@@ -11,7 +11,7 @@ interface ActivityDashboardWorkspaceProps {
       id: string;
       activityType: string;
       description: string;
-      createdAt: Date;
+      createdAt: string | Date;
       user?: {
         id: string;
         name: string | null;
