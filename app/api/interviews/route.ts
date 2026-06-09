@@ -27,6 +27,11 @@ export async function POST(request: Request) {
       }
     }
 
+    const attendeesJson =
+      payload.email || payload.phone
+        ? JSON.stringify({ email: payload.email, phone: payload.phone })
+        : null;
+
     const interview = await prisma.interview.create({
       data: {
         candidateId: payload.candidateId,
@@ -39,6 +44,7 @@ export async function POST(request: Request) {
         location: payload.location,
         meetingUrl: payload.meetingUrl,
         notes: payload.notes,
+        attendeesJson,
         status: payload.status,
         source: "local-calendar"
       },

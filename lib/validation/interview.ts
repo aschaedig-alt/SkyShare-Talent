@@ -12,6 +12,8 @@ export const interviewCreateSchema = z
     location: z.string().trim().optional().nullable(),
     meetingUrl: z.string().trim().optional().nullable(),
     notes: z.string().trim().optional().nullable(),
+    email: z.string().trim().optional().nullable(),
+    phone: z.string().trim().optional().nullable(),
     status: z.enum(["SCHEDULED", "COMPLETED", "CANCELLED"]).default("SCHEDULED")
   })
   .transform((value) => {
@@ -37,7 +39,9 @@ export const interviewCreateSchema = z
       interviewer: value.interviewer?.trim() || null,
       location: value.location?.trim() || null,
       meetingUrl: value.meetingUrl?.trim() || null,
-      notes: value.notes?.trim() || null
+      notes: value.notes?.trim() || null,
+      email: value.email?.trim() || null,
+      phone: value.phone?.trim() || null
     };
   });
 
