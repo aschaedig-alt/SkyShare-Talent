@@ -11,9 +11,9 @@
 ## 2. Tech Stack
 - **Framework:** Next.js 15.5 (React 19)
 - **Language:** TypeScript 5.7 (strict mode)
-- **Database:** 
-  - Local: SQLite (file: `./prisma/dev.db`)
-  - Production: PostgreSQL (via Vercel)
+- **Database:** PostgreSQL (Neon) - same for local development and production
+  - Connection: Neon free tier with pooling
+  - URL: Set via `DATABASE_URL` environment variable
 - **ORM:** Prisma 7.8.0 with adapter for both SQLite and PostgreSQL
 - **Authentication:** NextAuth.js 4.24 with Prisma adapter
 - **Styling:** Tailwind CSS 3.4 + PostCSS
@@ -78,11 +78,18 @@
 3. **UI Cleanup** ✅
    - Removed unprofessional "Prisma-backed" badge from candidates listing
 
+4. **PostgreSQL Database Migration** ✅
+   - Switched from SQLite (local) to PostgreSQL (Neon) for consistency
+   - Changed Prisma schema: `provider = "postgresql"` with `DATABASE_URL` env var
+   - Created `.env.local` with all Neon PostgreSQL and AWS S3 credentials
+   - All 16 Vercel environment variables configured (DATABASE_URL, AWS keys, Google OAuth, Auth settings)
+   - Build now compiles without driver incompatibility errors
+
 ### Deployment:
-- Git initialized locally, all Phase 1 files committed to `master` branch
+- Git initialized locally, all Phase 1 + PostgreSQL files committed to `master` branch
 - Pushed to GitHub: `aschaedig-alt/SkyShare-Talent`
-- Environment variable set on Vercel: `DATABASE_URL=file:./prisma/dev.db`
-- Build status: Awaiting redeploy confirmation
+- All Vercel environment variables set (PostgreSQL, AWS S3, Google OAuth, NextAuth)
+- Build status: ✅ **Live** - PostgreSQL-backed app deployed to https://skyshare-talent.vercel.app
 
 ---
 
@@ -96,8 +103,7 @@
 | `lib/candidates/normalize.ts` | Email/phone/name normalization utilities |
 | `lib/import/csv-parser.ts` | CSV parsing with auto-delimiter detection |
 | `lib/import/csv-validator.ts` | Pre-import validation, duplicate detection |
-| `prisma/schema.prisma` | SQLite schema definition (local dev) |
-| `prisma/schema.postgres.prisma` | PostgreSQL schema (production) |
+| `prisma/schema.prisma` | PostgreSQL schema definition (unified local & production) |
 | `app/api/candidates/[id]/route.ts` | Candidate CRUD API (GET/PATCH/DELETE) |
 | `components/candidates/CandidateProfileWorkspace.tsx` | Candidate detail view with edit mode |
 
@@ -114,15 +120,24 @@
 # Install dependencies
 npm install
 
-# Set up database (creates SQLite dev.db if needed)
-npm run dev
+# Ensure .env.local exists with DATABASE_URL (Neon PostgreSQL connection string)
+# File: .env.local (contains PostgreSQL URL, AWS S3 keys, Google OAuth credentials)
 
-# Database migrations (if needed)
+# Push Prisma schema to PostgreSQL
 npm run db:push
 
-# Seed database with master jobs
+# Start dev server (http://localhost:3000)
+npm run dev
+
+# Optional: Seed database with master jobs
 npm run db:import-master
 ```
+
+**Prerequisites:**
+- `.env.local` file with `DATABASE_URL` pointing to Neon PostgreSQL
+- AWS S3 credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, S3_CANDIDATE_FILES_BUCKET)
+- Google OAuth credentials (AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET)
+- NextAuth secret (NEXTAUTH_SECRET)
 
 ### Available Commands
 ```bash
@@ -140,7 +155,7 @@ npm run prod:check       # Check production readiness
 ## 8. Known Issues & TODOs
 
 ### Active Blockers
-- None currently blocking deployment
+- ✅ None - Phase 1 fully deployed and working
 
 ### Planned Features (Phase 4)
 - **Role-Based Access Control Enhancement**
@@ -210,22 +225,30 @@ return NextResponse.json({ message: "Error message" }, { status: 400 });
 
 ### Environment Variables Required
 
-**Local Development (.env.local):**
+**Both Local & Production (PostgreSQL via Neon):**
 ```
-DATABASE_URL=file:./prisma/dev.db
-NEXTAUTH_SECRET=<random_string>
-NEXTAUTH_URL=http://localhost:3000
-```
+# Database (same for local and production)
+DATABASE_URL=postgresql://neondb_owner:...@ep-....us-west-2.aws.neon.tech/neondb?sslmode=require
 
-**Production (Vercel):**
-```
-DATABASE_URL=<PostgreSQL_connection_string>
-NEXTAUTH_SECRET=<production_secret>
-NEXTAUTH_URL=https://skyshare-talent.vercel.app
+# NextAuth
+NEXTAUTH_SECRET=<random_secret_key>
+NEXTAUTH_URL=http://localhost:3000 (local) or https://skyshare-talent.vercel.app (prod)
+
+# AWS S3
 AWS_ACCESS_KEY_ID=<aws_key>
 AWS_SECRET_ACCESS_KEY=<aws_secret>
-AWS_REGION=us-east-1
-AWS_S3_BUCKET=<bucket_name>
+AWS_REGION=us-east-2
+S3_CANDIDATE_FILES_BUCKET=skyshare-talent-candidate-files
+
+# Google OAuth
+AUTH_GOOGLE_ID=<your_google_client_id>
+AUTH_GOOGLE_SECRET=<your_google_client_secret>
+
+# App Configuration
+NEXT_PUBLIC_APP_ENV=staging
+AUTH_PROVIDER=google-workspace
+REQUIRE_AUTH=true
+FILE_STORAGE_PROVIDER=s3
 ```
 
 ### Permission Scopes
@@ -244,8 +267,9 @@ AWS_S3_BUCKET=<bucket_name>
 ## Quick Reference
 
 **Master branch deployment:** GitHub → Vercel (auto-deploys on push)  
-**Database:** SQLite locally, PostgreSQL in production (Vercel)  
-**Build script:** `npm run build` (local) / `npm run build:hosted` (Vercel with postgres)  
+**Database:** PostgreSQL (Neon) for both local and production - unified setup  
+**Build script:** `npm run build` (same for local and Vercel)  
 **Type checking:** Strict mode enabled, no `any` types allowed  
 **Testing:** Jest configured but tests minimal - focus on manual testing  
-**Deployment status:** Phase 1 complete, awaiting final redeploy confirmation
+**Deployment status:** ✅ Phase 1 complete and live at https://skyshare-talent.vercel.app  
+**Deployment workflow:** Changes → git push → GitHub → Vercel auto-redeploy
