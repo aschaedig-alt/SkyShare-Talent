@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { normalizeEmail, normalizeName, normalizePhone } from "@/lib/candidates/normalize";
 import { getCandidateProfileData } from "@/lib/data/candidates";
+import { logActivity } from "@/lib/activity/logger";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireApiPermission("candidates:read");
@@ -152,6 +153,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ message: "Failed to retrieve updated candidate." }, { status: 500 });
     }
 
+    // Log activity
+    await logActivity({
+      userId: auth.user?.id,
+      userEmail: auth.user?.email || undefined,
+      activityType: "CANDIDATE_EDITED",
+      description: `Updated candidate ${updated.displayName}`,
+      entityType: "Candidate",
+      entityId: id,
+    });
+
     return NextResponse.json(updated);
   } catch (error) {
     console.error("Error updating candidate:", error);
@@ -179,8 +190,20 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   }
 
   try {
+    const candidateName = candidate.displayName;
+
     await prisma.candidate.delete({
       where: { id }
+    });
+
+    // Log activity
+    await logActivity({
+      userId: auth.user?.id,
+      userEmail: auth.user?.email || undefined,
+      activityType: "CANDIDATE_DELETED",
+      description: `Deleted candidate ${candidateName}`,
+      entityType: "Candidate",
+      entityId: id,
     });
 
     return NextResponse.json({ ok: true, message: "Candidate deleted." });
