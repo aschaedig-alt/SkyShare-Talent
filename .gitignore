@@ -10,3 +10,5 @@ prisma/generated
 storage/
 
 .vercel
+
+.env*
