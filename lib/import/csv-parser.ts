@@ -110,7 +110,7 @@ export function parseCsv(text: string): CsvParseResult {
       if (fields.some((cell) => cell.trim().length > 0)) {
         rows.push(fields);
       }
-    } catch (error) {
+    } catch {
       errorCount += 1;
     }
   }

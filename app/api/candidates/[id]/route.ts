@@ -33,7 +33,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ message: "Candidate not found." }, { status: 404 });
   }
 
-  const updateData: Record<string, any> = {};
+  const updateData: Record<string, string | null> = {};
 
   if (typeof body.displayName === "string") {
     updateData.displayName = body.displayName.trim();
