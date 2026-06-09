@@ -119,7 +119,7 @@ function accessLevelFrom(value: unknown): AccessLevel | null {
 function normalizeRule(moduleId: ModuleId, role: RoleName, value: unknown): ModuleAccessRule {
   const fallback =
     moduleId === "settings"
-      ? role === "ADMIN" || role === "RECRUITER"
+      ? role === "ADMIN"
         ? defaultRule
         : hiddenRule
       : defaultRule;
@@ -134,7 +134,7 @@ function normalizeRule(moduleId: ModuleId, role: RoleName, value: unknown): Modu
     accessLevel === "HIDDEN" ? false : typeof raw.showInSidebar === "boolean" ? raw.showInSidebar : fallback.showInSidebar;
 
   if (moduleId === "settings") {
-    return role === "ADMIN" || role === "RECRUITER" ? defaultRule : hiddenRule;
+    return role === "ADMIN" ? defaultRule : hiddenRule;
   }
 
   return {
@@ -150,8 +150,8 @@ export function createDefaultModuleAccessPolicy(): ModuleAccessPolicy {
     policy[moduleId] = {
       ADMIN: normalizeRule(moduleId, "ADMIN", defaultRule),
       RECRUITER: normalizeRule(moduleId, "RECRUITER", defaultRule),
-      VIEWER: normalizeRule(moduleId, "VIEWER", defaultRule),
-      PUBLISHER: normalizeRule(moduleId, "PUBLISHER", defaultRule)
+      HIRING_MANAGER: normalizeRule(moduleId, "HIRING_MANAGER", defaultRule),
+      VIEWER: normalizeRule(moduleId, "VIEWER", defaultRule)
     } as Record<RoleName, ModuleAccessRule>;
   }
 
@@ -184,7 +184,7 @@ export function normalizeModuleAccessPolicy(value: unknown): ModuleAccessPolicy 
       continue;
     }
 
-    for (const role of ["ADMIN", "RECRUITER", "VIEWER", "PUBLISHER"] as const) {
+    for (const role of ["ADMIN", "RECRUITER", "HIRING_MANAGER", "VIEWER"] as const) {
       normalized[moduleId][role] = normalizeRule(moduleId, role, modulePolicy[role]);
     }
   }

@@ -13,7 +13,7 @@ export default async function SettingsPage() {
   const session = authRequired ? await getServerSession(authOptions) : null;
   const role: RoleName | null = authRequired ? (isRoleName(session?.user?.role) ? session.user.role : null) : "ADMIN";
 
-  if (authRequired && role !== "ADMIN" && role !== "RECRUITER") {
+  if (authRequired && role !== "ADMIN") {
     notFound();
   }
 

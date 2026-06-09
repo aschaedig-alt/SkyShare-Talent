@@ -1,4 +1,4 @@
-export const roleNames = ["ADMIN", "RECRUITER", "VIEWER", "PUBLISHER"] as const;
+export const roleNames = ["ADMIN", "RECRUITER", "HIRING_MANAGER", "VIEWER"] as const;
 
 export type RoleName = (typeof roleNames)[number];
 
@@ -47,8 +47,20 @@ export const rolePermissions: Record<RoleName, Permission[]> = {
     "imports:write",
     "duplicates:write"
   ],
-  VIEWER: ["candidates:read", "files:read", "jobs:read", "requirements:read", "calendar:read"],
-  PUBLISHER: ["jobs:read", "jobs:write", "requirements:read", "publishing:write"]
+  HIRING_MANAGER: [
+    "candidates:read",
+    "files:read",
+    "jobs:read",
+    "requirements:read",
+    "calendar:read"
+  ],
+  VIEWER: [
+    "candidates:read",
+    "files:read",
+    "jobs:read",
+    "requirements:read",
+    "calendar:read"
+  ]
 };
 
 export function hasPermission(role: RoleName, permission: Permission) {

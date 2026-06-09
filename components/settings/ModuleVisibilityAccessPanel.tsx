@@ -16,7 +16,7 @@ type ModuleVisibilityAccessPanelProps = {
   policy: ModuleAccessPolicy;
 };
 
-const roles: RoleName[] = ["ADMIN", "RECRUITER", "VIEWER", "PUBLISHER"];
+const roles: RoleName[] = ["ADMIN", "RECRUITER", "HIRING_MANAGER", "VIEWER"];
 
 function clonePolicy(policy: ModuleAccessPolicy) {
   return JSON.parse(JSON.stringify(policy)) as ModuleAccessPolicy;
