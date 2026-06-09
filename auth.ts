@@ -48,7 +48,8 @@ function initialRoleForEmail(email: string | null | undefined): RoleName {
     return "ADMIN";
   }
 
-  return "RECRUITER";
+  // New team members get read-only access by default. Admins must grant access via Settings.
+  return "VIEWER";
 }
 
 async function loadTokenUser(email: string) {
@@ -117,7 +118,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = typeof token.id === "string" ? token.id : token.sub ?? "";
-        session.user.role = isRoleName(String(token.role)) ? (token.role as RoleName) : "RECRUITER";
+        session.user.role = isRoleName(String(token.role)) ? (token.role as RoleName) : "VIEWER";
       }
 
       return session;
