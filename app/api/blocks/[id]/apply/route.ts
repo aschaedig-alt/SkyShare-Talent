@@ -43,8 +43,12 @@ export async function POST(request: Request, context: RouteContext) {
       },
       select: { jobPostId: true }
     });
-    const jobsAlreadyUsingBlock = new Set(existingUsages.map((usage) => usage.jobPostId));
-    const jobsToAttach = jobIds.filter((jobId) => !jobsAlreadyUsingBlock.has(jobId));
+    const jobsAlreadyUsingBlock = new Set(
+  existingUsages.map((usage: { jobPostId: string }) => usage.jobPostId)
+);
+    const jobsToAttach = jobIds.filter(
+  (jobId: string) => !jobsAlreadyUsingBlock.has(jobId)
+);
 
     const lastInstances = await prisma.jobBlockInstance.findMany({
       where: { jobPostId: { in: jobsToAttach } },
@@ -59,19 +63,19 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     await prisma.$transaction(
-      jobsToAttach.map((jobId) =>
-        prisma.jobBlockInstance.create({
-          data: {
-            jobPostId: jobId,
-            contentBlockId: block.id,
-            blockVersionId: block.currentVersionId,
-            sortOrder: nextSortOrderByJob.get(jobId) ?? 1,
-            sectionKey: block.category.toLowerCase(),
-            mode: "LINKED"
-          }
-        })
-      )
-    );
+  jobsToAttach.map((jobId: string) =>
+    prisma.jobBlockInstance.create({
+      data: {
+        jobPostId: jobId,
+        contentBlockId: block.id,
+        blockVersionId: block.currentVersionId,
+        sortOrder: nextSortOrderByJob.get(jobId) ?? 1,
+        sectionKey: block.category.toLowerCase(),
+        mode: "LINKED"
+      }
+    })
+  )
+);
 
     return NextResponse.json({
       block: await getContentBlockById(id),
