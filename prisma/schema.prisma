@@ -141,10 +141,12 @@ model User {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  accounts    Account[]
-  sessions    Session[]
-  notes       CandidateNote[]
-  auditEvents AuditEvent[]
+  accounts      Account[]
+  sessions      Session[]
+  notes         CandidateNote[]
+  auditEvents   AuditEvent[]
+  permissions   UserPermission[]
+  activityLogs  ActivityLog[]    @relation("ActivityLogs")
 }
 
 model Account {
@@ -584,5 +586,36 @@ model AuditEvent {
   actor       User?     @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([eventType])
+  @@index([entityType, entityId])
+}
+
+model UserPermission {
+  id        String   @id @default(cuid())
+  userId    String
+  permission String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permission])
+  @@index([userId])
+}
+
+model ActivityLog {
+  id            String   @id @default(cuid())
+  userId        String?
+  userEmail     String?
+  activityType  String
+  description   String
+  entityType    String?
+  entityId      String?
+  metadata      String?
+  createdAt     DateTime @default(now())
+
+  user          User?    @relation("ActivityLogs", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([activityType])
+  @@index([createdAt])
   @@index([entityType, entityId])
 }
