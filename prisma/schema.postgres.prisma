@@ -1,0 +1,592 @@
+// Generated from prisma/schema.prisma for PostgreSQL validation.
+
+// Do not edit by hand; run npm run db:postgres:schema.
+
+generator client {
+  provider = "prisma-client"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model JobPost {
+  id                 String             @id @default(cuid())
+  title              String
+  internalName       String?
+  department         String?
+  category           String?
+  location           String?
+  secondaryLocation  String?
+  positionType       String?
+  salaryRange        String?
+  reportsTo          String?
+  positionCode       String?
+  seatCode           String?
+  travelPercentage   String?
+  educationLevel     String?
+  workSchedule       String?
+  summary            String?
+  keyResponsibilities String?
+  qualificationsText String?
+  benefitsText       String?
+  postedDate         DateTime?
+  status             String             @default("DRAFT")
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  recruitingJobId    String?
+  pilotRequirementId String?
+
+  paycom             PaycomConfig?
+  recruitingJob      Job?               @relation("RecruitingJobToJobPosts", fields: [recruitingJobId], references: [id], onDelete: SetNull)
+  pilotRequirement   PilotRequirement?  @relation("PilotRequirementToJobPosts", fields: [pilotRequirementId], references: [id], onDelete: SetNull)
+  blockInstances     JobBlockInstance[]
+}
+
+model PaycomConfig {
+  id                    String   @id @default(cuid())
+  jobPostId             String   @unique
+  workflow              String?
+  externalApplication   String?
+  externalKnockout      String?
+  externalGlobal        String?
+  externalJobLevel      String?
+  externalFollowUps     String?
+  internalApplication   String?
+  internalKnockout      String?
+  internalGlobal        String?
+  internalJobLevel      String?
+
+  jobPost               JobPost  @relation(fields: [jobPostId], references: [id], onDelete: Cascade)
+}
+
+model ContentBlock {
+  id               String                @id @default(cuid())
+  name             String
+  description      String?
+  category         String
+  scope            String
+  placement        String                @default("OPTIONAL")
+  currentVersionId String?
+  archivedAt       DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  versions         ContentBlockVersion[]  @relation("BlockVersions")
+  usages           JobBlockInstance[]
+}
+
+model ContentBlockVersion {
+  id             String             @id @default(cuid())
+  contentBlockId String
+  versionNumber  Int
+  title          String
+  body           String
+  plainText      String?
+  bodyFormat     String             @default("BULLET_LIST")
+  textWeight     String             @default("NORMAL")
+  textColor      String             @default("BLACK")
+  createdAt      DateTime           @default(now())
+  changeNote     String?
+
+  contentBlock   ContentBlock       @relation("BlockVersions", fields: [contentBlockId], references: [id], onDelete: Cascade)
+  jobInstances   JobBlockInstance[]
+
+  @@unique([contentBlockId, versionNumber])
+}
+
+model JobBlockInstance {
+  id              String               @id @default(cuid())
+  jobPostId       String
+  contentBlockId  String?
+  blockVersionId  String?
+  sortOrder       Int
+  sectionKey      String
+  mode            String               @default("LINKED")
+  customTitle     String?
+  customBody      String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  jobPost         JobPost              @relation(fields: [jobPostId], references: [id], onDelete: Cascade)
+  contentBlock    ContentBlock?        @relation(fields: [contentBlockId], references: [id], onDelete: SetNull)
+  blockVersion    ContentBlockVersion? @relation(fields: [blockVersionId], references: [id], onDelete: SetNull)
+}
+
+model Template {
+  id          String          @id @default(cuid())
+  name        String
+  isLocked    Boolean         @default(true)
+  version     Int             @default(1)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  tokens      TemplateToken[]
+}
+
+model TemplateToken {
+  id          String    @id @default(cuid())
+  templateId  String
+  key         String
+  value       String
+  locked      Boolean   @default(true)
+
+  template    Template  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id          String       @id @default(cuid())
+  name        String?
+  email       String?      @unique
+  emailVerified DateTime?
+  image       String?
+  role        String       @default("RECRUITER")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  accounts    Account[]
+  sessions    Session[]
+  notes       CandidateNote[]
+  auditEvents AuditEvent[]
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id            String   @id @default(cuid())
+  sessionToken  String   @unique
+  userId        String
+  expires       DateTime
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model WorkspaceSetting {
+  id          String   @id @default(cuid())
+  scope       String   @default("workspace")
+  key         String
+  valueJson   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([scope, key])
+}
+
+model Candidate {
+  id                   String                 @id @default(cuid())
+  firstName            String?
+  lastName             String?
+  displayName          String
+  normalizedName       String?
+  primaryEmail         String?
+  normalizedEmail      String?
+  primaryPhone         String?
+  normalizedPhone      String?
+  currentTitle         String?
+  status               String                 @default("ACTIVE")
+  stage                String?
+  owner                String?
+  source               String?
+  tagsJson             String?
+  foldersJson          String?
+  originalFieldsJson   String?
+  sourceHistoryJson    String?
+  mergeHistoryJson     String?
+  archivedAt           DateTime?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  contacts             CandidateContact[]
+  notes                CandidateNote[]
+  files                CandidateFile[]
+  applications         CandidateApplication[]
+  interviews           Interview[]
+  duplicateAsPrimary   DuplicateReviewItem[]  @relation("DuplicateCandidatePrimary")
+  duplicateAsSecondary DuplicateReviewItem[]  @relation("DuplicateCandidateSecondary")
+  importRows           ImportRow[]
+
+  @@index([normalizedEmail])
+  @@index([normalizedPhone])
+  @@index([normalizedName])
+  @@index([status])
+}
+
+model CandidateContact {
+  id          String    @id @default(cuid())
+  candidateId String
+  type        String
+  label       String?
+  value       String
+  normalized  String?
+  isPrimary   Boolean   @default(false)
+  source      String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+  @@index([type, normalized])
+}
+
+model CandidateNote {
+  id          String     @id @default(cuid())
+  candidateId String
+  authorId    String?
+  body        String
+  source      String?
+  sourceRef   String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  candidate   Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  author      User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([candidateId])
+}
+
+model CandidateFile {
+  id               String    @id @default(cuid())
+  candidateId      String?
+  originalFilename String
+  displayFilename  String
+  storageKey        String?
+  mimeType          String?
+  sizeBytes         Int?
+  source            String?
+  metadataJson      String?
+  uploadedAt        DateTime  @default(now())
+  renamedAt         DateTime?
+  archivedAt        DateTime?
+  updatedAt         DateTime  @updatedAt
+
+  candidate         Candidate? @relation(fields: [candidateId], references: [id], onDelete: SetNull)
+
+  @@index([candidateId])
+  @@index([displayFilename])
+}
+
+model Job {
+  id                    String                 @id @default(cuid())
+  sourceJobId           String?
+  jobReqId              String?
+  recruiter             String?
+  title                 String
+  normalizedTitle       String?
+  city                  String?
+  state                 String?
+  postal                String?
+  department            String?
+  openedDate            DateTime?
+  filledDate            DateTime?
+  status                String                 @default("OPEN")
+  activeStatus          String?
+  source                String?
+  sourceFilename        String?
+  importedAt            DateTime?
+  rawJobDescriptionHtml String?
+  jobDescriptionText    String?
+  rawMinimumRequirements String?
+  rawPayScale           String?
+  originalFieldsJson    String?
+  isPilotRole           Boolean                @default(false)
+  isPilotLeadershipRole Boolean                @default(false)
+  isOldRole             Boolean                @default(false)
+  aircraftTypesJson     String?
+  pilotSeat             String?
+  roleCategory          String?
+  baseLocation          String?
+  paySummary            String?
+  scheduleSummary       String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  applications          CandidateApplication[]
+  interviews            Interview[]
+  pilotRequirements     PilotRequirement[]     @relation("JobToPilotRequirements")
+  jobPosts              JobPost[]              @relation("RecruitingJobToJobPosts")
+  importRows            ImportRow[]
+
+  @@index([sourceJobId])
+  @@index([jobReqId])
+  @@index([normalizedTitle])
+  @@index([status])
+  @@index([isPilotRole])
+}
+
+model PilotRequirement {
+  id                         String                    @id @default(cuid())
+  sourceJobRecordId           String?
+  title                      String
+  normalizedTitle            String?
+  status                     String                    @default("ACTIVE")
+  reviewStatus               String                    @default("DRAFT")
+  operatorType               String?
+  requirementVersion         Int                       @default(1)
+  roleCategory               String                    @default("Pilot")
+  pilotSeat                  String?
+  aircraftTypesJson          String?
+  aircraftSeriesJson         String?
+  aircraftAliasesJson        String?
+  baseCity                   String?
+  baseState                  String?
+  baseAirport                String?
+  payScaleRaw                String?
+  salaryMin                  Int?
+  salaryMax                  Int?
+  signOnBonus                Int?
+  scheduleRaw                String?
+  rotation                   String?
+  locationFitRequirements    String?
+  scheduleFitRequirements    String?
+  rawMinimumRequirements     String?
+  originalJobDescriptionText String?
+  originalJobDescriptionHtml String?
+  extractionConfidence       Int?
+  extractionWarningsJson     String?
+  manualOverrideNotes        String?
+  sourceHistoryJson          String?
+  createdAt                  DateTime                  @default(now())
+  updatedAt                  DateTime                  @updatedAt
+  lastReviewedAt             DateTime?
+
+  sourceJobRecord            Job?                      @relation("JobToPilotRequirements", fields: [sourceJobRecordId], references: [id], onDelete: SetNull)
+  gates                      PilotRequirementGate[]
+  changes                    PilotRequirementChange[]
+  jobPosts                   JobPost[]                 @relation("PilotRequirementToJobPosts")
+  applications               CandidateApplication[]
+
+  @@index([normalizedTitle])
+  @@index([status])
+  @@index([pilotSeat])
+}
+
+model RequirementCatalogItem {
+  id             String                   @id @default(cuid())
+  key            String                   @unique
+  label          String
+  category       String
+  valueType      String
+  description    String?
+  defaultEnabled Boolean                  @default(false)
+  sortOrder      Int                      @default(0)
+  archivedAt     DateTime?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  gates          PilotRequirementGate[]
+
+  @@index([category])
+}
+
+model PilotRequirementGate {
+  id                   String                 @id @default(cuid())
+  pilotRequirementId    String
+  catalogItemId         String?
+  key                   String
+  label                 String
+  category              String
+  valueType             String
+  enabled               Boolean                @default(false)
+  numericValue          Int?
+  textValue             String?
+  evidenceText          String?
+  sortOrder             Int                    @default(0)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  pilotRequirement      PilotRequirement       @relation(fields: [pilotRequirementId], references: [id], onDelete: Cascade)
+  catalogItem           RequirementCatalogItem? @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
+
+  @@index([pilotRequirementId])
+  @@index([key])
+  @@index([category])
+}
+
+model PilotRequirementChange {
+  id                  String            @id @default(cuid())
+  pilotRequirementId   String
+  changeNote           String?
+  changedFieldsJson    String?
+  previousValuesJson   String?
+  newValuesJson        String?
+  changedBy            String?
+  changedAt            DateTime          @default(now())
+
+  pilotRequirement     PilotRequirement  @relation(fields: [pilotRequirementId], references: [id], onDelete: Cascade)
+
+  @@index([pilotRequirementId])
+}
+
+model CandidateApplication {
+  id                  String             @id @default(cuid())
+  candidateId          String
+  jobId                String?
+  pilotRequirementId   String?
+  sourceApplicationId  String?
+  status               String?
+  stage                String?
+  disposition          String?
+  source               String?
+  appliedAt            DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  candidate            Candidate          @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  job                  Job?               @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  pilotRequirement     PilotRequirement?  @relation(fields: [pilotRequirementId], references: [id], onDelete: SetNull)
+
+  @@index([candidateId])
+  @@index([jobId])
+  @@index([pilotRequirementId])
+}
+
+model Interview {
+  id                  String     @id @default(cuid())
+  candidateId          String
+  jobId                String?
+  title                String
+  startDateTime        DateTime
+  endDateTime          DateTime?
+  timezone             String?
+  interviewer          String?
+  attendeesJson        String?
+  location             String?
+  meetingUrl           String?
+  notes                String?
+  status               String     @default("SCHEDULED")
+  source               String?
+  googleCalendarId     String?
+  googleEventId        String?
+  lastSyncedAt         DateTime?
+  syncStatus           String?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  candidate            Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  job                  Job?       @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([candidateId])
+  @@index([jobId])
+  @@index([startDateTime])
+}
+
+model GoogleCalendarConnection {
+  id                 String   @id @default(cuid())
+  accountEmail       String?
+  calendarId         String?
+  syncDirection      String   @default("LOCAL_ONLY")
+  accessTokenHint    String?
+  refreshTokenStored Boolean  @default(false)
+  lastSyncedAt       DateTime?
+  lastSyncStatus     String?
+  lastSyncError      String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model ImportBatch {
+  id            String      @id @default(cuid())
+  sourceType    String
+  sourceFilename String?
+  status        String      @default("PENDING")
+  rowCount      Int         @default(0)
+  importedCount Int         @default(0)
+  skippedCount  Int         @default(0)
+  warningCount  Int         @default(0)
+  errorCount    Int         @default(0)
+  summaryJson   String?
+  createdAt     DateTime    @default(now())
+  completedAt   DateTime?
+
+  rows          ImportRow[]
+}
+
+model ImportRow {
+  id          String     @id @default(cuid())
+  importBatchId String
+  rowNumber    Int?
+  rawJson      String
+  status       String    @default("PENDING")
+  warningJson  String?
+  errorJson    String?
+  candidateId  String?
+  jobId        String?
+  createdAt    DateTime  @default(now())
+
+  importBatch  ImportBatch @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
+  candidate    Candidate?  @relation(fields: [candidateId], references: [id], onDelete: SetNull)
+  job          Job?        @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([importBatchId])
+  @@index([candidateId])
+  @@index([jobId])
+}
+
+model DuplicateReviewItem {
+  id                   String     @id @default(cuid())
+  reviewType            String
+  status                String     @default("OPEN")
+  reason                String?
+  confidence            String?
+  primaryCandidateId    String?
+  secondaryCandidateId  String?
+  primaryJobId          String?
+  secondaryJobId        String?
+  payloadJson           String?
+  createdAt             DateTime   @default(now())
+  resolvedAt            DateTime?
+
+  primaryCandidate      Candidate? @relation("DuplicateCandidatePrimary", fields: [primaryCandidateId], references: [id], onDelete: SetNull)
+  secondaryCandidate    Candidate? @relation("DuplicateCandidateSecondary", fields: [secondaryCandidateId], references: [id], onDelete: SetNull)
+
+  @@index([reviewType])
+  @@index([status])
+  @@index([primaryCandidateId])
+  @@index([secondaryCandidateId])
+}
+
+model AuditEvent {
+  id          String    @id @default(cuid())
+  actorId     String?
+  eventType   String
+  entityType  String
+  entityId    String?
+  summary     String?
+  payloadJson String?
+  createdAt   DateTime  @default(now())
+
+  actor       User?     @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([eventType])
+  @@index([entityType, entityId])
+}

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($zipPath = \"C:\\\\Users\\\\Recruiter\\\\OneDrive\\\\Documents\\\\SkyShare Talent Ops.zip\"; $extractPath = \"$env:TEMP\\\\SkyShareProject\"; Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force; Get-ChildItem $extractPath | Select-Object Name -First 20)",
+      "PowerShell(Get-ChildItem \"$env:TEMP\\\\SkyShareProject\\\\SkyShare Talent Ops\" | Where-Object { $_.PSIsContainer } | Select-Object Name)"
+    ]
+  }
+}

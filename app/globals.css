@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --skyshare-red: #ba0c2f;
+  --skyshare-cloud-dancer: #f0eee9;
+  --skyshare-gold: #eaaa00;
+  --skyshare-sweet: #a6c9e7;
+  --skyshare-eden: #466481;
+  --skyshare-lea: #0d2c43;
+  --skyshare-grey: #76787b;
+  --skyshare-black: #302f31;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 1600px) {
+  html {
+    font-size: 14.5px;
+  }
+}
+
+body {
+  background: var(--skyshare-cloud-dancer);
+  color: var(--skyshare-black);
+  font-family: Verdana, Geneva, sans-serif;
+  font-size: 0.95rem;
+}
+
+button,
+code,
+input,
+pre,
+select,
+textarea {
+  font: inherit;
+}
+
+textarea {
+  resize: vertical;
+}
+
+button,
+input,
+select,
+textarea {
+  min-height: 2.25rem;
+}
+
+button,
+select {
+  line-height: 1.2;
+}
+
+::selection {
+  background: rgba(234, 170, 0, 0.28);
+}
+
+.preview-paper {
+  background:
+    linear-gradient(180deg, rgba(13, 44, 67, 0.02), rgba(13, 44, 67, 0)),
+    #fff;
+}
+
+[data-module-access="VIEW_ONLY"] button,
+[data-module-access="VIEW_ONLY"] input,
+[data-module-access="VIEW_ONLY"] select,
+[data-module-access="VIEW_ONLY"] textarea {
+  cursor: not-allowed;
+}
+
+[data-module-access="VIEW_ONLY"] button,
+[data-module-access="VIEW_ONLY"] input[type="button"],
+[data-module-access="VIEW_ONLY"] input[type="submit"],
+[data-module-access="VIEW_ONLY"] input[type="reset"],
+[data-module-access="VIEW_ONLY"] select,
+[data-module-access="VIEW_ONLY"] textarea {
+  pointer-events: none;
+  opacity: 0.78;
+}

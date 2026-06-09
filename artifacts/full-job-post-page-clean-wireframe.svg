@@ -1,0 +1,307 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="2720" viewBox="0 0 1700 2720">
+  <defs>
+    <style>
+      .page { fill: #f0eee9; }
+      .nav { fill: #0d2c43; }
+      .nav2 { fill: #123a56; }
+      .panel { fill: #ffffff; stroke: rgba(13,44,67,.16); stroke-width: 1; }
+      .soft { fill: #f8f8f6; stroke: rgba(13,44,67,.10); stroke-width: 1; }
+      .field { fill: #ffffff; stroke: rgba(13,44,67,.18); stroke-width: 1; }
+      .blue { fill: #d9ecfb; }
+      .green { fill: #e9f8ef; }
+      .gold { fill: #eaaa00; }
+      .mutedFill { fill: #eeeeea; }
+      .red { fill: #ba0c2f; }
+      .line { stroke: rgba(13,44,67,.14); stroke-width: 1; }
+      .dash { stroke: rgba(13,44,67,.28); stroke-width: 1; stroke-dasharray: 8 8; fill: none; }
+      .text { font-family: Verdana, Geneva, sans-serif; fill: #0d2c43; }
+      .muted { font-family: Verdana, Geneva, sans-serif; fill: #76787b; }
+      .white { font-family: Verdana, Geneva, sans-serif; fill: #ffffff; }
+      .tiny { font-size: 11px; font-weight: 700; letter-spacing: 1.3px; }
+      .small { font-size: 12px; }
+      .body { font-size: 14px; }
+      .label { font-size: 14px; font-weight: 700; }
+      .title { font-size: 22px; font-weight: 700; }
+      .h1 { font-size: 34px; font-weight: 700; }
+      .button { font-size: 13px; font-weight: 700; }
+      .note { font-size: 13px; fill: #466481; font-family: Verdana, Geneva, sans-serif; }
+      .shadow { filter: drop-shadow(0 14px 30px rgba(13,44,67,.10)); }
+    </style>
+  </defs>
+
+  <rect class="page" x="0" y="0" width="1700" height="2720"/>
+
+  <!-- Left app nav -->
+  <rect class="nav" x="0" y="0" width="170" height="2720"/>
+  <rect class="nav2" x="16" y="18" width="34" height="34" rx="4"/>
+  <text class="white tiny" x="62" y="26">SKYSHARE</text>
+  <text class="white label" x="62" y="46">Job Builder</text>
+  <rect fill="#ffffff" x="16" y="86" width="138" height="32" rx="4"/>
+  <text class="text small" x="34" y="107">Job Posts</text>
+  <text class="white small" x="34" y="150">Final Review</text>
+  <text class="white small" x="34" y="190">Templates</text>
+  <text class="white small" x="34" y="230">Content Blocks</text>
+  <text class="white small" x="34" y="270">Changes</text>
+  <text class="white small" x="34" y="310">Approvals</text>
+  <text class="white small" x="34" y="350">Settings</text>
+
+  <!-- Sticky header -->
+  <rect class="nav" x="170" y="0" width="1530" height="70"/>
+  <text class="white tiny" x="198" y="26">JOB POSTING SYSTEM</text>
+  <text class="white title" x="198" y="52">SkyShare Job Post Builder</text>
+  <circle fill="#ffffff" cx="666" cy="35" r="14"/>
+  <text class="text small" x="662" y="40">1</text>
+  <text class="white small" x="688" y="40">Edit</text>
+  <circle fill="#ffffff" cx="754" cy="35" r="14"/>
+  <text class="text small" x="750" y="40">2</text>
+  <text class="white small" x="776" y="40">Build</text>
+  <circle fill="#ffffff" cx="850" cy="35" r="14"/>
+  <text class="text small" x="846" y="40">3</text>
+  <text class="white small" x="872" y="40">Preview</text>
+  <rect class="gold" x="1126" y="20" width="144" height="32" rx="4"/>
+  <text class="text tiny" x="1147" y="41">TEMPLATE LOCKED</text>
+  <rect class="green" x="1284" y="20" width="92" height="32" rx="4"/>
+  <text class="text tiny" x="1308" y="41">ACTIVE</text>
+  <rect fill="#ffffff" x="1390" y="20" width="94" height="32" rx="4"/>
+  <text class="text button" x="1410" y="41">Save Draft</text>
+  <rect fill="none" stroke="rgba(255,255,255,.35)" x="1498" y="20" width="166" height="32" rx="4"/>
+  <text class="white button" x="1522" y="41">Export Preview</text>
+
+  <!-- Page summary label -->
+  <g transform="translate(198 104)">
+    <text class="text tiny" x="0" y="0">FULL CLEANED JOB POSTS PAGE</text>
+    <text class="text h1" x="0" y="42">One page, organized into visible sections and expandable drawers</text>
+    <text class="muted body" x="0" y="76">This shows where all current Job Posts information would live after cleanup. The template/style panel moves off this page.</text>
+  </g>
+
+  <!-- Section 1: top workspace -->
+  <g transform="translate(198 220)">
+    <text class="text tiny" x="0" y="0">SECTION 1 - ALWAYS VISIBLE</text>
+    <text class="text title" x="0" y="34">Job selector, essential fields, and live preview</text>
+    <text class="muted body" x="0" y="62">This replaces the current top three-column page. Template controls are removed from Job Posts.</text>
+
+    <!-- Left column -->
+    <rect class="panel shadow" x="0" y="92" width="500" height="590" rx="6"/>
+    <text class="text tiny" x="24" y="122">JOB SELECTOR</text>
+    <rect class="nav" x="24" y="144" width="96" height="30" rx="4"/>
+    <text class="white tiny" x="42" y="164">ACTIVE (18)</text>
+    <rect class="field" x="128" y="144" width="118" height="30" rx="4"/>
+    <text class="text tiny" x="146" y="164">ARCHIVED (61)</text>
+    <rect class="field" x="254" y="144" width="78" height="30" rx="4"/>
+    <text class="text tiny" x="274" y="164">ALL (79)</text>
+    <rect class="field" x="24" y="190" width="452" height="34" rx="4"/>
+    <text class="muted small" x="40" y="212">Search active jobs...</text>
+    <rect class="field" x="24" y="234" width="452" height="36" rx="4"/>
+    <text class="text label" x="40" y="257">Gulfstream G450 &amp; GV Captain</text>
+
+    <rect class="soft" x="24" y="292" width="452" height="56" rx="5"/>
+    <text class="text tiny" x="42" y="314">BULK ACTIONS</text>
+    <text class="muted small" x="42" y="334">Collapsed until you need archive/restore.</text>
+    <rect class="field" x="376" y="306" width="78" height="28" rx="4"/>
+    <text class="text small" x="397" y="324">Open</text>
+
+    <text class="text tiny" x="24" y="384">ESSENTIAL FIELDS</text>
+    <rect class="soft" x="24" y="404" width="452" height="244" rx="5"/>
+    <text class="muted tiny" x="44" y="430">JOB TITLE</text>
+    <rect class="field" x="44" y="440" width="412" height="32" rx="3"/>
+    <text class="text small" x="56" y="461">Gulfstream G450 &amp; GV Captain</text>
+    <text class="muted tiny" x="44" y="500">LOCATION</text>
+    <rect class="field" x="44" y="510" width="192" height="32" rx="3"/>
+    <text class="text small" x="56" y="531">SLC</text>
+    <text class="muted tiny" x="260" y="500">PAY RANGE</text>
+    <rect class="field" x="260" y="510" width="196" height="32" rx="3"/>
+    <text class="text small" x="272" y="531">$230,000 annually</text>
+    <text class="muted tiny" x="44" y="570">STATUS</text>
+    <rect class="field" x="44" y="580" width="192" height="32" rx="3"/>
+    <text class="text small" x="56" y="601">Active</text>
+    <text class="muted tiny" x="260" y="570">JOB TYPE</text>
+    <rect class="field" x="260" y="580" width="196" height="32" rx="3"/>
+    <text class="text small" x="272" y="601">Full Time</text>
+
+    <!-- Right preview -->
+    <rect class="panel shadow" x="530" y="92" width="914" height="590" rx="6"/>
+    <text class="text tiny" x="554" y="122">LIVE PREVIEW</text>
+    <text class="text title" x="554" y="154">Formatted job post preview</text>
+    <rect class="green" x="1240" y="118" width="82" height="28" rx="4"/>
+    <text class="text tiny" x="1260" y="137">ACTIVE</text>
+    <rect class="nav" x="1334" y="118" width="86" height="28" rx="4"/>
+    <text class="white tiny" x="1354" y="137">COPY</text>
+    <rect fill="#eefaf3" stroke="#9be3b7" x="554" y="174" width="866" height="60" rx="5"/>
+    <text class="text label" x="576" y="199">Ready check clean</text>
+    <text class="muted small" x="576" y="220">12/12 checks complete. Warnings expand only when needed.</text>
+    <rect class="nav" x="554" y="260" width="866" height="124" rx="5"/>
+    <text class="white tiny" x="584" y="296">SKYSHARE CAREERS</text>
+    <text class="white h1" x="584" y="342">Gulfstream G450 &amp; GV Captain</text>
+    <text class="white body" x="584" y="372">Flight Operations | SLC | Full Time</text>
+    <rect class="soft" x="554" y="384" width="866" height="60"/>
+    <text class="text label" x="584" y="420">SLC</text>
+    <text class="text label" x="820" y="420">$230,000 annually</text>
+    <text class="text label" x="1052" y="420">Full Time</text>
+    <line class="line" x1="584" y1="478" x2="1390" y2="478"/>
+    <rect class="gold" x="584" y="510" width="32" height="5" rx="3"/>
+    <text class="text title" x="632" y="520">Job Summary</text>
+    <rect class="green" x="1280" y="500" width="100" height="26" rx="4"/>
+    <text class="text tiny" x="1296" y="518">JOB FIELD</text>
+    <text class="text body" x="584" y="558">SkyShare is seeking a passionate and skilled GV typed Captain to fly both the G450 and GV.</text>
+  </g>
+
+  <!-- Section 2: expandable job data drawers -->
+  <g transform="translate(198 970)">
+    <text class="text tiny" x="0" y="0">SECTION 2 - EDITOR DRAWERS</text>
+    <text class="text title" x="0" y="34">Detailed job fields are collapsed by default</text>
+    <text class="muted body" x="0" y="62">This is where the long field list from your current screenshots goes. People expand only what they need.</text>
+
+    <rect class="panel shadow" x="0" y="94" width="1444" height="360" rx="6"/>
+    <g transform="translate(24 122)">
+      <rect class="field" x="0" y="0" width="680" height="62" rx="5"/>
+      <text class="text label" x="18" y="25">Summary</text>
+      <text class="muted small" x="18" y="45">Visible in final body. Click to expand and edit formatting.</text>
+      <rect class="green" x="540" y="18" width="114" height="26" rx="4"/>
+      <text class="text tiny" x="558" y="36">FROM FIELD</text>
+
+      <rect class="field" x="720" y="0" width="680" height="62" rx="5"/>
+      <text class="text label" x="738" y="25">Responsibilities</text>
+      <text class="muted small" x="738" y="45">Hidden because a Responsibilities shared block is attached.</text>
+      <rect class="mutedFill" x="1240" y="18" width="134" height="26" rx="4"/>
+      <text class="muted tiny" x="1256" y="36">FROM BLOCK</text>
+
+      <rect class="field" x="0" y="82" width="680" height="62" rx="5"/>
+      <text class="text label" x="18" y="107">Qualifications</text>
+      <text class="muted small" x="18" y="127">Hidden because Pilot Requirements and Work Authorization are attached.</text>
+      <rect class="mutedFill" x="540" y="100" width="134" height="26" rx="4"/>
+      <text class="muted tiny" x="556" y="118">FROM BLOCK</text>
+
+      <rect class="field" x="720" y="82" width="680" height="62" rx="5"/>
+      <text class="text label" x="738" y="107">Benefits</text>
+      <text class="muted small" x="738" y="127">Hidden because Perks and Salary Schedule blocks are attached.</text>
+      <rect class="mutedFill" x="1240" y="100" width="134" height="26" rx="4"/>
+      <text class="muted tiny" x="1256" y="118">FROM BLOCK</text>
+
+      <rect class="field" x="0" y="164" width="680" height="62" rx="5"/>
+      <text class="text label" x="18" y="189">Paycom setup</text>
+      <text class="muted small" x="18" y="209">Workflow, application, knockout, global, job level, follow-up templates.</text>
+      <text class="muted small" x="598" y="200">collapsed</text>
+
+      <rect class="field" x="720" y="164" width="680" height="62" rx="5"/>
+      <text class="text label" x="738" y="189">Advanced job details</text>
+      <text class="muted small" x="738" y="209">Reports to, position code, seat code, travel, education, work schedule.</text>
+      <text class="muted small" x="1310" y="200">collapsed</text>
+    </g>
+  </g>
+
+  <!-- Section 3: section builder collapsed -->
+  <g transform="translate(198 1510)">
+    <text class="text tiny" x="0" y="0">SECTION 3 - SECTION BUILDER COLLAPSED</text>
+    <text class="text title" x="0" y="34">Blocks are summarized until someone needs to manage them</text>
+    <text class="muted body" x="0" y="62">This replaces the always-open block library, content source map, job canvas, and duplicate builder preview.</text>
+
+    <rect class="panel shadow" x="0" y="94" width="1444" height="190" rx="6"/>
+    <text class="text tiny" x="24" y="124">SECTION BUILDER</text>
+    <text class="text title" x="24" y="158">10 shared blocks attached</text>
+    <text class="muted body" x="24" y="186">Click Manage Sections to drag, reorder, customize, or inspect versions.</text>
+    <rect class="field" x="410" y="120" width="210" height="64" rx="5"/>
+    <text class="text label" x="430" y="146">Core Values</text>
+    <text class="muted small" x="430" y="168">Shared - Required</text>
+    <rect class="field" x="644" y="120" width="248" height="64" rx="5"/>
+    <text class="text label" x="664" y="146">Job Responsibilities</text>
+    <text class="muted small" x="664" y="168">Shared - Role Specific</text>
+    <rect class="field" x="916" y="120" width="228" height="64" rx="5"/>
+    <text class="text label" x="936" y="146">Pilot Requirements</text>
+    <text class="muted small" x="936" y="168">Shared - Role Specific</text>
+    <rect class="nav" x="1214" y="132" width="188" height="42" rx="5"/>
+    <text class="white button" x="1250" y="158">Manage Sections</text>
+  </g>
+
+  <!-- Section 4: expanded section builder state -->
+  <g transform="translate(198 1855)">
+    <text class="text tiny" x="0" y="0">SECTION 4 - SECTION BUILDER EXPANDED</text>
+    <text class="text title" x="0" y="34">Only opens when the user clicks Manage Sections</text>
+    <text class="muted body" x="0" y="62">This is where the current lower screenshots live, but with clearer language and fewer technical buttons.</text>
+
+    <rect class="panel shadow" x="0" y="94" width="1444" height="560" rx="6"/>
+
+    <!-- Library -->
+    <rect class="soft" x="24" y="126" width="370" height="496" rx="5"/>
+    <text class="text tiny" x="44" y="154">AVAILABLE BLOCKS</text>
+    <rect class="field" x="44" y="174" width="330" height="32" rx="4"/>
+    <text class="muted small" x="58" y="195">Search shared blocks...</text>
+    <text class="text tiny" x="44" y="234">REQUIRED</text>
+    <rect class="field" x="44" y="248" width="330" height="54" rx="4"/>
+    <text class="text label" x="62" y="272">About Us</text>
+    <text class="muted small" x="62" y="290">Shared company intro</text>
+    <text class="text tiny" x="44" y="330">ROLE SPECIFIC</text>
+    <rect class="field" x="44" y="344" width="330" height="54" rx="4"/>
+    <text class="text label" x="62" y="368">Pilot Qualifications</text>
+    <text class="muted small" x="62" y="386">Drag into this job</text>
+    <rect class="field" x="44" y="410" width="330" height="54" rx="4"/>
+    <text class="text label" x="62" y="434">Salary Schedule</text>
+    <text class="muted small" x="62" y="452">Department-specific</text>
+
+    <!-- Canvas -->
+    <rect class="soft" x="420" y="126" width="554" height="496" rx="5"/>
+    <text class="text tiny" x="440" y="154">JOB SECTIONS</text>
+    <text class="muted small" x="440" y="176">Drag to reorder. Technical version tools are hidden under Details.</text>
+    <g transform="translate(440 202)">
+      <rect class="field" x="0" y="0" width="514" height="64" rx="5"/>
+      <text class="text label" x="18" y="28">Core Values</text>
+      <rect class="blue" x="132" y="14" width="76" height="24" rx="4"/>
+      <text class="text tiny" x="148" y="31">SHARED</text>
+      <rect class="field" x="374" y="14" width="112" height="32" rx="4"/>
+      <text class="text small" x="398" y="35">Details</text>
+    </g>
+    <g transform="translate(440 282)">
+      <rect class="field" x="0" y="0" width="514" height="64" rx="5"/>
+      <text class="text label" x="18" y="28">Job Responsibilities</text>
+      <rect class="blue" x="186" y="14" width="76" height="24" rx="4"/>
+      <text class="text tiny" x="202" y="31">SHARED</text>
+      <rect class="nav" x="330" y="14" width="156" height="32" rx="4"/>
+      <text class="white small" x="354" y="35">Customize for job</text>
+    </g>
+    <g transform="translate(440 362)">
+      <rect class="field" x="0" y="0" width="514" height="64" rx="5"/>
+      <text class="text label" x="18" y="28">Pilot Requirements</text>
+      <rect class="blue" x="166" y="14" width="76" height="24" rx="4"/>
+      <text class="text tiny" x="182" y="31">SHARED</text>
+      <rect class="field" x="374" y="14" width="112" height="32" rx="4"/>
+      <text class="text small" x="398" y="35">Details</text>
+    </g>
+    <rect class="dash" x="440" y="458" width="514" height="120" rx="5"/>
+    <text class="muted body" x="570" y="522">Drop shared blocks here</text>
+
+    <!-- Source map -->
+    <rect class="soft" x="1000" y="126" width="420" height="496" rx="5"/>
+    <text class="text tiny" x="1020" y="154">CONTENT SOURCE MAP</text>
+    <text class="muted small" x="1020" y="176">Shows what publishes without opening every field.</text>
+    <rect class="field" x="1020" y="204" width="178" height="94" rx="4"/>
+    <text class="text tiny" x="1034" y="228">REQUIRED</text>
+    <text class="text small" x="1034" y="252">Core Values</text>
+    <text class="text small" x="1034" y="274">About Us</text>
+    <rect class="field" x="1220" y="204" width="178" height="94" rx="4"/>
+    <text class="text tiny" x="1234" y="228">ROLE SPECIFIC</text>
+    <text class="text small" x="1234" y="252">Responsibilities</text>
+    <text class="text small" x="1234" y="274">Requirements</text>
+    <rect class="field" x="1020" y="326" width="378" height="60" rx="4"/>
+    <text class="text label" x="1034" y="350">Fallback fields hidden</text>
+    <text class="muted small" x="1034" y="370">Responsibilities, Qualifications, Benefits</text>
+    <rect class="field" x="1020" y="414" width="378" height="92" rx="4"/>
+    <text class="text label" x="1034" y="438">Plain-language details</text>
+    <text class="muted small" x="1034" y="462">Shared means all jobs using the block get updates.</text>
+    <text class="muted small" x="1034" y="484">Customize means this job gets its own copy.</text>
+  </g>
+
+  <!-- Section 5: reference/archive expanded -->
+  <g transform="translate(198 2550)">
+    <text class="text tiny" x="0" y="0">SECTION 5 - ARCHIVE REFERENCE DRAWER</text>
+    <text class="text title" x="0" y="34">Archived jobs stay available, but are hidden from active work</text>
+    <text class="muted body" x="0" y="62">This panel opens only when managing inactive roles or looking up old posts.</text>
+    <rect class="panel shadow" x="0" y="88" width="1444" height="92" rx="6"/>
+    <rect class="field" x="24" y="116" width="360" height="36" rx="4"/>
+    <text class="muted small" x="42" y="138">Search archived posts...</text>
+    <rect class="field" x="416" y="116" width="260" height="36" rx="4"/>
+    <text class="text small" x="436" y="138">Gulfstream G450 Lead Captain</text>
+    <rect class="field" x="700" y="116" width="260" height="36" rx="4"/>
+    <text class="text small" x="720" y="138">Citation CE525 Captain</text>
+    <rect class="nav" x="1204" y="112" width="180" height="42" rx="5"/>
+    <text class="white button" x="1242" y="138">Restore Selected</text>
+  </g>
+</svg>

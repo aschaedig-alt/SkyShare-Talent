@@ -1,0 +1,177 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1880" viewBox="0 0 1600 1880">
+  <defs>
+    <style>
+      .bg { fill: #f0eee9; }
+      .panel { fill: #ffffff; stroke: rgba(13,44,67,.16); stroke-width: 1; }
+      .nav { fill: #0d2c43; }
+      .nav2 { fill: #123a56; }
+      .gold { fill: #eaaa00; }
+      .sweet { fill: #d9ecfb; }
+      .soft { fill: #f8f8f6; }
+      .line { stroke: rgba(13,44,67,.14); stroke-width: 1; }
+      .text { font-family: Verdana, Geneva, sans-serif; fill: #0d2c43; }
+      .muted { font-family: Verdana, Geneva, sans-serif; fill: #76787b; }
+      .white { font-family: Verdana, Geneva, sans-serif; fill: #ffffff; }
+      .tiny { font-size: 12px; font-weight: 700; letter-spacing: 1.4px; }
+      .label { font-size: 14px; font-weight: 700; }
+      .body { font-size: 13px; }
+      .title { font-size: 22px; font-weight: 700; }
+      .h1 { font-size: 28px; font-weight: 700; }
+      .button { fill: #0d2c43; }
+      .chip { fill: #d9ecfb; }
+      .hidden { fill: #eeeeea; }
+      .redline { stroke: #ba0c2f; stroke-width: 2; stroke-dasharray: 8 6; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1600" height="1880"/>
+  <rect class="nav" x="0" y="0" width="1600" height="72"/>
+  <text class="white tiny" x="36" y="30">SKYSHARE JOB BUILDER</text>
+  <text class="white title" x="36" y="58">Job Posts Page Cleanup Options</text>
+  <text class="white body" x="980" y="45">Goal: fewer always-visible controls, clearer block language, more preview space</text>
+
+  <!-- Option 1 -->
+  <g transform="translate(40 110)">
+    <rect class="panel" x="0" y="0" width="730" height="320" rx="8"/>
+    <text class="text tiny" x="22" y="30">OPTION 1</text>
+    <text class="text title" x="22" y="58">Two-column job workspace</text>
+    <text class="muted body" x="22" y="84">Remove Style &amp; Brand Tokens from this page. Templates page owns that.</text>
+    <rect class="nav2" x="22" y="108" width="686" height="36" rx="4"/>
+    <text class="white tiny" x="40" y="132">ACTIVE JOBS</text>
+    <text class="white tiny" x="180" y="132">ARCHIVED</text>
+    <text class="white tiny" x="318" y="132">ALL</text>
+    <rect class="soft" x="22" y="160" width="310" height="132" rx="6"/>
+    <text class="text label" x="42" y="188">Left: compact editor</text>
+    <rect class="panel" x="42" y="204" width="270" height="24" rx="4"/>
+    <rect class="panel" x="42" y="238" width="270" height="24" rx="4"/>
+    <rect class="panel" x="42" y="272" width="180" height="12" rx="4"/>
+    <rect class="soft" x="354" y="160" width="354" height="132" rx="6"/>
+    <text class="text label" x="374" y="188">Right: full live preview</text>
+    <rect class="nav" x="374" y="204" width="314" height="38" rx="4"/>
+    <rect class="panel" x="374" y="254" width="314" height="26" rx="4"/>
+    <line class="redline" x1="354" y1="96" x2="708" y2="96"/>
+    <text class="muted body" x="374" y="96">Middle template column removed</text>
+  </g>
+
+  <!-- Option 2 -->
+  <g transform="translate(830 110)">
+    <rect class="panel" x="0" y="0" width="730" height="320" rx="8"/>
+    <text class="text tiny" x="22" y="30">OPTION 2</text>
+    <text class="text title" x="22" y="58">Accordion editor, details hidden</text>
+    <text class="muted body" x="22" y="84">Show only the fields people need most. Expand sections when editing deeper data.</text>
+    <rect class="soft" x="22" y="108" width="312" height="184" rx="6"/>
+    <rect class="panel" x="42" y="130" width="272" height="34" rx="5"/>
+    <text class="text label" x="56" y="152">Basics</text>
+    <text class="muted body" x="230" y="152">expanded</text>
+    <rect class="panel" x="42" y="174" width="272" height="28" rx="5"/>
+    <text class="text body" x="56" y="193">Job title, location, status</text>
+    <rect class="panel" x="42" y="212" width="272" height="30" rx="5"/>
+    <text class="text label" x="56" y="232">Content fields</text>
+    <text class="muted body" x="238" y="232">collapsed</text>
+    <rect class="panel" x="42" y="252" width="272" height="30" rx="5"/>
+    <text class="text label" x="56" y="272">Paycom</text>
+    <text class="muted body" x="260" y="272">collapsed</text>
+    <rect class="soft" x="356" y="108" width="352" height="184" rx="6"/>
+    <text class="text label" x="376" y="136">Preview stays visible</text>
+    <rect class="nav" x="376" y="154" width="312" height="46" rx="4"/>
+    <rect class="panel" x="376" y="214" width="312" height="24" rx="4"/>
+    <rect class="panel" x="376" y="248" width="260" height="14" rx="4"/>
+  </g>
+
+  <!-- Option 3 -->
+  <g transform="translate(40 480)">
+    <rect class="panel" x="0" y="0" width="730" height="350" rx="8"/>
+    <text class="text tiny" x="22" y="30">OPTION 3</text>
+    <text class="text title" x="22" y="58">Simplified block builder</text>
+    <text class="muted body" x="22" y="84">Replace technical controls with plain-language actions and hide version controls.</text>
+    <rect class="soft" x="22" y="108" width="686" height="210" rx="6"/>
+    <text class="text label" x="42" y="138">Job Canvas</text>
+    <g transform="translate(42 154)">
+      <rect class="panel" x="0" y="0" width="646" height="48" rx="5"/>
+      <text class="text label" x="16" y="28">Core Values</text>
+      <rect class="chip" x="146" y="12" width="92" height="24" rx="4"/>
+      <text class="text tiny" x="158" y="29">SHARED</text>
+      <rect class="button" x="454" y="10" width="168" height="28" rx="4"/>
+      <text class="white body" x="476" y="29">Customize for this job</text>
+      <text class="muted body" x="320" y="29">Details hidden</text>
+    </g>
+    <g transform="translate(42 214)">
+      <rect class="panel" x="0" y="0" width="646" height="48" rx="5"/>
+      <text class="text label" x="16" y="28">Job Responsibilities</text>
+      <rect class="chip" x="206" y="12" width="92" height="24" rx="4"/>
+      <text class="text tiny" x="218" y="29">SHARED</text>
+      <rect class="button" x="454" y="10" width="168" height="28" rx="4"/>
+      <text class="white body" x="476" y="29">Customize for this job</text>
+    </g>
+    <text class="muted body" x="42" y="306">Advanced version controls live inside an expandable Details panel.</text>
+  </g>
+
+  <!-- Option 4 -->
+  <g transform="translate(830 480)">
+    <rect class="panel" x="0" y="0" width="730" height="350" rx="8"/>
+    <text class="text tiny" x="22" y="30">OPTION 4</text>
+    <text class="text title" x="22" y="58">Friendly block details drawer</text>
+    <text class="muted body" x="22" y="84">One visible action. Technical choices appear only after clicking Details.</text>
+    <rect class="soft" x="22" y="110" width="328" height="208" rx="6"/>
+    <text class="text label" x="42" y="140">Block row</text>
+    <rect class="panel" x="42" y="158" width="286" height="52" rx="5"/>
+    <text class="text label" x="58" y="184">Pilot Requirements</text>
+    <text class="muted body" x="58" y="202">Shared content, current version</text>
+    <rect class="button" x="42" y="226" width="286" height="34" rx="5"/>
+    <text class="white body" x="96" y="248">Edit this job's copy</text>
+    <rect class="panel" x="42" y="272" width="286" height="30" rx="5"/>
+    <text class="text body" x="58" y="292">Show version details</text>
+    <rect class="soft" x="374" y="110" width="334" height="208" rx="6"/>
+    <text class="text label" x="394" y="140">Expanded details</text>
+    <rect class="panel" x="394" y="160" width="294" height="34" rx="5"/>
+    <text class="text body" x="410" y="182">Use current shared content</text>
+    <rect class="panel" x="394" y="204" width="294" height="34" rx="5"/>
+    <text class="text body" x="410" y="226">Keep this older version</text>
+    <rect class="panel" x="394" y="248" width="294" height="34" rx="5"/>
+    <text class="text body" x="410" y="270">Make a job-only copy</text>
+  </g>
+
+  <!-- Option 5 -->
+  <g transform="translate(40 880)">
+    <rect class="panel" x="0" y="0" width="1520" height="430" rx="8"/>
+    <text class="text tiny" x="22" y="32">OPTION 5</text>
+    <text class="text title" x="22" y="62">Preview-first review screen</text>
+    <text class="muted body" x="22" y="88">Best for reviewing built jobs. The preview gets most of the page. Editing and blocks sit in drawers.</text>
+    <rect class="soft" x="22" y="116" width="372" height="278" rx="6"/>
+    <text class="text label" x="42" y="146">Left utility rail</text>
+    <rect class="panel" x="42" y="166" width="330" height="34" rx="5"/>
+    <text class="text body" x="58" y="188">Job selector and status</text>
+    <rect class="panel" x="42" y="214" width="330" height="34" rx="5"/>
+    <text class="text body" x="58" y="236">Edit job data drawer</text>
+    <rect class="panel" x="42" y="262" width="330" height="34" rx="5"/>
+    <text class="text body" x="58" y="284">Manage blocks drawer</text>
+    <rect class="panel" x="42" y="310" width="330" height="34" rx="5"/>
+    <text class="text body" x="58" y="332">Copy formatted / limited HTML</text>
+    <rect class="panel" x="426" y="116" width="1072" height="278" rx="6"/>
+    <rect class="nav" x="456" y="146" width="1012" height="70" rx="4"/>
+    <text class="white h1" x="486" y="191">Gulfstream G450 &amp; GV Captain</text>
+    <rect class="soft" x="456" y="238" width="1012" height="120" rx="4"/>
+    <text class="text label" x="486" y="274">Full formatted preview dominates the screen</text>
+    <text class="muted body" x="486" y="306">Click Edit Job Data or Manage Blocks only when needed.</text>
+  </g>
+
+  <!-- Recommendation -->
+  <g transform="translate(40 1360)">
+    <rect class="panel" x="0" y="0" width="1520" height="420" rx="8"/>
+    <text class="text tiny" x="22" y="34">RECOMMENDED COMBINATION</text>
+    <text class="text h1" x="22" y="74">Use Option 1 + Option 2 + Option 3</text>
+    <text class="muted body" x="22" y="104">This keeps the job page simple without losing power.</text>
+    <rect class="soft" x="22" y="132" width="456" height="230" rx="6"/>
+    <text class="text label" x="48" y="166">1. Remove template panel</text>
+    <text class="muted body" x="48" y="196">The Templates page owns colors, typography, layout, and locked settings.</text>
+    <text class="muted body" x="48" y="226">Job Posts page becomes Editor + Preview + Blocks.</text>
+    <rect class="soft" x="532" y="132" width="456" height="230" rx="6"/>
+    <text class="text label" x="558" y="166">2. Collapse low-priority fields</text>
+    <text class="muted body" x="558" y="196">Show Basics, Summary, Pay Range, Status first.</text>
+    <text class="muted body" x="558" y="226">Hide Paycom and fallback fields until expanded.</text>
+    <rect class="soft" x="1042" y="132" width="456" height="230" rx="6"/>
+    <text class="text label" x="1068" y="166">3. Rename block actions</text>
+    <text class="muted body" x="1068" y="196">Do not show Use linked, Pin version, Fork for job by default.</text>
+    <text class="muted body" x="1068" y="226">Use: Shared, Customize for this job, Version details.</text>
+  </g>
+</svg>
