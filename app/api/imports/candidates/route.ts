@@ -73,7 +73,12 @@ async function findExistingCandidate(normalizedEmail: string | null, normalizedP
 
 export async function POST(request: Request) {
   const auth = await requireApiPermission("imports:write");
-  if (!auth.ok) return auth.response;
+  if (!auth.ok) {
+  return NextResponse.json(
+    { message: "Unauthorized" },
+    { status: 401 }
+  );
+}
 
   try {
     const form = await request.formData();

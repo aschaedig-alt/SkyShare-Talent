@@ -30,8 +30,8 @@ export async function POST(request: Request, context: RouteContext) {
     const auth = await requireApiPermission("files:write");
 
     if (!auth.ok) {
-      return auth.response;
-    }
+  return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+}
 
     const { id } = await context.params;
     const candidate = await prisma.candidate.findUnique({

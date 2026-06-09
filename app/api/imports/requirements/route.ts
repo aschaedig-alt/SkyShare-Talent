@@ -130,7 +130,12 @@ function rowsFromSimpleRequirementList(rows: Record<string, string>[]) {
 
 export async function POST(request: Request) {
   const auth = await requireApiPermission("requirements:write");
-  if (!auth.ok) return auth.response;
+  if (!auth.ok) {
+  return NextResponse.json(
+    { message: "Unauthorized" },
+    { status: 401 }
+  );
+}
 
   const form = await request.formData();
   const file = form.get("file");

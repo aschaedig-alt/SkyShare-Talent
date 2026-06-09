@@ -7,7 +7,10 @@ export async function POST(request: Request) {
   const auth = await requireApiPermission("settings:admin");
 
   if (!auth.ok) {
-    return auth.response;
+    return NextResponse.json(
+      { message: "Unauthorized" },
+      { status: 401 }
+    );
   }
 
   try {

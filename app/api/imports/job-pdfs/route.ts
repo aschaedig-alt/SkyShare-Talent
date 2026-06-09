@@ -8,7 +8,12 @@ export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const auth = await requireApiPermission("imports:write");
-  if (!auth.ok) return auth.response;
+  if (!auth.ok) {
+  return NextResponse.json(
+    { message: "Unauthorized" },
+    { status: 401 }
+  );
+}
 
   if ((request.headers.get("content-type") ?? "").includes("application/json")) {
     const payload = (await request.json()) as {

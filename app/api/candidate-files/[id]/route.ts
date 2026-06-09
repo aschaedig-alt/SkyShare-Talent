@@ -17,8 +17,8 @@ export async function GET(_request: Request, context: RouteContext) {
     const auth = await requireApiPermission("files:read");
 
     if (!auth.ok) {
-      return auth.response;
-    }
+  return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+}
 
     const { id } = await context.params;
     const file = await prisma.candidateFile.findUnique({

@@ -19,7 +19,12 @@ type CompleteRequest = {
 
 export async function POST(request: Request) {
   const auth = await requireApiPermission("files:write");
-  if (!auth.ok) return auth.response;
+  if (!auth.ok) {
+  return NextResponse.json(
+    { message: "Unauthorized" },
+    { status: 401 }
+  );
+}
 
   const payload = (await request.json()) as CompleteRequest;
   if (!payload.batchId) return NextResponse.json({ message: "Missing upload batch ID." }, { status: 400 });

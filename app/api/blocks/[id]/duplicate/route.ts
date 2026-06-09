@@ -18,7 +18,7 @@ export async function POST(_request: Request, context: RouteContext) {
       }
     });
     const sourceVersion =
-      sourceBlock.versions.find((version) => version.id === sourceBlock.currentVersionId) ?? sourceBlock.versions[0];
+  sourceBlock.versions.find((version: { id: string }) => version.id === sourceBlock.currentVersionId) ?? sourceBlock.versions[0];
 
     if (!sourceVersion) {
       return NextResponse.json({ message: "This block does not have a version to duplicate." }, { status: 400 });

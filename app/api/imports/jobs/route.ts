@@ -5,7 +5,12 @@ import { parseCsv } from "@/lib/imports/csv";
 
 export async function POST(request: Request) {
   const auth = await requireApiPermission("imports:write");
-  if (!auth.ok) return auth.response;
+  if (!auth.ok) {
+  return NextResponse.json(
+    { message: "Unauthorized" },
+    { status: 401 }
+  );
+}
 
   const form = await request.formData();
   const file = form.get("file");

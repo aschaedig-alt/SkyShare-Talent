@@ -13,7 +13,12 @@ type PresignRequest = {
 
 export async function POST(request: Request) {
   const auth = await requireApiPermission("files:write");
-  if (!auth.ok) return auth.response;
+  if (!auth.ok) {
+  return NextResponse.json(
+    { message: "Unauthorized" },
+    { status: 401 }
+  );
+}
 
   const storage = getFileStorageAdapter();
   if (shouldRequirePrivateFileStorage() && !isPrivateFileStorageReady(storage)) {

@@ -13,7 +13,12 @@ function isFileLike(value: FormDataEntryValue): value is File {
 
 export async function POST(request: Request) {
   const auth = await requireApiPermission("files:write");
-  if (!auth.ok) return auth.response;
+  if (!auth.ok) {
+  return NextResponse.json(
+    { message: "Unauthorized" },
+    { status: 401 }
+  );
+}
 
   const formData = await request.formData();
   const files = formData.getAll("files").filter(isFileLike);
