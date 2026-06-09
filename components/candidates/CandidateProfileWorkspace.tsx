@@ -133,9 +133,6 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
 
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
-      <div className="rounded border-2 border-brand-gold bg-brand-gold/10 p-3 text-sm font-semibold text-brand-gold">
-        ✓ Edit Component Loaded - isEditing: {isEditing ? "YES" : "NO"}
-      </div>
       {error && (
         <div className="rounded border border-red-500/30 bg-red-50 p-3 text-sm text-red-700">
           {error}

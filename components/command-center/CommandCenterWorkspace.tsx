@@ -19,10 +19,6 @@ export function CommandCenterWorkspace({ data }: CommandCenterWorkspaceProps) {
   return (
     <div className="grid gap-4 px-5 py-5 lg:px-8 xl:grid-cols-[1fr_340px]">
       <main className="space-y-4">
-        <div className="rounded border-2 border-red-500 bg-red-100 p-4 text-sm font-bold text-red-700">
-          🚨 DEBUG BOX - If you see this, deployments are working! (Timestamp: {new Date().toLocaleTimeString()})
-        </div>
-
         <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
             Recruiting command center
