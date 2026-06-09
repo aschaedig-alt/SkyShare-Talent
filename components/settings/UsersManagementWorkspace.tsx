@@ -26,7 +26,7 @@ export function UsersManagementWorkspace({ users: initialUsers }: UsersManagemen
   const handleRoleChange = async (userId: string, newRole: string) => {
     setSaving(true);
     try {
-      const response = await fetch(`/api/admin/users/${userId}/role`, {
+      const response = await fetch(`/api/admin/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: newRole }),

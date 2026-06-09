@@ -2,6 +2,14 @@ export const roleNames = ["ADMIN", "RECRUITER", "HIRING_MANAGER", "VIEWER"] as c
 
 export type RoleName = (typeof roleNames)[number];
 
+/** Role hierarchy: lower number = higher privilege. Useful for "role >= RECRUITER" checks. */
+export const ROLE_RANK: Record<RoleName, number> = {
+  "ADMIN": 0,
+  "RECRUITER": 1,
+  "HIRING_MANAGER": 2,
+  "VIEWER": 3,
+};
+
 export type Permission =
   | "candidates:read"
   | "candidates:write"
@@ -69,4 +77,23 @@ export function hasPermission(role: RoleName, permission: Permission) {
 
 export function isRoleName(value: string | null | undefined): value is RoleName {
   return roleNames.includes(value as RoleName);
+}
+
+/** Check if user has at least this role seniority (e.g., isAdminOrAbove checks ADMIN). */
+export function isRoleAtLeast(
+  role: RoleName | null | undefined,
+  minimum: RoleName
+): boolean {
+  if (!role) return false;
+  return ROLE_RANK[role] <= ROLE_RANK[minimum];
+}
+
+/** Check if user is ADMIN. */
+export function isAdmin(role: RoleName | null | undefined): boolean {
+  return role === "ADMIN";
+}
+
+/** Check if user is ADMIN or RECRUITER. */
+export function isAdminOrRecruiter(role: RoleName | null | undefined): boolean {
+  return role === "ADMIN" || role === "RECRUITER";
 }

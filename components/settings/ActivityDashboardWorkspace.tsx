@@ -58,7 +58,9 @@ export function ActivityDashboardWorkspace({ activityData }: ActivityDashboardWo
         <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-4">
           <div className="text-xs font-bold uppercase tracking-[0.16em] text-brand-grey">Avg per Person</div>
           <div className="mt-2 text-3xl font-semibold text-brand-lea">
-            {(activityData.total / Object.keys(activityData.byUser).length).toFixed(1)}
+            {Object.keys(activityData.byUser).length > 0
+              ? (activityData.total / Object.keys(activityData.byUser).length).toFixed(1)
+              : "0"}
           </div>
         </div>
       </div>
@@ -66,29 +68,41 @@ export function ActivityDashboardWorkspace({ activityData }: ActivityDashboardWo
       <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
         <h2 className="text-lg font-semibold text-brand-lea">Activity Breakdown</h2>
         <div className="mt-4 space-y-2">
-          {activityTypes.map((type) => (
-            <div key={type} className="flex items-center justify-between rounded border border-brand-lea/10 bg-brand-cloudDancer/30 p-3">
-              <span className="font-medium text-brand-lea">{type}</span>
-              <span className="text-sm font-semibold text-brand-grey">{activityData.byType[type]} events</span>
+          {activityTypes.length > 0 ? (
+            activityTypes.map((type) => (
+              <div key={type} className="flex items-center justify-between rounded border border-brand-lea/10 bg-brand-cloudDancer/30 p-3">
+                <span className="font-medium text-brand-lea">{type}</span>
+                <span className="text-sm font-semibold text-brand-grey">{activityData.byType[type]} events</span>
+              </div>
+            ))
+          ) : (
+            <div className="flex items-center justify-center p-8">
+              <p className="text-brand-grey">No activity data yet</p>
             </div>
-          ))}
+          )}
         </div>
       </section>
 
       <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
         <h2 className="text-lg font-semibold text-brand-lea">Team Contribution</h2>
         <div className="mt-4 space-y-2">
-          {Object.entries(activityData.byUser)
-            .sort(([, a], [, b]) => b - a)
-            .slice(0, 10)
-            .map(([user, count]) => (
-              <div key={user} className="flex items-center justify-between rounded border border-brand-lea/10 bg-brand-cloudDancer/30 p-3">
-                <span className="font-medium text-brand-lea">{user}</span>
-                <span className="inline-block rounded bg-brand-gold/20 px-2 py-1 text-sm font-semibold text-brand-lea">
-                  {count} activities
-                </span>
-              </div>
-            ))}
+          {Object.keys(activityData.byUser).length > 0 ? (
+            Object.entries(activityData.byUser)
+              .sort(([, a], [, b]) => b - a)
+              .slice(0, 10)
+              .map(([user, count]) => (
+                <div key={user} className="flex items-center justify-between rounded border border-brand-lea/10 bg-brand-cloudDancer/30 p-3">
+                  <span className="font-medium text-brand-lea">{user}</span>
+                  <span className="inline-block rounded bg-brand-gold/20 px-2 py-1 text-sm font-semibold text-brand-lea">
+                    {count} activities
+                  </span>
+                </div>
+              ))
+          ) : (
+            <div className="flex items-center justify-center p-8">
+              <p className="text-brand-grey">No team members with activity yet</p>
+            </div>
+          )}
         </div>
       </section>
 
