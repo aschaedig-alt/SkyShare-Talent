@@ -109,10 +109,10 @@ export async function findDuplicateJobs(
       continue;
     }
 
-    // Check similarity
+    // Check similarity (60% threshold - catches variants like "Sr. Engineer" vs "Senior Engineer")
     const titleSimilarity = calculateSimilarity(sourceJob.title, job.title);
 
-    if (titleSimilarity >= 75) {
+    if (titleSimilarity >= 60) {
       const locationMatch = job.city === sourceJob.city && job.state === sourceJob.state;
       const reason = locationMatch
         ? `${titleSimilarity}% title similarity + same location`

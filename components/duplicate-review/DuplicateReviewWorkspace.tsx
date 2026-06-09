@@ -1,5 +1,6 @@
 import type { DuplicateReviewData } from "@/lib/data/duplicate-review";
 import { CandidateDuplicateScanCard } from "@/components/duplicate-review/CandidateDuplicateScanCard";
+import { JobDuplicateScanCard } from "@/components/duplicate-review/JobDuplicateScanCard";
 
 type DuplicateReviewWorkspaceProps = {
   data: DuplicateReviewData;
@@ -48,6 +49,8 @@ export function DuplicateReviewWorkspace({ data }: DuplicateReviewWorkspaceProps
       </section>
 
       <CandidateDuplicateScanCard />
+
+      <JobDuplicateScanCard />
 
       <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10">
         <div className="border-b border-brand-lea/10 px-4 py-3">
