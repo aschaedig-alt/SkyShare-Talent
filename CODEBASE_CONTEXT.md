@@ -152,12 +152,24 @@ npm run prod:check       # Check production readiness
 
 ---
 
-## 8. Known Issues & TODOs
+## 8. Git & Deployment Strategy
+
+### ⚠️ CRITICAL: Branch Configuration for Vercel
+- **Production branch:** `main` (configured in Vercel)
+- **Development branch:** `master` (local work)
+- **Deployment command:** `git push origin master:main` to deploy changes to production
+- **Important:** Always push to `main` for production - NOT to `master`!
+
+**History Note:** Initially this repo was on `master` branch, but Vercel is configured to watch the `main` branch. We discovered this issue when Phase 1 changes weren't deploying - the deployments were building but not reaching production. Fixed by force-pushing `master` to `main` and using that as the production branch going forward.
+
+---
+
+## 9. Known Issues & TODOs
 
 ### Active Blockers
 - ✅ None - Phase 1 fully deployed and working
 
-### Planned Features (Phase 4)
+### Planned Features (Phase 2+)
 - **Role-Based Access Control Enhancement**
   - User role management interface
   - Permission matrix UI for custom permissions
@@ -266,10 +278,11 @@ FILE_STORAGE_PROVIDER=s3
 
 ## Quick Reference
 
-**Master branch deployment:** GitHub → Vercel (auto-deploys on push)  
-**Database:** PostgreSQL (Neon) for both local and production - unified setup  
-**Build script:** `npm run build` (same for local and Vercel)  
-**Type checking:** Strict mode enabled, no `any` types allowed  
-**Testing:** Jest configured but tests minimal - focus on manual testing  
-**Deployment status:** ✅ Phase 1 complete and live at https://skyshare-talent.vercel.app  
-**Deployment workflow:** Changes → git push → GitHub → Vercel auto-redeploy
+**⚠️ PRODUCTION BRANCH:** Push to `main` (NOT master) for production deployments  
+- `main` branch → Vercel production (https://skyshare-talent.vercel.app)
+- Auto-deploys when commits pushed to `main`
+- Database: PostgreSQL (Neon) for both local and production - unified setup  
+- Build script: `npm run build` (same for local and Vercel)  
+- Type checking: Strict mode enabled, no `any` types allowed  
+- Testing: Jest configured but tests minimal - focus on manual testing  
+- **Deployment workflow:** Changes → `git push origin master:main` → Vercel auto-redeploy
