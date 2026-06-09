@@ -1,11 +1,19 @@
 "use client";
 
-import { User } from "@prisma/client";
 import { useState } from "react";
 import { VALID_ROLES, ROLE_PERMISSIONS } from "@/lib/auth/permissions";
 
+interface UserWithPermissions {
+  id: string;
+  name: string | null;
+  email: string | null;
+  role: string;
+  permissions: Array<{ id: string; userId: string; permission: string }>;
+  accounts: Array<{ id: string }>;
+}
+
 interface UsersManagementWorkspaceProps {
-  users: any[];
+  users: UserWithPermissions[];
 }
 
 export function UsersManagementWorkspace({ users: initialUsers }: UsersManagementWorkspaceProps) {
@@ -25,14 +33,14 @@ export function UsersManagementWorkspace({ users: initialUsers }: UsersManagemen
       });
 
       if (response.ok) {
-        const updated = await response.json();
+        await response.json();
         setUsers(users.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
         setMessage({ type: "success", text: "Role updated successfully" });
         setTimeout(() => setMessage(null), 3000);
       } else {
         setMessage({ type: "error", text: "Failed to update role" });
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: "error", text: "Error updating role" });
     } finally {
       setSaving(false);

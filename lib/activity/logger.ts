@@ -24,7 +24,7 @@ export interface ActivityLogPayload {
   description: string;
   entityType?: string;
   entityId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, string | number | boolean | null>;
 }
 
 export async function logActivity(payload: ActivityLogPayload) {
@@ -46,21 +46,24 @@ export async function logActivity(payload: ActivityLogPayload) {
   }
 }
 
-export async function getActivityStats(options?: {
+interface ActivityStatsOptions {
   userId?: string;
   activityType?: ActivityType;
   startDate?: Date;
   endDate?: Date;
   limit?: number;
-}) {
-  const where: any = {};
+}
+
+export async function getActivityStats(options?: ActivityStatsOptions) {
+  const where: Record<string, unknown> = {};
 
   if (options?.userId) where.userId = options.userId;
   if (options?.activityType) where.activityType = options.activityType;
   if (options?.startDate || options?.endDate) {
-    where.createdAt = {};
-    if (options.startDate) where.createdAt.gte = options.startDate;
-    if (options.endDate) where.createdAt.lte = options.endDate;
+    where.createdAt = {
+      ...(options?.startDate && { gte: options.startDate }),
+      ...(options?.endDate && { lte: options.endDate }),
+    };
   }
 
   const logs = await prisma.activityLog.findMany({
@@ -90,20 +93,23 @@ export async function getUserActivitySummary(userId: string, days: number = 30) 
   });
 
   // Count by activity type
-  const summary = {
-    total: activities.length,
-    byType: {} as Record<string, number>,
-    byDate: {} as Record<string, number>,
-  };
+  const byType: Record<string, number> = {};
+  const byDate: Record<string, number> = {};
 
   activities.forEach((activity) => {
     // Count by type
-    summary.byType[activity.activityType] = (summary.byType[activity.activityType] || 0) + 1;
+    byType[activity.activityType] = (byType[activity.activityType] || 0) + 1;
 
     // Count by date
     const dateKey = activity.createdAt.toISOString().split("T")[0];
-    summary.byDate[dateKey] = (summary.byDate[dateKey] || 0) + 1;
+    byDate[dateKey] = (byDate[dateKey] || 0) + 1;
   });
+
+  const summary = {
+    total: activities.length,
+    byType,
+    byDate,
+  };
 
   return summary;
 }

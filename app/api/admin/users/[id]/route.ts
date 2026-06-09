@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
-import { VALID_ROLES } from "@/lib/auth/permissions";
+import { VALID_ROLES, UserRole } from "@/lib/auth/permissions";
 import { logActivity } from "@/lib/activity/logger";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -11,11 +11,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   const { id } = await params;
-  const body = await request.json();
+  const body = await request.json() as { role?: string };
   const { role } = body;
 
   // Validate role
-  if (!role || !VALID_ROLES.includes(role as any)) {
+  if (!role || !VALID_ROLES.includes(role as UserRole)) {
     return NextResponse.json({ message: "Invalid role" }, { status: 400 });
   }
 
