@@ -35,7 +35,7 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ message: "Choose at least one job to apply this block to." }, { status: 400 });
     }
 
-    const jobIds = requestedJobs.map((job) => job.id);
+    const jobIds = requestedJobs.map((job: { id: string }) => job.id);
     const existingUsages = await prisma.jobBlockInstance.findMany({
       where: {
         jobPostId: { in: jobIds },
