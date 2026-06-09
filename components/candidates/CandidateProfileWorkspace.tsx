@@ -184,7 +184,8 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
             <button
               onClick={() => setIsEditing(!isEditing)}
               disabled={isSaving}
-              className="rounded bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50"
+              className="w-full rounded bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50"
+              title="Click to edit candidate details"
             >
               {isEditing ? "Cancel Edit" : "Edit Candidate"}
             </button>
