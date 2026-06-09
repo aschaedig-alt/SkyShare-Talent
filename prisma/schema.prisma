@@ -325,6 +325,7 @@ model Job {
   baseLocation          String?
   paySummary            String?
   scheduleSummary       String?
+  mergedIntoJobId       String?
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
 
@@ -333,12 +334,15 @@ model Job {
   pilotRequirements     PilotRequirement[]     @relation("JobToPilotRequirements")
   jobPosts              JobPost[]              @relation("RecruitingJobToJobPosts")
   importRows            ImportRow[]
+  mergedIntoJob         Job?                   @relation("JobMerges", fields: [mergedIntoJobId], references: [id], onDelete: SetNull)
+  mergedJobs            Job[]                  @relation("JobMerges")
 
   @@index([sourceJobId])
   @@index([jobReqId])
   @@index([normalizedTitle])
   @@index([status])
   @@index([isPilotRole])
+  @@index([mergedIntoJobId])
 }
 
 model PilotRequirement {
