@@ -7,11 +7,18 @@ import type { CalendarData } from "@/lib/data/calendar";
 type ScheduleInterviewFormProps = {
   candidates: CalendarData["candidates"];
   jobs: CalendarData["jobs"];
+  prefilledDate?: Date | null;
 };
 
 const statusOptions = ["SCHEDULED", "COMPLETED", "CANCELLED"];
 
-export function ScheduleInterviewForm({ candidates, jobs }: ScheduleInterviewFormProps) {
+// Convert a Date to datetime-local input value (local time, defaults to 9am)
+function toDateTimeLocal(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T09:00`;
+}
+
+export function ScheduleInterviewForm({ candidates, jobs, prefilledDate }: ScheduleInterviewFormProps) {
   const router = useRouter();
   const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -115,7 +122,14 @@ export function ScheduleInterviewForm({ candidates, jobs }: ScheduleInterviewFor
         <div className="grid gap-3 md:grid-cols-2">
           <label className="grid gap-1 text-xs font-semibold text-brand-lea">
             Start date/time
-            <input name="startDateTime" required type="datetime-local" className="rounded border border-brand-lea/20 px-3 py-2 text-sm" />
+            <input
+              name="startDateTime"
+              required
+              type="datetime-local"
+              defaultValue={prefilledDate ? toDateTimeLocal(prefilledDate) : undefined}
+              key={prefilledDate?.toISOString() ?? "no-date"}
+              className="rounded border border-brand-lea/20 px-3 py-2 text-sm"
+            />
           </label>
           <label className="grid gap-1 text-xs font-semibold text-brand-lea">
             Duration
