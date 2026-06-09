@@ -137,6 +137,117 @@ export async function findDuplicateJobs(
   return { exact, similar };
 }
 
+export interface DuplicateCluster {
+  key: string;
+  title: string;
+  matchType: "exact" | "similar";
+  jobs: Array<{
+    id: string;
+    title: string;
+    city?: string;
+    state?: string;
+    department?: string;
+    status: string;
+    applications: number;
+    interviews: number;
+  }>;
+}
+
+/**
+ * Scan ALL jobs and group them into duplicate clusters.
+ * - Exact clusters: jobs sharing an identical (case-insensitive, trimmed) title
+ * - Similar clusters: remaining jobs grouped by >= threshold title similarity
+ * Only clusters with 2+ jobs are returned.
+ */
+export async function findAllDuplicateClusters(
+  similarityThreshold: number = 60
+): Promise<DuplicateCluster[]> {
+  const jobs = await prisma.job.findMany({
+    where: { mergedIntoJobId: null },
+    select: {
+      id: true,
+      title: true,
+      city: true,
+      state: true,
+      department: true,
+      status: true,
+      _count: { select: { applications: true, interviews: true } },
+    },
+    orderBy: { title: "asc" },
+  });
+
+  const mapJob = (j: (typeof jobs)[number]) => ({
+    id: j.id,
+    title: j.title,
+    city: j.city || undefined,
+    state: j.state || undefined,
+    department: j.department || undefined,
+    status: j.status,
+    applications: j._count.applications,
+    interviews: j._count.interviews,
+  });
+
+  const clusters: DuplicateCluster[] = [];
+  const usedJobIds = new Set<string>();
+
+  // 1. Exact-title clusters
+  const exactGroups = new Map<string, typeof jobs>();
+  for (const job of jobs) {
+    const key = job.title.trim().toLowerCase();
+    const group = exactGroups.get(key) ?? [];
+    group.push(job);
+    exactGroups.set(key, group);
+  }
+
+  for (const [key, group] of exactGroups) {
+    if (group.length > 1) {
+      group.forEach((j) => usedJobIds.add(j.id));
+      clusters.push({
+        key: `exact:${key}`,
+        title: group[0].title,
+        matchType: "exact",
+        jobs: group.map(mapJob),
+      });
+    }
+  }
+
+  // 2. Similar-title clusters (only among jobs not already in an exact cluster)
+  const remaining = jobs.filter((j) => !usedJobIds.has(j.id));
+  for (let i = 0; i < remaining.length; i += 1) {
+    const seed = remaining[i];
+    if (usedJobIds.has(seed.id)) continue;
+
+    const matches = [seed];
+    usedJobIds.add(seed.id);
+
+    for (let k = i + 1; k < remaining.length; k += 1) {
+      const candidate = remaining[k];
+      if (usedJobIds.has(candidate.id)) continue;
+      if (calculateSimilarity(seed.title, candidate.title) >= similarityThreshold) {
+        matches.push(candidate);
+        usedJobIds.add(candidate.id);
+      }
+    }
+
+    if (matches.length > 1) {
+      clusters.push({
+        key: `similar:${seed.id}`,
+        title: seed.title,
+        matchType: "similar",
+        jobs: matches.map(mapJob),
+      });
+    }
+  }
+
+  // Sort: exact first, then by cluster size descending
+  clusters.sort((a, b) => {
+    if (a.matchType !== b.matchType) return a.matchType === "exact" ? -1 : 1;
+    return b.jobs.length - a.jobs.length;
+  });
+
+  return clusters;
+}
+
 /**
  * Get detailed comparison of two jobs
  */

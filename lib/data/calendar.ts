@@ -1,5 +1,14 @@
 import { prisma } from "@/lib/prisma";
 
+export type CalendarCandidate = {
+  id: string;
+  displayName: string;
+  currentTitle: string | null;
+  email: string | null;
+  phone: string | null;
+  appliedJobs: Array<{ id: string; title: string }>;
+};
+
 export type CalendarData = {
   stats: {
     scheduled: number;
@@ -7,11 +16,7 @@ export type CalendarData = {
     thisWeek: number;
     candidates: number;
   };
-  candidates: Array<{
-    id: string;
-    displayName: string;
-    currentTitle: string | null;
-  }>;
+  candidates: CalendarCandidate[];
   jobs: Array<{
     id: string;
     title: string;
@@ -32,6 +37,8 @@ export type CalendarData = {
       id: string;
       displayName: string;
       currentTitle: string | null;
+      email: string | null;
+      phone: string | null;
     };
     job: {
       id: string;
@@ -53,14 +60,16 @@ export async function getCalendarData(): Promise<CalendarData> {
 
   const [interviews, candidates, jobs, scheduled, completed, thisWeek] = await Promise.all([
     prisma.interview.findMany({
-      take: 100,
+      take: 200,
       orderBy: { startDateTime: "asc" },
       include: {
         candidate: {
           select: {
             id: true,
             displayName: true,
-            currentTitle: true
+            currentTitle: true,
+            primaryEmail: true,
+            primaryPhone: true
           }
         },
         job: {
@@ -73,16 +82,25 @@ export async function getCalendarData(): Promise<CalendarData> {
       }
     }),
     prisma.candidate.findMany({
-      take: 200,
+      take: 500,
       orderBy: { displayName: "asc" },
       select: {
         id: true,
         displayName: true,
-        currentTitle: true
+        currentTitle: true,
+        primaryEmail: true,
+        primaryPhone: true,
+        applications: {
+          where: { jobId: { not: null } },
+          select: {
+            job: { select: { id: true, title: true } }
+          }
+        }
       }
     }),
     prisma.job.findMany({
-      take: 200,
+      take: 300,
+      where: { mergedIntoJobId: null },
       orderBy: [{ isPilotRole: "desc" }, { title: "asc" }],
       select: {
         id: true,
@@ -110,7 +128,24 @@ export async function getCalendarData(): Promise<CalendarData> {
       thisWeek,
       candidates: candidates.length
     },
-    candidates,
+    candidates: candidates.map((candidate) => {
+      // Dedupe applied jobs
+      const jobMap = new Map<string, { id: string; title: string }>();
+      for (const app of candidate.applications) {
+        if (app.job) {
+          jobMap.set(app.job.id, app.job);
+        }
+      }
+
+      return {
+        id: candidate.id,
+        displayName: candidate.displayName,
+        currentTitle: candidate.currentTitle,
+        email: candidate.primaryEmail,
+        phone: candidate.primaryPhone,
+        appliedJobs: Array.from(jobMap.values())
+      };
+    }),
     jobs,
     interviews: interviews.map((interview) => ({
       id: interview.id,
@@ -123,7 +158,13 @@ export async function getCalendarData(): Promise<CalendarData> {
       meetingUrl: interview.meetingUrl,
       status: interview.status,
       notes: interview.notes,
-      candidate: interview.candidate,
+      candidate: {
+        id: interview.candidate.id,
+        displayName: interview.candidate.displayName,
+        currentTitle: interview.candidate.currentTitle,
+        email: interview.candidate.primaryEmail,
+        phone: interview.candidate.primaryPhone
+      },
       job: interview.job
     }))
   };
