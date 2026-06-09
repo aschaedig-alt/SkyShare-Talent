@@ -1,45 +1,22 @@
 import "dotenv/config";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/client/client";
-import { schemaStatements } from "./schema-sql";
 import { masterJobCatalog, type MasterJobCatalogEntry } from "../lib/seed/master-job-catalog";
 
-const adapter = new PrismaBetterSqlite3(
-  {
-    url: process.env.DATABASE_URL ?? "file:./prisma/dev.db"
-  },
-  {
-    timestampFormat: "unixepoch-ms"
-  }
-);
+const databaseUrl = process.env.DATABASE_URL;
 
-const prisma = new PrismaClient({ adapter });
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is not set");
+}
+
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({
+    connectionString: databaseUrl,
+  }),
+});
 
 function normalize(value: string | null | undefined) {
   return (value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-async function ensureSchema() {
-  for (const statement of schemaStatements) {
-    await prisma.$executeRawUnsafe(statement);
-  }
-
-  const blockColumns = (await prisma.$queryRawUnsafe<Array<{ name: string }>>(
-    `PRAGMA table_info("ContentBlock")`
-  )).map((column) => column.name);
-
-  if (!blockColumns.includes("placement")) {
-    await prisma.$executeRawUnsafe(`ALTER TABLE "ContentBlock" ADD COLUMN "placement" TEXT NOT NULL DEFAULT 'OPTIONAL'`);
-    await prisma.$executeRawUnsafe(`
-      UPDATE "ContentBlock"
-      SET "placement" = CASE
-        WHEN "category" IN ('ABOUT', 'VALUES', 'CTA') THEN 'REQUIRED'
-        WHEN "scope" = 'DEPARTMENT' THEN 'DEPARTMENT_SPECIFIC'
-        WHEN "scope" = 'ROLE' THEN 'ROLE_SPECIFIC'
-        ELSE 'OPTIONAL'
-      END
-    `);
-  }
 }
 
 function blocksForEntry(entry: MasterJobCatalogEntry) {
@@ -78,8 +55,6 @@ function blocksForEntry(entry: MasterJobCatalogEntry) {
 }
 
 async function importMasterJobs() {
-  await ensureSchema();
-
   const [existingJobs, blocks] = await Promise.all([
     prisma.jobPost.findMany({ select: { title: true } }),
     prisma.contentBlock.findMany({ include: { versions: true } })

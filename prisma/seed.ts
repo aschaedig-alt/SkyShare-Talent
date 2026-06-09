@@ -1,8 +1,13 @@
 import "dotenv/config";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/client/client";
-import { schemaStatements } from "./schema-sql";
 import { masterJobCatalog, type MasterJobCatalogEntry } from "../lib/seed/master-job-catalog";
+
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is not set");
+}
 
 const JobStatus = {
   DRAFT: "DRAFT",
@@ -46,16 +51,11 @@ const BlockInstanceMode = {
   FORKED_CUSTOM: "FORKED_CUSTOM"
 } as const;
 
-const adapter = new PrismaBetterSqlite3(
-  {
-    url: process.env.DATABASE_URL ?? "file:./prisma/dev.db"
-  },
-  {
-    timestampFormat: "unixepoch-ms"
-  }
-);
-
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({
+    connectionString: databaseUrl,
+  }),
+});
 
 type BlockSeed = {
   name: string;
@@ -698,51 +698,6 @@ async function createBlock(seed: BlockSeed) {
   });
 }
 
-export async function ensureSchema() {
-  for (const statement of schemaStatements) {
-    await prisma.$executeRawUnsafe(statement);
-  }
-
-  const columns = (await prisma.$queryRawUnsafe<Array<{ name: string }>>(
-    `PRAGMA table_info("ContentBlockVersion")`
-  )).map((column) => column.name);
-
-  const blockColumns = (await prisma.$queryRawUnsafe<Array<{ name: string }>>(
-    `PRAGMA table_info("ContentBlock")`
-  )).map((column) => column.name);
-
-  const addColumn = async (table: string, tableColumns: string[], name: string, definition: string) => {
-    if (!tableColumns.includes(name)) {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "${table}" ADD COLUMN ${definition}`);
-      return true;
-    }
-    return false;
-  };
-
-  await addColumn("ContentBlockVersion", columns, "bodyFormat", `"bodyFormat" TEXT NOT NULL DEFAULT 'BULLET_LIST'`);
-  await addColumn("ContentBlockVersion", columns, "textWeight", `"textWeight" TEXT NOT NULL DEFAULT 'NORMAL'`);
-  await addColumn("ContentBlockVersion", columns, "textColor", `"textColor" TEXT NOT NULL DEFAULT 'BLACK'`);
-  await addColumn("ContentBlock", blockColumns, "archivedAt", `"archivedAt" DATETIME`);
-  const addedPlacement = await addColumn(
-    "ContentBlock",
-    blockColumns,
-    "placement",
-    `"placement" TEXT NOT NULL DEFAULT 'OPTIONAL'`
-  );
-
-  if (addedPlacement) {
-    await prisma.$executeRawUnsafe(`
-      UPDATE "ContentBlock"
-      SET "placement" = CASE
-        WHEN "category" IN ('ABOUT', 'VALUES', 'CTA') THEN 'REQUIRED'
-        WHEN "scope" = 'DEPARTMENT' THEN 'DEPARTMENT_SPECIFIC'
-        WHEN "scope" = 'ROLE' THEN 'ROLE_SPECIFIC'
-        ELSE 'OPTIONAL'
-      END
-    `);
-  }
-}
-
 export async function countSeededJobs() {
   return prisma.jobPost.count();
 }
@@ -752,8 +707,6 @@ export async function disconnectSeedPrisma() {
 }
 
 export async function resetAndSeed() {
-  await ensureSchema();
-
   await prisma.jobBlockInstance.deleteMany();
   await prisma.paycomConfig.deleteMany();
   await prisma.jobPost.deleteMany();
