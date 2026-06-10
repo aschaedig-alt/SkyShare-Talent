@@ -625,3 +625,17 @@ model ActivityLog {
   @@index([createdAt])
   @@index([entityType, entityId])
 }
+
+// Records that two jobs have been reviewed and confirmed NOT to be duplicates.
+// jobIdA/jobIdB are stored sorted (jobIdA < jobIdB) so each pair is unique.
+model JobDuplicateDismissal {
+  id        String   @id @default(cuid())
+  jobIdA    String
+  jobIdB    String
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  @@unique([jobIdA, jobIdB])
+  @@index([jobIdA])
+  @@index([jobIdB])
+}

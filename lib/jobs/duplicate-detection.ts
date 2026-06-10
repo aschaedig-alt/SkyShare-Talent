@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/prisma";
 
+/** Normalized, order-independent key for a pair of job IDs. */
+export function pairKey(a: string, b: string): string {
+  return a < b ? `${a}|${b}` : `${b}|${a}`;
+}
+
 /**
  * Levenshtein distance - measures how different two strings are
  * Lower score = more similar
@@ -223,6 +228,33 @@ export async function findAllDuplicateClusters(
     rawMinimumRequirements: j.rawMinimumRequirements || undefined,
   });
 
+  // Load dismissed pairs ("not duplicates" decisions) so we can filter them out.
+  const dismissals = await prisma.jobDuplicateDismissal.findMany({
+    select: { jobIdA: true, jobIdB: true },
+  });
+  const dismissedPairs = new Set<string>();
+  for (const d of dismissals) {
+    dismissedPairs.add(pairKey(d.jobIdA, d.jobIdB));
+  }
+
+  // Remove jobs that no longer have any non-dismissed partner in the group.
+  // Runs to a fixpoint because removing one job can orphan another.
+  function prune(group: typeof jobs): typeof jobs {
+    let current = [...group];
+    let changed = true;
+    while (changed && current.length > 1) {
+      changed = false;
+      current = current.filter((j) => {
+        const hasPartner = current.some(
+          (other) => other.id !== j.id && !dismissedPairs.has(pairKey(j.id, other.id))
+        );
+        if (!hasPartner) changed = true;
+        return hasPartner;
+      });
+    }
+    return current;
+  }
+
   const clusters: DuplicateCluster[] = [];
   const usedJobIds = new Set<string>();
 
@@ -238,12 +270,15 @@ export async function findAllDuplicateClusters(
   for (const [key, group] of exactGroups) {
     if (group.length > 1) {
       group.forEach((j) => usedJobIds.add(j.id));
-      clusters.push({
-        key: `exact:${key}`,
-        title: group[0].title,
-        matchType: "exact",
-        jobs: group.map(mapJob),
-      });
+      const pruned = prune(group);
+      if (pruned.length > 1) {
+        clusters.push({
+          key: `exact:${key}`,
+          title: pruned[0].title,
+          matchType: "exact",
+          jobs: pruned.map(mapJob),
+        });
+      }
     }
   }
 
@@ -266,12 +301,15 @@ export async function findAllDuplicateClusters(
     }
 
     if (matches.length > 1) {
-      clusters.push({
-        key: `similar:${seed.id}`,
-        title: seed.title,
-        matchType: "similar",
-        jobs: matches.map(mapJob),
-      });
+      const pruned = prune(matches);
+      if (pruned.length > 1) {
+        clusters.push({
+          key: `similar:${pruned[0].id}`,
+          title: pruned[0].title,
+          matchType: "similar",
+          jobs: pruned.map(mapJob),
+        });
+      }
     }
   }
 

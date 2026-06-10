@@ -45,6 +45,13 @@ Filling out the platform.
 - [x] 4.2 User Access Controls / RBAC (Jun 9) — 4 roles, permission matrix
 - [x] 4.3 User Statistics Dashboard (Jun 9) — activity logging + team analytics
 
+## Job Builder / Publishing
+Restoring the publishing toolset after the move to Vercel.
+- [x] Job Builder data restored (Jun 10) — migrated 79 jobs, 16 blocks, 660 instances, templates from local dev.db to Postgres
+- [x] Content Blocks, Sandbox, Final Review live (Jun 10)
+- [ ] Approvals page — build out (currently placeholder)
+- [ ] Changes / version history page — build out (currently placeholder)
+
 ## Platform & Infrastructure
 Behind-the-scenes work that keeps everything running.
 - [x] Google OAuth login fixed (Jun 9) — env vars via Vercel CLI
