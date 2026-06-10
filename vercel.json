@@ -1,4 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm run build:hosted"
+  "buildCommand": "npm run build:hosted",
+  "crons": [
+    {
+      "path": "/api/cron/calendar-sync",
+      "schedule": "*/15 * * * *"
+    }
+  ]
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
 import { interviewCreateSchema } from "@/lib/validation/interview";
+import { pushInterviewToGoogle } from "@/lib/google/interview-sync";
 
 export async function POST(request: Request) {
   try {
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
         candidateId: payload.candidateId,
         jobId: payload.jobId,
         title: payload.title,
+        interviewType: payload.interviewType,
         startDateTime: payload.startDate,
         endDateTime: payload.endDate,
         timezone: payload.timezone,
@@ -70,6 +72,9 @@ export async function POST(request: Request) {
         })
       }
     });
+
+    // Push to Google Calendar (no-op if not configured; won't block response on failure)
+    await pushInterviewToGoogle(interview.id);
 
     return NextResponse.json({
       ok: true,

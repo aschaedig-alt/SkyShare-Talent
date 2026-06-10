@@ -477,6 +477,7 @@ model Interview {
   candidateId          String
   jobId                String?
   title                String
+  interviewType        String     @default("RECRUITER_SCREEN")
   startDateTime        DateTime
   endDateTime          DateTime?
   timezone             String?
@@ -509,6 +510,7 @@ model GoogleCalendarConnection {
   syncDirection      String   @default("LOCAL_ONLY")
   accessTokenHint    String?
   refreshTokenStored Boolean  @default(false)
+  syncToken          String?
   lastSyncedAt       DateTime?
   lastSyncStatus     String?
   lastSyncError      String?

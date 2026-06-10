@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { interviewUpdateSchema } from "@/lib/validation/interview";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { logActivity } from "@/lib/activity/logger";
+import { pushInterviewToGoogle, removeInterviewFromGoogle } from "@/lib/google/interview-sync";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const authResult = await requireApiPermission("calendar:write");
@@ -38,6 +39,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       data: {
         ...(payload.jobId !== undefined && { jobId: payload.jobId }),
         ...(payload.title !== undefined && { title: payload.title }),
+        ...(payload.interviewType !== undefined && { interviewType: payload.interviewType }),
         ...(payload.startDate !== undefined && { startDateTime: payload.startDate }),
         ...(payload.endDate !== undefined && { endDateTime: payload.endDate }),
         ...(payload.timezone !== undefined && { timezone: payload.timezone }),
@@ -64,6 +66,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       entityType: "Interview",
       entityId: interview.id
     });
+
+    // Sync change to Google Calendar
+    await pushInterviewToGoogle(interview.id);
 
     return NextResponse.json({
       ok: true,
@@ -101,6 +106,9 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     if (!existing) {
       return NextResponse.json({ message: "Interview not found." }, { status: 404 });
     }
+
+    // Remove from Google Calendar before deleting locally
+    await removeInterviewFromGoogle(existing.googleEventId);
 
     await prisma.interview.delete({ where: { id } });
 

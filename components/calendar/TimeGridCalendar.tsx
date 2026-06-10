@@ -5,6 +5,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { clsx } from "clsx";
 import type { CalendarData } from "@/lib/data/calendar";
 import { formatTime } from "@/lib/calendar/format";
+import { interviewTypeMeta } from "@/lib/calendar/interview-types";
+import { StageLegend } from "@/components/calendar/StageLegend";
 
 type Interview = CalendarData["interviews"][number];
 
@@ -27,17 +29,13 @@ const START_HOUR = 7;
 const END_HOUR = 20;
 const HOUR_HEIGHT = 56; // px per hour
 
-function statusColor(status: string) {
-  switch (status) {
-    case "SCHEDULED":
-      return "bg-blue-500/90 text-white hover:bg-blue-600 border-blue-600";
-    case "COMPLETED":
-      return "bg-emerald-500/90 text-white hover:bg-emerald-600 border-emerald-600";
-    case "CANCELLED":
-      return "bg-slate-400/80 text-white hover:bg-slate-500 border-slate-500 line-through";
-    default:
-      return "bg-brand-gold text-brand-black hover:bg-brand-gold/90 border-brand-gold";
+function blockClasses(interview: Interview) {
+  const meta = interviewTypeMeta(interview.interviewType);
+  if (interview.status === "CANCELLED") {
+    return "bg-slate-300 text-slate-600 hover:bg-slate-400 border-slate-400 line-through";
   }
+  const completed = interview.status === "COMPLETED" ? "opacity-60" : "";
+  return `${meta.chip} border-black/10 ${completed}`;
 }
 
 function startOfWeek(date: Date): Date {
@@ -254,7 +252,7 @@ export function TimeGridCalendar({ interviews, mode, onSlotClick, onInterviewCli
                     style={blockStyle(interview)}
                     className={clsx(
                       "absolute left-0.5 right-0.5 cursor-pointer overflow-hidden rounded-md border px-1.5 py-1 text-left text-[10px] shadow-sm transition",
-                      statusColor(interview.status),
+                      blockClasses(interview),
                       draggingId === interview.id && "opacity-40"
                     )}
                   >
@@ -269,19 +267,9 @@ export function TimeGridCalendar({ interviews, mode, onSlotClick, onInterviewCli
         </div>
       </div>
 
-      {/* Legend + drag hint */}
+      {/* Stage legend + drag hint */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="flex items-center gap-1">
-            <span className="h-3 w-3 rounded bg-blue-500" /> Scheduled
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="h-3 w-3 rounded bg-emerald-500" /> Completed
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="h-3 w-3 rounded bg-slate-400" /> Cancelled
-          </span>
-        </div>
+        <StageLegend />
         <span className="hidden italic text-brand-grey/70 sm:inline">Drag an interview to another time slot to reschedule</span>
       </div>
     </section>

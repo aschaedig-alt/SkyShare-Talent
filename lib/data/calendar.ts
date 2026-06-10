@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { isGoogleCalendarConfigured } from "@/lib/google/calendar";
 
 export type CalendarCandidate = {
   id: string;
@@ -22,9 +23,17 @@ export type CalendarData = {
     title: string;
     status: string;
   }>;
+  sync: {
+    configured: boolean;
+    direction: string | null;
+    lastSyncedAt: string | null;
+    lastSyncStatus: string | null;
+    lastSyncError: string | null;
+  };
   interviews: Array<{
     id: string;
     title: string;
+    interviewType: string;
     startDateTime: string;
     endDateTime: string | null;
     timezone: string | null;
@@ -33,6 +42,8 @@ export type CalendarData = {
     meetingUrl: string | null;
     status: string;
     notes: string | null;
+    googleEventId: string | null;
+    syncStatus: string | null;
     candidate: {
       id: string;
       displayName: string;
@@ -58,7 +69,7 @@ export async function getCalendarData(): Promise<CalendarData> {
   const now = new Date();
   const weekEnd = addDays(now, 7);
 
-  const [interviews, candidates, jobs, scheduled, completed, thisWeek] = await Promise.all([
+  const [interviews, candidates, jobs, scheduled, completed, thisWeek, connection] = await Promise.all([
     prisma.interview.findMany({
       take: 200,
       orderBy: { startDateTime: "asc" },
@@ -118,7 +129,8 @@ export async function getCalendarData(): Promise<CalendarData> {
           lte: weekEnd
         }
       }
-    })
+    }),
+    prisma.googleCalendarConnection.findFirst()
   ]);
 
   return {
@@ -147,9 +159,17 @@ export async function getCalendarData(): Promise<CalendarData> {
       };
     }),
     jobs,
+    sync: {
+      configured: isGoogleCalendarConfigured(),
+      direction: connection?.syncDirection ?? null,
+      lastSyncedAt: connection?.lastSyncedAt?.toISOString() ?? null,
+      lastSyncStatus: connection?.lastSyncStatus ?? null,
+      lastSyncError: connection?.lastSyncError ?? null
+    },
     interviews: interviews.map((interview) => ({
       id: interview.id,
       title: interview.title,
+      interviewType: interview.interviewType,
       startDateTime: interview.startDateTime.toISOString(),
       endDateTime: interview.endDateTime?.toISOString() ?? null,
       timezone: interview.timezone,
@@ -158,6 +178,8 @@ export async function getCalendarData(): Promise<CalendarData> {
       meetingUrl: interview.meetingUrl,
       status: interview.status,
       notes: interview.notes,
+      googleEventId: interview.googleEventId,
+      syncStatus: interview.syncStatus,
       candidate: {
         id: interview.candidate.id,
         displayName: interview.candidate.displayName,

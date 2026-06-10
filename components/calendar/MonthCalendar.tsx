@@ -5,6 +5,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { clsx } from "clsx";
 import type { CalendarData } from "@/lib/data/calendar";
 import { formatTime } from "@/lib/calendar/format";
+import { interviewTypeMeta } from "@/lib/calendar/interview-types";
+import { StageLegend } from "@/components/calendar/StageLegend";
 
 type Interview = CalendarData["interviews"][number];
 
@@ -21,17 +23,13 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December"
 ];
 
-function chipColor(status: string) {
-  switch (status) {
-    case "SCHEDULED":
-      return "bg-blue-500 text-white hover:bg-blue-600";
-    case "COMPLETED":
-      return "bg-emerald-500 text-white hover:bg-emerald-600";
-    case "CANCELLED":
-      return "bg-slate-400 text-white hover:bg-slate-500 line-through";
-    default:
-      return "bg-brand-gold text-brand-black hover:bg-brand-gold/90";
+function chipClasses(interview: Interview) {
+  const meta = interviewTypeMeta(interview.interviewType);
+  if (interview.status === "CANCELLED") {
+    return "bg-slate-300 text-slate-600 hover:bg-slate-400 line-through";
   }
+  const completed = interview.status === "COMPLETED" ? "opacity-60" : "";
+  return `${meta.chip} ${completed}`;
 }
 
 export function MonthCalendar({ interviews, onDayClick, onInterviewClick, onReschedule }: MonthCalendarProps) {
@@ -179,7 +177,7 @@ export function MonthCalendar({ interviews, onDayClick, onInterviewClick, onResc
                     onClick={() => onInterviewClick?.(interview)}
                     className={clsx(
                       "block w-full cursor-pointer truncate rounded px-1.5 py-0.5 text-left text-[10px] font-medium shadow-sm transition",
-                      chipColor(interview.status),
+                      chipClasses(interview),
                       draggingId === interview.id && "opacity-40"
                     )}
                     title={`${formatTime(interview.startDateTime)} - ${interview.candidate.displayName}${interview.job ? ` (${interview.job.title})` : ""}`}
@@ -213,7 +211,7 @@ export function MonthCalendar({ interviews, onDayClick, onInterviewClick, onResc
                             setPopoverDay(null);
                             onInterviewClick?.(interview);
                           }}
-                          className={clsx("block w-full truncate rounded px-2 py-1 text-left text-[11px] font-medium", chipColor(interview.status))}
+                          className={clsx("block w-full truncate rounded px-2 py-1 text-left text-[11px] font-medium", chipClasses(interview))}
                         >
                           {formatTime(interview.startDateTime)} · {interview.candidate.displayName}
                         </button>
@@ -227,19 +225,9 @@ export function MonthCalendar({ interviews, onDayClick, onInterviewClick, onResc
         })}
       </div>
 
-      {/* Legend + drag hint */}
+      {/* Stage legend + drag hint */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="flex items-center gap-1">
-            <span className="h-3 w-3 rounded bg-blue-500" /> Scheduled
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="h-3 w-3 rounded bg-emerald-500" /> Completed
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="h-3 w-3 rounded bg-slate-400" /> Cancelled
-          </span>
-        </div>
+        <StageLegend />
         <span className="hidden italic text-brand-grey/70 sm:inline">Drag an interview to another day to reschedule</span>
       </div>
     </section>

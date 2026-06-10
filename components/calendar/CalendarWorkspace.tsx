@@ -11,7 +11,9 @@ import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import { TimeGridCalendar } from "@/components/calendar/TimeGridCalendar";
 import { EditInterviewModal } from "@/components/calendar/EditInterviewModal";
 import { UpcomingInterviews } from "@/components/calendar/UpcomingInterviews";
+import { GoogleSyncCard } from "@/components/calendar/GoogleSyncCard";
 import { formatDateTimeWithZone } from "@/lib/calendar/format";
+import { interviewTypeMeta } from "@/lib/calendar/interview-types";
 
 type CalendarWorkspaceProps = {
   data: CalendarData;
@@ -152,6 +154,7 @@ export function CalendarWorkspace({ data }: CalendarWorkspaceProps) {
         <div className="space-y-4" id="schedule-form">
           <UpcomingInterviews interviews={data.interviews} onInterviewClick={handleInterviewClick} />
           <ScheduleInterviewForm candidates={data.candidates} jobs={data.jobs} prefilledDate={prefilledDate} />
+          <GoogleSyncCard sync={data.sync} />
         </div>
 
         {/* Right column: Calendar views */}
@@ -235,9 +238,19 @@ export function CalendarWorkspace({ data }: CalendarWorkspaceProps) {
                               )}
                             </div>
                           </div>
-                          <span className={clsx("w-fit rounded-full px-2.5 py-1 text-[11px] font-semibold", statusBadgeColor(interview.status))}>
-                            {interview.status}
-                          </span>
+                          <div className="flex w-fit flex-col items-start gap-1.5 sm:items-end">
+                            <span className={clsx("rounded-full px-2.5 py-1 text-[11px] font-semibold text-white", interviewTypeMeta(interview.interviewType).chip)}>
+                              {interviewTypeMeta(interview.interviewType).label}
+                            </span>
+                            <span className={clsx("rounded-full px-2.5 py-1 text-[11px] font-semibold", statusBadgeColor(interview.status))}>
+                              {interview.status}
+                            </span>
+                            {interview.googleEventId && (
+                              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                                ✓ On Google
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="mt-4 grid gap-2 text-xs text-brand-grey md:grid-cols-3">
                           <div>

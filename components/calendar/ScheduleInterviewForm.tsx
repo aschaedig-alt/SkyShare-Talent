@@ -6,6 +6,7 @@ import { Mail, Phone, Briefcase } from "lucide-react";
 import type { CalendarData } from "@/lib/data/calendar";
 import { US_TIMEZONES, DEFAULT_TIMEZONE } from "@/lib/calendar/timezones";
 import { dateAtHour } from "@/lib/calendar/format";
+import { interviewTypes, INTERVIEW_TYPE_META, DEFAULT_INTERVIEW_TYPE } from "@/lib/calendar/interview-types";
 
 type ScheduleInterviewFormProps = {
   candidates: CalendarData["candidates"];
@@ -23,6 +24,7 @@ export function ScheduleInterviewForm({ candidates, jobs, prefilledDate }: Sched
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [jobId, setJobId] = useState("");
+  const [interviewType, setInterviewType] = useState<string>(DEFAULT_INTERVIEW_TYPE);
 
   const selectedCandidate = useMemo(
     () => candidates.find((c) => c.id === selectedCandidateId) ?? null,
@@ -57,6 +59,7 @@ export function ScheduleInterviewForm({ candidates, jobs, prefilledDate }: Sched
       candidateId: selectedCandidateId,
       jobId,
       title: String(formData.get("title") ?? ""),
+      interviewType,
       startDateTime: String(formData.get("startDateTime") ?? ""),
       durationMinutes: Number(formData.get("durationMinutes") ?? 60),
       timezone: String(formData.get("timezone") ?? DEFAULT_TIMEZONE),
@@ -88,6 +91,7 @@ export function ScheduleInterviewForm({ candidates, jobs, prefilledDate }: Sched
       setEmail("");
       setPhone("");
       setJobId("");
+      setInterviewType(DEFAULT_INTERVIEW_TYPE);
       router.refresh();
     } catch (error) {
       setStatus("error");
@@ -188,6 +192,32 @@ export function ScheduleInterviewForm({ candidates, jobs, prefilledDate }: Sched
             </optgroup>
           </select>
         </label>
+
+        {/* Interview stage picker (color-coded) */}
+        <div className="grid gap-1 text-xs font-semibold text-brand-lea">
+          Interview stage
+          <div className="flex flex-wrap gap-1.5">
+            {interviewTypes.map((type) => {
+              const meta = INTERVIEW_TYPE_META[type];
+              const active = interviewType === type;
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setInterviewType(type)}
+                  className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+                    active
+                      ? `${meta.chip} ring-2 ring-offset-1 ring-brand-lea/30`
+                      : "bg-brand-cloudDancer/50 text-brand-grey hover:bg-brand-cloudDancer"
+                  }`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${active ? "bg-white/80" : meta.dot}`} />
+                  {meta.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <div className="grid gap-3 md:grid-cols-2">
           <label className="grid gap-1 text-xs font-semibold text-brand-lea">
