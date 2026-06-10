@@ -1,4 +1,5 @@
 import { JobDuplicateClusters } from "@/components/jobs/JobDuplicateClusters";
+import { JobMergedHistory } from "@/components/jobs/JobMergedHistory";
 
 export function JobDuplicateScanCard() {
   return (
@@ -14,6 +15,8 @@ export function JobDuplicateScanCard() {
       </div>
 
       <JobDuplicateClusters />
+
+      <JobMergedHistory />
     </section>
   );
 }

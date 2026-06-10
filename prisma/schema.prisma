@@ -639,3 +639,23 @@ model JobDuplicateDismissal {
   @@index([jobIdA])
   @@index([jobIdB])
 }
+
+// Captures exactly what moved during a job merge so it can be precisely reversed.
+// applicationIds / interviewIds / jobPostIds are JSON arrays of the moved record IDs.
+model JobMergeRecord {
+  id             String    @id @default(cuid())
+  primaryJobId   String
+  secondaryJobId String
+  applicationIds String    @default("[]")
+  interviewIds   String    @default("[]")
+  jobPostIds     String    @default("[]")
+  previousStatus String?
+  mergedBy       String?
+  mergedAt       DateTime  @default(now())
+  undone         Boolean   @default(false)
+  undoneAt       DateTime?
+
+  @@index([secondaryJobId])
+  @@index([primaryJobId])
+  @@index([undone])
+}

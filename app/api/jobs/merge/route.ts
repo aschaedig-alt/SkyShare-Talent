@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     if (undo) {
       result = await undoMerge(secondaryJobId);
     } else {
-      result = await mergeJobs(primaryJobId, secondaryJobId);
+      result = await mergeJobs(primaryJobId, secondaryJobId, authResult.user.email ?? undefined);
     }
 
     if (!result.success) {
