@@ -123,6 +123,7 @@ function matchesSearch(job: RecruitingJobListItem, query: string) {
 export async function getRecruitingJobsData(query = "", selectedId?: string): Promise<RecruitingJobsData> {
   const [rows, total, open, pilot, withCandidates] = await Promise.all([
     prisma.job.findMany({
+      where: { mergedIntoJobId: null },
       orderBy: [{ isPilotRole: "desc" }, { department: "asc" }, { title: "asc" }],
       include: {
         _count: {
@@ -154,10 +155,10 @@ export async function getRecruitingJobsData(query = "", selectedId?: string): Pr
         }
       }
     }),
-    prisma.job.count(),
-    prisma.job.count({ where: { status: "OPEN" } }),
-    prisma.job.count({ where: { isPilotRole: true } }),
-    prisma.job.count({ where: { applications: { some: {} } } })
+    prisma.job.count({ where: { mergedIntoJobId: null } }),
+    prisma.job.count({ where: { mergedIntoJobId: null, status: "OPEN" } }),
+    prisma.job.count({ where: { mergedIntoJobId: null, isPilotRole: true } }),
+    prisma.job.count({ where: { mergedIntoJobId: null, applications: { some: {} } } })
   ]);
 
   const listItems = rows.map(toListItem);
