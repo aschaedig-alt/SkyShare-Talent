@@ -98,7 +98,8 @@ export function GoogleSyncCard({ sync }: GoogleSyncCardProps) {
           )}
 
           <p className="mt-2 text-[11px] text-brand-grey">
-            Auto-syncs every 15 minutes. Interviews appear on the shared calendar color-coded by stage.
+            Changes you make in the app sync to Google instantly. Use “Sync now” to pull changes made in Google back in
+            (also runs automatically once a day).
           </p>
         </>
       ) : (
