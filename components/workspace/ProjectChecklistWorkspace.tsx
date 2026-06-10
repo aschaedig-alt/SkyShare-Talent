@@ -1,106 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Check, Clock, AlertCircle } from "lucide-react";
+import { ChevronDown, Check, Clock, Circle } from "lucide-react";
 import { clsx } from "clsx";
+import { parseRoadmap, type ItemStatus } from "@/lib/roadmap/parse";
 
-interface ChecklistItem {
-  id: string;
-  label: string;
-  description?: string;
-  status: "completed" | "in-progress" | "upcoming";
-  completedDate?: string;
-}
+const roadmap = parseRoadmap();
 
-interface ChecklistSection {
-  phase: string;
-  title: string;
-  description: string;
-  status: "completed" | "in-progress" | "upcoming";
-  items: ChecklistItem[];
-}
-
-const sections: ChecklistSection[] = [
-  {
-    phase: "Phase 1",
-    title: "Critical Fixes",
-    description: "Essential bugs and missing features from prior session",
-    status: "completed",
-    items: [
-      { id: "p1-1", label: "Candidate CSV import reliability", status: "completed", completedDate: "Jun 8" },
-      { id: "p1-2", label: "Remove 'prisma-backed' UI text", status: "completed", completedDate: "Jun 8" },
-      { id: "p1-3", label: "Candidate inline editing", status: "completed", completedDate: "Jun 8" },
-    ]
-  },
-  {
-    phase: "Phase 4.2",
-    title: "User Access Controls (RBAC)",
-    description: "Role-based access with 4 roles and permission matrix",
-    status: "completed",
-    items: [
-      { id: "p42-1", label: "Define 4 roles: ADMIN, RECRUITER, HIRING_MANAGER, VIEWER", status: "completed", completedDate: "Jun 9" },
-      { id: "p42-2", label: "Create permission matrix system", status: "completed", completedDate: "Jun 9" },
-      { id: "p42-3", label: "Module access policies", status: "completed", completedDate: "Jun 9" },
-      { id: "p42-4", label: "Settings page (users management)", status: "completed", completedDate: "Jun 9" },
-      { id: "p42-5", label: "Change user roles API endpoint", status: "completed", completedDate: "Jun 9" },
-      { id: "p42-6", label: "Role hierarchy system (ROLE_RANK)", status: "completed", completedDate: "Jun 9" },
-      { id: "p42-7", label: "Fix new user default role to VIEWER", status: "completed", completedDate: "Jun 9" },
-    ]
-  },
-  {
-    phase: "Phase 4.3",
-    title: "User Statistics Dashboard",
-    description: "Activity tracking and team analytics",
-    status: "completed",
-    items: [
-      { id: "p43-1", label: "Activity logging system", status: "completed", completedDate: "Jun 9" },
-      { id: "p43-2", label: "Activity types (15 event types)", status: "completed", completedDate: "Jun 9" },
-      { id: "p43-3", label: "Activity dashboard page", status: "completed", completedDate: "Jun 9" },
-      { id: "p43-4", label: "Team contribution analytics", status: "completed", completedDate: "Jun 9" },
-      { id: "p43-5", label: "Recent activity feed with filters", status: "completed", completedDate: "Jun 9" },
-      { id: "p43-6", label: "Settings navigation tabs", status: "completed", completedDate: "Jun 9" },
-    ]
-  },
-  {
-    phase: "Bug Fixes",
-    title: "Critical Fixes (Jun 9)",
-    description: "Production issues resolved",
-    status: "completed",
-    items: [
-      { id: "bf-1", label: "Google OAuth environment variables", status: "completed", completedDate: "Jun 9", description: "All env vars were empty on Vercel—fixed with CLI" },
-      { id: "bf-2", label: "Settings pages serialization errors", status: "completed", completedDate: "Jun 9", description: "Date objects can't pass to client—converted to ISO strings" },
-      { id: "bf-3", label: "Database schema sync", status: "completed", completedDate: "Jun 9", description: "UserPermission/ActivityLog tables missing—ran prisma db push" },
-      { id: "bf-4", label: "API endpoint URL fix", status: "completed", completedDate: "Jun 9", description: "/api/admin/users/{id}/role → /api/admin/users/{id}" },
-      { id: "bf-5", label: "Activity dashboard empty state crashes", status: "completed", completedDate: "Jun 9", description: "Division by zero and missing null checks" },
-    ]
-  },
-  {
-    phase: "Phase 5",
-    title: "Data & Compliance",
-    description: "Database migrations, backups, audit logging",
-    status: "upcoming",
-    items: [
-      { id: "p5-1", label: "Database migration strategy (SQLite → PostgreSQL)", status: "upcoming" },
-      { id: "p5-2", label: "Backup and recovery procedures", status: "upcoming" },
-      { id: "p5-3", label: "Audit logging for compliance", status: "upcoming" },
-      { id: "p5-4", label: "Data export/download features", status: "upcoming" },
-    ]
-  },
-  {
-    phase: "Phase 6",
-    title: "Advanced Features",
-    description: "Performance, search, reporting",
-    status: "upcoming",
-    items: [
-      { id: "p6-1", label: "Advanced filtering & saved searches", status: "upcoming" },
-      { id: "p6-2", label: "Custom reporting dashboard", status: "upcoming" },
-      { id: "p6-3", label: "Bulk operations (edit, delete, export)", status: "upcoming" },
-      { id: "p6-4", label: "Performance optimization", status: "upcoming" },
-    ]
-  },
-];
-
-const StatusBadge = ({ status }: { status: "completed" | "in-progress" | "upcoming" }) => {
+const StatusBadge = ({ status }: { status: ItemStatus }) => {
   if (status === "completed") {
     return (
       <div className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1">
@@ -119,33 +26,26 @@ const StatusBadge = ({ status }: { status: "completed" | "in-progress" | "upcomi
   }
   return (
     <div className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1">
-      <AlertCircle className="h-3 w-3 text-slate-600" />
+      <Circle className="h-3 w-3 text-slate-500" />
       <span className="text-xs font-semibold text-slate-600">Upcoming</span>
     </div>
   );
 };
 
 export function ProjectChecklistWorkspace() {
+  // Expand everything that still needs attention; collapse finished sections.
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(sections.filter(s => s.status !== "upcoming").map(s => s.phase))
+    new Set(roadmap.sections.filter((s) => s.status !== "completed").map((s) => s.id))
   );
 
-  const toggleSection = (phase: string) => {
-    const newExpanded = new Set(expandedSections);
-    if (newExpanded.has(phase)) {
-      newExpanded.delete(phase);
-    } else {
-      newExpanded.add(phase);
-    }
-    setExpandedSections(newExpanded);
+  const toggleSection = (id: string) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
-
-  const totalItems = sections.reduce((sum, s) => sum + s.items.length, 0);
-  const completedItems = sections.reduce(
-    (sum, s) => sum + s.items.filter(i => i.status === "completed").length,
-    0
-  );
-  const progressPercent = Math.round((completedItems / totalItems) * 100);
 
   return (
     <div className="space-y-6">
@@ -157,74 +57,67 @@ export function ProjectChecklistWorkspace() {
             <h2 className="text-2xl font-semibold text-brand-lea">Development Roadmap</h2>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-bold text-brand-lea">{progressPercent}%</div>
-            <div className="text-xs text-brand-grey">{completedItems} of {totalItems} items</div>
+            <div className="text-3xl font-bold text-brand-lea">{roadmap.progressPercent}%</div>
+            <div className="text-xs text-brand-grey">
+              {roadmap.completedItems} of {roadmap.totalItems} items
+            </div>
           </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="h-2 rounded-full bg-brand-cloudDancer/30 overflow-hidden">
+        <div className="h-2 overflow-hidden rounded-full bg-brand-cloudDancer/30">
           <div
             className="h-full bg-emerald-500 transition-all duration-500"
-            style={{ width: `${progressPercent}%` }}
+            style={{ width: `${roadmap.progressPercent}%` }}
           />
         </div>
-
-        <p className="mt-3 text-sm text-brand-grey">
-          Last updated: June 9, 2026 • Google OAuth fixed • Settings pages working • RBAC & Activity dashboard complete
-        </p>
       </section>
 
       {/* Sections */}
       <div className="space-y-3">
-        {sections.map((section) => {
-          const isExpanded = expandedSections.has(section.phase);
-          const completedCount = section.items.filter(i => i.status === "completed").length;
-          const sectionPercent = Math.round((completedCount / section.items.length) * 100);
+        {roadmap.sections.map((section) => {
+          const isExpanded = expandedSections.has(section.id);
+          const completedCount = section.items.filter((i) => i.status === "completed").length;
+          const sectionPercent =
+            section.items.length === 0 ? 0 : Math.round((completedCount / section.items.length) * 100);
 
           return (
-            <section key={section.phase} className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10">
+            <section key={section.id} className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10">
               <button
-                onClick={() => toggleSection(section.phase)}
-                className="w-full px-5 py-4 hover:bg-brand-cloudDancer/10 transition flex items-center justify-between gap-4"
+                onClick={() => toggleSection(section.id)}
+                className="flex w-full items-center justify-between gap-4 px-5 py-4 transition hover:bg-brand-cloudDancer/10"
               >
                 <div className="flex-1 text-left">
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <h3 className="font-semibold text-brand-lea">{section.phase}: {section.title}</h3>
-                      <p className="mt-1 text-xs text-brand-grey">{section.description}</p>
-                    </div>
-                  </div>
+                  <h3 className="font-semibold text-brand-lea">{section.title}</h3>
+                  {section.description && <p className="mt-1 text-xs text-brand-grey">{section.description}</p>}
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <div className="text-right hidden sm:block">
+                  <div className="hidden text-right sm:block">
                     <div className="text-sm font-semibold text-brand-lea">{sectionPercent}%</div>
-                    <div className="text-xs text-brand-grey">{completedCount}/{section.items.length}</div>
+                    <div className="text-xs text-brand-grey">
+                      {completedCount}/{section.items.length}
+                    </div>
                   </div>
 
                   <StatusBadge status={section.status} />
 
                   <ChevronDown
-                    className={clsx(
-                      "h-5 w-5 text-brand-grey transition-transform",
-                      isExpanded && "rotate-180"
-                    )}
+                    className={clsx("h-5 w-5 text-brand-grey transition-transform", isExpanded && "rotate-180")}
                   />
                 </div>
               </button>
 
               {isExpanded && (
-                <div className="border-t border-brand-lea/10 px-5 py-4 space-y-2">
+                <div className="space-y-2 border-t border-brand-lea/10 px-5 py-4">
                   {section.items.map((item) => (
                     <div key={item.id} className="flex items-start gap-3 text-sm">
-                      <div className="flex-shrink-0 mt-0.5">
+                      <div className="mt-0.5 flex-shrink-0">
                         {item.status === "completed" ? (
                           <div className="flex h-5 w-5 items-center justify-center rounded bg-emerald-100">
                             <Check className="h-3 w-3 text-emerald-700" />
                           </div>
                         ) : item.status === "in-progress" ? (
-                          <div className="h-5 w-5 rounded border-2 border-amber-400 border-dashed" />
+                          <div className="h-5 w-5 rounded border-2 border-dashed border-amber-400" />
                         ) : (
                           <div className="h-5 w-5 rounded border-2 border-slate-300" />
                         )}
@@ -241,16 +134,15 @@ export function ProjectChecklistWorkspace() {
                           >
                             {item.label}
                           </span>
-                          {item.completedDate && (
-                            <span className="text-xs text-brand-grey">{item.completedDate}</span>
-                          )}
+                          {item.date && <span className="shrink-0 text-xs text-brand-grey">{item.date}</span>}
                         </div>
-                        {item.description && (
-                          <p className="mt-1 text-xs text-brand-grey">{item.description}</p>
-                        )}
+                        {item.note && <p className="mt-1 text-xs text-brand-grey">{item.note}</p>}
                       </div>
                     </div>
                   ))}
+                  {section.items.length === 0 && (
+                    <p className="text-xs italic text-brand-grey">No items yet.</p>
+                  )}
                 </div>
               )}
             </section>
@@ -258,15 +150,14 @@ export function ProjectChecklistWorkspace() {
         })}
       </div>
 
-      {/* Key Notes */}
-      <section className="rounded bg-brand-gold/10 border border-brand-gold/30 p-4">
-        <h3 className="font-semibold text-brand-lea mb-2">📋 Important Notes</h3>
-        <ul className="space-y-1 text-sm text-brand-grey">
-          <li>• <strong>Google Auth:</strong> Use Vercel CLI for env vars, not web UI</li>
-          <li>• <strong>Database:</strong> Run <code className="bg-white px-1 rounded text-xs">prisma db push</code> after schema changes</li>
-          <li>• <strong>Roles:</strong> New users default to VIEWER (read-only)—admins must grant access</li>
-          <li>• <strong>Issues:</strong> See FIXES_AND_LESSONS.md for troubleshooting tips</li>
-        </ul>
+      {/* Edit hint */}
+      <section className="rounded border border-brand-gold/30 bg-brand-gold/10 p-4 text-sm text-brand-grey">
+        <span className="font-semibold text-brand-lea">Want to add or change items?</span> Edit{" "}
+        <code className="rounded bg-white px-1 text-xs">lib/roadmap/roadmap.ts</code> — use{" "}
+        <code className="rounded bg-white px-1 text-xs">- [x]</code> for done,{" "}
+        <code className="rounded bg-white px-1 text-xs">- [~]</code> for in progress,{" "}
+        <code className="rounded bg-white px-1 text-xs">- [ ]</code> for to-do. Or just jot items in and ask Claude to
+        tidy it up.
       </section>
     </div>
   );
