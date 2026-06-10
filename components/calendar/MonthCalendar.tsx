@@ -12,7 +12,7 @@ interface MonthCalendarProps {
   interviews: Interview[];
   onDayClick?: (date: Date) => void;
   onInterviewClick?: (interview: Interview) => void;
-  onReschedule?: (interviewId: string, newDate: Date) => void;
+  onReschedule?: (interviewId: string, newDate: Date, options?: { keepOriginalTime?: boolean }) => void;
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -87,7 +87,7 @@ export function MonthCalendar({ interviews, onDayClick, onInterviewClick, onResc
   function handleDrop(day: number) {
     if (draggingId && onReschedule) {
       const newDate = new Date(year, month, day);
-      onReschedule(draggingId, newDate);
+      onReschedule(draggingId, newDate, { keepOriginalTime: true });
     }
     setDraggingId(null);
     setDragOverKey(null);

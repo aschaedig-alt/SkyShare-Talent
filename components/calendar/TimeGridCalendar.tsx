@@ -13,6 +13,7 @@ interface TimeGridCalendarProps {
   mode: "week" | "day";
   onSlotClick?: (date: Date) => void;
   onInterviewClick?: (interview: Interview) => void;
+  onReschedule?: (interviewId: string, newDate: Date, options?: { keepOriginalTime?: boolean }) => void;
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -46,12 +47,28 @@ function startOfWeek(date: Date): Date {
   return d;
 }
 
-export function TimeGridCalendar({ interviews, mode, onSlotClick, onInterviewClick }: TimeGridCalendarProps) {
+export function TimeGridCalendar({ interviews, mode, onSlotClick, onInterviewClick, onReschedule }: TimeGridCalendarProps) {
   const [anchorDate, setAnchorDate] = useState(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     return now;
   });
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverSlot, setDragOverSlot] = useState<string | null>(null);
+
+  function slotKey(day: Date, hour: number) {
+    return `${day.getFullYear()}-${day.getMonth()}-${day.getDate()}-${hour}`;
+  }
+
+  function handleSlotDrop(day: Date, hour: number) {
+    if (draggingId && onReschedule) {
+      const target = new Date(day);
+      target.setHours(hour, 0, 0, 0);
+      onReschedule(draggingId, target);
+    }
+    setDraggingId(null);
+    setDragOverSlot(null);
+  }
 
   // Days to render
   const days: Date[] = [];
@@ -193,36 +210,58 @@ export function TimeGridCalendar({ interviews, mode, onSlotClick, onInterviewCli
                 key={day.toISOString()}
                 className={clsx("relative flex-1 border-l border-brand-lea/10", isToday(day) && "bg-brand-sweet/5")}
               >
-                {/* Hour cells (clickable) */}
-                {hours.map((hour) => (
-                  <button
-                    key={hour}
-                    onClick={() => {
-                      const slot = new Date(day);
-                      slot.setHours(hour, 0, 0, 0);
-                      onSlotClick?.(slot);
-                    }}
-                    className="block w-full border-b border-brand-lea/5 transition hover:bg-brand-gold/5"
-                    style={{ height: `${HOUR_HEIGHT}px` }}
-                    aria-label={`Schedule at ${hour}:00`}
-                  />
-                ))}
+                {/* Hour cells (clickable + drop targets) */}
+                {hours.map((hour) => {
+                  const key = slotKey(day, hour);
+                  const isDragOver = dragOverSlot === key;
+                  return (
+                    <button
+                      key={hour}
+                      onClick={() => {
+                        const slot = new Date(day);
+                        slot.setHours(hour, 0, 0, 0);
+                        onSlotClick?.(slot);
+                      }}
+                      onDragOver={(e) => {
+                        if (draggingId) {
+                          e.preventDefault();
+                          setDragOverSlot(key);
+                        }
+                      }}
+                      onDragLeave={() => setDragOverSlot((cur) => (cur === key ? null : cur))}
+                      onDrop={() => handleSlotDrop(day, hour)}
+                      className={clsx(
+                        "block w-full border-b border-brand-lea/5 transition",
+                        isDragOver ? "bg-brand-gold/25 ring-1 ring-inset ring-brand-gold" : "hover:bg-brand-gold/5"
+                      )}
+                      style={{ height: `${HOUR_HEIGHT}px` }}
+                      aria-label={`Schedule at ${hour}:00`}
+                    />
+                  );
+                })}
 
                 {/* Interview blocks */}
                 {dayInterviews.map((interview) => (
-                  <button
+                  <div
                     key={interview.id}
+                    draggable={interview.status !== "CANCELLED"}
+                    onDragStart={() => setDraggingId(interview.id)}
+                    onDragEnd={() => {
+                      setDraggingId(null);
+                      setDragOverSlot(null);
+                    }}
                     onClick={() => onInterviewClick?.(interview)}
                     style={blockStyle(interview)}
                     className={clsx(
-                      "absolute left-0.5 right-0.5 overflow-hidden rounded-md border px-1.5 py-1 text-left text-[10px] shadow-sm transition",
-                      statusColor(interview.status)
+                      "absolute left-0.5 right-0.5 cursor-pointer overflow-hidden rounded-md border px-1.5 py-1 text-left text-[10px] shadow-sm transition",
+                      statusColor(interview.status),
+                      draggingId === interview.id && "opacity-40"
                     )}
                   >
                     <div className="font-semibold leading-tight">{formatTime(interview.startDateTime)}</div>
                     <div className="truncate font-medium leading-tight">{interview.candidate.displayName}</div>
                     {interview.job && <div className="truncate opacity-90 leading-tight">{interview.job.title}</div>}
-                  </button>
+                  </div>
                 ))}
               </div>
             );
@@ -230,17 +269,20 @@ export function TimeGridCalendar({ interviews, mode, onSlotClick, onInterviewCli
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap items-center gap-3 border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey">
-        <span className="flex items-center gap-1">
-          <span className="h-3 w-3 rounded bg-blue-500" /> Scheduled
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="h-3 w-3 rounded bg-emerald-500" /> Completed
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="h-3 w-3 rounded bg-slate-400" /> Cancelled
-        </span>
+      {/* Legend + drag hint */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="flex items-center gap-1">
+            <span className="h-3 w-3 rounded bg-blue-500" /> Scheduled
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="h-3 w-3 rounded bg-emerald-500" /> Completed
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="h-3 w-3 rounded bg-slate-400" /> Cancelled
+          </span>
+        </div>
+        <span className="hidden italic text-brand-grey/70 sm:inline">Drag an interview to another time slot to reschedule</span>
       </div>
     </section>
   );

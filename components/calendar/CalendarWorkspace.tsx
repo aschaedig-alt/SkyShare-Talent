@@ -62,14 +62,21 @@ export function CalendarWorkspace({ data }: CalendarWorkspaceProps) {
     setEditingInterview(interview);
   }
 
-  // Drag-to-reschedule: keep the same time-of-day, change the date
-  async function handleReschedule(interviewId: string, newDate: Date) {
+  // Drag-to-reschedule. Month drops keep the original time-of-day; week/day drops
+  // use the exact dropped slot (date + hour).
+  async function handleReschedule(
+    interviewId: string,
+    newDate: Date,
+    options?: { keepOriginalTime?: boolean }
+  ) {
     const interview = data.interviews.find((i) => i.id === interviewId);
     if (!interview) return;
 
     const oldStart = new Date(interview.startDateTime);
     const newStart = new Date(newDate);
-    newStart.setHours(oldStart.getHours(), oldStart.getMinutes(), 0, 0);
+    if (options?.keepOriginalTime) {
+      newStart.setHours(oldStart.getHours(), oldStart.getMinutes(), 0, 0);
+    }
 
     // Compute duration to preserve it
     const oldEnd = interview.endDateTime ? new Date(interview.endDateTime) : null;
@@ -164,6 +171,7 @@ export function CalendarWorkspace({ data }: CalendarWorkspaceProps) {
               mode="week"
               onSlotClick={handleDayClick}
               onInterviewClick={handleInterviewClick}
+              onReschedule={handleReschedule}
             />
           )}
 
@@ -173,6 +181,7 @@ export function CalendarWorkspace({ data }: CalendarWorkspaceProps) {
               mode="day"
               onSlotClick={handleDayClick}
               onInterviewClick={handleInterviewClick}
+              onReschedule={handleReschedule}
             />
           )}
 
