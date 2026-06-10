@@ -1,0 +1,379 @@
+"use client";
+
+import { useCallback, useState } from "react";
+import Link from "next/link";
+import { Loader, Check, ChevronDown } from "lucide-react";
+import type { DuplicateCluster, DuplicateClusterJob } from "@/lib/jobs/duplicate-detection";
+
+interface JobDuplicateClustersProps {
+  initialClusters?: DuplicateCluster[] | null;
+}
+
+export function JobDuplicateClusters({ initialClusters = null }: JobDuplicateClustersProps) {
+  const [clusters, setClusters] = useState<DuplicateCluster[] | null>(initialClusters);
+  const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const scan = useCallback(async () => {
+    setScanning(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/jobs/duplicates/clusters");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "Failed to scan job duplicates.");
+      setClusters(data.clusters ?? []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to scan job duplicates.");
+    } finally {
+      setScanning(false);
+    }
+  }, []);
+
+  const totalDuplicates = clusters?.reduce((sum, c) => sum + (c.jobs.length - 1), 0) ?? 0;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="text-sm text-brand-grey">
+          {clusters === null
+            ? "Run a scan to group jobs into duplicate clusters."
+            : clusters.length === 0
+              ? "No duplicate clusters found."
+              : `${clusters.length} clusters • ${totalDuplicates} redundant jobs`}
+        </div>
+        <button
+          type="button"
+          onClick={scan}
+          disabled={scanning}
+          className="flex items-center gap-2 rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-lea/90 disabled:cursor-wait disabled:opacity-70"
+        >
+          {scanning && <Loader className="h-4 w-4 animate-spin" />}
+          {scanning ? "Scanning…" : clusters === null ? "Scan job duplicates" : "Re-scan"}
+        </button>
+      </div>
+
+      {error && (
+        <div role="alert" className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
+          {error}
+        </div>
+      )}
+
+      {clusters && clusters.length === 0 && (
+        <div className="rounded border border-emerald-200 bg-emerald-50 p-4 text-center text-sm text-emerald-900">
+          <Check className="mx-auto h-6 w-6" />
+          <p className="mt-1 font-medium">All jobs look unique — nothing to merge.</p>
+        </div>
+      )}
+
+      {clusters &&
+        clusters.map((cluster) => (
+          <ClusterCard key={cluster.key} cluster={cluster} onMerged={scan} />
+        ))}
+    </div>
+  );
+}
+
+function ClusterCard({ cluster, onMerged }: { cluster: DuplicateCluster; onMerged: () => void }) {
+  // Default "keep": the job with the most activity (apps + interviews).
+  const sortedByActivity = [...cluster.jobs].sort(
+    (a, b) => b.applications + b.interviews - (a.applications + a.interviews)
+  );
+  const defaultPrimary = sortedByActivity[0].id;
+
+  const [primaryId, setPrimaryId] = useState<string>(defaultPrimary);
+  // Exact clusters: pre-select all others to merge. Similar: select none (user decides).
+  const [toMerge, setToMerge] = useState<Set<string>>(() => {
+    if (cluster.matchType === "exact") {
+      return new Set(cluster.jobs.filter((j) => j.id !== defaultPrimary).map((j) => j.id));
+    }
+    return new Set();
+  });
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [merging, setMerging] = useState(false);
+  const [message, setMessage] = useState<{ type: string; text: string } | null>(null);
+
+  function setPrimary(id: string) {
+    setPrimaryId(id);
+    // The new primary can't also be a merge target.
+    setToMerge((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }
+
+  function toggleMerge(id: string) {
+    setToMerge((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleExpand(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const selectedIds = [...toMerge].filter((id) => id !== primaryId);
+
+  async function handleMergeSelected() {
+    if (selectedIds.length === 0) return;
+    setMerging(true);
+    setMessage(null);
+
+    let merged = 0;
+    let movedApps = 0;
+    let movedInterviews = 0;
+
+    for (const secondaryId of selectedIds) {
+      try {
+        const response = await fetch("/api/jobs/merge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ primaryJobId: primaryId, secondaryJobId: secondaryId }),
+        });
+        const result = await response.json();
+        if (result.success) {
+          merged += 1;
+          movedApps += result.affectedRecords?.applications ?? 0;
+          movedInterviews += result.affectedRecords?.interviews ?? 0;
+        }
+      } catch {
+        // continue with the rest
+      }
+    }
+
+    setMerging(false);
+
+    if (merged === selectedIds.length) {
+      setMessage({
+        type: "success",
+        text: `Merged ${merged} job${merged === 1 ? "" : "s"} (${movedApps} applications, ${movedInterviews} interviews moved). Refreshing…`,
+      });
+      setTimeout(onMerged, 1200);
+    } else {
+      setMessage({
+        type: "error",
+        text: `Merged ${merged} of ${selectedIds.length}. Some merges failed — please re-scan and retry.`,
+      });
+      setTimeout(onMerged, 1500);
+    }
+  }
+
+  return (
+    <section className="rounded border border-brand-lea/10 bg-white">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-lea/10 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <span
+            className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${
+              cluster.matchType === "exact" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
+            }`}
+          >
+            {cluster.matchType === "exact" ? "Exact" : "Similar"}
+          </span>
+          <h3 className="font-semibold text-brand-lea">{cluster.title}</h3>
+          <span className="text-xs text-brand-grey">{cluster.jobs.length} jobs</span>
+        </div>
+
+        <button
+          onClick={handleMergeSelected}
+          disabled={merging || selectedIds.length === 0}
+          className="flex items-center gap-2 rounded bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {merging && <Loader className="h-4 w-4 animate-spin" />}
+          {merging ? "Merging…" : `Merge ${selectedIds.length} selected`}
+        </button>
+      </div>
+
+      {cluster.matchType === "similar" && (
+        <div className="border-b border-amber-200 bg-amber-50/60 px-4 py-2 text-xs text-amber-800">
+          These are <strong>similar</strong> titles, not guaranteed duplicates. Check the boxes only for the jobs that
+          are truly the same role.
+        </div>
+      )}
+
+      {message && (
+        <div
+          className={`mx-4 mt-3 rounded p-3 text-sm ${
+            message.type === "success"
+              ? "border border-emerald-300 bg-emerald-50 text-emerald-700"
+              : "border border-red-300 bg-red-50 text-red-700"
+          }`}
+        >
+          {message.text}
+        </div>
+      )}
+
+      <div className="divide-y divide-brand-lea/10 p-2">
+        {cluster.jobs.map((job) => (
+          <JobRow
+            key={job.id}
+            job={job}
+            isPrimary={job.id === primaryId}
+            isChecked={toMerge.has(job.id)}
+            isExpanded={expanded.has(job.id)}
+            disabled={merging}
+            onSetPrimary={() => setPrimary(job.id)}
+            onToggleMerge={() => toggleMerge(job.id)}
+            onToggleExpand={() => toggleExpand(job.id)}
+          />
+        ))}
+      </div>
+
+      <div className="border-t border-brand-lea/10 px-4 py-2 text-xs text-brand-grey">
+        Select <span className="font-semibold text-brand-lea">Keep</span> for the job that survives, then check the
+        boxes for the jobs to merge into it.
+      </div>
+    </section>
+  );
+}
+
+function JobRow({
+  job,
+  isPrimary,
+  isChecked,
+  isExpanded,
+  disabled,
+  onSetPrimary,
+  onToggleMerge,
+  onToggleExpand,
+}: {
+  job: DuplicateClusterJob;
+  isPrimary: boolean;
+  isChecked: boolean;
+  isExpanded: boolean;
+  disabled: boolean;
+  onSetPrimary: () => void;
+  onToggleMerge: () => void;
+  onToggleExpand: () => void;
+}) {
+  const metaLine = [
+    job.baseLocation || (job.city && `${job.city}${job.state ? `, ${job.state}` : ""}`),
+    job.roleCategory,
+    job.pilotSeat,
+    job.status,
+  ]
+    .filter(Boolean)
+    .join(" • ");
+
+  return (
+    <div className={`rounded ${isPrimary ? "bg-emerald-50" : ""}`}>
+      <div className="flex items-center justify-between gap-3 px-2 py-2">
+        <div className="flex min-w-0 items-center gap-3">
+          {/* Keep radio */}
+          <button
+            onClick={onSetPrimary}
+            disabled={disabled}
+            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${
+              isPrimary ? "border-emerald-500 bg-emerald-500" : "border-brand-lea/30 hover:border-emerald-400"
+            } disabled:opacity-50`}
+            title={isPrimary ? "This job will be kept" : "Keep this job instead"}
+          >
+            {isPrimary && <Check className="h-3 w-3 text-white" />}
+          </button>
+
+          {/* Merge checkbox (hidden for the primary) */}
+          {isPrimary ? (
+            <span className="w-4 shrink-0" />
+          ) : (
+            <input
+              type="checkbox"
+              checked={isChecked}
+              onChange={onToggleMerge}
+              disabled={disabled}
+              className="h-4 w-4 shrink-0 rounded border-brand-lea/30"
+              title="Merge this job into the kept job"
+            />
+          )}
+
+          <button onClick={onToggleExpand} className="min-w-0 text-left">
+            <div className="flex items-center gap-2 text-sm font-medium text-brand-lea">
+              <span className="truncate">{job.title}</span>
+              {isPrimary && (
+                <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-700">
+                  Keep
+                </span>
+              )}
+              <ChevronDown
+                className={`h-3.5 w-3.5 shrink-0 text-brand-grey transition-transform ${isExpanded ? "rotate-180" : ""}`}
+              />
+            </div>
+            {metaLine && <div className="mt-0.5 truncate text-xs text-brand-grey">{metaLine}</div>}
+          </button>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-4 text-xs text-brand-grey">
+          <span>{job.applications} apps</span>
+          <span>{job.interviews} interviews</span>
+          <Link
+            href={`/recruiting-jobs?id=${job.id}`}
+            target="_blank"
+            className="text-brand-lea underline hover:text-brand-gold"
+          >
+            Open
+          </Link>
+        </div>
+      </div>
+
+      {isExpanded && <JobDetails job={job} />}
+    </div>
+  );
+}
+
+function JobDetails({ job }: { job: DuplicateClusterJob }) {
+  const facts: Array<[string, string | undefined]> = [
+    ["Recruiter", job.recruiter],
+    ["Job Req ID", job.jobReqId],
+    ["Source", job.source],
+    ["Opened", job.openedDate ? new Date(job.openedDate).toLocaleDateString() : undefined],
+    ["Base", job.baseLocation],
+    ["Seat", job.pilotSeat],
+    ["Category", job.roleCategory],
+    ["Pay", job.paySummary],
+    ["Schedule", job.scheduleSummary],
+  ];
+  const shownFacts = facts.filter(([, v]) => Boolean(v));
+
+  return (
+    <div className="mx-2 mb-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/30 p-3 text-xs">
+      {shownFacts.length > 0 ? (
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {shownFacts.map(([label, value]) => (
+            <div key={label}>
+              <div className="font-bold uppercase tracking-[0.12em] text-brand-grey">{label}</div>
+              <div className="mt-0.5 text-brand-lea">{value}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-brand-grey">No extra structured details on this job.</p>
+      )}
+
+      {job.jobDescriptionText && (
+        <div className="mt-3">
+          <div className="font-bold uppercase tracking-[0.12em] text-brand-grey">Description</div>
+          <p className="mt-1 whitespace-pre-wrap text-brand-lea line-clamp-6">
+            {job.jobDescriptionText.slice(0, 600)}
+            {job.jobDescriptionText.length > 600 ? "…" : ""}
+          </p>
+        </div>
+      )}
+
+      {job.rawMinimumRequirements && (
+        <div className="mt-3">
+          <div className="font-bold uppercase tracking-[0.12em] text-brand-grey">Minimum Requirements</div>
+          <p className="mt-1 whitespace-pre-wrap text-brand-lea line-clamp-6">
+            {job.rawMinimumRequirements.slice(0, 600)}
+            {job.rawMinimumRequirements.length > 600 ? "…" : ""}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -137,20 +137,34 @@ export async function findDuplicateJobs(
   return { exact, similar };
 }
 
+export interface DuplicateClusterJob {
+  id: string;
+  title: string;
+  city?: string;
+  state?: string;
+  department?: string;
+  status: string;
+  applications: number;
+  interviews: number;
+  // Detail fields for inline expansion
+  recruiter?: string;
+  jobReqId?: string;
+  source?: string;
+  openedDate?: string;
+  baseLocation?: string;
+  pilotSeat?: string;
+  roleCategory?: string;
+  paySummary?: string;
+  scheduleSummary?: string;
+  jobDescriptionText?: string;
+  rawMinimumRequirements?: string;
+}
+
 export interface DuplicateCluster {
   key: string;
   title: string;
   matchType: "exact" | "similar";
-  jobs: Array<{
-    id: string;
-    title: string;
-    city?: string;
-    state?: string;
-    department?: string;
-    status: string;
-    applications: number;
-    interviews: number;
-  }>;
+  jobs: DuplicateClusterJob[];
 }
 
 /**
@@ -171,12 +185,23 @@ export async function findAllDuplicateClusters(
       state: true,
       department: true,
       status: true,
+      recruiter: true,
+      jobReqId: true,
+      source: true,
+      openedDate: true,
+      baseLocation: true,
+      pilotSeat: true,
+      roleCategory: true,
+      paySummary: true,
+      scheduleSummary: true,
+      jobDescriptionText: true,
+      rawMinimumRequirements: true,
       _count: { select: { applications: true, interviews: true } },
     },
     orderBy: { title: "asc" },
   });
 
-  const mapJob = (j: (typeof jobs)[number]) => ({
+  const mapJob = (j: (typeof jobs)[number]): DuplicateClusterJob => ({
     id: j.id,
     title: j.title,
     city: j.city || undefined,
@@ -185,6 +210,17 @@ export async function findAllDuplicateClusters(
     status: j.status,
     applications: j._count.applications,
     interviews: j._count.interviews,
+    recruiter: j.recruiter || undefined,
+    jobReqId: j.jobReqId || undefined,
+    source: j.source || undefined,
+    openedDate: j.openedDate ? j.openedDate.toISOString() : undefined,
+    baseLocation: j.baseLocation || undefined,
+    pilotSeat: j.pilotSeat || undefined,
+    roleCategory: j.roleCategory || undefined,
+    paySummary: j.paySummary || undefined,
+    scheduleSummary: j.scheduleSummary || undefined,
+    jobDescriptionText: j.jobDescriptionText || undefined,
+    rawMinimumRequirements: j.rawMinimumRequirements || undefined,
   });
 
   const clusters: DuplicateCluster[] = [];
