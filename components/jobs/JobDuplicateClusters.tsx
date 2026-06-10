@@ -90,7 +90,51 @@ function ClusterCard({ cluster, onMerged }: { cluster: DuplicateCluster; onMerge
   });
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [merging, setMerging] = useState(false);
+  const [dismissing, setDismissing] = useState(false);
   const [message, setMessage] = useState<{ type: string; text: string } | null>(null);
+
+  const busy = merging || dismissing;
+
+  function allPairs(ids: string[]): [string, string][] {
+    const pairs: [string, string][] = [];
+    for (let i = 0; i < ids.length; i += 1) {
+      for (let j = i + 1; j < ids.length; j += 1) {
+        pairs.push([ids[i], ids[j]]);
+      }
+    }
+    return pairs;
+  }
+
+  async function dismissPairs(pairs: [string, string][], label: string) {
+    setDismissing(true);
+    setMessage(null);
+    try {
+      const response = await fetch("/api/jobs/duplicates/dismiss", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pairs }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result?.error ?? "Failed to dismiss.");
+      setMessage({ type: "success", text: `${label} Refreshing…` });
+      setTimeout(onMerged, 900);
+    } catch (e) {
+      setDismissing(false);
+      setMessage({ type: "error", text: e instanceof Error ? e.message : "Failed to dismiss." });
+    }
+  }
+
+  function handleDismissCluster() {
+    dismissPairs(allPairs(cluster.jobs.map((j) => j.id)), "Marked the whole group as not duplicates.");
+  }
+
+  function handleDismissJob(jobId: string) {
+    const others = cluster.jobs.filter((j) => j.id !== jobId).map((j) => j.id);
+    dismissPairs(
+      others.map((o) => [jobId, o] as [string, string]),
+      "Removed that job from the cluster."
+    );
+  }
 
   function setPrimary(id: string) {
     setPrimaryId(id);
@@ -181,14 +225,25 @@ function ClusterCard({ cluster, onMerged }: { cluster: DuplicateCluster; onMerge
           <span className="text-xs text-brand-grey">{cluster.jobs.length} jobs</span>
         </div>
 
-        <button
-          onClick={handleMergeSelected}
-          disabled={merging || selectedIds.length === 0}
-          className="flex items-center gap-2 rounded bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {merging && <Loader className="h-4 w-4 animate-spin" />}
-          {merging ? "Merging…" : `Merge ${selectedIds.length} selected`}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleDismissCluster}
+            disabled={busy}
+            className="flex items-center gap-2 rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/30 hover:text-brand-lea disabled:cursor-not-allowed disabled:opacity-50"
+            title="These are all different jobs — stop showing this group"
+          >
+            {dismissing && <Loader className="h-4 w-4 animate-spin" />}
+            Not duplicates
+          </button>
+          <button
+            onClick={handleMergeSelected}
+            disabled={busy || selectedIds.length === 0}
+            className="flex items-center gap-2 rounded bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {merging && <Loader className="h-4 w-4 animate-spin" />}
+            {merging ? "Merging…" : `Merge ${selectedIds.length} selected`}
+          </button>
+        </div>
       </div>
 
       {cluster.matchType === "similar" && (
@@ -218,17 +273,21 @@ function ClusterCard({ cluster, onMerged }: { cluster: DuplicateCluster; onMerge
             isPrimary={job.id === primaryId}
             isChecked={toMerge.has(job.id)}
             isExpanded={expanded.has(job.id)}
-            disabled={merging}
+            disabled={busy}
+            canRemove={cluster.jobs.length > 2}
             onSetPrimary={() => setPrimary(job.id)}
             onToggleMerge={() => toggleMerge(job.id)}
             onToggleExpand={() => toggleExpand(job.id)}
+            onDismiss={() => handleDismissJob(job.id)}
           />
         ))}
       </div>
 
       <div className="border-t border-brand-lea/10 px-4 py-2 text-xs text-brand-grey">
         Select <span className="font-semibold text-brand-lea">Keep</span> for the job that survives, then check the
-        boxes for the jobs to merge into it.
+        boxes for the jobs to merge into it. Use <span className="font-semibold text-brand-lea">Not a dup</span> to
+        drop a single job, or <span className="font-semibold text-brand-lea">Not duplicates</span> to dismiss the whole
+        group.
       </div>
     </section>
   );
@@ -240,18 +299,22 @@ function JobRow({
   isChecked,
   isExpanded,
   disabled,
+  canRemove,
   onSetPrimary,
   onToggleMerge,
   onToggleExpand,
+  onDismiss,
 }: {
   job: DuplicateClusterJob;
   isPrimary: boolean;
   isChecked: boolean;
   isExpanded: boolean;
   disabled: boolean;
+  canRemove: boolean;
   onSetPrimary: () => void;
   onToggleMerge: () => void;
   onToggleExpand: () => void;
+  onDismiss: () => void;
 }) {
   const metaLine = [
     job.baseLocation || (job.city && `${job.city}${job.state ? `, ${job.state}` : ""}`),
@@ -318,6 +381,16 @@ function JobRow({
           >
             Open
           </Link>
+          {canRemove && (
+            <button
+              onClick={onDismiss}
+              disabled={disabled}
+              className="rounded border border-brand-lea/15 px-2 py-1 font-semibold text-brand-grey transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+              title="This job is not a duplicate of the others — remove it from this cluster"
+            >
+              Not a dup
+            </button>
+          )}
         </div>
       </div>
 
