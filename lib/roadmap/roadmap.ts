@@ -59,4 +59,22 @@ Behind-the-scenes work that keeps everything running.
 - [x] Settings pages: Team Members + Activity (Jun 9)
 - [x] Editable roadmap powering this checklist (Jun 10)
 - [x] Feedback button + admin review page (Jun 10) — any user submits ideas/bugs/questions
+
+## Candidate Evaluation
+Tools for assessing candidates — must stay transparent and fair.
+- [ ] Candidate pros & cons — capture strengths and concerns on each candidate
+- [ ] Hired-candidate evaluation score — score candidates after hire to learn what works
+- [ ] Scoring transparency & compliance — clear documented explanation of how a candidate is scored; review CA + NY law (NYC Local Law 144 bias audit, CA FEHA / automated-decision rules) to prevent discrimination — gates the scoring features; needs legal review
+
+## People Ops / Onboarding
+Supporting the team beyond recruiting.
+- [ ] Orientation tracker — track new-hire orientation progress
+- [ ] Pre-onboarding sheet — collect new-hire info before day one
+- [ ] Recognition program — idea stage; shape the concept first
+
+## Bugs & UX Fixes
+Smaller fixes and polish.
+- [ ] Calendar weekly view errors — investigate and fix
+- [ ] Click outside a window/panel to close it — apply to all modals, not just the X
+- [x] Feedback & suggestions inbox (Jun 10) — covered by the Feedback button + Settings inbox
 `;
