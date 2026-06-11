@@ -75,6 +75,9 @@ export function FeedbackButton() {
         </button>
       )}
 
+      {/* Click-away backdrop (transparent) */}
+      {open && <div className="fixed inset-0 z-30" onClick={close} aria-hidden="true" />}
+
       {/* Panel */}
       {open && (
         <div className="fixed bottom-5 right-5 z-40 w-[min(360px,calc(100vw-2.5rem))] rounded-xl border border-brand-lea/15 bg-white shadow-2xl">

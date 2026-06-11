@@ -74,7 +74,7 @@ Supporting the team beyond recruiting.
 
 ## Bugs & UX Fixes
 Smaller fixes and polish.
-- [ ] Calendar weekly view errors — investigate and fix
-- [ ] Click outside a window/panel to close it — apply to all modals, not just the X
+- [x] Calendar weekly view errors (Jun 10) — dynamic hour range so interviews are never clipped; no column crushing
+- [x] Click outside a window/panel to close it (Jun 10) — interview editor + feedback panel close on outside click
 - [x] Feedback & suggestions inbox (Jun 10) — covered by the Feedback button + Settings inbox
 `;

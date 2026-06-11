@@ -24,9 +24,10 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December"
 ];
 
-// Show 7am to 8pm by default
-const START_HOUR = 7;
-const END_HOUR = 20;
+// Default visible window (7am–8pm); expands automatically to include any
+// interview scheduled earlier or later so nothing is ever clipped.
+const DEFAULT_START_HOUR = 7;
+const DEFAULT_END_HOUR = 20;
 const HOUR_HEIGHT = 56; // px per hour
 
 function blockClasses(interview: Interview) {
@@ -79,8 +80,31 @@ export function TimeGridCalendar({ interviews, mode, onSlotClick, onInterviewCli
     days.push(new Date(anchorDate));
   }
 
+  // Interviews visible in the current view, used to expand the hour window.
+  const visibleInterviews = interviews.filter((interview) => {
+    const d = new Date(interview.startDateTime);
+    return days.some(
+      (day) =>
+        d.getFullYear() === day.getFullYear() &&
+        d.getMonth() === day.getMonth() &&
+        d.getDate() === day.getDate()
+    );
+  });
+
+  let startHour = DEFAULT_START_HOUR;
+  let endHour = DEFAULT_END_HOUR;
+  for (const interview of visibleInterviews) {
+    const s = new Date(interview.startDateTime);
+    const e = interview.endDateTime ? new Date(interview.endDateTime) : new Date(s.getTime() + 60 * 60 * 1000);
+    startHour = Math.min(startHour, s.getHours());
+    // round the end hour up so a block never gets cut off at the bottom
+    endHour = Math.max(endHour, e.getMinutes() > 0 ? e.getHours() + 1 : e.getHours());
+  }
+  startHour = Math.max(0, startHour);
+  endHour = Math.min(23, endHour);
+
   const hours: number[] = [];
-  for (let h = START_HOUR; h <= END_HOUR; h += 1) {
+  for (let h = startHour; h <= endHour; h += 1) {
     hours.push(h);
   }
 
@@ -117,10 +141,10 @@ export function TimeGridCalendar({ interviews, mode, onSlotClick, onInterviewCli
   function blockStyle(interview: Interview) {
     const start = new Date(interview.startDateTime);
     const end = interview.endDateTime ? new Date(interview.endDateTime) : new Date(start.getTime() + 60 * 60 * 1000);
-    const startMinutes = (start.getHours() - START_HOUR) * 60 + start.getMinutes();
+    const startMinutes = (start.getHours() - startHour) * 60 + start.getMinutes();
     const durationMinutes = Math.max(30, (end.getTime() - start.getTime()) / (1000 * 60));
     return {
-      top: `${(startMinutes / 60) * HOUR_HEIGHT}px`,
+      top: `${Math.max(0, (startMinutes / 60) * HOUR_HEIGHT)}px`,
       height: `${(durationMinutes / 60) * HOUR_HEIGHT}px`
     };
   }
@@ -160,6 +184,9 @@ export function TimeGridCalendar({ interviews, mode, onSlotClick, onInterviewCli
         </div>
       </div>
 
+      {/* Scrollable wrapper so a 7-day week never gets crushed on narrow screens */}
+      <div className="overflow-x-auto">
+      <div className={clsx(mode === "week" && "min-w-[640px]")}>
       {/* Day headers */}
       <div className="flex border-b border-brand-lea/10">
         <div className="w-14 shrink-0" />
@@ -265,6 +292,8 @@ export function TimeGridCalendar({ interviews, mode, onSlotClick, onInterviewCli
             );
           })}
         </div>
+      </div>
+      </div>
       </div>
 
       {/* Stage legend + drag hint */}
