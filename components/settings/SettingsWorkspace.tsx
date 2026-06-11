@@ -2,6 +2,7 @@ import type { SettingsData } from "@/lib/data/settings";
 import type { RoleName } from "@/lib/auth/roles";
 import { SettingsTabs } from "@/components/settings/SettingsTabs";
 import { ModuleVisibilityAccessPanel } from "@/components/settings/ModuleVisibilityAccessPanel";
+import { BrandingPanel } from "@/components/settings/BrandingPanel";
 
 type SettingsWorkspaceProps = {
   data: SettingsData;
@@ -201,6 +202,8 @@ export function SettingsWorkspace({ data, currentRole }: SettingsWorkspaceProps)
           </div>
         </section>
       </section>
+
+      {currentRole === "ADMIN" ? <BrandingPanel initialLogoDataUrl={data.logoDataUrl} /> : null}
 
       {currentRole === "ADMIN" ? (
         <ModuleVisibilityAccessPanel policy={data.moduleAccessPolicy} />

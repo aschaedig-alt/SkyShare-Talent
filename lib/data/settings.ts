@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getAuthRuntimeStatus } from "@/lib/auth/auth-config";
 import { rolePermissions, type RoleName } from "@/lib/auth/roles";
 import { getWorkspaceModuleAccessPolicy } from "@/lib/data/module-access";
+import { getWorkspaceBranding } from "@/lib/data/branding";
 import type { ModuleAccessPolicy } from "@/lib/navigation/modules";
 
 export type SettingsData = {
@@ -41,6 +42,7 @@ export type SettingsData = {
     }>;
   };
   moduleAccessPolicy: ModuleAccessPolicy;
+  logoDataUrl: string | null;
 };
 
 function appEnvironment() {
@@ -72,6 +74,7 @@ export async function getSettingsData(): Promise<SettingsData> {
   const appEnv = process.env.NEXT_PUBLIC_APP_ENV ?? "";
   const authStatus = getAuthRuntimeStatus();
   const moduleAccessPolicy = await getWorkspaceModuleAccessPolicy();
+  const branding = await getWorkspaceBranding();
 
   return {
     environment: {
@@ -136,6 +139,7 @@ export async function getSettingsData(): Promise<SettingsData> {
         permissionCount: rolePermissions[role].length
       }))
     },
-    moduleAccessPolicy
+    moduleAccessPolicy,
+    logoDataUrl: branding.logoDataUrl
   };
 }

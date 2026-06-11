@@ -16,6 +16,7 @@ import {
 type SidebarProps = {
   role: RoleName;
   policy: ModuleAccessPolicy;
+  logoDataUrl?: string | null;
 };
 
 const COLLAPSE_KEY = "skyshare-sidebar-collapsed";
@@ -25,7 +26,7 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function Sidebar({ role, policy }: SidebarProps) {
+export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
   const pathname = usePathname();
   const groups = getVisibleNavigationGroups(policy, role);
 
@@ -93,12 +94,17 @@ export function Sidebar({ role, policy }: SidebarProps) {
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
           <aside className="absolute left-0 top-0 h-full w-72 overflow-y-auto bg-brand-lea text-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-[4px] bg-brand-gold/90 text-brand-lea">
-                  <Plane className="h-4 w-4" />
+              <Link href="/command-center" className="flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-[4px] bg-brand-gold/90 p-1 text-brand-lea">
+                  {logoDataUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={logoDataUrl} alt="Home" className="h-full w-full object-contain" />
+                  ) : (
+                    <Plane className="h-4 w-4" />
+                  )}
                 </div>
-                <span className="font-semibold">SkyShare</span>
-              </div>
+                {logoDataUrl ? null : <span className="font-semibold">SkyShare</span>}
+              </Link>
               <button onClick={() => setMobileOpen(false)} aria-label="Close menu">
                 <X className="h-5 w-5 text-white/70" />
               </button>
@@ -124,9 +130,19 @@ export function Sidebar({ role, policy }: SidebarProps) {
       <div className="hidden shrink-0 lg:flex">
         {/* Icon rail */}
         <div className="flex w-16 flex-col items-center border-r border-white/10 bg-brand-eden py-3">
-          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-[4px] bg-brand-gold/90 text-brand-lea">
-            <Plane className="h-5 w-5" />
-          </div>
+          <Link
+            href="/command-center"
+            title="Home"
+            aria-label="Home"
+            className="mb-3 flex h-10 w-10 items-center justify-center overflow-hidden rounded-[4px] bg-brand-gold/90 p-1 text-brand-lea"
+          >
+            {logoDataUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoDataUrl} alt="Home" className="h-full w-full object-contain" />
+            ) : (
+              <Plane className="h-5 w-5" />
+            )}
+          </Link>
           <div className="flex flex-1 flex-col items-center gap-1.5">
             {groups.map((group) => {
               const Icon = group.icon;
