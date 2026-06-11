@@ -148,6 +148,7 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
 
   const candidateWhere = hasQuery
     ? {
+        archivedAt: null,
         OR: [
           { normalizedName: { contains: normalizedQuery } },
           { normalizedEmail: { contains: normalizedQuery } },
@@ -164,7 +165,7 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
           { files: { some: { extractedText: { contains: query, mode: "insensitive" as const } } } }
         ]
       }
-    : {};
+    : { archivedAt: null };
 
   // Only pull document text for matching files when there's a query (keeps the list light).
   const filesInclude = hasQuery

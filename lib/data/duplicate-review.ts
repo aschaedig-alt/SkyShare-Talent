@@ -1,5 +1,13 @@
 import { prisma } from "@/lib/prisma";
 
+export type DuplicateCandidateBrief = {
+  id: string;
+  displayName: string;
+  email: string | null;
+  phone: string | null;
+  counts: { files: number; notes: number; applications: number; interviews: number };
+} | null;
+
 export type DuplicateReviewData = {
   stats: {
     open: number;
@@ -14,20 +22,54 @@ export type DuplicateReviewData = {
     status: string;
     reason: string | null;
     confidence: string | null;
-    primaryCandidateName: string | null;
-    secondaryCandidateName: string | null;
     createdAt: string;
+    primary: DuplicateCandidateBrief;
+    secondary: DuplicateCandidateBrief;
   }>;
 };
+
+const candidateSelect = {
+  select: {
+    id: true,
+    displayName: true,
+    primaryEmail: true,
+    primaryPhone: true,
+    _count: { select: { files: true, notes: true, applications: true, interviews: true } }
+  }
+} as const;
+
+type CandidateRow = {
+  id: string;
+  displayName: string;
+  primaryEmail: string | null;
+  primaryPhone: string | null;
+  _count: { files: number; notes: number; applications: number; interviews: number };
+};
+
+function brief(c: CandidateRow | null): DuplicateCandidateBrief {
+  if (!c) return null;
+  return {
+    id: c.id,
+    displayName: c.displayName,
+    email: c.primaryEmail,
+    phone: c.primaryPhone,
+    counts: {
+      files: c._count.files,
+      notes: c._count.notes,
+      applications: c._count.applications,
+      interviews: c._count.interviews
+    }
+  };
+}
 
 export async function getDuplicateReviewData(): Promise<DuplicateReviewData> {
   const [items, open, candidate, job, file, resolved] = await Promise.all([
     prisma.duplicateReviewItem.findMany({
       take: 50,
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       include: {
-        primaryCandidate: { select: { displayName: true } },
-        secondaryCandidate: { select: { displayName: true } }
+        primaryCandidate: candidateSelect,
+        secondaryCandidate: candidateSelect
       }
     }),
     prisma.duplicateReviewItem.count({ where: { status: "OPEN" } }),
@@ -38,22 +80,16 @@ export async function getDuplicateReviewData(): Promise<DuplicateReviewData> {
   ]);
 
   return {
-    stats: {
-      open,
-      candidate,
-      job,
-      file,
-      resolved
-    },
+    stats: { open, candidate, job, file, resolved },
     items: items.map((item) => ({
       id: item.id,
       reviewType: item.reviewType,
       status: item.status,
       reason: item.reason,
       confidence: item.confidence,
-      primaryCandidateName: item.primaryCandidate?.displayName ?? null,
-      secondaryCandidateName: item.secondaryCandidate?.displayName ?? null,
-      createdAt: item.createdAt.toISOString()
+      createdAt: item.createdAt.toISOString(),
+      primary: brief(item.primaryCandidate as CandidateRow | null),
+      secondary: brief(item.secondaryCandidate as CandidateRow | null)
     }))
   };
 }

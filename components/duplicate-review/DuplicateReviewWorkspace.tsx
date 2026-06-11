@@ -1,6 +1,8 @@
+import { clsx } from "clsx";
 import type { DuplicateReviewData } from "@/lib/data/duplicate-review";
 import { CandidateDuplicateScanCard } from "@/components/duplicate-review/CandidateDuplicateScanCard";
 import { JobDuplicateScanCard } from "@/components/duplicate-review/JobDuplicateScanCard";
+import { CandidateDuplicateActions } from "@/components/duplicate-review/CandidateDuplicateActions";
 
 type DuplicateReviewWorkspaceProps = {
   data: DuplicateReviewData;
@@ -66,10 +68,15 @@ export function DuplicateReviewWorkspace({ data }: DuplicateReviewWorkspaceProps
                     <div>
                       <div className="font-semibold text-brand-lea">{item.reviewType} review</div>
                       <div className="mt-1 text-xs text-brand-grey">
-                        {[item.primaryCandidateName, item.secondaryCandidateName].filter(Boolean).join(" vs ") || "No linked entity"}
+                        {[item.primary?.displayName, item.secondary?.displayName].filter(Boolean).join(" vs ") || "No linked entity"}
                       </div>
                     </div>
-                    <span className="rounded-full bg-brand-sweet/25 px-2 py-1 text-[11px] font-semibold text-brand-lea">
+                    <span
+                      className={clsx(
+                        "rounded-full px-2 py-1 text-[11px] font-semibold",
+                        item.status === "OPEN" ? "bg-brand-gold/25 text-brand-lea" : "bg-emerald-100 text-emerald-700"
+                      )}
+                    >
                       {item.status}
                     </span>
                   </div>
@@ -78,6 +85,10 @@ export function DuplicateReviewWorkspace({ data }: DuplicateReviewWorkspaceProps
                     <div>Confidence: {item.confidence ?? "Not scored"}</div>
                     <div>Created: {formatDate(item.createdAt)}</div>
                   </div>
+
+                  {item.reviewType === "CANDIDATE" && item.status === "OPEN" && (
+                    <CandidateDuplicateActions itemId={item.id} primary={item.primary} secondary={item.secondary} />
+                  )}
                 </div>
               ))}
             </div>
