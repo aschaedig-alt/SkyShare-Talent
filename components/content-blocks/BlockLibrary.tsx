@@ -6,6 +6,8 @@ import {
   Archive,
   Blocks,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Copy,
   Edit3,
   GitBranch,
@@ -30,7 +32,7 @@ import type {
   SerializedJobPost
 } from "@/lib/types";
 import { BlockTemplateBoard } from "@/components/content-blocks/BlockTemplateBoard";
-import { RichText, RichTextParagraphs } from "@/components/shared/RichText";
+import { RichText, RichTextParagraphs, RichTextMixed } from "@/components/shared/RichText";
 import { RichTextEditor } from "@/components/shared/RichTextEditor";
 import { inlineTextColorOptions } from "@/lib/formatting/rich-text";
 import { splitCleanLines } from "@/lib/formatting/text";
@@ -68,8 +70,9 @@ const placements: Array<{ value: BlockPlacement; label: string }> = [
   { value: "OPTIONAL", label: "Optional" }
 ];
 const bodyFormats: Array<{ value: BlockBodyFormat; label: string }> = [
-  { value: "BULLET_LIST", label: "Bullet points" },
-  { value: "PARAGRAPH", label: "No bullets" }
+  { value: "BULLET_LIST", label: "All bullet points" },
+  { value: "PARAGRAPH", label: "All paragraphs (no bullets)" },
+  { value: "MIXED", label: "Bullets + text (mix per line)" }
 ];
 const textWeights: Array<{ value: BlockTextWeight; label: string }> = [
   { value: "NORMAL", label: "Normal" },
@@ -116,6 +119,48 @@ function formatEnum(value: string) {
     .split("_")
     .map((part) => part[0].toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+type GroupDim = "CATEGORY" | "SCOPE" | "PLACEMENT";
+type SortKey = "NAME" | "USAGE" | "UPDATED";
+
+const groupDims: Array<{ value: GroupDim; label: string }> = [
+  { value: "CATEGORY", label: "Category" },
+  { value: "SCOPE", label: "Scope" },
+  { value: "PLACEMENT", label: "Placement" }
+];
+
+const sortKeys: Array<{ value: SortKey; label: string }> = [
+  { value: "NAME", label: "Name (A–Z)" },
+  { value: "USAGE", label: "Most used" },
+  { value: "UPDATED", label: "Recently updated" }
+];
+
+function dimValue(block: SerializedContentBlock, dim: GroupDim): string {
+  return dim === "CATEGORY" ? block.category : dim === "SCOPE" ? block.scope : block.placement;
+}
+
+function dimOrder(dim: GroupDim): string[] {
+  return dim === "CATEGORY" ? categories : dim === "SCOPE" ? scopes : placements.map((p) => p.value);
+}
+
+function dimLabel(dim: GroupDim, value: string): string {
+  if (dim === "PLACEMENT") {
+    return placements.find((p) => p.value === value)?.label ?? formatEnum(value);
+  }
+  return formatEnum(value);
+}
+
+function sortBlocks(list: SerializedContentBlock[], key: SortKey): SerializedContentBlock[] {
+  const copy = [...list];
+  if (key === "USAGE") {
+    copy.sort((a, b) => (b.usageCount ?? 0) - (a.usageCount ?? 0));
+  } else if (key === "UPDATED") {
+    copy.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  } else {
+    copy.sort((a, b) => a.name.localeCompare(b.name));
+  }
+  return copy;
 }
 
 function versionLabel(block: SerializedContentBlock) {
@@ -221,6 +266,10 @@ function BlockBodyPreview({
     return <p className="text-sm italic text-brand-grey">No clean text entered yet.</p>;
   }
 
+  if (bodyFormat === "MIXED") {
+    return <RichTextMixed value={value} textClass={textClass} />;
+  }
+
   if (bodyFormat === "PARAGRAPH") {
     return (
       <RichTextParagraphs
@@ -249,6 +298,10 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
   const [blocks, setBlocks] = useState(initialBlocks);
   const [view, setView] = useState<ViewMode>("library");
   const [query, setQuery] = useState("");
+  const [groupBy, setGroupBy] = useState<GroupDim>("CATEGORY");
+  const [sortBy, setSortBy] = useState<SortKey>("NAME");
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [selectedBlockId, setSelectedBlockId] = useState(initialBlocks[0]?.id ?? "");
   const [mode, setMode] = useState<EditorMode>("detail");
   const [form, setForm] = useState(emptyForm);
@@ -566,6 +619,101 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
     }
   }
 
+  const chips = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const block of filteredBlocks) {
+      const value = dimValue(block, groupBy);
+      counts.set(value, (counts.get(value) ?? 0) + 1);
+    }
+    const order = dimOrder(groupBy);
+    return [...counts.keys()]
+      .sort((a, b) => order.indexOf(a) - order.indexOf(b))
+      .map((value) => ({ value, label: dimLabel(groupBy, value), count: counts.get(value) ?? 0 }));
+  }, [filteredBlocks, groupBy]);
+
+  const groupedBlocks = useMemo(() => {
+    const visible = activeFilter
+      ? filteredBlocks.filter((block) => dimValue(block, groupBy) === activeFilter)
+      : filteredBlocks;
+    const groups = new Map<string, SerializedContentBlock[]>();
+    for (const block of visible) {
+      const value = dimValue(block, groupBy);
+      const existing = groups.get(value);
+      if (existing) {
+        existing.push(block);
+      } else {
+        groups.set(value, [block]);
+      }
+    }
+    const order = dimOrder(groupBy);
+    return [...groups.entries()]
+      .sort(([a], [b]) => order.indexOf(a) - order.indexOf(b))
+      .map(([value, list]) => ({
+        key: `${groupBy}:${value}`,
+        value,
+        label: dimLabel(groupBy, value),
+        blocks: sortBlocks(list, sortBy)
+      }));
+  }, [filteredBlocks, groupBy, sortBy, activeFilter]);
+
+  function toggleGroup(key: string) {
+    setCollapsedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }
+
+  function blockButton(block: SerializedContentBlock) {
+    return (
+      <button
+        key={block.id}
+        type="button"
+        onClick={() => selectBlock(block.id)}
+        className={`w-full px-4 py-4 text-left transition ${
+          selectedBlock?.id === block.id && mode !== "create" ? "bg-brand-sweet/35" : "hover:bg-brand-cloudDancer/70"
+        }`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="text-sm font-bold text-brand-lea">{block.name}</div>
+              {block.archivedAt && (
+                <span className="rounded bg-brand-grey/15 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey">
+                  Archived
+                </span>
+              )}
+            </div>
+            <div className="mt-1 text-xs leading-5 text-brand-grey">{block.description}</div>
+          </div>
+          <div className="rounded bg-brand-cloudDancer px-2 py-1 text-xs font-bold text-brand-lea">
+            {versionLabel(block)}
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="rounded bg-brand-lea px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
+            {formatEnum(block.category)}
+          </span>
+          <span className="rounded bg-brand-gold/22 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-lea">
+            {formatEnum(block.scope)}
+          </span>
+          <span className="rounded bg-brand-sweet/35 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-lea">
+            {formatEnum(block.placement)}
+          </span>
+          <span className="inline-flex items-center gap-1 rounded bg-brand-cloudDancer px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-eden">
+            <Users className="h-3 w-3" />
+            {block.usageCount ?? 0} jobs
+          </span>
+          <BlockCoverageBadges block={block} jobs={jobs} />
+        </div>
+      </button>
+    );
+  }
+
   return (
     <div className="px-5 py-5 lg:px-8">
       <div className="mb-5 rounded bg-brand-lea px-6 py-5 text-white shadow-panel">
@@ -687,59 +835,95 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
             </div>
           </div>
 
-          <div className="divide-y divide-brand-lea/8">
-            {filteredBlocks.map((block) => (
+          <div className="space-y-3 border-b border-brand-lea/10 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey">Group</span>
+              <select
+                value={groupBy}
+                onChange={(event) => {
+                  setGroupBy(event.target.value as GroupDim);
+                  setActiveFilter(null);
+                }}
+                className="rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-xs font-semibold text-brand-lea"
+              >
+                {groupDims.map((dim) => (
+                  <option key={dim.value} value={dim.value}>
+                    {dim.label}
+                  </option>
+                ))}
+              </select>
+              <span className="ml-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey">Sort</span>
+              <select
+                value={sortBy}
+                onChange={(event) => setSortBy(event.target.value as SortKey)}
+                className="rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-xs font-semibold text-brand-lea"
+              >
+                {sortKeys.map((sort) => (
+                  <option key={sort.value} value={sort.value}>
+                    {sort.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
               <button
-                key={block.id}
                 type="button"
-                onClick={() => selectBlock(block.id)}
-                className={`w-full px-4 py-4 text-left transition ${
-                  selectedBlock?.id === block.id && mode !== "create"
-                    ? "bg-brand-sweet/35"
-                    : "hover:bg-brand-cloudDancer/70"
+                onClick={() => setActiveFilter(null)}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+                  activeFilter === null ? "bg-brand-lea text-white" : "bg-brand-cloudDancer text-brand-grey hover:bg-brand-cloudDancer/70"
                 }`}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="text-sm font-bold text-brand-lea">{block.name}</div>
-                      {block.archivedAt && (
-                        <span className="rounded bg-brand-grey/15 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey">
-                          Archived
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-1 text-xs leading-5 text-brand-grey">{block.description}</div>
-                  </div>
-                  <div className="rounded bg-brand-cloudDancer px-2 py-1 text-xs font-bold text-brand-lea">
-                    {versionLabel(block)}
-                  </div>
-                </div>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className="rounded bg-brand-lea px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
-                    {formatEnum(block.category)}
-                  </span>
-                  <span className="rounded bg-brand-gold/22 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-lea">
-                    {formatEnum(block.scope)}
-                  </span>
-                  <span className="rounded bg-brand-sweet/35 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-lea">
-                    {formatEnum(block.placement)}
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded bg-brand-cloudDancer px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-eden">
-                    <Users className="h-3 w-3" />
-                    {block.usageCount ?? 0} jobs
-                  </span>
-                  <BlockCoverageBadges block={block} jobs={jobs} />
-                </div>
+                All · {filteredBlocks.length}
               </button>
-            ))}
+              {chips.map((chip) => (
+                <button
+                  key={chip.value}
+                  type="button"
+                  onClick={() => setActiveFilter(activeFilter === chip.value ? null : chip.value)}
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+                    activeFilter === chip.value ? "bg-brand-lea text-white" : "bg-brand-cloudDancer text-brand-grey hover:bg-brand-cloudDancer/70"
+                  }`}
+                >
+                  {chip.label} · {chip.count}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="max-h-[640px] overflow-y-auto">
+            {groupedBlocks.length === 0 ? (
+              <div className="px-4 py-6 text-sm text-brand-grey">No blocks match.</div>
+            ) : (
+              groupedBlocks.map((group) => {
+                const collapsed = collapsedGroups.has(group.key);
+                return (
+                  <div key={group.key}>
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.key)}
+                      className="sticky top-0 z-10 flex w-full items-center justify-between bg-brand-cloudDancer/85 px-4 py-2.5 text-left backdrop-blur transition hover:bg-brand-cloudDancer"
+                    >
+                      <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-brand-lea">
+                        {group.label} <span className="text-brand-grey">· {group.blocks.length}</span>
+                      </span>
+                      {collapsed ? (
+                        <ChevronRight className="h-4 w-4 text-brand-grey" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-brand-grey" />
+                      )}
+                    </button>
+                    {!collapsed && <div className="divide-y divide-brand-lea/8">{group.blocks.map(blockButton)}</div>}
+                  </div>
+                );
+              })
+            )}
           </div>
         </section>
 
         <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10">
           {mode === "edit" || mode === "create" ? (
             <div>
-              <div className="flex items-start justify-between gap-4 border-b border-brand-lea/10 px-5 py-4">
+              <div className="sticky top-0 z-20 flex items-start justify-between gap-4 border-b border-brand-lea/10 bg-white px-5 py-4">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">
                     {mode === "create" ? "Create block" : "Edit block"}
@@ -748,14 +932,25 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                     {mode === "create" ? "New reusable content block" : selectedBlock?.name}
                   </h2>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setMode("detail")}
-                  className="rounded border border-brand-lea/10 p-2 text-brand-grey hover:bg-brand-cloudDancer"
-                  aria-label="Cancel"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={saveBlock}
+                    disabled={isSaving}
+                    className="inline-flex items-center gap-2 rounded bg-brand-lea px-4 py-2 text-sm font-bold text-white hover:bg-brand-eden disabled:opacity-60"
+                  >
+                    <Save className="h-4 w-4" />
+                    {isSaving ? "Saving..." : mode === "create" ? "Create" : "Save"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("detail")}
+                    className="rounded border border-brand-lea/10 p-2 text-brand-grey hover:bg-brand-cloudDancer"
+                    aria-label="Cancel"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-5 p-5">
@@ -835,7 +1030,14 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                     onChange={(value) => updateForm("body", value)}
                     minHeightClassName="min-h-48"
                     placeholder="One clean line per bullet, or a short paragraph."
+                    enableBulletLine={form.bodyFormat === "MIXED"}
                   />
+                  {form.bodyFormat === "MIXED" && (
+                    <p className="mt-1.5 text-xs text-brand-grey">
+                      Start a line with <span className="font-semibold">-</span> to make it a bullet; other lines stay as
+                      paragraphs. Mix freely in one block.
+                    </p>
+                  )}
                 </div>
                 <div className="grid gap-4 md:grid-cols-3">
                   <div>

@@ -1,9 +1,9 @@
-import type { BlockCategory, SerializedJobPost } from "@/lib/types";
+import type { BlockBodyFormat, BlockCategory, SerializedJobPost } from "@/lib/types";
 import { getReusablePublishingBlocks, hasPublishingBlockCategory } from "@/lib/blocks/content-source";
 import { getInstanceBody, getInstanceFormatting, getInstanceTitle } from "@/lib/blocks/sections";
 import { brandColors } from "@/lib/formatting/brand";
 import { escapeHtml, richTextToHtml, richTextToLimitedHtml, richTextToPlainText } from "@/lib/formatting/rich-text";
-import { formatDateForDisplay, joinPreviewParts, splitCleanLines, splitCleanParagraphs } from "@/lib/formatting/text";
+import { formatDateForDisplay, joinPreviewParts, parseBodySegments, splitCleanLines, splitCleanParagraphs } from "@/lib/formatting/text";
 
 const applicationNote = "Note: Please apply through our website job link. All other applications will not be considered.";
 
@@ -30,13 +30,26 @@ function sectionLimitedHtml(title: string, body: string) {
   return `<b>${escapeHtml(title)}:</b>${separator}${cleanBody}`;
 }
 
+function mixedLimitedHtml(value?: string | null) {
+  return parseBodySegments(value)
+    .map((segment) =>
+      segment.type === "bullets"
+        ? segment.items.map((item) => `- ${richTextToLimitedHtml(item)}`).join("\n")
+        : segment.lines.map(richTextToLimitedHtml).join("\n")
+    )
+    .join("\n");
+}
+
 function blockBodyLimitedHtml({
   value,
   bodyFormat
 }: {
   value?: string | null;
-  bodyFormat: "BULLET_LIST" | "PARAGRAPH";
+  bodyFormat: BlockBodyFormat;
 }) {
+  if (bodyFormat === "MIXED") {
+    return mixedLimitedHtml(value);
+  }
   if (bodyFormat === "PARAGRAPH") {
     return paragraphLimitedHtml(value);
   }
@@ -90,13 +103,28 @@ function formatSecondaryLocation(value?: string | null) {
   return value;
 }
 
+function mixedFormattedHtml(value?: string | null) {
+  return parseBodySegments(value)
+    .map((segment) =>
+      segment.type === "bullets"
+        ? `<ul style="margin: 0 0 14px 20px; padding: 0; line-height: 1.55;">${segment.items
+            .map((item) => `<li style="margin: 0 0 7px;">${richTextToHtml(item)}</li>`)
+            .join("")}</ul>`
+        : `<p style="margin: 0 0 12px; line-height: 1.55;">${segment.lines.map(richTextToHtml).join("<br>")}</p>`
+    )
+    .join("");
+}
+
 function blockBodyFormattedHtml({
   value,
   bodyFormat
 }: {
   value?: string | null;
-  bodyFormat: "BULLET_LIST" | "PARAGRAPH";
+  bodyFormat: BlockBodyFormat;
 }) {
+  if (bodyFormat === "MIXED") {
+    return mixedFormattedHtml(value);
+  }
   if (bodyFormat === "PARAGRAPH") {
     return paragraphFormattedHtml(value);
   }
@@ -218,13 +246,26 @@ function bulletListPlainText(value?: string | null) {
     .join("\n");
 }
 
+function mixedPlainText(value?: string | null) {
+  return parseBodySegments(value)
+    .map((segment) =>
+      segment.type === "bullets"
+        ? segment.items.map((item) => `- ${richTextToPlainText(item)}`).join("\n")
+        : segment.lines.map(richTextToPlainText).join("\n")
+    )
+    .join("\n");
+}
+
 function blockBodyPlainText({
   value,
   bodyFormat
 }: {
   value?: string | null;
-  bodyFormat: "BULLET_LIST" | "PARAGRAPH";
+  bodyFormat: BlockBodyFormat;
 }) {
+  if (bodyFormat === "MIXED") {
+    return mixedPlainText(value);
+  }
   if (bodyFormat === "PARAGRAPH") {
     return paragraphPlainText(value);
   }

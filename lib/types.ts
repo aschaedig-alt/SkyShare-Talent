@@ -15,7 +15,7 @@ export type BlockCategory =
 export type BlockScope = "GLOBAL" | "DEPARTMENT" | "ROLE" | "JOB_SPECIFIC";
 export type BlockPlacement = "REQUIRED" | "DEPARTMENT_SPECIFIC" | "ROLE_SPECIFIC" | "OPTIONAL";
 export type BlockInstanceMode = "LINKED" | "PINNED_VERSION" | "FORKED_CUSTOM";
-export type BlockBodyFormat = "BULLET_LIST" | "PARAGRAPH";
+export type BlockBodyFormat = "BULLET_LIST" | "PARAGRAPH" | "MIXED";
 export type BlockTextWeight = "NORMAL" | "SEMIBOLD" | "BOLD";
 export type BlockTextColor =
   | "BLACK"

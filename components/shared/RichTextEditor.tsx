@@ -15,6 +15,7 @@ type RichTextEditorProps = {
   onChange: (value: string) => void;
   minHeightClassName?: string;
   placeholder?: string;
+  enableBulletLine?: boolean;
 };
 
 const colorValueToKey = new Map(
@@ -154,7 +155,8 @@ export function RichTextEditor({
   value,
   onChange,
   minHeightClassName = "min-h-28",
-  placeholder = "Type content..."
+  placeholder = "Type content...",
+  enableBulletLine = false
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
@@ -218,10 +220,23 @@ export function RichTextEditor({
 
   return (
     <div>
-      <InlineFormatToolbar
-        onBold={() => runCommand("bold")}
-        onColor={(color) => runCommand("foreColor", color.value)}
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <InlineFormatToolbar
+          onBold={() => runCommand("bold")}
+          onColor={(color) => runCommand("foreColor", color.value)}
+        />
+        {enableBulletLine && (
+          <button
+            type="button"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => runCommand("insertText", "\n- ")}
+            className="inline-flex items-center gap-1 rounded border border-brand-lea/15 px-2 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer"
+            title="Start a new bullet line"
+          >
+            <span className="text-brand-eden">•</span> Bullet line
+          </button>
+        )}
+      </div>
       <div className="relative">
         <div
           ref={editorRef}

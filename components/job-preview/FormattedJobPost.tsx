@@ -18,7 +18,7 @@ import {
   isInstanceOutdated
 } from "@/lib/blocks/sections";
 import { formatDateForDisplay, joinPreviewParts, splitCleanLines } from "@/lib/formatting/text";
-import { RichText, RichTextParagraphs } from "@/components/shared/RichText";
+import { RichText, RichTextParagraphs, RichTextMixed } from "@/components/shared/RichText";
 
 type FormattedJobPostProps = {
   job: SerializedJobPost;
@@ -129,6 +129,10 @@ function FormattedBlockBody({
 
   if (!lines.length) {
     return <p className="text-sm italic text-brand-grey">No clean text entered yet.</p>;
+  }
+
+  if (bodyFormat === "MIXED") {
+    return <RichTextMixed value={value} textClass={textClass} />;
   }
 
   if (bodyFormat === "PARAGRAPH") {

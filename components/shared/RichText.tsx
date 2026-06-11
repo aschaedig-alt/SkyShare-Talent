@@ -1,7 +1,7 @@
 import { Fragment, type ReactNode } from "react";
 import type { InlineTextColor, RichTextNode } from "@/lib/formatting/rich-text";
 import { parseRichText } from "@/lib/formatting/rich-text";
-import { splitCleanParagraphs } from "@/lib/formatting/text";
+import { parseBodySegments, splitCleanParagraphs } from "@/lib/formatting/text";
 
 const inlineColorClasses: Record<InlineTextColor, string> = {
   BLACK: "text-brand-black",
@@ -36,6 +36,43 @@ function renderNode(node: RichTextNode, key: string): ReactNode {
 
 export function RichText({ value }: { value?: string | null }) {
   return <>{parseRichText(value).map((node, index) => renderNode(node, String(index)))}</>;
+}
+
+// Renders a body that mixes bullet lists and paragraphs (bodyFormat === "MIXED").
+export function RichTextMixed({ value, textClass = "" }: { value?: string | null; textClass?: string }) {
+  const segments = parseBodySegments(value);
+
+  if (!segments.length) {
+    return <p className="text-sm italic text-brand-grey">No clean text entered yet.</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {segments.map((segment, index) =>
+        segment.type === "bullets" ? (
+          <ul key={index} className={`space-y-2 text-sm leading-6 ${textClass}`}>
+            {segment.items.map((item, itemIndex) => (
+              <li key={`${item}-${itemIndex}`} className="flex gap-3">
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-eden" />
+                <span>
+                  <RichText value={item} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p key={index} className={`text-sm leading-6 ${textClass}`}>
+            {segment.lines.map((line, lineIndex) => (
+              <Fragment key={`${line}-${lineIndex}`}>
+                {lineIndex > 0 && <br />}
+                <RichText value={line} />
+              </Fragment>
+            ))}
+          </p>
+        )
+      )}
+    </div>
+  );
 }
 
 export function RichTextParagraphs({

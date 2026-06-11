@@ -54,6 +54,9 @@ Restoring and streamlining the publishing toolset.
 - [x] Job Builder data restored (Jun 10) — migrated 79 jobs, 16 blocks, 660 instances, templates from local dev.db to Postgres
 - [x] Content Blocks + Final Review live (Jun 10)
 - [x] Publishing cleanup, step A (Jun 10) — removed Sandbox Lab, empty Changes/Approvals tabs; moved Templates into Settings; deleted dead code. 7 tabs → 3
+- [x] Content block library UX (Jun 11) — group blocks by category/scope/placement, one-click category filter chips with counts, sort (name / most used / recently updated), and collapsible groups so it is not one long scroll
+- [x] Block editor Save at top (Jun 11) — sticky editor header with a Save button so you do not have to scroll down to save
+- [x] Mixed block formatting (Jun 11) — new "Bullets + text" format: start a line with - for a bullet, other lines stay paragraphs, mixable in one block; renders the same in the editor preview, the final job post, and all exports (HTML / limited HTML / plain text)
 - [ ] Publishing cleanup, step B — consider merging Final Review into Job Builder (review a sample first)
 - [ ] Changes / version history — build out later if needed
 - [ ] Approvals workflow — build out later if needed

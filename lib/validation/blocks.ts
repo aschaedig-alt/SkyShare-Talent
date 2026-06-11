@@ -25,7 +25,7 @@ export const blockAdoptionSchema = z.enum([
   "ONLY_CURRENT_JOB"
 ]);
 
-export const blockBodyFormatSchema = z.enum(["BULLET_LIST", "PARAGRAPH"]);
+export const blockBodyFormatSchema = z.enum(["BULLET_LIST", "PARAGRAPH", "MIXED"]);
 export const blockTextWeightSchema = z.enum(["NORMAL", "SEMIBOLD", "BOLD"]);
 export const blockTextColorSchema = z.enum([
   "BLACK",
