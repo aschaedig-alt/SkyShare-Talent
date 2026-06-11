@@ -64,11 +64,14 @@ Behind-the-scenes work that keeps everything running.
 
 ## Document Intelligence
 Making candidate documents searchable and structured.
-- [x] Full-text document search (Jun 10) — extracts text from PDFs; candidates list now searches inside resumes/pilot apps and shows a matching snippet
-- [x] In-profile document find (Jun 10) — search within a candidate's documents; PDF.js viewer highlights matches in-page and jumps between them, with match badges per document
+- [x] Full-text document search (Jun 10) — extracts text from PDFs; candidates list searches inside resumes/pilot apps and shows a matching snippet
+- [x] In-profile document find (Jun 10) — PDF.js viewer highlights matches in-page, jumps between them, with per-document match badges
+- [x] Serverless PDF extraction via unpdf (Jun 11) — fixed text extraction failing on Vercel; self-healing scan re-extracts files missing text
+- [x] Flight-data extraction v1 (Jun 11) — Scan docs pulls Total Time, PIC/SIC, Turbine, Multi, Jet (incl. PIC sub-values), Night, Instrument, Cross-Country, type ratings, certificates, medical
+- [x] Flight Profile review controls (Jun 11) — suggest/confirm, edit label + value, sticky reject, and manually add a field
+- [ ] Sortable candidates table — compare Total Time / type ratings / certs across everyone (next big piece)
 - [ ] OCR for scanned/image PDFs — so photographed/scanned docs become searchable
-- [~] Structured key-term extraction — pull Total Time, type ratings (e.g. GV), etc. into candidate fields; sortable candidates table. Starting with free pattern-matching during development; upgrade to Claude LLM extraction when ready (see memory note)
-- [ ] Upgrade extraction to Claude LLM — swap regex for a Claude call once the feature is proven; needs ANTHROPIC_API_KEY (deferred to avoid dev-time cost)
+- [ ] Upgrade extraction to Claude LLM — swap regex for a Claude call once proven; needs ANTHROPIC_API_KEY (deferred to avoid dev-time cost; see memory note)
 
 ## Candidate Evaluation
 Tools for assessing candidates — must stay transparent and fair.
@@ -87,4 +90,7 @@ Smaller fixes and polish.
 - [x] Calendar weekly view errors (Jun 10) — dynamic hour range so interviews are never clipped; no column crushing
 - [x] Click outside a window/panel to close it (Jun 10) — interview editor + feedback panel close on outside click
 - [x] Feedback & suggestions inbox (Jun 10) — covered by the Feedback button + Settings inbox
+- [x] Candidate duplicate merge & dismiss (Jun 11) — review queue now lets you pick which record to keep, merge, or mark not-a-duplicate
+- [x] Candidate document upload fixes (Jun 11) — fixed upload error, removed the redundant upload button, and added "Link" to attach an Imports-uploaded file to a candidate
+- [x] PDF viewer polish (Jun 11) — 100% zoom, whole-page fit, and search match navigation that scrolls inside the pane
 `;
