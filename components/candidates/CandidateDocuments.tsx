@@ -15,6 +15,7 @@ import {
   Check,
   X,
   Search,
+  Link2,
   FileWarning
 } from "lucide-react";
 import { clsx } from "clsx";
@@ -141,6 +142,10 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [docSearch, setDocSearch] = useState("");
+  const [showLink, setShowLink] = useState(false);
+  const [unassigned, setUnassigned] = useState<Array<{ id: string; displayFilename: string; uploadedAt: string }>>([]);
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkingId, setLinkingId] = useState<string | null>(null);
 
   const trimmedSearch = docSearch.trim();
   const matchingIds = useMemo(() => {
@@ -228,6 +233,39 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
     }
   }
 
+  async function openLink() {
+    setShowLink(true);
+    setLinkLoading(true);
+    try {
+      const res = await fetch("/api/candidate-files/unassigned");
+      const data = await res.json();
+      setUnassigned(data.files ?? []);
+    } catch {
+      setUnassigned([]);
+    } finally {
+      setLinkLoading(false);
+    }
+  }
+
+  async function linkFile(fileId: string) {
+    setLinkingId(fileId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/candidates/${candidateId}/files/link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileId })
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.message ?? "Could not attach file.");
+      setShowLink(false);
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not attach file.");
+    } finally {
+      setLinkingId(null);
+    }
+  }
+
   const canCompare = files.length >= 2;
   const effectiveLayout: Layout = trimmedSearch ? "single" : layout;
 
@@ -264,7 +302,8 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
         </div>
       )}
 
-      {/* Tab strip + layout toggle */}
+      {/* Tab strip + layout toggle (only when there are documents) */}
+      {files.length > 0 && (
       <div className="flex items-center gap-2 border-b border-brand-lea/10 px-2 py-1.5">
         <div className="flex items-center gap-1 overflow-x-auto">
           {files.map((file) => {
@@ -310,6 +349,13 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
             </div>
           )}
           <button
+            onClick={openLink}
+            className="flex items-center gap-1.5 rounded-lg border border-brand-lea/20 px-3 py-2 text-sm font-medium text-brand-grey transition hover:text-brand-lea"
+            title="Attach a file that was uploaded via Imports"
+          >
+            <Link2 className="h-4 w-4" /> Link
+          </button>
+          <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
             className="flex items-center gap-1.5 rounded-lg border border-dashed border-brand-lea/30 px-3 py-2 text-sm font-medium text-brand-grey transition hover:border-brand-gold hover:text-brand-lea disabled:opacity-60"
@@ -319,17 +365,56 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
           </button>
         </div>
       </div>
+      )}
 
       {error && <div className="mx-3 mt-3 rounded border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div>}
+
+      {/* Link an unassigned (Imports-uploaded) file */}
+      {showLink && (
+        <div className="m-3 rounded-lg border border-brand-lea/15 bg-brand-cloudDancer/30 p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-brand-lea">Attach a file uploaded via Imports</span>
+            <button onClick={() => setShowLink(false)} className="text-brand-grey hover:text-brand-lea" aria-label="Close">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          {linkLoading ? (
+            <div className="flex items-center gap-2 py-4 text-xs text-brand-grey"><Loader className="h-4 w-4 animate-spin" /> Loading…</div>
+          ) : unassigned.length === 0 ? (
+            <p className="py-3 text-xs text-brand-grey">No unassigned uploaded files. Files uploaded here attach automatically.</p>
+          ) : (
+            <div className="mt-2 space-y-1.5">
+              {unassigned.map((f) => (
+                <div key={f.id} className="flex items-center gap-2 rounded border border-brand-lea/10 bg-white px-2.5 py-1.5">
+                  <span className="rounded bg-red-100 px-1 py-0.5 text-[9px] font-bold text-red-800">PDF</span>
+                  <span className="min-w-0 flex-1 truncate text-sm text-brand-lea">{f.displayFilename}</span>
+                  <button
+                    onClick={() => linkFile(f.id)}
+                    disabled={linkingId === f.id}
+                    className="flex items-center gap-1 rounded bg-brand-lea px-2.5 py-1 text-xs font-semibold text-white hover:bg-brand-eden disabled:opacity-60"
+                  >
+                    {linkingId === f.id ? <Loader className="h-3 w-3 animate-spin" /> : <Link2 className="h-3 w-3" />} Attach
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {!activeFile ? (
         <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
           <FileText className="h-10 w-10 text-brand-grey/50" />
           <p className="font-semibold text-brand-lea">No documents yet</p>
           <p className="max-w-sm text-sm text-brand-grey">Add a resume, pilot app, or other PDF — it previews right here.</p>
-          <button onClick={() => fileInputRef.current?.click()} className="mt-1 rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-eden">
-            Upload document
-          </button>
+          <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+            <button onClick={() => fileInputRef.current?.click()} className="rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-eden">
+              Upload document
+            </button>
+            <button onClick={openLink} className="flex items-center gap-1.5 rounded-lg border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/40">
+              <Link2 className="h-4 w-4" /> Link an uploaded file
+            </button>
+          </div>
         </div>
       ) : effectiveLayout === "compare" ? (
         /* Side-by-side compare */

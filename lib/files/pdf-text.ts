@@ -1,5 +1,3 @@
-import { PDFParse } from "pdf-parse";
-
 const MAX_CHARS = 500_000;
 
 /** Collapse whitespace so stored text is compact and searchable. */
@@ -30,6 +28,9 @@ export async function extractFileText(
 ): Promise<string> {
   try {
     if (looksLikePdf(mimeType, filename)) {
+      // Lazy-load pdf-parse so a load/runtime failure here can never crash the
+      // upload route — extraction is best-effort and degrades to "" on any error.
+      const { PDFParse } = await import("pdf-parse");
       const data = bytes instanceof Uint8Array && !Buffer.isBuffer(bytes) ? bytes : new Uint8Array(bytes);
       const parser = new PDFParse({ data });
       try {
