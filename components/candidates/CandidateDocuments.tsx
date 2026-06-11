@@ -296,9 +296,9 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
             ) : isPdf(activeFile) ? (
               <iframe
                 key={activeFile.id}
-                src={`/api/candidate-files/${activeFile.id}#view=Fit`}
+                src={`/api/candidate-files/${activeFile.id}#zoom=100`}
                 title={activeFile.displayFilename}
-                className="h-[82vh] min-h-[620px] w-full rounded-lg border border-brand-lea/10 bg-white"
+                className="h-[1120px] w-full rounded-lg border border-brand-lea/10 bg-white"
               />
             ) : isImage(activeFile) ? (
               <div className="flex justify-center rounded-lg border border-brand-lea/10 bg-white p-4">
