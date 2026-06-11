@@ -44,6 +44,8 @@ Making the day-to-day experience better.
 ## Phase 4: Feature Completeness
 Filling out the platform.
 - [ ] 4.1 Jobs Page Integration
+- [ ] Support-role gates — when a job is Support, disable most pilot gates but keep U.S. work authorization and U.S. driver's license required; allow position-specific gate fields
+- [ ] Role identity defaults to job title — pilot requirement role identity should default to the job post title instead of a synthesized "Citation 560 XL Captain"; support roles get a non-pilot seat/identity
 - [x] 4.2 User Access Controls / RBAC (Jun 9) — 4 roles, permission matrix
 - [x] 4.3 User Statistics Dashboard (Jun 9) — activity logging + team analytics
 
@@ -98,5 +100,5 @@ Smaller fixes and polish.
 - [x] Candidate duplicate merge & dismiss (Jun 11) — review queue now lets you pick which record to keep, merge, or mark not-a-duplicate
 - [x] Candidate document upload fixes (Jun 11) — fixed upload error, removed the redundant upload button, and added "Link" to attach an Imports-uploaded file to a candidate
 - [x] PDF viewer polish (Jun 11) — 100% zoom, whole-page fit, and search match navigation that scrolls inside the pane
-- [x] Job role classification fix (Jun 11) — imported jobs are Pilot only when the TITLE says Captain / First Officer / PIC / SIC / Pilot (aircraft names no longer imply pilot, so "Senior Gulfstream Technician" is support); added a Pilot/Support toggle + seat/aircraft editor on the Jobs detail that clears pilot tags everywhere and removes the role from Pilot Requirements when set to Support; corrected the existing mis-flagged job. Remaining: support-role gate defaults (work auth + driver's license) and role-identity-defaults-to-title
+- [x] Job role classification fix (Jun 11) — imported jobs are Pilot only when the TITLE says Captain / First Officer / PIC / SIC / Pilot (aircraft names no longer imply pilot, so "Senior Gulfstream Technician" is support); added a Pilot/Support toggle + seat/aircraft editor on the Jobs detail that clears pilot tags everywhere and removes the role from Pilot Requirements when set to Support; corrected the existing mis-flagged job
 `;
