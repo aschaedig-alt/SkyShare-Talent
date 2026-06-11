@@ -221,7 +221,7 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
         orderBy: [{ isPrimary: "desc" }, { type: "asc" }]
       },
       files: {
-        orderBy: { uploadedAt: "desc" }
+        orderBy: { uploadedAt: "asc" }
       },
       notes: {
         orderBy: { createdAt: "desc" }

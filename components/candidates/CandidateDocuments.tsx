@@ -33,35 +33,94 @@ type CandidateDocumentsProps = {
   files: CandidateFileItem[];
 };
 
+type Layout = "single" | "compare";
+
 const UPLOAD_ACCEPT = ".pdf,.doc,.docx,.txt,.rtf,.jpg,.jpeg,.png,.webp,.heic,.tif,.tiff";
 
 function isPdf(file: CandidateFileItem) {
   return (file.mimeType ?? "").includes("pdf") || file.displayFilename.toLowerCase().endsWith(".pdf");
 }
-
 function isImage(file: CandidateFileItem) {
   return (file.mimeType ?? "").startsWith("image/");
 }
-
 function fileIcon(file: CandidateFileItem) {
   const name = file.displayFilename.toLowerCase();
-  if (name.includes("pilot") || name.includes("application") || name.includes("app")) return Plane;
+  if (name.includes("pilot") || name.includes("application")) return Plane;
   if (name.includes("resume") || name.includes("cv")) return FileText;
   if (name.includes("medical") || name.includes("cert")) return FileCheck2;
   return FileText;
 }
-
 function formatBytes(value: number | null) {
   if (!value) return "";
   if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`;
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+}
+function findResume(files: CandidateFileItem[]) {
+  return files.find((f) => /resume|cv/i.test(f.displayFilename)) ?? files[0] ?? null;
+}
+function findPilotApp(files: CandidateFileItem[], excludeId?: string) {
+  return (
+    files.find((f) => f.id !== excludeId && /pilot|application/i.test(f.displayFilename)) ??
+    files.find((f) => f.id !== excludeId) ??
+    null
+  );
+}
+
+/** Inner preview surface for a single file (used by both single and compare layouts). */
+function FilePreview({ file, mode }: { file: CandidateFileItem; mode: "actual" | "fit" }) {
+  if (!file.storageKey) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-brand-lea/10 bg-white py-16 text-center">
+        <FileWarning className="h-8 w-8 text-brand-grey/50" />
+        <p className="font-semibold text-brand-lea">File content not stored</p>
+        <p className="text-sm text-brand-grey">Metadata only — re-upload to preview.</p>
+      </div>
+    );
+  }
+  if (isPdf(file)) {
+    const hash = mode === "actual" ? "#zoom=100" : "#view=FitH";
+    const heightClass = mode === "actual" ? "h-[1120px]" : "h-[760px]";
+    return (
+      <iframe
+        key={file.id}
+        src={`/api/candidate-files/${file.id}${hash}`}
+        title={file.displayFilename}
+        className={clsx("w-full rounded-lg border border-brand-lea/10 bg-white", heightClass)}
+      />
+    );
+  }
+  if (isImage(file)) {
+    return (
+      <div className="flex justify-center rounded-lg border border-brand-lea/10 bg-white p-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={`/api/candidate-files/${file.id}`} alt={file.displayFilename} className="max-h-[82vh] w-auto rounded" />
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-brand-lea/10 bg-white py-16 text-center">
+      <FileText className="h-8 w-8 text-brand-grey/50" />
+      <p className="font-semibold text-brand-lea">Inline preview not available</p>
+      <p className="max-w-sm text-sm text-brand-grey">{file.displayFilename} can&apos;t preview in the browser.</p>
+      <a href={`/api/candidate-files/${file.id}`} download className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-eden">
+        <Download className="h-4 w-4" /> Download
+      </a>
+    </div>
+  );
 }
 
 export function CandidateDocuments({ candidateId, files }: CandidateDocumentsProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [activeId, setActiveId] = useState<string | null>(files[0]?.id ?? null);
+  const [layout, setLayout] = useState<Layout>("single");
+  const [activeId, setActiveId] = useState<string | null>(() => findResume(files)?.id ?? null);
+  const [leftId, setLeftId] = useState<string | null>(() => findResume(files)?.id ?? null);
+  const [rightId, setRightId] = useState<string | null>(() => {
+    const resume = findResume(files);
+    return findPilotApp(files, resume?.id)?.id ?? null;
+  });
+
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -69,16 +128,21 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Keep a valid active tab when the file list changes (after add/delete refresh)
+  // Keep selections valid (default to resume) when the file list changes.
   useEffect(() => {
+    const resume = findResume(files);
     if (files.length === 0) {
       setActiveId(null);
     } else if (!files.some((f) => f.id === activeId)) {
-      setActiveId(files[0].id);
+      setActiveId(resume?.id ?? files[0].id);
     }
-  }, [files, activeId]);
+    if (!files.some((f) => f.id === leftId)) setLeftId(resume?.id ?? files[0]?.id ?? null);
+    if (rightId && !files.some((f) => f.id === rightId)) setRightId(findPilotApp(files, resume?.id)?.id ?? null);
+  }, [files, activeId, leftId, rightId]);
 
   const activeFile = files.find((f) => f.id === activeId) ?? files[0] ?? null;
+  const leftFile = files.find((f) => f.id === leftId) ?? null;
+  const rightFile = files.find((f) => f.id === rightId) ?? null;
 
   async function handleRename(id: string) {
     const name = renameValue.trim();
@@ -91,10 +155,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ displayFilename: name })
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? "Rename failed.");
-      }
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.message ?? "Rename failed.");
       setRenamingId(null);
       router.refresh();
     } catch (e) {
@@ -109,10 +170,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
     setError(null);
     try {
       const res = await fetch(`/api/candidate-files/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? "Delete failed.");
-      }
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.message ?? "Delete failed.");
       setConfirmDeleteId(null);
       router.refresh();
     } catch (e) {
@@ -130,10 +188,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
     Array.from(fileList).forEach((f) => formData.append("files", f));
     try {
       const res = await fetch(`/api/candidates/${candidateId}/files`, { method: "POST", body: formData });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? "Upload failed.");
-      }
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.message ?? "Upload failed.");
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed.");
@@ -143,74 +198,116 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
     }
   }
 
+  const canCompare = files.length >= 2;
+
   return (
     <section className="rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10">
-      {/* Hidden upload input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        accept={UPLOAD_ACCEPT}
-        className="sr-only"
-        onChange={(e) => handleUpload(e.currentTarget.files)}
-      />
+      <input ref={fileInputRef} type="file" multiple accept={UPLOAD_ACCEPT} className="sr-only" onChange={(e) => handleUpload(e.currentTarget.files)} />
 
-      {/* Tab strip */}
-      <div className="flex items-center gap-1 overflow-x-auto border-b border-brand-lea/10 px-2 py-1.5">
-        {files.map((file) => {
-          const Icon = fileIcon(file);
-          const active = file.id === activeFile?.id;
-          return (
-            <button
-              key={file.id}
-              onClick={() => setActiveId(file.id)}
-              className={clsx(
-                "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition",
-                active ? "bg-brand-lea text-white" : "text-brand-grey hover:bg-brand-cloudDancer/40 hover:text-brand-lea"
-              )}
-              title={file.displayFilename}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="max-w-[160px] truncate">{file.displayFilename}</span>
-            </button>
-          );
-        })}
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className="ml-auto flex shrink-0 items-center gap-1.5 rounded-lg border border-dashed border-brand-lea/30 px-3 py-2 text-sm font-medium text-brand-grey transition hover:border-brand-gold hover:text-brand-lea disabled:opacity-60"
-        >
-          {uploading ? <Loader className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          {uploading ? "Uploading…" : "Add"}
-        </button>
+      {/* Tab strip + layout toggle */}
+      <div className="flex items-center gap-2 border-b border-brand-lea/10 px-2 py-1.5">
+        <div className="flex items-center gap-1 overflow-x-auto">
+          {files.map((file) => {
+            const Icon = fileIcon(file);
+            const active = layout === "single" && file.id === activeFile?.id;
+            return (
+              <button
+                key={file.id}
+                onClick={() => {
+                  setLayout("single");
+                  setActiveId(file.id);
+                }}
+                className={clsx(
+                  "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition",
+                  active ? "bg-brand-lea text-white" : "text-brand-grey hover:bg-brand-cloudDancer/40 hover:text-brand-lea"
+                )}
+                title={file.displayFilename}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="max-w-[150px] truncate">{file.displayFilename}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {canCompare && (
+            <div className="flex items-center rounded-lg border border-brand-lea/15 p-0.5">
+              <button
+                onClick={() => setLayout("single")}
+                className={clsx("rounded px-2.5 py-1 text-xs font-semibold transition", layout === "single" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea")}
+              >
+                Single
+              </button>
+              <button
+                onClick={() => setLayout("compare")}
+                className={clsx("rounded px-2.5 py-1 text-xs font-semibold transition", layout === "compare" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea")}
+              >
+                Side by side
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-1.5 rounded-lg border border-dashed border-brand-lea/30 px-3 py-2 text-sm font-medium text-brand-grey transition hover:border-brand-gold hover:text-brand-lea disabled:opacity-60"
+          >
+            {uploading ? <Loader className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            {uploading ? "Uploading…" : "Add"}
+          </button>
+        </div>
       </div>
 
-      {error && (
-        <div className="mx-3 mt-3 rounded border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div>
-      )}
+      {error && <div className="mx-3 mt-3 rounded border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div>}
 
       {!activeFile ? (
         <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
           <FileText className="h-10 w-10 text-brand-grey/50" />
           <p className="font-semibold text-brand-lea">No documents yet</p>
-          <p className="max-w-sm text-sm text-brand-grey">
-            Add a resume, pilot app, or other PDF. It will preview right here — no need to open a new tab.
-          </p>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="mt-1 rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-eden"
-          >
+          <p className="max-w-sm text-sm text-brand-grey">Add a resume, pilot app, or other PDF — it previews right here.</p>
+          <button onClick={() => fileInputRef.current?.click()} className="mt-1 rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-eden">
             Upload document
           </button>
         </div>
+      ) : layout === "compare" ? (
+        /* Side-by-side compare */
+        <div className="grid gap-3 p-3 lg:grid-cols-2">
+          {[
+            { file: leftFile, set: setLeftId, fallback: "Left document" },
+            { file: rightFile, set: setRightId, fallback: "Right document" }
+          ].map((pane, idx) => (
+            <div key={idx} className="rounded-lg border border-brand-lea/10">
+              <div className="flex items-center gap-2 border-b border-brand-lea/10 px-2 py-2">
+                <select
+                  value={pane.file?.id ?? ""}
+                  onChange={(e) => pane.set(e.target.value)}
+                  className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm font-medium text-brand-lea"
+                >
+                  {files.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.displayFilename}
+                    </option>
+                  ))}
+                </select>
+                {pane.file?.storageKey && (
+                  <a href={`/api/candidate-files/${pane.file.id}`} download className="rounded p-1.5 text-brand-grey hover:bg-brand-cloudDancer/40 hover:text-brand-lea" aria-label="Download">
+                    <Download className="h-4 w-4" />
+                  </a>
+                )}
+              </div>
+              <div className="bg-brand-cloudDancer/30 p-2">
+                {pane.file ? <FilePreview file={pane.file} mode="fit" /> : <div className="py-16 text-center text-sm text-brand-grey">{pane.fallback}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
+        /* Single focus view */
         <>
-          {/* Toolbar for the active doc */}
           <div className="flex flex-wrap items-center gap-2 border-b border-brand-lea/10 px-4 py-2.5">
             <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-800">
               {isPdf(activeFile) ? "PDF" : (activeFile.mimeType?.split("/")[1] ?? "FILE").toUpperCase().slice(0, 4)}
             </span>
-
             {renamingId === activeFile.id ? (
               <div className="flex flex-1 items-center gap-1">
                 <input
@@ -223,54 +320,22 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                   }}
                   className="min-w-0 flex-1 rounded border border-brand-lea/30 px-2 py-1 text-sm focus:border-brand-gold focus:outline-none"
                 />
-                <button onClick={() => handleRename(activeFile.id)} disabled={busy} className="rounded p-1 text-emerald-700 hover:bg-emerald-50" aria-label="Save name">
-                  <Check className="h-4 w-4" />
-                </button>
-                <button onClick={() => setRenamingId(null)} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/40" aria-label="Cancel rename">
-                  <X className="h-4 w-4" />
-                </button>
+                <button onClick={() => handleRename(activeFile.id)} disabled={busy} className="rounded p-1 text-emerald-700 hover:bg-emerald-50" aria-label="Save name"><Check className="h-4 w-4" /></button>
+                <button onClick={() => setRenamingId(null)} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/40" aria-label="Cancel"><X className="h-4 w-4" /></button>
               </div>
             ) : (
               <>
                 <span className="flex-1 truncate text-sm font-medium text-brand-lea">{activeFile.displayFilename}</span>
-                {activeFile.sizeBytes ? (
-                  <span className="text-xs text-brand-grey">{formatBytes(activeFile.sizeBytes)}</span>
-                ) : null}
-                <button
-                  onClick={() => {
-                    setRenamingId(activeFile.id);
-                    setRenameValue(activeFile.displayFilename);
-                  }}
-                  className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/40 hover:text-brand-lea"
-                  aria-label="Rename"
-                  title="Rename"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
+                {activeFile.sizeBytes ? <span className="text-xs text-brand-grey">{formatBytes(activeFile.sizeBytes)}</span> : null}
+                <button onClick={() => { setRenamingId(activeFile.id); setRenameValue(activeFile.displayFilename); }} className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/40 hover:text-brand-lea" aria-label="Rename" title="Rename"><Pencil className="h-4 w-4" /></button>
                 {activeFile.storageKey && (
-                  <a
-                    href={`/api/candidate-files/${activeFile.id}`}
-                    download
-                    className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/40 hover:text-brand-lea"
-                    aria-label="Download"
-                    title="Download"
-                  >
-                    <Download className="h-4 w-4" />
-                  </a>
+                  <a href={`/api/candidate-files/${activeFile.id}`} download className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/40 hover:text-brand-lea" aria-label="Download" title="Download"><Download className="h-4 w-4" /></a>
                 )}
-                <button
-                  onClick={() => setConfirmDeleteId(activeFile.id)}
-                  className="rounded p-1.5 text-red-600 transition hover:bg-red-50"
-                  aria-label="Delete"
-                  title="Delete"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <button onClick={() => setConfirmDeleteId(activeFile.id)} className="rounded p-1.5 text-red-600 transition hover:bg-red-50" aria-label="Delete" title="Delete"><Trash2 className="h-4 w-4" /></button>
               </>
             )}
           </div>
 
-          {/* Delete confirm bar */}
           {confirmDeleteId === activeFile.id && (
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
               <span>Remove “{activeFile.displayFilename}” from this candidate?</span>
@@ -278,53 +343,13 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                 <button onClick={() => handleDelete(activeFile.id)} disabled={busy} className="flex items-center gap-1 rounded bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60">
                   {busy ? <Loader className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />} Delete
                 </button>
-                <button onClick={() => setConfirmDeleteId(null)} className="rounded border border-red-300 px-3 py-1 text-xs font-semibold text-red-700">
-                  Cancel
-                </button>
+                <button onClick={() => setConfirmDeleteId(null)} className="rounded border border-red-300 px-3 py-1 text-xs font-semibold text-red-700">Cancel</button>
               </div>
             </div>
           )}
 
-          {/* Preview */}
           <div className="bg-brand-cloudDancer/30 p-3">
-            {!activeFile.storageKey ? (
-              <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-brand-lea/10 bg-white py-16 text-center">
-                <FileWarning className="h-8 w-8 text-brand-grey/50" />
-                <p className="font-semibold text-brand-lea">File content not stored</p>
-                <p className="text-sm text-brand-grey">This record has metadata only — re-upload the file to preview it.</p>
-              </div>
-            ) : isPdf(activeFile) ? (
-              <iframe
-                key={activeFile.id}
-                src={`/api/candidate-files/${activeFile.id}#zoom=100`}
-                title={activeFile.displayFilename}
-                className="h-[1120px] w-full rounded-lg border border-brand-lea/10 bg-white"
-              />
-            ) : isImage(activeFile) ? (
-              <div className="flex justify-center rounded-lg border border-brand-lea/10 bg-white p-4">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`/api/candidate-files/${activeFile.id}`}
-                  alt={activeFile.displayFilename}
-                  className="max-h-[82vh] w-auto rounded"
-                />
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-brand-lea/10 bg-white py-16 text-center">
-                <FileText className="h-8 w-8 text-brand-grey/50" />
-                <p className="font-semibold text-brand-lea">Inline preview not available</p>
-                <p className="max-w-sm text-sm text-brand-grey">
-                  {activeFile.displayFilename} can&apos;t be previewed in the browser. Download it to view.
-                </p>
-                <a
-                  href={`/api/candidate-files/${activeFile.id}`}
-                  download
-                  className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-eden"
-                >
-                  <Download className="h-4 w-4" /> Download
-                </a>
-              </div>
-            )}
+            <FilePreview file={activeFile} mode="actual" />
           </div>
         </>
       )}
