@@ -112,7 +112,7 @@ export const navigationGroups: readonly NavigationGroup[] = [
       {
         id: "people",
         label: "People",
-        items: [{ id: "people", href: "/people", label: "Onboarding", icon: UserPlus }]
+        items: [{ id: "people", href: "/people", label: "Pre-onboarding", icon: UserPlus }]
       }
     ]
   },

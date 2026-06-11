@@ -1,14 +1,20 @@
-import { PagePlaceholder } from "@/components/layout/PagePlaceholder";
 import { requireModulePageAccess } from "@/lib/data/module-access";
+import { getOnboardingWorkspaceData, type HireStage } from "@/lib/data/onboarding";
+import { PreOnboardingWorkspace } from "@/components/people/PreOnboardingWorkspace";
 
-export default async function PeoplePage() {
+export const dynamic = "force-dynamic";
+
+function stageFromParam(value: string | undefined): HireStage {
+  if (value === "post") return "POST_ONBOARD";
+  if (value === "archived") return "ARCHIVED";
+  return "ACTIVE";
+}
+
+export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ stage?: string }> }) {
   await requireModulePageAccess("people");
-  return (
-    <PagePlaceholder
-      eyebrow="People"
-      title="People & Onboarding"
-      description="The People workspace will hold new-hire onboarding, orientation tracking, and recognition — coming soon."
-      cards={["Orientation tracker", "Pre-onboarding sheet", "Recognition program", "Employee directory"]}
-    />
-  );
+  const sp = await searchParams;
+  const stage = stageFromParam(sp.stage);
+  const data = await getOnboardingWorkspaceData(stage);
+
+  return <PreOnboardingWorkspace data={data} stage={stage} />;
 }

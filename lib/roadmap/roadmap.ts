@@ -35,7 +35,7 @@ Core recruiting capabilities.
 ## Phase 3: UX & Polish
 Making the day-to-day experience better.
 - [x] Sidebar redesign (Jun 11) — squared icon rail + items panel; domains Home/Recruiting/People/Data/Admin; Publishing folded into Recruiting as a collapsible section (Job Post Builder, Final Review, Content Blocks); collapsible sections remember their state; hover flyouts + mobile drawer
-- [ ] People workspace — onboarding, orientation tracker, recognition (domain stubbed in)
+- [~] People workspace — Pre-onboarding shipped (below); orientation tracker + recognition still to come
 - [ ] 3.1 Command Center Redesign
 - [x] 3.2 Candidate Profile Editing UX (Jun 10) — split layout, profile tabs, inline PDF preview for resume/pilot app, add/rename/delete docs
 - [x] 3.3 Calendar UX Improvements (Jun 10) — month/week/day views, drag-to-reschedule, autofill, stages
@@ -86,8 +86,8 @@ Tools for assessing candidates — must stay transparent and fair.
 
 ## People Ops / Onboarding
 Supporting the team beyond recruiting.
-- [ ] Orientation tracker — track new-hire orientation progress
-- [ ] Pre-onboarding sheet — collect new-hire info before day one
+- [x] Pre-onboarding tracker (Jun 11) — replaced the Google Sheet; dashboard (starting soon, missing items, urgent, needs-attention, upcoming starts), active-hire table with progress + status + next action, per-hire detail with the universal checklist, and Active/Post-onboard/Archived lifecycle; imported the 34 current hires from CSV
+- [ ] Orientation tracker — group pre-onboarding hires by orientation date and run the session (builds on the cohorts idea)
 - [ ] Recognition program — idea stage; shape the concept first
 
 ## Bugs & UX Fixes

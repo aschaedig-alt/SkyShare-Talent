@@ -199,6 +199,50 @@ model WorkspaceSetting {
   @@unique([scope, key])
 }
 
+model NewHire {
+  id              String   @id @default(cuid())
+  name            String
+  position        String?
+  department      String?
+  phone           String?
+  ssEmail         String?
+  personalEmail   String?
+  offerSentDate   DateTime?
+  offerSignedDate DateTime?
+  startDate       DateTime?
+  orientationDate DateTime?
+  // Lifecycle: ACTIVE (being onboarded) -> POST_ONBOARD (maintenance) -> ARCHIVED
+  stage           String   @default("ACTIVE")
+  canceled        Boolean  @default(false)
+  travelStatus    String?
+  notes           String?
+  candidateId     String?
+  importKey       String?  @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tasks           OnboardingTask[]
+
+  @@index([stage])
+}
+
+model OnboardingTask {
+  id          String    @id @default(cuid())
+  newHireId   String
+  key         String
+  label       String
+  group       String
+  order       Int
+  // TODO (not done) | DONE | NA (not applicable, e.g. pilot-only tasks for ground crew)
+  status      String    @default("TODO")
+  completedAt DateTime?
+
+  newHire     NewHire   @relation(fields: [newHireId], references: [id], onDelete: Cascade)
+
+  @@unique([newHireId, key])
+  @@index([newHireId])
+}
+
 model Feedback {
   id          String   @id @default(cuid())
   type        String   @default("IDEA")
