@@ -79,14 +79,15 @@ function normalizeTitle(value: string | null) {
   return (value ?? "").toLowerCase().replace(/\s+/g, " ").trim();
 }
 
-function isPilotTitle(title: string, department: string | null, minimumRequirements = "") {
-  const text = `${title} ${department ?? ""} ${minimumRequirements}`.toLowerCase();
-  const supportOnly = /\b(technician|maintenance|controller|coordinator|sales|accounting|human resources|generalist|facilities|line service|attendant)\b/.test(text)
-    && !/\b(pilot|captain|first officer|pic|sic|chief pilot)\b/.test(text);
-  return !supportOnly && /\b(pilot|captain|first officer|pic|sic|chief pilot|gulfstream|citation|pilatus|pc-12|cj2|g450|g200|560xl|ce525|m2|phenom)\b/.test(text);
+// A role is "pilot" ONLY when the TITLE names a pilot seat/role (Captain, First Officer,
+// PIC, SIC, Pilot, Chief Pilot). Aircraft names alone (Gulfstream, Citation, Pilatus, ...)
+// do NOT make it a pilot job, so "Senior Gulfstream Technician" classifies as support.
+// Department is intentionally ignored — imported department values are unreliable.
+export function isPilotTitle(title: string) {
+  return /\b(pilot|captain|first officer|chief pilot|pic|sic|aviator)\b/.test(title.toLowerCase());
 }
 
-function detectSeat(title: string) {
+export function detectSeat(title: string) {
   const text = title.toLowerCase();
   if (/\b(first officer|sic)\b/.test(text)) return "SIC";
   if (/\b(lead pic|lead captain)\b/.test(text)) return "Lead PIC";
@@ -94,7 +95,7 @@ function detectSeat(title: string) {
   return "PIC";
 }
 
-function extractAircraftTypes(text: string) {
+export function extractAircraftTypes(text: string) {
   const source = text.toLowerCase();
   const aircraft = new Set<string>();
   if (/gulfstream\s*g450|\bg450\b/.test(source)) aircraft.add("Gulfstream G450");
@@ -169,7 +170,7 @@ function boolGateEnabled(key: string, text: string) {
   return checks[key]?.test(text) ?? false;
 }
 
-async function ensurePilotRequirementCatalog() {
+export async function ensurePilotRequirementCatalog() {
   for (const [index, item] of defaultCatalogItems.entries()) {
     await prisma.requirementCatalogItem.upsert({
       where: { key: item.key },
@@ -191,7 +192,7 @@ async function ensurePilotRequirementCatalog() {
   return prisma.requirementCatalogItem.findMany({ where: { archivedAt: null }, orderBy: [{ sortOrder: "asc" }, { label: "asc" }] });
 }
 
-async function createPilotRequirementGates(pilotRequirementId: string, text: string) {
+export async function createPilotRequirementGates(pilotRequirementId: string, text: string) {
   const catalog = await ensurePilotRequirementCatalog();
   const hours = extractHours(text);
 
@@ -252,7 +253,7 @@ export async function importJobRows({ rows, sourceFilename, sourceType, importBa
       const rawMinimumRequirements = getFirstValue(row, minimumKeys);
       const rawPayScale = getFirstValue(row, payKeys);
       const sourceText = [stripHtml(rawDescription), rawMinimumRequirements, rawPayScale].filter(Boolean).join("\n\n");
-      const pilotRole = isPilotTitle(title, department, rawMinimumRequirements ?? "");
+      const pilotRole = isPilotTitle(title);
       const aircraftTypes = extractAircraftTypes(`${title}\n${sourceText}`);
       const filledDate = parseDate(getFirstValue(row, filledKeys));
 

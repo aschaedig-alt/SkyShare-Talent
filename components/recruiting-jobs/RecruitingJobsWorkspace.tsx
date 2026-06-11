@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { RecruitingJobDetail, RecruitingJobsData } from "@/lib/data/recruiting-jobs";
+import { JobClassificationEditor } from "@/components/recruiting-jobs/JobClassificationEditor";
 
 type RecruitingJobsWorkspaceProps = {
   data: RecruitingJobsData;
@@ -42,24 +43,13 @@ function JobDetail({ job }: { job: RecruitingJobDetail | null }) {
             <p className="mt-1 text-sm text-brand-grey">
               {[job.department, job.status, locationLabel(job)].filter(Boolean).join(" - ")}
             </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full border border-brand-sweet/60 bg-brand-sweet/18 px-2.5 py-1 text-[11px] font-semibold text-brand-lea">
-                {job.isPilotRole ? "Pilot role" : "Support role"}
-              </span>
-              {job.pilotSeat ? (
-                <span className="rounded-full border border-brand-sweet/60 bg-brand-sweet/18 px-2.5 py-1 text-[11px] font-semibold text-brand-lea">
-                  {job.pilotSeat}
-                </span>
-              ) : null}
-              {job.aircraftTypes.map((aircraft) => (
-                <span
-                  key={aircraft}
-                  className="rounded-full border border-brand-sweet/60 bg-brand-sweet/18 px-2.5 py-1 text-[11px] font-semibold text-brand-lea"
-                >
-                  {aircraft}
-                </span>
-              ))}
-            </div>
+            <JobClassificationEditor
+              key={job.id}
+              jobId={job.id}
+              isPilotRole={job.isPilotRole}
+              pilotSeat={job.pilotSeat}
+              aircraftTypes={job.aircraftTypes}
+            />
           </div>
           <div className="grid min-w-full grid-cols-2 gap-2 text-sm sm:min-w-[420px] sm:grid-cols-4">
             <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-3">
