@@ -65,6 +65,7 @@ Behind-the-scenes work that keeps everything running.
 - [x] Editable roadmap powering this checklist (Jun 10)
 - [x] Feedback button + admin review page (Jun 10) — any user submits ideas/bugs/questions
 - [x] Workspace logo library (Jun 11) — admins upload multiple named logos in Settings (Branding) and assign one to each placement: sidebar mark, login page, and reports/exports; logo also serves as the Home button
+- [x] Sidebar polish (Jun 11) — rail locked to full screen height (only panel/content scroll), Admin pinned to the bottom, thin gold hairline dividers between rail items, wider 70px rail; Settings tabs (General/Team Members/Activity/Feedback/Templates) moved into the Admin panel as nav items
 
 ## Document Intelligence
 Making candidate documents searchable and structured.

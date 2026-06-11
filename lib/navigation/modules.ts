@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type { RoleName } from "@/lib/auth/roles";
 import {
+  Activity,
   BarChart3,
   Blocks,
   BriefcaseBusiness,
@@ -9,11 +10,14 @@ import {
   ClipboardList,
   Database,
   FileCheck2,
+  FileText,
   HeartHandshake,
   Import,
+  MessageSquare,
   Plane,
   SearchCheck,
   Settings,
+  SlidersHorizontal,
   UserPlus,
   Users
 } from "lucide-react";
@@ -134,9 +138,15 @@ export const navigationGroups: readonly NavigationGroup[] = [
     icon: Settings,
     sections: [
       {
-        id: "admin",
-        label: "Admin",
-        items: [{ id: "settings", href: "/settings", label: "Settings", icon: Settings }]
+        id: "settings",
+        label: "Settings",
+        items: [
+          { id: "settings", href: "/settings", label: "General", icon: SlidersHorizontal },
+          { id: "settings", href: "/settings/users", label: "Team Members", icon: Users },
+          { id: "settings", href: "/settings/activity", label: "Activity", icon: Activity },
+          { id: "settings", href: "/settings/feedback", label: "Feedback", icon: MessageSquare },
+          { id: "settings", href: "/settings/templates", label: "Templates", icon: FileText }
+        ]
       }
     ]
   }

@@ -1,5 +1,4 @@
 import { FeedbackWorkspace } from "@/components/settings/FeedbackWorkspace";
-import { SettingsTabs } from "@/components/settings/SettingsTabs";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { prisma } from "@/lib/prisma";
 
@@ -29,10 +28,8 @@ export default async function FeedbackPage() {
       <div className="space-y-4 px-5 py-5 lg:px-8">
         <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Admin foundation</p>
-          <h1 className="text-2xl font-semibold text-brand-lea">Settings</h1>
+          <h1 className="text-2xl font-semibold text-brand-lea">Feedback</h1>
         </section>
-
-        <SettingsTabs currentTab="feedback" />
 
         <FeedbackWorkspace items={serialized} />
       </div>

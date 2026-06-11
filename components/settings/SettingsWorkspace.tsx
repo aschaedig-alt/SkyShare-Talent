@@ -1,6 +1,5 @@
 import type { SettingsData } from "@/lib/data/settings";
 import type { RoleName } from "@/lib/auth/roles";
-import { SettingsTabs } from "@/components/settings/SettingsTabs";
 import { ModuleVisibilityAccessPanel } from "@/components/settings/ModuleVisibilityAccessPanel";
 import { BrandingPanel } from "@/components/settings/BrandingPanel";
 
@@ -53,8 +52,6 @@ export function SettingsWorkspace({ data, currentRole }: SettingsWorkspaceProps)
           deployment readiness, storage, and Google Calendar configuration.
         </p>
       </section>
-
-      <SettingsTabs currentTab="general" />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         {countLabels.map(([key, label]) => (

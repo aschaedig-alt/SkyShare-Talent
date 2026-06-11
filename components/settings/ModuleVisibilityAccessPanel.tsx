@@ -28,13 +28,24 @@ export function ModuleVisibilityAccessPanel({ policy: initialPolicy }: ModuleVis
   const [status, setStatus] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Several nav items can map to the same module (e.g. the Settings sub-pages all use
+  // the "settings" module). The access table is per-module, so show each module once.
+  const seenModules = new Set<ModuleId>();
   const rows = navigationGroups.flatMap((group) =>
     group.sections.flatMap((section) =>
-      section.items.map((item) => ({
-        group: section.label === group.label ? group.label : `${group.label} › ${section.label}`,
-        id: item.id,
-        label: item.label
-      }))
+      section.items
+        .filter((item) => {
+          if (seenModules.has(item.id)) {
+            return false;
+          }
+          seenModules.add(item.id);
+          return true;
+        })
+        .map((item) => ({
+          group: section.label === group.label ? group.label : `${group.label} › ${section.label}`,
+          id: item.id,
+          label: item.id === "settings" ? "Settings" : item.label
+        }))
     )
   );
 
