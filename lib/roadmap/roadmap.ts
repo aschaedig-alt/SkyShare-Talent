@@ -58,6 +58,7 @@ Restoring and streamlining the publishing toolset.
 
 ## Platform & Infrastructure
 Behind-the-scenes work that keeps everything running.
+- [ ] Hard-delete test data — bulk-select checkboxes on the Candidates and Jobs lists to permanently remove test records; irreversible, admin-only, with confirmation (build when closer to going live)
 - [x] Google OAuth login fixed (Jun 9) — env vars via Vercel CLI
 - [x] PostgreSQL (Neon) for local + production (Jun 9)
 - [x] Settings pages: Team Members + Activity (Jun 9)
