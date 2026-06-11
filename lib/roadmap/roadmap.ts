@@ -34,7 +34,7 @@ Core recruiting capabilities.
 
 ## Phase 3: UX & Polish
 Making the day-to-day experience better.
-- [x] Sidebar redesign (Jun 11) — icon rail + items panel; domains Home/Recruiting/Publishing/People/Data/Admin; collapsible with hover flyouts + mobile drawer
+- [x] Sidebar redesign (Jun 11) — squared icon rail + items panel; domains Home/Recruiting/People/Data/Admin; Publishing folded into Recruiting as a collapsible section (Job Post Builder, Final Review, Content Blocks); collapsible sections remember their state; hover flyouts + mobile drawer
 - [ ] People workspace — onboarding, orientation tracker, recognition (domain stubbed in)
 - [ ] 3.1 Command Center Redesign
 - [x] 3.2 Candidate Profile Editing UX (Jun 10) — split layout, profile tabs, inline PDF preview for resume/pilot app, add/rename/delete docs

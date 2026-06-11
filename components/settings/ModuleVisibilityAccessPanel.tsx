@@ -29,11 +29,13 @@ export function ModuleVisibilityAccessPanel({ policy: initialPolicy }: ModuleVis
   const [saving, setSaving] = useState(false);
 
   const rows = navigationGroups.flatMap((group) =>
-    group.items.map((item) => ({
-      group: group.label,
-      id: item.id,
-      label: item.label
-    }))
+    group.sections.flatMap((section) =>
+      section.items.map((item) => ({
+        group: section.label === group.label ? group.label : `${group.label} › ${section.label}`,
+        id: item.id,
+        label: item.label
+      }))
+    )
   );
 
   function updateRule(moduleId: ModuleId, role: RoleName, patch: Partial<{ showInSidebar: boolean; accessLevel: AccessLevel }>) {

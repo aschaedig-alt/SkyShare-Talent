@@ -62,11 +62,17 @@ export type NavigationItem = {
   icon: ComponentType<{ className?: string }>;
 };
 
+export type NavigationSection = {
+  id: string;
+  label: string;
+  items: NavigationItem[];
+};
+
 export type NavigationGroup = {
   id: string;
   label: string;
   icon: ComponentType<{ className?: string }>;
-  items: NavigationItem[];
+  sections: NavigationSection[];
 };
 
 export const navigationGroups: readonly NavigationGroup[] = [
@@ -74,50 +80,79 @@ export const navigationGroups: readonly NavigationGroup[] = [
     id: "home",
     label: "Home",
     icon: LayoutDashboard,
-    items: [{ id: "command-center", href: "/command-center", label: "Command Center", icon: Gauge }]
+    sections: [
+      {
+        id: "home",
+        label: "Home",
+        items: [{ id: "command-center", href: "/command-center", label: "Command Center", icon: Gauge }]
+      }
+    ]
   },
   {
     id: "recruiting",
     label: "Recruiting",
     icon: Users,
-    items: [
-      { id: "candidates", href: "/candidates", label: "Candidates", icon: SearchCheck },
-      { id: "recruiting-jobs", href: "/recruiting-jobs", label: "Jobs", icon: BriefcaseBusiness },
-      { id: "pilot-requirements", href: "/pilot-requirements", label: "Pilot Requirements", icon: Plane },
-      { id: "calendar", href: "/calendar", label: "Calendar", icon: CalendarDays }
-    ]
-  },
-  {
-    id: "publishing",
-    label: "Publishing",
-    icon: ClipboardList,
-    items: [
-      { id: "jobs", href: "/jobs", label: "Job Builder", icon: ClipboardList },
-      { id: "review", href: "/review", label: "Final Review", icon: FileCheck2 },
-      { id: "blocks", href: "/blocks", label: "Content Blocks", icon: Blocks }
+    sections: [
+      {
+        id: "recruiting",
+        label: "Recruiting",
+        items: [
+          { id: "candidates", href: "/candidates", label: "Candidates", icon: SearchCheck },
+          { id: "recruiting-jobs", href: "/recruiting-jobs", label: "Jobs", icon: BriefcaseBusiness },
+          { id: "pilot-requirements", href: "/pilot-requirements", label: "Pilot Requirements", icon: Plane },
+          { id: "calendar", href: "/calendar", label: "Calendar", icon: CalendarDays }
+        ]
+      },
+      {
+        id: "publishing",
+        label: "Publishing",
+        items: [
+          { id: "jobs", href: "/jobs", label: "Job Post Builder", icon: ClipboardList },
+          { id: "review", href: "/review", label: "Final Review", icon: FileCheck2 },
+          { id: "blocks", href: "/blocks", label: "Content Blocks", icon: Blocks }
+        ]
+      }
     ]
   },
   {
     id: "people",
     label: "People",
     icon: HeartHandshake,
-    items: [{ id: "people", href: "/people", label: "Onboarding", icon: UserPlus }]
+    sections: [
+      {
+        id: "people",
+        label: "People",
+        items: [{ id: "people", href: "/people", label: "Onboarding", icon: UserPlus }]
+      }
+    ]
   },
   {
     id: "data",
     label: "Data",
     icon: Database,
-    items: [
-      { id: "imports", href: "/imports", label: "Imports / Uploads", icon: Import },
-      { id: "duplicate-review", href: "/duplicate-review", label: "Duplicate Review", icon: CheckCircle2 },
-      { id: "reports", href: "/reports", label: "Reports", icon: BarChart3 }
+    sections: [
+      {
+        id: "data",
+        label: "Data",
+        items: [
+          { id: "imports", href: "/imports", label: "Imports / Uploads", icon: Import },
+          { id: "duplicate-review", href: "/duplicate-review", label: "Duplicate Review", icon: CheckCircle2 },
+          { id: "reports", href: "/reports", label: "Reports", icon: BarChart3 }
+        ]
+      }
     ]
   },
   {
     id: "admin",
     label: "Admin",
     icon: Settings,
-    items: [{ id: "settings", href: "/settings", label: "Settings", icon: Settings }]
+    sections: [
+      {
+        id: "admin",
+        label: "Admin",
+        items: [{ id: "settings", href: "/settings", label: "Settings", icon: Settings }]
+      }
+    ]
   }
 ];
 
@@ -225,9 +260,11 @@ function matchesPath(href: string, pathname: string) {
 
 export function getModuleIdForPath(pathname: string): ModuleId | null {
   for (const group of navigationGroups) {
-    for (const item of group.items) {
-      if (matchesPath(item.href, pathname)) {
-        return item.id;
+    for (const section of group.sections) {
+      for (const item of section.items) {
+        if (matchesPath(item.href, pathname)) {
+          return item.id;
+        }
       }
     }
   }
@@ -256,7 +293,15 @@ export function getVisibleNavigationGroups(policy: ModuleAccessPolicy, role: Rol
   return navigationGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => isSidebarVisible(getModuleAccessRule(policy, item.id, role)))
+      sections: group.sections
+        .map((section) => ({
+          ...section,
+          items: section.items.filter((item) => isSidebarVisible(getModuleAccessRule(policy, item.id, role)))
+        }))
+        .filter((section) => section.items.length > 0)
     }))
-    .filter((group) => group.items.length > 0);
+    .filter((group) => group.sections.length > 0);
 }
+
+export type VisibleNavigationGroup = ReturnType<typeof getVisibleNavigationGroups>[number];
+export type VisibleNavigationSection = VisibleNavigationGroup["sections"][number];

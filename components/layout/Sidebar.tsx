@@ -4,9 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { clsx } from "clsx";
-import { Plane, Menu, X, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Plane, Menu, X, ChevronsLeft, ChevronsRight, ChevronDown, ChevronRight } from "lucide-react";
 import type { RoleName } from "@/lib/auth/roles";
-import { getVisibleNavigationGroups, type ModuleAccessPolicy, type NavigationGroup } from "@/lib/navigation/modules";
+import {
+  getVisibleNavigationGroups,
+  type ModuleAccessPolicy,
+  type VisibleNavigationGroup,
+  type VisibleNavigationSection
+} from "@/lib/navigation/modules";
 
 type SidebarProps = {
   role: RoleName;
@@ -14,6 +19,7 @@ type SidebarProps = {
 };
 
 const COLLAPSE_KEY = "skyshare-sidebar-collapsed";
+const SECTIONS_KEY = "skyshare-sidebar-sections-collapsed";
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -25,9 +31,18 @@ export function Sidebar({ role, policy }: SidebarProps) {
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setCollapsed(window.localStorage.getItem(COLLAPSE_KEY) === "1");
+    try {
+      const raw = window.localStorage.getItem(SECTIONS_KEY);
+      if (raw) {
+        setCollapsedSections(new Set(JSON.parse(raw) as string[]));
+      }
+    } catch {
+      // ignore malformed storage
+    }
   }, []);
   useEffect(() => {
     setMobileOpen(false);
@@ -41,11 +56,24 @@ export function Sidebar({ role, policy }: SidebarProps) {
     });
   }
 
-  const activeGroup =
-    groups.find((g) => g.items.some((i) => isActive(pathname, i.href))) ?? groups[0];
+  function toggleSection(id: string) {
+    setCollapsedSections((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      window.localStorage.setItem(SECTIONS_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  }
 
-  function firstHref(group: NavigationGroup) {
-    return group.items[0]?.href ?? "/command-center";
+  const activeGroup =
+    groups.find((g) => g.sections.some((s) => s.items.some((i) => isActive(pathname, i.href)))) ?? groups[0];
+
+  function firstHref(group: VisibleNavigationGroup) {
+    return group.sections[0]?.items[0]?.href ?? "/command-center";
   }
 
   return (
@@ -53,7 +81,7 @@ export function Sidebar({ role, policy }: SidebarProps) {
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="fixed left-3 top-3 z-40 flex h-9 w-9 items-center justify-center rounded-lg bg-brand-lea text-white shadow-lg lg:hidden"
+        className="fixed left-3 top-3 z-40 flex h-9 w-9 items-center justify-center rounded-[4px] bg-brand-lea text-white shadow-lg lg:hidden"
         aria-label="Open menu"
       >
         <Menu className="h-5 w-5" />
@@ -66,7 +94,7 @@ export function Sidebar({ role, policy }: SidebarProps) {
           <aside className="absolute left-0 top-0 h-full w-72 overflow-y-auto bg-brand-lea text-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded bg-brand-gold/90 text-brand-lea">
+                <div className="flex h-8 w-8 items-center justify-center rounded-[4px] bg-brand-gold/90 text-brand-lea">
                   <Plane className="h-4 w-4" />
                 </div>
                 <span className="font-semibold">SkyShare</span>
@@ -75,33 +103,18 @@ export function Sidebar({ role, policy }: SidebarProps) {
                 <X className="h-5 w-5 text-white/70" />
               </button>
             </div>
-            <nav className="space-y-4 px-3 py-4">
-              {groups.map((group) => (
-                <div key={group.id}>
-                  <div className="mb-1 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">
-                    {group.label}
-                  </div>
-                  <div className="space-y-1">
-                    {group.items.map((item) => {
-                      const Icon = item.icon;
-                      const active = isActive(pathname, item.href);
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className={clsx(
-                            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition",
-                            active ? "bg-white text-brand-lea" : "text-white/80 hover:bg-white/10"
-                          )}
-                        >
-                          <Icon className="h-4 w-4 shrink-0" />
-                          {item.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+            <nav className="space-y-3 px-3 py-4">
+              {groups.flatMap((group) =>
+                group.sections.map((section) => (
+                  <SectionBlock
+                    key={`${group.id}-${section.id}`}
+                    section={section}
+                    pathname={pathname}
+                    collapsed={collapsedSections.has(section.id)}
+                    onToggle={() => toggleSection(section.id)}
+                  />
+                ))
+              )}
             </nav>
           </aside>
         </div>
@@ -111,10 +124,10 @@ export function Sidebar({ role, policy }: SidebarProps) {
       <div className="hidden shrink-0 lg:flex">
         {/* Icon rail */}
         <div className="flex w-16 flex-col items-center border-r border-white/10 bg-brand-eden py-3">
-          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-brand-gold/90 text-brand-lea">
+          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-[4px] bg-brand-gold/90 text-brand-lea">
             <Plane className="h-5 w-5" />
           </div>
-          <div className="flex flex-1 flex-col items-center gap-1">
+          <div className="flex flex-1 flex-col items-center gap-1.5">
             {groups.map((group) => {
               const Icon = group.icon;
               const groupActive = group.id === activeGroup?.id;
@@ -124,8 +137,10 @@ export function Sidebar({ role, policy }: SidebarProps) {
                     href={firstHref(group)}
                     title={group.label}
                     className={clsx(
-                      "flex w-12 flex-col items-center gap-0.5 rounded-lg py-2 transition",
-                      groupActive ? "bg-brand-gold text-brand-lea" : "text-white/70 hover:bg-white/10 hover:text-white"
+                      "flex w-12 flex-col items-center gap-0.5 rounded-[4px] py-2 transition",
+                      groupActive
+                        ? "bg-brand-gold text-brand-lea"
+                        : "text-white/85 hover:bg-white/10 hover:text-white"
                     )}
                   >
                     <Icon className="h-5 w-5" />
@@ -133,29 +148,33 @@ export function Sidebar({ role, policy }: SidebarProps) {
                   </Link>
 
                   {/* Flyout (collapsed mode) */}
-                  {collapsed && group.items.length > 1 && (
-                    <div className="invisible absolute left-full top-0 z-50 ml-1 w-52 opacity-0 transition group-hover:visible group-hover:opacity-100">
-                      <div className="rounded-lg border border-white/10 bg-brand-lea p-2 shadow-2xl">
-                        <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">
-                          {group.label}
-                        </div>
-                        {group.items.map((item) => {
-                          const Ic = item.icon;
-                          const active = isActive(pathname, item.href);
-                          return (
-                            <Link
-                              key={item.href}
-                              href={item.href}
-                              className={clsx(
-                                "flex items-center gap-2.5 rounded px-2.5 py-2 text-sm font-medium transition",
-                                active ? "bg-white text-brand-lea" : "text-white/80 hover:bg-white/10"
-                              )}
-                            >
-                              <Ic className="h-4 w-4 shrink-0" />
-                              {item.label}
-                            </Link>
-                          );
-                        })}
+                  {collapsed && (
+                    <div className="invisible absolute left-full top-0 z-50 ml-1 w-56 opacity-0 transition group-hover:visible group-hover:opacity-100">
+                      <div className="rounded-[4px] border border-white/10 bg-brand-lea p-2 shadow-2xl">
+                        {group.sections.map((section) => (
+                          <div key={section.id} className="mb-1 last:mb-0">
+                            <div className="px-2 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-brand-gold">
+                              {section.label}
+                            </div>
+                            {section.items.map((item) => {
+                              const Ic = item.icon;
+                              const active = isActive(pathname, item.href);
+                              return (
+                                <Link
+                                  key={item.href}
+                                  href={item.href}
+                                  className={clsx(
+                                    "flex items-center gap-2.5 rounded-[3px] px-2.5 py-2 text-sm font-medium transition",
+                                    active ? "bg-white text-brand-lea" : "text-white/90 hover:bg-white/10 hover:text-white"
+                                  )}
+                                >
+                                  <Ic className="h-4 w-4 shrink-0" />
+                                  {item.label}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -165,7 +184,7 @@ export function Sidebar({ role, policy }: SidebarProps) {
           </div>
           <button
             onClick={toggleCollapsed}
-            className="mt-2 flex h-9 w-9 items-center justify-center rounded-lg text-white/60 transition hover:bg-white/10 hover:text-white"
+            className="mt-2 flex h-9 w-9 items-center justify-center rounded-[4px] text-white/70 transition hover:bg-white/10 hover:text-white"
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -175,32 +194,76 @@ export function Sidebar({ role, policy }: SidebarProps) {
 
         {/* Items panel */}
         {!collapsed && activeGroup && (
-          <div className="flex w-52 flex-col border-r border-white/10 bg-brand-lea">
-            <div className="border-b border-white/10 px-4 py-[18px]">
-              <div className="text-sm font-semibold text-white">{activeGroup.label}</div>
-            </div>
-            <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-              {activeGroup.items.map((item) => {
-                const Icon = item.icon;
-                const active = isActive(pathname, item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={clsx(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition",
-                      active ? "bg-white text-brand-lea shadow-sm" : "text-white/78 hover:bg-white/10 hover:text-white"
-                    )}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{item.label}</span>
-                  </Link>
-                );
-              })}
+          <div className="flex w-56 flex-col border-r border-white/10 bg-brand-lea">
+            <nav className="flex-1 space-y-2 overflow-y-auto p-3">
+              {activeGroup.sections.map((section) => (
+                <SectionBlock
+                  key={section.id}
+                  section={section}
+                  pathname={pathname}
+                  collapsible={activeGroup.sections.length > 1}
+                  collapsed={collapsedSections.has(section.id)}
+                  onToggle={() => toggleSection(section.id)}
+                />
+              ))}
             </nav>
           </div>
         )}
       </div>
     </>
+  );
+}
+
+type SectionBlockProps = {
+  section: VisibleNavigationSection;
+  pathname: string;
+  collapsed: boolean;
+  onToggle: () => void;
+  collapsible?: boolean;
+};
+
+function SectionBlock({ section, pathname, collapsed, onToggle, collapsible = true }: SectionBlockProps) {
+  const isOpen = !collapsible || !collapsed;
+
+  return (
+    <div>
+      {collapsible ? (
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={isOpen}
+          className="flex w-full items-center justify-between rounded-[3px] px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-brand-gold transition hover:bg-white/5"
+        >
+          <span>{section.label}</span>
+          {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        </button>
+      ) : (
+        <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-brand-gold">
+          {section.label}
+        </div>
+      )}
+
+      {isOpen && (
+        <div className="mt-0.5 space-y-1">
+          {section.items.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(pathname, item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={clsx(
+                  "flex items-center gap-3 rounded-[3px] px-3 py-2.5 text-sm font-medium transition",
+                  active ? "bg-white text-brand-lea shadow-sm" : "text-white/90 hover:bg-white/10 hover:text-white"
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="truncate">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
