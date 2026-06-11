@@ -21,8 +21,11 @@ export const METRIC_DEFS: MetricDef[] = [
   { key: "pic", label: "PIC", kind: "hours", unit: "hrs" },
   { key: "sic", label: "SIC", kind: "hours", unit: "hrs" },
   { key: "turbine", label: "Turbine", kind: "hours", unit: "hrs" },
+  { key: "turbine_pic", label: "Turbine PIC", kind: "hours", unit: "hrs" },
   { key: "multi_engine", label: "Multi-Engine", kind: "hours", unit: "hrs" },
+  { key: "multi_engine_pic", label: "Multi-Engine PIC", kind: "hours", unit: "hrs" },
   { key: "jet", label: "Jet", kind: "hours", unit: "hrs" },
+  { key: "jet_pic", label: "Jet PIC", kind: "hours", unit: "hrs" },
   { key: "night", label: "Night", kind: "hours", unit: "hrs" },
   { key: "instrument", label: "Instrument", kind: "hours", unit: "hrs" },
   { key: "cross_country", label: "Cross-Country", kind: "hours", unit: "hrs" },
@@ -30,6 +33,13 @@ export const METRIC_DEFS: MetricDef[] = [
   { key: "certificates", label: "Certificates", kind: "list" },
   { key: "medical_class", label: "Medical", kind: "text" }
 ];
+
+// For "Label (PIC): TOTAL (PIC-portion)" rows, the base synonym used to find the PIC sub-value.
+const PIC_BASE_SYNONYM: Record<string, string> = {
+  jet_pic: "jet",
+  turbine_pic: "turbine",
+  multi_engine_pic: "multi-?engine|multi engine"
+};
 
 export type ExtractedMetric = {
   key: string;
@@ -43,8 +53,8 @@ export type ExtractedMetric = {
 // Synonyms used to locate each hours metric (case-insensitive).
 const HOURS_SYNONYMS: Record<string, string[]> = {
   total_time: ["total time", "total flight time", "total hours", "total\\s*time", "\\btotal\\b", "\\bTT\\b"],
-  pic: ["pic", "pilot in command", "p\\.i\\.c"],
-  sic: ["sic", "second in command", "s\\.i\\.c"],
+  pic: ["pilot in command", "\\bPIC\\b(?!\\s*privile)", "p\\.i\\.c"],
+  sic: ["second in command", "\\bSIC\\b(?!\\s*privile)", "s\\.i\\.c"],
   turbine: ["turbine"],
   multi_engine: ["multi-engine", "multi engine", "multiengine", "\\bMEL\\b", "\\bME\\b"],
   jet: ["jet"],
@@ -103,13 +113,28 @@ function findHours(text: string, synonyms: string[]): { value: number; snippet: 
   return null;
 }
 
+/** Capture the parenthetical PIC sub-value, e.g. "Jet (PIC): 1175 (720)" → 720. */
+function findPicPortion(text: string, baseSyn: string): { value: number; snippet: string } | null {
+  const re = new RegExp(`(?:${baseSyn})\\s*\\(\\s*pic\\s*\\)\\s*[:\\-]?\\s*[0-9][0-9,]{0,6}\\s*\\(\\s*([0-9][0-9,]{0,6})\\s*\\)`, "i");
+  const m = re.exec(text);
+  if (m && m.index !== undefined) {
+    const value = parseNumber(m[1]);
+    if (value !== null) {
+      return { value, snippet: snippetAround(text, m.index, m[0].length) };
+    }
+  }
+  return null;
+}
+
 export function extractPilotMetrics(text: string): ExtractedMetric[] {
   if (!text || text.trim().length === 0) return [];
   const results: ExtractedMetric[] = [];
 
   for (const def of METRIC_DEFS) {
     if (def.kind === "hours") {
-      const found = findHours(text, HOURS_SYNONYMS[def.key] ?? [def.label.toLowerCase()]);
+      const found = PIC_BASE_SYNONYM[def.key]
+        ? findPicPortion(text, PIC_BASE_SYNONYM[def.key])
+        : findHours(text, HOURS_SYNONYMS[def.key] ?? [def.label.toLowerCase()]);
       if (found) {
         results.push({ key: def.key, label: def.label, valueNumber: found.value, unit: def.unit, snippet: found.snippet });
       }

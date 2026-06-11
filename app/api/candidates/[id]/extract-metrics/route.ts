@@ -37,7 +37,8 @@ export async function POST(_request: Request, context: RouteContext) {
       const existing = await prisma.candidateMetric.findUnique({
         where: { candidateId_key: { candidateId: id, key } }
       });
-      if (existing?.status === "CONFIRMED") continue;
+      // Don't resurrect values the user already confirmed or rejected.
+      if (existing?.status === "CONFIRMED" || existing?.status === "DISMISSED") continue;
 
       await prisma.candidateMetric.upsert({
         where: { candidateId_key: { candidateId: id, key } },

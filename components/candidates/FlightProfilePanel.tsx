@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plane, Sparkles, Check, X, Loader, Clock } from "lucide-react";
+import { Plane, Sparkles, Check, X, Loader, Clock, Pencil } from "lucide-react";
 import { clsx } from "clsx";
 
 type Metric = {
@@ -34,6 +34,33 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
   const [scanning, setScanning] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editVal, setEditVal] = useState("");
+
+  function startEdit(m: Metric) {
+    setEditingId(m.id);
+    setEditVal(m.valueNumber !== null && m.valueNumber !== undefined ? String(m.valueNumber) : m.valueText ?? "");
+  }
+
+  async function saveEdit(m: Metric, accept: boolean) {
+    const isNum = m.valueNumber !== null && m.valueNumber !== undefined;
+    const body: Record<string, unknown> = isNum
+      ? { valueNumber: Number(editVal.replace(/,/g, "")) || 0 }
+      : { valueText: editVal.trim() };
+    if (accept) body.action = "accept";
+    setBusyId(m.id);
+    try {
+      await fetch(`/api/candidate-metrics/${m.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      setEditingId(null);
+      router.refresh();
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   const confirmed = metrics.filter((m) => m.status === "CONFIRMED");
   const suggested = metrics.filter((m) => m.status === "SUGGESTED");
@@ -109,12 +136,36 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
       {confirmed.length > 0 && (
         <div className="mt-3 grid grid-cols-2 gap-2">
           {confirmed.map((m) => (
-            <div key={m.id} className="rounded-lg bg-brand-cloudDancer/45 px-2.5 py-2">
-              <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey">{m.label}</div>
-              <div className="mt-0.5 text-sm font-semibold text-brand-lea">
-                {metricValue(m)}
-                {m.unit && m.valueNumber !== null ? <span className="ml-1 text-[10px] font-normal text-brand-grey">{m.unit}</span> : null}
+            <div key={m.id} className="group rounded-lg bg-brand-cloudDancer/45 px-2.5 py-2">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey">{m.label}</div>
+                {editingId !== m.id && (
+                  <button onClick={() => startEdit(m)} className="text-brand-grey opacity-0 transition group-hover:opacity-100" aria-label="Edit">
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                )}
               </div>
+              {editingId === m.id ? (
+                <div className="mt-1 flex items-center gap-1">
+                  <input
+                    value={editVal}
+                    onChange={(e) => setEditVal(e.target.value)}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveEdit(m, false);
+                      if (e.key === "Escape") setEditingId(null);
+                    }}
+                    className="min-w-0 flex-1 rounded border border-brand-lea/30 px-1.5 py-0.5 text-sm focus:border-brand-gold focus:outline-none"
+                  />
+                  <button onClick={() => saveEdit(m, false)} disabled={busyId === m.id} className="rounded p-0.5 text-emerald-700" aria-label="Save"><Check className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => setEditingId(null)} className="rounded p-0.5 text-brand-grey" aria-label="Cancel"><X className="h-3.5 w-3.5" /></button>
+                </div>
+              ) : (
+                <div className="mt-0.5 text-sm font-semibold text-brand-lea">
+                  {metricValue(m)}
+                  {m.unit && m.valueNumber !== null ? <span className="ml-1 text-[10px] font-normal text-brand-grey">{m.unit}</span> : null}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -134,22 +185,49 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
           <div className="space-y-1.5">
             {suggested.map((m) => (
               <div key={m.id} className="rounded-lg border border-amber-200 bg-amber-50/60 px-2.5 py-1.5">
-                <div className="flex items-center gap-2">
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[11px] text-brand-grey">{m.label}</span>{" "}
-                    <span className="text-sm font-semibold text-brand-lea">
-                      {metricValue(m)}
-                      {m.unit && m.valueNumber !== null ? <span className="ml-0.5 text-[10px] font-normal text-brand-grey">{m.unit}</span> : null}
-                    </span>
+                {editingId === m.id ? (
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] text-brand-grey">{m.label}</span>
+                    <input
+                      value={editVal}
+                      onChange={(e) => setEditVal(e.target.value)}
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveEdit(m, true);
+                        if (e.key === "Escape") setEditingId(null);
+                      }}
+                      className="min-w-0 flex-1 rounded border border-brand-lea/30 px-1.5 py-0.5 text-sm focus:border-brand-gold focus:outline-none"
+                    />
+                    <button onClick={() => saveEdit(m, true)} disabled={busyId === m.id} className="rounded p-1 text-emerald-700 hover:bg-emerald-100" aria-label="Save and accept">
+                      {busyId === m.id ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                    </button>
+                    <button onClick={() => setEditingId(null)} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/50" aria-label="Cancel">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                  <button onClick={() => act(m.id, "accept")} disabled={busyId === m.id} className="rounded p-1 text-emerald-700 hover:bg-emerald-100" aria-label="Accept">
-                    {busyId === m.id ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                  </button>
-                  <button onClick={() => act(m.id, "dismiss")} disabled={busyId === m.id} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/50" aria-label="Dismiss">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                {m.sourceSnippet && <div className="mt-0.5 truncate text-[10px] italic text-brand-grey/80" title={m.sourceSnippet}>“{m.sourceSnippet}”</div>}
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[11px] text-brand-grey">{m.label}</span>{" "}
+                      <span className="text-sm font-semibold text-brand-lea">
+                        {metricValue(m)}
+                        {m.unit && m.valueNumber !== null ? <span className="ml-0.5 text-[10px] font-normal text-brand-grey">{m.unit}</span> : null}
+                      </span>
+                    </div>
+                    <button onClick={() => startEdit(m)} disabled={busyId === m.id} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/50" aria-label="Edit before accepting" title="Edit">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={() => act(m.id, "accept")} disabled={busyId === m.id} className="rounded p-1 text-emerald-700 hover:bg-emerald-100" aria-label="Accept">
+                      {busyId === m.id ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                    </button>
+                    <button onClick={() => act(m.id, "dismiss")} disabled={busyId === m.id} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/50" aria-label="Dismiss">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+                {editingId !== m.id && m.sourceSnippet && (
+                  <div className="mt-0.5 truncate text-[10px] italic text-brand-grey/80" title={m.sourceSnippet}>“{m.sourceSnippet}”</div>
+                )}
               </div>
             ))}
           </div>
