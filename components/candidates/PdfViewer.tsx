@@ -51,7 +51,17 @@ export function PdfViewer({ fileUrl, searchTerm }: PdfViewerProps) {
     [term]
   );
 
-  // Recompute match list + jump to first whenever the term changes (after layers render).
+  // Scroll a match into view WITHIN the document pane only (never scrolls the page).
+  const scrollToMark = useCallback((mark: HTMLElement) => {
+    const container = containerRef.current;
+    if (!container) return;
+    const cRect = container.getBoundingClientRect();
+    const mRect = mark.getBoundingClientRect();
+    const delta = mRect.top - cRect.top - cRect.height / 2 + mRect.height / 2;
+    container.scrollBy({ top: delta, behavior: "smooth" });
+  }, []);
+
+  // Recompute match list whenever the term changes (after layers render).
   const refreshMatches = useCallback(() => {
     const marks = containerRef.current?.querySelectorAll<HTMLElement>("mark.pdf-hl") ?? [];
     setMatchCount(marks.length);
@@ -64,23 +74,22 @@ export function PdfViewer({ fileUrl, searchTerm }: PdfViewerProps) {
       setMatchCount(0);
       return;
     }
-    // Give text layers a moment to render, then count + scroll to first.
     const t = setTimeout(() => {
       const marks = refreshMatches();
       if (marks.length > 0) {
         marks.forEach((m, i) => m.classList.toggle("pdf-hl-active", i === 0));
-        marks[0].scrollIntoView({ block: "center", behavior: "smooth" });
+        scrollToMark(marks[0]);
       }
     }, 350);
     return () => clearTimeout(t);
-  }, [term, numPages, refreshMatches]);
+  }, [term, numPages, refreshMatches, scrollToMark]);
 
   function goToMatch(next: number) {
     const marks = containerRef.current?.querySelectorAll<HTMLElement>("mark.pdf-hl");
     if (!marks || marks.length === 0) return;
     const idx = ((next % marks.length) + marks.length) % marks.length;
     marks.forEach((m, i) => m.classList.toggle("pdf-hl-active", i === idx));
-    marks[idx].scrollIntoView({ block: "center", behavior: "smooth" });
+    scrollToMark(marks[idx]);
     setActiveMatch(idx);
   }
 
@@ -98,9 +107,9 @@ export function PdfViewer({ fileUrl, searchTerm }: PdfViewerProps) {
 
   return (
     <div className="rounded-lg border border-brand-lea/10 bg-white">
-      {/* Search match navigation */}
+      {/* Search match navigation (sticky so the arrows stay visible while scrolling) */}
       {term ? (
-        <div className="flex items-center justify-between gap-2 border-b border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-1.5 text-xs text-brand-grey">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-brand-lea/10 bg-brand-cloudDancer px-3 py-1.5 text-xs text-brand-grey">
           <span>
             {matchCount > 0 ? (
               <>
@@ -124,7 +133,7 @@ export function PdfViewer({ fileUrl, searchTerm }: PdfViewerProps) {
         </div>
       ) : null}
 
-      <div ref={containerRef} className="max-h-[1000px] overflow-y-auto px-3 py-3">
+      <div ref={containerRef} className="h-[74vh] overflow-y-auto px-3 py-3">
         <Document
           file={fileUrl}
           onLoadSuccess={({ numPages: n }) => setNumPages(n)}
