@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { extractPilotMetrics } from "@/lib/extraction/pilot-metrics";
+import { extractFileText } from "@/lib/files/pdf-text";
+import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -14,6 +16,29 @@ export async function POST(_request: Request, context: RouteContext) {
   const { id } = await context.params;
 
   try {
+    // Self-heal: extract text now for any of this candidate's files that are missing it.
+    const needsText = await prisma.candidateFile.findMany({
+      where: { candidateId: id, storageKey: { not: null }, extractedText: null },
+      select: { id: true, storageKey: true, mimeType: true, displayFilename: true, originalFilename: true }
+    });
+    if (needsText.length > 0) {
+      const storage = getFileStorageAdapter();
+      for (const f of needsText) {
+        try {
+          const { bytes } = await storage.read(f.storageKey!);
+          const text = await extractFileText(Buffer.from(bytes), f.mimeType, f.displayFilename || f.originalFilename);
+          if (text) {
+            await prisma.candidateFile.update({
+              where: { id: f.id },
+              data: { extractedText: text, textExtractedAt: new Date() }
+            });
+          }
+        } catch (e) {
+          console.error(`Self-heal extraction failed for ${f.displayFilename}:`, e);
+        }
+      }
+    }
+
     const files = await prisma.candidateFile.findMany({
       where: { candidateId: id, extractedText: { not: null } },
       orderBy: { uploadedAt: "asc" },

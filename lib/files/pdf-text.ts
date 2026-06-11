@@ -28,17 +28,13 @@ export async function extractFileText(
 ): Promise<string> {
   try {
     if (looksLikePdf(mimeType, filename)) {
-      // Lazy-load pdf-parse so a load/runtime failure here can never crash the
-      // upload route — extraction is best-effort and degrades to "" on any error.
-      const { PDFParse } = await import("pdf-parse");
-      const data = bytes instanceof Uint8Array && !Buffer.isBuffer(bytes) ? bytes : new Uint8Array(bytes);
-      const parser = new PDFParse({ data });
-      try {
-        const result = await parser.getText();
-        return normalize(result.text ?? "");
-      } finally {
-        await parser.destroy().catch(() => {});
-      }
+      // unpdf ships a serverless-friendly pdfjs build that runs on Vercel.
+      // Lazy-loaded so any failure degrades to "" rather than crashing the route.
+      const { extractText, getDocumentProxy } = await import("unpdf");
+      const data = new Uint8Array(bytes);
+      const pdf = await getDocumentProxy(data);
+      const { text } = await extractText(pdf, { mergePages: true });
+      return normalize(Array.isArray(text) ? text.join(" ") : text ?? "");
     }
     if (looksLikeText(mimeType, filename)) {
       const buffer = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
