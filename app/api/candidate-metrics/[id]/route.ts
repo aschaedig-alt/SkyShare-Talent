@@ -16,6 +16,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   try {
     const body = (await request.json()) as {
       action?: "accept" | "dismiss";
+      label?: string;
       valueNumber?: number | null;
       valueText?: string | null;
     };
@@ -28,6 +29,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     const data: Record<string, unknown> = {};
     if (body.action === "accept") data.status = "CONFIRMED";
     if (body.action === "dismiss") data.status = "DISMISSED";
+    if (body.label !== undefined && body.label.trim().length > 0) data.label = body.label.trim();
     if (body.valueNumber !== undefined) data.valueNumber = body.valueNumber;
     if (body.valueText !== undefined) data.valueText = body.valueText;
 

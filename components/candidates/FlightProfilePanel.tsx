@@ -36,9 +36,11 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
   const [message, setMessage] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editVal, setEditVal] = useState("");
+  const [editLabel, setEditLabel] = useState("");
 
   function startEdit(m: Metric) {
     setEditingId(m.id);
+    setEditLabel(m.label);
     setEditVal(m.valueNumber !== null && m.valueNumber !== undefined ? String(m.valueNumber) : m.valueText ?? "");
   }
 
@@ -47,6 +49,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
     const body: Record<string, unknown> = isNum
       ? { valueNumber: Number(editVal.replace(/,/g, "")) || 0 }
       : { valueText: editVal.trim() };
+    body.label = editLabel.trim() || m.label;
     if (accept) body.action = "accept";
     setBusyId(m.id);
     try {
@@ -146,19 +149,28 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
                 )}
               </div>
               {editingId === m.id ? (
-                <div className="mt-1 flex items-center gap-1">
+                <div className="mt-1 space-y-1">
                   <input
-                    value={editVal}
-                    onChange={(e) => setEditVal(e.target.value)}
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") saveEdit(m, false);
-                      if (e.key === "Escape") setEditingId(null);
-                    }}
-                    className="min-w-0 flex-1 rounded border border-brand-lea/30 px-1.5 py-0.5 text-sm focus:border-brand-gold focus:outline-none"
+                    value={editLabel}
+                    onChange={(e) => setEditLabel(e.target.value)}
+                    placeholder="Label"
+                    className="w-full rounded border border-brand-lea/30 px-1.5 py-0.5 text-xs font-semibold text-brand-lea focus:border-brand-gold focus:outline-none"
                   />
-                  <button onClick={() => saveEdit(m, false)} disabled={busyId === m.id} className="rounded p-0.5 text-emerald-700" aria-label="Save"><Check className="h-3.5 w-3.5" /></button>
-                  <button onClick={() => setEditingId(null)} className="rounded p-0.5 text-brand-grey" aria-label="Cancel"><X className="h-3.5 w-3.5" /></button>
+                  <div className="flex items-center gap-1">
+                    <input
+                      value={editVal}
+                      onChange={(e) => setEditVal(e.target.value)}
+                      autoFocus
+                      placeholder="Value"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveEdit(m, false);
+                        if (e.key === "Escape") setEditingId(null);
+                      }}
+                      className="min-w-0 flex-1 rounded border border-brand-lea/30 px-1.5 py-0.5 text-sm focus:border-brand-gold focus:outline-none"
+                    />
+                    <button onClick={() => saveEdit(m, false)} disabled={busyId === m.id} className="rounded p-0.5 text-emerald-700" aria-label="Save"><Check className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => setEditingId(null)} className="rounded p-0.5 text-brand-grey" aria-label="Cancel"><X className="h-3.5 w-3.5" /></button>
+                  </div>
                 </div>
               ) : (
                 <div className="mt-0.5 text-sm font-semibold text-brand-lea">
@@ -186,24 +198,34 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
             {suggested.map((m) => (
               <div key={m.id} className="rounded-lg border border-amber-200 bg-amber-50/60 px-2.5 py-1.5">
                 {editingId === m.id ? (
-                  <div className="flex items-center gap-1">
-                    <span className="text-[11px] text-brand-grey">{m.label}</span>
-                    <input
-                      value={editVal}
-                      onChange={(e) => setEditVal(e.target.value)}
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") saveEdit(m, true);
-                        if (e.key === "Escape") setEditingId(null);
-                      }}
-                      className="min-w-0 flex-1 rounded border border-brand-lea/30 px-1.5 py-0.5 text-sm focus:border-brand-gold focus:outline-none"
-                    />
-                    <button onClick={() => saveEdit(m, true)} disabled={busyId === m.id} className="rounded p-1 text-emerald-700 hover:bg-emerald-100" aria-label="Save and accept">
-                      {busyId === m.id ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                    </button>
-                    <button onClick={() => setEditingId(null)} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/50" aria-label="Cancel">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        value={editLabel}
+                        onChange={(e) => setEditLabel(e.target.value)}
+                        placeholder="Label"
+                        className="w-[42%] rounded border border-brand-lea/30 px-1.5 py-0.5 text-xs font-semibold text-brand-lea focus:border-brand-gold focus:outline-none"
+                      />
+                      <input
+                        value={editVal}
+                        onChange={(e) => setEditVal(e.target.value)}
+                        autoFocus
+                        placeholder="Value"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveEdit(m, true);
+                          if (e.key === "Escape") setEditingId(null);
+                        }}
+                        className="min-w-0 flex-1 rounded border border-brand-lea/30 px-1.5 py-0.5 text-sm focus:border-brand-gold focus:outline-none"
+                      />
+                    </div>
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => saveEdit(m, true)} disabled={busyId === m.id} className="flex items-center gap-1 rounded bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-emerald-700" aria-label="Save and accept">
+                        {busyId === m.id ? <Loader className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} Save &amp; accept
+                      </button>
+                      <button onClick={() => setEditingId(null)} className="rounded border border-brand-lea/20 px-2 py-0.5 text-[11px] font-semibold text-brand-grey" aria-label="Cancel">
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
