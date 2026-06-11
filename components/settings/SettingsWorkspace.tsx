@@ -203,7 +203,7 @@ export function SettingsWorkspace({ data, currentRole }: SettingsWorkspaceProps)
         </section>
       </section>
 
-      {currentRole === "ADMIN" ? <BrandingPanel initialLogoDataUrl={data.logoDataUrl} /> : null}
+      {currentRole === "ADMIN" ? <BrandingPanel initialBranding={data.branding} /> : null}
 
       {currentRole === "ADMIN" ? (
         <ModuleVisibilityAccessPanel policy={data.moduleAccessPolicy} />

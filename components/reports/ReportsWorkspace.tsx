@@ -2,6 +2,7 @@ import type { ReportsData } from "@/lib/data/reports";
 
 type ReportsWorkspaceProps = {
   data: ReportsData;
+  logoDataUrl?: string | null;
 };
 
 function MetricList({ items }: { items: Array<{ label: string; value: number }> }) {
@@ -28,17 +29,23 @@ function MetricList({ items }: { items: Array<{ label: string; value: number }> 
   );
 }
 
-export function ReportsWorkspace({ data }: ReportsWorkspaceProps) {
+export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
-        <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
-          Recruiting insights
-        </p>
-        <h1 className="text-2xl font-semibold text-brand-lea">Reports</h1>
-        <p className="mt-1 max-w-3xl text-sm text-brand-grey">
-          Early reporting foundation for pipeline, sources, job coverage, document gaps, and pilot readiness.
-        </p>
+      <section className="flex items-start justify-between gap-4 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
+            Recruiting insights
+          </p>
+          <h1 className="text-2xl font-semibold text-brand-lea">Reports</h1>
+          <p className="mt-1 max-w-3xl text-sm text-brand-grey">
+            Early reporting foundation for pipeline, sources, job coverage, document gaps, and pilot readiness.
+          </p>
+        </div>
+        {logoDataUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoDataUrl} alt="Workspace logo" className="h-12 w-auto shrink-0 object-contain" />
+        ) : null}
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">

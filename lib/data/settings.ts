@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getAuthRuntimeStatus } from "@/lib/auth/auth-config";
 import { rolePermissions, type RoleName } from "@/lib/auth/roles";
 import { getWorkspaceModuleAccessPolicy } from "@/lib/data/module-access";
-import { getWorkspaceBranding } from "@/lib/data/branding";
+import { getWorkspaceBranding, type WorkspaceBranding } from "@/lib/data/branding";
 import type { ModuleAccessPolicy } from "@/lib/navigation/modules";
 
 export type SettingsData = {
@@ -42,7 +42,7 @@ export type SettingsData = {
     }>;
   };
   moduleAccessPolicy: ModuleAccessPolicy;
-  logoDataUrl: string | null;
+  branding: WorkspaceBranding;
 };
 
 function appEnvironment() {
@@ -140,6 +140,6 @@ export async function getSettingsData(): Promise<SettingsData> {
       }))
     },
     moduleAccessPolicy,
-    logoDataUrl: branding.logoDataUrl
+    branding
   };
 }

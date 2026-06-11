@@ -1,61 +1,110 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { BRANDING_SLOTS, type WorkspaceBranding } from "@/lib/branding/shared";
 
 type BrandingPanelProps = {
-  initialLogoDataUrl: string | null;
+  initialBranding: WorkspaceBranding;
 };
 
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
-const MAX_FILE_BYTES = 650 * 1024; // keep the stored data URL comfortably under the server cap
+const MAX_FILE_BYTES = 650 * 1024;
+const MAX_LOGOS = 12;
 
-export function BrandingPanel({ initialLogoDataUrl }: BrandingPanelProps) {
+function newId(): string {
+  const cryptoObj = (globalThis as { crypto?: Crypto }).crypto;
+  if (cryptoObj?.randomUUID) {
+    return cryptoObj.randomUUID();
+  }
+  return `logo_${Date.now().toString(36)}_${Math.floor(Math.random() * 1e9).toString(36)}`;
+}
+
+function readFile(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Could not read that file."));
+    reader.readAsDataURL(file);
+  });
+}
+
+export function BrandingPanel({ initialBranding }: BrandingPanelProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [savedLogo, setSavedLogo] = useState<string | null>(initialLogoDataUrl);
-  const [pending, setPending] = useState<string | null>(null); // selected-but-unsaved logo
+  const [branding, setBranding] = useState<WorkspaceBranding>(initialBranding);
+  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialBranding));
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const preview = pending ?? savedLogo;
-  const dirty = pending !== null && pending !== savedLogo;
-
-  function readFile(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error("Could not read that file."));
-      reader.readAsDataURL(file);
-    });
-  }
+  const dirty = useMemo(() => JSON.stringify(branding) !== savedSnapshot, [branding, savedSnapshot]);
 
   async function onPick(event: React.ChangeEvent<HTMLInputElement>) {
     setError(null);
     setStatus(null);
-    const file = event.target.files?.[0];
-    if (!file) {
+    const files = Array.from(event.target.files ?? []);
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+    if (!files.length) {
       return;
     }
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      setError("Use a PNG, JPG, WEBP, GIF, or SVG image.");
+    if (branding.logos.length + files.length > MAX_LOGOS) {
+      setError(`You can store up to ${MAX_LOGOS} logos.`);
       return;
     }
-    if (file.size > MAX_FILE_BYTES) {
-      setError(`That file is ${Math.round(file.size / 1024)} KB. Please keep it under ${Math.round(MAX_FILE_BYTES / 1024)} KB.`);
-      return;
+
+    const added: WorkspaceBranding["logos"] = [];
+    for (const file of files) {
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        setError(`"${file.name}" must be a PNG, JPG, WEBP, GIF, or SVG.`);
+        return;
+      }
+      if (file.size > MAX_FILE_BYTES) {
+        setError(`"${file.name}" is ${Math.round(file.size / 1024)} KB. Keep each under ${Math.round(MAX_FILE_BYTES / 1024)} KB.`);
+        return;
+      }
+      try {
+        const dataUrl = await readFile(file);
+        const baseName = file.name.replace(/\.[^.]+$/, "").slice(0, 60) || "Logo";
+        added.push({ id: newId(), name: baseName, dataUrl });
+      } catch {
+        setError(`Could not read "${file.name}".`);
+        return;
+      }
     }
-    try {
-      const dataUrl = await readFile(file);
-      setPending(dataUrl);
-    } catch {
-      setError("Could not read that file. Try a different one.");
-    }
+    setBranding((current) => ({ ...current, logos: [...current.logos, ...added] }));
   }
 
-  async function persist(logoDataUrl: string | null) {
+  function renameLogo(id: string, name: string) {
+    setBranding((current) => ({
+      ...current,
+      logos: current.logos.map((logo) => (logo.id === id ? { ...logo, name: name.slice(0, 60) } : logo))
+    }));
+  }
+
+  function deleteLogo(id: string) {
+    setBranding((current) => {
+      const assignments = { ...current.assignments };
+      for (const slot of BRANDING_SLOTS) {
+        if (assignments[slot.key] === id) {
+          assignments[slot.key] = null;
+        }
+      }
+      return { logos: current.logos.filter((logo) => logo.id !== id), assignments };
+    });
+  }
+
+  function assignSlot(slotKey: (typeof BRANDING_SLOTS)[number]["key"], logoId: string) {
+    setBranding((current) => ({
+      ...current,
+      assignments: { ...current.assignments, [slotKey]: logoId || null }
+    }));
+  }
+
+  async function save() {
     setBusy(true);
     setError(null);
     setStatus(null);
@@ -63,112 +112,143 @@ export function BrandingPanel({ initialLogoDataUrl }: BrandingPanelProps) {
       const response = await fetch("/api/workspace-settings/branding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ logoDataUrl })
+        body: JSON.stringify(branding)
       });
-      const payload = (await response.json().catch(() => null)) as { logoDataUrl?: string | null; message?: string } | null;
-      if (!response.ok) {
-        throw new Error(payload?.message ?? "Unable to save the logo.");
+      const payload = (await response.json().catch(() => null)) as (WorkspaceBranding & { message?: string }) | null;
+      if (!response.ok || !payload) {
+        throw new Error(payload?.message ?? "Unable to save branding.");
       }
-      setSavedLogo(payload?.logoDataUrl ?? null);
-      setPending(null);
-      setStatus(logoDataUrl ? "Logo saved. It now shows in the sidebar." : "Logo removed.");
-      if (inputRef.current) {
-        inputRef.current.value = "";
-      }
+      const normalized: WorkspaceBranding = { logos: payload.logos, assignments: payload.assignments };
+      setBranding(normalized);
+      setSavedSnapshot(JSON.stringify(normalized));
+      setStatus("Branding saved.");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to save the logo.");
+      setError(err instanceof Error ? err.message : "Unable to save branding.");
     } finally {
       setBusy(false);
     }
   }
 
+  function dataUrlFor(id: string | null) {
+    return id ? branding.logos.find((logo) => logo.id === id)?.dataUrl ?? null : null;
+  }
+
   return (
     <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
-      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Branding</p>
-      <h2 className="text-base font-semibold text-brand-lea">Workspace logo</h2>
-      <p className="mt-1 max-w-3xl text-sm leading-6 text-brand-grey">
-        Upload your SkyShare logo. It appears in the top tile of the sidebar and the mobile menu header. A square,
-        transparent PNG or SVG works best. Max ~650&nbsp;KB.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Branding</p>
+          <h2 className="text-base font-semibold text-brand-lea">Logos</h2>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-brand-grey">
+            Upload a library of logos, then assign one to each placement. Square, transparent PNG or SVG works best.
+            Max ~650&nbsp;KB each, up to {MAX_LOGOS} logos.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={save}
+          disabled={busy || !dirty}
+          className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {busy ? "Saving..." : dirty ? "Save changes" : "Saved"}
+        </button>
+      </div>
 
-      <div className="mt-4 flex flex-wrap items-start gap-5">
-        {/* Live preview on the gold tile, exactly like the sidebar */}
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex h-16 w-16 items-center justify-center rounded-[4px] bg-brand-gold/90 p-1.5">
-            {preview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={preview} alt="Logo preview" className="h-full w-full object-contain" />
-            ) : (
-              <span className="text-[10px] font-semibold text-brand-lea">No logo</span>
-            )}
-          </div>
-          <span className="text-[10px] uppercase tracking-[0.14em] text-brand-grey">Sidebar tile</span>
+      {error ? <p className="mt-3 text-sm font-medium text-red-700">{error}</p> : null}
+      {status ? <p className="mt-3 text-sm font-medium text-emerald-700">{status}</p> : null}
+
+      {/* Library */}
+      <div className="mt-5">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey">Logo library</h3>
+          <label className="cursor-pointer rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">
+            + Add logo
+            <input
+              ref={inputRef}
+              type="file"
+              accept={ALLOWED_TYPES.join(",")}
+              multiple
+              onChange={onPick}
+              disabled={busy}
+              className="hidden"
+            />
+          </label>
         </div>
 
-        {/* Preview on a dark rail background, to check contrast */}
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex h-16 w-16 items-center justify-center rounded-[4px] bg-brand-eden p-1.5">
-            {preview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={preview} alt="Logo preview on dark" className="h-full w-full object-contain" />
-            ) : (
-              <span className="text-[10px] font-semibold text-white/70">No logo</span>
-            )}
+        {branding.logos.length === 0 ? (
+          <p className="mt-3 rounded border border-dashed border-brand-lea/20 bg-brand-cloudDancer/40 px-3 py-6 text-center text-sm text-brand-grey">
+            No logos yet. Click &ldquo;Add logo&rdquo; to upload one or more.
+          </p>
+        ) : (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {branding.logos.map((logo) => (
+              <div key={logo.id} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/30 p-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[4px] bg-brand-gold/90 p-1.5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={logo.dataUrl} alt={logo.name} className="h-full w-full object-contain" />
+                  </div>
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[4px] bg-brand-eden p-1.5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={logo.dataUrl} alt={`${logo.name} on dark`} className="h-full w-full object-contain" />
+                  </div>
+                </div>
+                <input
+                  value={logo.name}
+                  onChange={(event) => renameLogo(logo.id, event.target.value)}
+                  className="mt-3 w-full rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-sm text-brand-lea"
+                  placeholder="Logo name"
+                />
+                <button
+                  type="button"
+                  onClick={() => deleteLogo(logo.id)}
+                  className="mt-2 text-xs font-semibold text-red-700 transition hover:underline"
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
           </div>
-          <span className="text-[10px] uppercase tracking-[0.14em] text-brand-grey">On dark rail</span>
-        </div>
+        )}
+      </div>
 
-        <div className="flex min-w-[220px] flex-1 flex-col gap-3">
-          <input
-            ref={inputRef}
-            type="file"
-            accept={ALLOWED_TYPES.join(",")}
-            onChange={onPick}
-            disabled={busy}
-            className="block w-full text-sm text-brand-grey file:mr-3 file:rounded file:border-0 file:bg-brand-lea file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-eden"
-          />
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => pending && persist(pending)}
-              disabled={busy || !dirty}
-              className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {busy ? "Saving..." : "Save logo"}
-            </button>
-            {pending ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setPending(null);
-                  setError(null);
-                  setStatus(null);
-                  if (inputRef.current) {
-                    inputRef.current.value = "";
-                  }
-                }}
-                disabled={busy}
-                className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-60"
-              >
-                Cancel
-              </button>
-            ) : null}
-            {savedLogo ? (
-              <button
-                type="button"
-                onClick={() => persist(null)}
-                disabled={busy}
-                className="rounded border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
-              >
-                Remove logo
-              </button>
-            ) : null}
-          </div>
-
-          {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
-          {status ? <p className="text-sm font-medium text-emerald-700">{status}</p> : null}
+      {/* Assignments */}
+      <div className="mt-6">
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey">Where each logo is used</h3>
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          {BRANDING_SLOTS.map((slot) => {
+            const assignedUrl = dataUrlFor(branding.assignments[slot.key]);
+            return (
+              <div key={slot.key} className="rounded border border-brand-lea/10 bg-white p-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[4px] bg-brand-gold/90 p-1.5">
+                    {assignedUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={assignedUrl} alt={slot.label} className="h-full w-full object-contain" />
+                    ) : (
+                      <span className="text-[9px] font-semibold text-brand-lea">None</span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-brand-lea">{slot.label}</div>
+                  </div>
+                </div>
+                <select
+                  value={branding.assignments[slot.key] ?? ""}
+                  onChange={(event) => assignSlot(slot.key, event.target.value)}
+                  className="mt-3 w-full rounded border border-brand-lea/15 bg-white px-2 py-2 text-sm text-brand-lea"
+                >
+                  <option value="">None</option>
+                  {branding.logos.map((logo) => (
+                    <option key={logo.id} value={logo.id}>
+                      {logo.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>

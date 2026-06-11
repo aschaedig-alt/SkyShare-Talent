@@ -70,8 +70,11 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
     });
   }
 
+  // No fallback: on the dashboard (and any path outside a rail group) there is no active
+  // group, so the items panel is hidden and the logo/Home tile is highlighted instead.
   const activeGroup =
-    groups.find((g) => g.sections.some((s) => s.items.some((i) => isActive(pathname, i.href)))) ?? groups[0];
+    groups.find((g) => g.sections.some((s) => s.items.some((i) => isActive(pathname, i.href)))) ?? null;
+  const onHome = isActive(pathname, "/command-center");
 
   function firstHref(group: VisibleNavigationGroup) {
     return group.sections[0]?.items[0]?.href ?? "/command-center";
@@ -134,7 +137,10 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
             href="/command-center"
             title="Home"
             aria-label="Home"
-            className="mb-3 flex h-10 w-10 items-center justify-center overflow-hidden rounded-[4px] bg-brand-gold/90 p-1 text-brand-lea"
+            className={clsx(
+              "mb-3 flex h-10 w-10 items-center justify-center overflow-hidden rounded-[4px] bg-brand-gold/90 p-1 text-brand-lea transition",
+              onHome ? "ring-2 ring-white/90" : "hover:ring-2 hover:ring-white/40"
+            )}
           >
             {logoDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element

@@ -9,10 +9,8 @@ import {
   ClipboardList,
   Database,
   FileCheck2,
-  Gauge,
   HeartHandshake,
   Import,
-  LayoutDashboard,
   Plane,
   SearchCheck,
   Settings,
@@ -76,18 +74,6 @@ export type NavigationGroup = {
 };
 
 export const navigationGroups: readonly NavigationGroup[] = [
-  {
-    id: "home",
-    label: "Home",
-    icon: LayoutDashboard,
-    sections: [
-      {
-        id: "home",
-        label: "Home",
-        items: [{ id: "command-center", href: "/command-center", label: "Command Center", icon: Gauge }]
-      }
-    ]
-  },
   {
     id: "recruiting",
     label: "Recruiting",

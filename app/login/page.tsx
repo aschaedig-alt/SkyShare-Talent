@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { getWorkspaceBranding, resolveBrandingLogo } from "@/lib/data/branding";
 
 type LoginPageProps = {
   searchParams: Promise<{
@@ -43,9 +44,20 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const authReady = isGoogleAuthReady();
   const title = authReady ? "Sign in to SkyShare Talent" : "Authentication setup required";
 
+  let loginLogo: string | null = null;
+  try {
+    loginLogo = resolveBrandingLogo(await getWorkspaceBranding(), "login");
+  } catch {
+    loginLogo = null;
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-brand-cloudDancer px-5 py-8">
       <section className="w-full max-w-xl rounded bg-white p-6 shadow-panel ring-1 ring-brand-lea/10">
+        {loginLogo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={loginLogo} alt="SkyShare" className="mb-5 h-16 w-auto object-contain" />
+        ) : null}
         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Access control</p>
         <h1 className="mt-2 text-2xl font-semibold text-brand-lea">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-brand-grey">{messageForReason(params.reason, authReady)}</p>
