@@ -20,6 +20,8 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen">
         {showSidebar && role ? <Sidebar role={role} policy={policy} /> : null}
         <main className="min-w-0 flex-1">
+          {/* Spacer so the fixed mobile menu button doesn't overlap content */}
+          {showSidebar ? <div className="h-12 lg:hidden" /> : null}
           <EnvironmentBanner />
           <ModuleAccessShell role={role} policy={policy}>
             {children}

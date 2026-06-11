@@ -7,12 +7,17 @@ import {
   CalendarDays,
   CheckCircle2,
   ClipboardList,
+  Database,
   FileCheck2,
   Gauge,
+  HeartHandshake,
   Import,
+  LayoutDashboard,
   Plane,
   SearchCheck,
-  Settings
+  Settings,
+  UserPlus,
+  Users
 } from "lucide-react";
 
 export const accessLevels = ["HIDDEN", "VIEW_ONLY", "FULL_ACCESS"] as const;
@@ -35,6 +40,7 @@ export const moduleIds = [
   "changes",
   "approvals",
   "jobs-sandbox",
+  "people",
   "settings"
 ] as const;
 
@@ -57,15 +63,24 @@ export type NavigationItem = {
 };
 
 export type NavigationGroup = {
+  id: string;
   label: string;
+  icon: ComponentType<{ className?: string }>;
   items: NavigationItem[];
 };
 
 export const navigationGroups: readonly NavigationGroup[] = [
   {
+    id: "home",
+    label: "Home",
+    icon: LayoutDashboard,
+    items: [{ id: "command-center", href: "/command-center", label: "Command Center", icon: Gauge }]
+  },
+  {
+    id: "recruiting",
     label: "Recruiting",
+    icon: Users,
     items: [
-      { id: "command-center", href: "/command-center", label: "Command Center", icon: Gauge },
       { id: "candidates", href: "/candidates", label: "Candidates", icon: SearchCheck },
       { id: "recruiting-jobs", href: "/recruiting-jobs", label: "Jobs", icon: BriefcaseBusiness },
       { id: "pilot-requirements", href: "/pilot-requirements", label: "Pilot Requirements", icon: Plane },
@@ -73,15 +88,9 @@ export const navigationGroups: readonly NavigationGroup[] = [
     ]
   },
   {
-    label: "Data & Review",
-    items: [
-      { id: "imports", href: "/imports", label: "Imports / Uploads", icon: Import },
-      { id: "duplicate-review", href: "/duplicate-review", label: "Duplicate Review", icon: CheckCircle2 },
-      { id: "reports", href: "/reports", label: "Reports", icon: BarChart3 }
-    ]
-  },
-  {
+    id: "publishing",
     label: "Publishing",
+    icon: ClipboardList,
     items: [
       { id: "jobs", href: "/jobs", label: "Job Builder", icon: ClipboardList },
       { id: "review", href: "/review", label: "Final Review", icon: FileCheck2 },
@@ -89,7 +98,25 @@ export const navigationGroups: readonly NavigationGroup[] = [
     ]
   },
   {
+    id: "people",
+    label: "People",
+    icon: HeartHandshake,
+    items: [{ id: "people", href: "/people", label: "Onboarding", icon: UserPlus }]
+  },
+  {
+    id: "data",
+    label: "Data",
+    icon: Database,
+    items: [
+      { id: "imports", href: "/imports", label: "Imports / Uploads", icon: Import },
+      { id: "duplicate-review", href: "/duplicate-review", label: "Duplicate Review", icon: CheckCircle2 },
+      { id: "reports", href: "/reports", label: "Reports", icon: BarChart3 }
+    ]
+  },
+  {
+    id: "admin",
     label: "Admin",
+    icon: Settings,
     items: [{ id: "settings", href: "/settings", label: "Settings", icon: Settings }]
   }
 ];
