@@ -22,6 +22,22 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+/** Wrap occurrences of query in <mark> for highlighted snippets. */
+function highlight(text: string, query: string) {
+  const q = query.trim();
+  if (!q) return text;
+  const parts = text.split(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "ig"));
+  return parts.map((part, i) =>
+    part.toLowerCase() === q.toLowerCase() ? (
+      <mark key={i} className="rounded-sm bg-brand-gold/40 px-0.5 text-brand-lea">
+        {part}
+      </mark>
+    ) : (
+      <span key={i}>{part}</span>
+    )
+  );
+}
+
 export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
@@ -33,15 +49,14 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
             </p>
             <h1 className="text-2xl font-semibold text-brand-lea">Candidates</h1>
             <p className="mt-1 max-w-3xl text-sm text-brand-grey">
-              First live Prisma-backed candidate workspace in the unified app. This starts with
-              records, files, notes, applications, and operational status.
+              Search and manage candidates — including the text inside their resumes and pilot apps.
             </p>
           </div>
           <form className="flex w-full gap-2 xl:w-[520px]">
             <input
               name="q"
               defaultValue={query}
-              placeholder="Search name, role, email, phone, tag, source"
+              placeholder="Search name, role, tag, or text inside resumes & pilot apps"
               className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20"
             />
             <button
@@ -102,6 +117,12 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
                         {candidate.displayName}
                       </Link>
                       <div className="text-xs text-brand-grey">{candidate.currentTitle ?? "No current role"}</div>
+                      {candidate.docMatch && (
+                        <div className="mt-1.5 max-w-[360px] rounded border border-brand-lea/10 bg-brand-cloudDancer/50 px-2 py-1 text-[11px] leading-5 text-brand-grey">
+                          <span className="font-semibold text-brand-lea">{candidate.docMatch.filename}: </span>
+                          {highlight(candidate.docMatch.snippet, query)}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className="rounded-full border border-brand-gold/30 bg-brand-gold/10 px-2 py-1 text-xs font-semibold text-brand-lea">

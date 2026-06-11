@@ -299,6 +299,8 @@ model CandidateFile {
   sizeBytes         Int?
   source            String?
   metadataJson      String?
+  extractedText     String?
+  textExtractedAt   DateTime?
   uploadedAt        DateTime  @default(now())
   renamedAt         DateTime?
   archivedAt        DateTime?

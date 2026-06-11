@@ -8,6 +8,7 @@ import {
 import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
 import { isPrivateFileStorageReady, shouldRequirePrivateFileStorage } from "@/lib/files/file-security";
 import { requireApiPermission } from "@/lib/auth/route-auth";
+import { extractFileText } from "@/lib/files/pdf-text";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -81,9 +82,10 @@ export async function POST(request: Request, context: RouteContext) {
       }
 
       const storageKey = createCandidateStorageKey(id, originalFilename);
+      const bytes = Buffer.from(await file.arrayBuffer());
       await storage.write({
         storageKey,
-        bytes: Buffer.from(await file.arrayBuffer()),
+        bytes,
         contentType: file.type || null,
         metadata: storageMetadata({
           candidateId: id,
@@ -92,6 +94,9 @@ export async function POST(request: Request, context: RouteContext) {
           uploadedByEmail: auth.user.email
         })
       });
+
+      // Extract searchable text (best-effort; never blocks the upload)
+      const extractedText = await extractFileText(bytes, file.type || null, originalFilename);
 
       const linkedAt = new Date().toISOString();
       const created = await prisma.candidateFile.create({
@@ -103,6 +108,8 @@ export async function POST(request: Request, context: RouteContext) {
           mimeType: file.type || null,
           sizeBytes: file.size,
           source: "candidate-profile-upload",
+          extractedText: extractedText || null,
+          textExtractedAt: extractedText ? new Date() : null,
           metadataJson: JSON.stringify({
             linkedBy: "direct-candidate-profile",
             linkedAt,

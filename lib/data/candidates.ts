@@ -14,6 +14,7 @@ export type CandidateListItem = {
   noteCount: number;
   fileCount: number;
   applicationCount: number;
+  docMatch: { filename: string; snippet: string } | null;
 };
 
 export type CandidateListData = {
@@ -115,47 +116,52 @@ function parseStringArray(value: string | null) {
   }
 }
 
-function matchesSearch(candidate: CandidateListItem, query: string) {
-  if (!query) {
-    return true;
+/** Build a short excerpt around the first match of query in text. */
+function buildSnippet(text: string, query: string): string {
+  const lowerText = text.toLowerCase();
+  const idx = lowerText.indexOf(query.toLowerCase());
+  if (idx === -1) {
+    return text.slice(0, 140).trim();
   }
-
-  const searchable = [
-    candidate.displayName,
-    candidate.currentTitle,
-    candidate.stage,
-    candidate.owner,
-    candidate.source,
-    candidate.primaryEmail,
-    candidate.primaryPhone,
-    ...candidate.tags
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-
-  return searchable.includes(query.toLowerCase());
+  const start = Math.max(0, idx - 60);
+  const end = Math.min(text.length, idx + query.length + 90);
+  const prefix = start > 0 ? "…" : "";
+  const suffix = end < text.length ? "…" : "";
+  return `${prefix}${text.slice(start, end).trim()}${suffix}`;
 }
 
 export async function getCandidateListData(query = ""): Promise<CandidateListData> {
   const normalizedQuery = query.trim().toLowerCase();
-  const candidateWhere = normalizedQuery
+  const hasQuery = normalizedQuery.length > 0;
+
+  const candidateWhere = hasQuery
     ? {
         OR: [
           { normalizedName: { contains: normalizedQuery } },
           { normalizedEmail: { contains: normalizedQuery } },
           { normalizedPhone: { contains: normalizedQuery.replace(/\D/g, "") || normalizedQuery } },
-          { displayName: { contains: query } },
-          { currentTitle: { contains: query } },
-          { stage: { contains: query } },
-          { owner: { contains: query } },
-          { source: { contains: query } },
-          { primaryEmail: { contains: normalizedQuery } },
+          { displayName: { contains: query, mode: "insensitive" as const } },
+          { currentTitle: { contains: query, mode: "insensitive" as const } },
+          { stage: { contains: query, mode: "insensitive" as const } },
+          { owner: { contains: query, mode: "insensitive" as const } },
+          { source: { contains: query, mode: "insensitive" as const } },
+          { primaryEmail: { contains: normalizedQuery, mode: "insensitive" as const } },
           { primaryPhone: { contains: query } },
-          { tagsJson: { contains: query } }
+          { tagsJson: { contains: query, mode: "insensitive" as const } },
+          // Search inside document text (resumes, pilot apps, etc.)
+          { files: { some: { extractedText: { contains: query, mode: "insensitive" as const } } } }
         ]
       }
     : {};
+
+  // Only pull document text for matching files when there's a query (keeps the list light).
+  const filesInclude = hasQuery
+    ? ({
+        where: { extractedText: { contains: query, mode: "insensitive" as const } },
+        select: { displayFilename: true, extractedText: true },
+        take: 1
+      } as const)
+    : false;
 
   const [candidateRows, total, active, withFiles, withApplications, scheduledInterviews] = await Promise.all([
     prisma.candidate.findMany({
@@ -163,6 +169,7 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
       take: 100,
       orderBy: [{ updatedAt: "desc" }, { displayName: "asc" }],
       include: {
+        files: filesInclude,
         _count: {
           select: {
             notes: true,
@@ -179,26 +186,35 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
     prisma.interview.count({ where: { status: "SCHEDULED" } })
   ]);
 
-  const candidates = candidateRows.map((candidate) => ({
-    id: candidate.id,
-    displayName: candidate.displayName,
-    currentTitle: candidate.currentTitle,
-    stage: candidate.stage,
-    owner: candidate.owner,
-    source: candidate.source,
-    primaryEmail: candidate.primaryEmail,
-    primaryPhone: candidate.primaryPhone,
-    tags: parseStringArray(candidate.tagsJson),
-    updatedAt: candidate.updatedAt.toISOString(),
-    noteCount: candidate._count.notes,
-    fileCount: candidate._count.files,
-    applicationCount: candidate._count.applications
-  }));
+  const candidates: CandidateListItem[] = candidateRows.map((candidate) => {
+    const matchedFile = hasQuery
+      ? (candidate as typeof candidate & { files?: Array<{ displayFilename: string; extractedText: string | null }> }).files?.[0]
+      : undefined;
+    const docMatch =
+      matchedFile?.extractedText
+        ? { filename: matchedFile.displayFilename, snippet: buildSnippet(matchedFile.extractedText, query) }
+        : null;
 
-  const filteredCandidates = normalizedQuery ? candidates.filter((candidate) => matchesSearch(candidate, query)) : candidates;
+    return {
+      id: candidate.id,
+      displayName: candidate.displayName,
+      currentTitle: candidate.currentTitle,
+      stage: candidate.stage,
+      owner: candidate.owner,
+      source: candidate.source,
+      primaryEmail: candidate.primaryEmail,
+      primaryPhone: candidate.primaryPhone,
+      tags: parseStringArray(candidate.tagsJson),
+      updatedAt: candidate.updatedAt.toISOString(),
+      noteCount: candidate._count.notes,
+      fileCount: candidate._count.files,
+      applicationCount: candidate._count.applications,
+      docMatch
+    };
+  });
 
   return {
-    candidates: filteredCandidates,
+    candidates,
     stats: {
       total,
       active,

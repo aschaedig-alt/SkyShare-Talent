@@ -62,6 +62,13 @@ Behind-the-scenes work that keeps everything running.
 - [x] Editable roadmap powering this checklist (Jun 10)
 - [x] Feedback button + admin review page (Jun 10) — any user submits ideas/bugs/questions
 
+## Document Intelligence
+Making candidate documents searchable and structured.
+- [x] Full-text document search (Jun 10) — extracts text from PDFs; candidates list now searches inside resumes/pilot apps and shows a matching snippet
+- [ ] In-profile document find — search within a single candidate's documents
+- [ ] OCR for scanned/image PDFs — so photographed/scanned docs become searchable
+- [ ] Structured key-term extraction — pull Total Time, type ratings (e.g. GV), etc. into candidate fields; sortable candidates table to compare everyone
+
 ## Candidate Evaluation
 Tools for assessing candidates — must stay transparent and fair.
 - [ ] Candidate pros & cons — capture strengths and concerns on each candidate
