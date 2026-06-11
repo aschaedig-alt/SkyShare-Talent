@@ -61,6 +61,7 @@ export type CandidateProfileData = {
     sizeBytes: number | null;
     source: string | null;
     uploadedAt: string;
+    extractedText: string | null;
   }>;
   notes: Array<{
     id: string;
@@ -307,7 +308,8 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
       mimeType: file.mimeType,
       sizeBytes: file.sizeBytes,
       source: file.source,
-      uploadedAt: file.uploadedAt.toISOString()
+      uploadedAt: file.uploadedAt.toISOString(),
+      extractedText: file.extractedText
     })),
     notes: candidate.notes.map((note) => ({
       id: note.id,

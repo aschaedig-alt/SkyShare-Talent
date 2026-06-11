@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   FileText,
   Plane,
@@ -13,9 +14,16 @@ import {
   Loader,
   Check,
   X,
+  Search,
   FileWarning
 } from "lucide-react";
 import { clsx } from "clsx";
+
+// PDF.js highlight viewer — client-only, loaded on demand (used during search).
+const PdfViewer = dynamic(() => import("@/components/candidates/PdfViewer").then((m) => m.PdfViewer), {
+  ssr: false,
+  loading: () => <div className="py-20 text-center text-sm text-brand-grey">Loading highlight viewer…</div>
+});
 
 export type CandidateFileItem = {
   id: string;
@@ -26,6 +34,7 @@ export type CandidateFileItem = {
   sizeBytes: number | null;
   source: string | null;
   uploadedAt: string;
+  extractedText: string | null;
 };
 
 type CandidateDocumentsProps = {
@@ -67,7 +76,7 @@ function findPilotApp(files: CandidateFileItem[], excludeId?: string) {
 }
 
 /** Inner preview surface for a single file (used by both single and compare layouts). */
-function FilePreview({ file, mode }: { file: CandidateFileItem; mode: "actual" | "fit" }) {
+function FilePreview({ file, mode, searchTerm }: { file: CandidateFileItem; mode: "actual" | "fit"; searchTerm?: string }) {
   if (!file.storageKey) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-brand-lea/10 bg-white py-16 text-center">
@@ -78,6 +87,10 @@ function FilePreview({ file, mode }: { file: CandidateFileItem; mode: "actual" |
     );
   }
   if (isPdf(file)) {
+    // Searching → use the PDF.js highlight viewer; otherwise the fast native viewer.
+    if (searchTerm && searchTerm.trim()) {
+      return <PdfViewer key={file.id} fileUrl={`/api/candidate-files/${file.id}`} searchTerm={searchTerm} />;
+    }
     const hash = mode === "actual" ? "#zoom=100" : "#view=FitH";
     const heightClass = mode === "actual" ? "h-[1120px]" : "h-[760px]";
     return (
@@ -127,6 +140,23 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [docSearch, setDocSearch] = useState("");
+
+  const trimmedSearch = docSearch.trim();
+  const matchingIds = useMemo(() => {
+    if (!trimmedSearch) return new Set<string>();
+    const q = trimmedSearch.toLowerCase();
+    return new Set(files.filter((f) => f.extractedText?.toLowerCase().includes(q)).map((f) => f.id));
+  }, [files, trimmedSearch]);
+
+  // When searching, jump to the first document that contains the term.
+  useEffect(() => {
+    if (trimmedSearch && matchingIds.size > 0 && activeId && !matchingIds.has(activeId)) {
+      const first = files.find((f) => matchingIds.has(f.id));
+      if (first) setActiveId(first.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trimmedSearch, matchingIds]);
 
   // Keep selections valid (default to resume) when the file list changes.
   useEffect(() => {
@@ -199,17 +229,48 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
   }
 
   const canCompare = files.length >= 2;
+  const effectiveLayout: Layout = trimmedSearch ? "single" : layout;
 
   return (
     <section className="rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10">
       <input ref={fileInputRef} type="file" multiple accept={UPLOAD_ACCEPT} className="sr-only" onChange={(e) => handleUpload(e.currentTarget.files)} />
+
+      {/* In-document search */}
+      {files.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-brand-lea/10 px-3 py-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-brand-lea/20 px-2.5 py-1.5">
+            <Search className="h-4 w-4 shrink-0 text-brand-grey" />
+            <input
+              value={docSearch}
+              onChange={(e) => setDocSearch(e.target.value)}
+              placeholder="Search inside this candidate's documents…"
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+            />
+            {docSearch && (
+              <button onClick={() => setDocSearch("")} className="text-brand-grey hover:text-brand-lea" aria-label="Clear search">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {trimmedSearch && (
+            <span className="text-xs text-brand-grey">
+              {matchingIds.size > 0 ? (
+                <>Found in <span className="font-semibold text-brand-lea">{matchingIds.size}</span> document{matchingIds.size === 1 ? "" : "s"}</>
+              ) : (
+                <>No documents contain “{trimmedSearch}”</>
+              )}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Tab strip + layout toggle */}
       <div className="flex items-center gap-2 border-b border-brand-lea/10 px-2 py-1.5">
         <div className="flex items-center gap-1 overflow-x-auto">
           {files.map((file) => {
             const Icon = fileIcon(file);
-            const active = layout === "single" && file.id === activeFile?.id;
+            const active = effectiveLayout === "single" && file.id === activeFile?.id;
+            const isMatch = matchingIds.has(file.id);
             return (
               <button
                 key={file.id}
@@ -225,6 +286,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 <span className="max-w-[150px] truncate">{file.displayFilename}</span>
+                {isMatch && <span className={clsx("h-1.5 w-1.5 shrink-0 rounded-full", active ? "bg-white" : "bg-brand-gold")} />}
               </button>
             );
           })}
@@ -269,7 +331,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
             Upload document
           </button>
         </div>
-      ) : layout === "compare" ? (
+      ) : effectiveLayout === "compare" ? (
         /* Side-by-side compare */
         <div className="grid gap-3 p-3 lg:grid-cols-2">
           {[
@@ -349,7 +411,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
           )}
 
           <div className="bg-brand-cloudDancer/30 p-3">
-            <FilePreview file={activeFile} mode="actual" />
+            <FilePreview file={activeFile} mode="actual" searchTerm={trimmedSearch} />
           </div>
         </>
       )}

@@ -65,7 +65,7 @@ Behind-the-scenes work that keeps everything running.
 ## Document Intelligence
 Making candidate documents searchable and structured.
 - [x] Full-text document search (Jun 10) — extracts text from PDFs; candidates list now searches inside resumes/pilot apps and shows a matching snippet
-- [ ] In-profile document find — search within a single candidate's documents
+- [x] In-profile document find (Jun 10) — search within a candidate's documents; PDF.js viewer highlights matches in-page and jumps between them, with match badges per document
 - [ ] OCR for scanned/image PDFs — so photographed/scanned docs become searchable
 - [ ] Structured key-term extraction — pull Total Time, type ratings (e.g. GV), etc. into candidate fields; sortable candidates table to compare everyone
 
