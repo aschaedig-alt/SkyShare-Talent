@@ -351,11 +351,11 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
     benefits: false
   });
   const [openFieldGroups, setOpenFieldGroups] = useState<Record<FieldGroupKey, boolean>>({
-    public: true,
-    internal: true,
-    offer: true,
-    paycom: true,
-    aviation: true
+    public: false,
+    internal: false,
+    offer: false,
+    paycom: false,
+    aviation: false
   });
   const [fieldOrderByGroup, setFieldOrderByGroup] = useState<Partial<Record<FieldGroupKey, string[]>>>({});
   const [disabledFieldIdsByGroup, setDisabledFieldIdsByGroup] = useState<Partial<Record<FieldGroupKey, string[]>>>({});
