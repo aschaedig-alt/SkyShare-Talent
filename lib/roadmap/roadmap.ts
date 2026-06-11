@@ -46,11 +46,13 @@ Filling out the platform.
 - [x] 4.3 User Statistics Dashboard (Jun 9) — activity logging + team analytics
 
 ## Job Builder / Publishing
-Restoring the publishing toolset after the move to Vercel.
+Restoring and streamlining the publishing toolset.
 - [x] Job Builder data restored (Jun 10) — migrated 79 jobs, 16 blocks, 660 instances, templates from local dev.db to Postgres
-- [x] Content Blocks, Sandbox, Final Review live (Jun 10)
-- [ ] Approvals page — build out (currently placeholder)
-- [ ] Changes / version history page — build out (currently placeholder)
+- [x] Content Blocks + Final Review live (Jun 10)
+- [x] Publishing cleanup, step A (Jun 10) — removed Sandbox Lab, empty Changes/Approvals tabs; moved Templates into Settings; deleted dead code. 7 tabs → 3
+- [ ] Publishing cleanup, step B — consider merging Final Review into Job Builder (review a sample first)
+- [ ] Changes / version history — build out later if needed
+- [ ] Approvals workflow — build out later if needed
 
 ## Platform & Infrastructure
 Behind-the-scenes work that keeps everything running.

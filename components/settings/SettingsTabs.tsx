@@ -5,14 +5,15 @@ import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 
 type SettingsTabsProps = {
-  currentTab?: "general" | "users" | "activity" | "feedback";
+  currentTab?: "general" | "users" | "activity" | "feedback" | "templates";
 };
 
 const tabs = [
   { id: "general", label: "General", href: "/settings" },
   { id: "users", label: "Team Members", href: "/settings/users" },
   { id: "activity", label: "Activity", href: "/settings/activity" },
-  { id: "feedback", label: "Feedback", href: "/settings/feedback" }
+  { id: "feedback", label: "Feedback", href: "/settings/feedback" },
+  { id: "templates", label: "Templates", href: "/settings/templates" }
 ] as const;
 
 export function SettingsTabs({ currentTab }: SettingsTabsProps) {
@@ -27,7 +28,9 @@ export function SettingsTabs({ currentTab }: SettingsTabsProps) {
         ? "activity"
         : pathname === "/settings/feedback"
           ? "feedback"
-          : "general");
+          : pathname === "/settings/templates"
+            ? "templates"
+            : "general");
 
   return (
     <div className="border-b border-brand-lea/10">

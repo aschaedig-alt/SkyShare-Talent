@@ -7,16 +7,12 @@ import {
   CalendarDays,
   CheckCircle2,
   ClipboardList,
-  FileClock,
   FileCheck2,
   Gauge,
   Import,
-  LayoutPanelTop,
   Plane,
   SearchCheck,
-  Settings,
-  ShieldCheck,
-  Stamp
+  Settings
 } from "lucide-react";
 
 export const accessLevels = ["HIDDEN", "VIEW_ONLY", "FULL_ACCESS"] as const;
@@ -89,11 +85,7 @@ export const navigationGroups: readonly NavigationGroup[] = [
     items: [
       { id: "jobs", href: "/jobs", label: "Job Builder", icon: ClipboardList },
       { id: "review", href: "/review", label: "Final Review", icon: FileCheck2 },
-      { id: "templates", href: "/templates", label: "Templates", icon: Stamp },
-      { id: "blocks", href: "/blocks", label: "Content Blocks", icon: Blocks },
-      { id: "changes", href: "/changes", label: "Changes", icon: FileClock },
-      { id: "approvals", href: "/approvals", label: "Approvals", icon: ShieldCheck },
-      { id: "jobs-sandbox", href: "/jobs-sandbox", label: "Sandbox Lab", icon: LayoutPanelTop }
+      { id: "blocks", href: "/blocks", label: "Content Blocks", icon: Blocks }
     ]
   },
   {
