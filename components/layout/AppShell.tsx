@@ -6,6 +6,7 @@ import { getWorkspaceModuleAccessPolicy } from "@/lib/data/module-access";
 import { EnvironmentBanner } from "@/components/layout/EnvironmentBanner";
 import { ModuleAccessShell } from "@/components/layout/ModuleAccessShell";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { FeedbackButton } from "@/components/feedback/FeedbackButton";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
   const authRequired = isAuthRequired();
@@ -25,6 +26,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
           </ModuleAccessShell>
         </main>
       </div>
+      {showSidebar ? <FeedbackButton /> : null}
     </div>
   );
 }

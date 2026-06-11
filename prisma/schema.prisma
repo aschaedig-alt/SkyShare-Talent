@@ -199,6 +199,23 @@ model WorkspaceSetting {
   @@unique([scope, key])
 }
 
+model Feedback {
+  id          String   @id @default(cuid())
+  type        String   @default("IDEA")
+  message     String
+  page        String?
+  status      String   @default("NEW")
+  userId      String?
+  userEmail   String?
+  userName    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+}
+
 model Candidate {
   id                   String                 @id @default(cuid())
   firstName            String?

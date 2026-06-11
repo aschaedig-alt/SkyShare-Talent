@@ -58,4 +58,5 @@ Behind-the-scenes work that keeps everything running.
 - [x] PostgreSQL (Neon) for local + production (Jun 9)
 - [x] Settings pages: Team Members + Activity (Jun 9)
 - [x] Editable roadmap powering this checklist (Jun 10)
+- [x] Feedback button + admin review page (Jun 10) — any user submits ideas/bugs/questions
 `;

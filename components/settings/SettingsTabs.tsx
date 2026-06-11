@@ -5,20 +5,29 @@ import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 
 type SettingsTabsProps = {
-  currentTab?: "general" | "users" | "activity";
+  currentTab?: "general" | "users" | "activity" | "feedback";
 };
 
 const tabs = [
   { id: "general", label: "General", href: "/settings" },
   { id: "users", label: "Team Members", href: "/settings/users" },
-  { id: "activity", label: "Activity", href: "/settings/activity" }
+  { id: "activity", label: "Activity", href: "/settings/activity" },
+  { id: "feedback", label: "Feedback", href: "/settings/feedback" }
 ] as const;
 
 export function SettingsTabs({ currentTab }: SettingsTabsProps) {
   const pathname = usePathname();
 
   // Determine active tab based on pathname if currentTab not provided
-  const activeTab = currentTab || (pathname === "/settings/users" ? "users" : pathname === "/settings/activity" ? "activity" : "general");
+  const activeTab =
+    currentTab ||
+    (pathname === "/settings/users"
+      ? "users"
+      : pathname === "/settings/activity"
+        ? "activity"
+        : pathname === "/settings/feedback"
+          ? "feedback"
+          : "general");
 
   return (
     <div className="border-b border-brand-lea/10">
