@@ -189,8 +189,16 @@ function groupGates(gates: RequirementGateView[]) {
 }
 
 export async function getPilotRequirementsData(query = "", selectedId?: string): Promise<PilotRequirementsData> {
+  // Hide requirements whose source job was merged away as a duplicate. Requirements
+  // with no source job stay visible. This mirrors the deduped Jobs list and self-heals:
+  // unmerging the source job brings its requirement back automatically.
+  const hideMergedSourceJob = {
+    NOT: { sourceJobRecord: { mergedIntoJobId: { not: null } } }
+  };
+
   const [rows, total, active, needsReview, catalogItems] = await Promise.all([
     prisma.pilotRequirement.findMany({
+      where: hideMergedSourceJob,
       orderBy: [{ status: "asc" }, { title: "asc" }],
       include: {
         sourceJobRecord: {
@@ -204,9 +212,9 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
         }
       }
     }),
-    prisma.pilotRequirement.count(),
-    prisma.pilotRequirement.count({ where: { status: "ACTIVE" } }),
-    prisma.pilotRequirement.count({ where: { reviewStatus: { not: "APPROVED" } } }),
+    prisma.pilotRequirement.count({ where: hideMergedSourceJob }),
+    prisma.pilotRequirement.count({ where: { ...hideMergedSourceJob, status: "ACTIVE" } }),
+    prisma.pilotRequirement.count({ where: { ...hideMergedSourceJob, reviewStatus: { not: "APPROVED" } } }),
     prisma.requirementCatalogItem.count({ where: { archivedAt: null } })
   ]);
 
