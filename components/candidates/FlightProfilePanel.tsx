@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plane, Sparkles, Check, X, Loader, Clock, Pencil } from "lucide-react";
+import { Plane, Sparkles, Check, X, Loader, Clock, Pencil, Plus } from "lucide-react";
 import { clsx } from "clsx";
 
 type Metric = {
@@ -37,6 +37,29 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editVal, setEditVal] = useState("");
   const [editLabel, setEditLabel] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [addLabel, setAddLabel] = useState("");
+  const [addValue, setAddValue] = useState("");
+
+  async function addField() {
+    if (!addLabel.trim() || !addValue.trim()) return;
+    setBusyId("add");
+    try {
+      const res = await fetch(`/api/candidates/${candidateId}/metrics`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: addLabel, value: addValue })
+      });
+      if (res.ok) {
+        setAddLabel("");
+        setAddValue("");
+        setAdding(false);
+        router.refresh();
+      }
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   function startEdit(m: Metric) {
     setEditingId(m.id);
@@ -264,6 +287,41 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
             : "Add a resume or pilot app, then scan to extract flight hours and ratings."}
         </p>
       )}
+
+      {/* Add a field manually */}
+      <div className="mt-3 border-t border-brand-lea/10 pt-3">
+        {adding ? (
+          <div className="space-y-1.5">
+            <input
+              value={addLabel}
+              onChange={(e) => setAddLabel(e.target.value)}
+              placeholder="Field name (e.g. Tailwheel)"
+              className="w-full rounded border border-brand-lea/30 px-2 py-1 text-xs font-semibold text-brand-lea focus:border-brand-gold focus:outline-none"
+            />
+            <input
+              value={addValue}
+              onChange={(e) => setAddValue(e.target.value)}
+              placeholder="Value (e.g. 250 for hours, or text)"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") addField();
+                if (e.key === "Escape") setAdding(false);
+              }}
+              className="w-full rounded border border-brand-lea/30 px-2 py-1 text-sm focus:border-brand-gold focus:outline-none"
+            />
+            <div className="flex items-center justify-end gap-1">
+              <button onClick={addField} disabled={busyId === "add" || !addLabel.trim() || !addValue.trim()} className="flex items-center gap-1 rounded bg-brand-lea px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-brand-eden disabled:opacity-50">
+                {busyId === "add" ? <Loader className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} Add
+              </button>
+              <button onClick={() => setAdding(false)} className="rounded border border-brand-lea/20 px-2.5 py-1 text-[11px] font-semibold text-brand-grey">Cancel</button>
+            </div>
+            <p className="text-[10px] text-brand-grey">A number becomes an hours field; anything else is saved as text.</p>
+          </div>
+        ) : (
+          <button onClick={() => setAdding(true)} className="flex items-center gap-1 text-xs font-semibold text-brand-eden hover:underline">
+            <Plus className="h-3.5 w-3.5" /> Add a field
+          </button>
+        )}
+      </div>
     </section>
   );
 }
