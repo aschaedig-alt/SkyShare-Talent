@@ -67,3 +67,102 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ message: "Unable to open candidate file." }, { status: 500 });
   }
 }
+
+export async function PATCH(request: Request, context: RouteContext) {
+  const auth = await requireApiPermission("files:write");
+  if (!auth.ok) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await context.params;
+
+  try {
+    const body = (await request.json()) as { displayFilename?: string };
+    const displayFilename = (body.displayFilename ?? "").trim();
+
+    if (displayFilename.length < 1) {
+      return NextResponse.json({ message: "A file name is required." }, { status: 400 });
+    }
+    if (displayFilename.length > 200) {
+      return NextResponse.json({ message: "File name is too long." }, { status: 400 });
+    }
+
+    const existing = await prisma.candidateFile.findUnique({ where: { id }, select: { candidateId: true } });
+    if (!existing) {
+      return NextResponse.json({ message: "File not found." }, { status: 404 });
+    }
+
+    const updated = await prisma.candidateFile.update({
+      where: { id },
+      data: { displayFilename, renamedAt: new Date() },
+      select: {
+        id: true,
+        originalFilename: true,
+        displayFilename: true,
+        storageKey: true,
+        mimeType: true,
+        sizeBytes: true,
+        source: true,
+        uploadedAt: true
+      }
+    });
+
+    await prisma.auditEvent.create({
+      data: {
+        actorId: auth.user.id,
+        eventType: "CANDIDATE_FILE_RENAMED",
+        entityType: "CandidateFile",
+        entityId: id,
+        summary: `Renamed candidate file to ${displayFilename}.`,
+        payloadJson: JSON.stringify({ candidateId: existing.candidateId, displayFilename })
+      }
+    });
+
+    return NextResponse.json({
+      ...updated,
+      uploadedAt: updated.uploadedAt.toISOString()
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ message: "Unable to rename file." }, { status: 500 });
+  }
+}
+
+export async function DELETE(_request: Request, context: RouteContext) {
+  const auth = await requireApiPermission("files:write");
+  if (!auth.ok) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await context.params;
+
+  try {
+    const existing = await prisma.candidateFile.findUnique({
+      where: { id },
+      select: { candidateId: true, displayFilename: true, originalFilename: true }
+    });
+    if (!existing) {
+      return NextResponse.json({ message: "File not found." }, { status: 404 });
+    }
+
+    // Note: the stored blob is intentionally left in place (no adapter delete yet);
+    // only the candidate's reference to it is removed.
+    await prisma.candidateFile.delete({ where: { id } });
+
+    await prisma.auditEvent.create({
+      data: {
+        actorId: auth.user.id,
+        eventType: "CANDIDATE_FILE_DELETED",
+        entityType: "CandidateFile",
+        entityId: id,
+        summary: `Removed candidate file ${existing.displayFilename || existing.originalFilename}.`,
+        payloadJson: JSON.stringify({ candidateId: existing.candidateId })
+      }
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ message: "Unable to delete file." }, { status: 500 });
+  }
+}
