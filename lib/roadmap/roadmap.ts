@@ -67,7 +67,8 @@ Making candidate documents searchable and structured.
 - [x] Full-text document search (Jun 10) — extracts text from PDFs; candidates list now searches inside resumes/pilot apps and shows a matching snippet
 - [x] In-profile document find (Jun 10) — search within a candidate's documents; PDF.js viewer highlights matches in-page and jumps between them, with match badges per document
 - [ ] OCR for scanned/image PDFs — so photographed/scanned docs become searchable
-- [ ] Structured key-term extraction — pull Total Time, type ratings (e.g. GV), etc. into candidate fields; sortable candidates table to compare everyone
+- [~] Structured key-term extraction — pull Total Time, type ratings (e.g. GV), etc. into candidate fields; sortable candidates table. Starting with free pattern-matching during development; upgrade to Claude LLM extraction when ready (see memory note)
+- [ ] Upgrade extraction to Claude LLM — swap regex for a Claude call once the feature is proven; needs ANTHROPIC_API_KEY (deferred to avoid dev-time cost)
 
 ## Candidate Evaluation
 Tools for assessing candidates — must stay transparent and fair.

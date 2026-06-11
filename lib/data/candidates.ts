@@ -63,6 +63,17 @@ export type CandidateProfileData = {
     uploadedAt: string;
     extractedText: string | null;
   }>;
+  metrics: Array<{
+    id: string;
+    key: string;
+    label: string;
+    valueNumber: number | null;
+    valueText: string | null;
+    unit: string | null;
+    status: string;
+    sourceFileId: string | null;
+    sourceSnippet: string | null;
+  }>;
   notes: Array<{
     id: string;
     body: string;
@@ -240,6 +251,10 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
       files: {
         orderBy: { uploadedAt: "asc" }
       },
+      metrics: {
+        where: { status: { not: "DISMISSED" } },
+        orderBy: { createdAt: "asc" }
+      },
       notes: {
         orderBy: { createdAt: "desc" }
       },
@@ -310,6 +325,17 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
       source: file.source,
       uploadedAt: file.uploadedAt.toISOString(),
       extractedText: file.extractedText
+    })),
+    metrics: candidate.metrics.map((m) => ({
+      id: m.id,
+      key: m.key,
+      label: m.label,
+      valueNumber: m.valueNumber,
+      valueText: m.valueText,
+      unit: m.unit,
+      status: m.status,
+      sourceFileId: m.sourceFileId,
+      sourceSnippet: m.sourceSnippet
     })),
     notes: candidate.notes.map((note) => ({
       id: note.id,

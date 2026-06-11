@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { clsx } from "clsx";
 import { FileText, Briefcase, StickyNote, CalendarClock } from "lucide-react";
 import { CandidateDocuments } from "@/components/candidates/CandidateDocuments";
+import { FlightProfilePanel } from "@/components/candidates/FlightProfilePanel";
 import type { CandidateProfileData } from "@/lib/data/candidates";
 
 type CandidateProfileWorkspaceProps = {
@@ -281,6 +282,11 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
           {activeTab === "documents" && (
             <section className="grid gap-4 xl:grid-cols-[240px_1fr]">
               <aside className="space-y-3">
+                <FlightProfilePanel
+                  candidateId={candidate.id}
+                  metrics={candidate.metrics}
+                  hasDocuments={candidate.files.length > 0}
+                />
                 <div className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
                   <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Contact</p>
                   <div className="mt-3 space-y-2 text-sm">

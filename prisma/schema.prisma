@@ -245,6 +245,7 @@ model Candidate {
   files                CandidateFile[]
   applications         CandidateApplication[]
   interviews           Interview[]
+  metrics              CandidateMetric[]
   duplicateAsPrimary   DuplicateReviewItem[]  @relation("DuplicateCandidatePrimary")
   duplicateAsSecondary DuplicateReviewItem[]  @relation("DuplicateCandidateSecondary")
   importRows           ImportRow[]
@@ -287,6 +288,27 @@ model CandidateNote {
   author      User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
 
   @@index([candidateId])
+}
+
+model CandidateMetric {
+  id            String   @id @default(cuid())
+  candidateId   String
+  key           String
+  label         String
+  valueNumber   Float?
+  valueText     String?
+  unit          String?
+  status        String   @default("SUGGESTED")
+  sourceFileId  String?
+  sourceSnippet String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  candidate     Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, key])
+  @@index([candidateId])
+  @@index([key])
 }
 
 model CandidateFile {
