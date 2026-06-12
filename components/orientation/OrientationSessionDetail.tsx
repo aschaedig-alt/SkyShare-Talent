@@ -1,0 +1,374 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { clsx } from "clsx";
+import type { AttendeeView, ConfirmStatus, PrepTaskView, SessionDetail, TravelStatus } from "@/lib/data/orientation";
+import type { EmailTemplateDef } from "@/lib/orientation/defaults";
+
+function fmtShort(iso: string) {
+  return new Intl.DateTimeFormat("en", { weekday: "long", month: "long", day: "numeric" }).format(new Date(iso));
+}
+function fmtTime(iso: string) {
+  return new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(new Date(iso));
+}
+
+async function patchJson(url: string, body: unknown, method = "PATCH") {
+  const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  return res.ok;
+}
+
+export function OrientationSessionDetail({ session }: { session: SessionDetail }) {
+  const router = useRouter();
+  const [attendees, setAttendees] = useState(session.attendees);
+  const [prep, setPrep] = useState(session.prepTasks);
+  const [busy, setBusy] = useState(false);
+
+  const headDone = prep.filter((p) => p.done).length;
+  const headcount = {
+    total: attendees.length,
+    outOfTown: attendees.filter((a) => a.travelStatus !== "NA").length,
+    pilots: attendees.filter((a) => a.isPilot).length,
+    confirmed: attendees.filter((a) => a.confirmed === "CONFIRMED").length
+  };
+
+  // ---- prep ----
+  async function togglePrep(id: string, done: boolean) {
+    setPrep((cur) => cur.map((p) => (p.id === id ? { ...p, done } : p)));
+    await patchJson(`/api/orientation/prep-tasks/${id}`, { done });
+  }
+  async function removePrep(id: string) {
+    setPrep((cur) => cur.filter((p) => p.id !== id));
+    await patchJson(`/api/orientation/prep-tasks/${id}`, null, "DELETE");
+  }
+  const [newPrep, setNewPrep] = useState("");
+  async function addPrep() {
+    if (!newPrep.trim()) return;
+    setBusy(true);
+    await patchJson("/api/orientation/prep-tasks", { sessionId: session.id, label: newPrep }, "POST");
+    setNewPrep("");
+    setBusy(false);
+    router.refresh();
+  }
+
+  // ---- attendees ----
+  function updateAttendee(id: string, patch: Partial<AttendeeView>) {
+    setAttendees((cur) => cur.map((a) => (a.id === id ? { ...a, ...patch } : a)));
+  }
+  async function setConfirm(a: AttendeeView, v: ConfirmStatus) {
+    updateAttendee(a.id, { confirmed: v });
+    await patchJson(`/api/orientation/attendees/${a.id}`, { confirmed: v });
+  }
+  async function setTravel(a: AttendeeView, v: TravelStatus) {
+    updateAttendee(a.id, { travelStatus: v });
+    await patchJson(`/api/orientation/attendees/${a.id}`, { travelStatus: v });
+  }
+  async function toggleFlag(a: AttendeeView, field: "ipadReady" | "cardReady" | "swagReady") {
+    const v = !a[field];
+    updateAttendee(a.id, { [field]: v } as Partial<AttendeeView>);
+    await patchJson(`/api/orientation/attendees/${a.id}`, { [field]: v });
+  }
+  async function removeAttendee(id: string) {
+    setAttendees((cur) => cur.filter((a) => a.id !== id));
+    await patchJson(`/api/orientation/attendees/${id}`, null, "DELETE");
+    router.refresh();
+  }
+  const [addId, setAddId] = useState("");
+  async function addAttendee() {
+    if (!addId) return;
+    setBusy(true);
+    await patchJson(`/api/orientation/sessions/${session.id}/attendees`, { newHireId: addId }, "POST");
+    setAddId("");
+    setBusy(false);
+    router.refresh();
+  }
+
+  async function markComplete() {
+    if (!confirm("Mark this orientation complete? This ticks 'Attended orientation' for all attendees.")) return;
+    setBusy(true);
+    await patchJson(`/api/orientation/sessions/${session.id}`, { status: "COMPLETE" });
+    router.refresh();
+  }
+
+  // ---- email send tracker ----
+  async function toggleEmail(a: AttendeeView, key: string) {
+    const sent = a.sentTemplateKeys.includes(key);
+    const next = sent ? a.sentTemplateKeys.filter((k) => k !== key) : [...a.sentTemplateKeys, key];
+    updateAttendee(a.id, { sentTemplateKeys: next });
+    await patchJson(`/api/orientation/attendees/${a.id}`, sent ? { markUnsent: key } : { markSent: key });
+  }
+
+  return (
+    <div className="space-y-4 px-5 py-5 lg:px-8">
+      <Link href="/orientation" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-grey hover:text-brand-lea">← Orientation</Link>
+
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold text-brand-lea">Orientation · {fmtShort(session.date)}</h1>
+            <p className="mt-1 text-sm text-brand-grey">
+              {fmtTime(session.date)} · {session.location ?? "—"}
+              {session.address ? ` · ${session.address}` : ""}
+              {session.meetLink ? <> · <a href={session.meetLink} className="text-brand-lea underline">Meet link</a></> : null}
+            </p>
+          </div>
+          {session.status === "COMPLETE" ? (
+            <span className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">Complete</span>
+          ) : (
+            <button onClick={markComplete} disabled={busy} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">Mark complete</button>
+          )}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+          {[
+            ["Attendees", headcount.total],
+            ["Confirmed", `${headcount.confirmed}/${headcount.total}`],
+            ["Out-of-town · travel", headcount.outOfTown],
+            ["Pilots · iPads", headcount.pilots],
+            ["Prep", `${headDone}/${prep.length}`]
+          ].map(([label, val]) => (
+            <span key={String(label)} className="rounded-full border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-1 text-brand-lea">
+              <span className="font-semibold">{val}</span> <span className="text-brand-grey">{label}</span>
+            </span>
+          ))}
+        </div>
+      </section>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
+        {/* Prep checklist */}
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+          <h2 className="text-base font-semibold text-brand-lea">Prep checklist</h2>
+          <div className="mt-3 space-y-1">
+            {prep.map((t) => (
+              <PrepRow key={t.id} t={t} onToggle={togglePrep} onRemove={removePrep} />
+            ))}
+          </div>
+          <div className="mt-3 flex items-center gap-2 border-t border-brand-lea/10 pt-3">
+            <input value={newPrep} onChange={(e) => setNewPrep(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addPrep()} placeholder="Add a prep task" className="flex-1 rounded border border-brand-lea/15 px-3 py-1.5 text-sm" />
+            <button onClick={addPrep} disabled={busy} className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">Add</button>
+          </div>
+        </section>
+
+        {/* Attendees */}
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+          <h2 className="text-base font-semibold text-brand-lea">Attendees</h2>
+          <div className="mt-3 overflow-x-auto">
+            <table className="min-w-full text-xs">
+              <thead>
+                <tr className="text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey">
+                  <th className="py-2 pr-2">Name</th>
+                  <th className="px-1 py-2">Confirm</th>
+                  <th className="px-1 py-2">Travel</th>
+                  <th className="px-1 py-2 text-center">iPad</th>
+                  <th className="px-1 py-2 text-center">Card</th>
+                  <th className="px-1 py-2 text-center">Swag</th>
+                  <th className="px-1 py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {attendees.length === 0 ? (
+                  <tr><td colSpan={7} className="py-4 text-center text-brand-grey">No attendees yet. Add from the list below.</td></tr>
+                ) : attendees.map((a) => (
+                  <tr key={a.id} className="border-t border-brand-lea/10">
+                    <td className="py-2 pr-2">
+                      <div className="font-medium text-brand-lea">{a.name}{a.isPilot ? <span className="ml-1 rounded bg-sky-50 px-1 text-[9px] font-semibold text-sky-700">pilot</span> : null}</div>
+                      <div className="text-[10px] text-brand-grey">{a.position ?? "—"}</div>
+                    </td>
+                    <td className="px-1 py-2">
+                      <select value={a.confirmed} onChange={(e) => setConfirm(a, e.target.value as ConfirmStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.confirmed === "CONFIRMED" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : a.confirmed === "DECLINED" ? "border-red-200 bg-red-50 text-red-700" : "border-brand-lea/15 bg-white text-brand-grey")}>
+                        <option value="PENDING">Pending</option>
+                        <option value="CONFIRMED">Confirmed</option>
+                        <option value="DECLINED">Declined</option>
+                      </select>
+                    </td>
+                    <td className="px-1 py-2">
+                      <select value={a.travelStatus} onChange={(e) => setTravel(a, e.target.value as TravelStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.travelStatus === "ARRANGED" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : a.travelStatus === "NEEDED" ? "border-brand-gold/40 bg-brand-gold/15 text-brand-lea" : "border-brand-lea/15 bg-white text-brand-grey")}>
+                        <option value="NA">Local</option>
+                        <option value="NEEDED">Needed</option>
+                        <option value="ARRANGED">Arranged</option>
+                      </select>
+                    </td>
+                    <td className="px-1 py-2 text-center">{a.isPilot ? <Flag on={a.ipadReady} onClick={() => toggleFlag(a, "ipadReady")} /> : <span className="text-brand-grey/40">—</span>}</td>
+                    <td className="px-1 py-2 text-center"><Flag on={a.cardReady} onClick={() => toggleFlag(a, "cardReady")} /></td>
+                    <td className="px-1 py-2 text-center"><Flag on={a.swagReady} onClick={() => toggleFlag(a, "swagReady")} /></td>
+                    <td className="px-1 py-2 text-right"><button onClick={() => removeAttendee(a.id)} className="text-[11px] text-red-600 hover:underline">remove</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-3 flex items-center gap-2 border-t border-brand-lea/10 pt-3">
+            <select value={addId} onChange={(e) => setAddId(e.target.value)} className="flex-1 rounded border border-brand-lea/15 px-2 py-1.5 text-sm text-brand-lea">
+              <option value="">Add attendee…</option>
+              {session.candidates.filter((c) => c.suggested).length > 0 ? (
+                <optgroup label="Suggested (this orientation date)">
+                  {session.candidates.filter((c) => c.suggested).map((c) => <option key={c.id} value={c.id}>{c.name}{c.position ? ` · ${c.position}` : ""}</option>)}
+                </optgroup>
+              ) : null}
+              <optgroup label="All hires">
+                {session.candidates.filter((c) => !c.suggested).map((c) => <option key={c.id} value={c.id}>{c.name}{c.position ? ` · ${c.position}` : ""}</option>)}
+              </optgroup>
+            </select>
+            <button onClick={addAttendee} disabled={busy || !addId} className="rounded bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-50">Add</button>
+          </div>
+        </section>
+      </div>
+
+      {/* Email send tracker */}
+      {attendees.length > 0 ? (
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+          <h2 className="text-base font-semibold text-brand-lea">Who's been emailed</h2>
+          <p className="mt-1 text-sm text-brand-grey">Check a box when you send that email (via Front) so you can see who has what. Live sending is coming later.</p>
+          <div className="mt-3 overflow-x-auto">
+            <table className="min-w-full text-xs">
+              <thead>
+                <tr className="text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey">
+                  <th className="py-2 pr-3">Attendee</th>
+                  {session.templates.map((t) => <th key={t.key} className="px-2 py-2 text-center" style={{ minWidth: 70 }}>{t.name}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {attendees.map((a) => (
+                  <tr key={a.id} className="border-t border-brand-lea/10">
+                    <td className="py-2 pr-3 font-medium text-brand-lea">{a.name}</td>
+                    {session.templates.map((t) => {
+                      const sent = a.sentTemplateKeys.includes(t.key);
+                      return (
+                        <td key={t.key} className="px-2 py-2 text-center">
+                          <button onClick={() => toggleEmail(a, t.key)} className="inline-flex items-center justify-center">
+                            {sent ? <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><svg width="11" height="11" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></span> : <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/30" />}
+                          </button>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
+      <EmailTemplates templates={session.templates} session={session} />
+    </div>
+  );
+}
+
+function Flag({ on, onClick }: { on: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="inline-flex items-center justify-center" title={on ? "Ready — click to unset" : "Not ready"}>
+      {on ? <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><svg width="11" height="11" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></span> : <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/30" />}
+    </button>
+  );
+}
+
+function PrepRow({ t, onToggle, onRemove }: { t: PrepTaskView; onToggle: (id: string, done: boolean) => void; onRemove: (id: string) => void }) {
+  return (
+    <div className="group flex items-center gap-2 border-b border-brand-lea/5 py-1.5">
+      <button onClick={() => onToggle(t.id, !t.done)} className="shrink-0">
+        {t.done ? <span className="text-emerald-600"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#d1fae5" /><path d="M5 8.5 L7 10.5 L11 6" fill="none" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span> : <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/40" />}
+      </button>
+      <span className={clsx("flex-1 text-[12.5px]", t.done ? "text-brand-grey line-through" : "text-brand-black")}>{t.label}</span>
+      {t.owner ? <span className="rounded-full bg-brand-cloudDancer/70 px-2 py-0.5 text-[10px] text-brand-grey">{t.owner}</span> : null}
+      {t.dueDaysBefore != null && !t.done ? <span className="text-[10px] text-brand-grey">{t.dueDaysBefore}d before</span> : null}
+      <button onClick={() => onRemove(t.id)} className="text-[11px] text-red-600 opacity-0 transition group-hover:opacity-100">×</button>
+    </div>
+  );
+}
+
+function fillPlaceholders(text: string, session: SessionDetail) {
+  return text
+    .replace(/\{\{date\}\}/g, fmtShort(session.date))
+    .replace(/\{\{time\}\}/g, fmtTime(session.date))
+    .replace(/\{\{location\}\}/g, session.location ?? "")
+    .replace(/\{\{address\}\}/g, session.address ?? "")
+    .replace(/\{\{meetLink\}\}/g, session.meetLink ?? "");
+}
+
+function EmailTemplates({ templates, session }: { templates: EmailTemplateDef[]; session: SessionDetail }) {
+  const router = useRouter();
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState({ name: "", subject: "", body: "" });
+
+  async function save(key: string, name: string, subject: string, body: string) {
+    setBusy(true);
+    await patchJson("/api/orientation/templates", { key, name, subject, body });
+    setBusy(false);
+    router.refresh();
+  }
+  async function remove(key: string) {
+    setBusy(true);
+    await patchJson(`/api/orientation/templates?key=${encodeURIComponent(key)}`, null, "DELETE");
+    setBusy(false);
+    router.refresh();
+  }
+  async function add() {
+    if (!draft.name.trim()) return;
+    setBusy(true);
+    await patchJson("/api/orientation/templates", draft, "POST");
+    setDraft({ name: "", subject: "", body: "" });
+    setAdding(false);
+    setBusy(false);
+    router.refresh();
+  }
+  function copy(t: EmailTemplateDef) {
+    const text = `Subject: ${fillPlaceholders(t.subject, session)}\n\n${fillPlaceholders(t.body, session)}`;
+    navigator.clipboard?.writeText(text);
+    setCopied(t.key);
+    setTimeout(() => setCopied((c) => (c === t.key ? null : c)), 1500);
+  }
+
+  return (
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold text-brand-lea">Email templates</h2>
+        <button onClick={() => setAdding((a) => !a)} className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">{adding ? "Cancel" : "+ Add template"}</button>
+      </div>
+      <p className="mt-1 text-xs text-brand-grey">Placeholders: {"{{name}} {{date}} {{time}} {{location}} {{address}} {{meetLink}}"}. Copy fills the session details; replace {"{{name}}"} per person.</p>
+
+      {adding ? (
+        <div className="mt-3 space-y-2 rounded border border-brand-lea/10 p-3">
+          <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Template name" className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm" />
+          <input value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} placeholder="Subject" className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm" />
+          <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} placeholder="Body" rows={4} className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm" />
+          <button onClick={add} disabled={busy} className="rounded bg-brand-lea px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">Add template</button>
+        </div>
+      ) : null}
+
+      <div className="mt-3 space-y-2">
+        {templates.map((t) => (
+          <div key={t.key} className="rounded border border-brand-lea/10">
+            <div className="flex items-center justify-between gap-2 px-3 py-2">
+              <button onClick={() => setOpenKey((k) => (k === t.key ? null : t.key))} className="flex items-center gap-2 text-left text-sm font-medium text-brand-lea">
+                <span className="text-brand-grey">{openKey === t.key ? "▾" : "▸"}</span> {t.name}
+              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => copy(t)} className="text-xs font-semibold text-brand-lea hover:underline">{copied === t.key ? "Copied!" : "Copy"}</button>
+                <button onClick={() => remove(t.key)} className="text-xs text-red-600 hover:underline">Remove</button>
+              </div>
+            </div>
+            {openKey === t.key ? <TemplateEditor t={t} onSave={save} busy={busy} /> : null}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function TemplateEditor({ t, onSave, busy }: { t: EmailTemplateDef; onSave: (key: string, name: string, subject: string, body: string) => void; busy: boolean }) {
+  const [name, setName] = useState(t.name);
+  const [subject, setSubject] = useState(t.subject);
+  const [body, setBody] = useState(t.body);
+  const dirty = name !== t.name || subject !== t.subject || body !== t.body;
+  return (
+    <div className="space-y-2 border-t border-brand-lea/10 px-3 py-3">
+      <input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm" />
+      <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm" />
+      <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={6} className="w-full rounded border border-brand-lea/15 px-3 py-2 font-mono text-xs" />
+      <button onClick={() => onSave(t.key, name, subject, body)} disabled={busy || !dirty} className="rounded bg-brand-lea px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-40">Save</button>
+    </div>
+  );
+}

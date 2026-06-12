@@ -225,8 +225,61 @@ model NewHire {
   updatedAt       DateTime @updatedAt
 
   tasks           OnboardingTask[]
+  orientationAttendances OrientationAttendee[]
 
   @@index([stage])
+}
+
+model OrientationSession {
+  id        String   @id @default(cuid())
+  date      DateTime
+  location  String?  @default("SkyShare HQ, Salt Lake City")
+  address   String?
+  meetLink  String?
+  notes     String?
+  status    String   @default("UPCOMING") // UPCOMING | COMPLETE | CANCELED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attendees OrientationAttendee[]
+  prepTasks OrientationPrepTask[]
+
+  @@index([status])
+}
+
+model OrientationAttendee {
+  id               String   @id @default(cuid())
+  sessionId        String
+  newHireId        String
+  confirmed        String   @default("PENDING") // PENDING | CONFIRMED | DECLINED
+  travelStatus     String   @default("NA")       // NA (local) | NEEDED | ARRANGED
+  ipadReady        Boolean  @default(false)
+  cardReady        Boolean  @default(false)
+  swagReady        Boolean  @default(false)
+  sentTemplateKeys String   @default("[]")
+  notes            String?
+  createdAt        DateTime @default(now())
+
+  session OrientationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  newHire NewHire            @relation(fields: [newHireId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, newHireId])
+  @@index([sessionId])
+}
+
+model OrientationPrepTask {
+  id            String    @id @default(cuid())
+  sessionId     String
+  label         String
+  owner         String?
+  dueDaysBefore Int?
+  order         Int
+  done          Boolean   @default(false)
+  completedAt   DateTime?
+
+  session OrientationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
 }
 
 model OnboardingTask {
