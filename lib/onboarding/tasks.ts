@@ -46,19 +46,32 @@ export function groupLabel(key: string): string {
   return ONBOARDING_GROUPS.find((g) => g.key === key)?.label ?? key;
 }
 
-// The 10 headline milestones for the Milestones tab (a subset of the full checklist).
+// The milestones shown on the Milestones tab — the full onboarding journey, with
+// concise labels (headers may wrap). Custom milestones are appended from settings.
 export const MILESTONE_KEYS: Array<{ key: string; short: string }> = [
-  { key: "verbal_offer", short: "Verbal" },
-  { key: "offer_letter_sent", short: "Sent" },
-  { key: "candidate_signed", short: "Signed" },
-  { key: "onboarding_journey", short: "Onboard email" },
-  { key: "company_gmail", short: "Gmail" },
-  { key: "bg_check_complete", short: "Bg check" },
-  { key: "paycom_hire", short: "Paycom" },
-  { key: "groups_drive", short: "Groups & drive" },
-  { key: "drug_screen", short: "Drug screen" },
-  { key: "attended_orientation", short: "Orientation" }
+  { key: "verbal_offer", short: "Verbal offer given" },
+  { key: "draft_offer", short: "Draft offer letter" },
+  { key: "supervisor_signs", short: "Supervisor signs offer" },
+  { key: "president_signs", short: "President signs offer" },
+  { key: "offer_letter_sent", short: "Offer letter sent" },
+  { key: "pilot_app", short: "Pilot app on file" },
+  { key: "ebco_form", short: "EBCO form on file" },
+  { key: "pilot_doc_request", short: "Pilot docs requested" },
+  { key: "candidate_signed", short: "Candidate signed offer" },
+  { key: "onboarding_journey", short: "Onboarding email sent" },
+  { key: "company_gmail", short: "Company Gmail created" },
+  { key: "bg_check_start", short: "Background check started" },
+  { key: "bg_check_complete", short: "Background check complete" },
+  { key: "paycom_hire", short: "Hired in Paycom" },
+  { key: "groups_drive", short: "Added to groups & drive" },
+  { key: "drug_screen", short: "Drug screen sent to ITS" },
+  { key: "attended_orientation", short: "Attended orientation" },
+  { key: "travel_complete", short: "Travel arranged" }
 ];
+
+// Custom (user-added) milestones live in their own group so they do not disturb the
+// fixed checklist groups; they are tracked per hire just like the standard tasks.
+export const CUSTOM_GROUP = "CUSTOM";
 
 // Maintenance check-ins for post-onboard employees. Day-based ones drive "due" reminders.
 export const MAINTENANCE_GROUP = "MAINTENANCE";

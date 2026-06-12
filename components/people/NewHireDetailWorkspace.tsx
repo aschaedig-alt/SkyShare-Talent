@@ -220,6 +220,35 @@ export function NewHireDetailWorkspace({ hire }: Props) {
                 </div>
               </div>
             ))}
+
+            {tasks.some((t) => t.group === "CUSTOM") && (
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-gold">Additional milestones</div>
+                <div className="mt-2 space-y-1.5">
+                  {tasks
+                    .filter((t) => t.group === "CUSTOM")
+                    .map((t) => (
+                      <div key={t.id} className="flex items-center justify-between gap-3 rounded border border-brand-lea/10 px-3 py-2">
+                        <span className={clsx("text-sm", t.status === "DONE" ? "text-brand-grey line-through" : "text-brand-black")}>{t.label}</span>
+                        <div className="flex shrink-0 overflow-hidden rounded border border-brand-lea/15">
+                          {(["TODO", "DONE", "NA"] as const).map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => setTaskStatus(t.id, s)}
+                              className={clsx(
+                                "px-2.5 py-1 text-xs font-semibold transition",
+                                t.status === s ? STATUS_BTN[s].on : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60"
+                              )}
+                            >
+                              {STATUS_BTN[s].label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
         </section>
       </div>

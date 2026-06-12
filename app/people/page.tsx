@@ -3,7 +3,7 @@ import {
   getOnboardingCounts,
   getActiveDashboard,
   getActiveGridHires,
-  toMilestoneHires,
+  getActiveMilestoneData,
   getPostOnboardHires,
   getArchivedRows
 } from "@/lib/data/onboarding";
@@ -30,7 +30,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
     return <PreOnboardingWorkspace tab={tab} counts={counts} grid={await getActiveGridHires()} />;
   }
   if (tab === "milestones") {
-    return <PreOnboardingWorkspace tab={tab} counts={counts} milestones={toMilestoneHires(await getActiveGridHires())} />;
+    return <PreOnboardingWorkspace tab={tab} counts={counts} milestones={await getActiveMilestoneData()} />;
   }
   if (tab === "post") {
     return <PreOnboardingWorkspace tab={tab} counts={counts} post={await getPostOnboardHires()} />;

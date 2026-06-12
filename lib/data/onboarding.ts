@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import {
   ONBOARDING_TASKS,
-  MILESTONE_KEYS,
   MAINTENANCE_TASKS,
   MAINTENANCE_GROUP,
+  CUSTOM_GROUP,
   type OnboardingTaskDef
 } from "@/lib/onboarding/tasks";
+import { getMilestoneCatalog } from "@/lib/data/onboarding-milestones";
 
 const DAY = 86_400_000;
 
@@ -104,7 +105,7 @@ function deriveStatus(hire: HireWithTasks, doneCount: number, applicableCount: n
 }
 
 function toRow(hire: HireWithTasks, now: number): NewHireRow {
-  const onboardingTasks = hire.tasks.filter((t) => t.group !== MAINTENANCE_GROUP);
+  const onboardingTasks = hire.tasks.filter((t) => t.group !== MAINTENANCE_GROUP && t.group !== CUSTOM_GROUP);
   const applicable = onboardingTasks.filter((t) => t.status !== "NA");
   const doneCount = applicable.filter((t) => t.status === "DONE").length;
   const applicableCount = applicable.length;
@@ -354,28 +355,43 @@ export async function getActiveGridHires(): Promise<GridHire[]> {
   });
 }
 
-export type MilestoneHire = {
+export type MilestoneColumn = { key: string; label: string; custom: boolean };
+export type MilestoneRow = {
   id: string;
   name: string;
   position: string | null;
   department: string | null;
-  milestones: GridTaskStatus[];
+  statuses: GridTaskStatus[];
   done: number;
+  total: number;
 };
+export type MilestoneData = { milestones: MilestoneColumn[]; hires: MilestoneRow[] };
 
-export function toMilestoneHires(grid: GridHire[]): MilestoneHire[] {
-  return grid.map((h) => {
+export async function getActiveMilestoneData(): Promise<MilestoneData> {
+  const [catalog, hires] = await Promise.all([
+    getMilestoneCatalog(),
+    prisma.newHire.findMany({
+      where: { stage: "ACTIVE" },
+      select: { id: true, name: true, position: true, department: true, tasks: { select: { key: true, status: true } } },
+      orderBy: [{ startDate: "asc" }, { name: "asc" }]
+    })
+  ]);
+
+  const hireRows: MilestoneRow[] = hires.map((h) => {
     const byKey = new Map(h.tasks.map((t) => [t.key, t.status] as const));
-    const milestones = MILESTONE_KEYS.map((m) => byKey.get(m.key) ?? ("NA" as GridTaskStatus));
+    const statuses = catalog.map((m) => (byKey.get(m.key) ?? "TODO") as GridTaskStatus);
     return {
       id: h.id,
       name: h.name,
       position: h.position,
       department: h.department,
-      milestones,
-      done: milestones.filter((s) => s === "DONE").length
+      statuses,
+      done: statuses.filter((s) => s === "DONE").length,
+      total: statuses.filter((s) => s !== "NA").length
     };
   });
+
+  return { milestones: catalog.map((m) => ({ key: m.key, label: m.label, custom: m.custom })), hires: hireRows };
 }
 
 // ---- Post-onboard (maintenance check-ins) ----

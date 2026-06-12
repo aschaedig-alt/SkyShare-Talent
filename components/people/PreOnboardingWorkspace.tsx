@@ -6,7 +6,7 @@ import { useState } from "react";
 import { clsx } from "clsx";
 import type {
   GridHire,
-  MilestoneHire,
+  MilestoneData,
   NewHireRow,
   OnboardingDashboard,
   PostOnboardHire
@@ -24,7 +24,7 @@ type Props = {
   counts: { active: number; postOnboard: number; archived: number };
   dashboard?: OnboardingDashboard;
   grid?: GridHire[];
-  milestones?: MilestoneHire[];
+  milestones?: MilestoneData;
   post?: PostOnboardHire[];
   archived?: NewHireRow[];
 };
@@ -107,7 +107,7 @@ export function PreOnboardingWorkspace({ tab, counts, dashboard, grid, milestone
 
       {tab === "dashboard" && dashboard ? <OnboardingDashboardTab dashboard={dashboard} /> : null}
       {tab === "grid" && grid ? <OnboardingGridTab hires={grid} /> : null}
-      {tab === "milestones" && milestones ? <OnboardingMilestonesTab hires={milestones} /> : null}
+      {tab === "milestones" && milestones ? <OnboardingMilestonesTab data={milestones} /> : null}
       {tab === "post" && post ? <PostOnboardTab hires={post} /> : null}
       {tab === "archived" && archived ? <OnboardingArchivedTab rows={archived} /> : null}
 
