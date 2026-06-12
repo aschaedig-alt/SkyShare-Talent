@@ -217,7 +217,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
       {/* Email send tracker */}
       {attendees.length > 0 ? (
         <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
-          <h2 className="text-base font-semibold text-brand-lea">Who's been emailed</h2>
+          <h2 className="text-base font-semibold text-brand-lea">Who&apos;s been emailed</h2>
           <p className="mt-1 text-sm text-brand-grey">Check a box when you send that email (via Front) so you can see who has what. Live sending is coming later.</p>
           <div className="mt-3 overflow-x-auto">
             <table className="min-w-full text-xs">
