@@ -46,6 +46,29 @@ export function groupLabel(key: string): string {
   return ONBOARDING_GROUPS.find((g) => g.key === key)?.label ?? key;
 }
 
+// The 10 headline milestones for the Milestones tab (a subset of the full checklist).
+export const MILESTONE_KEYS: Array<{ key: string; short: string }> = [
+  { key: "verbal_offer", short: "Verbal" },
+  { key: "offer_letter_sent", short: "Sent" },
+  { key: "candidate_signed", short: "Signed" },
+  { key: "onboarding_journey", short: "Onboard email" },
+  { key: "company_gmail", short: "Gmail" },
+  { key: "bg_check_complete", short: "Bg check" },
+  { key: "paycom_hire", short: "Paycom" },
+  { key: "groups_drive", short: "Groups & drive" },
+  { key: "drug_screen", short: "Drug screen" },
+  { key: "attended_orientation", short: "Orientation" }
+];
+
+// Maintenance check-ins for post-onboard employees. Day-based ones drive "due" reminders.
+export const MAINTENANCE_GROUP = "MAINTENANCE";
+export const MAINTENANCE_TASKS: Array<{ key: string; label: string; short: string; dueDays: number | null }> = [
+  { key: "checkin_30", label: "30-day check-in", short: "30-day", dueDays: 30 },
+  { key: "checkin_60", label: "60-day check-in", short: "60-day", dueDays: 60 },
+  { key: "checkin_90", label: "90-day check-in", short: "90-day", dueDays: 90 },
+  { key: "benefits_enrolled", label: "Benefits enrolled", short: "Benefits", dueDays: null }
+];
+
 // Maps the verbose row labels from the current Google Sheet to our task keys (used by the importer).
 export const SHEET_LABEL_TO_KEY: Record<string, string> = {
   "verbal offer extended to candidate": "verbal_offer",

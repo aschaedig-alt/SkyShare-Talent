@@ -47,6 +47,9 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     if (typeof body.stage === "string" && STAGES.includes(body.stage as (typeof STAGES)[number])) {
       data.stage = body.stage;
+      if (body.stage === "POST_ONBOARD") {
+        data.onboardedAt = new Date();
+      }
     }
     if (typeof body.canceled === "boolean") {
       data.canceled = body.canceled;

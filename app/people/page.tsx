@@ -1,20 +1,39 @@
 import { requireModulePageAccess } from "@/lib/data/module-access";
-import { getOnboardingWorkspaceData, type HireStage } from "@/lib/data/onboarding";
-import { PreOnboardingWorkspace } from "@/components/people/PreOnboardingWorkspace";
+import {
+  getOnboardingCounts,
+  getActiveDashboard,
+  getActiveGridHires,
+  toMilestoneHires,
+  getPostOnboardHires,
+  getArchivedRows
+} from "@/lib/data/onboarding";
+import { PreOnboardingWorkspace, type PeopleTab } from "@/components/people/PreOnboardingWorkspace";
 
 export const dynamic = "force-dynamic";
 
-function stageFromParam(value: string | undefined): HireStage {
-  if (value === "post") return "POST_ONBOARD";
-  if (value === "archived") return "ARCHIVED";
-  return "ACTIVE";
+const TABS: PeopleTab[] = ["dashboard", "grid", "milestones", "post", "archived"];
+
+function tabFromParam(value: string | undefined): PeopleTab {
+  return TABS.includes(value as PeopleTab) ? (value as PeopleTab) : "dashboard";
 }
 
-export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ stage?: string }> }) {
+export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   await requireModulePageAccess("people");
   const sp = await searchParams;
-  const stage = stageFromParam(sp.stage);
-  const data = await getOnboardingWorkspaceData(stage);
+  const tab = tabFromParam(sp.tab);
+  const counts = await getOnboardingCounts();
 
-  return <PreOnboardingWorkspace data={data} stage={stage} />;
+  if (tab === "dashboard") {
+    return <PreOnboardingWorkspace tab={tab} counts={counts} dashboard={await getActiveDashboard()} />;
+  }
+  if (tab === "grid") {
+    return <PreOnboardingWorkspace tab={tab} counts={counts} grid={await getActiveGridHires()} />;
+  }
+  if (tab === "milestones") {
+    return <PreOnboardingWorkspace tab={tab} counts={counts} milestones={toMilestoneHires(await getActiveGridHires())} />;
+  }
+  if (tab === "post") {
+    return <PreOnboardingWorkspace tab={tab} counts={counts} post={await getPostOnboardHires()} />;
+  }
+  return <PreOnboardingWorkspace tab={tab} counts={counts} archived={await getArchivedRows()} />;
 }

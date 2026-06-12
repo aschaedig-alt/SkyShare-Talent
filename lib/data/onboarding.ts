@@ -1,5 +1,11 @@
 import { prisma } from "@/lib/prisma";
-import { ONBOARDING_TASKS, type OnboardingTaskDef } from "@/lib/onboarding/tasks";
+import {
+  ONBOARDING_TASKS,
+  MILESTONE_KEYS,
+  MAINTENANCE_TASKS,
+  MAINTENANCE_GROUP,
+  type OnboardingTaskDef
+} from "@/lib/onboarding/tasks";
 
 const DAY = 86_400_000;
 
@@ -41,13 +47,20 @@ export type NewHireRow = {
 export type Alert = { id: string; name: string; level: AlertLevel; text: string };
 export type UpcomingStart = { id: string; name: string; position: string | null; startDate: string };
 
+export type ChartDatum = { label: string; count: number };
+
 export type OnboardingDashboard = {
   startingSoon: number;
   missingItems: number;
   urgent: number;
   inProcess: number;
+  avgCompletion: number;
   alerts: Alert[];
   upcomingStarts: UpcomingStart[];
+  byStatus: ChartDatum[];
+  byDepartment: ChartDatum[];
+  startsByWeek: ChartDatum[];
+  funnel: ChartDatum[];
 };
 
 export type OnboardingWorkspaceData = {
@@ -91,10 +104,11 @@ function deriveStatus(hire: HireWithTasks, doneCount: number, applicableCount: n
 }
 
 function toRow(hire: HireWithTasks, now: number): NewHireRow {
-  const applicable = hire.tasks.filter((t) => t.status !== "NA");
+  const onboardingTasks = hire.tasks.filter((t) => t.group !== MAINTENANCE_GROUP);
+  const applicable = onboardingTasks.filter((t) => t.status !== "NA");
   const doneCount = applicable.filter((t) => t.status === "DONE").length;
   const applicableCount = applicable.length;
-  const nextTask = [...hire.tasks].sort((a, b) => a.order - b.order).find((t) => t.status === "TODO");
+  const nextTask = [...onboardingTasks].sort((a, b) => a.order - b.order).find((t) => t.status === "TODO");
   return {
     id: hire.id,
     name: hire.name,
@@ -149,7 +163,71 @@ function buildDashboard(active: HireWithTasks[], now: number): OnboardingDashboa
     .slice(0, 6)
     .map(({ row }) => ({ id: row.id, name: row.name, position: row.position, startDate: row.startDate as string }));
 
-  return { startingSoon, missingItems, urgent, inProcess: rows.length, alerts: alerts.slice(0, 8), upcomingStarts };
+  // Charts
+  const statusOrder: HireStatus[] = ["In process", "Ready", "Urgent", "Blocked"];
+  const byStatus: ChartDatum[] = statusOrder
+    .map((s) => ({ label: s, count: rows.filter(({ row }) => row.status === s).length }))
+    .filter((d) => d.count > 0);
+
+  const deptMap = new Map<string, number>();
+  for (const { row } of rows) {
+    const d = row.department ?? "Unassigned";
+    deptMap.set(d, (deptMap.get(d) ?? 0) + 1);
+  }
+  const byDepartment: ChartDatum[] = [...deptMap.entries()]
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count);
+
+  // Starts grouped into the next 6 weeks, starting this week (Monday).
+  const startOfToday = new Date(now);
+  startOfToday.setUTCHours(0, 0, 0, 0);
+  const dow = (startOfToday.getUTCDay() + 6) % 7; // 0 = Monday
+  const weekStart = startOfToday.getTime() - dow * DAY;
+  const startsByWeek: ChartDatum[] = Array.from({ length: 6 }, (_, i) => {
+    const from = weekStart + i * 7 * DAY;
+    const label = new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(from));
+    const count = rows.filter(({ row }) => {
+      if (!row.startDate) return false;
+      const t = new Date(row.startDate).getTime();
+      return t >= from && t < from + 7 * DAY;
+    }).length;
+    return { label, count };
+  });
+
+  const funnelDefs: Array<{ label: string; key: string }> = [
+    { label: "Offer signed", key: "candidate_signed" },
+    { label: "Background done", key: "bg_check_complete" },
+    { label: "Hired in Paycom", key: "paycom_hire" },
+    { label: "Groups & drive", key: "groups_drive" },
+    { label: "Attended orientation", key: "attended_orientation" }
+  ];
+  const funnel: ChartDatum[] = funnelDefs.map((f) => ({
+    label: f.label,
+    count: rows.filter(({ hire }) => hire.tasks.some((t) => t.key === f.key && t.status === "DONE")).length
+  }));
+
+  const avgCompletion =
+    rows.length === 0
+      ? 0
+      : Math.round(
+          (rows.reduce((acc, { row }) => acc + (row.applicableCount > 0 ? row.doneCount / row.applicableCount : 0), 0) /
+            rows.length) *
+            100
+        );
+
+  return {
+    startingSoon,
+    missingItems,
+    urgent,
+    inProcess: rows.length,
+    avgCompletion,
+    alerts: alerts.slice(0, 8),
+    upcomingStarts,
+    byStatus,
+    byDepartment,
+    startsByWeek,
+    funnel
+  };
 }
 
 const hireSelect = {
@@ -210,4 +288,167 @@ export async function getNewHireDetail(id: string): Promise<NewHireDetail | null
 // Builds the default task set for a brand-new (manually added) hire.
 export function defaultTaskCreateData(): Array<Pick<OnboardingTaskDef, "label" | "group"> & { key: string; order: number; status: string }> {
   return ONBOARDING_TASKS.map((t, i) => ({ key: t.key, label: t.label, group: t.group, order: i, status: "TODO" }));
+}
+
+export async function getOnboardingCounts() {
+  const [active, postOnboard, archived] = await Promise.all([
+    prisma.newHire.count({ where: { stage: "ACTIVE" } }),
+    prisma.newHire.count({ where: { stage: "POST_ONBOARD" } }),
+    prisma.newHire.count({ where: { stage: "ARCHIVED" } })
+  ]);
+  return { active, postOnboard, archived };
+}
+
+export async function getActiveDashboard(): Promise<OnboardingDashboard> {
+  const hires = (await prisma.newHire.findMany({
+    where: { stage: "ACTIVE" },
+    select: hireSelect,
+    orderBy: [{ startDate: "asc" }, { name: "asc" }]
+  })) as HireWithTasks[];
+  return buildDashboard(hires, Date.now());
+}
+
+// ---- Grid + Milestones (active hires only) ----
+
+export type GridTaskStatus = "TODO" | "DONE" | "NA";
+export type GridTask = { id: string; key: string; status: GridTaskStatus };
+export type GridHire = {
+  id: string;
+  name: string;
+  position: string | null;
+  department: string | null;
+  startDate: string | null;
+  orientationDate: string | null;
+  status: HireStatus;
+  doneCount: number;
+  applicableCount: number;
+  tasks: GridTask[];
+};
+
+export async function getActiveGridHires(): Promise<GridHire[]> {
+  const now = Date.now();
+  const hires = (await prisma.newHire.findMany({
+    where: { stage: "ACTIVE" },
+    select: hireSelect,
+    orderBy: [{ startDate: "asc" }, { name: "asc" }]
+  })) as HireWithTasks[];
+
+  return hires.map((h) => {
+    const row = toRow(h, now);
+    const tasks = h.tasks
+      .filter((t) => t.group !== MAINTENANCE_GROUP)
+      .sort((a, b) => a.order - b.order)
+      .map((t) => ({ id: t.id, key: t.key, status: t.status as GridTaskStatus }));
+    return {
+      id: h.id,
+      name: h.name,
+      position: h.position,
+      department: h.department,
+      startDate: iso(h.startDate),
+      orientationDate: iso(h.orientationDate),
+      status: row.status,
+      doneCount: row.doneCount,
+      applicableCount: row.applicableCount,
+      tasks
+    };
+  });
+}
+
+export type MilestoneHire = {
+  id: string;
+  name: string;
+  position: string | null;
+  department: string | null;
+  milestones: GridTaskStatus[];
+  done: number;
+};
+
+export function toMilestoneHires(grid: GridHire[]): MilestoneHire[] {
+  return grid.map((h) => {
+    const byKey = new Map(h.tasks.map((t) => [t.key, t.status] as const));
+    const milestones = MILESTONE_KEYS.map((m) => byKey.get(m.key) ?? ("NA" as GridTaskStatus));
+    return {
+      id: h.id,
+      name: h.name,
+      position: h.position,
+      department: h.department,
+      milestones,
+      done: milestones.filter((s) => s === "DONE").length
+    };
+  });
+}
+
+// ---- Post-onboard (maintenance check-ins) ----
+
+async function ensureMaintenanceTasks(hireId: string) {
+  await Promise.all(
+    MAINTENANCE_TASKS.map((t, i) =>
+      prisma.onboardingTask.upsert({
+        where: { newHireId_key: { newHireId: hireId, key: t.key } },
+        create: { newHireId: hireId, key: t.key, label: t.label, group: MAINTENANCE_GROUP, order: 100 + i, status: "TODO" },
+        update: {}
+      })
+    )
+  );
+}
+
+export type Checkin = { id: string; key: string; short: string; status: GridTaskStatus; dueSoon: boolean };
+export type PostOnboardHire = {
+  id: string;
+  name: string;
+  position: string | null;
+  department: string | null;
+  startDate: string | null;
+  onboardedAt: string | null;
+  checkins: Checkin[];
+};
+
+export async function getPostOnboardHires(): Promise<PostOnboardHire[]> {
+  const now = Date.now();
+  const ids = await prisma.newHire.findMany({ where: { stage: "POST_ONBOARD" }, select: { id: true } });
+  await Promise.all(ids.map((h) => ensureMaintenanceTasks(h.id)));
+
+  const hires = await prisma.newHire.findMany({
+    where: { stage: "POST_ONBOARD" },
+    select: {
+      id: true,
+      name: true,
+      position: true,
+      department: true,
+      startDate: true,
+      onboardedAt: true,
+      tasks: { where: { group: MAINTENANCE_GROUP }, select: { id: true, key: true, status: true } }
+    },
+    orderBy: [{ name: "asc" }]
+  });
+
+  return hires.map((h) => {
+    const byKey = new Map(h.tasks.map((t) => [t.key, { id: t.id, status: t.status }] as const));
+    const startMs = h.startDate ? h.startDate.getTime() : null;
+    const checkins: Checkin[] = MAINTENANCE_TASKS.map((m) => {
+      const rec = byKey.get(m.key);
+      const status = (rec?.status ?? "TODO") as GridTaskStatus;
+      const dueSoon = Boolean(m.dueDays !== null && startMs !== null && now >= startMs + m.dueDays * DAY && status !== "DONE");
+      return { id: rec?.id ?? "", key: m.key, short: m.short, status, dueSoon };
+    });
+    return {
+      id: h.id,
+      name: h.name,
+      position: h.position,
+      department: h.department,
+      startDate: iso(h.startDate),
+      onboardedAt: iso(h.onboardedAt),
+      checkins
+    };
+  });
+}
+
+export async function getArchivedRows(): Promise<NewHireRow[]> {
+  const now = Date.now();
+  const hires = (await prisma.newHire.findMany({
+    where: { stage: "ARCHIVED" },
+    select: hireSelect,
+    orderBy: [{ name: "asc" }]
+  })) as HireWithTasks[];
+  return hires.map((h) => toRow(h, now));
 }

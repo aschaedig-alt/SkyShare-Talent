@@ -213,6 +213,7 @@ model NewHire {
   orientationDate DateTime?
   // Lifecycle: ACTIVE (being onboarded) -> POST_ONBOARD (maintenance) -> ARCHIVED
   stage           String   @default("ACTIVE")
+  onboardedAt     DateTime?
   canceled        Boolean  @default(false)
   travelStatus    String?
   notes           String?

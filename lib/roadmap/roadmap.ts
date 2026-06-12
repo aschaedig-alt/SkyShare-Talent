@@ -91,7 +91,8 @@ Tools for assessing candidates — must stay transparent and fair.
 
 ## People Ops / Onboarding
 Supporting the team beyond recruiting.
-- [x] Pre-onboarding tracker (Jun 11) — replaced the Google Sheet; dashboard (starting soon, missing items, urgent, needs-attention, upcoming starts), active-hire table with progress + status + next action, per-hire detail with the universal checklist, and Active/Post-onboard/Archived lifecycle; imported the 34 current hires from CSV
+- [x] Pre-onboarding tracker (Jun 11) — replaced the Google Sheet; imported the 34 current hires from CSV; per-hire detail with the universal checklist; lifecycle moves hires Active → Post-onboard → Archived
+- [x] Pre-onboarding tabs (Jun 11) — Dashboard (charts: status donut, by department, starts-by-week, progress funnel + needs-attention/upcoming), Grid (frozen-column matrix, click-to-cycle cells), Milestones (10 key milestones + progress), Post-onboard (auto-receives onboarded hires; 30/60/90-day + benefits check-ins with due reminders), Archived
 - [ ] Orientation tracker — group pre-onboarding hires by orientation date and run the session (builds on the cohorts idea)
 - [ ] Recognition program — idea stage; shape the concept first
 
