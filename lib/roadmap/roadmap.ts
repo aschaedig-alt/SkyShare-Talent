@@ -47,6 +47,7 @@ Filling out the platform.
 - [ ] Support-role gates — when a job is Support, disable most pilot gates but keep U.S. work authorization and U.S. driver's license required; allow position-specific gate fields
 - [ ] Role identity defaults to job title — pilot requirement role identity should default to the job post title instead of a synthesized "Citation 560 XL Captain"; support roles get a non-pilot seat/identity
 - [x] 4.2 User Access Controls / RBAC (Jun 9) — 4 roles, permission matrix
+- [x] Access control condense (Jun 11) — merged each role's sidebar checkbox + access dropdown into one Hidden/View/Full control (5 columns, no horizontal scroll), grouped by domain, equal-width controls; still driven by the nav registry so new pages appear automatically
 - [x] 4.3 User Statistics Dashboard (Jun 9) — activity logging + team analytics
 
 ## Job Builder / Publishing
