@@ -169,8 +169,9 @@ export async function createOrientationSession(input: {
   location?: string | null;
   address?: string | null;
   meetLink?: string | null;
+  attendeeHireIds?: string[];
 }) {
-  return prisma.orientationSession.create({
+  const session = await prisma.orientationSession.create({
     data: {
       date: input.date,
       location: input.location ?? "SkyShare HQ, Salt Lake City",
@@ -181,6 +182,81 @@ export async function createOrientationSession(input: {
       }
     }
   });
+  if (input.attendeeHireIds?.length) {
+    await prisma.orientationAttendee.createMany({
+      data: input.attendeeHireIds.map((newHireId) => ({ sessionId: session.id, newHireId })),
+      skipDuplicates: true
+    });
+  }
+  return session;
+}
+
+// ---- Cohorts: pre-onboarding hires grouped by their orientation date ----
+
+export type CohortHire = { id: string; name: string; position: string | null; isAttendee: boolean };
+export type Cohort = {
+  dateISO: string;
+  hires: CohortHire[];
+  sessionId: string | null;
+  missingHireIds: string[];
+};
+export type CalendarDay = { dateISO: string; hireCount: number; sessionId: string | null };
+export type CohortData = { cohorts: Cohort[]; calendar: CalendarDay[] };
+
+export async function getOrientationCohorts(): Promise<CohortData> {
+  const [hires, sessions] = await Promise.all([
+    prisma.newHire.findMany({
+      where: { stage: "ACTIVE", orientationDate: { not: null } },
+      select: { id: true, name: true, position: true, orientationDate: true },
+      orderBy: [{ orientationDate: "asc" }, { name: "asc" }]
+    }),
+    prisma.orientationSession.findMany({ select: { id: true, date: true, attendees: { select: { newHireId: true } } } })
+  ]);
+
+  const sessionByDay = new Map<string, { id: string; attendeeIds: Set<string> }>();
+  for (const s of sessions) {
+    sessionByDay.set(s.date.toISOString().slice(0, 10), { id: s.id, attendeeIds: new Set(s.attendees.map((a) => a.newHireId)) });
+  }
+
+  const byDay = new Map<string, typeof hires>();
+  for (const h of hires) {
+    const day = h.orientationDate!.toISOString().slice(0, 10);
+    const arr = byDay.get(day) ?? [];
+    arr.push(h);
+    byDay.set(day, arr);
+  }
+
+  const cohorts: Cohort[] = [...byDay.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([day, hs]) => {
+      const session = sessionByDay.get(day) ?? null;
+      const cohortHires: CohortHire[] = hs.map((h) => ({
+        id: h.id,
+        name: h.name,
+        position: h.position,
+        isAttendee: session ? session.attendeeIds.has(h.id) : false
+      }));
+      return {
+        dateISO: hs[0].orientationDate!.toISOString(),
+        hires: cohortHires,
+        sessionId: session?.id ?? null,
+        missingHireIds: cohortHires.filter((h) => !h.isAttendee).map((h) => h.id)
+      };
+    });
+
+  // Calendar markers: union of cohort days and session days.
+  const calMap = new Map<string, CalendarDay>();
+  for (const c of cohorts) {
+    const day = c.dateISO.slice(0, 10);
+    calMap.set(day, { dateISO: c.dateISO, hireCount: c.hires.length, sessionId: c.sessionId });
+  }
+  for (const s of sessions) {
+    const day = s.date.toISOString().slice(0, 10);
+    if (!calMap.has(day)) calMap.set(day, { dateISO: s.date.toISOString(), hireCount: 0, sessionId: s.id });
+  }
+  const calendar = [...calMap.values()].sort((a, b) => a.dateISO.localeCompare(b.dateISO));
+
+  return { cohorts, calendar };
 }
 
 /** Mark complete and tick each attendee's "Attended orientation" pre-onboarding task. */

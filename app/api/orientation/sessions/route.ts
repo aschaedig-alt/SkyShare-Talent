@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
   try {
-    const body = (await request.json()) as { date?: string; location?: string; address?: string; meetLink?: string };
+    const body = (await request.json()) as { date?: string; location?: string; address?: string; meetLink?: string; attendeeHireIds?: string[] };
     if (!body?.date) {
       return NextResponse.json({ message: "A date is required." }, { status: 400 });
     }
@@ -22,7 +22,8 @@ export async function POST(request: Request) {
       date,
       location: body.location?.trim() || undefined,
       address: body.address?.trim() || null,
-      meetLink: body.meetLink?.trim() || null
+      meetLink: body.meetLink?.trim() || null,
+      attendeeHireIds: Array.isArray(body.attendeeHireIds) ? body.attendeeHireIds.filter((x): x is string => typeof x === "string") : undefined
     });
     return NextResponse.json({ ok: true, id: session.id });
   } catch (error) {
