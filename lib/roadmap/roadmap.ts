@@ -58,6 +58,7 @@ Restoring and streamlining the publishing toolset.
 - [x] Content block library UX (Jun 11) — group blocks by category/scope/placement, one-click category filter chips with counts, sort (name / most used / recently updated), and collapsible groups so it is not one long scroll
 - [x] Block editor Save at top (Jun 11) — sticky editor header with a Save button so you do not have to scroll down to save
 - [x] Mixed block formatting (Jun 11) — new "Bullets + text" format: start a line with - for a bullet, other lines stay paragraphs, mixable in one block; renders the same in the editor preview, the final job post, and all exports (HTML / limited HTML / plain text)
+- [x] Content Blocks page condense (Jun 11) — narrower library list, inline editing (no separate edit screen) with Save at top, Apply-to-jobs + Version history as a side column; moved Archive/Delete + the jobs-using list to a new Settings → Block management tab (admin-only)
 - [ ] Publishing cleanup, step B — consider merging Final Review into Job Builder (review a sample first)
 - [ ] Changes / version history — build out later if needed
 - [ ] Approvals workflow — build out later if needed

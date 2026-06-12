@@ -303,7 +303,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [selectedBlockId, setSelectedBlockId] = useState(initialBlocks[0]?.id ?? "");
-  const [mode, setMode] = useState<EditorMode>("detail");
+  const [mode, setMode] = useState<EditorMode>("edit");
   const [form, setForm] = useState(emptyForm);
   const [applyForm, setApplyForm] = useState(emptyApplyForm);
   const [message, setMessage] = useState<string | null>(null);
@@ -371,7 +371,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
 
   function selectBlock(blockId: string) {
     setSelectedBlockId(blockId);
-    setMode("detail");
+    setMode("edit");
     setRetirementForm(emptyRetirementForm);
     setApplyForm(emptyApplyForm);
     setMessage(null);
@@ -449,7 +449,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
           : [savedBlock, ...current];
       });
       setSelectedBlockId(savedBlock.id);
-      setMode("detail");
+      setMode("edit");
       setMessage(mode === "create" ? "Block created." : "Block details and new version saved.");
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Unable to save block.");
@@ -732,14 +732,6 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => selectedBlock && setMode("edit")}
-              className="inline-flex items-center gap-2 rounded border border-white/20 px-3.5 py-2 text-sm font-semibold text-white hover:bg-white/10"
-            >
-              <Edit3 className="h-4 w-4" />
-              Edit Block
-            </button>
-            <button
-              type="button"
               onClick={duplicateBlock}
               disabled={!selectedBlock || isDuplicating}
               className="inline-flex items-center gap-2 rounded border border-white/20 px-3.5 py-2 text-sm font-semibold text-white hover:bg-white/10 disabled:opacity-60"
@@ -818,7 +810,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
           onPlacementChange={updateBlockPlacement}
         />
       ) : (
-      <div className="grid gap-5 xl:grid-cols-[minmax(420px,0.95fr)_minmax(430px,1.05fr)]">
+      <div className="grid gap-5 xl:grid-cols-[300px_1fr]">
         <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10">
           <div className="border-b border-brand-lea/10 p-4">
             <label className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-brand-grey">
@@ -921,8 +913,9 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
         </section>
 
         <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10">
-          {mode === "edit" || mode === "create" ? (
-            <div>
+          {selectedBlock || mode === "create" ? (
+            <div className={mode === "create" ? "" : "grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr)_minmax(290px,1fr)]"}>
+              <div className="min-w-0">
               <div className="sticky top-0 z-20 flex items-start justify-between gap-4 border-b border-brand-lea/10 bg-white px-5 py-4">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">
@@ -931,6 +924,14 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                   <h2 className="mt-1 text-2xl font-semibold text-brand-lea">
                     {mode === "create" ? "New reusable content block" : selectedBlock?.name}
                   </h2>
+                  {mode !== "create" && selectedBlock ? (
+                    <a
+                      href="/settings/content-blocks"
+                      className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-grey hover:text-brand-lea"
+                    >
+                      Used by {selectedBlock.usageCount ?? 0} jobs · manage ›
+                    </a>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -941,14 +942,6 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                   >
                     <Save className="h-4 w-4" />
                     {isSaving ? "Saving..." : mode === "create" ? "Create" : "Save"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMode("detail")}
-                    className="rounded border border-brand-lea/10 p-2 text-brand-grey hover:bg-brand-cloudDancer"
-                    aria-label="Cancel"
-                  >
-                    <X className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -1204,59 +1197,8 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                 </button>
               </div>
             </div>
-          ) : selectedBlock ? (
-            <>
-              <div className="border-b border-brand-lea/10 px-5 py-4">
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">
-                  Block detail
-                </p>
-                <h2 className="mt-1 text-2xl font-semibold text-brand-lea">{selectedBlock.name}</h2>
-                <p className="mt-2 text-sm leading-6 text-brand-black/68">{selectedBlock.description}</p>
-                {selectedBlock.archivedAt && (
-                  <div className="mt-3 inline-flex items-center gap-2 rounded bg-brand-grey/12 px-3 py-2 text-sm font-semibold text-brand-grey">
-                    <Archive className="h-4 w-4" />
-                    Archived blocks stay visible for history but cannot be attached to new jobs.
-                  </div>
-                )}
-                {message && (
-                  <div className="mt-3 inline-flex items-center gap-2 rounded bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
-                    <CheckCircle2 className="h-4 w-4" />
-                    {message}
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-6 p-5">
-                <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-4">
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-brand-lea">
-                      Current Version
-                    </h3>
-                    <span className="rounded bg-brand-gold/25 px-2 py-1 text-xs font-bold text-brand-lea">
-                      {versionLabel(selectedBlock)}
-                    </span>
-                  </div>
-                  <div className="text-base font-bold text-brand-lea">{selectedBlock.currentVersion?.title}</div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <span className="rounded bg-white px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-eden">
-                      {selectedBlock.currentVersion?.bodyFormat === "PARAGRAPH" ? "No bullets" : "Bullet points"}
-                    </span>
-                    <span className="rounded bg-white px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-eden">
-                      {selectedBlock.currentVersion?.textWeight?.toLowerCase() ?? "normal"}
-                    </span>
-                    <span className="rounded bg-white px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-eden">
-                      {selectedBlock.currentVersion?.textColor?.toLowerCase() ?? "black"}
-                    </span>
-                  </div>
-                  <div className="mt-3">
-                    <BlockBodyPreview
-                      value={selectedBlock.currentVersion?.body}
-                      bodyFormat={selectedBlock.currentVersion?.bodyFormat ?? "BULLET_LIST"}
-                      textWeight={selectedBlock.currentVersion?.textWeight ?? "NORMAL"}
-                      textColor={selectedBlock.currentVersion?.textColor ?? "BLACK"}
-                    />
-                  </div>
-                </div>
+            {mode !== "create" && selectedBlock ? (
+              <aside className="space-y-5 border-t border-brand-lea/10 p-5 xl:border-l xl:border-t-0">
 
                 <div className="rounded border border-brand-lea/10 bg-white p-4">
                   <div className="mb-3 flex items-start justify-between gap-3">
@@ -1350,133 +1292,6 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                   )}
                 </div>
 
-                <div className="rounded border border-brand-red/20 bg-brand-red/6 p-4">
-                  <div className="mb-3 flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.16em] text-brand-lea">
-                        <Archive className="h-4 w-4 text-brand-red" />
-                        Archive or delete this block
-                      </h3>
-                      <p className="mt-2 text-sm leading-6 text-brand-black/70">
-                        {selectedBlockUsageCount > 0
-                          ? `${selectedBlockUsageCount} job${selectedBlockUsageCount === 1 ? "" : "s"} currently use this block. Review them before archiving or deleting.`
-                          : "No jobs currently use this block."}
-                      </p>
-                    </div>
-                    {selectedBlockUsageCount > 0 && (
-                      <span className="inline-flex items-center gap-1.5 rounded bg-brand-gold/25 px-2 py-1 text-xs font-bold text-brand-lea">
-                        <AlertTriangle className="h-3.5 w-3.5" />
-                        In use
-                      </span>
-                    )}
-                  </div>
-
-                  {selectedBlockUsageCount > 0 && (
-                    <div className="mb-4 max-h-40 overflow-auto rounded border border-brand-lea/10 bg-white">
-                      {selectedBlock.usedByJobs?.map((job) => (
-                        <div
-                          key={`${selectedBlock.id}-retire-${job.id}`}
-                          className="flex items-center justify-between gap-3 border-b border-brand-lea/8 px-3 py-2 last:border-b-0"
-                        >
-                          <span className="text-sm font-semibold text-brand-lea">{job.title}</span>
-                          <span className="rounded bg-brand-cloudDancer px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-eden">
-                            {formatEnum(job.status)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <label className="flex items-start gap-2 text-sm font-semibold text-brand-black/78">
-                    <input
-                      type="checkbox"
-                      className="mt-1"
-                      checked={retirementForm.migrateJobs}
-                      onChange={(event) =>
-                        setRetirementForm((current) => ({
-                          ...current,
-                          migrateJobs: event.target.checked
-                        }))
-                      }
-                      disabled={!selectedBlockUsageCount || isRetiring}
-                    />
-                    Update jobs using this block to a replacement block first
-                  </label>
-
-                  <div className="mt-3">
-                    <label className={labelClass}>Replacement Block</label>
-                    <select
-                      value={retirementForm.replacementBlockId}
-                      onChange={(event) =>
-                        setRetirementForm((current) => ({
-                          ...current,
-                          replacementBlockId: event.target.value
-                        }))
-                      }
-                      disabled={!retirementForm.migrateJobs || isRetiring}
-                      className={inputClass}
-                    >
-                      <option value="">Choose replacement block...</option>
-                      {replacementBlocks.map((block) => (
-                        <option key={block.id} value={block.id}>
-                          {block.name} - {formatEnum(block.category)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => retireBlock("ARCHIVE")}
-                      disabled={isRetiring || Boolean(selectedBlock.archivedAt) || replacementRequired}
-                      className="inline-flex items-center gap-2 rounded bg-brand-lea px-3 py-2 text-sm font-bold text-white hover:bg-brand-eden disabled:opacity-50"
-                    >
-                      <Archive className="h-4 w-4" />
-                      {isRetiring ? "Working..." : "Archive Block"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => retireBlock("DELETE")}
-                      disabled={isRetiring || deleteNeedsReplacement || replacementRequired}
-                      className="inline-flex items-center gap-2 rounded border border-brand-red/25 bg-white px-3 py-2 text-sm font-bold text-brand-red hover:bg-brand-red/8 disabled:opacity-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete Block
-                    </button>
-                  </div>
-
-                  {deleteNeedsReplacement && (
-                    <p className="mt-3 text-xs font-semibold text-brand-red">
-                      Delete is locked while jobs still use this block. Choose a replacement and update those jobs first,
-                      or archive instead.
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.16em] text-brand-lea">
-                    <Users className="h-4 w-4 text-brand-eden" />
-                    Jobs using this block
-                  </h3>
-                  <div className="divide-y divide-brand-lea/8 overflow-hidden rounded border border-brand-lea/10">
-                    {selectedBlock.usedByJobs?.length ? (
-                      selectedBlock.usedByJobs.map((job) => (
-                        <div
-                          key={`${selectedBlock.id}-${job.id}`}
-                          className="flex items-center justify-between gap-3 px-3 py-2.5"
-                        >
-                          <div className="text-sm font-semibold text-brand-lea">{job.title}</div>
-                          <div className="rounded bg-brand-cloudDancer px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-eden">
-                            {formatEnum(job.status)}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="px-3 py-3 text-sm text-brand-grey">No jobs use this block yet.</div>
-                    )}
-                  </div>
-                </div>
 
                 <div>
                   <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.16em] text-brand-lea">
@@ -1503,8 +1318,9 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                     ))}
                   </div>
                 </div>
-              </div>
-            </>
+              </aside>
+            ) : null}
+            </div>
           ) : (
             <div className="p-8 text-sm text-brand-grey">No reusable blocks found.</div>
           )}
