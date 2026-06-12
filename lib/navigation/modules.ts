@@ -13,6 +13,7 @@ import {
   FileText,
   HeartHandshake,
   Import,
+  LayoutGrid,
   MessageSquare,
   Plane,
   SearchCheck,
@@ -98,6 +99,7 @@ export const navigationGroups: readonly NavigationGroup[] = [
         label: "Publishing",
         items: [
           { id: "jobs", href: "/jobs", label: "Job Post Builder", icon: ClipboardList },
+          { id: "jobs", href: "/jobs/layout-lab", label: "Layout Lab", icon: LayoutGrid },
           { id: "review", href: "/review", label: "Final Review", icon: FileCheck2 },
           { id: "blocks", href: "/blocks", label: "Content Blocks", icon: Blocks }
         ]
