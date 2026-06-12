@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { clsx } from "clsx";
-import type { Checkin, GridTaskStatus, PostOnboardHire } from "@/lib/data/onboarding";
+import type { Checkin, EmploymentStatus, GridTaskStatus, PostOnboardHire } from "@/lib/data/onboarding";
 
 function fmtDate(iso: string | null) {
   return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(iso)) : "—";
@@ -11,6 +11,21 @@ function fmtDate(iso: string | null) {
 
 export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] }) {
   const [hires, setHires] = useState(initial);
+
+  async function setEmployment(hireId: string, status: EmploymentStatus) {
+    const prev = hires;
+    setHires((cur) => cur.map((h) => (h.id === hireId ? { ...h, employmentStatus: status } : h)));
+    try {
+      const res = await fetch(`/api/new-hires/${hireId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employmentStatus: status })
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      setHires(prev);
+    }
+  }
 
   async function toggle(hireId: string, c: Checkin) {
     if (!c.id) return;
@@ -51,21 +66,37 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
               <th className="px-4 py-3 text-left">Department</th>
               <th className="px-4 py-3 text-left">Started</th>
               <th className="px-4 py-3 text-left">Onboarded</th>
+              <th className="px-4 py-3 text-left">Status</th>
               {heads.map((h) => (
                 <th key={h} className="px-3 py-3 text-center">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {hires.map((h) => (
-              <tr key={h.id} className="border-b border-brand-lea/5 hover:bg-brand-cloudDancer/30">
+            {hires.map((h) => {
+              const terminated = h.employmentStatus === "TERMINATED";
+              return (
+              <tr key={h.id} className={clsx("border-b border-brand-lea/5 hover:bg-brand-cloudDancer/30", terminated && "bg-brand-cloudDancer/30")}>
                 <td className="px-4 py-3">
-                  <Link href={`/people/${h.id}`} className="font-semibold text-brand-lea hover:underline">{h.name}</Link>
+                  <Link href={`/people/${h.id}`} className={clsx("font-semibold hover:underline", terminated ? "text-brand-grey" : "text-brand-lea")}>{h.name}</Link>
                   <div className="text-xs text-brand-grey">{h.position ?? "—"}</div>
                 </td>
                 <td className="px-4 py-3 text-brand-grey">{h.department ?? "—"}</td>
                 <td className="px-4 py-3 text-brand-grey">{fmtDate(h.startDate)}</td>
                 <td className="px-4 py-3 text-brand-grey">{fmtDate(h.onboardedAt)}</td>
+                <td className="px-4 py-3">
+                  <select
+                    value={h.employmentStatus}
+                    onChange={(e) => setEmployment(h.id, e.target.value as EmploymentStatus)}
+                    className={clsx(
+                      "rounded border px-2 py-1 text-xs font-semibold outline-none transition",
+                      terminated ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    )}
+                  >
+                    <option value="ACTIVE">Active</option>
+                    <option value="TERMINATED">Terminated</option>
+                  </select>
+                </td>
                 {h.checkins.map((c) => (
                   <td key={c.key} className="px-3 py-3 text-center">
                     <button
@@ -87,7 +118,8 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
                   </td>
                 ))}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

@@ -54,6 +54,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (typeof body.canceled === "boolean") {
       data.canceled = body.canceled;
     }
+    if (body.employmentStatus === "ACTIVE" || body.employmentStatus === "TERMINATED") {
+      data.employmentStatus = body.employmentStatus;
+    }
 
     const updated = await prisma.newHire.update({ where: { id }, data });
     return NextResponse.json({ ok: true, id: updated.id });

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiPermission } from "@/lib/auth/route-auth";
-import { addCustomMilestone, removeCustomMilestone, getMilestoneCatalog } from "@/lib/data/onboarding-milestones";
+import { addMilestone, editMilestone, removeMilestone, getMilestoneCatalog } from "@/lib/data/onboarding-milestones";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +15,27 @@ export async function POST(request: Request) {
   }
   try {
     const body = (await request.json()) as { label?: string };
-    const milestones = await addCustomMilestone(String(body?.label ?? ""));
+    const milestones = await addMilestone(String(body?.label ?? ""));
     return NextResponse.json({ ok: true, milestones });
   } catch (error) {
     return NextResponse.json({ message: error instanceof Error ? error.message : "Unable to add milestone." }, { status: 400 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  const auth = await requireApiPermission("candidates:write");
+  if (!auth.ok) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+  try {
+    const body = (await request.json()) as { key?: string; label?: string };
+    if (!body?.key) {
+      return NextResponse.json({ message: "Milestone key is required." }, { status: 400 });
+    }
+    const milestones = await editMilestone(body.key, String(body?.label ?? ""));
+    return NextResponse.json({ ok: true, milestones });
+  } catch (error) {
+    return NextResponse.json({ message: error instanceof Error ? error.message : "Unable to edit milestone." }, { status: 400 });
   }
 }
 
@@ -33,7 +50,7 @@ export async function DELETE(request: Request) {
     if (!key) {
       return NextResponse.json({ message: "Milestone key is required." }, { status: 400 });
     }
-    const milestones = await removeCustomMilestone(key);
+    const milestones = await removeMilestone(key);
     return NextResponse.json({ ok: true, milestones });
   } catch (error) {
     return NextResponse.json({ message: error instanceof Error ? error.message : "Unable to remove milestone." }, { status: 400 });

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { clsx } from "clsx";
 import type { GridTaskStatus, MilestoneData } from "@/lib/data/onboarding";
 
@@ -22,74 +22,115 @@ function Glyph({ status }: { status: GridTaskStatus }) {
 export function OnboardingMilestonesTab({ data }: { data: MilestoneData }) {
   const router = useRouter();
   const { milestones, hires } = data;
-  const [adding, setAdding] = useState(false);
-  const [label, setLabel] = useState("");
+  const [managing, setManaging] = useState(false);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [newLabel, setNewLabel] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function addMilestone() {
-    if (!label.trim()) {
-      setError("Enter a milestone name.");
-      return;
-    }
+  useEffect(() => {
+    setDrafts(Object.fromEntries(milestones.map((m) => [m.key, m.label])));
+  }, [milestones]);
+
+  async function call(method: string, body: unknown, url = "/api/onboarding-milestones") {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/onboarding-milestones", {
-        method: "POST",
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label })
+        body: body ? JSON.stringify(body) : undefined
       });
-      const payload = (await res.json().catch(() => null)) as { message?: string } | null;
-      if (!res.ok) throw new Error(payload?.message ?? "Unable to add milestone.");
-      setLabel("");
-      setAdding(false);
+      if (!res.ok) {
+        const p = (await res.json().catch(() => null)) as { message?: string } | null;
+        throw new Error(p?.message ?? "Something went wrong.");
+      }
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to add milestone.");
+      setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setBusy(false);
     }
   }
 
-  async function removeMilestone(key: string) {
-    setBusy(true);
-    try {
-      await fetch(`/api/onboarding-milestones?key=${encodeURIComponent(key)}`, { method: "DELETE" });
-      router.refresh();
-    } finally {
-      setBusy(false);
+  const addMilestone = async () => {
+    if (!newLabel.trim()) {
+      setError("Enter a milestone name.");
+      return;
     }
-  }
+    await call("POST", { label: newLabel });
+    setNewLabel("");
+  };
+  const saveLabel = (key: string) => call("PATCH", { key, label: drafts[key] });
+  const removeMilestone = (key: string) => call("DELETE", null, `/api/onboarding-milestones?key=${encodeURIComponent(key)}`);
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-brand-grey">All onboarding milestones. Click a name to open the hire and tick items off.</p>
-        {adding ? (
-          <div className="flex items-center gap-2">
-            <input
-              autoFocus
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addMilestone()}
-              placeholder="New milestone name"
-              className="w-56 rounded border border-brand-lea/15 px-3 py-1.5 text-sm"
-            />
-            <button onClick={addMilestone} disabled={busy} className="rounded bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
-              {busy ? "Adding..." : "Add"}
-            </button>
-            <button onClick={() => { setAdding(false); setError(null); setLabel(""); }} className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <button onClick={() => setAdding(true)} className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">
-            + Add milestone
-          </button>
-        )}
+        <button
+          onClick={() => setManaging((m) => !m)}
+          className={clsx(
+            "rounded border px-3 py-1.5 text-sm font-semibold transition",
+            managing ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-lea hover:bg-brand-cloudDancer/60"
+          )}
+        >
+          {managing ? "Done managing" : "Manage milestones"}
+        </button>
       </div>
       {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
+
+      {managing && (
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+          <h2 className="text-base font-semibold text-brand-lea">Manage milestones</h2>
+          <p className="mt-1 text-sm text-brand-grey">Rename, remove, or add milestones. Renaming updates them everywhere; removing a custom milestone deletes its tracking.</p>
+          <div className="mt-3 space-y-2">
+            {milestones.map((m, i) => {
+              const dirty = (drafts[m.key] ?? m.label) !== m.label;
+              return (
+                <div key={m.key} className="flex items-center gap-2">
+                  <span className="w-6 text-right text-xs text-brand-grey">{i + 1}</span>
+                  <input
+                    value={drafts[m.key] ?? m.label}
+                    onChange={(e) => setDrafts({ ...drafts, [m.key]: e.target.value })}
+                    onKeyDown={(e) => e.key === "Enter" && dirty && saveLabel(m.key)}
+                    className="flex-1 rounded border border-brand-lea/15 px-3 py-1.5 text-sm"
+                  />
+                  {m.custom ? (
+                    <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700">custom</span>
+                  ) : null}
+                  <button
+                    onClick={() => saveLabel(m.key)}
+                    disabled={busy || !dirty}
+                    className="rounded bg-brand-lea px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-eden disabled:opacity-40"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => removeMilestone(m.key)}
+                    disabled={busy}
+                    className="rounded border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-4 flex items-center gap-2 border-t border-brand-lea/10 pt-3">
+            <input
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addMilestone()}
+              placeholder="New milestone name"
+              className="flex-1 rounded border border-brand-lea/15 px-3 py-1.5 text-sm"
+            />
+            <button onClick={addMilestone} disabled={busy} className="rounded bg-brand-lea px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
+              + Add milestone
+            </button>
+          </div>
+        </section>
+      )}
 
       {hires.length === 0 ? (
         <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10">No active hires.</p>
@@ -104,13 +145,8 @@ export function OnboardingMilestonesTab({ data }: { data: MilestoneData }) {
                   </th>
                   {milestones.map((m) => (
                     <th key={m.key} className="border-b border-brand-lea/10 px-2 py-2 align-bottom" style={{ width: 78, minWidth: 78 }}>
-                      <div className="mx-auto flex min-h-[48px] w-[68px] flex-col items-center justify-end gap-1 text-center font-medium leading-tight text-brand-grey">
+                      <div className="mx-auto flex min-h-[48px] w-[68px] items-end justify-center text-center font-medium leading-tight text-brand-grey">
                         <span className="whitespace-normal break-words">{m.label}</span>
-                        {m.custom ? (
-                          <button onClick={() => removeMilestone(m.key)} disabled={busy} title="Remove custom milestone" className="text-[9px] font-semibold text-red-600 hover:underline">
-                            remove
-                          </button>
-                        ) : null}
                       </div>
                     </th>
                   ))}

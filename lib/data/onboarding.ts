@@ -409,6 +409,7 @@ async function ensureMaintenanceTasks(hireId: string) {
 }
 
 export type Checkin = { id: string; key: string; short: string; status: GridTaskStatus; dueSoon: boolean };
+export type EmploymentStatus = "ACTIVE" | "TERMINATED";
 export type PostOnboardHire = {
   id: string;
   name: string;
@@ -416,6 +417,7 @@ export type PostOnboardHire = {
   department: string | null;
   startDate: string | null;
   onboardedAt: string | null;
+  employmentStatus: EmploymentStatus;
   checkins: Checkin[];
 };
 
@@ -433,6 +435,7 @@ export async function getPostOnboardHires(): Promise<PostOnboardHire[]> {
       department: true,
       startDate: true,
       onboardedAt: true,
+      employmentStatus: true,
       tasks: { where: { group: MAINTENANCE_GROUP }, select: { id: true, key: true, status: true } }
     },
     orderBy: [{ name: "asc" }]
@@ -454,6 +457,7 @@ export async function getPostOnboardHires(): Promise<PostOnboardHire[]> {
       department: h.department,
       startDate: iso(h.startDate),
       onboardedAt: iso(h.onboardedAt),
+      employmentStatus: (h.employmentStatus === "TERMINATED" ? "TERMINATED" : "ACTIVE") as EmploymentStatus,
       checkins
     };
   });
