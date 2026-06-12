@@ -24,13 +24,32 @@ export function OnboardingMilestonesTab({ data }: { data: MilestoneData }) {
   const { milestones, hires } = data;
   const [managing, setManaging] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [items, setItems] = useState(milestones);
+  const [dragKey, setDragKey] = useState<string | null>(null);
   const [newLabel, setNewLabel] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setDrafts(Object.fromEntries(milestones.map((m) => [m.key, m.label])));
+    setItems(milestones);
   }, [milestones]);
+
+  function onDrop(targetKey: string) {
+    if (!dragKey || dragKey === targetKey) {
+      setDragKey(null);
+      return;
+    }
+    const next = [...items];
+    const from = next.findIndex((m) => m.key === dragKey);
+    const to = next.findIndex((m) => m.key === targetKey);
+    if (from === -1 || to === -1) return;
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setItems(next);
+    setDragKey(null);
+    void call("PATCH", { order: next.map((m) => m.key) });
+  }
 
   async function call(method: string, body: unknown, url = "/api/onboarding-milestones") {
     setBusy(true);
@@ -83,13 +102,21 @@ export function OnboardingMilestonesTab({ data }: { data: MilestoneData }) {
       {managing && (
         <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
           <h2 className="text-base font-semibold text-brand-lea">Manage milestones</h2>
-          <p className="mt-1 text-sm text-brand-grey">Rename, remove, or add milestones. Renaming updates them everywhere; removing a custom milestone deletes its tracking.</p>
+          <p className="mt-1 text-sm text-brand-grey">Drag the handle to reorder. Rename inline, remove, or add a milestone. Renaming updates them everywhere; removing a custom milestone deletes its tracking.</p>
           <div className="mt-3 space-y-2">
-            {milestones.map((m, i) => {
+            {items.map((m, i) => {
               const dirty = (drafts[m.key] ?? m.label) !== m.label;
               return (
-                <div key={m.key} className="flex items-center gap-2">
-                  <span className="w-6 text-right text-xs text-brand-grey">{i + 1}</span>
+                <div
+                  key={m.key}
+                  draggable
+                  onDragStart={() => setDragKey(m.key)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => onDrop(m.key)}
+                  className={clsx("flex items-center gap-2 rounded transition", dragKey === m.key && "opacity-50")}
+                >
+                  <span className="cursor-grab select-none px-1 text-brand-grey/60" title="Drag to reorder">⋮⋮</span>
+                  <span className="w-5 text-right text-xs text-brand-grey">{i + 1}</span>
                   <input
                     value={drafts[m.key] ?? m.label}
                     onChange={(e) => setDrafts({ ...drafts, [m.key]: e.target.value })}

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clsx } from "clsx";
 import type { Checkin, EmploymentStatus, GridTaskStatus, PostOnboardHire } from "@/lib/data/onboarding";
@@ -10,11 +11,13 @@ function fmtDate(iso: string | null) {
 }
 
 export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] }) {
+  const router = useRouter();
   const [hires, setHires] = useState(initial);
 
   async function setEmployment(hireId: string, status: EmploymentStatus) {
     const prev = hires;
-    setHires((cur) => cur.map((h) => (h.id === hireId ? { ...h, employmentStatus: status } : h)));
+    // Terminating moves the employee to Archived, so drop them from this list.
+    setHires((cur) => (status === "TERMINATED" ? cur.filter((h) => h.id !== hireId) : cur.map((h) => (h.id === hireId ? { ...h, employmentStatus: status } : h))));
     try {
       const res = await fetch(`/api/new-hires/${hireId}`, {
         method: "PATCH",
@@ -22,6 +25,7 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
         body: JSON.stringify({ employmentStatus: status })
       });
       if (!res.ok) throw new Error();
+      if (status === "TERMINATED") router.refresh();
     } catch {
       setHires(prev);
     }

@@ -50,12 +50,20 @@ export async function PATCH(request: Request, context: RouteContext) {
       if (body.stage === "POST_ONBOARD") {
         data.onboardedAt = new Date();
       }
+      if (body.stage === "ACTIVE") {
+        data.employmentStatus = "ACTIVE"; // reactivating clears a prior termination
+      }
     }
     if (typeof body.canceled === "boolean") {
       data.canceled = body.canceled;
     }
-    if (body.employmentStatus === "ACTIVE" || body.employmentStatus === "TERMINATED") {
-      data.employmentStatus = body.employmentStatus;
+    // Terminating moves an employee to Archived; re-activating returns them to Post-onboard.
+    if (body.employmentStatus === "TERMINATED") {
+      data.employmentStatus = "TERMINATED";
+      data.stage = "ARCHIVED";
+    } else if (body.employmentStatus === "ACTIVE") {
+      data.employmentStatus = "ACTIVE";
+      data.stage = "POST_ONBOARD";
     }
 
     const updated = await prisma.newHire.update({ where: { id }, data });

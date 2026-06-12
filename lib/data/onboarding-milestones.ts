@@ -94,6 +94,23 @@ export async function removeMilestone(key: string): Promise<MilestoneCatalogItem
   return getMilestoneCatalog();
 }
 
+export async function reorderMilestones(keys: string[]): Promise<MilestoneCatalogItem[]> {
+  const cat = await materialize();
+  const byKey = new Map(cat.map((m) => [m.key, m]));
+  const ordered: MilestoneDef[] = [];
+  for (const k of keys) {
+    const m = byKey.get(k);
+    if (m) {
+      ordered.push(m);
+      byKey.delete(k);
+    }
+  }
+  // Keep any milestones the client did not mention (safety) at the end.
+  for (const m of byKey.values()) ordered.push(m);
+  await writeCatalog(ordered);
+  return getMilestoneCatalog();
+}
+
 /** For newly created hires: create tasks for any catalog milestone that is not a built-in default. */
 export async function ensureCustomMilestoneTasks(hireId: string) {
   const stored = await readCatalog();

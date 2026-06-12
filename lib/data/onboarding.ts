@@ -37,6 +37,7 @@ export type NewHireRow = {
   orientationDate: string | null;
   stage: HireStage;
   canceled: boolean;
+  employmentStatus: EmploymentStatus;
   travelStatus: string | null;
   notes: string | null;
   doneCount: number;
@@ -84,6 +85,7 @@ type HireWithTasks = {
   orientationDate: Date | null;
   stage: string;
   canceled: boolean;
+  employmentStatus: string;
   travelStatus: string | null;
   notes: string | null;
   tasks: { id: string; key: string; label: string; group: string; order: number; status: string }[];
@@ -124,6 +126,7 @@ function toRow(hire: HireWithTasks, now: number): NewHireRow {
     orientationDate: iso(hire.orientationDate),
     stage: hire.stage as HireStage,
     canceled: hire.canceled,
+    employmentStatus: (hire.employmentStatus === "TERMINATED" ? "TERMINATED" : "ACTIVE") as EmploymentStatus,
     travelStatus: hire.travelStatus,
     notes: hire.notes,
     doneCount,
@@ -245,6 +248,7 @@ const hireSelect = {
   orientationDate: true,
   stage: true,
   canceled: true,
+  employmentStatus: true,
   travelStatus: true,
   notes: true,
   tasks: { select: { id: true, key: true, label: true, group: true, order: true, status: true } }
@@ -396,18 +400,6 @@ export async function getActiveMilestoneData(): Promise<MilestoneData> {
 
 // ---- Post-onboard (maintenance check-ins) ----
 
-async function ensureMaintenanceTasks(hireId: string) {
-  await Promise.all(
-    MAINTENANCE_TASKS.map((t, i) =>
-      prisma.onboardingTask.upsert({
-        where: { newHireId_key: { newHireId: hireId, key: t.key } },
-        create: { newHireId: hireId, key: t.key, label: t.label, group: MAINTENANCE_GROUP, order: 100 + i, status: "TODO" },
-        update: {}
-      })
-    )
-  );
-}
-
 export type Checkin = { id: string; key: string; short: string; status: GridTaskStatus; dueSoon: boolean };
 export type EmploymentStatus = "ACTIVE" | "TERMINATED";
 export type PostOnboardHire = {
@@ -424,7 +416,20 @@ export type PostOnboardHire = {
 export async function getPostOnboardHires(): Promise<PostOnboardHire[]> {
   const now = Date.now();
   const ids = await prisma.newHire.findMany({ where: { stage: "POST_ONBOARD" }, select: { id: true } });
-  await Promise.all(ids.map((h) => ensureMaintenanceTasks(h.id)));
+  // Ensure the 4 maintenance tasks exist for every post-onboard hire in a single insert.
+  await prisma.onboardingTask.createMany({
+    data: ids.flatMap((h) =>
+      MAINTENANCE_TASKS.map((m, i) => ({
+        newHireId: h.id,
+        key: m.key,
+        label: m.label,
+        group: MAINTENANCE_GROUP,
+        order: 100 + i,
+        status: "TODO"
+      }))
+    ),
+    skipDuplicates: true
+  });
 
   const hires = await prisma.newHire.findMany({
     where: { stage: "POST_ONBOARD" },
