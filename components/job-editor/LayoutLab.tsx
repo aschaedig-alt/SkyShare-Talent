@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import RGL, { WidthProvider, type Layout } from "react-grid-layout";
-import { Lock, Unlock, Eye, EyeOff, Grid3x3 } from "lucide-react";
+import { Lock, Unlock, Eye, EyeOff, Grid3x3, ArrowRightLeft } from "lucide-react";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import type {
@@ -26,6 +26,8 @@ const GridLayout = WidthProvider(RGL);
 const STORAGE_KEY = "skyshare-layout-lab-v2";
 const LOCK_KEY = "skyshare-layout-lab-locks-v2";
 const HIDE_KEY = "skyshare-layout-lab-hidden-v2";
+const ASSIGN_KEY = "skyshare-layout-lab-assign-v2";
+const DENSITY_KEY = "skyshare-layout-lab-density-v2";
 
 type Props = {
   job: SerializedJobPost | null;
@@ -36,10 +38,26 @@ type Props = {
 type Source = "Job Builder" | "Final Review" | "Content Blocks";
 type Widget = { id: string; title: string; source: Source; badge?: string };
 
-const SOURCE_COLOR: Record<Source, string> = {
+// A box can stay on its original page or be reassigned to a consolidation target
+// ("Page 1" / "Page 2") so you can rehearse merging everything onto one or two pages.
+const SOURCE_PAGES: Source[] = ["Job Builder", "Final Review", "Content Blocks"];
+const TARGET_PAGES = ["Page 1", "Page 2"];
+const ALL_PAGES = [...SOURCE_PAGES, ...TARGET_PAGES];
+
+const PAGE_COLOR: Record<string, string> = {
   "Job Builder": "bg-brand-lea text-white",
   "Final Review": "bg-emerald-600 text-white",
-  "Content Blocks": "bg-brand-gold text-brand-lea"
+  "Content Blocks": "bg-brand-gold text-brand-lea",
+  "Page 1": "bg-indigo-600 text-white",
+  "Page 2": "bg-fuchsia-700 text-white"
+};
+
+const PAGE_DOT: Record<string, string> = {
+  "Job Builder": "bg-brand-lea",
+  "Final Review": "bg-emerald-600",
+  "Content Blocks": "bg-brand-gold",
+  "Page 1": "bg-indigo-600",
+  "Page 2": "bg-fuchsia-700"
 };
 
 // Every box across all three publishing pages. Duplicates across pages are intentional
@@ -76,6 +94,16 @@ const WIDGETS: Widget[] = [
   { id: "cb-history", title: "Version history", source: "Content Blocks" }
 ];
 
+// Default tidy height (in grid rows) per box, used by presets when re-flowing.
+const BOX_H: Record<string, number> = {
+  "jb-selector": 4, "jb-bulk": 3, "jb-public": 7, "jb-internal": 6, "jb-offer": 6,
+  "jb-paycom": 6, "jb-aviation": 6, "jb-summary": 5, "jb-responsibilities": 7,
+  "jb-qualifications": 7, "jb-benefits": 6, "jb-blocks": 6, "jb-preview": 16,
+  "jb-readiness": 6, "jb-export": 7, "fr-selector": 4, "fr-status": 3,
+  "fr-readiness": 6, "fr-preview": 14, "fr-export": 7, "cb-list": 6,
+  "cb-template": 8, "cb-editor": 6, "cb-apply": 3, "cb-history": 5
+};
+
 const DEFAULT_LAYOUT: Layout[] = [
   { i: "jb-selector", x: 0, y: 0, w: 4, h: 4 },
   { i: "jb-public", x: 0, y: 4, w: 4, h: 7 },
@@ -105,6 +133,27 @@ const DEFAULT_LAYOUT: Layout[] = [
   { i: "fr-export", x: 8, y: 52, w: 4, h: 7 },
   { i: "fr-selector", x: 8, y: 59, w: 4, h: 4 }
 ];
+
+// Lay a list of boxes into N columns, shortest-column-first (masonry). Used by presets.
+function flow(ids: string[], colCount = 3, startY = 0): Layout[] {
+  const colW = 12 / colCount;
+  const colY = new Array(colCount).fill(startY);
+  return ids.map((id) => {
+    let c = 0;
+    for (let i = 1; i < colCount; i++) if (colY[i] < colY[c]) c = i;
+    const h = BOX_H[id] ?? 5;
+    const y = colY[c];
+    colY[c] += h;
+    return { i: id, x: c * colW, y, w: colW, h };
+  });
+}
+
+const DENSITY_MAP = {
+  compact: { rh: 22, m: 6 },
+  cozy: { rh: 28, m: 10 },
+  roomy: { rh: 36, m: 14 }
+} as const;
+type Density = keyof typeof DENSITY_MAP;
 
 function fmtDate(iso: string | null) {
   if (!iso) return null;
@@ -156,7 +205,11 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
   const [layout, setLayout] = useState<Layout[]>(DEFAULT_LAYOUT);
   const [locked, setLocked] = useState<Set<string>>(new Set());
   const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [assign, setAssign] = useState<Record<string, string>>({});
+  const [pageFilter, setPageFilter] = useState<string>("All");
+  const [density, setDensity] = useState<Density>("cozy");
   const [showGrid, setShowGrid] = useState(false);
+  const [moveMenu, setMoveMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -168,6 +221,10 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
       if (rawLocks) setLocked(new Set(JSON.parse(rawLocks) as string[]));
       const rawHidden = window.localStorage.getItem(HIDE_KEY);
       if (rawHidden) setHidden(new Set(JSON.parse(rawHidden) as string[]));
+      const rawAssign = window.localStorage.getItem(ASSIGN_KEY);
+      if (rawAssign) setAssign(JSON.parse(rawAssign) as Record<string, string>);
+      const rawDensity = window.localStorage.getItem(DENSITY_KEY);
+      if (rawDensity === "compact" || rawDensity === "cozy" || rawDensity === "roomy") setDensity(rawDensity);
     } catch {
       /* ignore */
     }
@@ -176,8 +233,14 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
 
   function onLayoutChange(next: Layout[]) {
     const positions = next.map((l) => ({ i: l.i, x: l.x, y: l.y, w: l.w, h: l.h }));
-    setLayout(positions);
-    if (loaded) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(positions));
+    // Merge so boxes filtered out of the current view keep their saved coordinates.
+    setLayout((cur) => {
+      const byId = new Map(cur.map((l) => [l.i, l]));
+      for (const p of positions) byId.set(p.i, p);
+      const merged = [...byId.values()];
+      if (loaded) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      return merged;
+    });
   }
 
   function toggleLock(id: string) {
@@ -200,38 +263,109 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
     });
   }
 
-  function reset() {
-    setLayout(DEFAULT_LAYOUT);
+  function reassign(id: string, page: string) {
+    setAssign((cur) => {
+      const next = { ...cur };
+      const original = WIDGETS.find((w) => w.id === id)?.source;
+      if (page === original) delete next[id];
+      else next[id] = page;
+      window.localStorage.setItem(ASSIGN_KEY, JSON.stringify(next));
+      return next;
+    });
+    setMoveMenu(null);
+  }
+
+  function changeDensity(d: Density) {
+    setDensity(d);
+    window.localStorage.setItem(DENSITY_KEY, d);
+  }
+
+  function applyState(nextLayout: Layout[], nextAssign: Record<string, string>, nextHidden: Set<string>) {
+    setLayout(nextLayout);
+    setAssign(nextAssign);
+    setHidden(nextHidden);
     setLocked(new Set());
-    setHidden(new Set());
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_LAYOUT));
+    setPageFilter("All");
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextLayout));
+    window.localStorage.setItem(ASSIGN_KEY, JSON.stringify(nextAssign));
+    window.localStorage.setItem(HIDE_KEY, JSON.stringify([...nextHidden]));
     window.localStorage.setItem(LOCK_KEY, JSON.stringify([]));
-    window.localStorage.setItem(HIDE_KEY, JSON.stringify([]));
+  }
+
+  function applyPreset(kind: "source" | "one" | "two") {
+    if (kind === "source") {
+      applyState(DEFAULT_LAYOUT, {}, new Set());
+      return;
+    }
+    const frDupes = WIDGETS.filter((w) => w.id.startsWith("fr-")).map((w) => w.id);
+    const hide = new Set(frDupes);
+    if (kind === "one") {
+      const keep = WIDGETS.filter((w) => !w.id.startsWith("fr-")).map((w) => w.id);
+      const a: Record<string, string> = {};
+      keep.forEach((id) => (a[id] = "Page 1"));
+      applyState(flow(keep, 3), a, hide);
+      return;
+    }
+    // two-page split: public/marketing on Page 1, internal/HR on Page 2
+    const page1 = ["jb-public", "jb-summary", "jb-responsibilities", "jb-qualifications", "jb-benefits", "jb-blocks", "jb-preview", "jb-readiness", "jb-export", "cb-template", "cb-list"];
+    const page2 = ["jb-selector", "jb-internal", "jb-offer", "jb-paycom", "jb-aviation", "jb-bulk", "cb-editor", "cb-apply", "cb-history"];
+    const a: Record<string, string> = {};
+    page1.forEach((id) => (a[id] = "Page 1"));
+    page2.forEach((id) => (a[id] = "Page 2"));
+    const l1 = flow(page1, 3);
+    const maxY1 = Math.max(0, ...l1.map((l) => l.y + l.h)) + 1;
+    const l2 = flow(page2, 3, maxY1);
+    applyState([...l1, ...l2], a, hide);
+  }
+
+  function reset() {
+    applyPreset("source");
   }
 
   function copyLayout() {
-    const compact = layout.map((l) => ({ i: l.i, x: l.x, y: l.y, w: l.w, h: l.h, locked: locked.has(l.i) }));
+    const compact = layout
+      .filter((l) => !hidden.has(l.i))
+      .map((l) => ({ i: l.i, page: assign[l.i] ?? WIDGETS.find((w) => w.id === l.i)?.source, x: l.x, y: l.y, w: l.w, h: l.h, locked: locked.has(l.i) }));
     navigator.clipboard.writeText(JSON.stringify(compact, null, 2)).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     });
   }
 
+  const pageOf = (w: Widget) => assign[w.id] ?? w.source;
+
+  const visibleWidgets = WIDGETS.filter((w) => !hidden.has(w.id) && (pageFilter === "All" || pageOf(w) === pageFilter));
+  const visibleIds = new Set(visibleWidgets.map((w) => w.id));
+  const hiddenWidgets = WIDGETS.filter((w) => hidden.has(w.id));
+
   const displayLayout = useMemo(
     () =>
       layout
-        .filter((l) => !hidden.has(l.i))
+        .filter((l) => visibleIds.has(l.i))
         .map((l) => ({
           ...l,
           static: locked.has(l.i),
           isDraggable: !locked.has(l.i),
           isResizable: !locked.has(l.i)
         })),
-    [layout, locked, hidden]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [layout, locked, hidden, assign, pageFilter]
   );
 
-  const hiddenWidgets = WIDGETS.filter((w) => hidden.has(w.id));
-  const visibleWidgets = WIDGETS.filter((w) => !hidden.has(w.id));
+  // Counts for the page filter chips (ignore the active filter; only respect hidden).
+  const pageCounts = useMemo(() => {
+    const counts: Record<string, number> = { All: 0 };
+    for (const p of ALL_PAGES) counts[p] = 0;
+    for (const w of WIDGETS) {
+      if (hidden.has(w.id)) continue;
+      counts.All += 1;
+      counts[pageOf(w)] = (counts[pageOf(w)] ?? 0) + 1;
+    }
+    return counts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assign, hidden]);
+
+  const dim = DENSITY_MAP[density];
 
   const sectionInstance = useMemo(() => {
     const map = new Map<string, SerializedJobBlockInstance>();
@@ -427,11 +561,11 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
           <h1 className="text-2xl font-semibold text-brand-lea">Layout Lab</h1>
           <p className="mt-1 max-w-3xl text-sm text-brand-grey">
             Every box from all three publishing pages, with real <span className="font-semibold text-brand-lea">{job?.title ?? "sample"}</span>{" "}
-            content. Boxes colored the same that repeat (preview, readiness, export) are the duplicates to merge. Drag by
-            the header, resize from the corner, <Lock className="inline h-3 w-3" /> lock a box so nothing can push it,{" "}
-            <EyeOff className="inline h-3 w-3" /> hide a duplicate to declutter, and toggle{" "}
-            <span className="font-semibold text-brand-lea">Grid</span> for snap guides. Hit{" "}
-            <span className="font-semibold text-brand-lea">Copy layout</span> when ready.
+            content. Drag by the header, resize from the corner, <Lock className="inline h-3 w-3" /> lock a box so nothing
+            pushes it, <EyeOff className="inline h-3 w-3" /> hide a duplicate, and{" "}
+            <ArrowRightLeft className="inline h-3 w-3" /> move a box onto a consolidated <span className="font-semibold text-indigo-600">Page 1</span> /{" "}
+            <span className="font-semibold text-fuchsia-700">Page 2</span> to rehearse merging. Try a{" "}
+            <span className="font-semibold text-brand-lea">preset</span>, then <span className="font-semibold text-brand-lea">Copy layout</span> when ready.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -443,10 +577,48 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
         </div>
       </section>
 
-      <div className="flex flex-wrap items-center gap-3 pb-3 text-[11px]">
-        <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-brand-lea" /> Job Builder</span>
-        <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-emerald-600" /> Final Review</span>
-        <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-brand-gold" /> Content Blocks</span>
+      {/* Controls: presets + density */}
+      <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded border border-brand-lea/10 bg-white px-3 py-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Presets:</span>
+          <button onClick={() => applyPreset("source")} className="rounded-full border border-brand-lea/20 px-3 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">Source (3 cols)</button>
+          <button onClick={() => applyPreset("one")} className="rounded-full border border-indigo-300 bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700 transition hover:bg-indigo-100">One-page draft</button>
+          <button onClick={() => applyPreset("two")} className="rounded-full border border-fuchsia-300 bg-fuchsia-50 px-3 py-1 text-[11px] font-semibold text-fuchsia-700 transition hover:bg-fuchsia-100">Two-page split</button>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Density:</span>
+          <div className="inline-flex overflow-hidden rounded-full border border-brand-lea/20">
+            {(["compact", "cozy", "roomy"] as Density[]).map((d) => (
+              <button
+                key={d}
+                onClick={() => changeDensity(d)}
+                className={`px-3 py-1 text-[11px] font-semibold capitalize transition ${density === d ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60"}`}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Page filter chips (also the color legend) */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Pages:</span>
+        {["All", ...ALL_PAGES].map((p) => {
+          const active = pageFilter === p;
+          const count = pageCounts[p] ?? 0;
+          return (
+            <button
+              key={p}
+              onClick={() => setPageFilter(p)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold transition ${active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/15 bg-white text-brand-lea hover:bg-brand-cloudDancer/50"}`}
+            >
+              {p !== "All" && <span className={`h-2.5 w-2.5 rounded-full ${PAGE_DOT[p]}`} />}
+              {p}
+              <span className={`rounded-full px-1.5 text-[10px] ${active ? "bg-white/25" : "bg-brand-lea/10 text-brand-grey"}`}>{count}</span>
+            </button>
+          );
+        })}
       </div>
 
       {hiddenWidgets.length > 0 && (
@@ -466,6 +638,13 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
         </div>
       )}
 
+      {visibleWidgets.length === 0 && (
+        <div className="rounded-lg border border-dashed border-brand-lea/20 bg-white px-4 py-10 text-center text-sm text-brand-grey">
+          No boxes on <span className="font-semibold text-brand-lea">{pageFilter}</span> yet. Use a box&apos;s{" "}
+          <ArrowRightLeft className="inline h-3 w-3" /> move menu to assign boxes here.
+        </div>
+      )}
+
       <div
         className="rounded-lg bg-brand-cloudDancer/30 p-1"
         style={
@@ -473,8 +652,8 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
             ? {
                 backgroundImage:
                   "linear-gradient(to right, rgba(21,50,62,0.10) 1px, transparent 1px), linear-gradient(to bottom, rgba(21,50,62,0.10) 1px, transparent 1px)",
-                backgroundSize: "8.3333% 38px",
-                backgroundPosition: "11px 11px"
+                backgroundSize: `8.3333% ${dim.rh + dim.m}px`,
+                backgroundPosition: `${dim.m + 1}px ${dim.m + 1}px`
               }
             : undefined
         }
@@ -483,8 +662,8 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
           className="layout"
           layout={displayLayout}
           cols={12}
-          rowHeight={28}
-          margin={[10, 10]}
+          rowHeight={dim.rh}
+          margin={[dim.m, dim.m]}
           draggableHandle=".lab-drag"
           draggableCancel=".lab-nodrag"
           onLayoutChange={onLayoutChange}
@@ -493,12 +672,26 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
         >
           {visibleWidgets.map((w) => {
             const isLocked = locked.has(w.id);
+            const page = pageOf(w);
+            const moved = page !== w.source;
             return (
               <div key={w.id} className={`flex flex-col overflow-hidden rounded-lg border bg-white shadow-panel ${isLocked ? "border-brand-gold ring-2 ring-brand-gold/40" : "border-brand-lea/15"}`}>
-                <div className={`lab-drag flex shrink-0 items-center justify-between gap-2 px-3 py-1.5 ${isLocked ? "cursor-default" : "cursor-move"} ${SOURCE_COLOR[w.source]}`}>
-                  <span className="truncate text-[11px] font-bold uppercase tracking-wide">{w.title}</span>
+                <div className={`lab-drag flex shrink-0 items-center justify-between gap-2 px-3 py-1.5 ${isLocked ? "cursor-default" : "cursor-move"} ${PAGE_COLOR[page]}`}>
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="truncate text-[11px] font-bold uppercase tracking-wide">{w.title}</span>
+                    {moved && <span className="shrink-0 rounded bg-white/25 px-1 text-[8px] font-bold uppercase">{w.source.split(" ")[0]}</span>}
+                  </span>
                   <div className="flex shrink-0 items-center gap-1.5">
                     {w.badge ? <span className="rounded bg-white/25 px-1.5 py-0.5 text-[9px] font-bold">{w.badge}</span> : null}
+                    <button
+                      type="button"
+                      onClick={(e) => setMoveMenu(moveMenu?.id === w.id ? null : { id: w.id, x: e.clientX, y: e.clientY })}
+                      className="lab-nodrag rounded p-0.5 opacity-80 hover:opacity-100"
+                      title="Move to another page"
+                      aria-label="Move to another page"
+                    >
+                      <ArrowRightLeft className="h-3.5 w-3.5" />
+                    </button>
                     <button
                       type="button"
                       onClick={() => toggleHide(w.id)}
@@ -525,6 +718,37 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
           })}
         </GridLayout>
       </div>
+
+      {/* Move-to-page popover (fixed so the card's overflow doesn't clip it) */}
+      {moveMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setMoveMenu(null)} />
+          <div
+            className="fixed z-50 w-56 rounded-lg border border-brand-lea/20 bg-white p-1.5 shadow-xl"
+            style={{ left: Math.min(moveMenu.x, (typeof window !== "undefined" ? window.innerWidth : 1200) - 240), top: moveMenu.y + 6 }}
+          >
+            <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-grey">Move this box to →</div>
+            {ALL_PAGES.map((p) => {
+              const current = (assign[moveMenu.id] ?? WIDGETS.find((w) => w.id === moveMenu.id)?.source) === p;
+              const isOrigin = WIDGETS.find((w) => w.id === moveMenu.id)?.source === p;
+              return (
+                <button
+                  key={p}
+                  onClick={() => reassign(moveMenu.id, p)}
+                  className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition ${current ? "bg-brand-cloudDancer/60 font-semibold text-brand-lea" : "text-brand-black/80 hover:bg-brand-cloudDancer/40"}`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className={`h-2.5 w-2.5 rounded-full ${PAGE_DOT[p]}`} />
+                    {p}
+                    {isOrigin && <span className="text-[9px] uppercase text-brand-grey">(origin)</span>}
+                  </span>
+                  {current && <span className="text-brand-eden">✓</span>}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }
