@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import RGL, { WidthProvider, type Layout } from "react-grid-layout";
-import { Lock, Unlock } from "lucide-react";
+import { Lock, Unlock, Eye, EyeOff, Grid3x3 } from "lucide-react";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import type {
@@ -25,6 +25,7 @@ import { FormattedJobPost } from "@/components/job-preview/FormattedJobPost";
 const GridLayout = WidthProvider(RGL);
 const STORAGE_KEY = "skyshare-layout-lab-v2";
 const LOCK_KEY = "skyshare-layout-lab-locks-v2";
+const HIDE_KEY = "skyshare-layout-lab-hidden-v2";
 
 type Props = {
   job: SerializedJobPost | null;
@@ -154,6 +155,8 @@ const PLACEMENTS: Array<{ key: string; label: string }> = [
 export function LayoutLab({ job, blocks, limitedHtml }: Props) {
   const [layout, setLayout] = useState<Layout[]>(DEFAULT_LAYOUT);
   const [locked, setLocked] = useState<Set<string>>(new Set());
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [showGrid, setShowGrid] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -163,6 +166,8 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
       if (raw) setLayout(JSON.parse(raw) as Layout[]);
       const rawLocks = window.localStorage.getItem(LOCK_KEY);
       if (rawLocks) setLocked(new Set(JSON.parse(rawLocks) as string[]));
+      const rawHidden = window.localStorage.getItem(HIDE_KEY);
+      if (rawHidden) setHidden(new Set(JSON.parse(rawHidden) as string[]));
     } catch {
       /* ignore */
     }
@@ -185,11 +190,23 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
     });
   }
 
+  function toggleHide(id: string) {
+    setHidden((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      window.localStorage.setItem(HIDE_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  }
+
   function reset() {
     setLayout(DEFAULT_LAYOUT);
     setLocked(new Set());
+    setHidden(new Set());
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_LAYOUT));
     window.localStorage.setItem(LOCK_KEY, JSON.stringify([]));
+    window.localStorage.setItem(HIDE_KEY, JSON.stringify([]));
   }
 
   function copyLayout() {
@@ -201,9 +218,20 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
   }
 
   const displayLayout = useMemo(
-    () => layout.map((l) => ({ ...l, static: locked.has(l.i) })),
-    [layout, locked]
+    () =>
+      layout
+        .filter((l) => !hidden.has(l.i))
+        .map((l) => ({
+          ...l,
+          static: locked.has(l.i),
+          isDraggable: !locked.has(l.i),
+          isResizable: !locked.has(l.i)
+        })),
+    [layout, locked, hidden]
   );
+
+  const hiddenWidgets = WIDGETS.filter((w) => hidden.has(w.id));
+  const visibleWidgets = WIDGETS.filter((w) => !hidden.has(w.id));
 
   const sectionInstance = useMemo(() => {
     const map = new Map<string, SerializedJobBlockInstance>();
@@ -400,23 +428,57 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
           <p className="mt-1 max-w-3xl text-sm text-brand-grey">
             Every box from all three publishing pages, with real <span className="font-semibold text-brand-lea">{job?.title ?? "sample"}</span>{" "}
             content. Boxes colored the same that repeat (preview, readiness, export) are the duplicates to merge. Drag by
-            the header, resize from the corner, and click the <Lock className="inline h-3 w-3" /> to lock a box so it
-            won&rsquo;t move. Hit <span className="font-semibold text-brand-lea">Copy layout</span> when ready.
+            the header, resize from the corner, <Lock className="inline h-3 w-3" /> lock a box so nothing can push it,{" "}
+            <EyeOff className="inline h-3 w-3" /> hide a duplicate to declutter, and toggle{" "}
+            <span className="font-semibold text-brand-lea">Grid</span> for snap guides. Hit{" "}
+            <span className="font-semibold text-brand-lea">Copy layout</span> when ready.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button onClick={() => setShowGrid((v) => !v)} className={`inline-flex items-center gap-1.5 rounded border px-3 py-2 text-sm font-semibold transition ${showGrid ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-lea hover:bg-brand-cloudDancer/60"}`}>
+            <Grid3x3 className="h-4 w-4" /> Grid
+          </button>
           <button onClick={copyLayout} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden">{copied ? "Copied!" : "Copy layout"}</button>
           <button onClick={reset} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">Reset</button>
         </div>
       </section>
 
-      <div className="flex flex-wrap gap-3 pb-3 text-[11px]">
+      <div className="flex flex-wrap items-center gap-3 pb-3 text-[11px]">
         <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-brand-lea" /> Job Builder</span>
         <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-emerald-600" /> Final Review</span>
         <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-brand-gold" /> Content Blocks</span>
       </div>
 
-      <div className="rounded-lg bg-brand-cloudDancer/30 p-1">
+      {hiddenWidgets.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded border border-brand-lea/10 bg-white px-3 py-2">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Hidden ({hiddenWidgets.length}):</span>
+          {hiddenWidgets.map((w) => (
+            <button
+              key={w.id}
+              type="button"
+              onClick={() => toggleHide(w.id)}
+              className="inline-flex items-center gap-1 rounded-full border border-brand-lea/15 bg-brand-cloudDancer/50 px-2.5 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer"
+              title="Show again"
+            >
+              <Eye className="h-3 w-3" /> {w.title}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div
+        className="rounded-lg bg-brand-cloudDancer/30 p-1"
+        style={
+          showGrid
+            ? {
+                backgroundImage:
+                  "linear-gradient(to right, rgba(21,50,62,0.10) 1px, transparent 1px), linear-gradient(to bottom, rgba(21,50,62,0.10) 1px, transparent 1px)",
+                backgroundSize: "8.3333% 38px",
+                backgroundPosition: "11px 11px"
+              }
+            : undefined
+        }
+      >
         <GridLayout
           className="layout"
           layout={displayLayout}
@@ -427,9 +489,9 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
           draggableCancel=".lab-nodrag"
           onLayoutChange={onLayoutChange}
           compactType={null}
-          preventCollision={false}
+          preventCollision
         >
-          {WIDGETS.map((w) => {
+          {visibleWidgets.map((w) => {
             const isLocked = locked.has(w.id);
             return (
               <div key={w.id} className={`flex flex-col overflow-hidden rounded-lg border bg-white shadow-panel ${isLocked ? "border-brand-gold ring-2 ring-brand-gold/40" : "border-brand-lea/15"}`}>
@@ -437,6 +499,15 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
                   <span className="truncate text-[11px] font-bold uppercase tracking-wide">{w.title}</span>
                   <div className="flex shrink-0 items-center gap-1.5">
                     {w.badge ? <span className="rounded bg-white/25 px-1.5 py-0.5 text-[9px] font-bold">{w.badge}</span> : null}
+                    <button
+                      type="button"
+                      onClick={() => toggleHide(w.id)}
+                      className="lab-nodrag rounded p-0.5 opacity-80 hover:opacity-100"
+                      title="Hide box"
+                      aria-label="Hide box"
+                    >
+                      <EyeOff className="h-3.5 w-3.5" />
+                    </button>
                     <button
                       type="button"
                       onClick={() => toggleLock(w.id)}
