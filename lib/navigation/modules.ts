@@ -154,7 +154,8 @@ export const navigationGroups: readonly NavigationGroup[] = [
           { id: "settings", href: "/settings/activity", label: "Activity", icon: Activity },
           { id: "settings", href: "/settings/feedback", label: "Feedback", icon: MessageSquare },
           { id: "settings", href: "/settings/templates", label: "Templates", icon: FileText },
-          { id: "settings", href: "/settings/content-blocks", label: "Block management", icon: Blocks }
+          { id: "settings", href: "/settings/content-blocks", label: "Block management", icon: Blocks },
+          { id: "settings", href: "/settings/layout-lab", label: "Layout Lab", icon: LayoutGrid }
         ]
       }
     ]
