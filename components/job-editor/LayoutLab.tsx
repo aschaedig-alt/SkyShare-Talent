@@ -28,6 +28,13 @@ const LOCK_KEY = "skyshare-layout-lab-locks-v2";
 const HIDE_KEY = "skyshare-layout-lab-hidden-v2";
 const ASSIGN_KEY = "skyshare-layout-lab-assign-v2";
 const DENSITY_KEY = "skyshare-layout-lab-density-v2";
+const COLS_KEY = "skyshare-layout-lab-cols-v2";
+
+const COL_OPTIONS = [
+  { n: 12, label: "Coarse" },
+  { n: 24, label: "Medium" },
+  { n: 36, label: "Fine" }
+];
 
 type Props = {
   job: SerializedJobPost | null;
@@ -134,17 +141,31 @@ const DEFAULT_LAYOUT: Layout[] = [
   { i: "fr-selector", x: 8, y: 59, w: 4, h: 4 }
 ];
 
-// Lay a list of boxes into N columns, shortest-column-first (masonry). Used by presets.
-function flow(ids: string[], colCount = 3, startY = 0): Layout[] {
-  const colW = 12 / colCount;
-  const colY = new Array(colCount).fill(startY);
+// Lay a list of boxes into N visual columns, shortest-column-first (masonry). Used by
+// presets. totalCols is the active grid resolution so widths scale with the snap grid.
+function flow(ids: string[], visualCols = 3, startY = 0, totalCols = 12): Layout[] {
+  const colW = Math.max(1, Math.round(totalCols / visualCols));
+  const colY = new Array(visualCols).fill(startY);
   return ids.map((id) => {
     let c = 0;
-    for (let i = 1; i < colCount; i++) if (colY[i] < colY[c]) c = i;
+    for (let i = 1; i < visualCols; i++) if (colY[i] < colY[c]) c = i;
     const h = BOX_H[id] ?? 5;
     const y = colY[c];
     colY[c] += h;
-    return { i: id, x: c * colW, y, w: colW, h };
+    const x = Math.min(c * colW, totalCols - colW);
+    return { i: id, x, y, w: colW, h };
+  });
+}
+
+// Re-map a layout from one grid resolution to another, preserving visual proportions.
+function scaleLayout(src: Layout[], from: number, to: number): Layout[] {
+  if (from === to) return src.map((l) => ({ ...l }));
+  const f = to / from;
+  return src.map((l) => {
+    const w = Math.max(1, Math.round(l.w * f));
+    let x = Math.round(l.x * f);
+    if (x + w > to) x = Math.max(0, to - w);
+    return { ...l, x, w };
   });
 }
 
@@ -208,6 +229,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
   const [assign, setAssign] = useState<Record<string, string>>({});
   const [pageFilter, setPageFilter] = useState<string>("All");
   const [density, setDensity] = useState<Density>("cozy");
+  const [cols, setCols] = useState(12);
   const [showGrid, setShowGrid] = useState(false);
   const [moveMenu, setMoveMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -225,6 +247,11 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
       if (rawAssign) setAssign(JSON.parse(rawAssign) as Record<string, string>);
       const rawDensity = window.localStorage.getItem(DENSITY_KEY);
       if (rawDensity === "compact" || rawDensity === "cozy" || rawDensity === "roomy") setDensity(rawDensity);
+      const rawCols = window.localStorage.getItem(COLS_KEY);
+      if (rawCols) {
+        const n = parseInt(rawCols, 10);
+        if (COL_OPTIONS.some((o) => o.n === n)) setCols(n);
+      }
     } catch {
       /* ignore */
     }
@@ -280,6 +307,16 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
     window.localStorage.setItem(DENSITY_KEY, d);
   }
 
+  function changeCols(next: number) {
+    setLayout((cur) => {
+      const scaled = scaleLayout(cur, cols, next);
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(scaled));
+      return scaled;
+    });
+    setCols(next);
+    window.localStorage.setItem(COLS_KEY, String(next));
+  }
+
   function applyState(nextLayout: Layout[], nextAssign: Record<string, string>, nextHidden: Set<string>) {
     setLayout(nextLayout);
     setAssign(nextAssign);
@@ -294,7 +331,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
 
   function applyPreset(kind: "source" | "one" | "two") {
     if (kind === "source") {
-      applyState(DEFAULT_LAYOUT, {}, new Set());
+      applyState(scaleLayout(DEFAULT_LAYOUT, 12, cols), {}, new Set());
       return;
     }
     const frDupes = WIDGETS.filter((w) => w.id.startsWith("fr-")).map((w) => w.id);
@@ -303,7 +340,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
       const keep = WIDGETS.filter((w) => !w.id.startsWith("fr-")).map((w) => w.id);
       const a: Record<string, string> = {};
       keep.forEach((id) => (a[id] = "Page 1"));
-      applyState(flow(keep, 3), a, hide);
+      applyState(flow(keep, 3, 0, cols), a, hide);
       return;
     }
     // two-page split: public/marketing on Page 1, internal/HR on Page 2
@@ -312,9 +349,9 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
     const a: Record<string, string> = {};
     page1.forEach((id) => (a[id] = "Page 1"));
     page2.forEach((id) => (a[id] = "Page 2"));
-    const l1 = flow(page1, 3);
+    const l1 = flow(page1, 3, 0, cols);
     const maxY1 = Math.max(0, ...l1.map((l) => l.y + l.h)) + 1;
-    const l2 = flow(page2, 3, maxY1);
+    const l2 = flow(page2, 3, maxY1, cols);
     applyState([...l1, ...l2], a, hide);
   }
 
@@ -323,10 +360,11 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
   }
 
   function copyLayout() {
-    const compact = layout
+    const boxes = layout
       .filter((l) => !hidden.has(l.i))
       .map((l) => ({ i: l.i, page: assign[l.i] ?? WIDGETS.find((w) => w.id === l.i)?.source, x: l.x, y: l.y, w: l.w, h: l.h, locked: locked.has(l.i) }));
-    navigator.clipboard.writeText(JSON.stringify(compact, null, 2)).then(() => {
+    const payload = { cols, density, boxes };
+    navigator.clipboard.writeText(JSON.stringify(payload, null, 2)).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     });
@@ -599,6 +637,22 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
             ))}
           </div>
         </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Grid:</span>
+          <div className="inline-flex overflow-hidden rounded-full border border-brand-lea/20">
+            {COL_OPTIONS.map((o) => (
+              <button
+                key={o.n}
+                onClick={() => changeCols(o.n)}
+                title={`${o.n} columns`}
+                className={`px-3 py-1 text-[11px] font-semibold transition ${cols === o.n ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60"}`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <span className="text-[10px] text-brand-grey">finer = smaller snap steps</span>
+        </div>
       </div>
 
       {/* Page filter chips (also the color legend) */}
@@ -652,7 +706,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
             ? {
                 backgroundImage:
                   "linear-gradient(to right, rgba(21,50,62,0.10) 1px, transparent 1px), linear-gradient(to bottom, rgba(21,50,62,0.10) 1px, transparent 1px)",
-                backgroundSize: `8.3333% ${dim.rh + dim.m}px`,
+                backgroundSize: `${100 / cols}% ${dim.rh + dim.m}px`,
                 backgroundPosition: `${dim.m + 1}px ${dim.m + 1}px`
               }
             : undefined
@@ -661,7 +715,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
         <GridLayout
           className="layout"
           layout={displayLayout}
-          cols={12}
+          cols={cols}
           rowHeight={dim.rh}
           margin={[dim.m, dim.m]}
           draggableHandle=".lab-drag"
