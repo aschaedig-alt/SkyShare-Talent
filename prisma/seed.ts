@@ -2,6 +2,12 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/client/client";
 import { masterJobCatalog, type MasterJobCatalogEntry } from "../lib/seed/master-job-catalog";
+import {
+  COMPANY_VALUES,
+  RecognitionStrength,
+  RewardCategory,
+  STRENGTH_POINTS
+} from "../lib/compliments/constants";
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -702,6 +708,234 @@ export async function countSeededJobs() {
   return prisma.jobPost.count();
 }
 
+// =====================================================================
+// Compliments by SkyShare — recognition & rewards seed
+//
+// Employees = the real NewHire roster (Milestones/active + Post-onboard).
+// Recognition is peer-to-peer between new hires; the logged-in operator
+// records who recognized whom and points accrue to the recipient new hire.
+// (Never seeds fake Users — earlier drafts did; that cleanup runs below.)
+// =====================================================================
+
+function deriveInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] ?? "";
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return (first + last).toUpperCase() || "?";
+}
+
+function dateAgo(daysAgo: number, hoursAgo = 0): Date {
+  const now = Date.now();
+  return new Date(now - daysAgo * 24 * 60 * 60 * 1000 - hoursAgo * 60 * 60 * 1000);
+}
+
+// Tiny deterministic PRNG so re-seeding produces a stable, reproducible feed.
+function makeRng(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 0xffffffff;
+  };
+}
+
+type RewardSeed = {
+  name: string;
+  description: string;
+  category: string;
+  pointCost: number;
+  icon: string; // lucide-react icon name
+};
+
+// ~8 rewards across all four categories, priced at 100 pts = $1.
+const rewardSeeds: RewardSeed[] = [
+  { name: "Amazon gift card", description: "$25 to spend on anything", category: RewardCategory.GIFT_CARD, pointCost: 2500, icon: "Gift" },
+  { name: "Coffee shop card", description: "$10 for your daily brew", category: RewardCategory.GIFT_CARD, pointCost: 1000, icon: "Coffee" },
+  { name: "Movie night", description: "$20 streaming or cinema credit", category: RewardCategory.EXPERIENCE, pointCost: 2000, icon: "Film" },
+  { name: "Weekend flight credit", description: "$250 toward your next getaway", category: RewardCategory.EXPERIENCE, pointCost: 25000, icon: "Plane" },
+  { name: "SkyShare hoodie", description: "Premium embroidered hoodie", category: RewardCategory.SWAG, pointCost: 4000, icon: "Shirt" },
+  { name: "SkyShare cap", description: "Classic logo cap", category: RewardCategory.SWAG, pointCost: 1500, icon: "Shirt" },
+  { name: "Plant 10 trees", description: "$10 donation in your name", category: RewardCategory.CHARITY, pointCost: 1000, icon: "Heart" },
+  { name: "Local food bank donation", description: "$25 to fight food insecurity", category: RewardCategory.CHARITY, pointCost: 2500, icon: "Heart" }
+];
+
+// Recognition message templates keyed by value. The feed header supplies the
+// names ("X recognized Y for Value"), so these are impact statements only and
+// read naturally for a frontline aviation-services crew.
+const MESSAGE_TEMPLATES: Record<string, string[]> = {
+  Teamwork: [
+    "Jumped in to help the crew without being asked and kept everything moving.",
+    "Always the first to lend a hand when the shift gets busy.",
+    "Made a brand-new teammate feel welcome from day one.",
+    "Covered a shift on short notice so the rest of us could breathe."
+  ],
+  Innovation: [
+    "Found a smarter way to run the pre-flight checklist that saved everyone time.",
+    "Suggested a fix to the fueling process that we're now using every day.",
+    "Brought a fresh idea to the table that made the whole operation smoother."
+  ],
+  Leadership: [
+    "Stepped up to lead the team through a tough day and kept everyone calm.",
+    "Set the standard for how we treat every customer who walks in.",
+    "Mentored a new hire and made them feel ready and confident."
+  ],
+  "Customer focus": [
+    "Went out of the way to make a passenger's experience unforgettable.",
+    "Turned a frustrated customer into a happy one with patience and care.",
+    "Remembered a regular's preferences and made their day."
+  ],
+  "Growth mindset": [
+    "Asked great questions and picked up the new procedure incredibly fast.",
+    "Took feedback to heart and came back sharper than ever.",
+    "Volunteered for the hard task just to learn something new."
+  ],
+  Integrity: [
+    "Did the right thing even when no one was watching.",
+    "Owned a mistake openly and made it right immediately.",
+    "Kept safety first, every single time — no shortcuts."
+  ]
+};
+
+const COMMENT_SNIPPETS = [
+  "Well deserved!",
+  "So true, great work.",
+  "Couldn't agree more.",
+  "This made my day.",
+  "Big respect.",
+  "Love to see it."
+];
+
+export async function seedCompliments() {
+  // Clear Compliments-owned data only (never delete NewHires or Users). FK order.
+  await prisma.recognitionLike.deleteMany();
+  await prisma.recognitionComment.deleteMany();
+  await prisma.redemption.deleteMany();
+  await prisma.recognition.deleteMany();
+  await prisma.recognitionValue.deleteMany();
+  await prisma.reward.deleteMany();
+
+  // Remove throwaway demo Users created by an earlier draft of this seed.
+  await prisma.user.deleteMany({ where: { email: { endsWith: "@skyshare.example" } } });
+
+  // Company values.
+  const valueByName = new Map<string, string>();
+  for (const value of COMPANY_VALUES) {
+    const created = await prisma.recognitionValue.create({
+      data: { name: value.name, colorKey: value.colorKey, sortOrder: value.sortOrder }
+    });
+    valueByName.set(value.name, created.id);
+  }
+
+  // Rewards catalog.
+  for (const reward of rewardSeeds) {
+    await prisma.reward.create({ data: reward });
+  }
+
+  // Roster = active (Milestones) + post-onboard new hires.
+  const roster = await prisma.newHire.findMany({
+    where: { stage: { in: ["ACTIVE", "POST_ONBOARD"] } },
+    select: { id: true, name: true, department: true },
+    orderBy: { name: "asc" }
+  });
+
+  if (roster.length < 2) {
+    console.log("Seeded Compliments: 0 recognitions (need 2+ active/post-onboard new hires).");
+    return;
+  }
+
+  // Give every roster member initials for their avatar chip.
+  for (const hire of roster) {
+    await prisma.newHire.update({
+      where: { id: hire.id },
+      data: { avatarInitials: deriveInitials(hire.name) }
+    });
+  }
+
+  const rng = makeRng(20260612);
+  const valueNames = COMPANY_VALUES.map((v) => v.name);
+  const strengths = [RecognitionStrength.GOOD, RecognitionStrength.GREAT, RecognitionStrength.AMAZING];
+  const target = Math.min(40, roster.length * 2);
+  const receivedPoints = new Map<string, number>();
+  const pick = <T,>(arr: T[]): T => arr[Math.floor(rng() * arr.length)];
+
+  for (let i = 0; i < target; i++) {
+    const recipient = pick(roster);
+    let giver = pick(roster);
+    let guard = 0;
+    while (giver.id === recipient.id && guard++ < 10) {
+      giver = pick(roster);
+    }
+    if (giver.id === recipient.id) {
+      continue;
+    }
+
+    const primaryValue = pick(valueNames);
+    const selectedValues = [primaryValue];
+    if (rng() < 0.25) {
+      const second = pick(valueNames);
+      if (second !== primaryValue) {
+        selectedValues.push(second);
+      }
+    }
+
+    const strength = pick(strengths);
+    const points = STRENGTH_POINTS[strength];
+    const message = pick(MESSAGE_TEMPLATES[primaryValue]);
+    const recognition = await prisma.recognition.create({
+      data: {
+        giverId: giver.id,
+        recipientId: recipient.id,
+        message,
+        strength,
+        pointsAwarded: points,
+        createdAt: dateAgo(Math.floor(rng() * 21), Math.floor(rng() * 24)),
+        values: { connect: selectedValues.map((name) => ({ id: valueByName.get(name)! })) }
+      }
+    });
+    receivedPoints.set(recipient.id, (receivedPoints.get(recipient.id) ?? 0) + points);
+
+    // Likes from a handful of distinct peers.
+    const likers = new Set<string>();
+    const likeCount = Math.floor(rng() * 18);
+    for (let l = 0; l < likeCount; l++) {
+      likers.add(pick(roster).id);
+    }
+    for (const actorId of likers) {
+      await prisma.recognitionLike.create({ data: { recognitionId: recognition.id, actorId } });
+    }
+
+    // A comment on ~1 in 4 recognitions.
+    if (rng() < 0.25) {
+      const author = pick(roster);
+      await prisma.recognitionComment.create({
+        data: {
+          recognitionId: recognition.id,
+          authorId: author.id,
+          authorName: author.name,
+          body: pick(COMMENT_SNIPPETS)
+        }
+      });
+    }
+  }
+
+  // Redeemable balance = received points + a baseline grant so the rewards
+  // catalog is usable in the demo (100 pts = $1). Baseline lets most hires
+  // afford the mid-tier rewards while the flight credit stays aspirational.
+  const baselineGrant = 2600;
+  for (const hire of roster) {
+    await prisma.newHire.update({
+      where: { id: hire.id },
+      data: { pointsBalance: baselineGrant + (receivedPoints.get(hire.id) ?? 0) }
+    });
+  }
+
+  const totalRecognitions = await prisma.recognition.count();
+  console.log(
+    `Seeded Compliments: ${roster.length} new hires, ${COMPANY_VALUES.length} values, ` +
+      `${totalRecognitions} recognitions, ${rewardSeeds.length} rewards.`
+  );
+}
+
+
 export async function disconnectSeedPrisma() {
   await prisma.$disconnect();
 }
@@ -817,6 +1051,8 @@ export async function resetAndSeed() {
   }
 
   console.log(`Seeded ${allJobSeeds.length} jobs, ${blocks.length} reusable blocks, and template ${template.name}.`);
+
+  await seedCompliments();
 }
 
 const directRunPath = process.argv[1]?.replace(/\\/g, "/") ?? "";

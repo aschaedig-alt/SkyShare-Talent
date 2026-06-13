@@ -1,0 +1,46 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { clsx } from "clsx";
+
+const TABS = [
+  { href: "/compliments", label: "Dashboard", exact: true },
+  { href: "/compliments/give", label: "Give", exact: false },
+  { href: "/compliments/feed", label: "Feed", exact: false },
+  { href: "/compliments/rewards", label: "Rewards", exact: false },
+  { href: "/compliments/analytics", label: "Insights", exact: false }
+];
+
+export function ComplimentsTabs() {
+  const pathname = usePathname();
+
+  function isActive(href: string, exact: boolean) {
+    return exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+  }
+
+  return (
+    <div className="border-b border-brand-lea/10">
+      <nav className="flex flex-wrap gap-6" aria-label="Compliments sections">
+        {TABS.map((t) => {
+          const active = isActive(t.href, t.exact);
+          return (
+            <Link
+              key={t.href}
+              href={t.href}
+              aria-current={active ? "page" : undefined}
+              className={clsx(
+                "border-b-2 px-1 py-3 text-sm font-semibold transition",
+                active
+                  ? "border-brand-lea text-brand-lea"
+                  : "border-transparent text-brand-grey hover:text-brand-lea"
+              )}
+            >
+              {t.label}
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
+  );
+}

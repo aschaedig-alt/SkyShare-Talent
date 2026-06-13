@@ -20,6 +20,7 @@ import {
   SearchCheck,
   Settings,
   SlidersHorizontal,
+  Sparkles,
   UserPlus,
   Users
 } from "lucide-react";
@@ -117,7 +118,8 @@ export const navigationGroups: readonly NavigationGroup[] = [
         label: "People",
         items: [
           { id: "people", href: "/people", label: "Pre-onboarding", icon: UserPlus },
-          { id: "people", href: "/orientation", label: "Orientation", icon: CalendarCheck }
+          { id: "people", href: "/orientation", label: "Orientation", icon: CalendarCheck },
+          { id: "people", href: "/compliments", label: "Compliments", icon: Sparkles }
         ]
       }
     ]

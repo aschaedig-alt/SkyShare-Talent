@@ -224,8 +224,16 @@ model NewHire {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  // Compliments by SkyShare — recognition & rewards (new hires are the employees)
+  pointsBalance   Int      @default(0)   // redeemable points balance
+  avatarInitials  String?                // initials chip; derived from name if absent
+
   tasks           OnboardingTask[]
   orientationAttendances OrientationAttendee[]
+
+  recognitionsGiven    Recognition[] @relation("giver")
+  recognitionsReceived Recognition[] @relation("recipient")
+  redemptions          Redemption[]
 
   @@index([stage])
 }
@@ -799,4 +807,91 @@ model JobMergeRecord {
   @@index([secondaryJobId])
   @@index([primaryJobId])
   @@index([undone])
+}
+
+// =====================================================================
+// Compliments by SkyShare — employee recognition & rewards
+// Per-repo convention, status/category columns are String (not Prisma
+// enums); the allowed values + points map live in lib/compliments/constants.ts.
+// =====================================================================
+
+// Company values (teamwork, innovation, ...). Every recognition is tagged
+// to one or more of these and inherits the value's color.
+model RecognitionValue {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  // teamwork | innovation | leadership | customerFocus | growthMindset | integrity
+  colorKey     String
+  sortOrder    Int           @default(0)
+  recognitions Recognition[]
+}
+
+model Recognition {
+  id            String               @id @default(cuid())
+  giver         NewHire              @relation("giver", fields: [giverId], references: [id], onDelete: Cascade)
+  giverId       String
+  recipient     NewHire              @relation("recipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  recipientId   String
+  message       String
+  values        RecognitionValue[]   // many-to-many
+  strength      String               @default("GREAT") // GOOD | GREAT | AMAZING (see RecognitionStrength)
+  pointsAwarded Int
+  likes         RecognitionLike[]
+  comments      RecognitionComment[]
+  createdAt     DateTime             @default(now())
+
+  @@index([recipientId])
+  @@index([giverId])
+  @@index([createdAt])
+}
+
+model RecognitionLike {
+  id            String      @id @default(cuid())
+  recognition   Recognition @relation(fields: [recognitionId], references: [id], onDelete: Cascade)
+  recognitionId String
+  // The actor who liked: a NewHire id (seeded peer) or the logged-in User id
+  // (live operator). Stored as an opaque string — display only needs the count.
+  actorId       String
+  createdAt     DateTime    @default(now())
+
+  @@unique([recognitionId, actorId])
+  @@index([recognitionId])
+}
+
+model RecognitionComment {
+  id            String      @id @default(cuid())
+  recognition   Recognition @relation(fields: [recognitionId], references: [id], onDelete: Cascade)
+  recognitionId String
+  authorId      String      // NewHire id (seeded peer) or User id (live operator)
+  authorName    String      // denormalized for display, avoids a cross-table join
+  body          String
+  createdAt     DateTime    @default(now())
+
+  @@index([recognitionId])
+}
+
+model Reward {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  category    String       // GIFT_CARD | EXPERIENCE | SWAG | CHARITY (see RewardCategory)
+  pointCost   Int
+  icon        String       // lucide-react icon name (resolved at render)
+  available   Boolean      @default(true)
+  redemptions Redemption[]
+
+  @@index([category])
+}
+
+model Redemption {
+  id          String   @id @default(cuid())
+  newHire     NewHire  @relation(fields: [newHireId], references: [id], onDelete: Cascade)
+  newHireId   String
+  reward      Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  rewardId    String
+  pointsSpent Int
+  createdAt   DateTime @default(now())
+
+  @@index([newHireId])
+  @@index([rewardId])
 }
