@@ -3,13 +3,15 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import RGL, { WidthProvider, type Layout } from "react-grid-layout";
 import { useRouter } from "next/navigation";
-import { Pencil, GripVertical } from "lucide-react";
+import { Pencil, GripVertical, Plus, Settings2, Trash2, X } from "lucide-react";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+import { WIDGETS, WIDGETS_BY_TYPE, WIDGET_CATEGORIES } from "@/components/widgets/registry";
+import type { PageLayoutItem, WidgetInstance } from "@/lib/data/page-layout";
 
 const GridLayout = WidthProvider(RGL);
 
-export type GridItem = { i: string; x: number; y: number; w: number; h: number };
+export type GridItem = PageLayoutItem;
 export type EditablePanel = { id: string; title: string; node: ReactNode };
 
 type Props = {
@@ -17,46 +19,67 @@ type Props = {
   panels: EditablePanel[];
   defaultLayout: GridItem[];
   savedLayout?: GridItem[] | null;
+  savedWidgets?: WidgetInstance[] | null;
   canEdit?: boolean;
   cols?: number;
   rowHeight?: number;
 };
 
-// Renders a page's real panels in a saved grid arrangement. Admins get an in-place
-// "Edit layout" mode (drag/resize); saving writes the layout to the database so the
-// arrangement is the same for everyone. On narrow screens it falls back to a clean
-// stacked column (in reading order), so phones are never broken by the desktop grid.
+function newWidgetId(type: string) {
+  return `w-${type}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1000)}`;
+}
+
 export function EditableGrid({
   pageKey,
   panels,
   defaultLayout,
   savedLayout,
+  savedWidgets,
   canEdit = false,
   cols = 12,
   rowHeight = 28
 }: Props) {
   const router = useRouter();
 
-  const resolve = useMemo(
-    () => (src: GridItem[] | null | undefined): GridItem[] =>
-      panels.map((p) => {
-        const found = src?.find((l) => l.i === p.id);
-        const dflt = defaultLayout.find((l) => l.i === p.id);
-        return found ?? dflt ?? { i: p.id, x: 0, y: 0, w: cols, h: 6 };
-      }),
-    [panels, defaultLayout, cols]
+  const [widgets, setWidgets] = useState<WidgetInstance[]>(savedWidgets ?? []);
+  const widgetIds = useMemo(() => new Set(widgets.map((w) => w.i)), [widgets]);
+
+  const itemIds = useMemo(() => [...panels.map((p) => p.id), ...widgets.map((w) => w.i)], [panels, widgets]);
+
+  const buildInitial = useMemo(
+    () => (): GridItem[] => {
+      let bottom = 0;
+      for (const l of savedLayout ?? defaultLayout) bottom = Math.max(bottom, l.y + l.h);
+      return itemIds.map((id) => {
+        const saved = savedLayout?.find((l) => l.i === id);
+        if (saved) return saved;
+        const dflt = defaultLayout.find((l) => l.i === id);
+        if (dflt) return dflt;
+        const def = WIDGETS_BY_TYPE[widgets.find((w) => w.i === id)?.type ?? ""];
+        const item = { i: id, x: 0, y: bottom, w: def?.size.w ?? 3, h: def?.size.h ?? 4 };
+        bottom += item.h;
+        return item;
+      });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [savedLayout, defaultLayout, itemIds]
   );
 
-  const baseline = useMemo(() => resolve(savedLayout), [resolve, savedLayout]);
-  const [layout, setLayout] = useState<GridItem[]>(baseline);
+  const [layout, setLayout] = useState<GridItem[]>(buildInitial);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [narrow, setNarrow] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [configFor, setConfigFor] = useState<string | null>(null);
 
   useEffect(() => {
-    setLayout(baseline);
-  }, [baseline]);
+    setWidgets(savedWidgets ?? []);
+  }, [savedWidgets]);
+
+  useEffect(() => {
+    setLayout(buildInitial());
+  }, [buildInitial]);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 1023px)");
@@ -71,6 +94,26 @@ export function EditableGrid({
     setLayout(next.map((l) => ({ i: l.i, x: l.x, y: l.y, w: l.w, h: l.h })));
   }
 
+  function addWidget(type: string) {
+    const def = WIDGETS_BY_TYPE[type];
+    if (!def) return;
+    const id = newWidgetId(type);
+    const bottom = layout.reduce((m, l) => Math.max(m, l.y + l.h), 0);
+    setWidgets((cur) => [...cur, { i: id, type, config: { ...def.defaultConfig } }]);
+    setLayout((cur) => [...cur, { i: id, x: 0, y: bottom, w: def.size.w, h: def.size.h }]);
+    setAddOpen(false);
+  }
+
+  function removeWidget(id: string) {
+    setWidgets((cur) => cur.filter((w) => w.i !== id));
+    setLayout((cur) => cur.filter((l) => l.i !== id));
+    if (configFor === id) setConfigFor(null);
+  }
+
+  function updateConfig(id: string, key: string, value: string) {
+    setWidgets((cur) => cur.map((w) => (w.i === id ? { ...w, config: { ...w.config, [key]: value } } : w)));
+  }
+
   async function save() {
     setSaving(true);
     setError(null);
@@ -78,7 +121,7 @@ export function EditableGrid({
       const res = await fetch(`/api/page-layout/${pageKey}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ layout })
+        body: JSON.stringify({ layout, widgets })
       });
       if (res.ok) {
         setEditing(false);
@@ -95,31 +138,43 @@ export function EditableGrid({
   }
 
   function resetToDefault() {
-    setLayout(resolve(defaultLayout));
+    setWidgets([]);
+    setLayout(defaultLayout.filter((l) => panels.some((p) => p.id === l.i)));
   }
 
   function cancel() {
-    setLayout(baseline);
+    setWidgets(savedWidgets ?? []);
+    setLayout(buildInitial());
     setEditing(false);
     setError(null);
+    setAddOpen(false);
+    setConfigFor(null);
   }
 
-  // Narrow screens: stack panels in saved reading order (top-to-bottom, left-to-right).
+  const renderItems: Array<{ id: string; title: string; node: ReactNode; isWidget: boolean }> = [
+    ...panels.map((p) => ({ id: p.id, title: p.title, node: p.node, isWidget: false })),
+    ...widgets.map((w) => {
+      const def = WIDGETS_BY_TYPE[w.type];
+      return { id: w.i, title: def?.name ?? w.type, node: def ? def.render(w.config) : null, isWidget: true };
+    })
+  ];
+
   if (narrow) {
-    const ordered = [...panels].sort((a, b) => {
+    const ordered = [...renderItems].sort((a, b) => {
       const la = layout.find((l) => l.i === a.id) ?? { x: 0, y: 0 };
       const lb = layout.find((l) => l.i === b.id) ?? { x: 0, y: 0 };
       return la.y - lb.y || la.x - lb.x;
     });
-    return <div className="space-y-4">{ordered.map((p) => <div key={p.id}>{p.node}</div>)}</div>;
+    return <div className="space-y-4">{ordered.map((it) => <div key={it.id}>{it.node}</div>)}</div>;
   }
 
-  const displayLayout = layout.map((l) => ({
-    ...l,
-    static: !editing,
-    isDraggable: editing,
-    isResizable: editing
-  }));
+  const displayLayout = renderItems.map((it) => {
+    const l = layout.find((x) => x.i === it.id) ?? { i: it.id, x: 0, y: 999, w: 3, h: 4 };
+    return { ...l, static: !editing, isDraggable: editing, isResizable: editing };
+  });
+
+  const configWidget = configFor ? widgets.find((w) => w.i === configFor) : null;
+  const configDef = configWidget ? WIDGETS_BY_TYPE[configWidget.type] : null;
 
   return (
     <div>
@@ -128,10 +183,13 @@ export function EditableGrid({
           {editing ? (
             <>
               <p className="mr-auto text-xs text-brand-grey">
-                Drag panels by the gold handle, resize from the corner.{" "}
+                Drag by the gold handle, resize from the corner, add widgets.{" "}
                 <span className="font-semibold text-brand-lea">Saving sets the layout for everyone.</span>
               </p>
               {error && <span className="text-xs font-semibold text-red-600">{error}</span>}
+              <button onClick={() => setAddOpen((v) => !v)} className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">
+                <Plus className="h-3.5 w-3.5" /> Add widget
+              </button>
               <button onClick={resetToDefault} className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">
                 Reset to default
               </button>
@@ -150,6 +208,32 @@ export function EditableGrid({
         </div>
       )}
 
+      {editing && addOpen && (
+        <div className="mb-3 rounded-lg border border-brand-lea/15 bg-white p-3 shadow-panel">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Add a widget</span>
+            <button onClick={() => setAddOpen(false)} className="lab-nodrag rounded p-0.5 text-brand-grey hover:text-brand-lea" aria-label="Close"><X className="h-4 w-4" /></button>
+          </div>
+          <div className="space-y-2.5">
+            {WIDGET_CATEGORIES.map((cat) => (
+              <div key={cat}>
+                <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-brand-grey">{cat}</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {WIDGETS.filter((w) => w.category === cat).map((w) => {
+                    const Icon = w.icon;
+                    return (
+                      <button key={w.type} onClick={() => addWidget(w.type)} className="inline-flex items-center gap-1.5 rounded-md border border-brand-lea/15 bg-brand-cloudDancer/40 px-2.5 py-1.5 text-[11px] font-semibold text-brand-lea transition hover:border-brand-gold hover:bg-brand-sweet/20">
+                        <Icon className="h-3.5 w-3.5 text-brand-eden" /> {w.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className={editing ? "rounded-lg bg-brand-cloudDancer/30 p-1 ring-1 ring-brand-gold/30" : ""}>
         <GridLayout
           className="layout"
@@ -158,17 +242,24 @@ export function EditableGrid({
           rowHeight={rowHeight}
           margin={[12, 12]}
           draggableHandle=".eg-drag"
+          draggableCancel=".lab-nodrag"
           onLayoutChange={onLayoutChange}
           compactType={null}
           preventCollision
           isDraggable={editing}
           isResizable={editing}
         >
-          {panels.map((p) => (
-            <div key={p.id} className="flex h-full flex-col">
+          {renderItems.map((it) => (
+            <div key={it.id} className="flex h-full flex-col">
               {editing && (
-                <div className="eg-drag flex shrink-0 cursor-move items-center gap-1 rounded-t bg-brand-lea px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
-                  <GripVertical className="h-3 w-3" /> {p.title}
+                <div className="eg-drag flex shrink-0 cursor-move items-center justify-between gap-1 rounded-t bg-brand-lea px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                  <span className="flex items-center gap-1 truncate"><GripVertical className="h-3 w-3" /> {it.title}</span>
+                  {it.isWidget && (
+                    <span className="flex shrink-0 items-center gap-1">
+                      <button onClick={() => setConfigFor(it.id)} className="lab-nodrag rounded p-0.5 opacity-90 hover:opacity-100" title="Configure" aria-label="Configure widget"><Settings2 className="h-3 w-3" /></button>
+                      <button onClick={() => removeWidget(it.id)} className="lab-nodrag rounded p-0.5 opacity-90 hover:opacity-100" title="Remove" aria-label="Remove widget"><Trash2 className="h-3 w-3" /></button>
+                    </span>
+                  )}
                 </div>
               )}
               <div
@@ -178,12 +269,51 @@ export function EditableGrid({
                     : "min-h-0 flex-1 [&>*]:h-full"
                 }
               >
-                {p.node}
+                {it.node}
               </div>
             </div>
           ))}
         </GridLayout>
       </div>
+
+      {configWidget && configDef && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setConfigFor(null)} />
+          <div className="fixed left-1/2 top-1/2 z-50 w-[min(92vw,420px)] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-brand-lea/20 bg-white p-4 shadow-xl">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-sm font-semibold text-brand-lea">Configure: {configDef.name}</span>
+              <button onClick={() => setConfigFor(null)} className="rounded p-0.5 text-brand-grey hover:text-brand-lea" aria-label="Close"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="space-y-3">
+              {configDef.fields.map((field) => (
+                <label key={field.key} className="block">
+                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-brand-grey">{field.label}</span>
+                  {field.type === "textarea" ? (
+                    <textarea
+                      value={String(configWidget.config[field.key] ?? "")}
+                      onChange={(e) => updateConfig(configWidget.i, field.key, e.target.value)}
+                      placeholder={field.placeholder}
+                      rows={4}
+                      className="w-full rounded border border-brand-lea/20 bg-white px-2.5 py-1.5 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20"
+                    />
+                  ) : (
+                    <input
+                      type={field.type === "number" ? "number" : "text"}
+                      value={String(configWidget.config[field.key] ?? "")}
+                      onChange={(e) => updateConfig(configWidget.i, field.key, e.target.value)}
+                      placeholder={field.placeholder}
+                      className="w-full rounded border border-brand-lea/20 bg-white px-2.5 py-1.5 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20"
+                    />
+                  )}
+                </label>
+              ))}
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button onClick={() => setConfigFor(null)} className="rounded bg-brand-lea px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden">Done</button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

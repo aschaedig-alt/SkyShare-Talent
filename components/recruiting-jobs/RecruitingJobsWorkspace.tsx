@@ -2,12 +2,14 @@ import Link from "next/link";
 import type { RecruitingJobDetail, RecruitingJobsData } from "@/lib/data/recruiting-jobs";
 import { JobClassificationEditor } from "@/components/recruiting-jobs/JobClassificationEditor";
 import { EditableGrid, type EditablePanel, type GridItem } from "@/components/shared/EditableGrid";
+import type { WidgetInstance } from "@/lib/data/page-layout";
 
 type RecruitingJobsWorkspaceProps = {
   data: RecruitingJobsData;
   query: string;
   canEdit?: boolean;
   savedLayout?: GridItem[] | null;
+  savedWidgets?: WidgetInstance[] | null;
 };
 
 const statLabels: Array<[keyof RecruitingJobsData["stats"], string]> = [
@@ -280,7 +282,7 @@ function NoJobPanel() {
   );
 }
 
-export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLayout = null }: RecruitingJobsWorkspaceProps) {
+export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLayout = null, savedWidgets = null }: RecruitingJobsWorkspaceProps) {
   const pilotJobs = data.jobs.filter((job) => job.isPilotRole);
   const supportJobs = data.jobs.filter((job) => !job.isPilotRole);
   const selectedId = data.selectedJob?.id ?? null;
@@ -321,6 +323,7 @@ export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLay
         panels={panels}
         defaultLayout={JOBS_DEFAULT_LAYOUT}
         savedLayout={savedLayout}
+        savedWidgets={savedWidgets}
         canEdit={canEdit}
       />
     </div>

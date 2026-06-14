@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiPermission } from "@/lib/auth/route-auth";
-import { savePageLayout, type PageLayoutItem } from "@/lib/data/page-layout";
+import { savePageLayout } from "@/lib/data/page-layout";
 
 export async function PUT(request: Request, { params }: { params: Promise<{ key: string }> }) {
   const auth = await requireApiPermission("settings:admin");
@@ -12,12 +12,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ key:
   const { key } = await params;
 
   try {
-    const body = (await request.json()) as { layout?: unknown };
+    const body = (await request.json()) as { layout?: unknown; widgets?: unknown };
     if (!Array.isArray(body.layout)) {
       return NextResponse.json({ message: "A layout array is required." }, { status: 400 });
     }
-    const saved = await savePageLayout(key, body.layout as PageLayoutItem[]);
-    return NextResponse.json({ layout: saved });
+    const saved = await savePageLayout(key, { layout: body.layout, widgets: body.widgets });
+    return NextResponse.json(saved);
   } catch {
     return NextResponse.json({ message: "Unable to save layout." }, { status: 500 });
   }

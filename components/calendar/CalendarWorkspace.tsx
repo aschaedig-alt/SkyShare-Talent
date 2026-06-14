@@ -13,11 +13,13 @@ import { UpcomingInterviews } from "@/components/calendar/UpcomingInterviews";
 import { GoogleSyncCard } from "@/components/calendar/GoogleSyncCard";
 import { formatDateTimeWithZone } from "@/lib/calendar/format";
 import { EditableGrid, type EditablePanel, type GridItem } from "@/components/shared/EditableGrid";
+import type { WidgetInstance } from "@/lib/data/page-layout";
 
 type CalendarWorkspaceProps = {
   data: CalendarData;
   canEdit?: boolean;
   savedLayout?: GridItem[] | null;
+  savedWidgets?: WidgetInstance[] | null;
 };
 
 type Interview = CalendarData["interviews"][number];
@@ -106,7 +108,7 @@ function CompactInterviewList({
   );
 }
 
-export function CalendarWorkspace({ data, canEdit = false, savedLayout = null }: CalendarWorkspaceProps) {
+export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, savedWidgets = null }: CalendarWorkspaceProps) {
   const router = useRouter();
   const [view, setView] = useState<ViewMode>("month");
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
@@ -262,6 +264,7 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null }:
         panels={panels}
         defaultLayout={CALENDAR_DEFAULT_LAYOUT}
         savedLayout={savedLayout}
+        savedWidgets={savedWidgets}
         canEdit={canEdit}
       />
 

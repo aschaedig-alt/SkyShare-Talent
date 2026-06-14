@@ -11,7 +11,7 @@ export default async function RecruitingJobsPage({ searchParams }: RecruitingJob
   const access = await requireModulePageAccess("recruiting-jobs");
   const params = await searchParams;
   const query = params?.q?.trim() ?? "";
-  const [data, savedLayout] = await Promise.all([
+  const [data, saved] = await Promise.all([
     getRecruitingJobsData(query, params?.id),
     getPageLayout("recruiting-jobs")
   ]);
@@ -21,7 +21,8 @@ export default async function RecruitingJobsPage({ searchParams }: RecruitingJob
       data={data}
       query={query}
       canEdit={access.role === "ADMIN"}
-      savedLayout={savedLayout}
+      savedLayout={saved.layout}
+      savedWidgets={saved.widgets}
     />
   );
 }
