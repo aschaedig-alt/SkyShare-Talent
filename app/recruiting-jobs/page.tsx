@@ -1,16 +1,27 @@
 import { RecruitingJobsWorkspace } from "@/components/recruiting-jobs/RecruitingJobsWorkspace";
 import { getRecruitingJobsData } from "@/lib/data/recruiting-jobs";
 import { requireModulePageAccess } from "@/lib/data/module-access";
+import { getPageLayout } from "@/lib/data/page-layout";
 
 type RecruitingJobsPageProps = {
   searchParams?: Promise<{ q?: string; id?: string }>;
 };
 
 export default async function RecruitingJobsPage({ searchParams }: RecruitingJobsPageProps) {
-  await requireModulePageAccess("recruiting-jobs");
+  const access = await requireModulePageAccess("recruiting-jobs");
   const params = await searchParams;
   const query = params?.q?.trim() ?? "";
-  const data = await getRecruitingJobsData(query, params?.id);
+  const [data, savedLayout] = await Promise.all([
+    getRecruitingJobsData(query, params?.id),
+    getPageLayout("recruiting-jobs")
+  ]);
 
-  return <RecruitingJobsWorkspace data={data} query={query} />;
+  return (
+    <RecruitingJobsWorkspace
+      data={data}
+      query={query}
+      canEdit={access.role === "ADMIN"}
+      savedLayout={savedLayout}
+    />
+  );
 }

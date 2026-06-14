@@ -12,13 +12,27 @@ import { EditInterviewModal } from "@/components/calendar/EditInterviewModal";
 import { UpcomingInterviews } from "@/components/calendar/UpcomingInterviews";
 import { GoogleSyncCard } from "@/components/calendar/GoogleSyncCard";
 import { formatDateTimeWithZone } from "@/lib/calendar/format";
+import { EditableGrid, type EditablePanel, type GridItem } from "@/components/shared/EditableGrid";
 
 type CalendarWorkspaceProps = {
   data: CalendarData;
+  canEdit?: boolean;
+  savedLayout?: GridItem[] | null;
 };
 
 type Interview = CalendarData["interviews"][number];
 type ViewMode = "month" | "week" | "day" | "list";
+
+// Default arrangement (12-col grid) used until an admin saves a custom layout.
+const CALENDAR_DEFAULT_LAYOUT: GridItem[] = [
+  { i: "cal-header", x: 0, y: 0, w: 5, h: 5 },
+  { i: "cal-stats", x: 5, y: 0, w: 7, h: 5 },
+  { i: "cal-upcoming", x: 0, y: 5, w: 3, h: 6 },
+  { i: "cal-list", x: 0, y: 11, w: 3, h: 8 },
+  { i: "cal-google", x: 0, y: 19, w: 3, h: 4 },
+  { i: "cal-schedule", x: 3, y: 5, w: 3, h: 18 },
+  { i: "cal-calendar", x: 6, y: 5, w: 6, h: 18 }
+];
 
 const statLabels: Array<[keyof CalendarData["stats"], string]> = [
   ["scheduled", "Scheduled"],
@@ -58,12 +72,12 @@ function CompactInterviewList({
   onInterviewClick: (interview: Interview) => void;
 }) {
   return (
-    <section className="rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10">
-      <div className="border-b border-brand-lea/10 px-4 py-3">
+    <section className="flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10">
+      <div className="shrink-0 border-b border-brand-lea/10 px-4 py-3">
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Interview manifest</p>
         <h2 className="text-base font-semibold text-brand-lea">All interviews</h2>
       </div>
-      <div className="max-h-[360px] space-y-2 overflow-y-auto p-3">
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
         {interviews.length > 0 ? (
           interviews.map((interview) => (
             <button
@@ -92,7 +106,7 @@ function CompactInterviewList({
   );
 }
 
-export function CalendarWorkspace({ data }: CalendarWorkspaceProps) {
+export function CalendarWorkspace({ data, canEdit = false, savedLayout = null }: CalendarWorkspaceProps) {
   const router = useRouter();
   const [view, setView] = useState<ViewMode>("month");
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
@@ -144,101 +158,112 @@ export function CalendarWorkspace({ data }: CalendarWorkspaceProps) {
     }
   }
 
-  return (
-    <div className="space-y-4 px-5 py-5 lg:px-8">
-      {/* Top band: interview-operations header (left, ~14/36) + stats (right, ~22/36) */}
-      <div className="grid gap-4 xl:[grid-template-columns:14fr_22fr]">
-        <section className="rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Interview operations</p>
-              <h1 className="text-2xl font-semibold text-brand-lea">Calendar</h1>
-              <p className="mt-1 text-sm text-brand-grey">
-                Schedule and manage candidate interviews. Click a day or time to schedule, click an interview to edit, or drag to reschedule.
-              </p>
-            </div>
-
-            {/* View Toggle */}
-            <div className="flex items-center gap-1 rounded-lg border border-brand-lea/15 p-1">
-              {viewOptions.map((option) => {
-                const Icon = option.icon;
-                return (
-                  <button
-                    key={option.id}
-                    onClick={() => setView(option.id)}
-                    className={clsx(
-                      "flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-semibold transition",
-                      view === option.id ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea"
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span className="hidden sm:inline">{option.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {statLabels.map(([key, label]) => (
-            <div key={key} className="rounded-xl bg-white p-3 shadow-panel ring-1 ring-brand-lea/10">
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey">{label}</div>
-              <div className="mt-1 text-xl font-semibold text-brand-lea">{data.stats[key]}</div>
-              <div className="mt-2 h-1 rounded-full bg-brand-gold/25">
-                <div className="h-1 w-2/3 rounded-full bg-brand-sweet" />
-              </div>
-            </div>
-          ))}
-        </section>
-      </div>
-
-      {/* Main band: left rail | schedule form | calendar — three columns (Layout Lab) */}
-      <section className="grid gap-4 xl:[grid-template-columns:6fr_9fr_21fr]">
-        {/* Left rail: upcoming + all-interviews list + google sync */}
-        <div className="space-y-4">
-          <UpcomingInterviews interviews={data.interviews} onInterviewClick={handleInterviewClick} />
-          <CompactInterviewList interviews={data.interviews} onInterviewClick={handleInterviewClick} />
-          <GoogleSyncCard sync={data.sync} />
+  const headerPanel = (
+    <section className="flex h-full flex-col rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Interview operations</p>
+          <h1 className="text-2xl font-semibold text-brand-lea">Calendar</h1>
+          <p className="mt-1 text-sm text-brand-grey">
+            Schedule and manage candidate interviews. Click a day or time to schedule, click an interview to edit, or drag to reschedule.
+          </p>
         </div>
 
-        {/* Schedule form */}
-        <div className="min-w-0" id="schedule-form">
+        {/* View Toggle */}
+        <div className="flex items-center gap-1 rounded-lg border border-brand-lea/15 p-1">
+          {viewOptions.map((option) => {
+            const Icon = option.icon;
+            return (
+              <button
+                key={option.id}
+                onClick={() => setView(option.id)}
+                className={clsx(
+                  "flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-semibold transition",
+                  view === option.id ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+
+  const statsPanel = (
+    <section className="grid h-full grid-cols-2 gap-3 sm:grid-cols-4">
+      {statLabels.map(([key, label]) => (
+        <div key={key} className="rounded-xl bg-white p-3 shadow-panel ring-1 ring-brand-lea/10">
+          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey">{label}</div>
+          <div className="mt-1 text-xl font-semibold text-brand-lea">{data.stats[key]}</div>
+          <div className="mt-2 h-1 rounded-full bg-brand-gold/25">
+            <div className="h-1 w-2/3 rounded-full bg-brand-sweet" />
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+
+  const calendarPanel = (
+    <div className="h-full min-w-0">
+      {view === "month" && (
+        <MonthCalendar
+          interviews={data.interviews}
+          onDayClick={handleDayClick}
+          onInterviewClick={handleInterviewClick}
+          onReschedule={handleReschedule}
+        />
+      )}
+      {view === "week" && (
+        <TimeGridCalendar
+          interviews={data.interviews}
+          mode="week"
+          onSlotClick={handleDayClick}
+          onInterviewClick={handleInterviewClick}
+          onReschedule={handleReschedule}
+        />
+      )}
+      {view === "day" && (
+        <TimeGridCalendar
+          interviews={data.interviews}
+          mode="day"
+          onSlotClick={handleDayClick}
+          onInterviewClick={handleInterviewClick}
+          onReschedule={handleReschedule}
+        />
+      )}
+    </div>
+  );
+
+  const panels: EditablePanel[] = [
+    { id: "cal-header", title: "Interview operations", node: headerPanel },
+    { id: "cal-stats", title: "Interview statistics", node: statsPanel },
+    { id: "cal-upcoming", title: "Upcoming interviews", node: <UpcomingInterviews interviews={data.interviews} onInterviewClick={handleInterviewClick} /> },
+    { id: "cal-list", title: "All interviews", node: <CompactInterviewList interviews={data.interviews} onInterviewClick={handleInterviewClick} /> },
+    { id: "cal-google", title: "Google sync", node: <GoogleSyncCard sync={data.sync} /> },
+    {
+      id: "cal-schedule",
+      title: "Schedule interview",
+      node: (
+        <div id="schedule-form" className="h-full">
           <ScheduleInterviewForm candidates={data.candidates} jobs={data.jobs} prefilledDate={prefilledDate} />
         </div>
+      )
+    },
+    { id: "cal-calendar", title: "Calendar", node: calendarPanel }
+  ];
 
-        {/* Calendar views */}
-        <div className="min-w-0">
-          {view === "month" && (
-            <MonthCalendar
-              interviews={data.interviews}
-              onDayClick={handleDayClick}
-              onInterviewClick={handleInterviewClick}
-              onReschedule={handleReschedule}
-            />
-          )}
-
-          {view === "week" && (
-            <TimeGridCalendar
-              interviews={data.interviews}
-              mode="week"
-              onSlotClick={handleDayClick}
-              onInterviewClick={handleInterviewClick}
-              onReschedule={handleReschedule}
-            />
-          )}
-
-          {view === "day" && (
-            <TimeGridCalendar
-              interviews={data.interviews}
-              mode="day"
-              onSlotClick={handleDayClick}
-              onInterviewClick={handleInterviewClick}
-              onReschedule={handleReschedule}
-            />
-          )}
-        </div>
-      </section>
+  return (
+    <div className="px-5 py-5 lg:px-8">
+      <EditableGrid
+        pageKey="calendar"
+        panels={panels}
+        defaultLayout={CALENDAR_DEFAULT_LAYOUT}
+        savedLayout={savedLayout}
+        canEdit={canEdit}
+      />
 
       {/* Edit Modal */}
       {editingInterview && (
