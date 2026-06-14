@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, CalendarRange, Square } from "lucide-react";
+import { CalendarDays, CalendarRange, Square, GanttChartSquare } from "lucide-react";
 import { clsx } from "clsx";
 import type { CalendarData } from "@/lib/data/calendar";
 import { ScheduleInterviewForm } from "@/components/calendar/ScheduleInterviewForm";
 import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import { TimeGridCalendar } from "@/components/calendar/TimeGridCalendar";
+import { ScheduleTimeline } from "@/components/calendar/ScheduleTimeline";
 import { EditInterviewModal } from "@/components/calendar/EditInterviewModal";
 import { UpcomingInterviews } from "@/components/calendar/UpcomingInterviews";
 import { GoogleSyncCard } from "@/components/calendar/GoogleSyncCard";
@@ -23,7 +24,7 @@ type CalendarWorkspaceProps = {
 };
 
 type Interview = CalendarData["interviews"][number];
-type ViewMode = "month" | "week" | "day" | "list";
+type ViewMode = "month" | "week" | "day" | "timeline" | "list";
 
 // Default arrangement (12-col grid) used until an admin saves a custom layout.
 const CALENDAR_DEFAULT_LAYOUT: GridItem[] = [
@@ -61,7 +62,8 @@ function statusBadgeColor(status: string) {
 const viewOptions: Array<{ id: ViewMode; label: string; icon: typeof CalendarDays }> = [
   { id: "month", label: "Month", icon: CalendarDays },
   { id: "week", label: "Week", icon: CalendarRange },
-  { id: "day", label: "Day", icon: Square }
+  { id: "day", label: "Day", icon: Square },
+  { id: "timeline", label: "Timeline", icon: GanttChartSquare }
 ];
 
 // Compact, rail-width list of every interview (the wide manifest cards do not fit a
@@ -232,6 +234,13 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
           interviews={data.interviews}
           mode="day"
           onSlotClick={handleDayClick}
+          onInterviewClick={handleInterviewClick}
+          onReschedule={handleReschedule}
+        />
+      )}
+      {view === "timeline" && (
+        <ScheduleTimeline
+          interviews={data.interviews}
           onInterviewClick={handleInterviewClick}
           onReschedule={handleReschedule}
         />

@@ -11,6 +11,7 @@ import {
   Search
 } from "lucide-react";
 import type { CandidateListData } from "@/lib/data/candidates";
+import { NewCandidateButton } from "@/components/candidates/NewCandidateButton";
 
 type CandidatesWorkspaceProps = {
   data: CandidateListData;
@@ -85,20 +86,25 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
               Search and manage candidates — including the text inside their resumes and pilot apps.
             </p>
           </div>
-          <form className="flex w-full gap-2 xl:w-[520px]">
-            <div className="relative min-w-0 flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey" />
-              <input
-                name="q"
-                defaultValue={query}
-                placeholder="Search name, role, tag, or text inside resumes & pilot apps"
-                className="w-full rounded-lg border border-white/20 bg-white/95 py-2.5 pl-9 pr-3 text-sm text-brand-black shadow-sm outline-none transition focus:ring-2 focus:ring-brand-gold/50"
-              />
+          <div className="flex w-full flex-col items-stretch gap-2 xl:w-[560px]">
+            <div className="flex justify-end">
+              <NewCandidateButton />
             </div>
-            <button type="submit" className="rounded-lg bg-brand-gold px-5 py-2.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-sweet">
-              Search
-            </button>
-          </form>
+            <form className="flex w-full gap-2">
+              <div className="relative min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey" />
+                <input
+                  name="q"
+                  defaultValue={query}
+                  placeholder="Search name, role, tag, or text inside resumes & pilot apps"
+                  className="w-full rounded-lg border border-white/20 bg-white/95 py-2.5 pl-9 pr-3 text-sm text-brand-black shadow-sm outline-none transition focus:ring-2 focus:ring-brand-gold/50"
+                />
+              </div>
+              <button type="submit" className="rounded-lg border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20">
+                Search
+              </button>
+            </form>
+          </div>
         </div>
       </section>
 

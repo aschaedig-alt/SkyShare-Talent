@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { RecruitingJobDetail, RecruitingJobsData } from "@/lib/data/recruiting-jobs";
 import { JobClassificationEditor } from "@/components/recruiting-jobs/JobClassificationEditor";
 import { EditableGrid, type EditablePanel, type GridItem } from "@/components/shared/EditableGrid";
+import { AddCandidateToJob } from "@/components/recruiting-jobs/AddCandidateToJob";
 import type { WidgetInstance } from "@/lib/data/page-layout";
 
 type RecruitingJobsWorkspaceProps = {
@@ -225,8 +226,13 @@ function LinkedRequirements({ job }: { job: RecruitingJobDetail }) {
 function LinkedCandidates({ job }: { job: RecruitingJobDetail }) {
   return (
     <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
-      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Linked candidates</p>
-      <h3 className="text-base font-semibold text-brand-lea">Applied or associated candidates</h3>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Linked candidates</p>
+          <h3 className="text-base font-semibold text-brand-lea">Applied or associated candidates</h3>
+        </div>
+        <AddCandidateToJob jobId={job.id} jobTitle={job.title} />
+      </div>
       <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">
         {job.linkedCandidates.length > 0 ? (
           job.linkedCandidates.map((candidate) => (

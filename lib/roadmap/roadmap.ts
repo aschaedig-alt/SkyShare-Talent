@@ -43,6 +43,7 @@ Making the day-to-day experience better.
 
 ## Phase 4: Feature Completeness
 Filling out the platform.
+- [x] Manual candidate create + job linking (Jun 14) — "New candidate" button on the Candidates page creates a candidate from a form (no CSV); "Add candidate" on a job's Linked-candidates panel links an existing candidate (searchable) or creates a new one and links them in one step. Backed by POST /api/candidates and /api/candidate-applications
 - [ ] 4.1 Jobs Page Integration
 - [ ] Support-role gates — when a job is Support, disable most pilot gates but keep U.S. work authorization and U.S. driver's license required; allow position-specific gate fields
 - [ ] Role identity defaults to job title — pilot requirement role identity should default to the job post title instead of a synthesized "Citation 560 XL Captain"; support roles get a non-pilot seat/identity
