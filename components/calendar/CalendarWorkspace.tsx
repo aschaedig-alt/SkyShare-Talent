@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarDays, CalendarRange, Square, List, Mail, Phone } from "lucide-react";
+import { CalendarDays, CalendarRange, Square } from "lucide-react";
 import { clsx } from "clsx";
 import type { CalendarData } from "@/lib/data/calendar";
 import { ScheduleInterviewForm } from "@/components/calendar/ScheduleInterviewForm";
@@ -13,7 +12,6 @@ import { EditInterviewModal } from "@/components/calendar/EditInterviewModal";
 import { UpcomingInterviews } from "@/components/calendar/UpcomingInterviews";
 import { GoogleSyncCard } from "@/components/calendar/GoogleSyncCard";
 import { formatDateTimeWithZone } from "@/lib/calendar/format";
-import { interviewTypeMeta } from "@/lib/calendar/interview-types";
 
 type CalendarWorkspaceProps = {
   data: CalendarData;
@@ -42,12 +40,57 @@ function statusBadgeColor(status: string) {
   }
 }
 
+// "List" is no longer a toggle option — the interviews list now lives as a persistent
+// compact panel in the left rail (per the Layout Lab arrangement).
 const viewOptions: Array<{ id: ViewMode; label: string; icon: typeof CalendarDays }> = [
   { id: "month", label: "Month", icon: CalendarDays },
   { id: "week", label: "Week", icon: CalendarRange },
-  { id: "day", label: "Day", icon: Square },
-  { id: "list", label: "List", icon: List }
+  { id: "day", label: "Day", icon: Square }
 ];
+
+// Compact, rail-width list of every interview (the wide manifest cards do not fit a
+// narrow column, so this is a condensed version that still opens the edit modal).
+function CompactInterviewList({
+  interviews,
+  onInterviewClick
+}: {
+  interviews: Interview[];
+  onInterviewClick: (interview: Interview) => void;
+}) {
+  return (
+    <section className="rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10">
+      <div className="border-b border-brand-lea/10 px-4 py-3">
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Interview manifest</p>
+        <h2 className="text-base font-semibold text-brand-lea">All interviews</h2>
+      </div>
+      <div className="max-h-[360px] space-y-2 overflow-y-auto p-3">
+        {interviews.length > 0 ? (
+          interviews.map((interview) => (
+            <button
+              key={interview.id}
+              type="button"
+              onClick={() => onInterviewClick(interview)}
+              className="block w-full rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-2 text-left transition hover:border-brand-sweet hover:bg-brand-sweet/10"
+            >
+              <div className="truncate text-xs font-semibold text-brand-lea">{interview.candidate.displayName}</div>
+              <div className="truncate text-[11px] text-brand-grey">{interview.title}</div>
+              <div className="mt-1 flex items-center justify-between gap-1">
+                <span className="truncate text-[10px] text-brand-grey">
+                  {formatDateTimeWithZone(interview.startDateTime, interview.timezone)}
+                </span>
+                <span className={clsx("shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold", statusBadgeColor(interview.status))}>
+                  {interview.status}
+                </span>
+              </div>
+            </button>
+          ))
+        ) : (
+          <p className="p-2 text-xs text-brand-grey">No interviews scheduled yet.</p>
+        )}
+      </div>
+    </section>
+  );
+}
 
 export function CalendarWorkspace({ data }: CalendarWorkspaceProps) {
   const router = useRouter();
@@ -103,61 +146,68 @@ export function CalendarWorkspace({ data }: CalendarWorkspaceProps) {
 
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
-      {/* Header */}
-      <section className="rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Interview operations</p>
-            <h1 className="text-2xl font-semibold text-brand-lea">Calendar</h1>
-            <p className="mt-1 max-w-3xl text-sm text-brand-grey">
-              Schedule and manage candidate interviews. Click a day or time to schedule, click an interview to edit, or drag to reschedule.
-            </p>
-          </div>
+      {/* Top band: interview-operations header (left, ~14/36) + stats (right, ~22/36) */}
+      <div className="grid gap-4 xl:[grid-template-columns:14fr_22fr]">
+        <section className="rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Interview operations</p>
+              <h1 className="text-2xl font-semibold text-brand-lea">Calendar</h1>
+              <p className="mt-1 text-sm text-brand-grey">
+                Schedule and manage candidate interviews. Click a day or time to schedule, click an interview to edit, or drag to reschedule.
+              </p>
+            </div>
 
-          {/* View Toggle */}
-          <div className="flex items-center gap-1 rounded-lg border border-brand-lea/15 p-1">
-            {viewOptions.map((option) => {
-              const Icon = option.icon;
-              return (
-                <button
-                  key={option.id}
-                  onClick={() => setView(option.id)}
-                  className={clsx(
-                    "flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-semibold transition",
-                    view === option.id ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="hidden sm:inline">{option.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {statLabels.map(([key, label]) => (
-          <div key={key} className="rounded-xl bg-white p-3 shadow-panel ring-1 ring-brand-lea/10">
-            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey">{label}</div>
-            <div className="mt-1 text-xl font-semibold text-brand-lea">{data.stats[key]}</div>
-            <div className="mt-2 h-1 rounded-full bg-brand-gold/25">
-              <div className="h-1 w-2/3 rounded-full bg-brand-sweet" />
+            {/* View Toggle */}
+            <div className="flex items-center gap-1 rounded-lg border border-brand-lea/15 p-1">
+              {viewOptions.map((option) => {
+                const Icon = option.icon;
+                return (
+                  <button
+                    key={option.id}
+                    onClick={() => setView(option.id)}
+                    className={clsx(
+                      "flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-semibold transition",
+                      view === option.id ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="hidden sm:inline">{option.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
-        ))}
-      </section>
+        </section>
 
-      <section className="grid gap-4 xl:grid-cols-[420px_1fr]">
-        {/* Left column: Upcoming + Schedule Form */}
-        <div className="space-y-4" id="schedule-form">
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {statLabels.map(([key, label]) => (
+            <div key={key} className="rounded-xl bg-white p-3 shadow-panel ring-1 ring-brand-lea/10">
+              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey">{label}</div>
+              <div className="mt-1 text-xl font-semibold text-brand-lea">{data.stats[key]}</div>
+              <div className="mt-2 h-1 rounded-full bg-brand-gold/25">
+                <div className="h-1 w-2/3 rounded-full bg-brand-sweet" />
+              </div>
+            </div>
+          ))}
+        </section>
+      </div>
+
+      {/* Main band: left rail | schedule form | calendar — three columns (Layout Lab) */}
+      <section className="grid gap-4 xl:[grid-template-columns:6fr_9fr_21fr]">
+        {/* Left rail: upcoming + all-interviews list + google sync */}
+        <div className="space-y-4">
           <UpcomingInterviews interviews={data.interviews} onInterviewClick={handleInterviewClick} />
-          <ScheduleInterviewForm candidates={data.candidates} jobs={data.jobs} prefilledDate={prefilledDate} />
+          <CompactInterviewList interviews={data.interviews} onInterviewClick={handleInterviewClick} />
           <GoogleSyncCard sync={data.sync} />
         </div>
 
-        {/* Right column: Calendar views */}
+        {/* Schedule form */}
+        <div className="min-w-0" id="schedule-form">
+          <ScheduleInterviewForm candidates={data.candidates} jobs={data.jobs} prefilledDate={prefilledDate} />
+        </div>
+
+        {/* Calendar views */}
         <div className="min-w-0">
           {view === "month" && (
             <MonthCalendar
@@ -186,115 +236,6 @@ export function CalendarWorkspace({ data }: CalendarWorkspaceProps) {
               onInterviewClick={handleInterviewClick}
               onReschedule={handleReschedule}
             />
-          )}
-
-          {view === "list" && (
-            <section className="rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10">
-              <div className="border-b border-brand-lea/10 px-4 py-3">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Interview manifest</p>
-                <h2 className="text-base font-semibold text-brand-lea">All interviews</h2>
-              </div>
-              <div className="p-4">
-                {data.interviews.length > 0 ? (
-                  <div className="space-y-3">
-                    {data.interviews.map((interview) => (
-                      <article
-                        key={interview.id}
-                        className="cursor-pointer rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 transition hover:border-brand-sweet hover:bg-brand-sweet/10"
-                        onClick={() => handleInterviewClick(interview)}
-                      >
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                          <div>
-                            <div className="text-sm font-semibold text-brand-lea">{interview.title}</div>
-                            <Link
-                              href={`/candidates/${interview.candidate.id}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="mt-1 inline-block text-lg font-semibold text-brand-lea hover:text-brand-eden"
-                            >
-                              {interview.candidate.displayName}
-                            </Link>
-                            <div className="mt-1 text-xs text-brand-grey">
-                              {[interview.candidate.currentTitle, interview.job?.title].filter(Boolean).join(" · ")}
-                            </div>
-                            {/* Contact chips */}
-                            <div className="mt-2 flex flex-wrap gap-1.5">
-                              {interview.candidate.email && (
-                                <a
-                                  href={`mailto:${interview.candidate.email}`}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-brand-lea ring-1 ring-brand-lea/10 hover:bg-brand-sweet/20"
-                                >
-                                  <Mail className="h-3 w-3" /> {interview.candidate.email}
-                                </a>
-                              )}
-                              {interview.candidate.phone && (
-                                <a
-                                  href={`tel:${interview.candidate.phone}`}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-brand-lea ring-1 ring-brand-lea/10 hover:bg-brand-sweet/20"
-                                >
-                                  <Phone className="h-3 w-3" /> {interview.candidate.phone}
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex w-fit flex-col items-start gap-1.5 sm:items-end">
-                            <span className={clsx("rounded-full px-2.5 py-1 text-[11px] font-semibold text-white", interviewTypeMeta(interview.interviewType).chip)}>
-                              {interviewTypeMeta(interview.interviewType).label}
-                            </span>
-                            <span className={clsx("rounded-full px-2.5 py-1 text-[11px] font-semibold", statusBadgeColor(interview.status))}>
-                              {interview.status}
-                            </span>
-                            {interview.googleEventId && (
-                              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
-                                ✓ On Google
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="mt-4 grid gap-2 text-xs text-brand-grey md:grid-cols-3">
-                          <div>
-                            <span className="font-semibold text-brand-lea">Starts</span>
-                            <br />
-                            {formatDateTimeWithZone(interview.startDateTime, interview.timezone)}
-                          </div>
-                          <div>
-                            <span className="font-semibold text-brand-lea">Interviewer</span>
-                            <br />
-                            {interview.interviewer ?? "Not assigned"}
-                          </div>
-                          <div>
-                            <span className="font-semibold text-brand-lea">Location</span>
-                            <br />
-                            {interview.location ?? "Not recorded"}
-                            {interview.meetingUrl ? (
-                              <>
-                                <br />
-                                <a
-                                  href={interview.meetingUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="text-brand-eden hover:text-brand-lea"
-                                >
-                                  Open meeting link
-                                </a>
-                              </>
-                            ) : null}
-                          </div>
-                        </div>
-                        {interview.notes ? <p className="mt-3 text-sm leading-6 text-brand-black/75">{interview.notes}</p> : null}
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-8 text-center">
-                    <div className="text-lg font-semibold text-brand-lea">No interviews scheduled yet</div>
-                    <p className="mt-2 text-sm text-brand-grey">Use the schedule form to add a candidate interview.</p>
-                  </div>
-                )}
-              </div>
-            </section>
           )}
         </div>
       </section>
