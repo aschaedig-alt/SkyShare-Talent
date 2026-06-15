@@ -3,6 +3,7 @@ import type { RecruitingJobDetail, RecruitingJobsData } from "@/lib/data/recruit
 import { JobClassificationEditor } from "@/components/recruiting-jobs/JobClassificationEditor";
 import { EditableGrid, type EditablePanel, type GridItem } from "@/components/shared/EditableGrid";
 import { AddCandidateToJob } from "@/components/recruiting-jobs/AddCandidateToJob";
+import { ResumeIntake } from "@/components/candidates/ResumeIntake";
 import type { WidgetInstance } from "@/lib/data/page-layout";
 
 type RecruitingJobsWorkspaceProps = {
@@ -231,7 +232,10 @@ function LinkedCandidates({ job }: { job: RecruitingJobDetail }) {
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Linked candidates</p>
           <h3 className="text-base font-semibold text-brand-lea">Applied or associated candidates</h3>
         </div>
-        <AddCandidateToJob jobId={job.id} jobTitle={job.title} />
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+          <ResumeIntake jobId={job.id} jobTitle={job.title} />
+          <AddCandidateToJob jobId={job.id} jobTitle={job.title} />
+        </div>
       </div>
       <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">
         {job.linkedCandidates.length > 0 ? (

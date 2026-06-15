@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { CandidateListData } from "@/lib/data/candidates";
 import { NewCandidateButton } from "@/components/candidates/NewCandidateButton";
+import { ResumeIntake } from "@/components/candidates/ResumeIntake";
 
 type CandidatesWorkspaceProps = {
   data: CandidateListData;
@@ -87,7 +88,8 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
             </p>
           </div>
           <div className="flex w-full flex-col items-stretch gap-2 xl:w-[560px]">
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              <ResumeIntake variant="solid" />
               <NewCandidateButton />
             </div>
             <form className="flex w-full gap-2">
