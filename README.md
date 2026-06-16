@@ -22,7 +22,7 @@ npm run dev
 Manual Windows command-line startup:
 
 ```cmd
-cd /d "C:\Users\Recruiter\OneDrive\Documents\SkyShare Talent Ops"
+cd /d "C:\Users\Recruiter\Projects\skyshare-talent-ops"
 "C:\Program Files\nodejs\npm.cmd" run dev -- --hostname 127.0.0.1 --port 3000
 ```
 

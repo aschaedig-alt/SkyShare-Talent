@@ -62,7 +62,7 @@ DATABASE_URL="postgresql://USER:PASSWORD@HOST/neondb?sslmode=require"
 On your local machine, temporarily point Prisma at the Neon URL and push the hosted schema:
 
 ```powershell
-cd "C:\Users\Recruiter\OneDrive\Documents\SkyShare Talent Ops"
+cd "C:\Users\Recruiter\Projects\skyshare-talent-ops"
 $env:DATABASE_URL="postgresql://USER:PASSWORD@HOST/neondb?sslmode=require"
 & 'C:\Program Files\nodejs\npm.cmd' run db:hosted:push
 ```
