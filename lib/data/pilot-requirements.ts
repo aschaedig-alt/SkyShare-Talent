@@ -3,6 +3,8 @@ import {
   getPilotRequirementCandidateMatches,
   type PilotRequirementCandidateMatch
 } from "@/lib/matching/pilot-requirement-matches";
+import { canEditScoring, getProfileScoringConfig } from "@/lib/matching/scoring-config.server";
+import { getRequirementFeedback } from "@/lib/matching/match-feedback";
 
 export type RequirementGateView = {
   id: string;
@@ -52,6 +54,7 @@ export type PilotRequirementsData = {
   requirements: PilotRequirementListItem[];
   selectedRequirement: PilotRequirementDetail | null;
   candidateMatches: PilotRequirementCandidateMatch[];
+  canEditScoring: boolean;
   stats: {
     total: number;
     active: number;
@@ -244,6 +247,14 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
         }
       : null;
 
+  const selectedAircraftTypes = selectedRow ? parseStringArray(selectedRow.aircraftTypesJson) : [];
+  const [scoringConfig, requirementFeedback] = selectedRow
+    ? await Promise.all([
+        getProfileScoringConfig(selectedAircraftTypes[0] ?? null, selectedRow.pilotSeat),
+        getRequirementFeedback(selectedRow.id)
+      ])
+    : [undefined, {}];
+
   const candidateMatches = await getPilotRequirementCandidateMatches(
     selectedRow
       ? {
@@ -264,13 +275,16 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
               numericValue: gate.numericValue
             }))
         }
-      : null
+      : null,
+    scoringConfig,
+    requirementFeedback
   );
 
   return {
     requirements,
     selectedRequirement,
     candidateMatches,
+    canEditScoring: await canEditScoring(),
     stats: {
       total,
       active,

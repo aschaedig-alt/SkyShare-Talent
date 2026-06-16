@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { PilotRequirementsData, PilotRequirementDetail } from "@/lib/data/pilot-requirements";
 import { PilotRequirementEditor } from "@/components/pilot-requirements/PilotRequirementEditor";
+import { CandidateTriagePanel } from "@/components/pilot-requirements/CandidateTriagePanel";
 
 type PilotRequirementsWorkspaceProps = {
   data: PilotRequirementsData;
@@ -57,77 +58,14 @@ function EvidencePanel({ requirement }: { requirement: PilotRequirementDetail })
   );
 }
 
-function CandidateMatchesPanel({ matches }: { matches: PilotRequirementsData["candidateMatches"] }) {
-  return (
-    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Candidate fit</p>
-          <h3 className="text-base font-semibold text-brand-lea">Suggested candidates</h3>
-          <p className="mt-1 text-xs text-brand-grey">
-            Read-only prototype. Scores use current profile text, tags, notes, files, and application history.
-          </p>
-        </div>
-        <span className="rounded-full bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden">
-          {matches.length} shown
-        </span>
-      </div>
-
-      {matches.length > 0 ? (
-        <div className="mt-4 space-y-3">
-          {matches.slice(0, 6).map((match) => (
-            <article key={match.candidateId} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <Link
-                    href={`/candidates/${match.candidateId}`}
-                    className="font-semibold text-brand-lea hover:text-brand-eden"
-                  >
-                    {match.candidateName}
-                  </Link>
-                  <div className="mt-1 truncate text-xs text-brand-grey">
-                    {[match.currentTitle, match.stage].filter(Boolean).join(" - ")}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-semibold text-brand-lea">{match.score}</div>
-                  <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey">score</div>
-                </div>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-1">
-                <span className="rounded-full bg-brand-sweet/25 px-2 py-0.5 text-[10px] font-semibold text-brand-lea">
-                  {match.readiness}
-                </span>
-                {match.matchedSignals.slice(0, 2).map((signal) => (
-                  <span key={signal} className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-brand-grey">
-                    {signal}
-                  </span>
-                ))}
-              </div>
-              {match.reviewGaps.length > 0 ? (
-                <div className="mt-2 text-[11px] leading-5 text-brand-grey">
-                  Review: {match.reviewGaps.slice(0, 2).join(" - ")}
-                </div>
-              ) : null}
-            </article>
-          ))}
-        </div>
-      ) : (
-        <div className="mt-4 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm text-brand-grey">
-          No candidate evidence is strong enough yet. Add resume text, notes, tags, or structured candidate experience
-          to improve matching.
-        </div>
-      )}
-    </section>
-  );
-}
-
 function RequirementDetail({
   requirement,
-  candidateMatches
+  candidateMatches,
+  canEditScoring
 }: {
   requirement: PilotRequirementDetail | null;
   candidateMatches: PilotRequirementsData["candidateMatches"];
+  canEditScoring: boolean;
 }) {
   if (!requirement) {
     return (
@@ -216,7 +154,11 @@ function RequirementDetail({
         </div>
 
         <aside className="space-y-4">
-          <CandidateMatchesPanel matches={candidateMatches} />
+          <CandidateTriagePanel
+            matches={candidateMatches}
+            requirementId={requirement.id}
+            canEdit={canEditScoring}
+          />
 
           <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
@@ -382,7 +324,11 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
           </div>
         </aside>
 
-        <RequirementDetail requirement={data.selectedRequirement} candidateMatches={data.candidateMatches} />
+        <RequirementDetail
+          requirement={data.selectedRequirement}
+          candidateMatches={data.candidateMatches}
+          canEditScoring={data.canEditScoring}
+        />
       </section>
     </div>
   );
