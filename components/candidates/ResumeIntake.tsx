@@ -31,6 +31,7 @@ export function ResumeIntake({
   const [open, setOpen] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<IntakeResult[] | null>(null);
 
@@ -38,9 +39,13 @@ export function ResumeIntake({
     setFiles([]);
     setResults(null);
     setError(null);
+    setProgress(null);
     if (inputRef.current) inputRef.current.value = "";
   }
 
+  // Upload one file per request. Hosted serverless functions cap the request body
+  // (~4.5 MB), so a batch of resumes in a single POST gets rejected before it reaches
+  // the server. Per-file keeps each request small and lets one bad file fail alone.
   async function submit() {
     if (files.length === 0) {
       setError("Choose at least one resume.");
@@ -48,23 +53,34 @@ export function ResumeIntake({
     }
     setBusy(true);
     setError(null);
-    try {
-      const fd = new FormData();
-      files.forEach((f) => fd.append("files", f));
-      if (jobId) fd.append("jobId", jobId);
-      const res = await fetch("/api/resume-intake", { method: "POST", body: fd });
-      const body = (await res.json().catch(() => ({}))) as { results?: IntakeResult[]; message?: string };
-      if (res.ok && body.results) {
-        setResults(body.results);
-        router.refresh();
-      } else {
-        setError(body.message ?? "Could not process resumes.");
+    const acc: IntakeResult[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      setProgress({ done: i, total: files.length });
+      const file = files[i];
+      const fallback: IntakeResult = { filename: file.name, candidateId: null, displayName: "", email: null, phone: null, reused: false, linkedToJob: false };
+      try {
+        const fd = new FormData();
+        fd.append("files", file);
+        if (jobId) fd.append("jobId", jobId);
+        const res = await fetch("/api/resume-intake", { method: "POST", body: fd });
+        if (res.ok) {
+          const body = (await res.json().catch(() => ({}))) as { results?: IntakeResult[] };
+          acc.push(body.results?.[0] ?? { ...fallback, error: "No result returned" });
+        } else {
+          const body = (await res.json().catch(() => null)) as { message?: string } | null;
+          const msg = body?.message ?? (res.status === 413 ? "File too large to upload" : `Upload failed (${res.status})`);
+          acc.push({ ...fallback, error: msg });
+        }
+      } catch {
+        acc.push({ ...fallback, error: "Network error" });
       }
-    } catch {
-      setError("Could not process resumes.");
-    } finally {
-      setBusy(false);
     }
+
+    setProgress(null);
+    setResults(acc);
+    router.refresh();
+    setBusy(false);
   }
 
   const btnClass =
@@ -111,7 +127,7 @@ export function ResumeIntake({
                 <div className="mt-4 flex justify-end gap-2">
                   <button onClick={() => { setOpen(false); reset(); }} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">Cancel</button>
                   <button onClick={submit} disabled={busy} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
-                    {busy ? "Processing…" : `Create ${files.length || ""} candidate${files.length === 1 ? "" : "s"}`.trim()}
+                    {busy ? (progress ? `Processing ${progress.done + 1} of ${progress.total}…` : "Processing…") : `Create ${files.length || ""} candidate${files.length === 1 ? "" : "s"}`.trim()}
                   </button>
                 </div>
               </>
