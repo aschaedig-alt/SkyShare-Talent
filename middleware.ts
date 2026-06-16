@@ -16,12 +16,18 @@ const protectedPagePrefixes = [
   "/recruiting-jobs",
   "/reports",
   "/review",
+  "/scheduling",
   "/settings",
   "/templates"
 ];
 
+// NOTE: the public booking surface (/book and /api/book) is intentionally NOT
+// listed here so candidates/guests can reach it without logging in.
 const protectedApiPrefixes = [
+  "/api/availability-overrides",
   "/api/blocks",
+  "/api/booking-hosts",
+  "/api/booking-types",
   "/api/candidate-files",
   "/api/candidates",
   "/api/duplicate-review",
@@ -64,8 +70,14 @@ function authSecret() {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Forward the path so server components (e.g. AppShell) can render bare pages
+  // like the public /book scheduling surface without the app sidebar.
+  const forwardHeaders = new Headers(request.headers);
+  forwardHeaders.set("x-pathname", pathname);
+  const passThrough = () => NextResponse.next({ request: { headers: forwardHeaders } });
+
   if (!isProtectedPath(pathname) || !isAuthRequired()) {
-    return NextResponse.next();
+    return passThrough();
   }
 
   if (!hasAuthRuntimeConfig()) {
@@ -91,7 +103,7 @@ export async function middleware(request: NextRequest) {
   });
 
   if (token) {
-    return NextResponse.next();
+    return passThrough();
   }
 
   if (isApiPath(pathname)) {

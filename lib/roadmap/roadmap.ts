@@ -121,4 +121,20 @@ Smaller fixes and polish.
 - [x] Candidate document upload fixes (Jun 11) — fixed upload error, removed the redundant upload button, and added "Link" to attach an Imports-uploaded file to a candidate
 - [x] PDF viewer polish (Jun 11) — 100% zoom, whole-page fit, and search match navigation that scrolls inside the pane
 - [x] Job role classification fix (Jun 11) — imported jobs are Pilot only when the TITLE says Captain / First Officer / PIC / SIC / Pilot (aircraft names no longer imply pilot, so "Senior Gulfstream Technician" is support); added a Pilot/Support toggle + seat/aircraft editor on the Jobs detail that clears pilot tags everywhere and removes the role from Pilot Requirements when set to Support; corrected the existing mis-flagged job
+
+## Scheduling / Booking Links (Calendly replacement)
+Public "schedule with me" links so candidates and guests can self-book onto the shared SkyShare calendar.
+- [x] Calendar Timeline view (Jun 15) — per-person schedule timeline (rows = recruiting team with avatars, bars colored by interview stage) added as a 4th calendar view alongside Month / Week / Day
+- [x] Booking data model (Jun 15) — BookingHost per employee (slug + settings), recurring weekly availability, per-date overrides (vacation / holiday / custom hours), meeting types (30 / 45 / 60 min, 0 or 10-min buffer, Interview or Meeting), and Booking records
+- [x] Slot engine (Jun 15) — recurring weekly windows minus busy time, honoring minimum notice (default 6h), bookable window (default 90 days), max bookings per day, buffers, and the invitee's timezone
+- [x] Per-host availability on one shared calendar (Jun 15) — every booking event is tagged with the host id so each person's free/busy is independent even though all events live on the single shared Google Calendar; also reads the host's optional personal @skyshare calendar free/busy
+- [x] Public booking pages (Jun 15) — /book/(slug): pick a meeting type, see open times in your own timezone, and book; Interview-type bookings auto-create or match a candidate + interview; no login required
+- [x] Admin scheduling page (Jun 15) — /scheduling: manage team members, weekly availability, date overrides, meeting types, settings (min notice / max per day / buffer / window), and copyable share links
+- [ ] Read @skyshare calendars without each manager opting in — enable service-account domain-wide delegation (one-time Workspace-admin step) so each host's real Google calendar free/busy is honored automatically
+- [ ] Email confirmations — confirmation + reschedule/cancel emails to invitee and host (needs a transactional email service or Gmail send)
+- [ ] Text / SMS reminders — optional SMS reminders before the meeting
+- [ ] Reschedule / cancel links — self-serve tokenized links for invitees
+- [ ] Round-robin pool — one link that assigns whichever team member is free
+- [ ] General meetings on the in-app calendar — show MEETING-type bookings (no candidate) on the calendar / timeline, not just on Google
+- [ ] Scheduling nav entry + anti-spam — add Scheduling to the sidebar and add basic bot protection (honeypot / rate limit) to the public booking endpoint
 `;

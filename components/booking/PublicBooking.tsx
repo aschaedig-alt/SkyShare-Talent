@@ -1,0 +1,414 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { Clock, Video, MapPin, ChevronLeft, Check, CalendarClock } from "lucide-react";
+import { clsx } from "clsx";
+import type { PublicHost, PublicBookingType } from "@/lib/data/booking";
+
+type Props = { slug: string; host: PublicHost };
+
+type DaySlots = { date: string; slots: string[] };
+
+type LocalDay = { key: string; label: string; times: Array<{ iso: string; label: string }> };
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/** Regroup UTC slots by the invitee's local date so they see their own day/time. */
+function groupByLocalDate(days: DaySlots[], tz: string): LocalDay[] {
+  const all = days.flatMap((d) => d.slots);
+  const dateFmt = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
+  const labelFmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "long", month: "long", day: "numeric" });
+  const timeFmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" });
+
+  const byKey = new Map<string, LocalDay>();
+  for (const iso of all) {
+    const d = new Date(iso);
+    const key = dateFmt.format(d);
+    if (!byKey.has(key)) byKey.set(key, { key, label: labelFmt.format(d), times: [] });
+    byKey.get(key)!.times.push({ iso, label: timeFmt.format(d) });
+  }
+  return Array.from(byKey.values()).sort((a, b) => a.key.localeCompare(b.key));
+}
+
+export function PublicBooking({ slug, host }: Props) {
+  const [tz, setTz] = useState<string>(host.timezone);
+  const [type, setType] = useState<PublicBookingType | null>(host.bookingTypes.length === 1 ? host.bookingTypes[0] : null);
+  const [days, setDays] = useState<DaySlots[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [slot, setSlot] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState<{ start: string; typeName: string; location: string | null } | null>(null);
+
+  // Detect the invitee's timezone client-side (avoids SSR hydration mismatch).
+  useEffect(() => {
+    try {
+      const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (detected) setTz(detected);
+    } catch {
+      /* keep host tz */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!type) return;
+    let active = true;
+    setLoading(true);
+    setSlot(null);
+    fetch(`/api/book/${slug}/slots?typeId=${encodeURIComponent(type.id)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (active) setDays(Array.isArray(data.days) ? data.days : []);
+      })
+      .catch(() => active && setDays([]))
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
+  }, [type, slug]);
+
+  const localDays = useMemo(() => groupByLocalDate(days, tz), [days, tz]);
+
+  const selectedLabel = useMemo(() => {
+    if (!slot) return null;
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short"
+    }).format(new Date(slot));
+  }, [slot, tz]);
+
+  async function submit() {
+    if (!type || !slot) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/book/${slug}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingTypeId: type.id,
+          startDateTime: slot,
+          inviteeName: name,
+          inviteeEmail: email,
+          inviteePhone: phone || null,
+          notes: notes || null,
+          timezone: tz
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message ?? "Unable to book.");
+      setConfirmed({ start: data.booking.start, typeName: data.booking.typeName, location: data.booking.location });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to book.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <main className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
+      {/* Host header */}
+      <div className="flex items-center gap-4">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-lea text-lg font-bold text-white shadow-sm">
+          {initials(host.name)}
+        </span>
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Schedule a time</p>
+          <h1 className="text-2xl font-semibold text-brand-lea">{host.name}</h1>
+          {host.title ? <p className="text-sm text-brand-grey">{host.title}</p> : null}
+        </div>
+      </div>
+
+      <div className="mt-8 rounded-2xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 sm:p-8">
+        {confirmed ? (
+          <ConfirmedCard confirmed={confirmed} tz={tz} hostName={host.name} email={email} />
+        ) : !type ? (
+          <TypePicker types={host.bookingTypes} onPick={setType} />
+        ) : !slot ? (
+          <SlotPicker
+            type={type}
+            tz={tz}
+            days={localDays}
+            loading={loading}
+            multiType={host.bookingTypes.length > 1}
+            onBack={() => setType(null)}
+            onPick={setSlot}
+          />
+        ) : (
+          <BookingForm
+            type={type}
+            selectedLabel={selectedLabel}
+            name={name}
+            email={email}
+            phone={phone}
+            notes={notes}
+            error={error}
+            submitting={submitting}
+            setName={setName}
+            setEmail={setEmail}
+            setPhone={setPhone}
+            setNotes={setNotes}
+            onBack={() => setSlot(null)}
+            onSubmit={submit}
+          />
+        )}
+      </div>
+
+      <p className="mt-4 text-center text-xs text-brand-grey">Powered by SkyShare Talent scheduling</p>
+    </main>
+  );
+}
+
+function TypeMeta({ type }: { type: PublicBookingType }) {
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-brand-grey">
+      <span className="inline-flex items-center gap-1">
+        <Clock className="h-3.5 w-3.5" /> {type.durationMinutes} min
+      </span>
+      {type.location ? (
+        <span className="inline-flex items-center gap-1">
+          {/zoom|video|meet|teams/i.test(type.location) ? <Video className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
+          {type.location}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function TypePicker({ types, onPick }: { types: PublicBookingType[]; onPick: (t: PublicBookingType) => void }) {
+  if (types.length === 0) {
+    return <p className="py-8 text-center text-sm text-brand-grey">No meeting types are available yet.</p>;
+  }
+  return (
+    <div>
+      <h2 className="text-sm font-semibold text-brand-lea">What would you like to book?</h2>
+      <div className="mt-4 space-y-3">
+        {types.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => onPick(t)}
+            className="flex w-full items-start justify-between gap-3 rounded-xl border border-brand-lea/15 p-4 text-left transition hover:border-brand-sweet hover:bg-brand-sweet/5"
+          >
+            <div>
+              <div className="font-semibold text-brand-lea">{t.name}</div>
+              {t.description ? <p className="mt-0.5 text-xs text-brand-grey">{t.description}</p> : null}
+              <TypeMeta type={t} />
+            </div>
+            <CalendarClock className="h-5 w-5 shrink-0 text-brand-gold" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SlotPicker({
+  type,
+  tz,
+  days,
+  loading,
+  multiType,
+  onBack,
+  onPick
+}: {
+  type: PublicBookingType;
+  tz: string;
+  days: LocalDay[];
+  loading: boolean;
+  multiType: boolean;
+  onBack: () => void;
+  onPick: (iso: string) => void;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          {multiType ? (
+            <button onClick={onBack} className="mb-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-grey hover:text-brand-lea">
+              <ChevronLeft className="h-3.5 w-3.5" /> Meeting type
+            </button>
+          ) : null}
+          <h2 className="text-base font-semibold text-brand-lea">{type.name}</h2>
+          <TypeMeta type={type} />
+        </div>
+        <span className="rounded-full bg-brand-cloudDancer/60 px-3 py-1 text-[11px] font-medium text-brand-grey">Times in {tz}</span>
+      </div>
+
+      {loading ? (
+        <p className="py-10 text-center text-sm text-brand-grey">Loading available times…</p>
+      ) : days.length === 0 ? (
+        <p className="py-10 text-center text-sm text-brand-grey">No open times in the booking window. Please check back later.</p>
+      ) : (
+        <div className="mt-5 max-h-[28rem] space-y-5 overflow-y-auto pr-1">
+          {days.map((day) => (
+            <div key={day.key}>
+              <h3 className="sticky top-0 bg-white py-1 text-xs font-bold uppercase tracking-[0.12em] text-brand-grey">{day.label}</h3>
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {day.times.map((t) => (
+                  <button
+                    key={t.iso}
+                    onClick={() => onPick(t.iso)}
+                    className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:border-brand-sweet hover:bg-brand-sweet/10"
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BookingForm(props: {
+  type: PublicBookingType;
+  selectedLabel: string | null;
+  name: string;
+  email: string;
+  phone: string;
+  notes: string;
+  error: string | null;
+  submitting: boolean;
+  setName: (v: string) => void;
+  setEmail: (v: string) => void;
+  setPhone: (v: string) => void;
+  setNotes: (v: string) => void;
+  onBack: () => void;
+  onSubmit: () => void;
+}) {
+  const { type, selectedLabel, error, submitting } = props;
+  const canSubmit = props.name.trim().length > 0 && /\S+@\S+\.\S+/.test(props.email) && !submitting;
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (canSubmit) props.onSubmit();
+      }}
+    >
+      <button type="button" onClick={props.onBack} className="mb-3 inline-flex items-center gap-1 text-xs font-semibold text-brand-grey hover:text-brand-lea">
+        <ChevronLeft className="h-3.5 w-3.5" /> Pick another time
+      </button>
+
+      <div className="rounded-xl bg-brand-cloudDancer/40 p-4">
+        <div className="font-semibold text-brand-lea">{type.name}</div>
+        <div className="mt-1 flex items-center gap-2 text-sm text-brand-grey">
+          <CalendarClock className="h-4 w-4 text-brand-gold" />
+          {selectedLabel}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3">
+        <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+          Name
+          <input
+            value={props.name}
+            onChange={(e) => props.setName(e.target.value)}
+            required
+            className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+          Email
+          <input
+            type="email"
+            value={props.email}
+            onChange={(e) => props.setEmail(e.target.value)}
+            required
+            className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+          Phone <span className="font-normal text-brand-grey">(optional)</span>
+          <input
+            value={props.phone}
+            onChange={(e) => props.setPhone(e.target.value)}
+            className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+          Anything we should know? <span className="font-normal text-brand-grey">(optional)</span>
+          <textarea
+            value={props.notes}
+            onChange={(e) => props.setNotes(e.target.value)}
+            rows={3}
+            className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm"
+          />
+        </label>
+      </div>
+
+      {error ? <p className="mt-3 rounded border border-red-300 bg-red-50 p-2 text-sm text-red-700">{error}</p> : null}
+
+      <button
+        type="submit"
+        disabled={!canSubmit}
+        className="mt-4 w-full rounded-lg bg-brand-lea px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-lea/90 disabled:opacity-50"
+      >
+        {submitting ? "Booking…" : "Confirm booking"}
+      </button>
+    </form>
+  );
+}
+
+function ConfirmedCard({
+  confirmed,
+  tz,
+  hostName,
+  email
+}: {
+  confirmed: { start: string; typeName: string; location: string | null };
+  tz: string;
+  hostName: string;
+  email: string;
+}) {
+  const when = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short"
+  }).format(new Date(confirmed.start));
+
+  return (
+    <div className="py-4 text-center">
+      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
+        <Check className="h-7 w-7 text-emerald-600" />
+      </span>
+      <h2 className="mt-4 text-xl font-semibold text-brand-lea">You&apos;re booked!</h2>
+      <p className="mt-1 text-sm text-brand-grey">
+        {confirmed.typeName} with {hostName}
+      </p>
+      <div className="mx-auto mt-4 max-w-sm rounded-xl bg-brand-cloudDancer/40 p-4 text-left text-sm text-brand-lea">
+        <div className="flex items-center gap-2">
+          <CalendarClock className="h-4 w-4 text-brand-gold" /> {when}
+        </div>
+        {confirmed.location ? (
+          <div className="mt-2 flex items-center gap-2 text-brand-grey">
+            <MapPin className="h-4 w-4" /> {confirmed.location}
+          </div>
+        ) : null}
+      </div>
+      <p className="mt-4 text-xs text-brand-grey">
+        Your time with {hostName} is reserved{email ? ` under ${email}` : ""}. Please make a note of it.
+      </p>
+    </div>
+  );
+}

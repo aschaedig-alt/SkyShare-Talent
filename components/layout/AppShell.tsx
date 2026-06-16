@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { isAuthRequired } from "@/lib/auth/auth-config";
@@ -10,6 +11,14 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { FeedbackButton } from "@/components/feedback/FeedbackButton";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
+  // Public booking pages render bare — no sidebar, banner, or feedback button.
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  if (pathname.startsWith("/book")) {
+    return (
+      <div className="min-h-screen bg-brand-cloudDancer text-brand-black">{children}</div>
+    );
+  }
+
   const authRequired = isAuthRequired();
   const session = authRequired ? await getServerSession(authOptions) : null;
   const role: RoleName | null = authRequired ? (isRoleName(session?.user?.role) ? session.user.role : null) : "ADMIN";
