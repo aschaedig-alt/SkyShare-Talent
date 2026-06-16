@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { RecruitingJobDetail, RecruitingJobsData } from "@/lib/data/recruiting-jobs";
+import type { JobScreeningData } from "@/lib/data/job-screening";
 import { JobClassificationEditor } from "@/components/recruiting-jobs/JobClassificationEditor";
+import { JobScreeningPanel } from "@/components/recruiting-jobs/JobScreeningPanel";
 import { EditableGrid, type EditablePanel, type GridItem } from "@/components/shared/EditableGrid";
 import { AddCandidateToJob } from "@/components/recruiting-jobs/AddCandidateToJob";
 import { ResumeIntake } from "@/components/candidates/ResumeIntake";
@@ -15,6 +17,7 @@ type RecruitingJobsWorkspaceProps = {
   savedLayout?: GridItem[] | null;
   savedWidgets?: WidgetInstance[] | null;
   widgetData?: WidgetData;
+  screening?: JobScreeningData | null;
 };
 
 const statLabels: Array<[keyof RecruitingJobsData["stats"], string]> = [
@@ -34,7 +37,8 @@ const JOBS_DEFAULT_LAYOUT: GridItem[] = [
   { i: "rjobs-detail-header", x: 6, y: 5, w: 6, h: 6 },
   { i: "rjobs-linked-cands", x: 6, y: 11, w: 3, h: 7 },
   { i: "rjobs-linked-reqs", x: 9, y: 11, w: 3, h: 7 },
-  { i: "rjobs-source", x: 6, y: 18, w: 6, h: 3 }
+  { i: "rjobs-source", x: 6, y: 18, w: 6, h: 3 },
+  { i: "rjobs-screening", x: 0, y: 21, w: 12, h: 18 }
 ];
 
 function locationLabel(job: { city: string | null; state: string | null }) {
@@ -296,7 +300,7 @@ function NoJobPanel() {
   );
 }
 
-export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLayout = null, savedWidgets = null, widgetData }: RecruitingJobsWorkspaceProps) {
+export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLayout = null, savedWidgets = null, widgetData, screening = null }: RecruitingJobsWorkspaceProps) {
   const pilotJobs = data.jobs.filter((job) => job.isPilotRole);
   const supportJobs = data.jobs.filter((job) => !job.isPilotRole);
   const selectedId = data.selectedJob?.id ?? null;
@@ -328,6 +332,13 @@ export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLay
       { id: "rjobs-linked-reqs", title: "Linked requirements", node: <LinkedRequirements job={job} /> },
       { id: "rjobs-source", title: "Source record", node: <SourceRecord job={job} /> }
     );
+    if (screening) {
+      panels.push({
+        id: "rjobs-screening",
+        title: "Screening",
+        node: <JobScreeningPanel key={job.id} data={screening} />
+      });
+    }
   }
 
   return (

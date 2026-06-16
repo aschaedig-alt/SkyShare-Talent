@@ -666,6 +666,22 @@ function buildSummary(
 // Entry point
 // ---------------------------------------------------------------------------
 
+const candidateMatchSelect = {
+  id: true,
+  displayName: true,
+  currentTitle: true,
+  stage: true,
+  primaryEmail: true,
+  tagsJson: true,
+  foldersJson: true,
+  notes: { select: { body: true }, take: 10 },
+  files: { select: { displayFilename: true, originalFilename: true }, take: 10 },
+  applications: { take: 10, select: { job: { select: { title: true, department: true } } } },
+  metrics: {
+    select: { key: true, label: true, valueNumber: true, valueText: true, unit: true, status: true, sourceSnippet: true }
+  }
+} as const;
+
 export async function getPilotRequirementCandidateMatches(
   requirement: MatchRequirement | null,
   config: ScoringProfileConfig = defaultProfileConfig(),
@@ -677,21 +693,7 @@ export async function getPilotRequirementCandidateMatches(
     take: 250,
     where: { status: "ACTIVE" },
     orderBy: { updatedAt: "desc" },
-    select: {
-      id: true,
-      displayName: true,
-      currentTitle: true,
-      stage: true,
-      primaryEmail: true,
-      tagsJson: true,
-      foldersJson: true,
-      notes: { select: { body: true }, take: 10 },
-      files: { select: { displayFilename: true, originalFilename: true }, take: 10 },
-      applications: { take: 10, select: { job: { select: { title: true, department: true } } } },
-      metrics: {
-        select: { key: true, label: true, valueNumber: true, valueText: true, unit: true, status: true, sourceSnippet: true }
-      }
-    }
+    select: candidateMatchSelect
   });
 
   return candidates
@@ -699,4 +701,27 @@ export async function getPilotRequirementCandidateMatches(
     .filter((match) => match.score > 0 || match.factors.some((factor) => factor.status === "met"))
     .sort((left, right) => right.score - left.score || left.candidateName.localeCompare(right.candidateName))
     .slice(0, 12);
+}
+
+/**
+ * Score a specific set of candidates (e.g. the people who applied to a job)
+ * against a requirement. Unlike the system-wide scan this keeps EVERY candidate
+ * in the set — even weak/zero scores — so an applicant list stays complete.
+ */
+export async function scoreSpecificCandidates(
+  requirement: MatchRequirement,
+  candidateIds: string[],
+  config: ScoringProfileConfig = defaultProfileConfig(),
+  feedback: RequirementFeedback = {}
+): Promise<PilotRequirementCandidateMatch[]> {
+  if (candidateIds.length === 0) return [];
+
+  const candidates = await prisma.candidate.findMany({
+    where: { id: { in: candidateIds } },
+    select: candidateMatchSelect
+  });
+
+  return candidates
+    .map((candidate) => scoreCandidate(requirement, candidate, config, feedback[candidate.id] ?? null))
+    .sort((left, right) => right.score - left.score || left.candidateName.localeCompare(right.candidateName));
 }
