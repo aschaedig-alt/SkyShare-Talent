@@ -19,7 +19,7 @@ import {
   FileWarning
 } from "lucide-react";
 import { clsx } from "clsx";
-import { DOCUMENT_TYPES, detectDocumentType } from "@/lib/files/document-types";
+import { DOCUMENT_TYPES, detectDocumentType, isExpirableType } from "@/lib/files/document-types";
 
 function effectiveType(file: { documentType: string | null; displayFilename: string }): string {
   return file.documentType || detectDocumentType(file.displayFilename);
@@ -40,6 +40,7 @@ export type CandidateFileItem = {
   sizeBytes: number | null;
   source: string | null;
   documentType: string | null;
+  expiresAt: string | null;
   uploadedAt: string;
   extractedText: string | null;
 };
@@ -238,6 +239,21 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not set type.");
+    }
+  }
+
+  async function handleSetExpiry(id: string, value: string) {
+    setError(null);
+    try {
+      const res = await fetch(`/api/candidate-files/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expiresAt: value || null })
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.message ?? "Could not set expiry.");
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not set expiry.");
     }
   }
 
@@ -548,6 +564,17 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                     <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
+                {isExpirableType(effectiveType(activeFile)) && (
+                  <label className="flex items-center gap-1 text-[11px] text-brand-grey" title="Expiry date">
+                    <span className="hidden sm:inline">Exp</span>
+                    <input
+                      type="date"
+                      value={activeFile.expiresAt ? activeFile.expiresAt.slice(0, 10) : ""}
+                      onChange={(e) => handleSetExpiry(activeFile.id, e.target.value)}
+                      className="rounded border border-brand-lea/20 bg-white px-1.5 py-1 text-xs text-brand-lea outline-none focus:border-brand-gold"
+                    />
+                  </label>
+                )}
                 <button onClick={() => { setRenamingId(activeFile.id); setRenameValue(activeFile.displayFilename); }} className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/40 hover:text-brand-lea" aria-label="Rename" title="Rename"><Pencil className="h-4 w-4" /></button>
                 {activeFile.storageKey && (
                   <a href={`/api/candidate-files/${activeFile.id}`} download className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/40 hover:text-brand-lea" aria-label="Download" title="Download"><Download className="h-4 w-4" /></a>

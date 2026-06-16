@@ -16,6 +16,20 @@ export const DOCUMENT_TYPES = [
 
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
 
+// Document types that expire and are worth tracking on the currency panel.
+export const EXPIRABLE_TYPES: readonly DocumentType[] = [
+  "Medical",
+  "Passport",
+  "Driver's License",
+  "FCC Radio Operator's License",
+  "Pilot's Certificate",
+  "Insurance"
+];
+
+export function isExpirableType(value: string | null | undefined): boolean {
+  return Boolean(value) && (EXPIRABLE_TYPES as readonly string[]).includes(value as string);
+}
+
 export function isDocumentType(value: unknown): value is DocumentType {
   return typeof value === "string" && (DOCUMENT_TYPES as readonly string[]).includes(value);
 }

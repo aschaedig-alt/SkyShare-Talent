@@ -78,15 +78,28 @@ export async function PATCH(request: Request, context: RouteContext) {
   const { id } = await context.params;
 
   try {
-    const body = (await request.json()) as { displayFilename?: string; documentType?: string };
+    const body = (await request.json()) as { displayFilename?: string; documentType?: string; expiresAt?: string | null };
     const hasName = typeof body.displayFilename === "string";
     const hasType = typeof body.documentType === "string";
+    const hasExpiry = "expiresAt" in body;
 
-    if (!hasName && !hasType) {
+    if (!hasName && !hasType && !hasExpiry) {
       return NextResponse.json({ message: "Nothing to update." }, { status: 400 });
     }
 
-    const data: { displayFilename?: string; documentType?: string; renamedAt?: Date } = {};
+    const data: { displayFilename?: string; documentType?: string; expiresAt?: Date | null; renamedAt?: Date } = {};
+
+    if (hasExpiry) {
+      if (body.expiresAt === null || body.expiresAt === "") {
+        data.expiresAt = null;
+      } else {
+        const parsed = new Date(body.expiresAt as string);
+        if (Number.isNaN(parsed.getTime())) {
+          return NextResponse.json({ message: "Invalid expiry date." }, { status: 400 });
+        }
+        data.expiresAt = parsed;
+      }
+    }
 
     if (hasName) {
       const displayFilename = (body.displayFilename ?? "").trim();
@@ -120,6 +133,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         originalFilename: true,
         displayFilename: true,
         documentType: true,
+        expiresAt: true,
         storageKey: true,
         mimeType: true,
         sizeBytes: true,
@@ -134,14 +148,15 @@ export async function PATCH(request: Request, context: RouteContext) {
         eventType: "CANDIDATE_FILE_UPDATED",
         entityType: "CandidateFile",
         entityId: id,
-        summary: hasType ? `Set document type to ${data.documentType}.` : `Renamed candidate file to ${data.displayFilename}.`,
-        payloadJson: JSON.stringify({ candidateId: existing.candidateId, ...data })
+        summary: hasExpiry ? `Set expiry to ${data.expiresAt ? data.expiresAt.toISOString().slice(0, 10) : "none"}.` : hasType ? `Set document type to ${data.documentType}.` : `Renamed candidate file to ${data.displayFilename}.`,
+        payloadJson: JSON.stringify({ candidateId: existing.candidateId, displayFilename: data.displayFilename, documentType: data.documentType, expiresAt: data.expiresAt?.toISOString() })
       }
     });
 
     return NextResponse.json({
       ...updated,
-      uploadedAt: updated.uploadedAt.toISOString()
+      uploadedAt: updated.uploadedAt.toISOString(),
+      expiresAt: updated.expiresAt ? updated.expiresAt.toISOString() : null
     });
   } catch (error) {
     console.error(error);

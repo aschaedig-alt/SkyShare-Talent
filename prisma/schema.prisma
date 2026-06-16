@@ -429,6 +429,7 @@ model CandidateFile {
   sizeBytes         Int?
   source            String?
   documentType      String?
+  expiresAt         DateTime?
   metadataJson      String?
   extractedText     String?
   textExtractedAt   DateTime?
