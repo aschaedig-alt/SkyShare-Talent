@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, GripVertical, Plus, Settings2, Trash2, X } from "lucide-react";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-import { WIDGETS, WIDGETS_BY_TYPE, WIDGET_CATEGORIES } from "@/components/widgets/registry";
+import { WIDGETS, WIDGETS_BY_TYPE, WIDGET_CATEGORIES, type WidgetData } from "@/components/widgets/registry";
 import type { PageLayoutItem, WidgetInstance } from "@/lib/data/page-layout";
 
 const GridLayout = WidthProvider(RGL);
@@ -23,6 +23,7 @@ type Props = {
   canEdit?: boolean;
   cols?: number;
   rowHeight?: number;
+  widgetData?: WidgetData;
 };
 
 function newWidgetId(type: string) {
@@ -37,7 +38,8 @@ export function EditableGrid({
   savedWidgets,
   canEdit = false,
   cols = 12,
-  rowHeight = 28
+  rowHeight = 28,
+  widgetData
 }: Props) {
   const router = useRouter();
 
@@ -155,7 +157,7 @@ export function EditableGrid({
     ...panels.map((p) => ({ id: p.id, title: p.title, node: p.node, isWidget: false })),
     ...widgets.map((w) => {
       const def = WIDGETS_BY_TYPE[w.type];
-      return { id: w.i, title: def?.name ?? w.type, node: def ? def.render(w.config) : null, isWidget: true };
+      return { id: w.i, title: def?.name ?? w.type, node: def ? def.render(w.config, widgetData) : null, isWidget: true };
     })
   ];
 

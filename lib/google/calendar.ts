@@ -58,11 +58,15 @@ export type GoogleEventInput = {
   colorId?: string;
   attendeeEmails?: string[];
   status?: "confirmed" | "cancelled";
+  /** Private metadata (e.g. hostId, bookingId) — used to filter free/busy per host. */
+  privateProps?: Record<string, string>;
 };
+
+export type CalendarBusy = { start: Date; end: Date };
 
 function toEventResource(input: GoogleEventInput): calendar_v3.Schema$Event {
   const tz = input.timezone || "America/Denver";
-  return {
+  const resource: calendar_v3.Schema$Event = {
     summary: input.summary,
     description: input.description,
     location: input.location,
@@ -71,6 +75,13 @@ function toEventResource(input: GoogleEventInput): calendar_v3.Schema$Event {
     end: { dateTime: input.end.toISOString(), timeZone: tz },
     status: input.status
   };
+  if (input.attendeeEmails && input.attendeeEmails.length > 0) {
+    resource.attendees = input.attendeeEmails.map((email) => ({ email }));
+  }
+  if (input.privateProps && Object.keys(input.privateProps).length > 0) {
+    resource.extendedProperties = { private: input.privateProps };
+  }
+  return resource;
 }
 
 /** Create an event; returns the Google event id. */
@@ -161,4 +172,69 @@ export async function listGoogleEvents(syncToken?: string | null): Promise<Googl
   } while (pageToken);
 
   return { events, nextSyncToken };
+}
+
+/**
+ * Free/busy across one or more calendars. Pass the shared calendar id and/or a
+ * host's personal @skyshare calendar id. Reading another person's calendar
+ * requires the service account to have access (domain-wide delegation or
+ * free/busy sharing) — degrades to empty if a calendar isn't readable.
+ */
+export async function getFreeBusy(calendarIds: string[], timeMin: Date, timeMax: Date): Promise<CalendarBusy[]> {
+  const client = getCalendarClient();
+  const ids = calendarIds.filter(Boolean);
+  if (!client || ids.length === 0) return [];
+
+  try {
+    const res = await client.freebusy.query({
+      requestBody: {
+        timeMin: timeMin.toISOString(),
+        timeMax: timeMax.toISOString(),
+        items: ids.map((id) => ({ id }))
+      }
+    });
+    const calendars = res.data.calendars ?? {};
+    const out: CalendarBusy[] = [];
+    for (const id of Object.keys(calendars)) {
+      for (const slot of calendars[id].busy ?? []) {
+        if (slot.start && slot.end) out.push({ start: new Date(slot.start), end: new Date(slot.end) });
+      }
+    }
+    return out;
+  } catch (error) {
+    console.error("getFreeBusy failed:", error);
+    return [];
+  }
+}
+
+/**
+ * Busy intervals for ONE host derived from the shared calendar, filtered to the
+ * events this app created for that host (tagged with private hostId). This is how
+ * per-person availability works while everyone shares a single calendar.
+ */
+export async function listHostBusyEvents(hostId: string, timeMin: Date, timeMax: Date): Promise<CalendarBusy[]> {
+  const client = getCalendarClient();
+  if (!client) return [];
+
+  try {
+    const res = await client.events.list({
+      calendarId: getSharedCalendarId(),
+      singleEvents: true,
+      timeMin: timeMin.toISOString(),
+      timeMax: timeMax.toISOString(),
+      privateExtendedProperty: [`hostId=${hostId}`],
+      maxResults: 2500
+    });
+    const out: CalendarBusy[] = [];
+    for (const event of res.data.items ?? []) {
+      if (event.status === "cancelled") continue;
+      const start = event.start?.dateTime ?? event.start?.date;
+      const end = event.end?.dateTime ?? event.end?.date;
+      if (start && end) out.push({ start: new Date(start), end: new Date(end) });
+    }
+    return out;
+  } catch (error) {
+    console.error("listHostBusyEvents failed:", error);
+    return [];
+  }
 }

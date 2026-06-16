@@ -6,6 +6,7 @@ import { AddCandidateToJob } from "@/components/recruiting-jobs/AddCandidateToJo
 import { ResumeIntake } from "@/components/candidates/ResumeIntake";
 import { DocumentIntake } from "@/components/candidates/DocumentIntake";
 import type { WidgetInstance } from "@/lib/data/page-layout";
+import type { WidgetData } from "@/components/widgets/registry";
 
 type RecruitingJobsWorkspaceProps = {
   data: RecruitingJobsData;
@@ -13,6 +14,7 @@ type RecruitingJobsWorkspaceProps = {
   canEdit?: boolean;
   savedLayout?: GridItem[] | null;
   savedWidgets?: WidgetInstance[] | null;
+  widgetData?: WidgetData;
 };
 
 const statLabels: Array<[keyof RecruitingJobsData["stats"], string]> = [
@@ -294,7 +296,7 @@ function NoJobPanel() {
   );
 }
 
-export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLayout = null, savedWidgets = null }: RecruitingJobsWorkspaceProps) {
+export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLayout = null, savedWidgets = null, widgetData }: RecruitingJobsWorkspaceProps) {
   const pilotJobs = data.jobs.filter((job) => job.isPilotRole);
   const supportJobs = data.jobs.filter((job) => !job.isPilotRole);
   const selectedId = data.selectedJob?.id ?? null;
@@ -337,6 +339,7 @@ export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLay
         savedLayout={savedLayout}
         savedWidgets={savedWidgets}
         canEdit={canEdit}
+        widgetData={widgetData}
       />
     </div>
   );

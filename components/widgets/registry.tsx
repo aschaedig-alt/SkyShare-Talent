@@ -13,8 +13,13 @@ import {
   Trophy,
   Plane,
   StickyNote,
+  ShieldAlert,
   type LucideIcon
 } from "lucide-react";
+import type { DocumentCurrency } from "@/lib/data/document-currency";
+
+// Optional live data passed into a widget's render (only data-bound widgets use it).
+export type WidgetData = { documentCurrency?: DocumentCurrency };
 
 // A widget is a config-driven block an admin can add from the palette and fill in.
 // Each definition declares a config form (fields) and a renderer. Everything renders
@@ -37,7 +42,8 @@ export type WidgetDef = {
   size: { w: number; h: number };
   defaultConfig: WidgetConfig;
   fields: WidgetField[];
-  render: (config: WidgetConfig) => ReactNode;
+  render: (config: WidgetConfig, data?: WidgetData) => ReactNode;
+  dataBound?: boolean;
 };
 
 const str = (v: unknown, fallback = "") => (typeof v === "string" ? v : v == null ? fallback : String(v));
@@ -231,6 +237,47 @@ export const WIDGETS: WidgetDef[] = [
               const bar = s === "ok" ? "bg-emerald-500" : s === "warn" ? "bg-amber-500" : s === "bad" ? "bg-red-500" : "bg-brand-grey/40";
               return <div key={i} className={`h-1.5 flex-1 rounded-full ${bar}`} title={it.a} />;
             })}
+          </div>
+        </Shell>
+      );
+    }
+  },
+  {
+    type: "doc-currency",
+    name: "Document currency (live)",
+    category: "Aviation status",
+    icon: ShieldAlert,
+    size: { w: 3, h: 6 },
+    defaultConfig: {},
+    fields: [],
+    dataBound: true,
+    render: (_config, data) => {
+      const dc = data?.documentCurrency;
+      if (!dc) {
+        return (
+          <Shell icon={ShieldAlert} title="Document currency">
+            <p className="text-xs italic text-brand-grey">Live workspace data — available on pages wired with document currency.</p>
+          </Shell>
+        );
+      }
+      return (
+        <Shell icon={ShieldAlert} title="Document currency">
+          <div className="mb-2 grid grid-cols-3 gap-1.5 text-center">
+            <div className="rounded bg-red-50 py-1"><div className="text-base font-semibold text-red-600">{dc.counts.expired}</div><div className="text-[9px] uppercase text-brand-grey">expired</div></div>
+            <div className="rounded bg-amber-50 py-1"><div className="text-base font-semibold text-amber-600">{dc.counts.due30}</div><div className="text-[9px] uppercase text-brand-grey">≤30d</div></div>
+            <div className="rounded bg-brand-cloudDancer/60 py-1"><div className="text-base font-semibold text-brand-lea">{dc.counts.due90}</div><div className="text-[9px] uppercase text-brand-grey">≤90d</div></div>
+          </div>
+          <div className="space-y-1">
+            {dc.upcoming.slice(0, 6).map((it, i) => {
+              const tone = it.days < 0 ? "text-red-600" : it.days <= 30 ? "text-amber-600" : "text-brand-grey";
+              return (
+                <div key={i} className="flex items-center justify-between gap-2 text-[11px]">
+                  <span className="truncate text-brand-black/80">{it.candidateName} · {it.documentType ?? "Doc"}</span>
+                  <span className={`shrink-0 font-semibold ${tone}`}>{it.days < 0 ? `exp ${Math.abs(it.days)}d` : `${it.days}d`}</span>
+                </div>
+              );
+            })}
+            {dc.upcoming.length === 0 && <p className="text-xs italic text-brand-grey">All tracked documents current.</p>}
           </div>
         </Shell>
       );

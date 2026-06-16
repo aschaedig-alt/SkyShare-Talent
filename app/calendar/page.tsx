@@ -2,12 +2,13 @@ import { CalendarWorkspace } from "@/components/calendar/CalendarWorkspace";
 import { getCalendarData } from "@/lib/data/calendar";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { getPageLayout } from "@/lib/data/page-layout";
+import { getDocumentCurrency } from "@/lib/data/document-currency";
 
 export const dynamic = "force-dynamic";
 
 export default async function CalendarPage() {
   const access = await requireModulePageAccess("calendar");
-  const [data, saved] = await Promise.all([getCalendarData(), getPageLayout("calendar")]);
+  const [data, saved, documentCurrency] = await Promise.all([getCalendarData(), getPageLayout("calendar"), getDocumentCurrency()]);
 
   return (
     <CalendarWorkspace
@@ -15,6 +16,7 @@ export default async function CalendarPage() {
       canEdit={access.role === "ADMIN"}
       savedLayout={saved.layout}
       savedWidgets={saved.widgets}
+      widgetData={{ documentCurrency }}
     />
   );
 }

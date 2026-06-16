@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getDocumentCurrency, type DocumentCurrency } from "@/lib/data/document-currency";
 
 export type ReportsData = {
   pipeline: Array<{ label: string; value: number }>;
@@ -13,10 +14,11 @@ export type ReportsData = {
     draftRequirements: number;
     activeRequirements: number;
   };
+  documentCurrency: DocumentCurrency;
 };
 
 export async function getReportsData(): Promise<ReportsData> {
-  const [pipeline, sourceGroups, jobs, candidatesWithoutFiles, candidatesWithFiles, approvedRequirements, draftRequirements, activeRequirements] =
+  const [pipeline, sourceGroups, jobs, candidatesWithoutFiles, candidatesWithFiles, approvedRequirements, draftRequirements, activeRequirements, documentCurrency] =
     await Promise.all([
       prisma.candidate.groupBy({ by: ["stage"], _count: { stage: true } }),
       prisma.candidate.groupBy({ by: ["source"], _count: { source: true } }),
@@ -35,7 +37,8 @@ export async function getReportsData(): Promise<ReportsData> {
       prisma.candidate.count({ where: { files: { some: {} } } }),
       prisma.pilotRequirement.count({ where: { reviewStatus: "APPROVED" } }),
       prisma.pilotRequirement.count({ where: { reviewStatus: "DRAFT" } }),
-      prisma.pilotRequirement.count({ where: { status: "ACTIVE" } })
+      prisma.pilotRequirement.count({ where: { status: "ACTIVE" } }),
+      getDocumentCurrency()
     ]);
 
   return {
@@ -50,6 +53,7 @@ export async function getReportsData(): Promise<ReportsData> {
       approvedRequirements,
       draftRequirements,
       activeRequirements
-    }
+    },
+    documentCurrency
   };
 }

@@ -897,3 +897,119 @@ model Redemption {
   @@index([newHireId])
   @@index([rewardId])
 }
+
+// ============================================================================
+//  Scheduling / public booking ("schedule with me" — Calendly replacement)
+//  Each employee is a BookingHost with a recurring weekly schedule, optional
+//  per-date overrides (vacation/holiday/custom hours), and one or more booking
+//  types. Public bookings land on the shared Google Calendar tagged with the
+//  host id so per-person availability works even on one shared calendar.
+//  Candidate/job/interview links are stored as plain ids (no relations) so this
+//  block is self-contained and additive.
+// ============================================================================
+
+model BookingHost {
+  id                String   @id @default(cuid())
+  name              String
+  slug              String   @unique
+  email             String?  // @skyshare email; also used for free/busy lookup
+  role              String   @default("RECRUITER") // RECRUITER | HIRING_MANAGER | OTHER
+  title             String?
+  timezone          String   @default("America/Denver")
+  // Optional Google calendar id (usually the @skyshare email) to read this
+  // person's real free/busy without them doing anything — requires the service
+  // account to have domain-wide delegation or free/busy sharing (one-time admin step).
+  calendarId        String?
+  // Editable booking settings
+  minNoticeHours    Int      @default(6)
+  bookingWindowDays Int      @default(90)
+  maxPerDay         Int?     // null = unlimited
+  bufferMinutes     Int      @default(0) // 0 or 10
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  weeklyRules  AvailabilityRule[]
+  overrides    AvailabilityOverride[]
+  bookingTypes BookingType[]
+  bookings     Booking[]
+
+  @@index([slug])
+}
+
+// Recurring weekly availability window (host-local time).
+model AvailabilityRule {
+  id          String      @id @default(cuid())
+  hostId      String
+  dayOfWeek   Int         // 0 = Sunday .. 6 = Saturday
+  startMinute Int         // minutes from midnight (host tz)
+  endMinute   Int
+  host        BookingHost @relation(fields: [hostId], references: [id], onDelete: Cascade)
+
+  @@index([hostId])
+}
+
+// Per-date override: BLOCK = unavailable (vacation/holiday), CUSTOM = special hours.
+// hostId null = applies to every host (org-wide holiday).
+model AvailabilityOverride {
+  id          String       @id @default(cuid())
+  hostId      String?
+  startDate   DateTime     @db.Date // inclusive
+  endDate     DateTime     @db.Date // inclusive
+  kind        String       @default("BLOCK") // BLOCK | CUSTOM
+  startMinute Int? // CUSTOM only
+  endMinute   Int? // CUSTOM only
+  label       String?
+  createdAt   DateTime     @default(now())
+  host        BookingHost? @relation(fields: [hostId], references: [id], onDelete: Cascade)
+
+  @@index([hostId])
+}
+
+model BookingType {
+  id              String      @id @default(cuid())
+  hostId          String
+  name            String
+  kind            String      @default("INTERVIEW") // INTERVIEW | MEETING
+  durationMinutes Int         @default(30) // 30 | 45 | 60
+  bufferMinutes   Int? // overrides host buffer (0 or 10); null = use host
+  location        String? // e.g. "Video — Zoom" or a phone note
+  description     String?
+  isActive        Boolean     @default(true)
+  sortOrder       Int         @default(0)
+  host            BookingHost @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  bookings        Booking[]
+
+  @@index([hostId])
+}
+
+model Booking {
+  id               String       @id @default(cuid())
+  hostId           String
+  bookingTypeId    String?
+  startDateTime    DateTime
+  endDateTime      DateTime
+  timezone         String       @default("America/Denver") // invitee timezone
+  inviteeName      String
+  inviteeEmail     String
+  inviteePhone     String?
+  notes            String?
+  status           String       @default("CONFIRMED") // CONFIRMED | CANCELLED
+  // Plain id links (no relations on purpose — keeps this block self-contained)
+  candidateId      String?
+  jobId            String?
+  interviewId      String?
+  googleEventId    String?
+  googleCalendarId String?
+  cancelToken      String?      @unique
+  source           String?      @default("public-booking")
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  host        BookingHost  @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  bookingType BookingType? @relation(fields: [bookingTypeId], references: [id], onDelete: SetNull)
+
+  @@index([hostId])
+  @@index([startDateTime])
+  @@index([status])
+}
