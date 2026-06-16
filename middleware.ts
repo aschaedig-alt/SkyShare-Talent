@@ -8,6 +8,7 @@ const protectedPagePrefixes = [
   "/candidates",
   "/changes",
   "/command-center",
+  "/compliments",
   "/duplicate-review",
   "/imports",
   "/jobs",
