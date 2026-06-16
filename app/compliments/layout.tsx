@@ -10,7 +10,8 @@ export const metadata: Metadata = {
 
 export default async function ComplimentsLayout({ children }: { children: React.ReactNode }) {
   // Compliments lives under the People module; reuse its access gate.
-  await requireModulePageAccess("people");
+  const { role } = await requireModulePageAccess("people");
+  const isAdmin = role === "ADMIN";
 
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
@@ -33,7 +34,7 @@ export default async function ComplimentsLayout({ children }: { children: React.
         </Link>
       </section>
 
-      <ComplimentsTabs />
+      <ComplimentsTabs isAdmin={isAdmin} />
 
       {children}
     </div>

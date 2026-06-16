@@ -6,6 +6,7 @@ import {
   Blocks,
   BriefcaseBusiness,
   CalendarCheck,
+  CalendarClock,
   CalendarDays,
   CheckCircle2,
   ClipboardList,
@@ -35,6 +36,7 @@ export const moduleIds = [
   "recruiting-jobs",
   "pilot-requirements",
   "calendar",
+  "scheduling",
   "imports",
   "duplicate-review",
   "reports",
@@ -93,7 +95,8 @@ export const navigationGroups: readonly NavigationGroup[] = [
           { id: "candidates", href: "/candidates", label: "Candidates", icon: SearchCheck },
           { id: "recruiting-jobs", href: "/recruiting-jobs", label: "Jobs", icon: BriefcaseBusiness },
           { id: "pilot-requirements", href: "/pilot-requirements", label: "Pilot Requirements", icon: Plane },
-          { id: "calendar", href: "/calendar", label: "Calendar", icon: CalendarDays }
+          { id: "calendar", href: "/calendar", label: "Calendar", icon: CalendarDays },
+          { id: "scheduling", href: "/scheduling", label: "Scheduling", icon: CalendarClock }
         ]
       },
       {

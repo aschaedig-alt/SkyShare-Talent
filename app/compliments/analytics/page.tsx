@@ -2,6 +2,7 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { getAnalyticsData, type AnalyticsRange } from "@/lib/data/compliments";
+import { getComplimentsSettings } from "@/lib/compliments/settings";
 import { Card } from "@/components/compliments/Card";
 import { MetricCard } from "@/components/compliments/MetricCard";
 import { Avatar } from "@/components/compliments/Avatar";
@@ -41,7 +42,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
 
   const sp = await searchParams;
   const range = rangeFromParam(sp.range);
-  const data = await getAnalyticsData(range);
+  const [data, settings] = await Promise.all([getAnalyticsData(range), getComplimentsSettings()]);
 
   const maxValueCount = Math.max(1, ...data.byValue.map((v) => v.count));
   const maxDeptCount = Math.max(1, ...data.byDepartment.map((d) => d.count));
@@ -78,7 +79,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         <MetricCard
           label="Points distributed"
           value={data.pointsDistributed.toLocaleString()}
-          sublabel={`${pointsToDollars(data.pointsDistributed)} value`}
+          sublabel={`${pointsToDollars(data.pointsDistributed, settings.pointsPerDollar)} value`}
           trend={data.pointsTrend}
         />
       </div>

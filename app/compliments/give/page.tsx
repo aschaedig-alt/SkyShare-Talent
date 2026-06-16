@@ -1,10 +1,15 @@
 import { getComplimentsRoster, getRecognitionValues } from "@/lib/data/compliments";
+import { getComplimentsSettings } from "@/lib/compliments/settings";
 import { GiveRecognitionForm } from "@/components/compliments/GiveRecognitionForm";
 
 export const dynamic = "force-dynamic";
 
 export default async function GiveRecognitionPage() {
-  const [roster, values] = await Promise.all([getComplimentsRoster(), getRecognitionValues()]);
+  const [roster, values, settings] = await Promise.all([
+    getComplimentsRoster(),
+    getRecognitionValues(),
+    getComplimentsSettings()
+  ]);
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -12,7 +17,7 @@ export default async function GiveRecognitionPage() {
         <h2 className="text-lg font-medium text-brand-lea">Give recognition</h2>
         <p className="text-sm text-brand-grey">Celebrate great work and reinforce our values.</p>
       </div>
-      <GiveRecognitionForm roster={roster} values={values} />
+      <GiveRecognitionForm roster={roster} values={values} strengthPoints={settings.strengthPoints} />
     </div>
   );
 }

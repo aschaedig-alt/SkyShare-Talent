@@ -5,7 +5,8 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/auth";
-import { RecognitionStrength, STRENGTH_POINTS } from "@/lib/compliments/constants";
+import { RecognitionStrength } from "@/lib/compliments/constants";
+import { getComplimentsSettings } from "@/lib/compliments/settings";
 
 const strengthValues = Object.values(RecognitionStrength) as [string, ...string[]];
 
@@ -40,7 +41,8 @@ export async function createRecognition(input: unknown): Promise<ActionResult> {
     return { ok: false, error: "Both people must be active or post-onboard new hires." };
   }
 
-  const points = STRENGTH_POINTS[strength as keyof typeof STRENGTH_POINTS];
+  const settings = await getComplimentsSettings();
+  const points = settings.strengthPoints[strength as keyof typeof settings.strengthPoints];
 
   await prisma.$transaction([
     prisma.recognition.create({

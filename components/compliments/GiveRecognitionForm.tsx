@@ -10,15 +10,17 @@ import { Check } from "lucide-react";
 import { Card } from "@/components/compliments/Card";
 import { PersonPicker } from "@/components/compliments/PersonPicker";
 import { createRecognition } from "@/app/compliments/actions";
-import { RecognitionStrength, STRENGTH_POINTS, STRENGTH_STOPS } from "@/lib/compliments/constants";
+import { RecognitionStrength, STRENGTH_STOPS } from "@/lib/compliments/constants";
 import { valueColorClasses } from "@/lib/compliments/value-colors";
 import type { RosterPerson } from "@/lib/compliments/types";
 
 type ValueOption = { id: string; name: string; colorKey: string };
+type StrengthPoints = { GOOD: number; GREAT: number; AMAZING: number };
 
 type Props = {
   roster: RosterPerson[];
   values: ValueOption[];
+  strengthPoints: StrengthPoints;
 };
 
 const strengthValues = Object.values(RecognitionStrength) as [string, ...string[]];
@@ -38,7 +40,7 @@ const schema = z
 
 type FormValues = z.infer<typeof schema>;
 
-export function GiveRecognitionForm({ roster, values }: Props) {
+export function GiveRecognitionForm({ roster, values, strengthPoints }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -126,7 +128,9 @@ export function GiveRecognitionForm({ roster, values }: Props) {
         <Controller
           control={control}
           name="strength"
-          render={({ field }) => <StrengthSlider value={field.value} onChange={field.onChange} />}
+          render={({ field }) => (
+            <StrengthSlider value={field.value} onChange={field.onChange} strengthPoints={strengthPoints} />
+          )}
         />
 
         {serverError ? (
@@ -204,10 +208,18 @@ function ValuePicker({
   );
 }
 
-function StrengthSlider({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function StrengthSlider({
+  value,
+  onChange,
+  strengthPoints
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  strengthPoints: StrengthPoints;
+}) {
   const index = STRENGTH_STOPS.findIndex((s) => s.value === value);
   const current = STRENGTH_STOPS[index] ?? STRENGTH_STOPS[1];
-  const points = STRENGTH_POINTS[current.value];
+  const points = strengthPoints[current.value];
 
   return (
     <div className="border-t border-brand-lea/10 pt-5">

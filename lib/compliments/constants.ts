@@ -44,11 +44,21 @@ export const REWARD_CATEGORY_LABELS: Record<RewardCategory, string> = {
   CHARITY: "Donate to charity"
 };
 
-// Rewards conversion: 100 points = $1.
+// lucide-react icon names the reward catalog can choose from (resolved by
+// components/compliments/RewardIcon.tsx).
+export const REWARD_ICON_NAMES = ["Gift", "Coffee", "Film", "Plane", "Shirt", "Heart", "Award"] as const;
+
+// Rewards conversion default: 100 points = $1. The live ratio is configurable
+// in admin settings (ComplimentsSettings.pointsPerDollar) — pass it in where the
+// admin may have changed it; the constant is only the fallback/default.
 export const POINTS_PER_DOLLAR = 100;
 
-export function pointsToDollars(points: number): string {
-  return `$${(points / POINTS_PER_DOLLAR).toFixed(2)}`;
+export function dollarsFromPoints(points: number, pointsPerDollar: number = POINTS_PER_DOLLAR): number {
+  return points / (pointsPerDollar || POINTS_PER_DOLLAR);
+}
+
+export function pointsToDollars(points: number, pointsPerDollar: number = POINTS_PER_DOLLAR): string {
+  return `$${dollarsFromPoints(points, pointsPerDollar).toFixed(2)}`;
 }
 
 // Company values and their color system (see handoff §3). `colorKey` is the

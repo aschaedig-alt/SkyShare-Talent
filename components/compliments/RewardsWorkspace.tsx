@@ -12,6 +12,7 @@ import type { RewardView, RosterPerson } from "@/lib/compliments/types";
 type Props = {
   roster: RosterPerson[];
   rewards: RewardView[];
+  pointsPerDollar: number;
 };
 
 // Thumbnail accent per category (handoff allows color blocks on reward cards).
@@ -30,7 +31,7 @@ const CATEGORY_PILLS = [
   { key: RewardCategory.CHARITY, label: REWARD_CATEGORY_LABELS.CHARITY }
 ];
 
-export function RewardsWorkspace({ roster, rewards }: Props) {
+export function RewardsWorkspace({ roster, rewards, pointsPerDollar }: Props) {
   const [selectedId, setSelectedId] = useState("");
   const [category, setCategory] = useState<string>("ALL");
   const [balances, setBalances] = useState<Record<string, number>>({});
@@ -83,7 +84,7 @@ export function RewardsWorkspace({ roster, rewards }: Props) {
             {balance === null ? "—" : balance.toLocaleString()}
           </p>
           <p className="mt-2 text-xs text-brand-grey">
-            {balance === null ? "Select a person" : `${pointsToDollars(balance)} value`}
+            {balance === null ? "Select a person" : `${pointsToDollars(balance, pointsPerDollar)} value`}
           </p>
         </Card>
       </div>
