@@ -26,7 +26,7 @@ const inputClass =
 const selectClass = inputClass;
 
 function flattenGates(requirement: PilotRequirementDetail): GateFormValue[] {
-  return requirement.gatesByCategory.flatMap((group) =>
+  return requirement.editableGatesByCategory.flatMap((group) =>
     group.gates.map((gate) => ({
       id: gate.id,
       key: gate.key,

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Clock, Video, MapPin, ChevronLeft, Check, CalendarClock } from "lucide-react";
 import { clsx } from "clsx";
 import type { PublicHost, PublicBookingType } from "@/lib/data/booking";
+import { formatDateTimeLongWithZone, zoneLabel } from "@/lib/calendar/format";
 
 type Props = { slug: string; host: PublicHost };
 
@@ -78,18 +79,7 @@ export function PublicBooking({ slug, host }: Props) {
 
   const localDays = useMemo(() => groupByLocalDate(days, tz), [days, tz]);
 
-  const selectedLabel = useMemo(() => {
-    if (!slot) return null;
-    return new Intl.DateTimeFormat("en-US", {
-      timeZone: tz,
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      timeZoneName: "short"
-    }).format(new Date(slot));
-  }, [slot, tz]);
+  const selectedLabel = useMemo(() => (slot ? formatDateTimeLongWithZone(slot, tz) : null), [slot, tz]);
 
   async function submit() {
     if (!type || !slot) return;
@@ -123,9 +113,14 @@ export function PublicBooking({ slug, host }: Props) {
     <main className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
       {/* Host header */}
       <div className="flex items-center gap-4">
-        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-lea text-lg font-bold text-white shadow-sm">
-          {initials(host.name)}
-        </span>
+        {host.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={host.avatarUrl} alt={host.name} className="h-14 w-14 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-brand-lea/15" />
+        ) : (
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-lea text-lg font-bold text-white shadow-sm">
+            {initials(host.name)}
+          </span>
+        )}
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Schedule a time</p>
           <h1 className="text-2xl font-semibold text-brand-lea">{host.name}</h1>
@@ -245,7 +240,7 @@ function SlotPicker({
           <h2 className="text-base font-semibold text-brand-lea">{type.name}</h2>
           <TypeMeta type={type} />
         </div>
-        <span className="rounded-full bg-brand-cloudDancer/60 px-3 py-1 text-[11px] font-medium text-brand-grey">Times in {tz}</span>
+        <span className="rounded-full bg-brand-cloudDancer/60 px-3 py-1 text-[11px] font-medium text-brand-grey">Times in {zoneLabel(tz)}</span>
       </div>
 
       {loading ? (
@@ -377,15 +372,7 @@ function ConfirmedCard({
   hostName: string;
   email: string;
 }) {
-  const when = new Intl.DateTimeFormat("en-US", {
-    timeZone: tz,
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short"
-  }).format(new Date(confirmed.start));
+  const when = formatDateTimeLongWithZone(confirmed.start, tz);
 
   return (
     <div className="py-4 text-center">

@@ -45,6 +45,7 @@ export async function POST(request: Request) {
         email: data.email ?? null,
         role: data.role,
         title: data.title ?? null,
+        avatarUrl: data.avatarUrl ?? null,
         timezone: data.timezone,
         calendarId: data.calendarId ?? null,
         minNoticeHours: data.minNoticeHours,

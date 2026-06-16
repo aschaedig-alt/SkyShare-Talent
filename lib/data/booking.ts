@@ -18,6 +18,7 @@ export type PublicHost = {
   name: string;
   slug: string;
   title: string | null;
+  avatarUrl: string | null;
   role: string;
   timezone: string;
   bufferMinutes: number;
@@ -224,6 +225,7 @@ export function toPublicHost(host: NonNullable<HostWithRules>): PublicHost {
     name: host.name,
     slug: host.slug,
     title: host.title,
+    avatarUrl: host.avatarUrl,
     role: host.role,
     timezone: host.timezone,
     bufferMinutes: host.bufferMinutes,

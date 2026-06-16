@@ -62,10 +62,10 @@ export function UpcomingInterviews({ interviews, onInterviewClick }: UpcomingInt
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="rounded bg-brand-gold/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-lea">
-                    {formatRelativeDay(interview.startDateTime)}
+                    {formatRelativeDay(interview.startDateTime, interview.timezone)}
                   </span>
                   <span className="text-sm font-bold text-brand-lea">
-                    {formatTime(interview.startDateTime)} {timezoneAbbr(interview.timezone)}
+                    {formatTime(interview.startDateTime, interview.timezone)} {timezoneAbbr(interview.timezone)}
                   </span>
                 </div>
                 <div className="mt-1.5 truncate text-base font-semibold text-brand-lea">

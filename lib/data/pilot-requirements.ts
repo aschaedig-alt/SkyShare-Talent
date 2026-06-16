@@ -44,7 +44,13 @@ export type PilotRequirementDetail = PilotRequirementListItem & {
   originalJobDescriptionText: string | null;
   extractionConfidence: number | null;
   extractionWarnings: string[];
+  // Only the enabled gates — used for the read-only "Enabled requirement gates" summary.
   gatesByCategory: Array<{
+    category: string;
+    gates: RequirementGateView[];
+  }>;
+  // ALL gates (enabled + disabled) so the editor can turn any requirement on/off.
+  editableGatesByCategory: Array<{
     category: string;
     gates: RequirementGateView[];
   }>;
@@ -55,6 +61,7 @@ export type PilotRequirementsData = {
   selectedRequirement: PilotRequirementDetail | null;
   candidateMatches: PilotRequirementCandidateMatch[];
   canEditScoring: boolean;
+  scannedCount: number;
   stats: {
     total: number;
     active: number;
@@ -191,6 +198,19 @@ function groupGates(gates: RequirementGateView[]) {
   return Array.from(groups.entries()).map(([category, group]) => ({ category, gates: group }));
 }
 
+// Like groupGates but keeps disabled gates too — the editor needs every gate so
+// any requirement (e.g. jet time, turbine time) can be turned on.
+function groupAllGates(gates: RequirementGateView[]) {
+  const groups = new Map<string, RequirementGateView[]>();
+  for (const gate of gates) {
+    const group = groups.get(gate.category) ?? [];
+    group.push(gate);
+    groups.set(gate.category, group);
+  }
+
+  return Array.from(groups.entries()).map(([category, group]) => ({ category, gates: group }));
+}
+
 export async function getPilotRequirementsData(query = "", selectedId?: string): Promise<PilotRequirementsData> {
   // Hide requirements whose source job was merged away as a duplicate. Requirements
   // with no source job stay visible. This mirrors the deduped Jobs list and self-heals:
@@ -199,7 +219,7 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
     NOT: { sourceJobRecord: { mergedIntoJobId: { not: null } } }
   };
 
-  const [rows, total, active, needsReview, catalogItems] = await Promise.all([
+  const [rows, total, active, needsReview, catalogItems, scannedCount] = await Promise.all([
     prisma.pilotRequirement.findMany({
       where: hideMergedSourceJob,
       orderBy: [{ status: "asc" }, { title: "asc" }],
@@ -218,7 +238,8 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
     prisma.pilotRequirement.count({ where: hideMergedSourceJob }),
     prisma.pilotRequirement.count({ where: { ...hideMergedSourceJob, status: "ACTIVE" } }),
     prisma.pilotRequirement.count({ where: { ...hideMergedSourceJob, reviewStatus: { not: "APPROVED" } } }),
-    prisma.requirementCatalogItem.count({ where: { archivedAt: null } })
+    prisma.requirementCatalogItem.count({ where: { archivedAt: null } }),
+    prisma.candidate.count({ where: { status: "ACTIVE" } })
   ]);
 
   const allListItems = rows.map(toListItem);
@@ -243,7 +264,8 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
           originalJobDescriptionText: selectedRow.originalJobDescriptionText,
           extractionConfidence: selectedRow.extractionConfidence,
           extractionWarnings: parseStringArray(selectedRow.extractionWarningsJson),
-          gatesByCategory: groupGates(selectedGates)
+          gatesByCategory: groupGates(selectedGates),
+          editableGatesByCategory: groupAllGates(selectedGates)
         }
       : null;
 
@@ -285,6 +307,7 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
     selectedRequirement,
     candidateMatches,
     canEditScoring: await canEditScoring(),
+    scannedCount,
     stats: {
       total,
       active,

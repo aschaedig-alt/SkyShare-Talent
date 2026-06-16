@@ -12,6 +12,7 @@ type Interview = CalendarData["interviews"][number];
 
 interface ScheduleTimelineProps {
   interviews: Interview[];
+  teamHosts?: Array<{ name: string; avatarUrl: string | null }>;
   onInterviewClick?: (interview: Interview) => void;
   onReschedule?: (interviewId: string, newDate: Date, options?: { keepOriginalTime?: boolean }) => void;
 }
@@ -55,8 +56,12 @@ function initials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function TeamAvatar({ name }: { name: string }) {
+function TeamAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) {
   const isUnassigned = name === UNASSIGNED;
+  if (avatarUrl) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={avatarUrl} alt={name} className="h-8 w-8 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-brand-lea/15" />;
+  }
   const color = isUnassigned ? "bg-slate-300 text-slate-600" : `${AVATAR_COLORS[hashString(name) % AVATAR_COLORS.length]} text-white`;
   return (
     <span className={clsx("flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold shadow-sm", color)}>
@@ -95,7 +100,15 @@ function packLanes(items: Array<{ interview: Interview; startDay: number; endDay
   return { placements, laneCount: Math.max(1, laneEnds.length) };
 }
 
-export function ScheduleTimeline({ interviews, onInterviewClick, onReschedule }: ScheduleTimelineProps) {
+export function ScheduleTimeline({ interviews, teamHosts, onInterviewClick, onReschedule }: ScheduleTimelineProps) {
+  // Match an interviewer name to a booking host's photo (case-insensitive).
+  const avatarByName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const host of teamHosts ?? []) {
+      if (host.avatarUrl) map.set(host.name.trim().toLowerCase(), host.avatarUrl);
+    }
+    return map;
+  }, [teamHosts]);
   const [viewDate, setViewDate] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -244,7 +257,7 @@ export function ScheduleTimeline({ interviews, onInterviewClick, onReschedule }:
                     className="sticky left-0 z-10 flex items-center gap-2.5 border-r border-brand-lea/10 bg-white px-4"
                     style={{ width: RAIL_WIDTH }}
                   >
-                    <TeamAvatar name={row.member} />
+                    <TeamAvatar name={row.member} avatarUrl={avatarByName.get(row.member.trim().toLowerCase())} />
                     <div className="min-w-0">
                       <div className="truncate text-sm font-semibold text-brand-lea">{row.member}</div>
                       <div className="text-[11px] text-brand-grey">{row.count} interview{row.count === 1 ? "" : "s"}</div>
@@ -296,7 +309,7 @@ export function ScheduleTimeline({ interviews, onInterviewClick, onReschedule }:
                             setDragOverDay(null);
                           }}
                           onClick={() => onInterviewClick?.(interview)}
-                          title={`${formatTime(interview.startDateTime)} · ${interview.candidate.displayName}${interview.job ? ` (${interview.job.title})` : ""}`}
+                          title={`${formatTime(interview.startDateTime, interview.timezone)} · ${interview.candidate.displayName}${interview.job ? ` (${interview.job.title})` : ""}`}
                           className={clsx(
                             "absolute flex items-center gap-1.5 overflow-hidden rounded-md px-2 text-left text-[11px] font-medium shadow-sm transition hover:shadow-md",
                             barClasses(interview),
@@ -304,7 +317,7 @@ export function ScheduleTimeline({ interviews, onInterviewClick, onReschedule }:
                           )}
                           style={{ left, width, top, height: BAR_HEIGHT }}
                         >
-                          <span className="shrink-0 font-semibold tabular-nums">{formatTime(interview.startDateTime)}</span>
+                          <span className="shrink-0 font-semibold tabular-nums">{formatTime(interview.startDateTime, interview.timezone)}</span>
                           <span className="truncate">{interview.candidate.displayName}</span>
                         </button>
                       );

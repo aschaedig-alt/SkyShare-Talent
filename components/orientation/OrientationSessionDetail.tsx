@@ -74,6 +74,12 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
     await patchJson(`/api/orientation/attendees/${id}`, null, "DELETE");
     router.refresh();
   }
+  async function moveAttendee(id: string, toSessionId: string) {
+    if (!toSessionId) return;
+    setAttendees((cur) => cur.filter((a) => a.id !== id));
+    await fetch(`/api/orientation/attendees/${id}/move`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ toSessionId }) });
+    router.refresh();
+  }
   const [addId, setAddId] = useState("");
   async function addAttendee() {
     if (!addId) return;
@@ -171,7 +177,11 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                 ) : attendees.map((a) => (
                   <tr key={a.id} className="border-t border-brand-lea/10">
                     <td className="py-2 pr-2">
-                      <div className="font-medium text-brand-lea">{a.name}{a.isPilot ? <span className="ml-1 rounded bg-sky-50 px-1 text-[9px] font-semibold text-sky-700">pilot</span> : null}</div>
+                      <div className="font-medium text-brand-lea">
+                        {a.name}
+                        {a.isPilot ? <span className="ml-1 rounded bg-sky-50 px-1 text-[9px] font-semibold text-sky-700">pilot</span> : null}
+                        {a.rescheduleCount > 0 ? <span className="ml-1 rounded bg-brand-gold/15 px-1 text-[9px] font-semibold text-brand-lea" title="Times moved to a later orientation">moved {a.rescheduleCount}×</span> : null}
+                      </div>
                       <div className="text-[10px] text-brand-grey">{a.position ?? "—"}</div>
                     </td>
                     <td className="px-1 py-2">
@@ -191,7 +201,24 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                     <td className="px-1 py-2 text-center">{a.isPilot ? <Flag on={a.ipadReady} onClick={() => toggleFlag(a, "ipadReady")} /> : <span className="text-brand-grey/40">—</span>}</td>
                     <td className="px-1 py-2 text-center"><Flag on={a.cardReady} onClick={() => toggleFlag(a, "cardReady")} /></td>
                     <td className="px-1 py-2 text-center"><Flag on={a.swagReady} onClick={() => toggleFlag(a, "swagReady")} /></td>
-                    <td className="px-1 py-2 text-right"><button onClick={() => removeAttendee(a.id)} className="text-[11px] text-red-600 hover:underline">remove</button></td>
+                    <td className="px-1 py-2">
+                      <div className="flex items-center justify-end gap-2">
+                        {session.otherSessions.length > 0 ? (
+                          <select
+                            value=""
+                            onChange={(e) => moveAttendee(a.id, e.target.value)}
+                            title="Move to another orientation"
+                            className="rounded border border-brand-lea/15 bg-white px-1 py-0.5 text-[11px] text-brand-grey"
+                          >
+                            <option value="">Move…</option>
+                            {session.otherSessions.map((o) => (
+                              <option key={o.id} value={o.id}>→ {new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(o.date))}</option>
+                            ))}
+                          </select>
+                        ) : null}
+                        <button onClick={() => removeAttendee(a.id)} className="text-[11px] text-red-600 hover:underline">remove</button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

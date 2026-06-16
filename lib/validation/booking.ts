@@ -26,6 +26,7 @@ export const hostCreateSchema = z.object({
   email: z.string().trim().email().optional().nullable(),
   role: z.enum(["RECRUITER", "HIRING_MANAGER", "OTHER"]).default("RECRUITER"),
   title: z.string().trim().optional().nullable(),
+  avatarUrl: z.string().optional().nullable(), // data URL or null to clear
   timezone: z.string().trim().min(1).default("America/Denver"),
   calendarId: z.string().trim().optional().nullable(),
   minNoticeHours: z.coerce.number().int().min(0).max(720).default(6),

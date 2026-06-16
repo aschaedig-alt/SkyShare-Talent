@@ -216,6 +216,8 @@ model NewHire {
   onboardedAt      DateTime?
   // Employment status once onboarded: ACTIVE | TERMINATED
   employmentStatus String   @default("ACTIVE")
+  // How many times this hire has been moved/rescheduled to a later orientation.
+  orientationRescheduleCount Int @default(0)
   canceled         Boolean  @default(false)
   travelStatus    String?
   notes           String?
@@ -915,6 +917,7 @@ model BookingHost {
   email             String?  // @skyshare email; also used for free/busy lookup
   role              String   @default("RECRUITER") // RECRUITER | HIRING_MANAGER | OTHER
   title             String?
+  avatarUrl         String?  // small profile photo (data URL) shown on the calendar
   timezone          String   @default("America/Denver")
   // Optional Google calendar id (usually the @skyshare email) to read this
   // person's real free/busy without them doing anything — requires the service

@@ -51,6 +51,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         ...(data.email !== undefined && { email: data.email ?? null }),
         ...(data.role !== undefined && { role: data.role }),
         ...(data.title !== undefined && { title: data.title ?? null }),
+        ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl ?? null }),
         ...(data.timezone !== undefined && { timezone: data.timezone }),
         ...(data.calendarId !== undefined && { calendarId: data.calendarId ?? null }),
         ...(data.minNoticeHours !== undefined && { minNoticeHours: data.minNoticeHours }),

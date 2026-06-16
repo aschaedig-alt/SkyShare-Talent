@@ -20,6 +20,7 @@ export default async function SchedulingPage() {
     email: h.email,
     role: h.role,
     title: h.title,
+    avatarUrl: h.avatarUrl,
     timezone: h.timezone,
     calendarId: h.calendarId,
     minNoticeHours: h.minNoticeHours,

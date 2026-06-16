@@ -61,11 +61,13 @@ function EvidencePanel({ requirement }: { requirement: PilotRequirementDetail })
 function RequirementDetail({
   requirement,
   candidateMatches,
-  canEditScoring
+  canEditScoring,
+  scannedCount
 }: {
   requirement: PilotRequirementDetail | null;
   candidateMatches: PilotRequirementsData["candidateMatches"];
   canEditScoring: boolean;
+  scannedCount: number;
 }) {
   if (!requirement) {
     return (
@@ -150,14 +152,16 @@ function RequirementDetail({
           </section>
 
           <EvidencePanel requirement={requirement} />
-          <PilotRequirementEditor requirement={requirement} />
+          <PilotRequirementEditor key={requirement.id} requirement={requirement} />
         </div>
 
         <aside className="space-y-4">
           <CandidateTriagePanel
+            key={requirement.id}
             matches={candidateMatches}
             requirementId={requirement.id}
             canEdit={canEditScoring}
+            scannedCount={scannedCount}
           />
 
           <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
@@ -328,6 +332,7 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
           requirement={data.selectedRequirement}
           candidateMatches={data.candidateMatches}
           canEditScoring={data.canEditScoring}
+          scannedCount={data.scannedCount}
         />
       </section>
     </div>

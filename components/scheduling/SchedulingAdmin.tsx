@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Copy, Check, Link as LinkIcon, Calendar, Clock, Ban } from "lucide-react";
+import { Plus, Trash2, Copy, Check, Link as LinkIcon, Calendar, Clock, Ban, ImageUp } from "lucide-react";
 import { clsx } from "clsx";
+import { US_TIMEZONES } from "@/lib/calendar/timezones";
 
 export type AdminWeeklyRule = { id: string; dayOfWeek: number; startMinute: number; endMinute: number };
 export type AdminBookingType = {
@@ -24,6 +25,7 @@ export type AdminHost = {
   email: string | null;
   role: string;
   title: string | null;
+  avatarUrl: string | null;
   timezone: string;
   calendarId: string | null;
   minNoticeHours: number;
@@ -59,6 +61,43 @@ function fromHHMM(value: string) {
 }
 function slugify(name: string) {
   return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// Read an image file and downscale to a small square data URL so avatars stay tiny.
+function fileToAvatarDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Could not read that file."));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("That file is not a readable image."));
+      img.onload = () => {
+        const size = 128;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(String(reader.result));
+          return;
+        }
+        const min = Math.min(img.width, img.height);
+        const sx = (img.width - min) / 2;
+        const sy = (img.height - min) / 2;
+        ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 async function api(url: string, method: string, body?: unknown) {
@@ -102,6 +141,14 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
     });
   }
 
+  async function removeHost(h: AdminHost) {
+    if (!window.confirm(`Remove ${h.name} from scheduling? Their bookings and availability will be deleted. This cannot be undone.`)) return;
+    await run(async () => {
+      await api(`/api/booking-hosts/${h.id}`, "DELETE");
+      if (selectedId === h.id) setSelectedId(null);
+    });
+  }
+
   return (
     <div className="px-5 py-6 lg:px-8">
       <div className="mb-5">
@@ -125,20 +172,30 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
             <Plus className="h-4 w-4" /> New team member
           </button>
           {hosts.map((h) => (
-            <button
+            <div
               key={h.id}
-              onClick={() => setSelectedId(h.id)}
               className={clsx(
-                "block w-full rounded-lg border px-3 py-2 text-left transition",
+                "flex items-stretch gap-1 rounded-lg border pr-1 transition",
                 h.id === selectedId ? "border-brand-sweet bg-brand-sweet/10" : "border-brand-lea/10 hover:bg-brand-cloudDancer/30"
               )}
             >
-              <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-sm font-semibold text-brand-lea">{h.name}</span>
-                {!h.isActive ? <span className="text-[10px] font-bold uppercase text-brand-grey">off</span> : null}
-              </div>
-              <div className="truncate text-[11px] text-brand-grey">/book/{h.slug}</div>
-            </button>
+              <button onClick={() => setSelectedId(h.id)} className="min-w-0 flex-1 px-3 py-2 text-left">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-sm font-semibold text-brand-lea">{h.name}</span>
+                  {!h.isActive ? <span className="text-[10px] font-bold uppercase text-brand-grey">off</span> : null}
+                </div>
+                <div className="truncate text-[11px] text-brand-grey">/book/{h.slug}</div>
+              </button>
+              <button
+                onClick={() => removeHost(h)}
+                disabled={busy}
+                title={`Remove ${h.name}`}
+                aria-label={`Remove ${h.name}`}
+                className="flex shrink-0 items-center rounded p-1.5 text-brand-grey/70 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
           ))}
           {hosts.length === 0 ? <p className="px-1 text-xs text-brand-grey">No team members yet.</p> : null}
         </aside>
@@ -186,12 +243,78 @@ function HostDetail({
 
   return (
     <div className="space-y-5">
+      <PhotoCard host={host} busy={busy} run={run} />
       <ShareLink slug={host.slug} />
       <Settings host={host} busy={busy} run={run} onDeleted={onDeleted} />
       <WeeklyAvailability host={host} busy={busy} run={run} />
       <BookingTypes host={host} busy={busy} run={run} />
       <Overrides host={host} overrides={hostOverrides} busy={busy} run={run} />
     </div>
+  );
+}
+
+function PhotoCard({
+  host,
+  busy,
+  run
+}: {
+  host: AdminHost;
+  busy: boolean;
+  run: (fn: () => Promise<void>) => Promise<void>;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [reading, setReading] = useState(false);
+
+  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (inputRef.current) inputRef.current.value = "";
+    if (!file) return;
+    setReading(true);
+    try {
+      const avatarUrl = await fileToAvatarDataUrl(file);
+      await run(async () => {
+        await api(`/api/booking-hosts/${host.id}`, "PATCH", { avatarUrl });
+      });
+    } finally {
+      setReading(false);
+    }
+  }
+
+  return (
+    <Card title="Profile photo" icon={ImageUp}>
+      <div className="flex items-center gap-4">
+        {host.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={host.avatarUrl} alt={host.name} className="h-16 w-16 shrink-0 rounded-full object-cover ring-1 ring-brand-lea/15" />
+        ) : (
+          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-brand-lea text-lg font-bold text-white">
+            {initials(host.name)}
+          </span>
+        )}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => inputRef.current?.click()}
+              disabled={busy || reading}
+              className="rounded-lg bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-lea/90 disabled:opacity-50"
+            >
+              {reading ? "Reading…" : host.avatarUrl ? "Replace photo" : "Upload photo"}
+            </button>
+            {host.avatarUrl ? (
+              <button
+                onClick={() => run(async () => void api(`/api/booking-hosts/${host.id}`, "PATCH", { avatarUrl: null }))}
+                disabled={busy}
+                className="rounded-lg border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/30"
+              >
+                Remove
+              </button>
+            ) : null}
+          </div>
+          <p className="text-xs text-brand-grey">Shown next to {host.name} on the calendar timeline. Square images look best; large photos are scaled down automatically.</p>
+        </div>
+        <input ref={inputRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
+      </div>
+    </Card>
   );
 }
 
@@ -301,7 +424,16 @@ function Settings({
           </select>
         </Field>
         <Field label="Timezone">
-          <input value={form.timezone} onChange={(e) => set("timezone", e.target.value)} className={inp} />
+          <select value={form.timezone} onChange={(e) => set("timezone", e.target.value)} className={inp}>
+            {US_TIMEZONES.map((z) => (
+              <option key={z.value} value={z.value}>
+                {z.label}
+              </option>
+            ))}
+            {US_TIMEZONES.every((z) => z.value !== form.timezone) ? (
+              <option value={form.timezone}>{form.timezone}</option>
+            ) : null}
+          </select>
         </Field>
         <Field label="Active">
           <label className="flex items-center gap-2 py-2 text-sm text-brand-lea">

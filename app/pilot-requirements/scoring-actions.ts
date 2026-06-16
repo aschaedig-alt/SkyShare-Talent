@@ -5,8 +5,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { canEditScoring, saveScoringConfigDoc } from "@/lib/matching/scoring-config.server";
 import { setMatchFeedback, type MatchVerdict } from "@/lib/matching/match-feedback";
+import { runRequirementScan, type RequirementScan } from "@/lib/matching/run-scan";
 
 export type ActionResult = { ok: boolean; error?: string };
+export type ScanResult = { ok: boolean; data?: RequirementScan; error?: string };
 
 async function guard(): Promise<ActionResult | null> {
   if (!(await canEditScoring())) {
@@ -33,6 +35,17 @@ export async function saveScoringConfig(input: unknown): Promise<ActionResult> {
   revalidatePath("/pilot-requirements");
   revalidatePath("/pilot-requirements/scoring");
   return { ok: true };
+}
+
+// Read-only re-scan of candidates for a requirement (no edit permission needed).
+export async function scanRequirementMatches(requirementId: string): Promise<ScanResult> {
+  if (!requirementId) return { ok: false, error: "Missing requirement." };
+  try {
+    const scan = await runRequirementScan(requirementId);
+    return { ok: true, data: scan };
+  } catch {
+    return { ok: false, error: "Could not scan candidates." };
+  }
 }
 
 export async function submitMatchFeedback(input: {

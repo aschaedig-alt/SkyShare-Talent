@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clsx } from "clsx";
-import type { Cohort, CalendarDay, SessionListItem } from "@/lib/data/orientation";
+import type { Cohort, CalendarDay, SessionListItem, UnscheduledHire } from "@/lib/data/orientation";
 
 function fmt(iso: string) {
   return new Intl.DateTimeFormat("en", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(iso));
@@ -119,14 +119,29 @@ export function OrientationOverview({
   upcoming,
   past,
   cohorts,
-  calendar
+  calendar,
+  unscheduled
 }: {
   upcoming: SessionListItem[];
   past: SessionListItem[];
   cohorts: Cohort[];
   calendar: CalendarDay[];
+  unscheduled: UnscheduledHire[];
 }) {
   const router = useRouter();
+
+  async function addToSession(hireId: string, sessionId: string) {
+    if (!sessionId) return;
+    setBusyHire(hireId);
+    await fetch(`/api/orientation/sessions/${sessionId}/attendees`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newHireId: hireId })
+    });
+    setBusyHire(null);
+    router.refresh();
+  }
+  const [busyHire, setBusyHire] = useState<string | null>(null);
   const [view, setView] = useState<"sessions" | "cohorts">("sessions");
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -211,6 +226,34 @@ export function OrientationOverview({
         </div>
         <button onClick={() => setAdding(true)} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden">+ New session</button>
       </section>
+
+      {unscheduled.length > 0 ? (
+        <section className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+          <div className="text-sm font-semibold text-amber-900">
+            {unscheduled.length} {unscheduled.length === 1 ? "hire still needs" : "hires still need"} an orientation
+          </div>
+          <p className="mt-0.5 text-xs text-amber-800">Not yet attended and not on any upcoming session — schedule them so none slip through.</p>
+          <div className="mt-3 space-y-1.5">
+            {unscheduled.map((h) => (
+              <div key={h.id} className="flex flex-wrap items-center gap-2 rounded bg-white/70 px-3 py-2 text-sm">
+                <Link href={`/people/${h.id}`} className="font-medium text-brand-lea hover:underline">{h.name}</Link>
+                <span className="text-xs text-brand-grey">{h.position ?? "—"}</span>
+                {h.rescheduleCount > 0 ? <span className="rounded-full bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold text-brand-lea">moved {h.rescheduleCount}×</span> : null}
+                <span className="ml-auto">
+                  {upcoming.length > 0 ? (
+                    <select value="" onChange={(e) => addToSession(h.id, e.target.value)} disabled={busyHire === h.id} className="rounded border border-brand-lea/15 bg-white px-2 py-1 text-xs text-brand-grey">
+                      <option value="">Add to…</option>
+                      {upcoming.map((s) => <option key={s.id} value={s.id}>{fmt(s.date)}</option>)}
+                    </select>
+                  ) : (
+                    <span className="text-xs text-brand-grey">create a session first</span>
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <div className="border-b border-brand-lea/10">
         <nav className="flex gap-6">

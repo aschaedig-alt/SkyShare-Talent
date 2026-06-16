@@ -63,7 +63,10 @@ export type AttendeeView = {
   cardReady: boolean;
   swagReady: boolean;
   sentTemplateKeys: string[];
+  rescheduleCount: number;
 };
+
+export type SessionRef = { id: string; date: string };
 
 export type PrepTaskView = {
   id: string;
@@ -88,6 +91,7 @@ export type SessionDetail = {
   headcount: { total: number; outOfTown: number; pilots: number; confirmed: number };
   candidates: SessionCandidate[];
   templates: EmailTemplateDef[];
+  otherSessions: SessionRef[];
 };
 
 function parseKeys(json: string): string[] {
@@ -104,7 +108,7 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
     where: { id },
     include: {
       attendees: {
-        include: { newHire: { select: { id: true, name: true, position: true, department: true } } },
+        include: { newHire: { select: { id: true, name: true, position: true, department: true, orientationRescheduleCount: true } } },
         orderBy: { newHire: { name: "asc" } }
       },
       prepTasks: { orderBy: { order: "asc" } }
@@ -124,8 +128,17 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
     ipadReady: a.ipadReady,
     cardReady: a.cardReady,
     swagReady: a.swagReady,
-    sentTemplateKeys: parseKeys(a.sentTemplateKeys)
+    sentTemplateKeys: parseKeys(a.sentTemplateKeys),
+    rescheduleCount: a.newHire.orientationRescheduleCount
   }));
+
+  const otherSessions: SessionRef[] = (
+    await prisma.orientationSession.findMany({
+      where: { id: { not: id }, status: "UPCOMING" },
+      select: { id: true, date: true },
+      orderBy: { date: "asc" }
+    })
+  ).map((o) => ({ id: o.id, date: o.date.toISOString() }));
 
   const attendeeHireIds = new Set(s.attendees.map((a) => a.newHireId));
   const sessionDay = s.date.toISOString().slice(0, 10);
@@ -160,8 +173,57 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
       confirmed: attendees.filter((a) => a.confirmed === "CONFIRMED").length
     },
     candidates,
-    templates: await getEmailTemplates()
+    templates: await getEmailTemplates(),
+    otherSessions
   };
+}
+
+/** Moves an attendee to another session: detaches from the old one (clearing its email
+ * tracking), schedules them on the new one fresh, bumps the reschedule count, syncs the
+ * hire's orientation date, and resets their "Attended orientation" task. */
+export async function moveAttendee(attendeeId: string, toSessionId: string) {
+  const att = await prisma.orientationAttendee.findUnique({ where: { id: attendeeId }, select: { newHireId: true, sessionId: true } });
+  if (!att || att.sessionId === toSessionId) return;
+  const target = await prisma.orientationSession.findUnique({ where: { id: toSessionId }, select: { date: true } });
+  if (!target) return;
+
+  await prisma.orientationAttendee.upsert({
+    where: { sessionId_newHireId: { sessionId: toSessionId, newHireId: att.newHireId } },
+    create: { sessionId: toSessionId, newHireId: att.newHireId },
+    update: {}
+  });
+  await prisma.orientationAttendee.delete({ where: { id: attendeeId } });
+  await prisma.newHire.update({
+    where: { id: att.newHireId },
+    data: { orientationRescheduleCount: { increment: 1 }, orientationDate: target.date }
+  });
+  await prisma.onboardingTask.updateMany({
+    where: { newHireId: att.newHireId, key: "attended_orientation" },
+    data: { status: "TODO", completedAt: null }
+  });
+}
+
+export type UnscheduledHire = { id: string; name: string; position: string | null; orientationDate: string | null; rescheduleCount: number };
+
+/** Active hires who still need orientation: not marked attended and not on any upcoming session. */
+export async function getUnscheduledHires(): Promise<UnscheduledHire[]> {
+  const upcoming = await prisma.orientationSession.findMany({ where: { status: "UPCOMING" }, select: { attendees: { select: { newHireId: true } } } });
+  const scheduled = new Set(upcoming.flatMap((s) => s.attendees.map((a) => a.newHireId)));
+  const hires = await prisma.newHire.findMany({
+    where: { stage: "ACTIVE" },
+    select: {
+      id: true,
+      name: true,
+      position: true,
+      orientationDate: true,
+      orientationRescheduleCount: true,
+      tasks: { where: { key: "attended_orientation" }, select: { status: true } }
+    },
+    orderBy: [{ orientationDate: "asc" }, { name: "asc" }]
+  });
+  return hires
+    .filter((h) => !scheduled.has(h.id) && (h.tasks[0]?.status ?? "TODO") !== "DONE")
+    .map((h) => ({ id: h.id, name: h.name, position: h.position, orientationDate: iso(h.orientationDate), rescheduleCount: h.orientationRescheduleCount }));
 }
 
 export async function createOrientationSession(input: {

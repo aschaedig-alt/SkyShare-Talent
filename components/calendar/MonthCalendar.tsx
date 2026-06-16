@@ -180,9 +180,9 @@ export function MonthCalendar({ interviews, onDayClick, onInterviewClick, onResc
                       chipClasses(interview),
                       draggingId === interview.id && "opacity-40"
                     )}
-                    title={`${formatTime(interview.startDateTime)} - ${interview.candidate.displayName}${interview.job ? ` (${interview.job.title})` : ""}`}
+                    title={`${formatTime(interview.startDateTime, interview.timezone)} - ${interview.candidate.displayName}${interview.job ? ` (${interview.job.title})` : ""}`}
                   >
-                    {formatTime(interview.startDateTime)} {interview.candidate.displayName}
+                    {formatTime(interview.startDateTime, interview.timezone)} {interview.candidate.displayName}
                   </div>
                 ))}
                 {dayInterviews.length > 3 && (
@@ -213,7 +213,7 @@ export function MonthCalendar({ interviews, onDayClick, onInterviewClick, onResc
                           }}
                           className={clsx("block w-full truncate rounded px-2 py-1 text-left text-[11px] font-medium", chipClasses(interview))}
                         >
-                          {formatTime(interview.startDateTime)} · {interview.candidate.displayName}
+                          {formatTime(interview.startDateTime, interview.timezone)} · {interview.candidate.displayName}
                         </button>
                       ))}
                     </div>

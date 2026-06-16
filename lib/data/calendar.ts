@@ -23,6 +23,8 @@ export type CalendarData = {
     title: string;
     status: string;
   }>;
+  /** Recruiting team / hiring managers, keyed by name, for timeline avatars. */
+  teamHosts: Array<{ name: string; avatarUrl: string | null }>;
   sync: {
     configured: boolean;
     direction: string | null;
@@ -69,7 +71,7 @@ export async function getCalendarData(): Promise<CalendarData> {
   const now = new Date();
   const weekEnd = addDays(now, 7);
 
-  const [interviews, candidates, jobs, scheduled, completed, thisWeek, connection] = await Promise.all([
+  const [interviews, candidates, jobs, scheduled, completed, thisWeek, connection, teamHosts] = await Promise.all([
     prisma.interview.findMany({
       take: 200,
       orderBy: { startDateTime: "asc" },
@@ -130,7 +132,8 @@ export async function getCalendarData(): Promise<CalendarData> {
         }
       }
     }),
-    prisma.googleCalendarConnection.findFirst()
+    prisma.googleCalendarConnection.findFirst(),
+    prisma.bookingHost.findMany({ select: { name: true, avatarUrl: true } })
   ]);
 
   return {
@@ -159,6 +162,7 @@ export async function getCalendarData(): Promise<CalendarData> {
       };
     }),
     jobs,
+    teamHosts: teamHosts.map((h) => ({ name: h.name, avatarUrl: h.avatarUrl })),
     sync: {
       configured: isGoogleCalendarConfigured(),
       direction: connection?.syncDirection ?? null,

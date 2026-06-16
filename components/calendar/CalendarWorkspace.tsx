@@ -243,6 +243,7 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
       {view === "timeline" && (
         <ScheduleTimeline
           interviews={data.interviews}
+          teamHosts={data.teamHosts}
           onInterviewClick={handleInterviewClick}
           onReschedule={handleReschedule}
         />
