@@ -4,6 +4,7 @@ import { JobClassificationEditor } from "@/components/recruiting-jobs/JobClassif
 import { EditableGrid, type EditablePanel, type GridItem } from "@/components/shared/EditableGrid";
 import { AddCandidateToJob } from "@/components/recruiting-jobs/AddCandidateToJob";
 import { ResumeIntake } from "@/components/candidates/ResumeIntake";
+import { DocumentIntake } from "@/components/candidates/DocumentIntake";
 import type { WidgetInstance } from "@/lib/data/page-layout";
 
 type RecruitingJobsWorkspaceProps = {
@@ -234,6 +235,7 @@ function LinkedCandidates({ job }: { job: RecruitingJobDetail }) {
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
           <ResumeIntake jobId={job.id} jobTitle={job.title} />
+          <DocumentIntake jobId={job.id} />
           <AddCandidateToJob jobId={job.id} jobTitle={job.title} />
         </div>
       </div>

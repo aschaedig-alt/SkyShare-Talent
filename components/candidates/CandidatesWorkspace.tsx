@@ -13,6 +13,7 @@ import {
 import type { CandidateListData } from "@/lib/data/candidates";
 import { NewCandidateButton } from "@/components/candidates/NewCandidateButton";
 import { ResumeIntake } from "@/components/candidates/ResumeIntake";
+import { DocumentIntake } from "@/components/candidates/DocumentIntake";
 
 type CandidatesWorkspaceProps = {
   data: CandidateListData;
@@ -88,8 +89,9 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
             </p>
           </div>
           <div className="flex w-full flex-col items-stretch gap-2 xl:w-[560px]">
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <ResumeIntake variant="solid" />
+              <DocumentIntake variant="solid" />
               <NewCandidateButton />
             </div>
             <form className="flex w-full gap-2">
