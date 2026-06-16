@@ -13,6 +13,8 @@ const protectedPagePrefixes = [
   "/imports",
   "/jobs",
   "/jobs-sandbox",
+  "/orientation",
+  "/people",
   "/pilot-requirements",
   "/recruiting-jobs",
   "/reports",
