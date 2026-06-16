@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Clock, Video, MapPin, ChevronLeft, Check, CalendarClock } from "lucide-react";
+import { Clock, Video, MapPin, ChevronLeft, Check, CalendarClock, Globe } from "lucide-react";
 import { clsx } from "clsx";
 import type { PublicHost, PublicBookingType } from "@/lib/data/booking";
-import { formatDateTimeLongWithZone, zoneLabel } from "@/lib/calendar/format";
+import { formatDateTimeLongWithZone, formatTime, zoneLabel } from "@/lib/calendar/format";
+import { US_TIMEZONES } from "@/lib/calendar/timezones";
+
+type TzOption = { value: string; label: string };
 
 type Props = { slug: string; host: PublicHost };
 
@@ -81,6 +84,21 @@ export function PublicBooking({ slug, host }: Props) {
 
   const selectedLabel = useMemo(() => (slot ? formatDateTimeLongWithZone(slot, tz) : null), [slot, tz]);
 
+  // Timezone choices: standard US zones, plus the detected and host zones if not already listed.
+  const tzOptions = useMemo<TzOption[]>(() => {
+    const map = new Map<string, string>();
+    for (const z of US_TIMEZONES) map.set(z.value, z.label);
+    if (!map.has(tz)) map.set(tz, tz);
+    if (!map.has(host.timezone)) map.set(host.timezone, host.timezone);
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }, [tz, host.timezone]);
+
+  // The host's local time, shown alongside the invitee's when the zones differ.
+  const hostLabel = useMemo(
+    () => (slot && host.timezone !== tz ? `${formatTime(slot, host.timezone)} ${zoneLabel(host.timezone)} for ${host.name}` : null),
+    [slot, tz, host.timezone, host.name]
+  );
+
   async function submit() {
     if (!type || !slot) return;
     setSubmitting(true);
@@ -130,13 +148,15 @@ export function PublicBooking({ slug, host }: Props) {
 
       <div className="mt-8 rounded-2xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 sm:p-8">
         {confirmed ? (
-          <ConfirmedCard confirmed={confirmed} tz={tz} hostName={host.name} email={email} />
+          <ConfirmedCard confirmed={confirmed} tz={tz} hostName={host.name} hostTimezone={host.timezone} email={email} />
         ) : !type ? (
           <TypePicker types={host.bookingTypes} onPick={setType} />
         ) : !slot ? (
           <SlotPicker
             type={type}
             tz={tz}
+            tzOptions={tzOptions}
+            onTzChange={setTz}
             days={localDays}
             loading={loading}
             multiType={host.bookingTypes.length > 1}
@@ -147,6 +167,7 @@ export function PublicBooking({ slug, host }: Props) {
           <BookingForm
             type={type}
             selectedLabel={selectedLabel}
+            hostLabel={hostLabel}
             name={name}
             email={email}
             phone={phone}
@@ -214,6 +235,8 @@ function TypePicker({ types, onPick }: { types: PublicBookingType[]; onPick: (t:
 function SlotPicker({
   type,
   tz,
+  tzOptions,
+  onTzChange,
   days,
   loading,
   multiType,
@@ -222,6 +245,8 @@ function SlotPicker({
 }: {
   type: PublicBookingType;
   tz: string;
+  tzOptions: TzOption[];
+  onTzChange: (tz: string) => void;
   days: LocalDay[];
   loading: boolean;
   multiType: boolean;
@@ -240,7 +265,22 @@ function SlotPicker({
           <h2 className="text-base font-semibold text-brand-lea">{type.name}</h2>
           <TypeMeta type={type} />
         </div>
-        <span className="rounded-full bg-brand-cloudDancer/60 px-3 py-1 text-[11px] font-medium text-brand-grey">Times in {zoneLabel(tz)}</span>
+        <label className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand-cloudDancer/60 py-1 pl-2.5 pr-1 text-[11px] font-medium text-brand-grey">
+          <Globe className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Times in</span>
+          <select
+            value={tz}
+            onChange={(e) => onTzChange(e.target.value)}
+            aria-label="Display timezone"
+            className="max-w-[10rem] truncate rounded-full bg-transparent py-0.5 pr-1 text-[11px] font-semibold text-brand-lea focus:outline-none"
+          >
+            {tzOptions.map((z) => (
+              <option key={z.value} value={z.value}>
+                {z.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {loading ? (
@@ -274,6 +314,7 @@ function SlotPicker({
 function BookingForm(props: {
   type: PublicBookingType;
   selectedLabel: string | null;
+  hostLabel: string | null;
   name: string;
   email: string;
   phone: string;
@@ -307,6 +348,7 @@ function BookingForm(props: {
           <CalendarClock className="h-4 w-4 text-brand-gold" />
           {selectedLabel}
         </div>
+        {props.hostLabel ? <div className="mt-1 pl-6 text-xs text-brand-grey">{props.hostLabel}</div> : null}
       </div>
 
       <div className="mt-4 grid gap-3">
@@ -365,14 +407,17 @@ function ConfirmedCard({
   confirmed,
   tz,
   hostName,
+  hostTimezone,
   email
 }: {
   confirmed: { start: string; typeName: string; location: string | null };
   tz: string;
   hostName: string;
+  hostTimezone: string;
   email: string;
 }) {
   const when = formatDateTimeLongWithZone(confirmed.start, tz);
+  const hostWhen = hostTimezone !== tz ? `${formatTime(confirmed.start, hostTimezone)} ${zoneLabel(hostTimezone)} for ${hostName}` : null;
 
   return (
     <div className="py-4 text-center">
@@ -387,6 +432,7 @@ function ConfirmedCard({
         <div className="flex items-center gap-2">
           <CalendarClock className="h-4 w-4 text-brand-gold" /> {when}
         </div>
+        {hostWhen ? <div className="mt-1 pl-6 text-xs text-brand-grey">{hostWhen}</div> : null}
         {confirmed.location ? (
           <div className="mt-2 flex items-center gap-2 text-brand-grey">
             <MapPin className="h-4 w-4" /> {confirmed.location}
