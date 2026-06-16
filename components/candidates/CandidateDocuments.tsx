@@ -19,7 +19,11 @@ import {
   FileWarning
 } from "lucide-react";
 import { clsx } from "clsx";
-import { DOCUMENT_TYPES } from "@/lib/files/document-types";
+import { DOCUMENT_TYPES, detectDocumentType } from "@/lib/files/document-types";
+
+function effectiveType(file: { documentType: string | null; displayFilename: string }): string {
+  return file.documentType || detectDocumentType(file.displayFilename);
+}
 
 // PDF.js highlight viewer — client-only, loaded on demand (used during search).
 const PdfViewer = dynamic(() => import("@/components/candidates/PdfViewer").then((m) => m.PdfViewer), {
@@ -144,6 +148,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [docSearch, setDocSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("All");
   const [showLink, setShowLink] = useState(false);
   const [unassigned, setUnassigned] = useState<Array<{ id: string; displayFilename: string; uploadedAt: string }>>([]);
   const [linkLoading, setLinkLoading] = useState(false);
@@ -176,6 +181,25 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
     if (!files.some((f) => f.id === leftId)) setLeftId(resume?.id ?? files[0]?.id ?? null);
     if (rightId && !files.some((f) => f.id === rightId)) setRightId(findPilotApp(files, resume?.id)?.id ?? null);
   }, [files, activeId, leftId, rightId]);
+
+  const typeCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const f of files) {
+      const t = effectiveType(f);
+      m.set(t, (m.get(t) ?? 0) + 1);
+    }
+    return m;
+  }, [files]);
+  const presentTypes = DOCUMENT_TYPES.filter((t) => typeCounts.has(t));
+  const filteredFiles = typeFilter === "All" ? files : files.filter((f) => effectiveType(f) === typeFilter);
+
+  // Keep the open document inside the active filter.
+  useEffect(() => {
+    if (typeFilter !== "All" && filteredFiles.length > 0 && !filteredFiles.some((f) => f.id === activeId)) {
+      setActiveId(filteredFiles[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typeFilter]);
 
   const activeFile = files.find((f) => f.id === activeId) ?? files[0] ?? null;
   const leftFile = files.find((f) => f.id === leftId) ?? null;
@@ -319,11 +343,32 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
         </div>
       )}
 
+      {/* Type filter chips */}
+      {files.length > 0 && presentTypes.length > 1 && (
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-brand-lea/10 px-3 py-2">
+          <button
+            onClick={() => setTypeFilter("All")}
+            className={clsx("rounded-full px-2.5 py-1 text-[11px] font-semibold transition", typeFilter === "All" ? "bg-brand-lea text-white" : "bg-brand-cloudDancer/60 text-brand-grey hover:text-brand-lea")}
+          >
+            All <span className="opacity-70">{files.length}</span>
+          </button>
+          {presentTypes.map((t) => (
+            <button
+              key={t}
+              onClick={() => setTypeFilter(t)}
+              className={clsx("rounded-full px-2.5 py-1 text-[11px] font-semibold transition", typeFilter === t ? "bg-brand-lea text-white" : "bg-brand-cloudDancer/60 text-brand-grey hover:text-brand-lea")}
+            >
+              {t} <span className="opacity-70">{typeCounts.get(t)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Tab strip + layout toggle (only when there are documents) */}
       {files.length > 0 && (
       <div className="flex items-center gap-2 border-b border-brand-lea/10 px-2 py-1.5">
         <div className="flex items-center gap-1 overflow-x-auto">
-          {files.map((file) => {
+          {filteredFiles.map((file) => {
             const Icon = fileIcon(file);
             const active = effectiveLayout === "single" && file.id === activeFile?.id;
             const isMatch = matchingIds.has(file.id);
