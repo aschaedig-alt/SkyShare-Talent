@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { clsx } from "clsx";
-import { requireModulePageAccess } from "@/lib/data/module-access";
 import { getAnalyticsData, type AnalyticsRange } from "@/lib/data/compliments";
-import { getComplimentsSettings } from "@/lib/compliments/settings";
+import { getComplimentsSettings, getComplimentsRole } from "@/lib/compliments/settings";
 import { Card } from "@/components/compliments/Card";
 import { MetricCard } from "@/components/compliments/MetricCard";
 import { Avatar } from "@/components/compliments/Avatar";
@@ -25,7 +24,7 @@ function rangeFromParam(value: string | undefined): AnalyticsRange {
 }
 
 export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
-  const { role } = await requireModulePageAccess("people");
+  const role = await getComplimentsRole();
 
   if (role === VIEWER_ROLE) {
     return (

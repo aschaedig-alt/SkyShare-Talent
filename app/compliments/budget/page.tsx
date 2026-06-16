@@ -1,6 +1,5 @@
 import { clsx } from "clsx";
-import { requireModulePageAccess } from "@/lib/data/module-access";
-import { getComplimentsSettings } from "@/lib/compliments/settings";
+import { getComplimentsSettings, getComplimentsRole } from "@/lib/compliments/settings";
 import { getBudgetData } from "@/lib/data/compliments-budget";
 import { Card } from "@/components/compliments/Card";
 import { MetricCard } from "@/components/compliments/MetricCard";
@@ -13,7 +12,11 @@ const usd0 = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD"
 const usd2 = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
 
 export default async function BudgetPage() {
-  const { role } = await requireModulePageAccess("people");
+  // Access to the /compliments area is gated by the layout; here we only need
+  // the role for the admin sub-gate. Use getComplimentsRole (which never
+  // redirects) rather than requireModulePageAccess (which redirects with no
+  // session and leaves a force-dynamic page blank).
+  const role = await getComplimentsRole();
 
   if (role !== "ADMIN") {
     return (
