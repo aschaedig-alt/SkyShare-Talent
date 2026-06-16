@@ -9,6 +9,7 @@ import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
 import { isPrivateFileStorageReady, shouldRequirePrivateFileStorage } from "@/lib/files/file-security";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { extractFileText } from "@/lib/files/pdf-text";
+import { detectDocumentType } from "@/lib/files/document-types";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -108,6 +109,7 @@ export async function POST(request: Request, context: RouteContext) {
           mimeType: file.type || null,
           sizeBytes: file.size,
           source: "candidate-profile-upload",
+          documentType: detectDocumentType(originalFilename),
           extractedText: extractedText || null,
           textExtractedAt: extractedText ? new Date() : null,
           metadataJson: JSON.stringify({

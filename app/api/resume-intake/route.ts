@@ -161,9 +161,10 @@ export async function POST(request: Request) {
           mimeType: file.type || null,
           sizeBytes: file.size,
           source: "resume-intake",
+          documentType: "Resume",
           extractedText: text || null,
           textExtractedAt: text ? new Date() : null,
-          metadataJson: JSON.stringify({ documentType: "resume", linkedBy: "resume-intake", storageProvider: storage.provider, uploadedByEmail: auth.user.email })
+          metadataJson: JSON.stringify({ linkedBy: "resume-intake", storageProvider: storage.provider, uploadedByEmail: auth.user.email })
         }
       });
 

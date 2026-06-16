@@ -19,6 +19,7 @@ import {
   FileWarning
 } from "lucide-react";
 import { clsx } from "clsx";
+import { DOCUMENT_TYPES } from "@/lib/files/document-types";
 
 // PDF.js highlight viewer — client-only, loaded on demand (used during search).
 const PdfViewer = dynamic(() => import("@/components/candidates/PdfViewer").then((m) => m.PdfViewer), {
@@ -34,6 +35,7 @@ export type CandidateFileItem = {
   mimeType: string | null;
   sizeBytes: number | null;
   source: string | null;
+  documentType: string | null;
   uploadedAt: string;
   extractedText: string | null;
 };
@@ -197,6 +199,21 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
       setError(e instanceof Error ? e.message : "Rename failed.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleSetType(id: string, documentType: string) {
+    setError(null);
+    try {
+      const res = await fetch(`/api/candidate-files/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentType })
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.message ?? "Could not set type.");
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not set type.");
     }
   }
 
@@ -474,6 +491,18 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
               <>
                 <span className="flex-1 truncate text-sm font-medium text-brand-lea">{activeFile.displayFilename}</span>
                 {activeFile.sizeBytes ? <span className="text-xs text-brand-grey">{formatBytes(activeFile.sizeBytes)}</span> : null}
+                <select
+                  value={activeFile.documentType ?? ""}
+                  onChange={(e) => handleSetType(activeFile.id, e.target.value)}
+                  className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-xs font-semibold text-brand-lea outline-none transition focus:border-brand-gold"
+                  title="Document type"
+                  aria-label="Document type"
+                >
+                  <option value="" disabled>Set type…</option>
+                  {DOCUMENT_TYPES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
                 <button onClick={() => { setRenamingId(activeFile.id); setRenameValue(activeFile.displayFilename); }} className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/40 hover:text-brand-lea" aria-label="Rename" title="Rename"><Pencil className="h-4 w-4" /></button>
                 {activeFile.storageKey && (
                   <a href={`/api/candidate-files/${activeFile.id}`} download className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/40 hover:text-brand-lea" aria-label="Download" title="Download"><Download className="h-4 w-4" /></a>

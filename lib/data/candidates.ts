@@ -60,6 +60,7 @@ export type CandidateProfileData = {
     mimeType: string | null;
     sizeBytes: number | null;
     source: string | null;
+    documentType: string | null;
     uploadedAt: string;
     extractedText: string | null;
   }>;
@@ -324,6 +325,7 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
       mimeType: file.mimeType,
       sizeBytes: file.sizeBytes,
       source: file.source,
+      documentType: file.documentType,
       uploadedAt: file.uploadedAt.toISOString(),
       extractedText: file.extractedText
     })),

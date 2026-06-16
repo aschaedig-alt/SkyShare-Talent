@@ -428,6 +428,7 @@ model CandidateFile {
   mimeType          String?
   sizeBytes         Int?
   source            String?
+  documentType      String?
   metadataJson      String?
   extractedText     String?
   textExtractedAt   DateTime?

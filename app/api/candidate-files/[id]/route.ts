@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
 import { requireApiPermission } from "@/lib/auth/route-auth";
+import { isDocumentType } from "@/lib/files/document-types";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -77,14 +78,33 @@ export async function PATCH(request: Request, context: RouteContext) {
   const { id } = await context.params;
 
   try {
-    const body = (await request.json()) as { displayFilename?: string };
-    const displayFilename = (body.displayFilename ?? "").trim();
+    const body = (await request.json()) as { displayFilename?: string; documentType?: string };
+    const hasName = typeof body.displayFilename === "string";
+    const hasType = typeof body.documentType === "string";
 
-    if (displayFilename.length < 1) {
-      return NextResponse.json({ message: "A file name is required." }, { status: 400 });
+    if (!hasName && !hasType) {
+      return NextResponse.json({ message: "Nothing to update." }, { status: 400 });
     }
-    if (displayFilename.length > 200) {
-      return NextResponse.json({ message: "File name is too long." }, { status: 400 });
+
+    const data: { displayFilename?: string; documentType?: string; renamedAt?: Date } = {};
+
+    if (hasName) {
+      const displayFilename = (body.displayFilename ?? "").trim();
+      if (displayFilename.length < 1) {
+        return NextResponse.json({ message: "A file name is required." }, { status: 400 });
+      }
+      if (displayFilename.length > 200) {
+        return NextResponse.json({ message: "File name is too long." }, { status: 400 });
+      }
+      data.displayFilename = displayFilename;
+      data.renamedAt = new Date();
+    }
+
+    if (hasType) {
+      if (!isDocumentType(body.documentType)) {
+        return NextResponse.json({ message: "Unknown document type." }, { status: 400 });
+      }
+      data.documentType = body.documentType;
     }
 
     const existing = await prisma.candidateFile.findUnique({ where: { id }, select: { candidateId: true } });
@@ -94,11 +114,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const updated = await prisma.candidateFile.update({
       where: { id },
-      data: { displayFilename, renamedAt: new Date() },
+      data,
       select: {
         id: true,
         originalFilename: true,
         displayFilename: true,
+        documentType: true,
         storageKey: true,
         mimeType: true,
         sizeBytes: true,
@@ -110,11 +131,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     await prisma.auditEvent.create({
       data: {
         actorId: auth.user.id,
-        eventType: "CANDIDATE_FILE_RENAMED",
+        eventType: "CANDIDATE_FILE_UPDATED",
         entityType: "CandidateFile",
         entityId: id,
-        summary: `Renamed candidate file to ${displayFilename}.`,
-        payloadJson: JSON.stringify({ candidateId: existing.candidateId, displayFilename })
+        summary: hasType ? `Set document type to ${data.documentType}.` : `Renamed candidate file to ${data.displayFilename}.`,
+        payloadJson: JSON.stringify({ candidateId: existing.candidateId, ...data })
       }
     });
 
@@ -124,7 +145,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ message: "Unable to rename file." }, { status: 500 });
+    return NextResponse.json({ message: "Unable to update file." }, { status: 500 });
   }
 }
 

@@ -6,6 +6,7 @@ import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
 import { isPrivateFileStorageReady, shouldRequirePrivateFileStorage } from "@/lib/files/file-security";
 import { extractFileText } from "@/lib/files/pdf-text";
 import { normalizeEmail, normalizeName, normalizePhone } from "@/lib/candidates/normalize";
+import { detectDocumentType } from "@/lib/files/document-types";
 
 const maxFileSizeBytes = 25 * 1024 * 1024;
 
@@ -112,6 +113,7 @@ export async function POST(request: Request) {
             mimeType: file.type || null,
             sizeBytes: file.size,
             source: "document-intake",
+            documentType: detectDocumentType(originalFilename),
             extractedText: text || null,
             textExtractedAt: text ? new Date() : null,
             metadataJson: JSON.stringify({ linkedBy: "document-intake", matchedBy: basis, storageProvider: storage.provider, uploadedByEmail: auth.user.email })
@@ -141,6 +143,7 @@ export async function POST(request: Request) {
             mimeType: file.type || null,
             sizeBytes: file.size,
             source: "imports-upload",
+            documentType: detectDocumentType(originalFilename),
             extractedText: text || null,
             textExtractedAt: text ? new Date() : null,
             metadataJson: JSON.stringify({ assignmentStatus: "unassigned", reason: basis === "ambiguous" ? "multiple name matches" : "no candidate match", storageProvider: storage.provider })

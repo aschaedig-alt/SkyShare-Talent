@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
 import { extractFileText } from "@/lib/files/pdf-text";
+import { detectDocumentType } from "@/lib/files/document-types";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -49,6 +50,7 @@ export async function POST(request: Request, context: RouteContext) {
       where: { id: file.id },
       data: {
         candidateId: id,
+        documentType: file.documentType ?? detectDocumentType(file.displayFilename || file.originalFilename),
         extractedText: extractedText ?? file.extractedText,
         textExtractedAt: extractedText ? new Date() : file.textExtractedAt
       }

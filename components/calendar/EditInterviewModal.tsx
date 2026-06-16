@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Loader, Trash2 } from "lucide-react";
 import type { CalendarData } from "@/lib/data/calendar";
 import { interviewTypes, INTERVIEW_TYPE_META, DEFAULT_INTERVIEW_TYPE } from "@/lib/calendar/interview-types";
@@ -30,10 +30,21 @@ export function EditInterviewModal({ interview, jobs, onClose, onSaved }: EditIn
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [interviewType, setInterviewType] = useState<string>(interview.interviewType || DEFAULT_INTERVIEW_TYPE);
 
-  async function handleSave(formData: FormData) {
+  // Derive the interview's actual duration so editing doesn't silently reset it to 60.
+  const initialDuration = (() => {
+    if (!interview.endDateTime) return "60";
+    const mins = Math.round(
+      (new Date(interview.endDateTime).getTime() - new Date(interview.startDateTime).getTime()) / 60000
+    );
+    return ["30", "45", "60", "90", "120"].includes(String(mins)) ? String(mins) : "60";
+  })();
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setSaving(true);
     setMessage(null);
 
+    const formData = new FormData(event.currentTarget);
     const payload = {
       jobId: String(formData.get("jobId") ?? ""),
       title: String(formData.get("title") ?? ""),
@@ -117,19 +128,7 @@ export function EditInterviewModal({ interview, jobs, onClose, onSaved }: EditIn
         </div>
 
         {/* Form */}
-        <form action={handleSave} className="space-y-3 p-6">
-          {message && (
-            <div
-              className={`rounded p-3 text-sm ${
-                message.type === "success"
-                  ? "border border-emerald-300 bg-emerald-50 text-emerald-700"
-                  : "border border-red-300 bg-red-50 text-red-700"
-              }`}
-            >
-              {message.text}
-            </div>
-          )}
-
+        <form onSubmit={handleSubmit} className="space-y-3 p-6">
           <div className="grid gap-3 md:grid-cols-2">
             <label className="grid gap-1 text-xs font-semibold text-brand-lea">
               Title
@@ -213,7 +212,7 @@ export function EditInterviewModal({ interview, jobs, onClose, onSaved }: EditIn
               Duration
               <select
                 name="durationMinutes"
-                defaultValue="60"
+                defaultValue={initialDuration}
                 className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm"
               >
                 <option value="30">30 minutes</option>
@@ -261,6 +260,19 @@ export function EditInterviewModal({ interview, jobs, onClose, onSaved }: EditIn
               className="rounded border border-brand-lea/20 px-3 py-2 text-sm"
             />
           </label>
+
+          {/* Inline feedback — kept next to the buttons so it's always visible */}
+          {message && (
+            <div
+              className={`rounded p-3 text-sm ${
+                message.type === "success"
+                  ? "border border-emerald-300 bg-emerald-50 text-emerald-700"
+                  : "border border-red-300 bg-red-50 text-red-700"
+              }`}
+            >
+              {message.text}
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex items-center justify-between gap-2 pt-2">
