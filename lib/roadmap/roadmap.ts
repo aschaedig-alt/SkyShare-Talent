@@ -29,13 +29,13 @@ Essential bugs and missing features from the initial build.
 ## Phase 2: High Priority Features
 Core recruiting capabilities.
 - [x] 2.1 Duplicate Job Detection & Merge (Jun 9) — shipped; quality improvements planned
-- [ ] 2.2 Candidate Suggestion Engine — match candidates to open roles
+- [x] 2.2 Candidate Suggestion Engine (Jun 16) — matches candidates to open roles via pilot-requirement gates plus a scoring engine (sub-scores, per-position config, triage + feedback); per-job candidate fit shows on the Recruiting Jobs detail (JobScreeningPanel) and a candidate scan runs on Pilot Requirements
 - [x] 2.3 Google Calendar Sync, two-way (Jun 10) — service account, stage color-coding
 
 ## Phase 3: UX & Polish
 Making the day-to-day experience better.
 - [x] Sidebar redesign (Jun 11) — squared icon rail + items panel; domains Home/Recruiting/People/Data/Admin; Publishing folded into Recruiting as a collapsible section (Job Post Builder, Final Review, Content Blocks); collapsible sections remember their state; hover flyouts + mobile drawer
-- [~] People workspace — Pre-onboarding shipped (below); orientation tracker + recognition still to come
+- [x] People workspace — Pre-onboarding, Orientation tracker, and Compliments recognition are all shipped (see People Ops section)
 - [ ] 3.1 Command Center Redesign
 - [x] 3.2 Candidate Profile Editing UX (Jun 10) — split layout, profile tabs, inline PDF preview for resume/pilot app, add/rename/delete docs
 - [x] 3.3 Calendar UX Improvements (Jun 10) — month/week/day views, drag-to-reschedule, autofill, stages
@@ -44,7 +44,7 @@ Making the day-to-day experience better.
 ## Phase 4: Feature Completeness
 Filling out the platform.
 - [x] Manual candidate create + job linking (Jun 14) — "New candidate" button on the Candidates page creates a candidate from a form (no CSV); "Add candidate" on a job's Linked-candidates panel links an existing candidate (searchable) or creates a new one and links them in one step. Backed by POST /api/candidates and /api/candidate-applications
-- [x] Resume intake (Jun 14) — "Upload resumes" button (Candidates page + each job): drop multiple resumes and each one auto-creates a candidate (name/email/phone parsed from the file via unpdf extraction), attaches the resume, and (from a job) links them all to that job in one step. POST /api/resume-intake (one file per request to stay under the ~4.5MB serverless body cap); dedupes by email/phone; shows a per-file result list. Name is best-guess (filename/header heuristics) — editable on the profile; LLM extraction upgrade would improve accuracy (see [[extraction-llm-upgrade]])
+- [x] Resume intake (Jun 14) — "Upload resumes" button (Candidates page + each job): drop multiple resumes and each one auto-creates a candidate (name/email/phone parsed from the file via unpdf extraction), attaches the resume, and (from a job) links them all to that job in one step. POST /api/resume-intake (one file per request to stay under the ~4.5MB serverless body cap); dedupes by email/phone; shows a per-file result list. Name is best-guess (filename/header heuristics) — editable on the profile; an LLM extraction upgrade would improve accuracy (tracked under Document Intelligence below)
 - [x] Document checklist + type filter (Jun 14) — candidate profile sidebar shows a real document checklist driven by the type tags: each expected document is green (on file) or red (required + missing) / muted (optional + missing), with an X/Y summary; the Documents tab gained type-filter chips to narrow files by tag
 - [x] Document currency roll-up + live widget (Jun 14) — Reports gained a "Document currency" panel: workspace-wide counts (expired / due 30 / due 90 / tracked) + a table of the soonest expirations linking to each candidate. New data-bound "Document currency (live)" widget reads the same roll-up and can be dropped on the Jobs/Calendar editable pages (widgets can now receive live data via EditableGrid). lib/data/document-currency.ts is the shared source
 - [x] Document expiry + currency panel (Jun 14) — CandidateFile.expiresAt; expirable docs (Medical, Passport, Driver's License, FCC, Pilot's Certificate, Insurance) get a date picker on the Documents tab. A Currency panel on the profile counts down each dated doc and color-codes expired (red) / due within 30 days (amber) / current (green), and lists expirable docs still missing a date
@@ -85,6 +85,9 @@ Behind-the-scenes work that keeps everything running.
 - [x] Feedback button + admin review page (Jun 10) — any user submits ideas/bugs/questions
 - [x] Workspace logo library (Jun 11) — admins upload multiple named logos in Settings (Branding) and assign one to each placement: sidebar mark, login page, and reports/exports; logo also serves as the Home button
 - [x] Sidebar polish (Jun 11) — rail locked to full screen height (only panel/content scroll), Admin pinned to the bottom, thin gold hairline dividers between rail items, wider 70px rail; Settings tabs (General/Team Members/Activity/Feedback/Templates) moved into the Admin panel as nav items
+- [x] Project moved off OneDrive (Jun 17) — repo now lives at C:/Users/Recruiter/Projects/skyshare-talent-ops; path references updated; stale OneDrive-pinned sessions archived
+- [x] Secured leaked database credential (Jun 17) — .env had been committed to the public GitHub repo; rotated the Neon password, untracked .env, removed redundant plaintext secret copies, verified prod + local still connect
+- [ ] Full local dev parity — real Google login + real S3 uploads on localhost (today dev bypasses auth and saves files to local disk, which is fine for everyday work); when wanted, add the localhost OAuth redirect URI in Google Cloud Console and fill AUTH_GOOGLE_ID/SECRET + AWS keys in .env.local (templates already stubbed there)
 
 ## Document Intelligence
 Making candidate documents searchable and structured.
@@ -110,7 +113,7 @@ Supporting the team beyond recruiting.
 - [x] Orientation module (Jun 12) — People > Orientation: create in-person SLC sessions; per-session prep checklist (default template with owners + due-X-days-before, editable); attendees suggested from pre-onboarding orientation dates (add/remove for last-minute changes); per-attendee confirm / travel / iPad (pilots) / credit card / swag; auto headcounts (out-of-town, pilots); editable email-template library with a who's-been-emailed send tracker (manual mark-sent for now, live send later); Mark complete ticks each attendee's Attended orientation
 - [x] Orientation cohorts & calendar (Jun 12) — Cohorts tab on Orientation: a mini month calendar marking orientation dates (hire count) + sessions, and cohort cards grouping active pre-onboarding hires by their orientation date with one-click "Create session + add all" or "Add N to existing session" (auto-links hires to the matching session)
 - [ ] Orientation: live email send — wire actual sending (Front/Gmail) so templates go out and track received automatically
-- [ ] Recognition program — idea stage; shape the concept first
+- [x] Compliments by SkyShare recognition program (Jun 12) — peer-to-peer recognition on the NewHire roster: give to feed to points to redeem rewards to manager analytics, plus an ADMIN Budget tab (cost report, reward catalog CRUD, program settings). Nav item under People; verified end-to-end
 
 ## Bugs & UX Fixes
 Smaller fixes and polish.
