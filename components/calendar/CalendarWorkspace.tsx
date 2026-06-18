@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, CalendarRange, Square, GanttChartSquare, Building2 } from "lucide-react";
+import { CalendarDays, CalendarRange, Square, GanttChartSquare, Building2, Palette } from "lucide-react";
 import { clsx } from "clsx";
 import type { CalendarData } from "@/lib/data/calendar";
+import { DEPARTMENTS, resolveDepartmentKey } from "@/lib/calendar/departments";
 import { ScheduleInterviewForm } from "@/components/calendar/ScheduleInterviewForm";
 import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import { TimeGridCalendar } from "@/components/calendar/TimeGridCalendar";
@@ -27,14 +28,7 @@ type CalendarWorkspaceProps = {
 
 type Interview = CalendarData["interviews"][number];
 type ViewMode = "month" | "week" | "day" | "timeline" | "list";
-
-// Sentinel for the "interviews with no linked job / department" bucket.
-const UNASSIGNED_DEPARTMENT = "__unassigned__";
-
-function interviewDepartment(interview: Interview): string | null {
-  const dept = interview.job?.department?.trim();
-  return dept ? dept : null;
-}
+type ColorMode = "department" | "stage";
 
 // Default arrangement (12-col grid) used until an admin saves a custom layout.
 const CALENDAR_DEFAULT_LAYOUT: GridItem[] = [
@@ -124,33 +118,30 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
   const router = useRouter();
   const [view, setView] = useState<ViewMode>("month");
   const [department, setDepartment] = useState<string>("all");
+  const [colorMode, setColorMode] = useState<ColorMode>("department");
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
   const [prefilledDate, setPrefilledDate] = useState<Date | null>(null);
 
-  // Distinct departments present on the loaded interviews (via their linked job),
-  // plus whether any interview has no department, so the filter only offers real values.
-  const { departmentList, hasUnassigned } = useMemo(() => {
-    const set = new Set<string>();
-    let unassigned = false;
-    for (const interview of data.interviews) {
-      const dept = interviewDepartment(interview);
-      if (dept) set.add(dept);
-      else unassigned = true;
-    }
-    return {
-      departmentList: [...set].sort((a, b) => a.localeCompare(b)),
-      hasUnassigned: unassigned
-    };
-  }, [data.interviews]);
+  // Whether any interview has no resolvable department, so we only offer the
+  // Unassigned filter option when it would actually match something.
+  const hasUnassigned = useMemo(
+    () => data.interviews.some((interview) => resolveDepartmentKey(interview.job?.department ?? null).deptKey === "unassigned"),
+    [data.interviews]
+  );
 
-  const showDepartmentFilter = departmentList.length > 0;
-
+  // Filter values: "all" | "dept:<key>" | "sub:<dept>:<sub>" | "unassigned".
   const filteredInterviews = useMemo(() => {
     if (department === "all") return data.interviews;
-    if (department === UNASSIGNED_DEPARTMENT) {
-      return data.interviews.filter((interview) => interviewDepartment(interview) === null);
-    }
-    return data.interviews.filter((interview) => interviewDepartment(interview) === department);
+    return data.interviews.filter((interview) => {
+      const { deptKey, subKey } = resolveDepartmentKey(interview.job?.department ?? null);
+      if (department === "unassigned") return deptKey === "unassigned";
+      if (department.startsWith("dept:")) return deptKey === department.slice(5);
+      if (department.startsWith("sub:")) {
+        const [, parent, sub] = department.split(":");
+        return deptKey === parent && subKey === sub;
+      }
+      return true;
+    });
   }, [data.interviews, department]);
 
   function handleDayClick(date: Date) {
@@ -211,26 +202,52 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Department filter */}
-          {showDepartmentFilter && (
-            <label className="flex items-center gap-1.5 rounded-lg border border-brand-lea/15 py-1 pl-2.5 pr-1 text-sm">
-              <Building2 className="h-4 w-4 shrink-0 text-brand-grey" />
-              <span className="sr-only">Filter by department</span>
-              <select
-                value={department}
-                onChange={(event) => setDepartment(event.target.value)}
-                className="max-w-[12rem] cursor-pointer rounded bg-transparent py-1 pr-1 text-sm font-semibold text-brand-lea outline-none focus:ring-2 focus:ring-brand-gold/40"
-              >
-                <option value="all">All departments</option>
-                {departmentList.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
+          {/* Department filter (drill down into sub-groups) */}
+          <label className="flex items-center gap-1.5 rounded-lg border border-brand-lea/15 py-1 pl-2.5 pr-1 text-sm">
+            <Building2 className="h-4 w-4 shrink-0 text-brand-grey" />
+            <span className="sr-only">Filter by department</span>
+            <select
+              value={department}
+              onChange={(event) => setDepartment(event.target.value)}
+              className="max-w-[12rem] cursor-pointer rounded bg-transparent py-1 pr-1 text-sm font-semibold text-brand-lea outline-none focus:ring-2 focus:ring-brand-gold/40"
+            >
+              <option value="all">All departments</option>
+              {DEPARTMENTS.map((dept) =>
+                dept.subs.length === 0 ? (
+                  <option key={dept.key} value={`dept:${dept.key}`}>
+                    {dept.label}
                   </option>
-                ))}
-                {hasUnassigned && <option value={UNASSIGNED_DEPARTMENT}>Unassigned</option>}
-              </select>
-            </label>
-          )}
+                ) : (
+                  <optgroup key={dept.key} label={dept.label}>
+                    <option value={`dept:${dept.key}`}>{dept.label} — all</option>
+                    {dept.subs.map((sub) => (
+                      <option key={sub.key} value={`sub:${dept.key}:${sub.key}`}>
+                        {sub.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                )
+              )}
+              {hasUnassigned && <option value="unassigned">Unassigned</option>}
+            </select>
+          </label>
+
+          {/* Color mode: by department (default) or by interview stage */}
+          <div className="flex items-center gap-1 rounded-lg border border-brand-lea/15 p-1" title="Color interviews by">
+            <Palette className="ml-1 h-4 w-4 shrink-0 text-brand-grey" />
+            {(["department", "stage"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setColorMode(mode)}
+                className={clsx(
+                  "rounded px-2 py-1.5 text-xs font-semibold transition",
+                  colorMode === mode ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea"
+                )}
+              >
+                {mode === "department" ? "Dept" : "Stage"}
+              </button>
+            ))}
+          </div>
 
           {/* View Toggle */}
           <div className="flex items-center gap-1 rounded-lg border border-brand-lea/15 p-1">
@@ -275,6 +292,7 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
       {view === "month" && (
         <MonthCalendar
           interviews={filteredInterviews}
+          colorMode={colorMode}
           onDayClick={handleDayClick}
           onInterviewClick={handleInterviewClick}
           onReschedule={handleReschedule}
@@ -283,6 +301,7 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
       {view === "week" && (
         <TimeGridCalendar
           interviews={filteredInterviews}
+          colorMode={colorMode}
           mode="week"
           onSlotClick={handleDayClick}
           onInterviewClick={handleInterviewClick}
@@ -292,6 +311,7 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
       {view === "day" && (
         <TimeGridCalendar
           interviews={filteredInterviews}
+          colorMode={colorMode}
           mode="day"
           onSlotClick={handleDayClick}
           onInterviewClick={handleInterviewClick}
@@ -301,6 +321,7 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
       {view === "timeline" && (
         <ScheduleTimeline
           interviews={filteredInterviews}
+          colorMode={colorMode}
           teamHosts={data.teamHosts}
           onInterviewClick={handleInterviewClick}
           onReschedule={handleReschedule}

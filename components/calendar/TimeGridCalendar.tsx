@@ -6,12 +6,15 @@ import { clsx } from "clsx";
 import type { CalendarData } from "@/lib/data/calendar";
 import { formatTime } from "@/lib/calendar/format";
 import { interviewTypeMeta } from "@/lib/calendar/interview-types";
-import { StageLegend } from "@/components/calendar/StageLegend";
+import { departmentColorMeta } from "@/lib/calendar/departments";
+import { CalendarLegend } from "@/components/calendar/CalendarLegend";
 
 type Interview = CalendarData["interviews"][number];
+type ColorMode = "department" | "stage";
 
 interface TimeGridCalendarProps {
   interviews: Interview[];
+  colorMode?: ColorMode;
   mode: "week" | "day";
   onSlotClick?: (date: Date) => void;
   onInterviewClick?: (interview: Interview) => void;
@@ -30,11 +33,11 @@ const DEFAULT_START_HOUR = 7;
 const DEFAULT_END_HOUR = 20;
 const HOUR_HEIGHT = 56; // px per hour
 
-function blockClasses(interview: Interview) {
-  const meta = interviewTypeMeta(interview.interviewType);
+function blockClasses(interview: Interview, colorMode: ColorMode) {
   if (interview.status === "CANCELLED") {
     return "bg-slate-300 text-slate-600 hover:bg-slate-400 border-slate-400 line-through";
   }
+  const meta = colorMode === "department" ? departmentColorMeta(interview.job?.department ?? null) : interviewTypeMeta(interview.interviewType);
   const completed = interview.status === "COMPLETED" ? "opacity-60" : "";
   return `${meta.chip} border-black/10 ${completed}`;
 }
@@ -46,7 +49,7 @@ function startOfWeek(date: Date): Date {
   return d;
 }
 
-export function TimeGridCalendar({ interviews, mode, onSlotClick, onInterviewClick, onReschedule }: TimeGridCalendarProps) {
+export function TimeGridCalendar({ interviews, colorMode = "department", mode, onSlotClick, onInterviewClick, onReschedule }: TimeGridCalendarProps) {
   const [anchorDate, setAnchorDate] = useState(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -279,7 +282,7 @@ export function TimeGridCalendar({ interviews, mode, onSlotClick, onInterviewCli
                     style={blockStyle(interview)}
                     className={clsx(
                       "absolute left-0.5 right-0.5 cursor-pointer overflow-hidden rounded-md border px-1.5 py-1 text-left text-[10px] shadow-sm transition",
-                      blockClasses(interview),
+                      blockClasses(interview, colorMode),
                       draggingId === interview.id && "opacity-40"
                     )}
                   >
@@ -296,9 +299,9 @@ export function TimeGridCalendar({ interviews, mode, onSlotClick, onInterviewCli
       </div>
       </div>
 
-      {/* Stage legend + drag hint */}
+      {/* Color legend + drag hint */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey">
-        <StageLegend />
+        <CalendarLegend mode={colorMode} />
         <span className="hidden italic text-brand-grey/70 sm:inline">Drag an interview to another time slot to reschedule</span>
       </div>
     </section>

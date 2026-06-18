@@ -6,12 +6,15 @@ import { clsx } from "clsx";
 import type { CalendarData } from "@/lib/data/calendar";
 import { formatTime } from "@/lib/calendar/format";
 import { interviewTypeMeta } from "@/lib/calendar/interview-types";
-import { StageLegend } from "@/components/calendar/StageLegend";
+import { departmentColorMeta } from "@/lib/calendar/departments";
+import { CalendarLegend } from "@/components/calendar/CalendarLegend";
 
 type Interview = CalendarData["interviews"][number];
+type ColorMode = "department" | "stage";
 
 interface ScheduleTimelineProps {
   interviews: Interview[];
+  colorMode?: ColorMode;
   teamHosts?: Array<{ name: string; avatarUrl: string | null }>;
   onInterviewClick?: (interview: Interview) => void;
   onReschedule?: (interviewId: string, newDate: Date, options?: { keepOriginalTime?: boolean }) => void;
@@ -70,11 +73,11 @@ function TeamAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string | nu
   );
 }
 
-function barClasses(interview: Interview) {
-  const meta = interviewTypeMeta(interview.interviewType);
+function barClasses(interview: Interview, colorMode: ColorMode) {
   if (interview.status === "CANCELLED") {
     return "bg-slate-300 text-slate-600 line-through";
   }
+  const meta = colorMode === "department" ? departmentColorMeta(interview.job?.department ?? null) : interviewTypeMeta(interview.interviewType);
   const completed = interview.status === "COMPLETED" ? "opacity-60" : "";
   return `${meta.chip} ${completed}`;
 }
@@ -100,7 +103,7 @@ function packLanes(items: Array<{ interview: Interview; startDay: number; endDay
   return { placements, laneCount: Math.max(1, laneEnds.length) };
 }
 
-export function ScheduleTimeline({ interviews, teamHosts, onInterviewClick, onReschedule }: ScheduleTimelineProps) {
+export function ScheduleTimeline({ interviews, colorMode = "department", teamHosts, onInterviewClick, onReschedule }: ScheduleTimelineProps) {
   // Match an interviewer name to a booking host's photo (case-insensitive).
   const avatarByName = useMemo(() => {
     const map = new Map<string, string>();
@@ -312,7 +315,7 @@ export function ScheduleTimeline({ interviews, teamHosts, onInterviewClick, onRe
                           title={`${formatTime(interview.startDateTime, interview.timezone)} · ${interview.candidate.displayName}${interview.job ? ` (${interview.job.title})` : ""}`}
                           className={clsx(
                             "absolute flex items-center gap-1.5 overflow-hidden rounded-md px-2 text-left text-[11px] font-medium shadow-sm transition hover:shadow-md",
-                            barClasses(interview),
+                            barClasses(interview, colorMode),
                             draggingId === interview.id && "opacity-40"
                           )}
                           style={{ left, width, top, height: BAR_HEIGHT }}
@@ -332,7 +335,7 @@ export function ScheduleTimeline({ interviews, teamHosts, onInterviewClick, onRe
 
       {/* Legend + hint */}
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey">
-        <StageLegend />
+        <CalendarLegend mode={colorMode} />
         <span className="hidden italic text-brand-grey/70 sm:inline">Drag a bar to another day to reschedule</span>
       </div>
     </section>
