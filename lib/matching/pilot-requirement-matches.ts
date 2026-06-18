@@ -3,6 +3,7 @@ import {
   CATEGORY_LABELS,
   SCORING_CATEGORIES,
   SCORING_REQUIREMENTS,
+  SCORING_REQUIREMENT_MAP,
   defaultProfileConfig,
   type CategoryKey,
   type ReqStatus,
@@ -10,6 +11,8 @@ import {
   type ScoringRequirementDef
 } from "@/lib/matching/scoring-config";
 import type { MatchFeedbackEntry, RequirementFeedback } from "@/lib/matching/match-feedback";
+import type { OverrideTier, TierOverrides } from "@/lib/matching/tier-override";
+import { isScanExclusionReason, type ScanExclusionReason } from "@/lib/candidates/scan-exclusion";
 
 // ---------------------------------------------------------------------------
 // Inputs
@@ -49,6 +52,8 @@ type CandidateForMatch = {
   displayName: string;
   currentTitle: string | null;
   stage: string | null;
+  scanExcludedReason: string | null;
+  scanExcludedNote: string | null;
   primaryEmail: string | null;
   tagsJson: string | null;
   foldersJson: string | null;
@@ -91,8 +96,22 @@ export type PilotRequirementCandidateMatch = {
   candidateName: string;
   currentTitle: string | null;
   stage: string | null;
+  /** Combined fit used for ranking: qualified + bonus (0 when gated). */
   score: number;
+  /** Gate score (0-100): how well the candidate clears the role's minimums. 100 = meets all. */
+  qualified: number;
+  /** Add-only bonus from nice-to-haves (type rating, time in type, etc.). */
+  bonus: number;
+  /** True when a HARD requirement is confirmed missing — flagged, never auto-rejected. */
+  gated: boolean;
   readiness: ReadinessLabel;
+  /** True when readiness was set by a recruiter's manual move, not the engine. */
+  overridden: boolean;
+  /** Set when the candidate is held out of scans (null = in the pool). */
+  excludedReason: ScanExclusionReason | null;
+  excludedNote: string | null;
+  /** SIC seat where total time is >= 2x the role minimum — likely wants PIC. */
+  overqualified: boolean;
   summary: string;
   subScores: SubScore[];
   factors: ScoredFactor[];
@@ -253,7 +272,8 @@ export function scoreCandidate(
   requirement: MatchRequirement,
   candidate: CandidateForMatch,
   config: ScoringProfileConfig,
-  feedback: MatchFeedbackEntry | null
+  feedback: MatchFeedbackEntry | null,
+  override: OverrideTier | null = null
 ): PilotRequirementCandidateMatch {
   const text = candidateText(candidate);
   const appliedText = applicationText(candidate);
@@ -575,17 +595,65 @@ export function scoreCandidate(
   const weightSum = scored.reduce((sum, sub) => sum + sub.weight, 0);
   const overall = weightSum > 0 ? Math.round(scored.reduce((sum, sub) => sum + sub.weight * sub.score, 0) / weightSum) : 0;
 
-  // --- Hard gaps (confirmed missing hard requirements — flag, never reject) -
+  // --- Hard gaps (confirmed missing hard requirements) -> gates the candidate
   const hardGaps = factors
     .filter((factor) => factor.requirementStatus === "hard" && factor.status === "missing")
     .map((factor) => factor.label);
+  const gated = hardGaps.length > 0;
 
-  // --- Readiness (downgraded one notch when a hard requirement is missing) --
-  let readiness: ReadinessLabel =
-    overall >= config.readiness.strong ? "Strong signal" : overall >= config.readiness.possible ? "Worth a look" : "Needs review";
-  if (hardGaps.length > 0 && readiness === "Strong signal") {
-    readiness = "Worth a look";
+  // --- Qualified (gate) + Bonus (add-only) split ---------------------------
+  // Gate factors are the position's minimums (hard/soft). Meeting them all = 100.
+  // Bonus factors are nice-to-haves: anything set to the "bonus" level, plus
+  // time-in-type and recency, which only ever add. Missing data (unknown) is
+  // not held against the gate score.
+  const effStatus = (key: string): ReqStatus => {
+    const def = SCORING_REQUIREMENT_MAP[key];
+    return def ? config.requirements[def.key] ?? def.defaultStatus : "soft";
+  };
+  const isBonusFactor = (factor: WorkingFactor): boolean =>
+    factor.key === "time_in_type" || factor.key === "recency" || effStatus(factor.key) === "bonus";
+
+  const gateFactors = factors.filter((factor) => !isBonusFactor(factor) && factor.status !== "unknown");
+  const gateWeight = gateFactors.reduce((sum, factor) => sum + statusWeight(factor.requirementStatus), 0);
+  const gateEarned = gateFactors.reduce((sum, factor) => sum + statusWeight(factor.requirementStatus) * factor.credit, 0);
+  const qualified = gateWeight > 0 ? Math.round((gateEarned / gateWeight) * 100) : 100;
+
+  const BONUS_PER_FACTOR = 20;
+  const BONUS_CAP = 50;
+  const bonus = Math.round(
+    Math.min(
+      BONUS_CAP,
+      factors.filter(isBonusFactor).reduce((sum, factor) => sum + Math.max(0, factor.credit) * BONUS_PER_FACTOR, 0)
+    )
+  );
+
+  const total = gated ? 0 : qualified + bonus;
+
+  // Readiness reads off the qualified (gate) score; a hard-requirement gate caps it.
+  let readiness: ReadinessLabel = gated
+    ? "Needs review"
+    : qualified >= config.readiness.strong
+      ? "Strong signal"
+      : qualified >= config.readiness.possible
+        ? "Worth a look"
+        : "Needs review";
+
+  // A recruiter's manual move wins over the computed tier and sticks.
+  const overridden = override !== null && override !== readiness;
+  if (override !== null) {
+    readiness = override;
   }
+
+  // Seat fit: an SIC role where the candidate has >= 2x the total-time minimum
+  // is likely a captain who won't want a first-officer seat.
+  const totalTimeMin = gatesByKey.get("total_time")?.numericValue ?? null;
+  const totalTimeValue = metricsByKey.get("total_time")?.valueNumber ?? null;
+  const overqualified =
+    seat === "sic" &&
+    typeof totalTimeMin === "number" &&
+    totalTimeMin > 0 &&
+    typeof totalTimeValue === "number" &&
+    totalTimeValue >= totalTimeMin * 2;
 
   const summary = buildSummary(factors, minsMet, minsTotal, hardGaps, overall);
 
@@ -616,8 +684,15 @@ export function scoreCandidate(
     candidateName: candidate.displayName,
     currentTitle: candidate.currentTitle,
     stage: candidate.stage,
-    score: overall,
+    score: total,
+    qualified,
+    bonus,
+    gated,
     readiness,
+    overridden,
+    excludedReason: isScanExclusionReason(candidate.scanExcludedReason) ? candidate.scanExcludedReason : null,
+    excludedNote: candidate.scanExcludedNote,
+    overqualified,
     summary,
     subScores,
     factors: cleanFactors,
@@ -666,11 +741,13 @@ function buildSummary(
 // Entry point
 // ---------------------------------------------------------------------------
 
-const candidateMatchSelect = {
+export const candidateMatchSelect = {
   id: true,
   displayName: true,
   currentTitle: true,
   stage: true,
+  scanExcludedReason: true,
+  scanExcludedNote: true,
   primaryEmail: true,
   tagsJson: true,
   foldersJson: true,
@@ -685,20 +762,22 @@ const candidateMatchSelect = {
 export async function getPilotRequirementCandidateMatches(
   requirement: MatchRequirement | null,
   config: ScoringProfileConfig = defaultProfileConfig(),
-  feedback: RequirementFeedback = {}
+  feedback: RequirementFeedback = {},
+  overrides: TierOverrides = {},
+  includeExcluded = false
 ): Promise<PilotRequirementCandidateMatch[]> {
   if (!requirement) return [];
 
   const candidates = await prisma.candidate.findMany({
     take: 250,
-    where: { status: "ACTIVE" },
+    where: { status: "ACTIVE", ...(includeExcluded ? {} : { scanExcludedReason: null }) },
     orderBy: { updatedAt: "desc" },
     select: candidateMatchSelect
   });
 
   return candidates
-    .map((candidate) => scoreCandidate(requirement, candidate, config, feedback[candidate.id] ?? null))
-    .filter((match) => match.score > 0 || match.factors.some((factor) => factor.status === "met"))
+    .map((candidate) => scoreCandidate(requirement, candidate, config, feedback[candidate.id] ?? null, overrides[candidate.id] ?? null))
+    .filter((match) => match.overridden || match.score > 0 || match.factors.some((factor) => factor.status === "met"))
     .sort((left, right) => right.score - left.score || left.candidateName.localeCompare(right.candidateName))
     .slice(0, 12);
 }
@@ -712,7 +791,8 @@ export async function scoreSpecificCandidates(
   requirement: MatchRequirement,
   candidateIds: string[],
   config: ScoringProfileConfig = defaultProfileConfig(),
-  feedback: RequirementFeedback = {}
+  feedback: RequirementFeedback = {},
+  overrides: TierOverrides = {}
 ): Promise<PilotRequirementCandidateMatch[]> {
   if (candidateIds.length === 0) return [];
 
@@ -722,6 +802,6 @@ export async function scoreSpecificCandidates(
   });
 
   return candidates
-    .map((candidate) => scoreCandidate(requirement, candidate, config, feedback[candidate.id] ?? null))
+    .map((candidate) => scoreCandidate(requirement, candidate, config, feedback[candidate.id] ?? null, overrides[candidate.id] ?? null))
     .sort((left, right) => right.score - left.score || left.candidateName.localeCompare(right.candidateName));
 }

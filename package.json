@@ -17,6 +17,7 @@
     "db:reset": "prisma db push --schema prisma/schema.prisma --force-reset && prisma db seed",
     "db:hosted:push": "prisma db push --schema prisma/schema.prisma",
     "db:hosted:generate": "prisma generate --schema prisma/schema.prisma",
+    "fleet:sync": "tsx scripts/sync-fleet-positions.ts",
     "prod:check": "tsx scripts/check-production-readiness.ts",
     "prod:check:strict": "tsx scripts/check-production-readiness.ts --strict"
   },

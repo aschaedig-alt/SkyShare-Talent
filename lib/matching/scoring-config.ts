@@ -46,7 +46,7 @@ export const CATEGORY_LABELS: Record<CategoryKey, string> = {
 // the candidate's structured value (keys differ by design across the two tables).
 // ---------------------------------------------------------------------------
 
-export type ReqStatus = "hard" | "soft" | "none";
+export type ReqStatus = "hard" | "soft" | "bonus" | "none";
 export type ReqKind = "hours" | "timeInType" | "typeRating" | "cert";
 
 export type ScoringRequirementDef = {
@@ -191,7 +191,7 @@ function clampNumber(value: unknown, fallback: number, min: number, max: number)
 }
 
 function normalizeStatus(value: unknown, fallback: ReqStatus): ReqStatus {
-  return value === "hard" || value === "soft" || value === "none" ? value : fallback;
+  return value === "hard" || value === "soft" || value === "bonus" || value === "none" ? value : fallback;
 }
 
 export function normalizeProfileConfig(raw: unknown): ScoringProfileConfig {

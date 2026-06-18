@@ -7,6 +7,7 @@ import {
 } from "@/lib/matching/pilot-requirement-matches";
 import { canEditScoring, getProfileScoringConfig } from "@/lib/matching/scoring-config.server";
 import { getRequirementFeedback } from "@/lib/matching/match-feedback";
+import { getRequirementTierOverrides } from "@/lib/matching/tier-override";
 
 export type JobScreeningData = {
   hasRequirement: boolean;
@@ -71,7 +72,7 @@ export async function getJobScreening(jobId: string | null): Promise<JobScreenin
     }
   });
 
-  const scannedCount = await prisma.candidate.count({ where: { status: "ACTIVE" } });
+  const scannedCount = await prisma.candidate.count({ where: { status: "ACTIVE", scanExcludedReason: null } });
   const requirement = job?.pilotRequirements[0];
   if (!job || !requirement) {
     return { ...empty, scannedCount };
@@ -89,15 +90,16 @@ export async function getJobScreening(jobId: string | null): Promise<JobScreenin
   };
 
   const aircraftTypes = parseStringArray(requirement.aircraftTypesJson);
-  const [config, feedback] = await Promise.all([
+  const [config, feedback, overrides] = await Promise.all([
     getProfileScoringConfig(aircraftTypes[0] ?? null, requirement.pilotSeat),
-    getRequirementFeedback(requirement.id)
+    getRequirementFeedback(requirement.id),
+    getRequirementTierOverrides(requirement.id)
   ]);
 
   const applicantIds = [...new Set(job.applications.map((application) => application.candidateId))];
   const [applicants, best] = await Promise.all([
-    scoreSpecificCandidates(matchRequirement, applicantIds, config, feedback),
-    getPilotRequirementCandidateMatches(matchRequirement, config, feedback)
+    scoreSpecificCandidates(matchRequirement, applicantIds, config, feedback, overrides),
+    getPilotRequirementCandidateMatches(matchRequirement, config, feedback, overrides)
   ]);
 
   return {

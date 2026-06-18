@@ -339,6 +339,10 @@ model Candidate {
   currentTitle         String?
   status               String                 @default("ACTIVE")
   stage                String?
+  scanExcludedReason   String?
+  scanExcludedNote     String?
+  scanExcludedAt       DateTime?
+  scanExcludedBy       String?
   owner                String?
   source               String?
   tagsJson             String?

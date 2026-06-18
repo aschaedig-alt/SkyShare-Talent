@@ -13,7 +13,12 @@ import {
   AlertTriangle,
   ThumbsDown,
   ThumbsUp,
-  ShieldCheck
+  Minus,
+  TrendingDown,
+  TrendingUp,
+  ArrowRight,
+  ShieldCheck,
+  type LucideIcon
 } from "lucide-react";
 import { submitMatchFeedback } from "@/app/pilot-requirements/scoring-actions";
 import type {
@@ -22,12 +27,24 @@ import type {
   ReadinessLabel,
   ScoredFactor
 } from "@/lib/matching/pilot-requirement-matches";
+import { SCAN_EXCLUSION_REASONS, SCAN_EXCLUSION_LABELS, type ScanExclusionReason } from "@/lib/candidates/scan-exclusion";
+import { ScoreSplit } from "@/components/pilot-requirements/ScoreSplit";
+import type { MatchVerdict } from "@/lib/matching/match-feedback";
+
+const FIT_TAGS: Array<{ value: MatchVerdict; label: string; Icon: LucideIcon; on: string }> = [
+  { value: "up", label: "Good fit", Icon: ThumbsUp, on: "bg-value-teamwork-light text-value-teamwork-dark" },
+  { value: "neutral", label: "Maybe", Icon: Minus, on: "bg-value-leadership-light text-value-leadership-dark" },
+  { value: "down", label: "Not a fit", Icon: ThumbsDown, on: "bg-value-customerFocus-light text-value-customerFocus-dark" },
+  { value: "under", label: "Underqualified", Icon: TrendingDown, on: "bg-brand-cloudDancer text-brand-eden" }
+];
 
 export const readinessStyles: Record<ReadinessLabel, string> = {
   "Strong signal": "bg-value-teamwork-light text-value-teamwork-dark",
   "Worth a look": "bg-value-leadership-light text-value-leadership-dark",
   "Needs review": "bg-brand-cloudDancer text-brand-grey"
 };
+
+const READINESS_TIERS = Object.keys(readinessStyles) as ReadinessLabel[];
 
 export function barClass(score: number | null): string {
   if (score === null) return "bg-brand-lea/10";
@@ -106,21 +123,42 @@ export function MatchCard({
   match,
   requirementId,
   canEdit,
-  applied = false
+  applied = false,
+  onMoveTier,
+  moving = false,
+  onExclude,
+  excluding = false,
+  onSelectName,
+  selected = false,
+  onViewRoles
 }: {
   match: PilotRequirementCandidateMatch;
   requirementId: string | null;
   canEdit: boolean;
   applied?: boolean;
+  onMoveTier?: (tier: ReadinessLabel) => void;
+  moving?: boolean;
+  onExclude?: (reason: ScanExclusionReason | null, note: string) => void;
+  excluding?: boolean;
+  onSelectName?: (candidateId: string) => void;
+  selected?: boolean;
+  onViewRoles?: (candidateId: string) => void;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [verdict, setVerdict] = useState<"up" | "down" | null>(match.feedback?.verdict ?? null);
+  const [verdict, setVerdict] = useState<MatchVerdict | null>(match.feedback?.verdict ?? null);
   const [reason, setReason] = useState(match.feedback?.reason ?? "");
   const [notice, setNotice] = useState<string | null>(null);
+  const [exReason, setExReason] = useState<ScanExclusionReason | "">(match.excludedReason ?? "");
+  const [exNote, setExNote] = useState(match.excludedNote ?? "");
 
-  function setFeedback(next: "up" | "down" | null) {
+  function changeExclusion(next: ScanExclusionReason | "") {
+    setExReason(next);
+    onExclude?.(next === "" ? null : next, next === "" ? "" : exNote);
+  }
+
+  function setFeedback(next: MatchVerdict | null) {
     if (!requirementId || !canEdit) return;
     setNotice(null);
     const resolved = next === verdict ? null : next; // tap active thumb to clear
@@ -152,7 +190,12 @@ export function MatchCard({
   }
 
   return (
-    <article className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 p-3">
+    <article
+      className={clsx(
+        "rounded border bg-brand-cloudDancer/40 p-3 transition",
+        selected ? "border-brand-gold ring-1 ring-brand-gold/40" : "border-brand-lea/10"
+      )}
+    >
       <div className="flex items-start gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-sweet/30 text-xs font-semibold text-brand-lea">
           {initials(match.candidateName)}
@@ -161,12 +204,30 @@ export function MatchCard({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <Link href={`/candidates/${match.candidateId}`} className="font-semibold text-brand-lea hover:text-brand-eden">
-                  {match.candidateName}
-                </Link>
+                {onSelectName ? (
+                  <button
+                    type="button"
+                    onClick={() => onSelectName(match.candidateId)}
+                    className="text-left font-semibold text-brand-lea transition hover:text-brand-eden"
+                  >
+                    {match.candidateName}
+                  </button>
+                ) : (
+                  <Link href={`/candidates/${match.candidateId}`} className="font-semibold text-brand-lea hover:text-brand-eden">
+                    {match.candidateName}
+                  </Link>
+                )}
                 {applied ? (
                   <span className="rounded-full bg-value-innovation-light px-1.5 py-0.5 text-[9px] font-bold uppercase text-value-innovation-dark">
                     applied
+                  </span>
+                ) : null}
+                {match.excludedReason ? (
+                  <span
+                    className="rounded-full bg-brand-cloudDancer px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-grey"
+                    title={match.excludedNote ?? undefined}
+                  >
+                    Ignored · {SCAN_EXCLUSION_LABELS[match.excludedReason]}
                   </span>
                 ) : null}
               </div>
@@ -178,12 +239,38 @@ export function MatchCard({
               <span className={clsx("rounded-full px-2.5 py-0.5 text-[11px] font-semibold", readinessStyles[match.readiness])}>
                 {match.readiness}
               </span>
-              {match.minsTotal > 0 ? (
+              {match.overridden ? (
+                <div className="mt-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-value-leadership-dark">
+                  Moved by you
+                </div>
+              ) : match.minsTotal > 0 ? (
                 <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-brand-grey">
                   {match.minsMet} of {match.minsTotal} mins met
                 </div>
               ) : null}
+              {onMoveTier && canEdit ? (
+                <div className="mt-1.5 flex items-center justify-end gap-1">
+                  <span className="text-[9px] font-semibold uppercase tracking-wide text-brand-grey">Move to</span>
+                  <select
+                    value={match.readiness}
+                    disabled={moving}
+                    onChange={(event) => onMoveTier(event.target.value as ReadinessLabel)}
+                    aria-label={`Move ${match.candidateName} to another group`}
+                    className="rounded-element border border-brand-lea/20 bg-white px-1 py-0.5 text-[10px] font-medium text-brand-lea outline-none transition focus:border-brand-gold disabled:opacity-60"
+                  >
+                    {READINESS_TIERS.map((tier) => (
+                      <option key={tier} value={tier}>
+                        {tier}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
             </div>
+          </div>
+
+          <div className="mt-2">
+            <ScoreSplit qualified={match.qualified} bonus={match.bonus} gated={match.gated} size="sm" />
           </div>
 
           <p className="mt-2 text-xs leading-5 text-brand-black/75">{match.summary}</p>
@@ -198,6 +285,12 @@ export function MatchCard({
                   <AlertTriangle className="h-3 w-3" /> {gap}
                 </span>
               ))}
+            </div>
+          ) : null}
+
+          {match.overqualified ? (
+            <div className="mt-2 inline-flex items-center gap-1 rounded-element bg-value-leadership-light px-2 py-1 text-[10px] font-semibold text-value-leadership-dark">
+              <TrendingUp className="h-3 w-3" /> Overqualified for SIC — total time is 2&times;+ the minimum, likely wants PIC
             </div>
           ) : null}
 
@@ -218,6 +311,36 @@ export function MatchCard({
             ))}
           </div>
 
+          {onExclude && canEdit ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-element border border-brand-lea/10 bg-brand-cloudDancer/30 px-2.5 py-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-brand-grey">Scan eligibility</span>
+              <select
+                value={exReason}
+                disabled={excluding}
+                onChange={(event) => changeExclusion(event.target.value as ScanExclusionReason | "")}
+                aria-label={`Scan eligibility for ${match.candidateName}`}
+                className="rounded-element border border-brand-lea/20 bg-white px-1.5 py-0.5 text-[11px] font-medium text-brand-lea outline-none transition focus:border-brand-gold disabled:opacity-60"
+              >
+                <option value="">In the pool</option>
+                {SCAN_EXCLUSION_REASONS.map((entry) => (
+                  <option key={entry.key} value={entry.key}>
+                    Ignore — {entry.label}
+                  </option>
+                ))}
+              </select>
+              {exReason === "OTHER" ? (
+                <input
+                  value={exNote}
+                  disabled={excluding}
+                  onChange={(event) => setExNote(event.target.value)}
+                  onBlur={() => onExclude("OTHER", exNote)}
+                  placeholder="Reason note"
+                  className="min-w-0 flex-1 rounded-element border border-brand-lea/20 px-2 py-0.5 text-[11px] outline-none transition focus:border-brand-gold disabled:opacity-60"
+                />
+              ) : null}
+            </div>
+          ) : null}
+
           <button
             type="button"
             onClick={() => setOpen((value) => !value)}
@@ -228,46 +351,40 @@ export function MatchCard({
             {open ? "Hide breakdown" : "Why this score"}
           </button>
 
+          {onViewRoles ? (
+            <button
+              type="button"
+              onClick={() => onViewRoles(match.candidateId)}
+              className="mt-3 ml-3 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-eden transition hover:text-brand-lea"
+            >
+              View roles <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
+
           {open ? (
             <div className="mt-3 space-y-2 border-t border-brand-lea/10 pt-3">
               <FactorList factors={match.factors} />
 
               {canEdit && requirementId ? (
                 <div className="mt-3 rounded-element bg-white/70 p-2.5 ring-1 ring-brand-lea/10">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-medium text-brand-grey">Was this a useful read?</span>
-                    <div className="flex gap-1.5">
+                  <span className="text-[11px] font-medium text-brand-grey">Tag the fit</span>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {FIT_TAGS.map((tag) => (
                       <button
+                        key={tag.value}
                         type="button"
                         disabled={pending}
-                        onClick={() => setFeedback("up")}
-                        aria-pressed={verdict === "up"}
-                        aria-label="Good fit"
+                        onClick={() => setFeedback(tag.value)}
+                        aria-pressed={verdict === tag.value}
+                        aria-label={tag.label}
                         className={clsx(
                           "inline-flex items-center gap-1 rounded-element px-2 py-1 text-[11px] font-semibold transition",
-                          verdict === "up"
-                            ? "bg-value-teamwork-light text-value-teamwork-dark"
-                            : "text-brand-grey hover:bg-brand-cloudDancer"
+                          verdict === tag.value ? tag.on : "text-brand-grey hover:bg-brand-cloudDancer"
                         )}
                       >
-                        <ThumbsUp className="h-3.5 w-3.5" /> Good fit
+                        <tag.Icon className="h-3.5 w-3.5" /> {tag.label}
                       </button>
-                      <button
-                        type="button"
-                        disabled={pending}
-                        onClick={() => setFeedback("down")}
-                        aria-pressed={verdict === "down"}
-                        aria-label="Off base"
-                        className={clsx(
-                          "inline-flex items-center gap-1 rounded-element px-2 py-1 text-[11px] font-semibold transition",
-                          verdict === "down"
-                            ? "bg-value-customerFocus-light text-value-customerFocus-dark"
-                            : "text-brand-grey hover:bg-brand-cloudDancer"
-                        )}
-                      >
-                        <ThumbsDown className="h-3.5 w-3.5" /> Off base
-                      </button>
-                    </div>
+                    ))}
                   </div>
                   {verdict ? (
                     <div className="mt-2 flex gap-2">

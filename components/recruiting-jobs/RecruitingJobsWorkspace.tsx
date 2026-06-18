@@ -1,8 +1,7 @@
 import Link from "next/link";
 import type { RecruitingJobDetail, RecruitingJobsData } from "@/lib/data/recruiting-jobs";
-import type { JobScreeningData } from "@/lib/data/job-screening";
 import { JobClassificationEditor } from "@/components/recruiting-jobs/JobClassificationEditor";
-import { JobScreeningPanel } from "@/components/recruiting-jobs/JobScreeningPanel";
+import { JobListsPanel } from "@/components/recruiting-jobs/JobListsPanel";
 import { EditableGrid, type EditablePanel, type GridItem } from "@/components/shared/EditableGrid";
 import { AddCandidateToJob } from "@/components/recruiting-jobs/AddCandidateToJob";
 import { ResumeIntake } from "@/components/candidates/ResumeIntake";
@@ -17,7 +16,6 @@ type RecruitingJobsWorkspaceProps = {
   savedLayout?: GridItem[] | null;
   savedWidgets?: WidgetInstance[] | null;
   widgetData?: WidgetData;
-  screening?: JobScreeningData | null;
 };
 
 const statLabels: Array<[keyof RecruitingJobsData["stats"], string]> = [
@@ -32,13 +30,11 @@ const statLabels: Array<[keyof RecruitingJobsData["stats"], string]> = [
 const JOBS_DEFAULT_LAYOUT: GridItem[] = [
   { i: "rjobs-header", x: 0, y: 0, w: 5, h: 5 },
   { i: "rjobs-stats", x: 5, y: 0, w: 7, h: 5 },
-  { i: "rjobs-pilot-list", x: 0, y: 5, w: 3, h: 16 },
-  { i: "rjobs-support-list", x: 3, y: 5, w: 3, h: 16 },
+  { i: "rjobs-jobs-list", x: 0, y: 5, w: 6, h: 16 },
   { i: "rjobs-detail-header", x: 6, y: 5, w: 6, h: 6 },
   { i: "rjobs-linked-cands", x: 6, y: 11, w: 3, h: 7 },
   { i: "rjobs-linked-reqs", x: 9, y: 11, w: 3, h: 7 },
-  { i: "rjobs-source", x: 6, y: 18, w: 6, h: 3 },
-  { i: "rjobs-screening", x: 0, y: 21, w: 12, h: 18 }
+  { i: "rjobs-source", x: 6, y: 18, w: 6, h: 3 }
 ];
 
 function locationLabel(job: { city: string | null; state: string | null }) {
@@ -84,88 +80,9 @@ function StatsPanel({ stats }: { stats: RecruitingJobsData["stats"] }) {
   );
 }
 
-function JobCard({
-  job,
-  selectedId,
-  query
-}: {
-  job: RecruitingJobsData["jobs"][number];
-  selectedId: string | null;
-  query: string;
-}) {
-  const isSelected = job.id === selectedId;
-
-  return (
-    <Link
-      href={`/recruiting-jobs?id=${job.id}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
-      className={`block rounded border p-3 transition ${
-        isSelected
-          ? "border-brand-gold bg-brand-sweet/18"
-          : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/65"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="truncate text-sm font-semibold text-brand-lea">{job.title}</div>
-          <div className="mt-1 text-xs text-brand-grey">
-            {[job.department, job.status, locationLabel(job)].filter(Boolean).join(" - ")}
-          </div>
-        </div>
-        <span className="rounded-full border border-brand-sweet/50 bg-brand-sweet/20 px-2 py-0.5 text-[10px] font-bold text-brand-lea">
-          {job.isPilotRole ? "Pilot" : "Support"}
-        </span>
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/60 p-2">
-          <div className="text-[9px] font-bold uppercase text-brand-grey">Candidates</div>
-          <div className="text-sm font-semibold text-brand-lea">{job.candidateCount}</div>
-        </div>
-        <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/60 p-2">
-          <div className="text-[9px] font-bold uppercase text-brand-grey">Req profiles</div>
-          <div className="text-sm font-semibold text-brand-lea">{job.requirementCount}</div>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function JobList({
-  title,
-  jobs,
-  selectedId,
-  query,
-  emptyText
-}: {
-  title: string;
-  jobs: RecruitingJobsData["jobs"];
-  selectedId: string | null;
-  query: string;
-  emptyText: string;
-}) {
-  return (
-    <section className="flex h-full flex-col rounded bg-white shadow-panel ring-1 ring-brand-lea/10">
-      <div className="shrink-0 border-b border-brand-lea/10 px-4 py-3">
-        <h2 className="text-base font-semibold text-brand-lea">{title}</h2>
-        <p className="text-xs text-brand-grey">{jobs.length} shown</p>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">
-        {jobs.length > 0 ? (
-          <div className="space-y-2">
-            {jobs.map((job) => (
-              <JobCard key={job.id} job={job} selectedId={selectedId} query={query} />
-            ))}
-          </div>
-        ) : (
-          <p className="p-4 text-sm text-brand-grey">{emptyText}</p>
-        )}
-      </div>
-    </section>
-  );
-}
-
 function JobDetailHeader({ job }: { job: RecruitingJobDetail }) {
   return (
-    <section className="flex h-full flex-col rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+    <section className="flex h-full min-h-0 flex-col overflow-y-auto rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
       <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Job detail</p>
@@ -192,7 +109,7 @@ function JobDetailHeader({ job }: { job: RecruitingJobDetail }) {
           </div>
           <div className="col-span-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-3">
             <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey">Pay</div>
-            <div className="mt-1 truncate text-sm font-semibold text-brand-lea">
+            <div className="mt-1 break-words text-sm font-semibold text-brand-lea">
               {job.paySummary ?? job.rawPayScale ?? "No pay recorded"}
             </div>
           </div>
@@ -300,7 +217,7 @@ function NoJobPanel() {
   );
 }
 
-export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLayout = null, savedWidgets = null, widgetData, screening = null }: RecruitingJobsWorkspaceProps) {
+export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLayout = null, savedWidgets = null, widgetData }: RecruitingJobsWorkspaceProps) {
   const pilotJobs = data.jobs.filter((job) => job.isPilotRole);
   const supportJobs = data.jobs.filter((job) => !job.isPilotRole);
   const selectedId = data.selectedJob?.id ?? null;
@@ -310,14 +227,9 @@ export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLay
     { id: "rjobs-header", title: "Role operations", node: <HeaderPanel query={query} /> },
     { id: "rjobs-stats", title: "Job statistics", node: <StatsPanel stats={data.stats} /> },
     {
-      id: "rjobs-pilot-list",
-      title: "Pilot jobs",
-      node: <JobList title="Pilot jobs" jobs={pilotJobs} selectedId={selectedId} query={query} emptyText="No pilot jobs match the current search." />
-    },
-    {
-      id: "rjobs-support-list",
-      title: "Support jobs",
-      node: <JobList title="Support jobs" jobs={supportJobs} selectedId={selectedId} query={query} emptyText="No support jobs match the current search." />
+      id: "rjobs-jobs-list",
+      title: "Pilot & support jobs",
+      node: <JobListsPanel pilotJobs={pilotJobs} supportJobs={supportJobs} selectedId={selectedId} query={query} />
     },
     {
       id: "rjobs-detail-header",
@@ -332,13 +244,6 @@ export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLay
       { id: "rjobs-linked-reqs", title: "Linked requirements", node: <LinkedRequirements job={job} /> },
       { id: "rjobs-source", title: "Source record", node: <SourceRecord job={job} /> }
     );
-    if (screening) {
-      panels.push({
-        id: "rjobs-screening",
-        title: "Screening",
-        node: <JobScreeningPanel key={job.id} data={screening} />
-      });
-    }
   }
 
   return (

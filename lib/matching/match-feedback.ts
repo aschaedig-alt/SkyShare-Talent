@@ -11,7 +11,9 @@ import { prisma } from "@/lib/prisma";
  * when we build the learning loop.
  */
 
-export type MatchVerdict = "up" | "down";
+export type MatchVerdict = "up" | "neutral" | "down" | "under";
+
+export const MATCH_VERDICTS: MatchVerdict[] = ["up", "neutral", "down", "under"];
 
 export type MatchFeedbackEntry = {
   verdict: MatchVerdict;
@@ -30,7 +32,7 @@ function normalize(raw: unknown): RequirementFeedback {
   for (const [candidateId, value] of Object.entries(raw as Record<string, unknown>)) {
     if (!value || typeof value !== "object") continue;
     const v = value as Partial<MatchFeedbackEntry>;
-    if (v.verdict !== "up" && v.verdict !== "down") continue;
+    if (!v.verdict || !MATCH_VERDICTS.includes(v.verdict)) continue;
     out[candidateId] = {
       verdict: v.verdict,
       reason: typeof v.reason === "string" ? v.reason.slice(0, 500) : "",
@@ -53,6 +55,23 @@ export async function getRequirementFeedback(requirementId: string): Promise<Req
   } catch {
     return {};
   }
+}
+
+/** One query: this candidate's feedback across every requirement (keyed by requirementId). */
+export async function getCandidateFeedback(candidateId: string): Promise<Record<string, MatchFeedbackEntry>> {
+  if (!candidateId) return {};
+  const rows = await prisma.workspaceSetting.findMany({ where: { scope: SCOPE }, select: { key: true, valueJson: true } });
+  const out: Record<string, MatchFeedbackEntry> = {};
+  for (const row of rows) {
+    if (!row.valueJson) continue;
+    try {
+      const map = normalize(JSON.parse(row.valueJson));
+      if (map[candidateId]) out[row.key] = map[candidateId];
+    } catch {
+      // skip malformed row
+    }
+  }
+  return out;
 }
 
 export async function setMatchFeedback(params: {

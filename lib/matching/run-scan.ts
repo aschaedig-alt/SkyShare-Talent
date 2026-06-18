@@ -5,6 +5,7 @@ import {
 } from "@/lib/matching/pilot-requirement-matches";
 import { getProfileScoringConfig } from "@/lib/matching/scoring-config.server";
 import { getRequirementFeedback } from "@/lib/matching/match-feedback";
+import { getRequirementTierOverrides } from "@/lib/matching/tier-override";
 
 export type RequirementScan = {
   matches: PilotRequirementCandidateMatch[];
@@ -29,7 +30,7 @@ function parseStringArray(value: string | null) {
  * both the initial page load and the on-demand "Scan" button so new candidates
  * surface as soon as they exist.
  */
-export async function runRequirementScan(requirementId: string): Promise<RequirementScan> {
+export async function runRequirementScan(requirementId: string, includeExcluded = false): Promise<RequirementScan> {
   const nowIso = new Date().toISOString();
 
   const requirement = await prisma.pilotRequirement.findUnique({
@@ -49,16 +50,19 @@ export async function runRequirementScan(requirementId: string): Promise<Require
     }
   });
 
-  const scannedCount = await prisma.candidate.count({ where: { status: "ACTIVE" } });
+  const scannedCount = await prisma.candidate.count({
+    where: { status: "ACTIVE", ...(includeExcluded ? {} : { scanExcludedReason: null }) }
+  });
 
   if (!requirement) {
     return { matches: [], scannedCount, scannedAt: nowIso };
   }
 
   const aircraftTypes = parseStringArray(requirement.aircraftTypesJson);
-  const [config, feedback] = await Promise.all([
+  const [config, feedback, overrides] = await Promise.all([
     getProfileScoringConfig(aircraftTypes[0] ?? null, requirement.pilotSeat),
-    getRequirementFeedback(requirement.id)
+    getRequirementFeedback(requirement.id),
+    getRequirementTierOverrides(requirement.id)
   ]);
 
   const matches = await getPilotRequirementCandidateMatches(
@@ -73,7 +77,9 @@ export async function runRequirementScan(requirementId: string): Promise<Require
       gates: requirement.gates
     },
     config,
-    feedback
+    feedback,
+    overrides,
+    includeExcluded
   );
 
   return { matches, scannedCount, scannedAt: nowIso };

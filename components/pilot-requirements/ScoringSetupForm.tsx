@@ -196,10 +196,11 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
         <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
           <h3 className="text-base font-semibold text-brand-lea">Requirements</h3>
           <p className="mt-0.5 text-xs text-brand-grey">
-            Mark each as <span className="font-semibold text-brand-lea">hard</span> (heavily weighted &amp; flagged),{" "}
-            <span className="font-semibold text-brand-lea">soft</span> (counts toward its sub-score), or{" "}
-            <span className="font-semibold text-brand-lea">none</span> (ignored for this position). Nothing here rejects a
-            candidate.
+            Mark each as <span className="font-semibold text-brand-lea">hard</span> (a minimum — missing it flags the
+            candidate), <span className="font-semibold text-brand-lea">soft</span> (a minimum that counts toward the
+            qualified score), <span className="font-semibold text-brand-lea">bonus</span> (add-only extra, never
+            penalizes), or <span className="font-semibold text-brand-lea">none</span> (ignored for this position).
+            Nothing here rejects a candidate.
           </p>
           <div className="mt-4 space-y-4">
             {SCORING_CATEGORIES.filter((category) => requirementsByCategory.has(category)).map((category) => (
@@ -335,6 +336,7 @@ function StatusToggle({
   const options: Array<{ key: ReqStatus; label: string; active: string }> = [
     { key: "hard", label: "Hard", active: "bg-brand-lea text-white" },
     { key: "soft", label: "Soft", active: "bg-brand-sweet text-brand-lea" },
+    { key: "bonus", label: "Bonus", active: "bg-value-leadership-light text-value-leadership-dark" },
     { key: "none", label: "None", active: "bg-brand-cloudDancer text-brand-grey" }
   ];
   return (
