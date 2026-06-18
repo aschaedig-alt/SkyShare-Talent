@@ -88,6 +88,8 @@ Behind-the-scenes work that keeps everything running.
 - [x] Project moved off OneDrive (Jun 17) — repo now lives at C:/Users/Recruiter/Projects/skyshare-talent-ops; path references updated; stale OneDrive-pinned sessions archived
 - [x] Secured leaked database credential (Jun 17) — .env had been committed to the public GitHub repo; rotated the Neon password, untracked .env, removed redundant plaintext secret copies, verified prod + local still connect
 - [ ] Full local dev parity — real Google login + real S3 uploads on localhost (today dev bypasses auth and saves files to local disk, which is fine for everyday work); when wanted, add the localhost OAuth redirect URI in Google Cloud Console and fill AUTH_GOOGLE_ID/SECRET + AWS keys in .env.local (templates already stubbed there)
+- [ ] Data security audit — confirm no personal / candidate data is publicly accessible: review unauthenticated API routes, S3 public access vs presigned URLs, and any NEXT_PUBLIC_ env leaks
+- [ ] Employee self-signup link — send a join link so employees can sign up with their company email (settings/users); gate by allowed domain
 
 ## Document Intelligence
 Making candidate documents searchable and structured.
@@ -114,6 +116,8 @@ Supporting the team beyond recruiting.
 - [x] Orientation cohorts & calendar (Jun 12) — Cohorts tab on Orientation: a mini month calendar marking orientation dates (hire count) + sessions, and cohort cards grouping active pre-onboarding hires by their orientation date with one-click "Create session + add all" or "Add N to existing session" (auto-links hires to the matching session)
 - [ ] Orientation: live email send — wire actual sending (Front/Gmail) so templates go out and track received automatically
 - [x] Compliments by SkyShare recognition program (Jun 12) — peer-to-peer recognition on the NewHire roster: give to feed to points to redeem rewards to manager analytics, plus an ADMIN Budget tab (cost report, reward catalog CRUD, program settings). Nav item under People; verified end-to-end
+- [ ] Update Values in Action options — refresh the recognition categories on the Compliments page to match the current core values
+- [ ] Integrate the orientation tracker into the site — fold standalone orientation tracking into the existing Pre-onboarding / Orientation workstream so it lives in one place (extends the shipped Orientation module)
 
 ## Bugs & UX Fixes
 Smaller fixes and polish.
@@ -140,4 +144,28 @@ Public "schedule with me" links so candidates and guests can self-book onto the 
 - [ ] Round-robin pool — one link that assigns whichever team member is free
 - [ ] General meetings on the in-app calendar — show MEETING-type bookings (no candidate) on the calendar / timeline, not just on Google
 - [ ] Scheduling nav entry + anti-spam — add Scheduling to the sidebar and add basic bot protection (honeypot / rate limit) to the public booking endpoint
+
+## Candidate Intake Automation
+Auto-ingest applicants from Paycom into the system, hands-off.
+- [ ] Paycom new-applicant email — configure Paycom to auto-send a new-applicant notification to a dedicated address on every application (confirm whether the resume can ride along as an attachment)
+- [ ] Recruiting intake Google account + Drive folder — stand up a dedicated account and intake folder with least-privilege access (only what the script needs)
+- [ ] Daily intake script — scan the intake Drive folder, create the candidate (with resume) in the system, then move the processed file to an archived / uploaded state so it is not re-imported
+
+## Candidates & Matcher
+Working a candidate's record and acting on matcher results.
+- [ ] Candidate notes & history on the record — view a candidate's previous notes and activity history right on their profile
+- [ ] Matcher bulk export — multi-select results in the resume matcher and bulk-export the selected candidates' contact info (name, phone, email, matched job) for Front emailing or Paycom re-entry; gate the export behind role-based permissions (ties into Phase 4 access controls)
+- [ ] Multiple & duplicate resumes per candidate — define how the system handles several resumes on one candidate and duplicate resumes (extends the candidate duplicate merge work)
+
+## Interview & Evaluation
+Streamline the end-to-end interview experience.
+- [ ] Independent interviewer scoring — each interviewer scores a candidate on their own, separate from what others entered
+- [ ] Per-question interview rubric — score each question on a 4-point scale: Exceeds / Meets / Can Develop / Does Not Meet
+- [ ] Rubric to numeric mapping — decide whether the rubric rolls up to a number so candidates can be ranked and compared on interview performance
+- [ ] Interview question bank — a reusable database of interview questions
+- [ ] Interview guide generator — auto-build an interview guide from the question bank matched to the job, core values, and situation (depends on the question bank)
+
+## Calendar
+- [ ] Calendar department filter — pick a specific department or view all departments on the calendar
+- [ ] Rename hiring manager to hiring team — update the label across the calendar view and likely the requisitions system-wide
 `;
