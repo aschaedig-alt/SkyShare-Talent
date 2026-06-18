@@ -339,6 +339,7 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
         </aside>
 
         <RequirementDetail
+          key={data.selectedRequirement?.id ?? "none"}
           requirement={data.selectedRequirement}
           candidateMatches={data.candidateMatches}
           canEditScoring={data.canEditScoring}
