@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { METRIC_DEFS, type MetricKind } from "@/lib/extraction/pilot-metrics";
 
 export type CandidateListItem = {
   id: string;
@@ -237,6 +238,128 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
       withApplications,
       scheduledInterviews
     }
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Comparison table — compare flight metrics, type ratings & certs across everyone
+// ---------------------------------------------------------------------------
+
+export type ComparisonColumn = {
+  key: string;
+  label: string;
+  kind: MetricKind;
+  unit?: string;
+};
+
+export type ComparisonMetric = {
+  number: number | null;
+  text: string | null;
+  unit: string | null;
+  confirmed: boolean; // false = still a SUGGESTED (unconfirmed) extraction
+};
+
+export type CandidateComparisonRow = {
+  id: string;
+  displayName: string;
+  currentTitle: string | null;
+  stage: string | null;
+  updatedAt: string;
+  metrics: Record<string, ComparisonMetric>; // keyed by metric key (hours/text columns)
+  typeRatings: string[];
+  certificates: string[];
+};
+
+export type CandidateComparisonData = {
+  rows: CandidateComparisonRow[];
+  columns: ComparisonColumn[]; // every numeric/text metric column (excludes the list columns)
+  typeRatingOptions: string[];
+  certificateOptions: string[];
+};
+
+/** Split a stored list value ("GV, G450 / CE-525") into clean tokens. */
+function splitListValue(value: string | null): string[] {
+  if (!value) return [];
+  return [
+    ...new Set(
+      value
+        .split(/[,;/|]+|\band\b/gi)
+        .map((part) => part.trim())
+        .filter(Boolean)
+    )
+  ];
+}
+
+export async function getCandidateComparisonData(): Promise<CandidateComparisonData> {
+  const candidateRows = await prisma.candidate.findMany({
+    where: { archivedAt: null },
+    take: 1000,
+    orderBy: [{ displayName: "asc" }],
+    select: {
+      id: true,
+      displayName: true,
+      currentTitle: true,
+      stage: true,
+      updatedAt: true,
+      metrics: {
+        where: { status: { not: "DISMISSED" } },
+        select: { key: true, valueNumber: true, valueText: true, unit: true, status: true }
+      }
+    }
+  });
+
+  // Scalar (hours/text) columns only; the two list columns get dedicated chip cells.
+  const columns: ComparisonColumn[] = METRIC_DEFS.filter((def) => def.kind !== "list").map((def) => ({
+    key: def.key,
+    label: def.label,
+    kind: def.kind,
+    unit: def.unit
+  }));
+
+  const typeRatingSet = new Set<string>();
+  const certificateSet = new Set<string>();
+
+  const rows: CandidateComparisonRow[] = candidateRows.map((candidate) => {
+    const metrics: Record<string, ComparisonMetric> = {};
+    let typeRatings: string[] = [];
+    let certificates: string[] = [];
+
+    for (const metric of candidate.metrics) {
+      if (metric.key === "type_ratings") {
+        typeRatings = splitListValue(metric.valueText);
+        typeRatings.forEach((rating) => typeRatingSet.add(rating));
+        continue;
+      }
+      if (metric.key === "certificates") {
+        certificates = splitListValue(metric.valueText);
+        certificates.forEach((cert) => certificateSet.add(cert));
+        continue;
+      }
+      metrics[metric.key] = {
+        number: metric.valueNumber,
+        text: metric.valueText,
+        unit: metric.unit,
+        confirmed: metric.status === "CONFIRMED"
+      };
+    }
+
+    return {
+      id: candidate.id,
+      displayName: candidate.displayName,
+      currentTitle: candidate.currentTitle,
+      stage: candidate.stage,
+      updatedAt: candidate.updatedAt.toISOString(),
+      metrics,
+      typeRatings,
+      certificates
+    };
+  });
+
+  return {
+    rows,
+    columns,
+    typeRatingOptions: [...typeRatingSet].sort((a, b) => a.localeCompare(b)),
+    certificateOptions: [...certificateSet].sort((a, b) => a.localeCompare(b))
   };
 }
 

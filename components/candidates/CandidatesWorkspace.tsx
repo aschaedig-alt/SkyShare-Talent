@@ -14,6 +14,7 @@ import type { CandidateListData } from "@/lib/data/candidates";
 import { NewCandidateButton } from "@/components/candidates/NewCandidateButton";
 import { ResumeIntake } from "@/components/candidates/ResumeIntake";
 import { DocumentIntake } from "@/components/candidates/DocumentIntake";
+import { CandidateViewTabs } from "@/components/candidates/CandidateViewTabs";
 
 type CandidatesWorkspaceProps = {
   data: CandidateListData;
@@ -111,6 +112,8 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
           </div>
         </div>
       </section>
+
+      <CandidateViewTabs active="list" />
 
       {/* Stats */}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
