@@ -11,6 +11,7 @@ import { resolveProfileConfig, profileKey } from "@/lib/matching/scoring-config"
 import { canEditScoring, getProfileScoringConfig, getScoringConfigDoc } from "@/lib/matching/scoring-config.server";
 import { getRequirementFeedback, getCandidateFeedback } from "@/lib/matching/match-feedback";
 import { getRequirementTierOverrides, getCandidateTierOverrides } from "@/lib/matching/tier-override";
+import { FLEET_POSITIONS, resolveFleetPosition } from "@/lib/fleet/positions";
 import type { JobScreeningData } from "@/lib/data/job-screening";
 
 function parseStringArray(value: string | null): string[] {
@@ -28,12 +29,15 @@ function parseStringArray(value: string | null): string[] {
 // ---------------------------------------------------------------------------
 
 export type RoleSubject = {
-  id: string;
-  title: string;
+  id: string; // representative requirement id to scan
+  title: string; // canonical fleet title (or the raw requirement title when unmatched)
   seat: string | null;
   aircraft: string | null;
-  jobTitle: string | null;
+  typeRating: string | null;
+  status: "Active" | "Archived" | null; // from the fleet registry; null when unmatched
   applicantCount: number;
+  dupeCount: number; // requirement rows collapsed into this canonical position
+  unmatched: boolean; // true = didn't resolve to a canonical fleet position
 };
 
 export type CandidateSubject = {
@@ -78,15 +82,58 @@ export async function getMatchboardSubjects(): Promise<MatchboardSubjects> {
     })
   ]);
 
+  // Collapse the messy requirement rows onto canonical fleet positions via the
+  // registry resolver, so the picker shows the canonical, deduped list.
+  type Group = { reqIds: string[]; applicants: number };
+  const bySlug = new Map<string, Group>();
+  const unmatched: RoleSubject[] = [];
+
+  for (const req of requirements) {
+    const position = resolveFleetPosition(req.title);
+    if (position) {
+      const group = bySlug.get(position.slug);
+      if (group) {
+        group.reqIds.push(req.id);
+        group.applicants += req._count.applications;
+      } else {
+        bySlug.set(position.slug, { reqIds: [req.id], applicants: req._count.applications });
+      }
+    } else {
+      unmatched.push({
+        id: req.id,
+        title: req.title,
+        seat: req.pilotSeat,
+        aircraft: parseStringArray(req.aircraftTypesJson)[0] ?? null,
+        typeRating: null,
+        status: null,
+        applicantCount: req._count.applications,
+        dupeCount: 1,
+        unmatched: true
+      });
+    }
+  }
+
+  const canonicalRoles: RoleSubject[] = FLEET_POSITIONS.filter((position) => bySlug.has(position.slug)).map(
+    (position) => {
+      const group = bySlug.get(position.slug)!;
+      return {
+        id: group.reqIds[0],
+        title: position.title,
+        seat: position.seat,
+        aircraft: position.aircraft,
+        typeRating: position.typeRating || null,
+        status: position.status,
+        applicantCount: group.applicants,
+        dupeCount: group.reqIds.length,
+        unmatched: false
+      };
+    }
+  );
+  // Active positions first (stable sort keeps fleet/size order within each group).
+  canonicalRoles.sort((a, b) => (a.status === "Archived" ? 1 : 0) - (b.status === "Archived" ? 1 : 0));
+
   return {
-    roles: requirements.map((req) => ({
-      id: req.id,
-      title: req.title,
-      seat: req.pilotSeat,
-      aircraft: parseStringArray(req.aircraftTypesJson)[0] ?? null,
-      jobTitle: req.sourceJobRecord?.title ?? null,
-      applicantCount: req._count.applications
-    })),
+    roles: [...canonicalRoles, ...unmatched],
     candidates: candidates.map((cand) => ({
       id: cand.id,
       name: cand.displayName,
@@ -178,7 +225,7 @@ export async function getRoleScreening(requirementId: string | null, includeExcl
   return {
     hasRequirement: true,
     requirementId: requirement.id,
-    requirementTitle: requirement.title,
+    requirementTitle: resolveFleetPosition(requirement.title)?.title ?? requirement.title,
     applicants,
     best,
     applicantIds,

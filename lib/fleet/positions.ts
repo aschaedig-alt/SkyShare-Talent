@@ -158,3 +158,9 @@ export function resolveFleetPosition(rawTitle: string | null | undefined): Fleet
     null
   );
 }
+
+/** Canonical display title for a raw/imported title; falls back to the raw title. */
+export function canonicalTitle(rawTitle: string | null | undefined): string {
+  if (!rawTitle) return rawTitle ?? "";
+  return resolveFleetPosition(rawTitle)?.title ?? rawTitle;
+}

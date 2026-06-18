@@ -46,7 +46,7 @@ export function MatchboardWorkspace({
     const q = query.trim().toLowerCase();
     if (!q) return subjects.roles;
     return subjects.roles.filter((r) =>
-      [r.title, r.seat, r.aircraft, r.jobTitle].filter(Boolean).join(" ").toLowerCase().includes(q)
+      [r.title, r.seat, r.aircraft, r.typeRating].filter(Boolean).join(" ").toLowerCase().includes(q)
     );
   }, [subjects.roles, query]);
 
@@ -122,10 +122,18 @@ export function MatchboardWorkspace({
                     >
                       <div className="flex items-center gap-1.5">
                         <span className="min-w-0 flex-1 truncate text-sm font-semibold text-brand-lea">{role.title}</span>
+                        {role.status === "Archived" ? (
+                          <span className="shrink-0 rounded-full bg-brand-cloudDancer px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-grey">Archived</span>
+                        ) : null}
+                        {role.unmatched ? (
+                          <span className="shrink-0 rounded-full bg-value-customerFocus-light px-1.5 py-0.5 text-[9px] font-bold uppercase text-value-customerFocus-dark">Review</span>
+                        ) : null}
                         <span className={clsx("shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase", seat.cls)}>{seat.label}</span>
                       </div>
                       <div className="mt-0.5 truncate text-xs text-brand-grey">
-                        {[role.aircraft, `${role.applicantCount} applied`].filter(Boolean).join(" · ")}
+                        {[role.typeRating, `${role.applicantCount} applied`, role.dupeCount > 1 ? `${role.dupeCount} variants` : null]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </div>
                     </button>
                   );

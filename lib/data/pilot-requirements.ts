@@ -5,6 +5,7 @@ import {
 } from "@/lib/matching/pilot-requirement-matches";
 import { canEditScoring, getProfileScoringConfig } from "@/lib/matching/scoring-config.server";
 import { getRequirementFeedback } from "@/lib/matching/match-feedback";
+import { canonicalTitle } from "@/lib/fleet/positions";
 
 export type RequirementGateView = {
   id: string;
@@ -167,7 +168,7 @@ function toListItem(requirement: {
   const gates = requirement.gates.map(serializeGate);
   return {
     id: requirement.id,
-    title: requirement.title,
+    title: canonicalTitle(requirement.title),
     status: requirement.status,
     reviewStatus: requirement.reviewStatus,
     operatorType: requirement.operatorType,

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { canonicalTitle } from "@/lib/fleet/positions";
 
 export type RecruitingJobListItem = {
   id: string;
@@ -86,7 +87,7 @@ function toListItem(job: {
 }): RecruitingJobListItem {
   return {
     id: job.id,
-    title: job.title,
+    title: canonicalTitle(job.title),
     department: job.department,
     status: job.status,
     city: job.city,
@@ -183,7 +184,10 @@ export async function getRecruitingJobsData(query = "", selectedId?: string): Pr
             rawPayScale: selectedRow.rawPayScale,
             rawMinimumRequirements: selectedRow.rawMinimumRequirements,
             jobDescriptionText: selectedRow.jobDescriptionText,
-            linkedRequirements: selectedRow.pilotRequirements,
+            linkedRequirements: selectedRow.pilotRequirements.map((requirement) => ({
+              ...requirement,
+              title: canonicalTitle(requirement.title)
+            })),
             linkedCandidates: selectedRow.applications.map((application) => ({
               id: application.candidate.id,
               displayName: application.candidate.displayName,

@@ -13,6 +13,7 @@ import {
 import type { MatchFeedbackEntry, RequirementFeedback } from "@/lib/matching/match-feedback";
 import type { OverrideTier, TierOverrides } from "@/lib/matching/tier-override";
 import { isScanExclusionReason, type ScanExclusionReason } from "@/lib/candidates/scan-exclusion";
+import { resolveFleetPosition, aircraftSharingTypeRating } from "@/lib/fleet/positions";
 
 // ---------------------------------------------------------------------------
 // Inputs
@@ -279,6 +280,21 @@ export function scoreCandidate(
   const appliedText = applicationText(candidate);
   const aircraftList = parseStringArray(requirement.aircraftTypesJson);
   const allAircraftAliases = aircraftList.flatMap(aircraftAliases);
+
+  // Type-rating-aware aircraft fit: a candidate who holds the role's type rating
+  // — or has flown any aircraft that shares it (e.g. CE-525 covers M2/CJ/CJ2) —
+  // counts as type-rated, even if they haven't flown this exact model.
+  const fleetPosition = resolveFleetPosition(requirement.title);
+  const positionTypeRating = fleetPosition?.typeRating || null;
+  const typeRatingAliases = positionTypeRating
+    ? [
+        normalize(positionTypeRating),
+        normalize(positionTypeRating).replace(/\s+/g, ""),
+        ...aircraftSharingTypeRating(positionTypeRating).flatMap(aircraftAliases)
+      ].filter((alias) => alias.length >= 2)
+    : [];
+  const ratingAliases = [...new Set([...allAircraftAliases, ...typeRatingAliases])];
+
   const metricsByKey = new Map(candidate.metrics.map((metric) => [metric.key, metric]));
   const gatesByKey = new Map(requirement.gates.map((gate) => [gate.key, gate]));
 
@@ -305,9 +321,9 @@ export function scoreCandidate(
   if (reqStatus(typeRatingDef) !== "none" && aircraftList.length > 0) {
     const ratingsMetric = metricsByKey.get("type_ratings");
     const ratingsText = normalize(ratingsMetric?.valueText ?? "");
-    const inRatings = allAircraftAliases.some((alias) => includesToken(ratingsText, alias));
-    const inProfile = allAircraftAliases.some((alias) => includesToken(text, alias));
-    const inApplied = allAircraftAliases.some((alias) => includesToken(appliedText, alias));
+    const inRatings = ratingAliases.some((alias) => includesToken(ratingsText, alias));
+    const inProfile = ratingAliases.some((alias) => includesToken(text, alias));
+    const inApplied = ratingAliases.some((alias) => includesToken(appliedText, alias));
 
     let status: FactorStatus;
     let source: FactorSource;
@@ -327,14 +343,16 @@ export function scoreCandidate(
 
     pushFactor({
       key: "type_rating",
-      label: `Type rating — ${aircraftList[0]}`,
+      label: positionTypeRating ? `Type rating — ${positionTypeRating}` : `Type rating — ${aircraftList[0]}`,
       category: "aircraft",
       categoryLabel: CATEGORY_LABELS.aircraft,
       status,
       requirementStatus: reqStatus(typeRatingDef) === "hard" ? "hard" : "soft",
       detail:
         status === "met"
-          ? "Type rating on file"
+          ? positionTypeRating
+            ? `${positionTypeRating} type rating on file (covers ${aircraftSharingTypeRating(positionTypeRating).join(" / ") || aircraftList[0]})`
+            : "Type rating on file"
           : status === "near"
             ? `Aircraft referenced (${source === "application" ? "in applications" : "in profile"})`
             : "No aircraft evidence",
