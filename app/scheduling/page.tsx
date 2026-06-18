@@ -3,6 +3,16 @@ import { SchedulingAdmin, type AdminHost, type AdminOverride } from "@/component
 
 export const dynamic = "force-dynamic";
 
+function parseDepartments(json: string | null): string[] {
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 export default async function SchedulingPage() {
   const hosts = await prisma.bookingHost.findMany({
     orderBy: { name: "asc" },
@@ -19,6 +29,7 @@ export default async function SchedulingPage() {
     slug: h.slug,
     email: h.email,
     role: h.role,
+    departments: parseDepartments(h.departmentsJson),
     title: h.title,
     avatarUrl: h.avatarUrl,
     timezone: h.timezone,

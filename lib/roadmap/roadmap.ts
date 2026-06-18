@@ -167,5 +167,7 @@ Streamline the end-to-end interview experience.
 
 ## Calendar
 - [x] Calendar department filter + color-coding (Jun 18) — canonical departments (Crew, Maintenance, FBO, Support, each with sub-groups) drive a drill-down filter and color every interview on all calendar views by department; a Dept/Stage toggle switches the coloring (defaults to department); jobs map onto the taxonomy via an editable resolver; interviews with no linked job group under Unassigned
+- [x] Editable department colors (Jun 18) — admins recolor each department (Crew/Maintenance/FBO/Support) from an on-brand palette via a Colors button on the calendar; saved per workspace, no migration
+- [x] Interviewer roster + multi-department assignment (Jun 18) — team members (Scheduling) can each be assigned to one or more departments; the calendar interviewer field now picks from the active roster — foundation for per-interviewer scoring
 - [ ] Rename hiring manager to hiring team — update the label across the calendar view and likely the requisitions system-wide
 `;

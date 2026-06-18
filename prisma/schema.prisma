@@ -922,6 +922,9 @@ model BookingHost {
   slug              String   @unique
   email             String?  // @skyshare email; also used for free/busy lookup
   role              String   @default("RECRUITER") // RECRUITER | HIRING_MANAGER | OTHER
+  // JSON array of canonical department keys this person can interview for
+  // (e.g. ["crew","fbo"]). A person may belong to multiple departments.
+  departmentsJson   String?
   title             String?
   avatarUrl         String?  // small profile photo (data URL) shown on the calendar
   timezone          String   @default("America/Denver")

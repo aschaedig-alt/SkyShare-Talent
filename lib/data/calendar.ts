@@ -25,6 +25,8 @@ export type CalendarData = {
   }>;
   /** Recruiting team / hiring managers, keyed by name, for timeline avatars. */
   teamHosts: Array<{ name: string; avatarUrl: string | null }>;
+  /** Active team members offered as interviewer choices (name + their departments). */
+  interviewers: Array<{ name: string; role: string; departments: string[] }>;
   sync: {
     configured: boolean;
     direction: string | null;
@@ -66,6 +68,16 @@ function addDays(date: Date, days: number) {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
   return next;
+}
+
+function parseStringArray(value: string | null): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 export async function getCalendarData(): Promise<CalendarData> {
@@ -135,7 +147,7 @@ export async function getCalendarData(): Promise<CalendarData> {
       }
     }),
     prisma.googleCalendarConnection.findFirst(),
-    prisma.bookingHost.findMany({ select: { name: true, avatarUrl: true } })
+    prisma.bookingHost.findMany({ select: { name: true, avatarUrl: true, role: true, isActive: true, departmentsJson: true } })
   ]);
 
   return {
@@ -165,6 +177,9 @@ export async function getCalendarData(): Promise<CalendarData> {
     }),
     jobs,
     teamHosts: teamHosts.map((h) => ({ name: h.name, avatarUrl: h.avatarUrl })),
+    interviewers: teamHosts
+      .filter((h) => h.isActive && h.name.trim())
+      .map((h) => ({ name: h.name, role: h.role, departments: parseStringArray(h.departmentsJson) })),
     sync: {
       configured: isGoogleCalendarConfigured(),
       direction: connection?.syncDirection ?? null,

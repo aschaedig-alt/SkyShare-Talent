@@ -25,6 +25,7 @@ export const hostCreateSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Slug may use lowercase letters, numbers, and hyphens."),
   email: z.string().trim().email().optional().nullable(),
   role: z.enum(["RECRUITER", "HIRING_MANAGER", "OTHER"]).default("RECRUITER"),
+  departments: z.array(z.enum(["crew", "maintenance", "fbo", "support"])).optional(),
   title: z.string().trim().optional().nullable(),
   avatarUrl: z.string().optional().nullable(), // data URL or null to clear
   timezone: z.string().trim().min(1).default("America/Denver"),

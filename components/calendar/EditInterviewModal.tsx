@@ -10,6 +10,7 @@ type Interview = CalendarData["interviews"][number];
 interface EditInterviewModalProps {
   interview: Interview;
   jobs: CalendarData["jobs"];
+  interviewers?: CalendarData["interviewers"];
   onClose: () => void;
   onSaved: () => void;
 }
@@ -23,7 +24,7 @@ function toDateTimeLocal(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function EditInterviewModal({ interview, jobs, onClose, onSaved }: EditInterviewModalProps) {
+export function EditInterviewModal({ interview, jobs, interviewers = [], onClose, onSaved }: EditInterviewModalProps) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState<{ type: string; text: string } | null>(null);
@@ -229,8 +230,17 @@ export function EditInterviewModal({ interview, jobs, onClose, onSaved }: EditIn
             <input
               name="interviewer"
               defaultValue={interview.interviewer ?? ""}
+              list="edit-interviewer-options"
+              placeholder={interviewers.length ? "Pick or type a name" : "Type a name"}
               className="rounded border border-brand-lea/20 px-3 py-2 text-sm"
             />
+            {interviewers.length > 0 && (
+              <datalist id="edit-interviewer-options">
+                {interviewers.map((person) => (
+                  <option key={person.name} value={person.name} />
+                ))}
+              </datalist>
+            )}
           </label>
 
           <label className="grid gap-1 text-xs font-semibold text-brand-lea">

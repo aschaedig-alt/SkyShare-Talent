@@ -11,12 +11,13 @@ import { interviewTypes, INTERVIEW_TYPE_META, DEFAULT_INTERVIEW_TYPE } from "@/l
 type ScheduleInterviewFormProps = {
   candidates: CalendarData["candidates"];
   jobs: CalendarData["jobs"];
+  interviewers?: CalendarData["interviewers"];
   prefilledDate?: Date | null;
 };
 
 const statusOptions = ["SCHEDULED", "COMPLETED", "CANCELLED"];
 
-export function ScheduleInterviewForm({ candidates, jobs, prefilledDate }: ScheduleInterviewFormProps) {
+export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], prefilledDate }: ScheduleInterviewFormProps) {
   const router = useRouter();
   const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -268,7 +269,19 @@ export function ScheduleInterviewForm({ candidates, jobs, prefilledDate }: Sched
         <div className="grid gap-3 md:grid-cols-2">
           <label className="grid gap-1 text-xs font-semibold text-brand-lea">
             Interviewer
-            <input name="interviewer" className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm" />
+            <input
+              name="interviewer"
+              list="interviewer-options"
+              placeholder={interviewers.length ? "Pick or type a name" : "Type a name"}
+              className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm"
+            />
+            {interviewers.length > 0 && (
+              <datalist id="interviewer-options">
+                {interviewers.map((person) => (
+                  <option key={person.name} value={person.name} />
+                ))}
+              </datalist>
+            )}
           </label>
           <label className="grid gap-1 text-xs font-semibold text-brand-lea">
             Timezone

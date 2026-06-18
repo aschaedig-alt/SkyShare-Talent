@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Trash2, Copy, Check, Link as LinkIcon, Calendar, Clock, Ban, ImageUp } from "lucide-react";
 import { clsx } from "clsx";
 import { US_TIMEZONES } from "@/lib/calendar/timezones";
+import { DEPARTMENTS } from "@/lib/calendar/departments";
 
 export type AdminWeeklyRule = { id: string; dayOfWeek: number; startMinute: number; endMinute: number };
 export type AdminBookingType = {
@@ -24,6 +25,7 @@ export type AdminHost = {
   slug: string;
   email: string | null;
   role: string;
+  departments: string[];
   title: string | null;
   avatarUrl: string | null;
   timezone: string;
@@ -365,6 +367,7 @@ function Settings({
     title: host.title ?? "",
     email: host.email ?? "",
     role: host.role,
+    departments: host.departments,
     timezone: host.timezone,
     calendarId: host.calendarId ?? "",
     minNoticeHours: host.minNoticeHours,
@@ -440,6 +443,31 @@ function Settings({
             <input type="checkbox" checked={form.isActive} onChange={(e) => set("isActive", e.target.checked)} /> Accepting bookings
           </label>
         </Field>
+      </div>
+
+      <div className="mt-3">
+        <div className="text-xs font-semibold text-brand-lea">Departments</div>
+        <p className="mb-2 text-[11px] text-brand-grey">Which departments this person interviews for — choose one or more.</p>
+        <div className="flex flex-wrap gap-1.5">
+          {DEPARTMENTS.map((d) => {
+            const active = form.departments.includes(d.key);
+            return (
+              <button
+                key={d.key}
+                type="button"
+                onClick={() =>
+                  set("departments", active ? form.departments.filter((x) => x !== d.key) : [...form.departments, d.key])
+                }
+                className={clsx(
+                  "rounded-full border px-3 py-1 text-xs font-semibold transition",
+                  active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"
+                )}
+              >
+                {d.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="mt-4 flex items-center justify-between">

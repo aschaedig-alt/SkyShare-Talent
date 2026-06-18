@@ -366,7 +366,7 @@ export function CalendarWorkspace({
       title: "Schedule interview",
       node: (
         <div id="schedule-form" className="h-full">
-          <ScheduleInterviewForm candidates={data.candidates} jobs={data.jobs} prefilledDate={prefilledDate} />
+          <ScheduleInterviewForm candidates={data.candidates} jobs={data.jobs} interviewers={data.interviewers} prefilledDate={prefilledDate} />
         </div>
       )
     },
@@ -390,6 +390,7 @@ export function CalendarWorkspace({
         <EditInterviewModal
           interview={editingInterview}
           jobs={data.jobs}
+          interviewers={data.interviewers}
           onClose={() => setEditingInterview(null)}
           onSaved={() => router.refresh()}
         />
