@@ -1,4 +1,4 @@
-import { timezoneAbbr, DEFAULT_TIMEZONE } from "@/lib/calendar/timezones";
+import { timezoneAbbr, resolveTimezone } from "@/lib/calendar/timezones";
 
 /**
  * Canonical date/time formatting for the whole app.
@@ -14,7 +14,7 @@ function toDate(value: string | Date): Date {
 }
 
 function tz(timezone?: string | null): string {
-  return timezone || DEFAULT_TIMEZONE;
+  return resolveTimezone(timezone);
 }
 
 /** Consistent short zone label: known US zones -> "MT"/"ET"; otherwise a short fallback. */
