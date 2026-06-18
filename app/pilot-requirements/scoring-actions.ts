@@ -199,6 +199,7 @@ export async function setRequirementFleetPosition(input: {
   requirementId: string;
   fleetPositionSlug: string | null; // null = clear (fall back to title matching)
   advertisedTitle: string | null;
+  aircraftTypes?: string[]; // when provided, replaces the requirement's aircraft tags
 }): Promise<ActionResult> {
   const denied = await guard();
   if (denied) return denied;
@@ -207,12 +208,19 @@ export async function setRequirementFleetPosition(input: {
     return { ok: false, error: "Unknown fleet position." };
   }
 
+  let aircraftTypesJson: string | undefined;
+  if (input.aircraftTypes) {
+    const cleaned = [...new Set(input.aircraftTypes.map((t) => t.trim()).filter(Boolean))].slice(0, 20);
+    aircraftTypesJson = JSON.stringify(cleaned);
+  }
+
   try {
     await prisma.pilotRequirement.update({
       where: { id: input.requirementId },
       data: {
         fleetPositionSlug: input.fleetPositionSlug,
-        advertisedTitle: input.advertisedTitle?.trim() ? input.advertisedTitle.trim().slice(0, 200) : null
+        advertisedTitle: input.advertisedTitle?.trim() ? input.advertisedTitle.trim().slice(0, 200) : null,
+        ...(aircraftTypesJson !== undefined ? { aircraftTypesJson } : {})
       }
     });
   } catch {

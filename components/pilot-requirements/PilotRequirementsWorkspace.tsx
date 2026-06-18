@@ -120,6 +120,7 @@ function RequirementDetail({
           requirementId={requirement.id}
           currentSlug={requirement.fleetPositionSlug}
           currentAdvertised={requirement.advertisedTitle}
+          currentAircraftTypes={requirement.aircraftTypes}
           rawTitle={requirement.title}
         />
       ) : null}
