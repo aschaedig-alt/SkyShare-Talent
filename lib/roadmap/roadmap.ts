@@ -98,7 +98,7 @@ Making candidate documents searchable and structured.
 - [x] Serverless PDF extraction via unpdf (Jun 11) — fixed text extraction failing on Vercel; self-healing scan re-extracts files missing text
 - [x] Flight-data extraction v1 (Jun 11) — Scan docs pulls Total Time, PIC/SIC, Turbine, Multi, Jet (incl. PIC sub-values), Night, Instrument, Cross-Country, type ratings, certificates, medical
 - [x] Flight Profile review controls (Jun 11) — suggest/confirm, edit label + value, sticky reject, and manually add a field
-- [ ] Sortable candidates table — compare Total Time / type ratings / certs across everyone (next big piece)
+- [x] Sortable candidates table (Jun 18) — /candidates → Compare tab: one table comparing flight metrics, type ratings, and certificates across everyone; click-to-sort columns (missing values sort last), name/role search, type-rating + certificate filters, min-total-time filter, column show/hide, and CSV export of the current view; unconfirmed extractions flagged
 - [ ] OCR for scanned/image PDFs — so photographed/scanned docs become searchable
 - [ ] Upgrade extraction to Claude LLM — swap regex for a Claude call once proven; needs ANTHROPIC_API_KEY (deferred to avoid dev-time cost; see memory note)
 
