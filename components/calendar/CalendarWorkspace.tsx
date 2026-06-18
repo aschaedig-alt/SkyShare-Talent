@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, CalendarRange, Square, GanttChartSquare } from "lucide-react";
+import { CalendarDays, CalendarRange, Square, GanttChartSquare, Building2 } from "lucide-react";
 import { clsx } from "clsx";
 import type { CalendarData } from "@/lib/data/calendar";
 import { ScheduleInterviewForm } from "@/components/calendar/ScheduleInterviewForm";
@@ -27,6 +27,14 @@ type CalendarWorkspaceProps = {
 
 type Interview = CalendarData["interviews"][number];
 type ViewMode = "month" | "week" | "day" | "timeline" | "list";
+
+// Sentinel for the "interviews with no linked job / department" bucket.
+const UNASSIGNED_DEPARTMENT = "__unassigned__";
+
+function interviewDepartment(interview: Interview): string | null {
+  const dept = interview.job?.department?.trim();
+  return dept ? dept : null;
+}
 
 // Default arrangement (12-col grid) used until an admin saves a custom layout.
 const CALENDAR_DEFAULT_LAYOUT: GridItem[] = [
@@ -115,8 +123,35 @@ function CompactInterviewList({
 export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, savedWidgets = null, widgetData }: CalendarWorkspaceProps) {
   const router = useRouter();
   const [view, setView] = useState<ViewMode>("month");
+  const [department, setDepartment] = useState<string>("all");
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
   const [prefilledDate, setPrefilledDate] = useState<Date | null>(null);
+
+  // Distinct departments present on the loaded interviews (via their linked job),
+  // plus whether any interview has no department, so the filter only offers real values.
+  const { departmentList, hasUnassigned } = useMemo(() => {
+    const set = new Set<string>();
+    let unassigned = false;
+    for (const interview of data.interviews) {
+      const dept = interviewDepartment(interview);
+      if (dept) set.add(dept);
+      else unassigned = true;
+    }
+    return {
+      departmentList: [...set].sort((a, b) => a.localeCompare(b)),
+      hasUnassigned: unassigned
+    };
+  }, [data.interviews]);
+
+  const showDepartmentFilter = departmentList.length > 0;
+
+  const filteredInterviews = useMemo(() => {
+    if (department === "all") return data.interviews;
+    if (department === UNASSIGNED_DEPARTMENT) {
+      return data.interviews.filter((interview) => interviewDepartment(interview) === null);
+    }
+    return data.interviews.filter((interview) => interviewDepartment(interview) === department);
+  }, [data.interviews, department]);
 
   function handleDayClick(date: Date) {
     setPrefilledDate(date);
@@ -175,24 +210,47 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
           </p>
         </div>
 
-        {/* View Toggle */}
-        <div className="flex items-center gap-1 rounded-lg border border-brand-lea/15 p-1">
-          {viewOptions.map((option) => {
-            const Icon = option.icon;
-            return (
-              <button
-                key={option.id}
-                onClick={() => setView(option.id)}
-                className={clsx(
-                  "flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-semibold transition",
-                  view === option.id ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea"
-                )}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Department filter */}
+          {showDepartmentFilter && (
+            <label className="flex items-center gap-1.5 rounded-lg border border-brand-lea/15 py-1 pl-2.5 pr-1 text-sm">
+              <Building2 className="h-4 w-4 shrink-0 text-brand-grey" />
+              <span className="sr-only">Filter by department</span>
+              <select
+                value={department}
+                onChange={(event) => setDepartment(event.target.value)}
+                className="max-w-[12rem] cursor-pointer rounded bg-transparent py-1 pr-1 text-sm font-semibold text-brand-lea outline-none focus:ring-2 focus:ring-brand-gold/40"
               >
-                <Icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{option.label}</span>
-              </button>
-            );
-          })}
+                <option value="all">All departments</option>
+                {departmentList.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
+                ))}
+                {hasUnassigned && <option value={UNASSIGNED_DEPARTMENT}>Unassigned</option>}
+              </select>
+            </label>
+          )}
+
+          {/* View Toggle */}
+          <div className="flex items-center gap-1 rounded-lg border border-brand-lea/15 p-1">
+            {viewOptions.map((option) => {
+              const Icon = option.icon;
+              return (
+                <button
+                  key={option.id}
+                  onClick={() => setView(option.id)}
+                  className={clsx(
+                    "flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-semibold transition",
+                    view === option.id ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea"
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="hidden sm:inline">{option.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>
@@ -216,7 +274,7 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
     <div className="h-full min-w-0">
       {view === "month" && (
         <MonthCalendar
-          interviews={data.interviews}
+          interviews={filteredInterviews}
           onDayClick={handleDayClick}
           onInterviewClick={handleInterviewClick}
           onReschedule={handleReschedule}
@@ -224,7 +282,7 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
       )}
       {view === "week" && (
         <TimeGridCalendar
-          interviews={data.interviews}
+          interviews={filteredInterviews}
           mode="week"
           onSlotClick={handleDayClick}
           onInterviewClick={handleInterviewClick}
@@ -233,7 +291,7 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
       )}
       {view === "day" && (
         <TimeGridCalendar
-          interviews={data.interviews}
+          interviews={filteredInterviews}
           mode="day"
           onSlotClick={handleDayClick}
           onInterviewClick={handleInterviewClick}
@@ -242,7 +300,7 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
       )}
       {view === "timeline" && (
         <ScheduleTimeline
-          interviews={data.interviews}
+          interviews={filteredInterviews}
           teamHosts={data.teamHosts}
           onInterviewClick={handleInterviewClick}
           onReschedule={handleReschedule}
@@ -254,8 +312,8 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
   const panels: EditablePanel[] = [
     { id: "cal-header", title: "Interview operations", node: headerPanel },
     { id: "cal-stats", title: "Interview statistics", node: statsPanel },
-    { id: "cal-upcoming", title: "Upcoming interviews", node: <UpcomingInterviews interviews={data.interviews} onInterviewClick={handleInterviewClick} /> },
-    { id: "cal-list", title: "All interviews", node: <CompactInterviewList interviews={data.interviews} onInterviewClick={handleInterviewClick} /> },
+    { id: "cal-upcoming", title: "Upcoming interviews", node: <UpcomingInterviews interviews={filteredInterviews} onInterviewClick={handleInterviewClick} /> },
+    { id: "cal-list", title: "All interviews", node: <CompactInterviewList interviews={filteredInterviews} onInterviewClick={handleInterviewClick} /> },
     { id: "cal-google", title: "Google sync", node: <GoogleSyncCard sync={data.sync} /> },
     {
       id: "cal-schedule",

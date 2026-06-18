@@ -166,6 +166,6 @@ Streamline the end-to-end interview experience.
 - [ ] Interview guide generator — auto-build an interview guide from the question bank matched to the job, core values, and situation (depends on the question bank)
 
 ## Calendar
-- [ ] Calendar department filter — pick a specific department or view all departments on the calendar
+- [x] Calendar department filter (Jun 18) — a department dropdown beside the view toggle filters the calendar and interview lists to one department (derived from each interview's linked job) or all; interviews with no linked job group under Unassigned
 - [ ] Rename hiring manager to hiring team — update the label across the calendar view and likely the requisitions system-wide
 `;
