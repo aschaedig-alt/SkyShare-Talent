@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { PilotRequirementsData, PilotRequirementDetail } from "@/lib/data/pilot-requirements";
 import { PilotRequirementEditor } from "@/components/pilot-requirements/PilotRequirementEditor";
 import { CandidateTriagePanel } from "@/components/pilot-requirements/CandidateTriagePanel";
+import { FleetPositionEditor } from "@/components/pilot-requirements/FleetPositionEditor";
 
 type PilotRequirementsWorkspaceProps = {
   data: PilotRequirementsData;
@@ -113,6 +114,15 @@ function RequirementDetail({
           </div>
         </div>
       </section>
+
+      {canEditScoring ? (
+        <FleetPositionEditor
+          requirementId={requirement.id}
+          currentSlug={requirement.fleetPositionSlug}
+          currentAdvertised={requirement.advertisedTitle}
+          rawTitle={requirement.title}
+        />
+      ) : null}
 
       <section className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">

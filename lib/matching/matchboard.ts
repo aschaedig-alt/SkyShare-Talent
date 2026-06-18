@@ -11,7 +11,7 @@ import { resolveProfileConfig, profileKey } from "@/lib/matching/scoring-config"
 import { canEditScoring, getProfileScoringConfig, getScoringConfigDoc } from "@/lib/matching/scoring-config.server";
 import { getRequirementFeedback, getCandidateFeedback } from "@/lib/matching/match-feedback";
 import { getRequirementTierOverrides, getCandidateTierOverrides } from "@/lib/matching/tier-override";
-import { FLEET_POSITIONS, resolveFleetPosition } from "@/lib/fleet/positions";
+import { FLEET_POSITIONS, resolveFleetPosition, positionFor } from "@/lib/fleet/positions";
 import type { JobScreeningData } from "@/lib/data/job-screening";
 
 function parseStringArray(value: string | null): string[] {
@@ -62,6 +62,7 @@ export async function getMatchboardSubjects(): Promise<MatchboardSubjects> {
       select: {
         id: true,
         title: true,
+        fleetPositionSlug: true,
         pilotSeat: true,
         aircraftTypesJson: true,
         sourceJobRecord: { select: { title: true } },
@@ -89,7 +90,7 @@ export async function getMatchboardSubjects(): Promise<MatchboardSubjects> {
   const unmatched: RoleSubject[] = [];
 
   for (const req of requirements) {
-    const position = resolveFleetPosition(req.title);
+    const position = positionFor(req.fleetPositionSlug, req.title);
     if (position) {
       const group = bySlug.get(position.slug);
       if (group) {

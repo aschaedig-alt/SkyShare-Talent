@@ -20,7 +20,7 @@ export function FleetPositionsView() {
   return (
     <div className="px-5 py-5 lg:px-8">
       <section className="mb-4 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
-        <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Recruiting</p>
+        <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Admin · Settings</p>
         <h1 className="flex items-center gap-2 text-2xl font-semibold text-brand-lea">
           <Plane className="h-6 w-6 text-brand-gold" /> Fleet positions
         </h1>

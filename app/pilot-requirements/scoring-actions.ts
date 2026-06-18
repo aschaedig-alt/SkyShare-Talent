@@ -6,6 +6,7 @@ import { authOptions } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { canEditScoring, saveScoringConfigDoc } from "@/lib/matching/scoring-config.server";
 import { isScanExclusionReason, type ScanExclusionReason } from "@/lib/candidates/scan-exclusion";
+import { fleetPositionBySlug } from "@/lib/fleet/positions";
 import { setMatchFeedback, MATCH_VERDICTS, type MatchVerdict } from "@/lib/matching/match-feedback";
 import { setTierOverride, OVERRIDE_TIERS, type OverrideTier } from "@/lib/matching/tier-override";
 import { runRequirementScan, type RequirementScan } from "@/lib/matching/run-scan";
@@ -192,6 +193,35 @@ export async function getCandidatePreview(candidateId: string): Promise<Candidat
   } catch {
     return { ok: false, error: "Could not load candidate." };
   }
+}
+
+export async function setRequirementFleetPosition(input: {
+  requirementId: string;
+  fleetPositionSlug: string | null; // null = clear (fall back to title matching)
+  advertisedTitle: string | null;
+}): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+  if (!input?.requirementId) return { ok: false, error: "Missing requirement." };
+  if (input.fleetPositionSlug && !fleetPositionBySlug(input.fleetPositionSlug)) {
+    return { ok: false, error: "Unknown fleet position." };
+  }
+
+  try {
+    await prisma.pilotRequirement.update({
+      where: { id: input.requirementId },
+      data: {
+        fleetPositionSlug: input.fleetPositionSlug,
+        advertisedTitle: input.advertisedTitle?.trim() ? input.advertisedTitle.trim().slice(0, 200) : null
+      }
+    });
+  } catch {
+    return { ok: false, error: "Could not save fleet position." };
+  }
+
+  revalidatePath("/pilot-requirements");
+  revalidatePath("/matching");
+  return { ok: true };
 }
 
 export async function setCandidateScanExclusion(input: {

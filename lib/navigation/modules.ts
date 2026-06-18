@@ -38,7 +38,6 @@ export const moduleIds = [
   "recruiting-jobs",
   "pilot-requirements",
   "matching",
-  "fleet",
   "calendar",
   "scheduling",
   "imports",
@@ -100,7 +99,6 @@ export const navigationGroups: readonly NavigationGroup[] = [
           { id: "recruiting-jobs", href: "/recruiting-jobs", label: "Jobs", icon: BriefcaseBusiness },
           { id: "pilot-requirements", href: "/pilot-requirements", label: "Pilot Requirements", icon: Plane },
           { id: "matching", href: "/matching", label: "Matchboard", icon: Radar },
-          { id: "fleet", href: "/fleet", label: "Fleet positions", icon: Layers },
           { id: "calendar", href: "/calendar", label: "Calendar", icon: CalendarDays },
           { id: "scheduling", href: "/scheduling", label: "Scheduling", icon: CalendarClock }
         ]
@@ -164,7 +162,8 @@ export const navigationGroups: readonly NavigationGroup[] = [
           { id: "settings", href: "/settings/feedback", label: "Feedback", icon: MessageSquare },
           { id: "settings", href: "/settings/templates", label: "Templates", icon: FileText },
           { id: "settings", href: "/settings/content-blocks", label: "Block management", icon: Blocks },
-          { id: "settings", href: "/settings/layout-lab", label: "Layout Lab", icon: LayoutGrid }
+          { id: "settings", href: "/settings/layout-lab", label: "Layout Lab", icon: LayoutGrid },
+          { id: "settings", href: "/settings/fleet", label: "Fleet positions", icon: Layers }
         ]
       }
     ]

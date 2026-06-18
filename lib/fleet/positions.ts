@@ -164,3 +164,15 @@ export function canonicalTitle(rawTitle: string | null | undefined): string {
   if (!rawTitle) return rawTitle ?? "";
   return resolveFleetPosition(rawTitle)?.title ?? rawTitle;
 }
+
+/**
+ * Resolve a record to its fleet position, preferring an explicitly stored slug
+ * (set by a recruiter in the editor) over best-effort title matching.
+ */
+export function positionFor(slug: string | null | undefined, rawTitle: string | null | undefined): FleetPosition | null {
+  if (slug) {
+    const stored = fleetPositionBySlug(slug);
+    if (stored) return stored;
+  }
+  return resolveFleetPosition(rawTitle);
+}

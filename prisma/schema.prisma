@@ -507,6 +507,8 @@ model PilotRequirement {
   sourceJobRecordId           String?
   title                      String
   normalizedTitle            String?
+  fleetPositionSlug          String?
+  advertisedTitle            String?
   status                     String                    @default("ACTIVE")
   reviewStatus               String                    @default("DRAFT")
   operatorType               String?

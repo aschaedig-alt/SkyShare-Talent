@@ -1,0 +1,94 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Plane, Megaphone } from "lucide-react";
+import { setRequirementFleetPosition } from "@/app/pilot-requirements/scoring-actions";
+import { FLEET_POSITIONS } from "@/lib/fleet/positions";
+
+export function FleetPositionEditor({
+  requirementId,
+  currentSlug,
+  currentAdvertised,
+  rawTitle
+}: {
+  requirementId: string;
+  currentSlug: string | null;
+  currentAdvertised: string | null;
+  rawTitle: string | null;
+}) {
+  const router = useRouter();
+  const [slug, setSlug] = useState(currentSlug ?? "");
+  const [advertised, setAdvertised] = useState(currentAdvertised ?? "");
+  const [pending, start] = useTransition();
+  const [notice, setNotice] = useState<string | null>(null);
+
+  function save() {
+    setNotice(null);
+    start(async () => {
+      const res = await setRequirementFleetPosition({
+        requirementId,
+        fleetPositionSlug: slug || null,
+        advertisedTitle: advertised || null
+      });
+      setNotice(res.ok ? "Saved." : res.error ?? "Could not save.");
+      if (res.ok) router.refresh();
+    });
+  }
+
+  return (
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Identity</p>
+      <h3 className="text-base font-semibold text-brand-lea">Fleet position &amp; advertised name</h3>
+      <p className="mt-1 text-xs text-brand-grey">
+        The fleet position is the internal name shown across the app. The advertised name is what goes on the public
+        job post (e.g. internal “M2 Captain”, advertised “CE-525 Captain”).
+      </p>
+
+      <label className="mt-3 block">
+        <span className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-brand-grey">
+          <Plane className="h-3.5 w-3.5" /> Fleet position
+        </span>
+        <select
+          value={slug}
+          disabled={pending}
+          onChange={(event) => setSlug(event.target.value)}
+          className="w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold disabled:opacity-60"
+        >
+          <option value="">— Auto (match from title) —</option>
+          {FLEET_POSITIONS.map((position) => (
+            <option key={position.slug} value={position.slug}>
+              {position.title}
+              {position.status === "Archived" ? " (archived)" : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="mt-3 block">
+        <span className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-brand-grey">
+          <Megaphone className="h-3.5 w-3.5" /> Advertised name
+        </span>
+        <input
+          value={advertised}
+          disabled={pending}
+          onChange={(event) => setAdvertised(event.target.value)}
+          placeholder={rawTitle ? `e.g. ${rawTitle}` : "e.g. CE-525 Captain"}
+          className="w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold disabled:opacity-60"
+        />
+      </label>
+
+      <div className="mt-3 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={save}
+          disabled={pending}
+          className="rounded bg-brand-lea px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60"
+        >
+          {pending ? "Saving…" : "Save"}
+        </button>
+        {notice ? <span className="text-xs text-brand-grey">{notice}</span> : null}
+      </div>
+    </section>
+  );
+}

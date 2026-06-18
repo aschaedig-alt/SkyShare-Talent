@@ -5,7 +5,7 @@ import {
 } from "@/lib/matching/pilot-requirement-matches";
 import { canEditScoring, getProfileScoringConfig } from "@/lib/matching/scoring-config.server";
 import { getRequirementFeedback } from "@/lib/matching/match-feedback";
-import { canonicalTitle } from "@/lib/fleet/positions";
+import { positionFor } from "@/lib/fleet/positions";
 
 export type RequirementGateView = {
   id: string;
@@ -22,6 +22,8 @@ export type RequirementGateView = {
 export type PilotRequirementListItem = {
   id: string;
   title: string;
+  fleetPositionSlug: string | null;
+  advertisedTitle: string | null;
   status: string;
   reviewStatus: string;
   operatorType: string | null;
@@ -154,6 +156,8 @@ function matchesSearch(requirement: PilotRequirementListItem, query: string) {
 function toListItem(requirement: {
   id: string;
   title: string;
+  fleetPositionSlug: string | null;
+  advertisedTitle: string | null;
   status: string;
   reviewStatus: string;
   operatorType: string | null;
@@ -168,7 +172,9 @@ function toListItem(requirement: {
   const gates = requirement.gates.map(serializeGate);
   return {
     id: requirement.id,
-    title: canonicalTitle(requirement.title),
+    title: positionFor(requirement.fleetPositionSlug, requirement.title)?.title ?? requirement.title,
+    fleetPositionSlug: requirement.fleetPositionSlug,
+    advertisedTitle: requirement.advertisedTitle,
     status: requirement.status,
     reviewStatus: requirement.reviewStatus,
     operatorType: requirement.operatorType,
