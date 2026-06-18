@@ -109,19 +109,30 @@ export function MatchboardWorkspace({
             {mode === "role"
               ? filteredRoles.map((role) => {
                   const seat = seatTag(role.seat);
-                  const active = role.id === selectedId;
+                  const active = role.id !== "" && role.id === selectedId;
+                  const disabled = role.noProfile;
                   return (
                     <button
-                      key={role.id}
+                      key={`${role.title}:${role.id}`}
                       type="button"
-                      onClick={() => go("role", role.id)}
+                      disabled={disabled}
+                      onClick={() => {
+                        if (!disabled) go("role", role.id);
+                      }}
                       className={clsx(
                         "mb-1.5 block w-full rounded border p-2.5 text-left transition",
-                        active ? "border-brand-gold bg-brand-sweet/18" : "border-brand-lea/10 hover:border-brand-sweet hover:bg-brand-cloudDancer/55"
+                        disabled
+                          ? "cursor-default border-brand-lea/10 opacity-60"
+                          : active
+                            ? "border-brand-gold bg-brand-sweet/18"
+                            : "border-brand-lea/10 hover:border-brand-sweet hover:bg-brand-cloudDancer/55"
                       )}
                     >
                       <div className="flex items-center gap-1.5">
                         <span className="min-w-0 flex-1 truncate text-sm font-semibold text-brand-lea">{role.title}</span>
+                        {role.noProfile ? (
+                          <span className="shrink-0 rounded-full bg-value-leadership-light px-1.5 py-0.5 text-[9px] font-bold uppercase text-value-leadership-dark">No profile</span>
+                        ) : null}
                         {role.status === "Archived" ? (
                           <span className="shrink-0 rounded-full bg-brand-cloudDancer px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-grey">Archived</span>
                         ) : null}
@@ -131,9 +142,11 @@ export function MatchboardWorkspace({
                         <span className={clsx("shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase", seat.cls)}>{seat.label}</span>
                       </div>
                       <div className="mt-0.5 truncate text-xs text-brand-grey">
-                        {[role.typeRating, `${role.applicantCount} applied`, role.dupeCount > 1 ? `${role.dupeCount} variants` : null]
-                          .filter(Boolean)
-                          .join(" · ")}
+                        {role.noProfile
+                          ? "No requirement profile yet — not scannable"
+                          : [role.typeRating, `${role.applicantCount} applied`, role.dupeCount > 1 ? `${role.dupeCount} variants` : null]
+                              .filter(Boolean)
+                              .join(" · ")}
                       </div>
                     </button>
                   );

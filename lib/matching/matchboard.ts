@@ -38,6 +38,7 @@ export type RoleSubject = {
   applicantCount: number;
   dupeCount: number; // requirement rows collapsed into this canonical position
   unmatched: boolean; // true = didn't resolve to a canonical fleet position
+  noProfile: boolean; // active fleet position with no requirement record yet (not scannable)
 };
 
 export type CandidateSubject = {
@@ -109,32 +110,42 @@ export async function getMatchboardSubjects(): Promise<MatchboardSubjects> {
         status: null,
         applicantCount: req._count.applications,
         dupeCount: 1,
-        unmatched: true
+        unmatched: true,
+        noProfile: false
       });
     }
   }
 
-  const canonicalRoles: RoleSubject[] = FLEET_POSITIONS.filter((position) => bySlug.has(position.slug)).map(
-    (position) => {
-      const group = bySlug.get(position.slug)!;
-      return {
-        id: group.reqIds[0],
-        title: position.title,
-        seat: position.seat,
-        aircraft: position.aircraft,
-        typeRating: position.typeRating || null,
-        status: position.status,
-        applicantCount: group.applicants,
-        dupeCount: group.reqIds.length,
-        unmatched: false
-      };
-    }
-  );
-  // Active positions first (stable sort keeps fleet/size order within each group).
-  canonicalRoles.sort((a, b) => (a.status === "Archived" ? 1 : 0) - (b.status === "Archived" ? 1 : 0));
+  // Driven by the fleet registry: show EVERY active position (so positions with
+  // no requirement record still appear, flagged), then archived positions that
+  // do have records, then any requirement that didn't resolve to a position.
+  const toSubject = (slug: string): RoleSubject | null => {
+    const position = FLEET_POSITIONS.find((p) => p.slug === slug);
+    if (!position) return null;
+    const group = bySlug.get(slug);
+    return {
+      id: group ? group.reqIds[0] : "",
+      title: position.title,
+      seat: position.seat,
+      aircraft: position.aircraft,
+      typeRating: position.typeRating || null,
+      status: position.status,
+      applicantCount: group ? group.applicants : 0,
+      dupeCount: group ? group.reqIds.length : 0,
+      unmatched: false,
+      noProfile: !group
+    };
+  };
+
+  const activeRoles = FLEET_POSITIONS.filter((p) => p.status === "Active")
+    .map((p) => toSubject(p.slug))
+    .filter((r): r is RoleSubject => r !== null);
+  const archivedRoles = FLEET_POSITIONS.filter((p) => p.status === "Archived" && bySlug.has(p.slug))
+    .map((p) => toSubject(p.slug))
+    .filter((r): r is RoleSubject => r !== null);
 
   return {
-    roles: [...canonicalRoles, ...unmatched],
+    roles: [...activeRoles, ...archivedRoles, ...unmatched],
     candidates: candidates.map((cand) => ({
       id: cand.id,
       name: cand.displayName,
