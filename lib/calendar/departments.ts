@@ -5,6 +5,11 @@
  * interviews. Some departments have sub-groups used for the calendar's
  * drill-down filter (color is always the parent's color).
  *
+ * Colors are chosen from a fixed on-brand PALETTE. Each department has a default
+ * color, and admins can override the choice from the calendar (stored as a
+ * WorkspaceSetting — see department-colors.server.ts). Tailwind classes must be
+ * present as literals here so the compiler emits them.
+ *
  * Interviews don't store a department directly — it is derived from the linked
  * job's free-form `Job.department` via resolveDepartmentKey(). That mapping is
  * the editable bridge between whatever strings live on jobs today and this
@@ -16,7 +21,7 @@ export type DeptKey = "crew" | "maintenance" | "fbo" | "support" | "unassigned";
 export type DepartmentSub = { key: string; label: string };
 export type Department = { key: Exclude<DeptKey, "unassigned">; label: string; subs: DepartmentSub[] };
 
-export type DepartmentColorMeta = {
+export type ColorMeta = {
   /** Solid chip background + text */
   chip: string;
   /** Dot/legend swatch */
@@ -56,23 +61,95 @@ export const DEPARTMENTS: Department[] = [
   }
 ];
 
-export const DEPARTMENT_META: Record<DeptKey, DepartmentColorMeta> = {
-  crew: { chip: "bg-sky-600 text-white hover:bg-sky-700", dot: "bg-sky-600", accent: "border-l-sky-600", label: "Crew" },
-  maintenance: {
-    chip: "bg-amber-500 text-white hover:bg-amber-600",
-    dot: "bg-amber-500",
-    accent: "border-l-amber-500",
-    label: "Maintenance"
-  },
-  fbo: { chip: "bg-violet-600 text-white hover:bg-violet-700", dot: "bg-violet-600", accent: "border-l-violet-600", label: "FBO" },
-  support: { chip: "bg-teal-600 text-white hover:bg-teal-700", dot: "bg-teal-600", accent: "border-l-teal-600", label: "Support" },
-  unassigned: {
-    chip: "bg-slate-400 text-white hover:bg-slate-500",
-    dot: "bg-slate-400",
-    accent: "border-l-slate-400",
-    label: "Unassigned"
-  }
+export const DEPARTMENT_LABELS: Record<DeptKey, string> = {
+  crew: "Crew",
+  maintenance: "Maintenance",
+  fbo: "FBO",
+  support: "Support",
+  unassigned: "Unassigned"
 };
+
+// ---------------------------------------------------------------------------
+// Color palette (on-brand, fixed set). swatch = preview background for pickers.
+// ---------------------------------------------------------------------------
+
+export type ColorName =
+  | "sky"
+  | "blue"
+  | "indigo"
+  | "violet"
+  | "teal"
+  | "emerald"
+  | "amber"
+  | "orange"
+  | "red"
+  | "pink"
+  | "slate"
+  | "gray";
+
+export type PaletteEntry = { label: string; swatch: string; chip: string; dot: string; accent: string };
+
+export const COLOR_PALETTE: Record<ColorName, PaletteEntry> = {
+  sky: { label: "Sky", swatch: "bg-sky-600", chip: "bg-sky-600 text-white hover:bg-sky-700", dot: "bg-sky-600", accent: "border-l-sky-600" },
+  blue: { label: "Blue", swatch: "bg-blue-600", chip: "bg-blue-600 text-white hover:bg-blue-700", dot: "bg-blue-600", accent: "border-l-blue-600" },
+  indigo: { label: "Indigo", swatch: "bg-indigo-600", chip: "bg-indigo-600 text-white hover:bg-indigo-700", dot: "bg-indigo-600", accent: "border-l-indigo-600" },
+  violet: { label: "Violet", swatch: "bg-violet-600", chip: "bg-violet-600 text-white hover:bg-violet-700", dot: "bg-violet-600", accent: "border-l-violet-600" },
+  teal: { label: "Teal", swatch: "bg-teal-600", chip: "bg-teal-600 text-white hover:bg-teal-700", dot: "bg-teal-600", accent: "border-l-teal-600" },
+  emerald: { label: "Green", swatch: "bg-emerald-600", chip: "bg-emerald-600 text-white hover:bg-emerald-700", dot: "bg-emerald-600", accent: "border-l-emerald-600" },
+  amber: { label: "Amber", swatch: "bg-amber-500", chip: "bg-amber-500 text-white hover:bg-amber-600", dot: "bg-amber-500", accent: "border-l-amber-500" },
+  orange: { label: "Orange", swatch: "bg-orange-500", chip: "bg-orange-500 text-white hover:bg-orange-600", dot: "bg-orange-500", accent: "border-l-orange-500" },
+  red: { label: "Red", swatch: "bg-red-600", chip: "bg-red-600 text-white hover:bg-red-700", dot: "bg-red-600", accent: "border-l-red-600" },
+  pink: { label: "Pink", swatch: "bg-pink-600", chip: "bg-pink-600 text-white hover:bg-pink-700", dot: "bg-pink-600", accent: "border-l-pink-600" },
+  slate: { label: "Slate", swatch: "bg-slate-500", chip: "bg-slate-500 text-white hover:bg-slate-600", dot: "bg-slate-500", accent: "border-l-slate-500" },
+  gray: { label: "Gray", swatch: "bg-gray-500", chip: "bg-gray-500 text-white hover:bg-gray-600", dot: "bg-gray-500", accent: "border-l-gray-500" }
+};
+
+export const PALETTE_ORDER: ColorName[] = [
+  "sky",
+  "blue",
+  "indigo",
+  "violet",
+  "teal",
+  "emerald",
+  "amber",
+  "orange",
+  "red",
+  "pink",
+  "slate",
+  "gray"
+];
+
+// Department keys an admin can recolor (Unassigned stays neutral/fixed).
+export const COLORABLE_DEPARTMENTS: Array<Exclude<DeptKey, "unassigned">> = ["crew", "maintenance", "fbo", "support"];
+
+export const DEFAULT_DEPARTMENT_COLORS: Record<DeptKey, ColorName> = {
+  crew: "sky",
+  maintenance: "amber",
+  fbo: "violet",
+  support: "teal",
+  unassigned: "slate"
+};
+
+export type DepartmentColorOverrides = Partial<Record<DeptKey, ColorName>>;
+
+export function isColorName(value: unknown): value is ColorName {
+  return typeof value === "string" && value in COLOR_PALETTE;
+}
+
+/** Merge stored overrides over the defaults and resolve to ready-to-use class sets. */
+export function buildDepartmentColors(overrides?: DepartmentColorOverrides | null): Record<DeptKey, ColorMeta> {
+  const result = {} as Record<DeptKey, ColorMeta>;
+  (Object.keys(DEPARTMENT_LABELS) as DeptKey[]).forEach((key) => {
+    const chosen = overrides?.[key];
+    const colorName = isColorName(chosen) ? chosen : DEFAULT_DEPARTMENT_COLORS[key];
+    const palette = COLOR_PALETTE[colorName];
+    result[key] = { chip: palette.chip, dot: palette.dot, accent: palette.accent, label: DEPARTMENT_LABELS[key] };
+  });
+  return result;
+}
+
+/** The default color map (no overrides) — used as a fallback when a prop is omitted. */
+export const DEFAULT_DEPARTMENT_COLOR_META = buildDepartmentColors(null);
 
 /**
  * Map a free-form Job.department string onto the canonical department + sub-group.
@@ -104,8 +181,4 @@ export function resolveDepartmentKey(raw: string | null | undefined): { deptKey:
 
   // Everything else administrative rolls into Support / Other so it stays visible.
   return { deptKey: "support", subKey: "other" };
-}
-
-export function departmentColorMeta(raw: string | null | undefined): DepartmentColorMeta {
-  return DEPARTMENT_META[resolveDepartmentKey(raw).deptKey];
 }

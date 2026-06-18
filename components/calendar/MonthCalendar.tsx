@@ -6,7 +6,7 @@ import { clsx } from "clsx";
 import type { CalendarData } from "@/lib/data/calendar";
 import { formatTime } from "@/lib/calendar/format";
 import { interviewTypeMeta } from "@/lib/calendar/interview-types";
-import { departmentColorMeta } from "@/lib/calendar/departments";
+import { resolveDepartmentKey, DEFAULT_DEPARTMENT_COLOR_META, type ColorMeta, type DeptKey } from "@/lib/calendar/departments";
 import { CalendarLegend } from "@/components/calendar/CalendarLegend";
 
 type Interview = CalendarData["interviews"][number];
@@ -15,6 +15,7 @@ type ColorMode = "department" | "stage";
 interface MonthCalendarProps {
   interviews: Interview[];
   colorMode?: ColorMode;
+  departmentColors?: Record<DeptKey, ColorMeta>;
   onDayClick?: (date: Date) => void;
   onInterviewClick?: (interview: Interview) => void;
   onReschedule?: (interviewId: string, newDate: Date, options?: { keepOriginalTime?: boolean }) => void;
@@ -26,16 +27,26 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December"
 ];
 
-function chipClasses(interview: Interview, colorMode: ColorMode) {
+function chipClasses(interview: Interview, colorMode: ColorMode, departmentColors: Record<DeptKey, ColorMeta>) {
   if (interview.status === "CANCELLED") {
     return "bg-slate-300 text-slate-600 hover:bg-slate-400 line-through";
   }
-  const meta = colorMode === "department" ? departmentColorMeta(interview.job?.department ?? null) : interviewTypeMeta(interview.interviewType);
+  const meta =
+    colorMode === "department"
+      ? departmentColors[resolveDepartmentKey(interview.job?.department ?? null).deptKey]
+      : interviewTypeMeta(interview.interviewType);
   const completed = interview.status === "COMPLETED" ? "opacity-60" : "";
   return `${meta.chip} ${completed}`;
 }
 
-export function MonthCalendar({ interviews, colorMode = "department", onDayClick, onInterviewClick, onReschedule }: MonthCalendarProps) {
+export function MonthCalendar({
+  interviews,
+  colorMode = "department",
+  departmentColors = DEFAULT_DEPARTMENT_COLOR_META,
+  onDayClick,
+  onInterviewClick,
+  onReschedule
+}: MonthCalendarProps) {
   const [viewDate, setViewDate] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -180,7 +191,7 @@ export function MonthCalendar({ interviews, colorMode = "department", onDayClick
                     onClick={() => onInterviewClick?.(interview)}
                     className={clsx(
                       "block w-full cursor-pointer truncate rounded px-1.5 py-0.5 text-left text-[10px] font-medium shadow-sm transition",
-                      chipClasses(interview, colorMode),
+                      chipClasses(interview, colorMode, departmentColors),
                       draggingId === interview.id && "opacity-40"
                     )}
                     title={`${formatTime(interview.startDateTime, interview.timezone)} - ${interview.candidate.displayName}${interview.job ? ` (${interview.job.title})` : ""}`}
@@ -214,7 +225,7 @@ export function MonthCalendar({ interviews, colorMode = "department", onDayClick
                             setPopoverDay(null);
                             onInterviewClick?.(interview);
                           }}
-                          className={clsx("block w-full truncate rounded px-2 py-1 text-left text-[11px] font-medium", chipClasses(interview, colorMode))}
+                          className={clsx("block w-full truncate rounded px-2 py-1 text-left text-[11px] font-medium", chipClasses(interview, colorMode, departmentColors))}
                         >
                           {formatTime(interview.startDateTime, interview.timezone)} · {interview.candidate.displayName}
                         </button>
@@ -230,7 +241,7 @@ export function MonthCalendar({ interviews, colorMode = "department", onDayClick
 
       {/* Color legend + drag hint */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey">
-        <CalendarLegend mode={colorMode} />
+        <CalendarLegend mode={colorMode} departmentColors={departmentColors} />
         <span className="hidden italic text-brand-grey/70 sm:inline">Drag an interview to another day to reschedule</span>
       </div>
     </section>

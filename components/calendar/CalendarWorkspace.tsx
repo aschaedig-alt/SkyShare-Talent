@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { CalendarDays, CalendarRange, Square, GanttChartSquare, Building2, Palette } from "lucide-react";
 import { clsx } from "clsx";
 import type { CalendarData } from "@/lib/data/calendar";
-import { DEPARTMENTS, resolveDepartmentKey } from "@/lib/calendar/departments";
+import { DEPARTMENTS, resolveDepartmentKey, DEFAULT_DEPARTMENT_COLOR_META, type ColorMeta, type DeptKey } from "@/lib/calendar/departments";
+import { DepartmentColorEditor } from "@/components/calendar/DepartmentColorEditor";
 import { ScheduleInterviewForm } from "@/components/calendar/ScheduleInterviewForm";
 import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import { TimeGridCalendar } from "@/components/calendar/TimeGridCalendar";
@@ -21,6 +22,7 @@ import type { WidgetData } from "@/components/widgets/registry";
 type CalendarWorkspaceProps = {
   data: CalendarData;
   canEdit?: boolean;
+  departmentColors?: Record<DeptKey, ColorMeta>;
   savedLayout?: GridItem[] | null;
   savedWidgets?: WidgetInstance[] | null;
   widgetData?: WidgetData;
@@ -114,11 +116,19 @@ function CompactInterviewList({
   );
 }
 
-export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, savedWidgets = null, widgetData }: CalendarWorkspaceProps) {
+export function CalendarWorkspace({
+  data,
+  canEdit = false,
+  departmentColors = DEFAULT_DEPARTMENT_COLOR_META,
+  savedLayout = null,
+  savedWidgets = null,
+  widgetData
+}: CalendarWorkspaceProps) {
   const router = useRouter();
   const [view, setView] = useState<ViewMode>("month");
   const [department, setDepartment] = useState<string>("all");
   const [colorMode, setColorMode] = useState<ColorMode>("department");
+  const [colorEditorOpen, setColorEditorOpen] = useState(false);
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
   const [prefilledDate, setPrefilledDate] = useState<Date | null>(null);
 
@@ -249,6 +259,17 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
             ))}
           </div>
 
+          {/* Edit department colors (admins) */}
+          {canEdit && (
+            <button
+              onClick={() => setColorEditorOpen(true)}
+              title="Edit department colors"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-grey transition hover:text-brand-lea"
+            >
+              <Palette className="h-4 w-4" /> Colors
+            </button>
+          )}
+
           {/* View Toggle */}
           <div className="flex items-center gap-1 rounded-lg border border-brand-lea/15 p-1">
             {viewOptions.map((option) => {
@@ -293,6 +314,7 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
         <MonthCalendar
           interviews={filteredInterviews}
           colorMode={colorMode}
+          departmentColors={departmentColors}
           onDayClick={handleDayClick}
           onInterviewClick={handleInterviewClick}
           onReschedule={handleReschedule}
@@ -302,6 +324,7 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
         <TimeGridCalendar
           interviews={filteredInterviews}
           colorMode={colorMode}
+          departmentColors={departmentColors}
           mode="week"
           onSlotClick={handleDayClick}
           onInterviewClick={handleInterviewClick}
@@ -312,6 +335,7 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
         <TimeGridCalendar
           interviews={filteredInterviews}
           colorMode={colorMode}
+          departmentColors={departmentColors}
           mode="day"
           onSlotClick={handleDayClick}
           onInterviewClick={handleInterviewClick}
@@ -322,6 +346,7 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
         <ScheduleTimeline
           interviews={filteredInterviews}
           colorMode={colorMode}
+          departmentColors={departmentColors}
           teamHosts={data.teamHosts}
           onInterviewClick={handleInterviewClick}
           onReschedule={handleReschedule}
@@ -369,6 +394,9 @@ export function CalendarWorkspace({ data, canEdit = false, savedLayout = null, s
           onSaved={() => router.refresh()}
         />
       )}
+
+      {/* Department color editor (admins) */}
+      {colorEditorOpen && <DepartmentColorEditor colors={departmentColors} onClose={() => setColorEditorOpen(false)} />}
     </div>
   );
 }
