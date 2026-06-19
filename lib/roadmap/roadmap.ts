@@ -174,6 +174,6 @@ Streamline the end-to-end interview experience.
 
 ## Design & Consistency
 Make the whole app feel like one professionally designed product.
-- [ ] Match corner radii on the Interview guide & Candidates pages — these newer pages use larger rounded corners than the rest of the site; bring their radius and card styling in line with the standard
+- [x] Match corner radii on the Interview guide & Candidates pages (Jun 18) — swapped the rounded-2xl heroes/cards on the Candidates (records + compare) and interview pages (question bank, guide, interview detail) to the site-standard rounded-xl (public booking + the color-editor modal left for the broader review)
 - [ ] Full-site design review — go through every page from a professional graphic designer's perspective and make the design elements consistent (corner radius, spacing, typography, color usage, buttons, cards, headers); document the standard and apply it site-wide
 `;
