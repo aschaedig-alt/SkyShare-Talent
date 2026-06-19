@@ -162,7 +162,7 @@ Streamline the end-to-end interview experience.
 - [ ] Independent interviewer scoring — each interviewer scores a candidate on their own, separate from what others entered
 - [ ] Per-question interview rubric — score each question on a 4-point scale: Exceeds / Meets / Can Develop / Does Not Meet
 - [ ] Rubric to numeric mapping — decide whether the rubric rolls up to a number so candidates can be ranked and compared on interview performance
-- [ ] Interview question bank — a reusable database of interview questions
+- [x] Interview question bank (Jun 18) — Recruiting > Question Bank: a reusable, searchable library of interview questions tagged by category, core value, and department, with full create / edit / delete and active toggle; the source the guide generator will draw from
 - [ ] Interview guide generator — auto-build an interview guide from the question bank matched to the job, core values, and situation (depends on the question bank)
 
 ## Calendar

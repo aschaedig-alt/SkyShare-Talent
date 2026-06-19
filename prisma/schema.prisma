@@ -1025,3 +1025,23 @@ model Booking {
   @@index([startDateTime])
   @@index([status])
 }
+
+// Reusable interview question bank. Each question is tagged by category, an
+// optional core value, and the department(s) it suits, so an interview guide
+// can later be assembled to match a role / core values / situation.
+model InterviewQuestion {
+  id              String   @id @default(cuid())
+  text            String
+  category        String   @default("BEHAVIORAL") // BEHAVIORAL | SITUATIONAL | TECHNICAL | EXPERIENCE | OTHER
+  coreValue       String?  // colorKey from COMPANY_VALUES (e.g. "teamwork"); null = none
+  departmentsJson String?  // JSON array of canonical department keys; empty/null = applies to all
+  guidance        String?  // what a strong answer looks like (interviewer note)
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdBy       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([category])
+  @@index([isActive])
+}

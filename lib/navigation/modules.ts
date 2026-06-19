@@ -17,6 +17,7 @@ import {
   Import,
   Layers,
   LayoutGrid,
+  ListChecks,
   MessageSquare,
   Plane,
   Radar,
@@ -40,6 +41,7 @@ export const moduleIds = [
   "matching",
   "calendar",
   "scheduling",
+  "interview-questions",
   "imports",
   "duplicate-review",
   "reports",
@@ -100,7 +102,8 @@ export const navigationGroups: readonly NavigationGroup[] = [
           { id: "pilot-requirements", href: "/pilot-requirements", label: "Pilot Requirements", icon: Plane },
           { id: "matching", href: "/matching", label: "Matchboard", icon: Radar },
           { id: "calendar", href: "/calendar", label: "Calendar", icon: CalendarDays },
-          { id: "scheduling", href: "/scheduling", label: "Scheduling", icon: CalendarClock }
+          { id: "scheduling", href: "/scheduling", label: "Scheduling", icon: CalendarClock },
+          { id: "interview-questions", href: "/interview-questions", label: "Question Bank", icon: ListChecks }
         ]
       },
       {
