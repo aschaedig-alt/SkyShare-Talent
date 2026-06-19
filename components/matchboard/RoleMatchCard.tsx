@@ -17,8 +17,8 @@ const VERDICT_LABEL: Record<MatchVerdict, string> = {
 function seatStyle(seat: string | null): { label: string; cls: string } {
   const s = (seat ?? "").toLowerCase();
   if (s === "pic") return { label: "PIC", cls: "bg-value-teamwork-light text-value-teamwork-dark" };
-  if (s === "sic") return { label: "SIC", cls: "bg-brand-cloudDancer text-brand-grey" };
-  return { label: seat || "Support", cls: "bg-brand-cloudDancer text-brand-grey" };
+  if (s === "sic") return { label: "SIC", cls: "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400" };
+  return { label: seat || "Support", cls: "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400" };
 }
 
 export function RoleMatchCard({
@@ -32,18 +32,18 @@ export function RoleMatchCard({
   const seat = seatStyle(role.seat);
 
   return (
-    <article className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 p-3">
+    <article className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 p-3 dark:border-white/10 dark:bg-white/5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2.5">
-          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-sweet/30 text-brand-lea">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-sweet/30 text-brand-lea dark:text-slate-100">
             <Plane className="h-4 w-4" />
           </span>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="font-semibold text-brand-lea">{role.title}</span>
+              <span className="font-semibold text-brand-lea dark:text-slate-100">{role.title}</span>
               <span className={clsx("rounded px-2 py-0.5 text-[10px] font-bold uppercase", seat.cls)}>{seat.label}</span>
             </div>
-            <div className="mt-0.5 truncate text-xs text-brand-grey">
+            <div className="mt-0.5 truncate text-xs text-brand-grey dark:text-slate-400">
               {[role.aircraft[0], role.jobTitle].filter(Boolean).join(" · ") || "No linked job"}
             </div>
           </div>
@@ -98,7 +98,7 @@ export function RoleMatchCard({
         <button
           type="button"
           onClick={() => onViewCandidates(role.requirementId)}
-          className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-eden transition hover:text-brand-lea"
+          className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-eden transition hover:text-brand-lea dark:text-slate-100"
         >
           View candidates <ArrowRight className="h-3.5 w-3.5" />
         </button>

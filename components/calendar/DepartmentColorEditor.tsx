@@ -68,7 +68,7 @@ export function DepartmentColorEditor({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-black/40 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl"
+        className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl dark:bg-[#10243a]"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -76,10 +76,10 @@ export function DepartmentColorEditor({
         <div className="flex items-start justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Calendar</p>
-            <h2 className="text-lg font-semibold text-brand-lea">Department colors</h2>
-            <p className="mt-1 text-xs text-brand-grey">Pick a color for each department. Used to color interviews across every calendar view.</p>
+            <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Department colors</h2>
+            <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">Pick a color for each department. Used to color interviews across every calendar view.</p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea">
+          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5 dark:text-slate-100">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -87,7 +87,7 @@ export function DepartmentColorEditor({
         <div className="mt-4 space-y-4">
           {COLORABLE_DEPARTMENTS.map((dept) => (
             <div key={dept}>
-              <div className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-brand-lea">
+              <div className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-brand-lea dark:text-slate-100">
                 <span className={`h-3.5 w-3.5 rounded ${COLOR_PALETTE[selection[dept]].dot}`} />
                 {DEPARTMENT_LABELS[dept]}
               </div>
@@ -114,12 +114,12 @@ export function DepartmentColorEditor({
         </div>
 
         <div className="mt-5 flex items-center justify-between">
-          <button type="button" onClick={reset} className="text-xs font-semibold text-brand-eden hover:text-brand-lea">
+          <button type="button" onClick={reset} className="text-xs font-semibold text-brand-eden hover:text-brand-lea dark:text-slate-100">
             Reset to defaults
           </button>
           <div className="flex items-center gap-3">
             {error ? <span className="text-xs font-medium text-red-700">{error}</span> : null}
-            <button type="button" onClick={onClose} className="rounded-lg px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea">
+            <button type="button" onClick={onClose} className="rounded-lg px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400 dark:text-slate-100">
               Cancel
             </button>
             <button

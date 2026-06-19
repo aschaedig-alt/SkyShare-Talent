@@ -23,7 +23,7 @@ const TYPE_META: Record<string, { label: string; icon: typeof Lightbulb; chip: s
 
 const STATUSES = ["NEW", "REVIEWING", "DONE"];
 const STATUS_CHIP: Record<string, string> = {
-  NEW: "bg-brand-gold/20 text-brand-lea",
+  NEW: "bg-brand-gold/20 text-brand-lea dark:text-slate-100",
   REVIEWING: "bg-blue-100 text-blue-800",
   DONE: "bg-emerald-100 text-emerald-700"
 };
@@ -77,21 +77,21 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
           ["Ideas", counts.ideas],
           ["Bugs", counts.bugs]
         ].map(([label, value]) => (
-          <div key={label} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10">
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey">{label}</div>
-            <div className="mt-1 text-2xl font-semibold text-brand-lea">{value}</div>
+          <div key={label} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{label}</div>
+            <div className="mt-1 text-2xl font-semibold text-brand-lea dark:text-slate-100">{value}</div>
           </div>
         ))}
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10">
+      <div className="flex flex-wrap gap-3 rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-brand-grey">Type</span>
+          <span className="text-xs font-semibold text-brand-grey dark:text-slate-400">Type</span>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm"
+            className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm dark:border-white/10 dark:bg-[#10243a]"
           >
             <option value="ALL">All</option>
             <option value="IDEA">Ideas</option>
@@ -100,11 +100,11 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-brand-grey">Status</span>
+          <span className="text-xs font-semibold text-brand-grey dark:text-slate-400">Status</span>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm"
+            className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm dark:border-white/10 dark:bg-[#10243a]"
           >
             <option value="ALL">All</option>
             <option value="NEW">New</option>
@@ -116,9 +116,9 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
 
       {/* List */}
       {filtered.length === 0 ? (
-        <div className="rounded bg-white p-8 text-center shadow-panel ring-1 ring-brand-lea/10">
-          <p className="font-medium text-brand-lea">No feedback yet</p>
-          <p className="mt-1 text-sm text-brand-grey">
+        <div className="rounded bg-white p-8 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <p className="font-medium text-brand-lea dark:text-slate-100">No feedback yet</p>
+          <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
             Submissions from the Feedback button will appear here.
           </p>
         </div>
@@ -128,7 +128,7 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
             const meta = TYPE_META[item.type] ?? TYPE_META.IDEA;
             const Icon = meta.icon;
             return (
-              <div key={item.id} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+              <div key={item.id} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className={clsx("inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold", meta.chip)}>
@@ -139,21 +139,21 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
                       {item.status}
                     </span>
                   </div>
-                  <span className="text-xs text-brand-grey">{formatDate(item.createdAt)}</span>
+                  <span className="text-xs text-brand-grey dark:text-slate-400">{formatDate(item.createdAt)}</span>
                 </div>
 
                 <p className="mt-2 whitespace-pre-wrap text-sm text-brand-black/85">{item.message}</p>
 
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-brand-lea/10 pt-3">
-                  <div className="text-xs text-brand-grey">
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
+                  <div className="text-xs text-brand-grey dark:text-slate-400">
                     {item.userName || item.userEmail || "Unknown"}
-                    {item.page && <span className="ml-2 rounded bg-brand-cloudDancer/60 px-1.5 py-0.5">{item.page}</span>}
+                    {item.page && <span className="ml-2 rounded bg-brand-cloudDancer/60 px-1.5 py-0.5 dark:bg-white/5">{item.page}</span>}
                   </div>
                   <div className="flex items-center gap-2">
                     <select
                       value={item.status}
                       onChange={(e) => updateStatus(item.id, e.target.value)}
-                      className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-xs"
+                      className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-xs dark:border-white/10 dark:bg-[#10243a]"
                     >
                       {STATUSES.map((s) => (
                         <option key={s} value={s}>

@@ -171,27 +171,27 @@ export function TimeGridCalendar({
       : `${WEEKDAYS[days[0].getDay()]}, ${MONTHS[days[0].getMonth()]} ${days[0].getDate()}, ${days[0].getFullYear()}`;
 
   return (
-    <section className="rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10">
+    <section className="rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-brand-lea/10 px-4 py-3">
-        <h2 className="text-lg font-semibold text-brand-lea">{headerLabel}</h2>
+      <div className="flex items-center justify-between border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
+        <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">{headerLabel}</h2>
         <div className="flex items-center gap-2">
           <button
             onClick={goToToday}
-            className="rounded-lg border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/30"
+            className="rounded-lg border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
           >
             Today
           </button>
           <button
             onClick={() => navigate(-1)}
-            className="rounded-lg border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30"
+            className="rounded-lg border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
             aria-label="Previous"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <button
             onClick={() => navigate(1)}
-            className="rounded-lg border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30"
+            className="rounded-lg border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
             aria-label="Next"
           >
             <ChevronRight className="h-4 w-4" />
@@ -203,7 +203,7 @@ export function TimeGridCalendar({
       <div className="overflow-x-auto">
       <div className={clsx(mode === "week" && "min-w-[640px]")}>
       {/* Day headers */}
-      <div className="flex border-b border-brand-lea/10">
+      <div className="flex border-b border-brand-lea/10 dark:border-white/10">
         <div className="w-14 shrink-0" />
         {days.map((day) => (
           <div
@@ -213,13 +213,13 @@ export function TimeGridCalendar({
               isToday(day) && "bg-brand-sweet/10"
             )}
           >
-            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-brand-grey">
+            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-brand-grey dark:text-slate-400">
               {WEEKDAYS[day.getDay()]}
             </div>
             <div
               className={clsx(
                 "mx-auto mt-0.5 flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold",
-                isToday(day) ? "bg-brand-lea text-white" : "text-brand-lea"
+                isToday(day) ? "bg-brand-lea text-white" : "text-brand-lea dark:text-slate-100"
               )}
             >
               {day.getDate()}
@@ -235,7 +235,7 @@ export function TimeGridCalendar({
           <div className="w-14 shrink-0">
             {hours.map((hour) => (
               <div key={hour} className="relative" style={{ height: `${HOUR_HEIGHT}px` }}>
-                <span className="absolute -top-2 right-2 text-[10px] font-medium text-brand-grey">
+                <span className="absolute -top-2 right-2 text-[10px] font-medium text-brand-grey dark:text-slate-400">
                   {hour === 12 ? "12 PM" : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
                 </span>
               </div>
@@ -248,7 +248,7 @@ export function TimeGridCalendar({
             return (
               <div
                 key={day.toISOString()}
-                className={clsx("relative flex-1 border-l border-brand-lea/10", isToday(day) && "bg-brand-sweet/5")}
+                className={clsx("relative flex-1 border-l border-brand-lea/10 dark:border-white/10", isToday(day) && "bg-brand-sweet/5")}
               >
                 {/* Hour cells (clickable + drop targets) */}
                 {hours.map((hour) => {
@@ -271,7 +271,7 @@ export function TimeGridCalendar({
                       onDragLeave={() => setDragOverSlot((cur) => (cur === key ? null : cur))}
                       onDrop={() => handleSlotDrop(day, hour)}
                       className={clsx(
-                        "block w-full border-b border-brand-lea/5 transition",
+                        "block w-full border-b border-brand-lea/5 transition dark:border-white/10",
                         isDragOver ? "bg-brand-gold/25 ring-1 ring-inset ring-brand-gold" : "hover:bg-brand-gold/5"
                       )}
                       style={{ height: `${HOUR_HEIGHT}px` }}
@@ -312,7 +312,7 @@ export function TimeGridCalendar({
       </div>
 
       {/* Color legend + drag hint */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey dark:border-white/10 dark:text-slate-400">
         <CalendarLegend mode={colorMode} departmentColors={departmentColors} />
         <span className="hidden italic text-brand-grey/70 sm:inline">Drag an interview to another time slot to reschedule</span>
       </div>

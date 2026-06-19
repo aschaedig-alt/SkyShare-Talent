@@ -184,18 +184,18 @@ export function EditableGrid({
         <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
           {editing ? (
             <>
-              <p className="mr-auto text-xs text-brand-grey">
+              <p className="mr-auto text-xs text-brand-grey dark:text-slate-400">
                 Drag by the gold handle, resize from the corner, add widgets.{" "}
-                <span className="font-semibold text-brand-lea">Saving sets the layout for everyone.</span>
+                <span className="font-semibold text-brand-lea dark:text-slate-100">Saving sets the layout for everyone.</span>
               </p>
               {error && <span className="text-xs font-semibold text-red-600">{error}</span>}
-              <button onClick={() => setAddOpen((v) => !v)} className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">
+              <button onClick={() => setAddOpen((v) => !v)} className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
                 <Plus className="h-3.5 w-3.5" /> Add widget
               </button>
-              <button onClick={resetToDefault} className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">
+              <button onClick={resetToDefault} className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
                 Reset to default
               </button>
-              <button onClick={cancel} className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">
+              <button onClick={cancel} className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
                 Cancel
               </button>
               <button onClick={save} disabled={saving} className="rounded bg-brand-lea px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
@@ -203,7 +203,7 @@ export function EditableGrid({
               </button>
             </>
           ) : (
-            <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">
+            <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
               <Pencil className="h-3.5 w-3.5" /> Edit layout
             </button>
           )}
@@ -211,20 +211,20 @@ export function EditableGrid({
       )}
 
       {editing && addOpen && (
-        <div className="mb-3 rounded-lg border border-brand-lea/15 bg-white p-3 shadow-panel">
+        <div className="mb-3 rounded-lg border border-brand-lea/15 bg-white p-3 shadow-panel dark:border-white/10 dark:bg-[#10243a]">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Add a widget</span>
-            <button onClick={() => setAddOpen(false)} className="lab-nodrag rounded p-0.5 text-brand-grey hover:text-brand-lea" aria-label="Close"><X className="h-4 w-4" /></button>
+            <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Add a widget</span>
+            <button onClick={() => setAddOpen(false)} className="lab-nodrag rounded p-0.5 text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100" aria-label="Close"><X className="h-4 w-4" /></button>
           </div>
           <div className="space-y-2.5">
             {WIDGET_CATEGORIES.map((cat) => (
               <div key={cat}>
-                <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-brand-grey">{cat}</div>
+                <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">{cat}</div>
                 <div className="flex flex-wrap gap-1.5">
                   {WIDGETS.filter((w) => w.category === cat).map((w) => {
                     const Icon = w.icon;
                     return (
-                      <button key={w.type} onClick={() => addWidget(w.type)} className="inline-flex items-center gap-1.5 rounded-md border border-brand-lea/15 bg-brand-cloudDancer/40 px-2.5 py-1.5 text-[11px] font-semibold text-brand-lea transition hover:border-brand-gold hover:bg-brand-sweet/20">
+                      <button key={w.type} onClick={() => addWidget(w.type)} className="inline-flex items-center gap-1.5 rounded-md border border-brand-lea/15 bg-brand-cloudDancer/40 px-2.5 py-1.5 text-[11px] font-semibold text-brand-lea transition hover:border-brand-gold hover:bg-brand-sweet/20 dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
                         <Icon className="h-3.5 w-3.5 text-brand-eden" /> {w.name}
                       </button>
                     );
@@ -236,7 +236,7 @@ export function EditableGrid({
         </div>
       )}
 
-      <div className={editing ? "rounded-lg bg-brand-cloudDancer/30 p-1 ring-1 ring-brand-gold/30" : ""}>
+      <div className={editing ? "rounded-lg bg-brand-cloudDancer/30 p-1 ring-1 ring-brand-gold/30 dark:bg-white/5" : ""}>
         <GridLayout
           className="layout"
           layout={displayLayout}
@@ -281,22 +281,22 @@ export function EditableGrid({
       {configWidget && configDef && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setConfigFor(null)} />
-          <div className="fixed left-1/2 top-1/2 z-50 w-[min(92vw,420px)] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-brand-lea/20 bg-white p-4 shadow-xl">
+          <div className="fixed left-1/2 top-1/2 z-50 w-[min(92vw,420px)] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-brand-lea/20 bg-white p-4 shadow-xl dark:border-white/10 dark:bg-[#10243a]">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm font-semibold text-brand-lea">Configure: {configDef.name}</span>
-              <button onClick={() => setConfigFor(null)} className="rounded p-0.5 text-brand-grey hover:text-brand-lea" aria-label="Close"><X className="h-4 w-4" /></button>
+              <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">Configure: {configDef.name}</span>
+              <button onClick={() => setConfigFor(null)} className="rounded p-0.5 text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100" aria-label="Close"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-3">
               {configDef.fields.map((field) => (
                 <label key={field.key} className="block">
-                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-brand-grey">{field.label}</span>
+                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">{field.label}</span>
                   {field.type === "textarea" ? (
                     <textarea
                       value={String(configWidget.config[field.key] ?? "")}
                       onChange={(e) => updateConfig(configWidget.i, field.key, e.target.value)}
                       placeholder={field.placeholder}
                       rows={4}
-                      className="w-full rounded border border-brand-lea/20 bg-white px-2.5 py-1.5 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20"
+                      className="w-full rounded border border-brand-lea/20 bg-white px-2.5 py-1.5 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
                     />
                   ) : (
                     <input
@@ -304,7 +304,7 @@ export function EditableGrid({
                       value={String(configWidget.config[field.key] ?? "")}
                       onChange={(e) => updateConfig(configWidget.i, field.key, e.target.value)}
                       placeholder={field.placeholder}
-                      className="w-full rounded border border-brand-lea/20 bg-white px-2.5 py-1.5 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20"
+                      className="w-full rounded border border-brand-lea/20 bg-white px-2.5 py-1.5 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
                     />
                   )}
                 </label>

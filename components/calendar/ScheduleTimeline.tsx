@@ -64,7 +64,7 @@ function TeamAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string | nu
   const isUnassigned = name === UNASSIGNED;
   if (avatarUrl) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={avatarUrl} alt={name} className="h-8 w-8 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-brand-lea/15" />;
+    return <img src={avatarUrl} alt={name} className="h-8 w-8 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-brand-lea/15 dark:ring-white/10" />;
   }
   const color = isUnassigned ? "bg-slate-300 text-slate-600" : `${AVATAR_COLORS[hashString(name) % AVATAR_COLORS.length]} text-white`;
   return (
@@ -192,24 +192,24 @@ export function ScheduleTimeline({
   const trackWidth = daysInMonth * DAY_WIDTH;
 
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10">
+    <section className="flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       {/* Header */}
-      <div className="flex shrink-0 items-center justify-between border-b border-brand-lea/10 px-4 py-3">
+      <div className="flex shrink-0 items-center justify-between border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Team schedule</p>
-          <h2 className="text-lg font-semibold text-brand-lea">{MONTHS[month]} {year}</h2>
+          <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">{MONTHS[month]} {year}</h2>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={goToToday}
-            className="rounded-lg border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/30"
+            className="rounded-lg border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
           >
             Today
           </button>
-          <button onClick={goToPrevMonth} className="rounded-lg border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30" aria-label="Previous month">
+          <button onClick={goToPrevMonth} className="rounded-lg border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5" aria-label="Previous month">
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <button onClick={goToNextMonth} className="rounded-lg border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30" aria-label="Next month">
+          <button onClick={goToNextMonth} className="rounded-lg border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5" aria-label="Next month">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
@@ -219,9 +219,9 @@ export function ScheduleTimeline({
       <div className="min-h-0 flex-1 overflow-auto">
         <div style={{ width: RAIL_WIDTH + trackWidth }}>
           {/* Day axis header */}
-          <div className="sticky top-0 z-20 flex border-b border-brand-lea/10 bg-white">
+          <div className="sticky top-0 z-20 flex border-b border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]">
             <div
-              className="sticky left-0 z-10 flex items-center border-r border-brand-lea/10 bg-white px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey"
+              className="sticky left-0 z-10 flex items-center border-r border-brand-lea/10 bg-white px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400"
               style={{ width: RAIL_WIDTH }}
             >
               Recruiting team
@@ -235,8 +235,8 @@ export function ScheduleTimeline({
                   <div
                     key={day}
                     className={clsx(
-                      "flex flex-col items-center justify-center border-r border-brand-lea/5 py-1.5",
-                      isWeekend && "bg-brand-cloudDancer/30",
+                      "flex flex-col items-center justify-center border-r border-brand-lea/5 py-1.5 dark:border-white/10",
+                      isWeekend && "bg-brand-cloudDancer/30 dark:bg-white/5",
                       isToday && "bg-brand-lea/5"
                     )}
                     style={{ width: DAY_WIDTH }}
@@ -244,12 +244,12 @@ export function ScheduleTimeline({
                     <span
                       className={clsx(
                         "flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold",
-                        isToday ? "bg-brand-lea text-white" : "text-brand-lea"
+                        isToday ? "bg-brand-lea text-white" : "text-brand-lea dark:text-slate-100"
                       )}
                     >
                       {day}
                     </span>
-                    <span className="text-[9px] uppercase tracking-wide text-brand-grey">{WEEKDAYS[weekday]}</span>
+                    <span className="text-[9px] uppercase tracking-wide text-brand-grey dark:text-slate-400">{WEEKDAYS[weekday]}</span>
                   </div>
                 );
               })}
@@ -258,23 +258,23 @@ export function ScheduleTimeline({
 
           {/* Team rows */}
           {rows.length === 0 ? (
-            <div className="px-4 py-10 text-center text-sm text-brand-grey">
+            <div className="px-4 py-10 text-center text-sm text-brand-grey dark:text-slate-400">
               No interviews scheduled in {MONTHS[month]}.
             </div>
           ) : (
             rows.map((row) => {
               const rowHeight = row.laneCount * (BAR_HEIGHT + LANE_GAP) - LANE_GAP + ROW_PAD * 2;
               return (
-                <div key={row.member} className="flex border-b border-brand-lea/5">
+                <div key={row.member} className="flex border-b border-brand-lea/5 dark:border-white/10">
                   {/* Sticky team rail */}
                   <div
-                    className="sticky left-0 z-10 flex items-center gap-2.5 border-r border-brand-lea/10 bg-white px-4"
+                    className="sticky left-0 z-10 flex items-center gap-2.5 border-r border-brand-lea/10 bg-white px-4 dark:border-white/10 dark:bg-[#10243a]"
                     style={{ width: RAIL_WIDTH }}
                   >
                     <TeamAvatar name={row.member} avatarUrl={avatarByName.get(row.member.trim().toLowerCase())} />
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-brand-lea">{row.member}</div>
-                      <div className="text-[11px] text-brand-grey">{row.count} interview{row.count === 1 ? "" : "s"}</div>
+                      <div className="truncate text-sm font-semibold text-brand-lea dark:text-slate-100">{row.member}</div>
+                      <div className="text-[11px] text-brand-grey dark:text-slate-400">{row.count} interview{row.count === 1 ? "" : "s"}</div>
                     </div>
                   </div>
 
@@ -297,8 +297,8 @@ export function ScheduleTimeline({
                             onDragLeave={() => setDragOverDay((d) => (d === day ? null : d))}
                             onDrop={() => handleDrop(day)}
                             className={clsx(
-                              "border-r border-brand-lea/5",
-                              isWeekend && "bg-brand-cloudDancer/20",
+                              "border-r border-brand-lea/5 dark:border-white/10",
+                              isWeekend && "bg-brand-cloudDancer/20 dark:bg-white/5",
                               day === todayDay && "bg-brand-lea/[0.04]",
                               dragOverDay === day && "bg-brand-gold/20 ring-2 ring-inset ring-brand-gold"
                             )}
@@ -345,7 +345,7 @@ export function ScheduleTimeline({
       </div>
 
       {/* Legend + hint */}
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey dark:border-white/10 dark:text-slate-400">
         <CalendarLegend mode={colorMode} departmentColors={departmentColors} />
         <span className="hidden italic text-brand-grey/70 sm:inline">Drag a bar to another day to reschedule</span>
       </div>

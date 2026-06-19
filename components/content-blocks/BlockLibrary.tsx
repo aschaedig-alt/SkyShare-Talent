@@ -196,7 +196,7 @@ function BlockCoverageBadges({ block, jobs }: { block: SerializedContentBlock; j
         className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${
           coverage.isInAllJobs
             ? "bg-emerald-50 text-emerald-800"
-            : "bg-brand-cloudDancer text-brand-eden"
+            : "bg-brand-cloudDancer text-brand-eden dark:bg-white/5"
         }`}
         title={
           coverage.isInAllJobs
@@ -210,8 +210,8 @@ function BlockCoverageBadges({ block, jobs }: { block: SerializedContentBlock; j
       <span
         className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${
           coverage.isInAllActiveJobs
-            ? "bg-brand-sweet/45 text-brand-lea"
-            : "bg-brand-gold/25 text-brand-lea"
+            ? "bg-brand-sweet/45 text-brand-lea dark:text-slate-100"
+            : "bg-brand-gold/25 text-brand-lea dark:text-slate-100"
         }`}
         title={
           coverage.isInAllActiveJobs
@@ -227,15 +227,15 @@ function BlockCoverageBadges({ block, jobs }: { block: SerializedContentBlock; j
 }
 
 const inputClass =
-  "w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-black outline-none transition placeholder:text-brand-grey/70 focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35";
+  "w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-black outline-none transition placeholder:text-brand-grey/70 focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100";
 
 const labelClass = "mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-brand-eden";
 
 const blockColorClasses: Record<BlockTextColor, string> = {
   BLACK: "text-brand-black/82",
-  LEA: "text-brand-lea",
+  LEA: "text-brand-lea dark:text-slate-100",
   EDEN: "text-brand-eden",
-  GREY: "text-brand-grey",
+  GREY: "text-brand-grey dark:text-slate-400",
   GOLD: "text-brand-gold",
   RED: "text-brand-red",
   SWEET: "text-brand-sweet",
@@ -263,7 +263,7 @@ function BlockBodyPreview({
   const textClass = `${blockColorClasses[textColor]} ${blockWeightClasses[textWeight]}`;
 
   if (!lines.length) {
-    return <p className="text-sm italic text-brand-grey">No clean text entered yet.</p>;
+    return <p className="text-sm italic text-brand-grey dark:text-slate-400">No clean text entered yet.</p>;
   }
 
   if (bodyFormat === "MIXED") {
@@ -675,22 +675,22 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
         type="button"
         onClick={() => selectBlock(block.id)}
         className={`w-full px-4 py-4 text-left transition hover:shadow-glow ${
-          selectedBlock?.id === block.id && mode !== "create" ? "bg-brand-sweet/35" : "hover:bg-brand-cloudDancer/70"
+          selectedBlock?.id === block.id && mode !== "create" ? "bg-brand-sweet/35" : "hover:bg-brand-cloudDancer/70 dark:bg-white/5"
         }`}
       >
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <div className="text-sm font-bold text-brand-lea">{block.name}</div>
+              <div className="text-sm font-bold text-brand-lea dark:text-slate-100">{block.name}</div>
               {block.archivedAt && (
-                <span className="rounded bg-brand-grey/15 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey">
+                <span className="rounded bg-brand-grey/15 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey dark:text-slate-400">
                   Archived
                 </span>
               )}
             </div>
-            <div className="mt-1 text-xs leading-5 text-brand-grey">{block.description}</div>
+            <div className="mt-1 text-xs leading-5 text-brand-grey dark:text-slate-400">{block.description}</div>
           </div>
-          <div className="rounded bg-brand-cloudDancer px-2 py-1 text-xs font-bold text-brand-lea">
+          <div className="rounded bg-brand-cloudDancer px-2 py-1 text-xs font-bold text-brand-lea dark:bg-white/5 dark:text-slate-100">
             {versionLabel(block)}
           </div>
         </div>
@@ -698,13 +698,13 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
           <span className="rounded bg-brand-lea px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
             {formatEnum(block.category)}
           </span>
-          <span className="rounded bg-brand-gold/22 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-lea">
+          <span className="rounded bg-brand-gold/22 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-lea dark:text-slate-100">
             {formatEnum(block.scope)}
           </span>
-          <span className="rounded bg-brand-sweet/35 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-lea">
+          <span className="rounded bg-brand-sweet/35 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-lea dark:text-slate-100">
             {formatEnum(block.placement)}
           </span>
-          <span className="inline-flex items-center gap-1 rounded bg-brand-cloudDancer px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-eden">
+          <span className="inline-flex items-center gap-1 rounded bg-brand-cloudDancer px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-eden dark:bg-white/5">
             <Users className="h-3 w-3" />
             {block.usageCount ?? 0} jobs
           </span>
@@ -742,7 +742,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
             <button
               type="button"
               onClick={() => setMode("create")}
-              className="inline-flex items-center gap-2 rounded bg-brand-gold px-3.5 py-2 text-sm font-bold text-brand-lea hover:bg-brand-gold/90"
+              className="inline-flex items-center gap-2 rounded bg-brand-gold px-3.5 py-2 text-sm font-bold text-brand-lea hover:bg-brand-gold/90 dark:text-slate-100"
             >
               <Plus className="h-4 w-4" />
               Create New Block
@@ -767,7 +767,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
               className={`inline-flex items-center gap-2 rounded px-3.5 py-2 text-sm font-bold transition hover:shadow-glow ${
                 active
                   ? "bg-brand-lea text-white shadow-sm"
-                  : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer"
+                  : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100 dark:bg-white/5"
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -781,7 +781,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
         <div
           className={`mb-5 flex items-center gap-2 rounded border px-3 py-2 text-sm font-semibold ${
             isWorking
-              ? "border-brand-gold/35 bg-brand-gold/12 text-brand-lea"
+              ? "border-brand-gold/35 bg-brand-gold/12 text-brand-lea dark:text-slate-100"
               : error
                 ? "border-brand-red/25 bg-brand-red/8 text-brand-red"
                 : "border-emerald-200 bg-emerald-50 text-emerald-800"
@@ -811,13 +811,13 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
         />
       ) : (
       <div className="grid gap-5 xl:grid-cols-[300px_1fr]">
-        <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10">
-          <div className="border-b border-brand-lea/10 p-4">
-            <label className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-brand-grey">
+        <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <div className="border-b border-brand-lea/10 p-4 dark:border-white/10">
+            <label className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
               Find reusable content
             </label>
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-brand-grey" />
+              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-brand-grey dark:text-slate-400" />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
@@ -827,16 +827,16 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
             </div>
           </div>
 
-          <div className="space-y-3 border-b border-brand-lea/10 px-4 py-3">
+          <div className="space-y-3 border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey">Group</span>
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Group</span>
               <select
                 value={groupBy}
                 onChange={(event) => {
                   setGroupBy(event.target.value as GroupDim);
                   setActiveFilter(null);
                 }}
-                className="rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-xs font-semibold text-brand-lea"
+                className="rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-xs font-semibold text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
               >
                 {groupDims.map((dim) => (
                   <option key={dim.value} value={dim.value}>
@@ -844,11 +844,11 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                   </option>
                 ))}
               </select>
-              <span className="ml-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey">Sort</span>
+              <span className="ml-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Sort</span>
               <select
                 value={sortBy}
                 onChange={(event) => setSortBy(event.target.value as SortKey)}
-                className="rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-xs font-semibold text-brand-lea"
+                className="rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-xs font-semibold text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
               >
                 {sortKeys.map((sort) => (
                   <option key={sort.value} value={sort.value}>
@@ -862,7 +862,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                 type="button"
                 onClick={() => setActiveFilter(null)}
                 className={`rounded px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow ${
-                  activeFilter === null ? "bg-brand-lea text-white" : "bg-brand-cloudDancer text-brand-grey hover:bg-brand-cloudDancer/70"
+                  activeFilter === null ? "bg-brand-lea text-white" : "bg-brand-cloudDancer text-brand-grey hover:bg-brand-cloudDancer/70 dark:bg-white/5 dark:text-slate-400"
                 }`}
               >
                 All · {filteredBlocks.length}
@@ -873,7 +873,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                   type="button"
                   onClick={() => setActiveFilter(activeFilter === chip.value ? null : chip.value)}
                   className={`rounded px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow ${
-                    activeFilter === chip.value ? "bg-brand-lea text-white" : "bg-brand-cloudDancer text-brand-grey hover:bg-brand-cloudDancer/70"
+                    activeFilter === chip.value ? "bg-brand-lea text-white" : "bg-brand-cloudDancer text-brand-grey hover:bg-brand-cloudDancer/70 dark:bg-white/5 dark:text-slate-400"
                   }`}
                 >
                   {chip.label} · {chip.count}
@@ -884,7 +884,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
 
           <div className="max-h-[640px] overflow-y-auto">
             {groupedBlocks.length === 0 ? (
-              <div className="px-4 py-6 text-sm text-brand-grey">No blocks match.</div>
+              <div className="px-4 py-6 text-sm text-brand-grey dark:text-slate-400">No blocks match.</div>
             ) : (
               groupedBlocks.map((group) => {
                 const collapsed = collapsedGroups.has(group.key);
@@ -893,18 +893,18 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                     <button
                       type="button"
                       onClick={() => toggleGroup(group.key)}
-                      className="sticky top-0 z-10 flex w-full items-center justify-between bg-brand-cloudDancer/85 px-4 py-2.5 text-left backdrop-blur transition hover:bg-brand-cloudDancer hover:shadow-glow"
+                      className="sticky top-0 z-10 flex w-full items-center justify-between bg-brand-cloudDancer/85 px-4 py-2.5 text-left backdrop-blur transition hover:bg-brand-cloudDancer hover:shadow-glow dark:bg-white/5"
                     >
-                      <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-brand-lea">
-                        {group.label} <span className="text-brand-grey">· {group.blocks.length}</span>
+                      <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-brand-lea dark:text-slate-100">
+                        {group.label} <span className="text-brand-grey dark:text-slate-400">· {group.blocks.length}</span>
                       </span>
                       {collapsed ? (
-                        <ChevronRight className="h-4 w-4 text-brand-grey" />
+                        <ChevronRight className="h-4 w-4 text-brand-grey dark:text-slate-400" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-brand-grey" />
+                        <ChevronDown className="h-4 w-4 text-brand-grey dark:text-slate-400" />
                       )}
                     </button>
-                    {!collapsed && <div className="divide-y divide-brand-lea/8">{group.blocks.map(blockButton)}</div>}
+                    {!collapsed && <div className="divide-y divide-brand-lea/8 dark:divide-white/10">{group.blocks.map(blockButton)}</div>}
                   </div>
                 );
               })
@@ -912,22 +912,22 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
           </div>
         </section>
 
-        <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10">
+        <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
           {selectedBlock || mode === "create" ? (
             <div className={mode === "create" ? "" : "grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr)_minmax(290px,1fr)]"}>
               <div className="min-w-0">
-              <div className="sticky top-0 z-20 flex items-start justify-between gap-4 border-b border-brand-lea/10 bg-white px-5 py-4">
+              <div className="sticky top-0 z-20 flex items-start justify-between gap-4 border-b border-brand-lea/10 bg-white px-5 py-4 dark:border-white/10 dark:bg-[#10243a]">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">
                     {mode === "create" ? "Create block" : "Edit block"}
                   </p>
-                  <h2 className="mt-1 text-2xl font-semibold text-brand-lea">
+                  <h2 className="mt-1 text-2xl font-semibold text-brand-lea dark:text-slate-100">
                     {mode === "create" ? "New reusable content block" : selectedBlock?.name}
                   </h2>
                   {mode !== "create" && selectedBlock ? (
                     <a
                       href="/settings/content-blocks"
-                      className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-grey hover:text-brand-lea"
+                      className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100"
                     >
                       Used by {selectedBlock.usageCount ?? 0} jobs · manage ›
                     </a>
@@ -1026,7 +1026,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                     enableBulletLine={form.bodyFormat === "MIXED"}
                   />
                   {form.bodyFormat === "MIXED" && (
-                    <p className="mt-1.5 text-xs text-brand-grey">
+                    <p className="mt-1.5 text-xs text-brand-grey dark:text-slate-400">
                       Start a line with <span className="font-semibold">-</span> to make it a bullet; other lines stay as
                       paragraphs. Mix freely in one block.
                     </p>
@@ -1076,18 +1076,18 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                     </select>
                   </div>
                 </div>
-                <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-3">
+                <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-3 dark:border-white/10 dark:bg-white/5">
                   <div className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-brand-eden">
                     Formatting preview
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <span className="rounded bg-white px-2 py-1 text-xs font-bold text-brand-lea">
+                    <span className="rounded bg-white px-2 py-1 text-xs font-bold text-brand-lea dark:bg-[#10243a] dark:text-slate-100">
                       {bodyFormats.find((format) => format.value === form.bodyFormat)?.label}
                     </span>
-                    <span className="rounded bg-white px-2 py-1 text-xs font-bold text-brand-lea">
+                    <span className="rounded bg-white px-2 py-1 text-xs font-bold text-brand-lea dark:bg-[#10243a] dark:text-slate-100">
                       {textWeights.find((weight) => weight.value === form.textWeight)?.label}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded bg-white px-2 py-1 text-xs font-bold text-brand-lea">
+                    <span className="inline-flex items-center gap-1.5 rounded bg-white px-2 py-1 text-xs font-bold text-brand-lea dark:bg-[#10243a] dark:text-slate-100">
                       <span
                         className="h-2.5 w-2.5 rounded-full"
                         style={{ backgroundColor: textColors.find((color) => color.value === form.textColor)?.swatch }}
@@ -1095,7 +1095,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                       {textColors.find((color) => color.value === form.textColor)?.label}
                     </span>
                   </div>
-                  <div className="mt-3 rounded border border-white/70 bg-white px-3 py-3">
+                  <div className="mt-3 rounded border border-white/70 bg-white px-3 py-3 dark:bg-[#10243a]">
                     <BlockBodyPreview
                       value={form.body}
                       bodyFormat={form.bodyFormat}
@@ -1116,7 +1116,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
 
                 {mode === "edit" && selectedBlock && (
                   <div className="rounded border border-brand-gold/45 bg-brand-gold/12 p-4">
-                    <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.16em] text-brand-lea">
+                    <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.16em] text-brand-lea dark:text-slate-100">
                       <GitBranch className="h-4 w-4" />
                       Apply this version
                     </h3>
@@ -1138,13 +1138,13 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                       ))}
                     </div>
                     {form.adoption === "SELECTED_JOBS" && (
-                      <div className="mt-4 max-h-56 overflow-auto rounded border border-brand-lea/10 bg-white">
+                      <div className="mt-4 max-h-56 overflow-auto rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]">
                         {selectedBlock.usedByJobs?.map((job) => (
                           <label
                             key={job.id}
-                            className="flex items-center justify-between gap-3 border-b border-brand-lea/8 px-3 py-2 last:border-b-0"
+                            className="flex items-center justify-between gap-3 border-b border-brand-lea/8 px-3 py-2 last:border-b-0 dark:border-white/10"
                           >
-                            <span className="text-sm font-semibold text-brand-lea">{job.title}</span>
+                            <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">{job.title}</span>
                             <input
                               type="checkbox"
                               checked={form.selectedJobIds.includes(job.id)}
@@ -1155,17 +1155,17 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                       </div>
                     )}
                     {form.adoption === "ALL_LINKED_JOBS" && Boolean(selectedBlock.usedByJobs?.length) && (
-                      <div className="mt-4 max-h-44 overflow-auto rounded border border-brand-lea/10 bg-white">
-                        <div className="border-b border-brand-lea/8 bg-brand-cloudDancer/55 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-brand-eden">
+                      <div className="mt-4 max-h-44 overflow-auto rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]">
+                        <div className="border-b border-brand-lea/8 bg-brand-cloudDancer/55 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-brand-eden dark:border-white/10 dark:bg-white/5">
                           Jobs to review before applying
                         </div>
                         {selectedBlock.usedByJobs?.map((job) => (
                           <div
                             key={`${job.id}-apply-all-review`}
-                            className="flex items-center justify-between gap-3 border-b border-brand-lea/8 px-3 py-2 last:border-b-0"
+                            className="flex items-center justify-between gap-3 border-b border-brand-lea/8 px-3 py-2 last:border-b-0 dark:border-white/10"
                           >
-                            <span className="text-sm font-semibold text-brand-lea">{job.title}</span>
-                            <span className="rounded bg-brand-cloudDancer px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-eden">
+                            <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">{job.title}</span>
+                            <span className="rounded bg-brand-cloudDancer px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-eden dark:bg-white/5">
                               {formatEnum(job.status)}
                             </span>
                           </div>
@@ -1198,12 +1198,12 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
               </div>
             </div>
             {mode !== "create" && selectedBlock ? (
-              <aside className="space-y-5 border-t border-brand-lea/10 p-5 xl:border-l xl:border-t-0">
+              <aside className="space-y-5 border-t border-brand-lea/10 p-5 xl:border-l xl:border-t-0 dark:border-white/10">
 
-                <div className="rounded border border-brand-lea/10 bg-white p-4">
+                <div className="rounded border border-brand-lea/10 bg-white p-4 dark:border-white/10 dark:bg-[#10243a]">
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.16em] text-brand-lea">
+                      <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.16em] text-brand-lea dark:text-slate-100">
                         <Users className="h-4 w-4 text-brand-eden" />
                         Apply this block to jobs
                       </h3>
@@ -1211,7 +1211,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                         Add this reusable block to every job, or choose specific jobs. Existing jobs that already use it are skipped.
                       </p>
                     </div>
-                    <span className="rounded bg-brand-sweet/35 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-lea">
+                    <span className="rounded bg-brand-sweet/35 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-lea dark:text-slate-100">
                       {formatEnum(selectedBlock.placement)}
                     </span>
                   </div>
@@ -1240,7 +1240,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                   </div>
 
                   {!applyForm.applyToAll && (
-                    <div className="mt-4 max-h-56 overflow-auto rounded border border-brand-lea/10">
+                    <div className="mt-4 max-h-56 overflow-auto rounded border border-brand-lea/10 dark:border-white/10">
                       {jobs.map((job) => {
                         const alreadyUsesBlock = job.blockInstances.some(
                           (instance) => instance.contentBlockId === selectedBlock.id
@@ -1249,13 +1249,13 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                         return (
                           <label
                             key={`${selectedBlock.id}-apply-${job.id}`}
-                            className={`flex items-center justify-between gap-3 border-b border-brand-lea/8 px-3 py-2 last:border-b-0 ${
-                              alreadyUsesBlock ? "bg-brand-cloudDancer/45" : "bg-white"
+                            className={`flex items-center justify-between gap-3 border-b border-brand-lea/8 px-3 py-2 last:border-b-0 dark:border-white/10 ${
+                              alreadyUsesBlock ? "bg-brand-cloudDancer/45 dark:bg-white/5" : "bg-white dark:bg-[#10243a]"
                             }`}
                           >
                             <span>
-                              <span className="block text-sm font-semibold text-brand-lea">{job.title}</span>
-                              <span className="text-xs text-brand-grey">
+                              <span className="block text-sm font-semibold text-brand-lea dark:text-slate-100">{job.title}</span>
+                              <span className="text-xs text-brand-grey dark:text-slate-400">
                                 {alreadyUsesBlock ? "Already using this block" : job.department ?? "No department"}
                               </span>
                             </span>
@@ -1286,7 +1286,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                   </button>
 
                   {selectedBlock.archivedAt && (
-                    <p className="mt-3 text-xs font-semibold text-brand-grey">
+                    <p className="mt-3 text-xs font-semibold text-brand-grey dark:text-slate-400">
                       Archived blocks cannot be applied to new jobs.
                     </p>
                   )}
@@ -1294,25 +1294,25 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
 
 
                 <div>
-                  <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.16em] text-brand-lea">
+                  <h3 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.16em] text-brand-lea dark:text-slate-100">
                     <History className="h-4 w-4 text-brand-eden" />
                     Version history
                   </h3>
                   <div className="space-y-2">
                     {selectedBlock.versions?.map((version) => (
-                      <div key={version.id} className="rounded border border-brand-lea/10 px-3 py-2">
+                      <div key={version.id} className="rounded border border-brand-lea/10 px-3 py-2 dark:border-white/10">
                         <div className="flex items-center justify-between gap-3">
-                          <div className="text-sm font-bold text-brand-lea">
+                          <div className="text-sm font-bold text-brand-lea dark:text-slate-100">
                             v{version.versionNumber} - {version.title}
                           </div>
                           {version.id === selectedBlock.currentVersionId && (
-                            <span className="rounded bg-brand-gold/22 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-lea">
+                            <span className="rounded bg-brand-gold/22 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-lea dark:text-slate-100">
                               Current
                             </span>
                           )}
                         </div>
                         {version.changeNote && (
-                          <div className="mt-1 text-xs font-medium text-brand-grey">{version.changeNote}</div>
+                          <div className="mt-1 text-xs font-medium text-brand-grey dark:text-slate-400">{version.changeNote}</div>
                         )}
                       </div>
                     ))}
@@ -1322,7 +1322,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
             ) : null}
             </div>
           ) : (
-            <div className="p-8 text-sm text-brand-grey">No reusable blocks found.</div>
+            <div className="p-8 text-sm text-brand-grey dark:text-slate-400">No reusable blocks found.</div>
           )}
         </section>
       </div>

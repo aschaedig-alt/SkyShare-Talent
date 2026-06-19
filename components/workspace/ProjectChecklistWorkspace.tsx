@@ -50,21 +50,21 @@ export function ProjectChecklistWorkspace() {
   return (
     <div className="space-y-6">
       {/* Progress Overview */}
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Project Progress</p>
-            <h2 className="text-2xl font-semibold text-brand-lea">Development Roadmap</h2>
+            <h2 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Development Roadmap</h2>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-bold text-brand-lea">{roadmap.progressPercent}%</div>
-            <div className="text-xs text-brand-grey">
+            <div className="text-3xl font-bold text-brand-lea dark:text-slate-100">{roadmap.progressPercent}%</div>
+            <div className="text-xs text-brand-grey dark:text-slate-400">
               {roadmap.completedItems} of {roadmap.totalItems} items
             </div>
           </div>
         </div>
 
-        <div className="h-2 overflow-hidden rounded-full bg-brand-cloudDancer/30">
+        <div className="h-2 overflow-hidden rounded-full bg-brand-cloudDancer/30 dark:bg-white/5">
           <div
             className="h-full bg-emerald-500 transition-all duration-500"
             style={{ width: `${roadmap.progressPercent}%` }}
@@ -81,20 +81,20 @@ export function ProjectChecklistWorkspace() {
             section.items.length === 0 ? 0 : Math.round((completedCount / section.items.length) * 100);
 
           return (
-            <section key={section.id} className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10">
+            <section key={section.id} className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
               <button
                 onClick={() => toggleSection(section.id)}
-                className="flex w-full items-center justify-between gap-4 px-5 py-4 transition hover:bg-brand-cloudDancer/10 hover:shadow-glow"
+                className="flex w-full items-center justify-between gap-4 px-5 py-4 transition hover:bg-brand-cloudDancer/10 hover:shadow-glow dark:bg-white/5"
               >
                 <div className="flex-1 text-left">
-                  <h3 className="font-semibold text-brand-lea">{section.title}</h3>
-                  {section.description && <p className="mt-1 text-xs text-brand-grey">{section.description}</p>}
+                  <h3 className="font-semibold text-brand-lea dark:text-slate-100">{section.title}</h3>
+                  {section.description && <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">{section.description}</p>}
                 </div>
 
                 <div className="flex items-center gap-4">
                   <div className="hidden text-right sm:block">
-                    <div className="text-sm font-semibold text-brand-lea">{sectionPercent}%</div>
-                    <div className="text-xs text-brand-grey">
+                    <div className="text-sm font-semibold text-brand-lea dark:text-slate-100">{sectionPercent}%</div>
+                    <div className="text-xs text-brand-grey dark:text-slate-400">
                       {completedCount}/{section.items.length}
                     </div>
                   </div>
@@ -102,13 +102,13 @@ export function ProjectChecklistWorkspace() {
                   <StatusBadge status={section.status} />
 
                   <ChevronDown
-                    className={clsx("h-5 w-5 text-brand-grey transition-transform", isExpanded && "rotate-180")}
+                    className={clsx("h-5 w-5 text-brand-grey transition-transform dark:text-slate-400", isExpanded && "rotate-180")}
                   />
                 </div>
               </button>
 
               {isExpanded && (
-                <div className="space-y-2 border-t border-brand-lea/10 px-5 py-4">
+                <div className="space-y-2 border-t border-brand-lea/10 px-5 py-4 dark:border-white/10">
                   {section.items.map((item) => (
                     <div key={item.id} className="flex items-start gap-3 text-sm">
                       <div className="mt-0.5 flex-shrink-0">
@@ -134,14 +134,14 @@ export function ProjectChecklistWorkspace() {
                           >
                             {item.label}
                           </span>
-                          {item.date && <span className="shrink-0 text-xs text-brand-grey">{item.date}</span>}
+                          {item.date && <span className="shrink-0 text-xs text-brand-grey dark:text-slate-400">{item.date}</span>}
                         </div>
-                        {item.note && <p className="mt-1 text-xs text-brand-grey">{item.note}</p>}
+                        {item.note && <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">{item.note}</p>}
                       </div>
                     </div>
                   ))}
                   {section.items.length === 0 && (
-                    <p className="text-xs italic text-brand-grey">No items yet.</p>
+                    <p className="text-xs italic text-brand-grey dark:text-slate-400">No items yet.</p>
                   )}
                 </div>
               )}
@@ -151,12 +151,12 @@ export function ProjectChecklistWorkspace() {
       </div>
 
       {/* Edit hint */}
-      <section className="rounded border border-brand-gold/30 bg-brand-gold/10 p-4 text-sm text-brand-grey">
-        <span className="font-semibold text-brand-lea">Want to add or change items?</span> Edit{" "}
-        <code className="rounded bg-white px-1 text-xs">lib/roadmap/roadmap.ts</code> — use{" "}
-        <code className="rounded bg-white px-1 text-xs">- [x]</code> for done,{" "}
-        <code className="rounded bg-white px-1 text-xs">- [~]</code> for in progress,{" "}
-        <code className="rounded bg-white px-1 text-xs">- [ ]</code> for to-do. Or just jot items in and ask Claude to
+      <section className="rounded border border-brand-gold/30 bg-brand-gold/10 p-4 text-sm text-brand-grey dark:text-slate-400">
+        <span className="font-semibold text-brand-lea dark:text-slate-100">Want to add or change items?</span> Edit{" "}
+        <code className="rounded bg-white px-1 text-xs dark:bg-[#10243a]">lib/roadmap/roadmap.ts</code> — use{" "}
+        <code className="rounded bg-white px-1 text-xs dark:bg-[#10243a]">- [x]</code> for done,{" "}
+        <code className="rounded bg-white px-1 text-xs dark:bg-[#10243a]">- [~]</code> for in progress,{" "}
+        <code className="rounded bg-white px-1 text-xs dark:bg-[#10243a]">- [ ]</code> for to-do. Or just jot items in and ask Claude to
         tidy it up.
       </section>
     </div>

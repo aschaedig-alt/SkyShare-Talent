@@ -56,14 +56,14 @@ export function CandidateCsvImportCard() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+    <form onSubmit={handleSubmit} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex min-h-[190px] flex-col justify-between gap-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">
             Active import
           </p>
-          <h2 className="mt-2 text-base font-semibold text-brand-lea">Candidate CSV import</h2>
-          <p className="mt-2 text-sm leading-6 text-brand-grey">
+          <h2 className="mt-2 text-base font-semibold text-brand-lea dark:text-slate-100">Candidate CSV import</h2>
+          <p className="mt-2 text-sm leading-6 text-brand-grey dark:text-slate-400">
             Import candidate records, preserve source rows, normalize names, and match existing candidates by exact email or phone.
           </p>
         </div>
@@ -72,7 +72,7 @@ export function CandidateCsvImportCard() {
             ref={inputRef}
             type="file"
             accept=".csv,text/csv"
-            className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm"
+            className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
           />
           <button
             type="submit"
@@ -85,7 +85,7 @@ export function CandidateCsvImportCard() {
             <div
               role="status"
               aria-live="polite"
-              className="rounded border border-brand-sweet/50 bg-brand-sweet/20 p-2 text-xs font-semibold text-brand-lea"
+              className="rounded border border-brand-sweet/50 bg-brand-sweet/20 p-2 text-xs font-semibold text-brand-lea dark:text-slate-100"
             >
               Reading the file, normalizing candidate names, and checking exact phone/email matches.
             </div>

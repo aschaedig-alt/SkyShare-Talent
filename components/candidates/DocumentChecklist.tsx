@@ -35,7 +35,7 @@ export function DocumentChecklist({ files }: { files: FileLike[] }) {
   const coreMissing = CHECKLIST.filter((c) => c.core && !counts.has(c.type)).length;
 
   return (
-    <div className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+    <div className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex items-center justify-between">
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Document checklist</p>
         <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${coreMissing === 0 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
@@ -50,13 +50,13 @@ export function DocumentChecklist({ files }: { files: FileLike[] }) {
             <li key={c.type} className="flex items-center gap-2 text-xs">
               <span
                 className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${
-                  has ? "bg-emerald-100 text-emerald-700" : c.core ? "bg-red-100 text-red-600" : "bg-brand-cloudDancer text-brand-grey"
+                  has ? "bg-emerald-100 text-emerald-700" : c.core ? "bg-red-100 text-red-600" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400"
                 }`}
               >
                 {has ? <Check className="h-3 w-3" /> : c.core ? <X className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
               </span>
-              <span className={`flex-1 truncate ${has ? "text-brand-black/80" : c.core ? "text-red-600" : "text-brand-grey"}`}>{c.type}</span>
-              {count > 1 && <span className="shrink-0 rounded bg-brand-lea/10 px-1.5 text-[10px] font-semibold text-brand-grey">{count}</span>}
+              <span className={`flex-1 truncate ${has ? "text-brand-black/80" : c.core ? "text-red-600" : "text-brand-grey dark:text-slate-400"}`}>{c.type}</span>
+              {count > 1 && <span className="shrink-0 rounded bg-brand-lea/10 px-1.5 text-[10px] font-semibold text-brand-grey dark:text-slate-400">{count}</span>}
             </li>
           );
         })}

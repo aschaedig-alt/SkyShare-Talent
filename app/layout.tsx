@@ -13,7 +13,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Apply the saved theme before paint so dark mode never flashes. Default light. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(localStorage.getItem('theme')==='dark'){document.documentElement.classList.add('dark')}}catch(e){}})()`
+          }}
+        />
+      </head>
       <body suppressHydrationWarning>
         <AppShell>{children}</AppShell>
       </body>

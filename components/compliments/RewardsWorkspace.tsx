@@ -79,11 +79,11 @@ export function RewardsWorkspace({ roster, rewards, pointsPerDollar }: Props) {
           />
         </Card>
         <Card padding="md" className="flex flex-col justify-center text-center">
-          <p className="text-xs font-medium text-brand-grey">Available points</p>
-          <p className="mt-1 text-[32px] font-medium leading-none text-brand-lea">
+          <p className="text-xs font-medium text-brand-grey dark:text-slate-400">Available points</p>
+          <p className="mt-1 text-[32px] font-medium leading-none text-brand-lea dark:text-slate-100">
             {balance === null ? "—" : balance.toLocaleString()}
           </p>
-          <p className="mt-2 text-xs text-brand-grey">
+          <p className="mt-2 text-xs text-brand-grey dark:text-slate-400">
             {balance === null ? "Select a person" : `${pointsToDollars(balance, pointsPerDollar)} value`}
           </p>
         </Card>
@@ -112,7 +112,7 @@ export function RewardsWorkspace({ roster, rewards, pointsPerDollar }: Props) {
               "whitespace-nowrap rounded-element border-[0.5px] px-3.5 py-2 text-[13px] font-medium transition hover:shadow-glow",
               category === pill.key
                 ? "border-brand-lea bg-brand-lea text-white"
-                : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"
+                : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:text-slate-100"
             )}
           >
             {pill.label}
@@ -138,10 +138,10 @@ export function RewardsWorkspace({ roster, rewards, pointsPerDollar }: Props) {
                 <RewardIcon name={reward.icon} className="h-9 w-9 text-white" />
               </div>
               <div className="flex flex-1 flex-col p-4">
-                <p className="text-sm font-medium text-brand-lea">{reward.name}</p>
-                <p className="mt-0.5 text-xs text-brand-grey">{reward.description}</p>
+                <p className="text-sm font-medium text-brand-lea dark:text-slate-100">{reward.name}</p>
+                <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">{reward.description}</p>
                 <div className="mt-3 flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium text-brand-lea">{reward.pointCost.toLocaleString()} pts</span>
+                  <span className="text-sm font-medium text-brand-lea dark:text-slate-100">{reward.pointCost.toLocaleString()} pts</span>
                   <button
                     type="button"
                     disabled={!canRedeem}
@@ -150,7 +150,7 @@ export function RewardsWorkspace({ roster, rewards, pointsPerDollar }: Props) {
                       "rounded-element px-3 py-1.5 text-xs font-medium transition",
                       canRedeem
                         ? "bg-brand-lea text-white hover:bg-brand-eden"
-                        : "cursor-not-allowed bg-brand-cloudDancer text-brand-grey"
+                        : "cursor-not-allowed bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400"
                     )}
                   >
                     {pendingId === reward.id ? "..." : disabledLabel ?? "Redeem"}

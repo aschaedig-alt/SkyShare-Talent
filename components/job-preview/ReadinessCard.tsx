@@ -26,7 +26,7 @@ export function ReadinessCard({ job, warnings, compact = false }: ReadinessCardP
         ) : (
           <CheckCircle2 className="h-4 w-4 text-emerald-700" />
         )}
-        <div className="text-sm font-bold text-brand-lea">
+        <div className="text-sm font-bold text-brand-lea dark:text-slate-100">
           {hasWarnings
             ? `${warnings.length} validation warning${warnings.length === 1 ? "" : "s"}`
             : "Ready check clean"}
@@ -48,7 +48,7 @@ export function ReadinessCard({ job, warnings, compact = false }: ReadinessCardP
         ))}
       </div>
       {hasWarnings && (
-        <div className="mt-4 space-y-2 border-t border-brand-lea/10 pt-3">
+        <div className="mt-4 space-y-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
           {warnings.slice(0, compact ? 6 : 5).map((warning) => (
             <div key={warning.id} className="text-xs font-medium leading-5 text-brand-black/72">
               {warning.label}

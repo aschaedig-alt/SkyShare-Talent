@@ -50,7 +50,7 @@ export type AdminOverride = {
 };
 
 const DOW = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const inp = "w-full rounded-lg border border-brand-lea/20 px-3 py-2 text-sm";
+const inp = "w-full rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10";
 
 function toHHMM(min: number) {
   const h = Math.floor(min / 60);
@@ -155,8 +155,8 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
     <div className="px-5 py-6 lg:px-8">
       <div className="mb-5">
         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Scheduling</p>
-        <h1 className="text-2xl font-semibold text-brand-lea">Booking links</h1>
-        <p className="mt-1 text-sm text-brand-grey">
+        <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Booking links</h1>
+        <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
           Give each recruiter and hiring manager a &quot;schedule with me&quot; link. Bookings land on the shared SkyShare calendar.
         </p>
       </div>
@@ -169,7 +169,7 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
           <button
             onClick={addHost}
             disabled={busy}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-brand-lea/30 px-3 py-2 text-sm font-semibold text-brand-lea hover:border-brand-sweet hover:bg-brand-sweet/5"
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-brand-lea/30 px-3 py-2 text-sm font-semibold text-brand-lea hover:border-brand-sweet hover:bg-brand-sweet/5 dark:border-white/10 dark:text-slate-100"
           >
             <Plus className="h-4 w-4" /> New team member
           </button>
@@ -178,15 +178,15 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
               key={h.id}
               className={clsx(
                 "flex items-stretch gap-1 rounded-lg border pr-1 transition hover:shadow-glow",
-                h.id === selectedId ? "border-brand-sweet bg-brand-sweet/10" : "border-brand-lea/10 hover:bg-brand-cloudDancer/30"
+                h.id === selectedId ? "border-brand-sweet bg-brand-sweet/10" : "border-brand-lea/10 hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:bg-white/5"
               )}
             >
               <button onClick={() => setSelectedId(h.id)} className="min-w-0 flex-1 px-3 py-2 text-left">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-sm font-semibold text-brand-lea">{h.name}</span>
-                  {!h.isActive ? <span className="text-[10px] font-bold uppercase text-brand-grey">off</span> : null}
+                  <span className="truncate text-sm font-semibold text-brand-lea dark:text-slate-100">{h.name}</span>
+                  {!h.isActive ? <span className="text-[10px] font-bold uppercase text-brand-grey dark:text-slate-400">off</span> : null}
                 </div>
-                <div className="truncate text-[11px] text-brand-grey">/book/{h.slug}</div>
+                <div className="truncate text-[11px] text-brand-grey dark:text-slate-400">/book/{h.slug}</div>
               </button>
               <button
                 onClick={() => removeHost(h)}
@@ -199,7 +199,7 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
               </button>
             </div>
           ))}
-          {hosts.length === 0 ? <p className="px-1 text-xs text-brand-grey">No team members yet.</p> : null}
+          {hosts.length === 0 ? <p className="px-1 text-xs text-brand-grey dark:text-slate-400">No team members yet.</p> : null}
         </aside>
 
         {/* Detail */}
@@ -207,7 +207,7 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
           {selected ? (
             <HostDetail key={selected.id} host={selected} overrides={overrides} busy={busy} run={run} onDeleted={() => setSelectedId(null)} />
           ) : (
-            <div className="rounded-xl bg-white p-8 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10">
+            <div className="rounded-xl bg-white p-8 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:text-slate-400 dark:ring-white/10">
               Select or create a team member to manage their availability.
             </div>
           )}
@@ -219,8 +219,8 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
 
 function Card({ title, icon: Icon, children }: { title: string; icon: typeof Clock; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
-      <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.12em] text-brand-grey">
+    <section className="rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.12em] text-brand-grey dark:text-slate-400">
         <Icon className="h-4 w-4 text-brand-gold" /> {title}
       </h2>
       {children}
@@ -287,7 +287,7 @@ function PhotoCard({
       <div className="flex items-center gap-4">
         {host.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={host.avatarUrl} alt={host.name} className="h-16 w-16 shrink-0 rounded-full object-cover ring-1 ring-brand-lea/15" />
+          <img src={host.avatarUrl} alt={host.name} className="h-16 w-16 shrink-0 rounded-full object-cover ring-1 ring-brand-lea/15 dark:ring-white/10" />
         ) : (
           <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-brand-lea text-lg font-bold text-white">
             {initials(host.name)}
@@ -306,13 +306,13 @@ function PhotoCard({
               <button
                 onClick={() => run(async () => void api(`/api/booking-hosts/${host.id}`, "PATCH", { avatarUrl: null }))}
                 disabled={busy}
-                className="rounded-lg border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/30"
+                className="rounded-lg border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
               >
                 Remove
               </button>
             ) : null}
           </div>
-          <p className="text-xs text-brand-grey">Shown next to {host.name} on the calendar timeline. Square images look best; large photos are scaled down automatically.</p>
+          <p className="text-xs text-brand-grey dark:text-slate-400">Shown next to {host.name} on the calendar timeline. Square images look best; large photos are scaled down automatically.</p>
         </div>
         <input ref={inputRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
       </div>
@@ -326,7 +326,7 @@ function ShareLink({ slug }: { slug: string }) {
   return (
     <Card title="Share link" icon={LinkIcon}>
       <div className="flex items-center gap-2">
-        <code className="flex-1 truncate rounded-lg bg-brand-cloudDancer/40 px-3 py-2 text-sm text-brand-lea">{url}</code>
+        <code className="flex-1 truncate rounded-lg bg-brand-cloudDancer/40 px-3 py-2 text-sm text-brand-lea dark:bg-white/5 dark:text-slate-100">{url}</code>
         <button
           onClick={() => {
             navigator.clipboard?.writeText(url);
@@ -341,7 +341,7 @@ function ShareLink({ slug }: { slug: string }) {
           href={url}
           target="_blank"
           rel="noreferrer"
-          className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/30"
+          className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
         >
           Open
         </a>
@@ -439,15 +439,15 @@ function Settings({
           </select>
         </Field>
         <Field label="Active">
-          <label className="flex items-center gap-2 py-2 text-sm text-brand-lea">
+          <label className="flex items-center gap-2 py-2 text-sm text-brand-lea dark:text-slate-100">
             <input type="checkbox" checked={form.isActive} onChange={(e) => set("isActive", e.target.checked)} /> Accepting bookings
           </label>
         </Field>
       </div>
 
       <div className="mt-3">
-        <div className="text-xs font-semibold text-brand-lea">Departments</div>
-        <p className="mb-2 text-[11px] text-brand-grey">Which departments this person interviews for — choose one or more.</p>
+        <div className="text-xs font-semibold text-brand-lea dark:text-slate-100">Departments</div>
+        <p className="mb-2 text-[11px] text-brand-grey dark:text-slate-400">Which departments this person interviews for — choose one or more.</p>
         <div className="flex flex-wrap gap-1.5">
           {DEPARTMENTS.map((d) => {
             const active = form.departments.includes(d.key);
@@ -460,7 +460,7 @@ function Settings({
                 }
                 className={clsx(
                   "rounded border px-3 py-1 text-xs font-semibold transition hover:shadow-glow",
-                  active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"
+                  active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:text-slate-100"
                 )}
               >
                 {d.label}
@@ -515,7 +515,7 @@ function Settings({
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+    <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
       {label}
       {children}
     </label>
@@ -549,33 +549,33 @@ function WeeklyAvailability({
     <Card title="Weekly availability" icon={Calendar}>
       <div className="space-y-2">
         {DOW.map((label, d) => (
-          <div key={d} className="flex flex-wrap items-start gap-2 border-b border-brand-lea/5 py-2 last:border-0">
-            <div className="w-24 shrink-0 pt-2 text-sm font-semibold text-brand-lea">{label}</div>
+          <div key={d} className="flex flex-wrap items-start gap-2 border-b border-brand-lea/5 py-2 last:border-0 dark:border-white/10">
+            <div className="w-24 shrink-0 pt-2 text-sm font-semibold text-brand-lea dark:text-slate-100">{label}</div>
             <div className="flex flex-1 flex-wrap items-center gap-2">
-              {days[d].length === 0 ? <span className="py-2 text-xs text-brand-grey">Unavailable</span> : null}
+              {days[d].length === 0 ? <span className="py-2 text-xs text-brand-grey dark:text-slate-400">Unavailable</span> : null}
               {days[d].map((range, i) => (
-                <div key={i} className="flex items-center gap-1 rounded-lg bg-brand-cloudDancer/40 px-2 py-1">
+                <div key={i} className="flex items-center gap-1 rounded-lg bg-brand-cloudDancer/40 px-2 py-1 dark:bg-white/5">
                   <input
                     type="time"
                     value={toHHMM(range.startMinute)}
                     onChange={(e) => update(d, days[d].map((r, j) => (j === i ? { ...r, startMinute: fromHHMM(e.target.value) } : r)))}
-                    className="rounded border border-brand-lea/20 px-1 py-0.5 text-xs"
+                    className="rounded border border-brand-lea/20 px-1 py-0.5 text-xs dark:border-white/10"
                   />
-                  <span className="text-xs text-brand-grey">–</span>
+                  <span className="text-xs text-brand-grey dark:text-slate-400">–</span>
                   <input
                     type="time"
                     value={toHHMM(range.endMinute)}
                     onChange={(e) => update(d, days[d].map((r, j) => (j === i ? { ...r, endMinute: fromHHMM(e.target.value) } : r)))}
-                    className="rounded border border-brand-lea/20 px-1 py-0.5 text-xs"
+                    className="rounded border border-brand-lea/20 px-1 py-0.5 text-xs dark:border-white/10"
                   />
-                  <button onClick={() => update(d, days[d].filter((_, j) => j !== i))} className="text-brand-grey hover:text-red-600">
+                  <button onClick={() => update(d, days[d].filter((_, j) => j !== i))} className="text-brand-grey hover:text-red-600 dark:text-slate-400">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
               ))}
               <button
                 onClick={() => update(d, [...days[d], { startMinute: 9 * 60, endMinute: 17 * 60 }])}
-                className="rounded-lg border border-brand-lea/20 px-2 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/30"
+                className="rounded-lg border border-brand-lea/20 px-2 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
               >
                 + Add hours
               </button>
@@ -618,14 +618,14 @@ function BookingTypes({
     <Card title="Meeting types" icon={Clock}>
       <div className="space-y-2">
         {host.bookingTypes.map((t) => (
-          <div key={t.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-brand-lea/10 p-2">
-            <span className="flex-1 text-sm font-semibold text-brand-lea">
-              {t.name} <span className="text-xs font-normal text-brand-grey">· {t.kind === "MEETING" ? "Meeting" : "Interview"}</span>
+          <div key={t.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-brand-lea/10 p-2 dark:border-white/10">
+            <span className="flex-1 text-sm font-semibold text-brand-lea dark:text-slate-100">
+              {t.name} <span className="text-xs font-normal text-brand-grey dark:text-slate-400">· {t.kind === "MEETING" ? "Meeting" : "Interview"}</span>
             </span>
             <select
               value={t.durationMinutes}
               onChange={(e) => run(async () => void api(`/api/booking-types/${t.id}`, "PATCH", { durationMinutes: Number(e.target.value) }))}
-              className="rounded border border-brand-lea/20 px-2 py-1 text-xs"
+              className="rounded border border-brand-lea/20 px-2 py-1 text-xs dark:border-white/10"
             >
               <option value={30}>30 min</option>
               <option value={45}>45 min</option>
@@ -638,7 +638,7 @@ function BookingTypes({
                   void api(`/api/booking-types/${t.id}`, "PATCH", { bufferMinutes: e.target.value === "" ? 0 : Number(e.target.value) })
                 )
               }
-              className="rounded border border-brand-lea/20 px-2 py-1 text-xs"
+              className="rounded border border-brand-lea/20 px-2 py-1 text-xs dark:border-white/10"
             >
               <option value="">No buffer</option>
               <option value={10}>10 min buffer</option>
@@ -649,30 +649,30 @@ function BookingTypes({
             >
               {t.isActive ? "Active" : "Off"}
             </button>
-            <button onClick={() => run(async () => void api(`/api/booking-types/${t.id}`, "DELETE"))} className="text-brand-grey hover:text-red-600">
+            <button onClick={() => run(async () => void api(`/api/booking-types/${t.id}`, "DELETE"))} className="text-brand-grey hover:text-red-600 dark:text-slate-400">
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
         ))}
-        {host.bookingTypes.length === 0 ? <p className="text-xs text-brand-grey">No meeting types yet — add one below.</p> : null}
+        {host.bookingTypes.length === 0 ? <p className="text-xs text-brand-grey dark:text-slate-400">No meeting types yet — add one below.</p> : null}
       </div>
 
       {/* Add */}
-      <div className="mt-3 grid gap-2 rounded-lg bg-brand-cloudDancer/30 p-3 sm:grid-cols-2">
+      <div className="mt-3 grid gap-2 rounded-lg bg-brand-cloudDancer/30 p-3 sm:grid-cols-2 dark:bg-white/5">
         <input
           placeholder="Name (e.g. Candidate screen)"
           value={draft.name}
           onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-          className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm"
+          className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10"
         />
-        <select value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm">
+        <select value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10">
           <option value="INTERVIEW">Interview (creates a candidate)</option>
           <option value="MEETING">Meeting (any guest)</option>
         </select>
         <select
           value={draft.durationMinutes}
           onChange={(e) => setDraft({ ...draft, durationMinutes: Number(e.target.value) })}
-          className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm"
+          className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10"
         >
           <option value={30}>30 minutes</option>
           <option value={45}>45 minutes</option>
@@ -682,7 +682,7 @@ function BookingTypes({
           placeholder="Location (e.g. Video — Zoom)"
           value={draft.location}
           onChange={(e) => setDraft({ ...draft, location: e.target.value })}
-          className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm"
+          className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10"
         />
         <button
           onClick={() =>
@@ -733,7 +733,7 @@ function Overrides({
     <Card title="Date overrides (vacation, holidays, special hours)" icon={Ban}>
       <div className="space-y-2">
         {overrides.map((o) => (
-          <div key={o.id} className="flex items-center gap-2 rounded-lg border border-brand-lea/10 p-2 text-sm">
+          <div key={o.id} className="flex items-center gap-2 rounded-lg border border-brand-lea/10 p-2 text-sm dark:border-white/10">
             <span
               className={clsx(
                 "rounded px-2 py-0.5 text-[11px] font-semibold",
@@ -742,54 +742,54 @@ function Overrides({
             >
               {o.kind === "BLOCK" ? "Blocked" : "Custom"}
             </span>
-            <span className="flex-1 text-brand-lea">
+            <span className="flex-1 text-brand-lea dark:text-slate-100">
               {o.label ? `${o.label} · ` : ""}
               {o.startDate}
               {o.endDate !== o.startDate ? ` → ${o.endDate}` : ""}
               {o.kind === "CUSTOM" && o.startMinute != null && o.endMinute != null
                 ? ` (${toHHMM(o.startMinute)}–${toHHMM(o.endMinute)})`
                 : ""}
-              {o.hostId === null ? <span className="ml-2 text-[11px] text-brand-grey">org-wide</span> : null}
+              {o.hostId === null ? <span className="ml-2 text-[11px] text-brand-grey dark:text-slate-400">org-wide</span> : null}
             </span>
-            <button onClick={() => run(async () => void api(`/api/availability-overrides/${o.id}`, "DELETE"))} className="text-brand-grey hover:text-red-600">
+            <button onClick={() => run(async () => void api(`/api/availability-overrides/${o.id}`, "DELETE"))} className="text-brand-grey hover:text-red-600 dark:text-slate-400">
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
         ))}
-        {overrides.length === 0 ? <p className="text-xs text-brand-grey">No overrides. Recurring schedule applies every week.</p> : null}
+        {overrides.length === 0 ? <p className="text-xs text-brand-grey dark:text-slate-400">No overrides. Recurring schedule applies every week.</p> : null}
       </div>
 
-      <div className="mt-3 grid gap-2 rounded-lg bg-brand-cloudDancer/30 p-3 sm:grid-cols-2">
+      <div className="mt-3 grid gap-2 rounded-lg bg-brand-cloudDancer/30 p-3 sm:grid-cols-2 dark:bg-white/5">
         <Field label="Applies to">
-          <select value={draft.scope} onChange={(e) => setDraft({ ...draft, scope: e.target.value as "host" | "org" })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm">
+          <select value={draft.scope} onChange={(e) => setDraft({ ...draft, scope: e.target.value as "host" | "org" })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10">
             <option value="host">{host.name} only</option>
             <option value="org">Everyone (holiday)</option>
           </select>
         </Field>
         <Field label="Type">
-          <select value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value as "BLOCK" | "CUSTOM" })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm">
+          <select value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value as "BLOCK" | "CUSTOM" })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10">
             <option value="BLOCK">Block (unavailable)</option>
             <option value="CUSTOM">Custom hours</option>
           </select>
         </Field>
         <Field label="Start date">
-          <input type="date" value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm" />
+          <input type="date" value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10" />
         </Field>
         <Field label="End date">
-          <input type="date" value={draft.endDate} onChange={(e) => setDraft({ ...draft, endDate: e.target.value })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm" />
+          <input type="date" value={draft.endDate} onChange={(e) => setDraft({ ...draft, endDate: e.target.value })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10" />
         </Field>
         {draft.kind === "CUSTOM" ? (
           <>
             <Field label="From">
-              <input type="time" value={toHHMM(draft.startMinute)} onChange={(e) => setDraft({ ...draft, startMinute: fromHHMM(e.target.value) })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm" />
+              <input type="time" value={toHHMM(draft.startMinute)} onChange={(e) => setDraft({ ...draft, startMinute: fromHHMM(e.target.value) })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10" />
             </Field>
             <Field label="To">
-              <input type="time" value={toHHMM(draft.endMinute)} onChange={(e) => setDraft({ ...draft, endMinute: fromHHMM(e.target.value) })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm" />
+              <input type="time" value={toHHMM(draft.endMinute)} onChange={(e) => setDraft({ ...draft, endMinute: fromHHMM(e.target.value) })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10" />
             </Field>
           </>
         ) : null}
         <Field label="Label (optional)">
-          <input value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} placeholder="Vacation, Holiday…" className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm" />
+          <input value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} placeholder="Vacation, Holiday…" className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10" />
         </Field>
         <button
           onClick={() =>

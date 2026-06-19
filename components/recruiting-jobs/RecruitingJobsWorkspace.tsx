@@ -43,10 +43,10 @@ function locationLabel(job: { city: string | null; state: string | null }) {
 
 function HeaderPanel({ query }: { query: string }) {
   return (
-    <section className="flex h-full flex-col rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+    <section className="flex h-full flex-col rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Role operations</p>
-      <h1 className="text-2xl font-semibold text-brand-lea">Jobs</h1>
-      <p className="mt-1 text-sm text-brand-grey">
+      <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Jobs</h1>
+      <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
         Imported role records, linked pilot requirements, and candidate coverage. Publishing workflows remain in Job Builder.
       </p>
       <form className="mt-3 flex w-full gap-2">
@@ -54,7 +54,7 @@ function HeaderPanel({ query }: { query: string }) {
           name="q"
           defaultValue={query}
           placeholder="Search title, department, aircraft, base, status"
-          className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20"
+          className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
         />
         <button type="submit" className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden">
           Search
@@ -68,9 +68,9 @@ function StatsPanel({ stats }: { stats: RecruitingJobsData["stats"] }) {
   return (
     <section className="grid h-full grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
       {statLabels.map(([key, label]) => (
-        <div key={key} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10">
-          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey">{label}</div>
-          <div className="mt-1 text-xl font-semibold text-brand-lea">{stats[key]}</div>
+        <div key={key} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey dark:text-slate-400">{label}</div>
+          <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{stats[key]}</div>
           <div className="mt-2 h-1 rounded-full bg-brand-gold/25">
             <div className="h-1 w-2/3 rounded-full bg-brand-sweet" />
           </div>
@@ -82,12 +82,12 @@ function StatsPanel({ stats }: { stats: RecruitingJobsData["stats"] }) {
 
 function JobDetailHeader({ job }: { job: RecruitingJobDetail }) {
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-y-auto rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+    <section className="flex h-full min-h-0 flex-col overflow-y-auto rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Job detail</p>
-          <h2 className="text-2xl font-semibold text-brand-lea">{job.title}</h2>
-          <p className="mt-1 text-sm text-brand-grey">
+          <h2 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">{job.title}</h2>
+          <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
             {[job.department, job.status, locationLabel(job)].filter(Boolean).join(" - ")}
           </p>
           <JobClassificationEditor
@@ -99,17 +99,17 @@ function JobDetailHeader({ job }: { job: RecruitingJobDetail }) {
           />
         </div>
         <div className="grid w-full grid-cols-2 gap-2 text-sm 2xl:max-w-[360px]">
-          <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-3">
-            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey">Candidates</div>
-            <div className="mt-1 text-lg font-semibold text-brand-lea">{job.candidateCount}</div>
+          <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-3 dark:border-white/10 dark:bg-white/5">
+            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Candidates</div>
+            <div className="mt-1 text-lg font-semibold text-brand-lea dark:text-slate-100">{job.candidateCount}</div>
           </div>
-          <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-3">
-            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey">Requirements</div>
-            <div className="mt-1 text-lg font-semibold text-brand-lea">{job.requirementCount}</div>
+          <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-3 dark:border-white/10 dark:bg-white/5">
+            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Requirements</div>
+            <div className="mt-1 text-lg font-semibold text-brand-lea dark:text-slate-100">{job.requirementCount}</div>
           </div>
-          <div className="col-span-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-3">
-            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey">Pay</div>
-            <div className="mt-1 break-words text-sm font-semibold text-brand-lea">
+          <div className="col-span-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-3 dark:border-white/10 dark:bg-white/5">
+            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Pay</div>
+            <div className="mt-1 break-words text-sm font-semibold text-brand-lea dark:text-slate-100">
               {job.paySummary ?? job.rawPayScale ?? "No pay recorded"}
             </div>
           </div>
@@ -121,25 +121,25 @@ function JobDetailHeader({ job }: { job: RecruitingJobDetail }) {
 
 function LinkedRequirements({ job }: { job: RecruitingJobDetail }) {
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Linked requirements</p>
-      <h3 className="text-base font-semibold text-brand-lea">Pilot requirement profiles</h3>
+      <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Pilot requirement profiles</h3>
       <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">
         {job.linkedRequirements.length > 0 ? (
           job.linkedRequirements.map((requirement) => (
             <Link
               key={requirement.id}
               href={`/pilot-requirements?id=${requirement.id}`}
-              className="block rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 transition hover:border-brand-sweet hover:bg-brand-sweet/18 hover:shadow-glow"
+              className="block rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 transition hover:border-brand-sweet hover:bg-brand-sweet/18 hover:shadow-glow dark:border-white/10 dark:bg-white/5"
             >
-              <div className="font-semibold text-brand-lea">{requirement.title}</div>
-              <div className="mt-1 text-xs text-brand-grey">
+              <div className="font-semibold text-brand-lea dark:text-slate-100">{requirement.title}</div>
+              <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">
                 {[requirement.pilotSeat, requirement.status, requirement.reviewStatus].filter(Boolean).join(" - ")}
               </div>
             </Link>
           ))
         ) : (
-          <p className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 text-sm text-brand-grey">
+          <p className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
             No linked requirement profile yet.
           </p>
         )}
@@ -150,11 +150,11 @@ function LinkedRequirements({ job }: { job: RecruitingJobDetail }) {
 
 function LinkedCandidates({ job }: { job: RecruitingJobDetail }) {
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Linked candidates</p>
-          <h3 className="text-base font-semibold text-brand-lea">Applied or associated candidates</h3>
+          <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Applied or associated candidates</h3>
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
           <ResumeIntake jobId={job.id} jobTitle={job.title} />
@@ -168,16 +168,16 @@ function LinkedCandidates({ job }: { job: RecruitingJobDetail }) {
             <Link
               key={candidate.id}
               href={`/candidates?q=${encodeURIComponent(candidate.displayName)}`}
-              className="block rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 transition hover:border-brand-sweet hover:bg-brand-sweet/18 hover:shadow-glow"
+              className="block rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 transition hover:border-brand-sweet hover:bg-brand-sweet/18 hover:shadow-glow dark:border-white/10 dark:bg-white/5"
             >
-              <div className="font-semibold text-brand-lea">{candidate.displayName}</div>
-              <div className="mt-1 text-xs text-brand-grey">
+              <div className="font-semibold text-brand-lea dark:text-slate-100">{candidate.displayName}</div>
+              <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">
                 {[candidate.currentTitle, candidate.stage, candidate.status].filter(Boolean).join(" - ")}
               </div>
             </Link>
           ))
         ) : (
-          <p className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 text-sm text-brand-grey">
+          <p className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
             No linked candidates yet. Suggested candidates will be added after matching logic exists.
           </p>
         )}
@@ -189,20 +189,20 @@ function LinkedCandidates({ job }: { job: RecruitingJobDetail }) {
 function SourceRecord({ job }: { job: RecruitingJobDetail }) {
   const sourceText = job.rawMinimumRequirements || job.jobDescriptionText;
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Source record</p>
-      <h3 className="text-base font-semibold text-brand-lea">Imported job text</h3>
-      <div className="mt-2 grid gap-2 text-xs text-brand-grey sm:grid-cols-3">
+      <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Imported job text</h3>
+      <div className="mt-2 grid gap-2 text-xs text-brand-grey sm:grid-cols-3 dark:text-slate-400">
         <div>Req ID: {job.jobReqId ?? "Not recorded"}</div>
         <div>Recruiter: {job.recruiter ?? "Not recorded"}</div>
         <div>Source: {job.sourceFilename ?? "Not recorded"}</div>
       </div>
       {sourceText ? (
-        <div className="mt-3 min-h-0 flex-1 overflow-auto rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm leading-6 text-brand-black/78 whitespace-pre-wrap">
+        <div className="mt-3 min-h-0 flex-1 overflow-auto rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm leading-6 text-brand-black/78 whitespace-pre-wrap dark:border-white/10 dark:bg-white/5">
           {sourceText}
         </div>
       ) : (
-        <p className="mt-3 text-sm text-brand-grey">No source text is attached to this job yet.</p>
+        <p className="mt-3 text-sm text-brand-grey dark:text-slate-400">No source text is attached to this job yet.</p>
       )}
     </section>
   );
@@ -210,9 +210,9 @@ function SourceRecord({ job }: { job: RecruitingJobDetail }) {
 
 function NoJobPanel() {
   return (
-    <section className="flex h-full flex-col items-center justify-center rounded bg-white p-8 text-center shadow-panel ring-1 ring-brand-lea/10">
-      <h2 className="text-lg font-semibold text-brand-lea">No jobs yet</h2>
-      <p className="mt-2 text-sm text-brand-grey">Import or seed recruiting jobs to populate this workspace.</p>
+    <section className="flex h-full flex-col items-center justify-center rounded bg-white p-8 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">No jobs yet</h2>
+      <p className="mt-2 text-sm text-brand-grey dark:text-slate-400">Import or seed recruiting jobs to populate this workspace.</p>
     </section>
   );
 }

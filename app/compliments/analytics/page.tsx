@@ -30,8 +30,8 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
     return (
       <Card padding="lg">
         <div className="py-10 text-center">
-          <p className="text-sm font-medium text-brand-lea">Insights are available to managers</p>
-          <p className="mt-1 text-sm text-brand-grey">
+          <p className="text-sm font-medium text-brand-lea dark:text-slate-100">Insights are available to managers</p>
+          <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
             Ask an admin for recruiter or manager access to see recognition analytics.
           </p>
         </div>
@@ -50,8 +50,8 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-medium text-brand-lea">Team insights</h2>
-          <p className="text-sm text-brand-grey">Recognition and engagement across new hires.</p>
+          <h2 className="text-lg font-medium text-brand-lea dark:text-slate-100">Team insights</h2>
+          <p className="text-sm text-brand-grey dark:text-slate-400">Recognition and engagement across new hires.</p>
         </div>
         <div className="flex gap-2">
           {RANGES.map((r) => (
@@ -62,7 +62,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
                 "rounded-element border-[0.5px] px-3 py-1.5 text-xs font-medium transition hover:shadow-glow",
                 range === r.key
                   ? "border-brand-lea bg-brand-lea text-white"
-                  : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"
+                  : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:text-slate-100"
               )}
             >
               {r.label}
@@ -85,20 +85,20 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card padding="lg">
-          <h3 className="mb-5 text-base font-medium text-brand-lea">Recognitions by value</h3>
+          <h3 className="mb-5 text-base font-medium text-brand-lea dark:text-slate-100">Recognitions by value</h3>
           {data.byValue.every((v) => v.count === 0) ? (
-            <p className="text-sm text-brand-grey">No recognition in this range yet.</p>
+            <p className="text-sm text-brand-grey dark:text-slate-400">No recognition in this range yet.</p>
           ) : (
             <div className="space-y-4">
               {data.byValue.map((v) => (
                 <div key={v.name}>
                   <div className="mb-1.5 flex justify-between text-[13px]">
-                    <span className="font-medium text-brand-lea">{v.name}</span>
-                    <span className="text-brand-grey">
+                    <span className="font-medium text-brand-lea dark:text-slate-100">{v.name}</span>
+                    <span className="text-brand-grey dark:text-slate-400">
                       {v.count} ({v.pct}%)
                     </span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-brand-cloudDancer">
+                  <div className="h-2 overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/5">
                     <div
                       className={clsx("h-full rounded-full", valueColorClasses(v.colorKey).barFill)}
                       style={{ width: `${Math.round((v.count / maxValueCount) * 100)}%` }}
@@ -111,26 +111,26 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         </Card>
 
         <Card padding="lg">
-          <h3 className="mb-4 text-base font-medium text-brand-lea">Top recipients</h3>
+          <h3 className="mb-4 text-base font-medium text-brand-lea dark:text-slate-100">Top recipients</h3>
           {data.topRecipients.length === 0 ? (
-            <p className="text-sm text-brand-grey">No recognition in this range yet.</p>
+            <p className="text-sm text-brand-grey dark:text-slate-400">No recognition in this range yet.</p>
           ) : (
             <ul>
               {data.topRecipients.map((r) => (
                 <li
                   key={r.name}
-                  className="flex items-center justify-between border-b border-brand-lea/10 py-2.5 last:border-0"
+                  className="flex items-center justify-between border-b border-brand-lea/10 py-2.5 last:border-0 dark:border-white/10"
                 >
                   <div className="flex items-center gap-2.5">
                     <Avatar name={r.name} initials={r.initials} size="sm" />
                     <div>
-                      <p className="text-[13px] font-medium text-brand-lea">{r.name}</p>
-                      <p className="text-xs text-brand-grey">{r.department ?? "Unassigned"}</p>
+                      <p className="text-[13px] font-medium text-brand-lea dark:text-slate-100">{r.name}</p>
+                      <p className="text-xs text-brand-grey dark:text-slate-400">{r.department ?? "Unassigned"}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium text-brand-lea">{r.count}</p>
-                    <p className="text-xs text-brand-grey">recognitions</p>
+                    <p className="text-sm font-medium text-brand-lea dark:text-slate-100">{r.count}</p>
+                    <p className="text-xs text-brand-grey dark:text-slate-400">recognitions</p>
                   </div>
                 </li>
               ))}
@@ -140,26 +140,26 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
       </div>
 
       <Card padding="lg">
-        <h3 className="mb-1 text-base font-medium text-brand-lea">Recognition equity across departments</h3>
-        <p className="mb-5 text-xs text-brand-grey">
+        <h3 className="mb-1 text-base font-medium text-brand-lea dark:text-slate-100">Recognition equity across departments</h3>
+        <p className="mb-5 text-xs text-brand-grey dark:text-slate-400">
           Surfaces under-recognized teams so recognition stays fair across the company.
         </p>
         {data.byDepartment.length === 0 ? (
-          <p className="text-sm text-brand-grey">No department data in this range yet.</p>
+          <p className="text-sm text-brand-grey dark:text-slate-400">No department data in this range yet.</p>
         ) : (
           <div className="space-y-3">
             {data.byDepartment.map((d) => (
               <div key={d.department} className="flex items-center gap-3">
-                <span className="w-28 shrink-0 truncate text-[13px] font-medium text-brand-lea">{d.department}</span>
-                <span className="w-12 shrink-0 text-right text-[13px] text-brand-lea">{d.count}</span>
-                <span className="w-12 shrink-0 text-right text-[13px] text-brand-grey">{d.pct}%</span>
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-brand-cloudDancer">
+                <span className="w-28 shrink-0 truncate text-[13px] font-medium text-brand-lea dark:text-slate-100">{d.department}</span>
+                <span className="w-12 shrink-0 text-right text-[13px] text-brand-lea dark:text-slate-100">{d.count}</span>
+                <span className="w-12 shrink-0 text-right text-[13px] text-brand-grey dark:text-slate-400">{d.pct}%</span>
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/5">
                   <div
                     className="h-full rounded-full bg-brand-eden"
                     style={{ width: `${Math.round((d.count / maxDeptCount) * 100)}%` }}
                   />
                 </div>
-                <span className="w-16 shrink-0 text-right text-xs text-brand-grey">{d.people} ppl</span>
+                <span className="w-16 shrink-0 text-right text-xs text-brand-grey dark:text-slate-400">{d.people} ppl</span>
               </div>
             ))}
           </div>

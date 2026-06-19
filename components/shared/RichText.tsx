@@ -4,10 +4,10 @@ import { parseRichText } from "@/lib/formatting/rich-text";
 import { parseBodySegments, splitCleanParagraphs } from "@/lib/formatting/text";
 
 const inlineColorClasses: Record<InlineTextColor, string> = {
-  BLACK: "text-brand-black",
-  LEA: "text-brand-lea",
+  BLACK: "text-brand-black dark:text-slate-100",
+  LEA: "text-brand-lea dark:text-slate-100",
   EDEN: "text-brand-eden",
-  GREY: "text-brand-grey",
+  GREY: "text-brand-grey dark:text-slate-400",
   GOLD: "text-brand-gold",
   RED: "text-brand-red",
   SWEET: "text-brand-sweet",
@@ -43,7 +43,7 @@ export function RichTextMixed({ value, textClass = "" }: { value?: string | null
   const segments = parseBodySegments(value);
 
   if (!segments.length) {
-    return <p className="text-sm italic text-brand-grey">No clean text entered yet.</p>;
+    return <p className="text-sm italic text-brand-grey dark:text-slate-400">No clean text entered yet.</p>;
   }
 
   return (
@@ -89,7 +89,7 @@ export function RichTextParagraphs({
   const paragraphs = splitCleanParagraphs(value);
 
   if (!paragraphs.length) {
-    return <p className="text-sm italic text-brand-grey">{emptyText}</p>;
+    return <p className="text-sm italic text-brand-grey dark:text-slate-400">{emptyText}</p>;
   }
 
   return (

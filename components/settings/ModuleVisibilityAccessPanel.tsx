@@ -35,8 +35,8 @@ function ruleToAccess3(accessLevel: AccessLevel): Access3 {
 
 const access3Styles: Record<Access3, string> = {
   FULL: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  VIEW: "border-brand-gold/40 bg-brand-gold/15 text-brand-lea",
-  HIDDEN: "border-brand-lea/15 bg-brand-cloudDancer text-brand-grey"
+  VIEW: "border-brand-gold/40 bg-brand-gold/15 text-brand-lea dark:text-slate-100",
+  HIDDEN: "border-brand-lea/15 bg-brand-cloudDancer text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400"
 };
 
 // One fixed-width control per cell so every pill lines up regardless of label length.
@@ -166,15 +166,15 @@ export function ModuleVisibilityAccessPanel({ policy: initialPolicy }: ModuleVis
   }
 
   return (
-    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Access control</p>
-          <h2 className="text-base font-semibold text-brand-lea">Module Visibility &amp; Access</h2>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-brand-grey">
-            One control per role: <span className="font-semibold text-brand-lea">Hidden</span> blocks the page and hides
-            it from the sidebar, <span className="font-semibold text-brand-lea">View</span> opens it but mutes write
-            controls, and <span className="font-semibold text-brand-lea">Full</span> behaves normally. New pages appear
+          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Module Visibility &amp; Access</h2>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-brand-grey dark:text-slate-400">
+            One control per role: <span className="font-semibold text-brand-lea dark:text-slate-100">Hidden</span> blocks the page and hides
+            it from the sidebar, <span className="font-semibold text-brand-lea dark:text-slate-100">View</span> opens it but mutes write
+            controls, and <span className="font-semibold text-brand-lea dark:text-slate-100">Full</span> behaves normally. New pages appear
             here automatically.
           </p>
         </div>
@@ -190,12 +190,12 @@ export function ModuleVisibilityAccessPanel({ policy: initialPolicy }: ModuleVis
       </div>
 
       {status ? (
-        <div className="mt-4 rounded border border-brand-lea/10 bg-brand-cloudDancer/50 px-3 py-2 text-sm text-brand-grey">
+        <div className="mt-4 rounded border border-brand-lea/10 bg-brand-cloudDancer/50 px-3 py-2 text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
           {status}
         </div>
       ) : null}
 
-      <div className="mt-4 overflow-hidden rounded border border-brand-lea/10">
+      <div className="mt-4 overflow-hidden rounded border border-brand-lea/10 dark:border-white/10">
         <table className="w-full table-fixed text-left text-sm">
           <colgroup>
             <col style={{ width: "32%" }} />
@@ -205,7 +205,7 @@ export function ModuleVisibilityAccessPanel({ policy: initialPolicy }: ModuleVis
             <col style={{ width: "17%" }} />
           </colgroup>
           <thead>
-            <tr className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey">
+            <tr className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
               <th className="px-3 py-2.5">Module</th>
               {roles.map((role) => (
                 <th key={role} className="px-2 py-2.5 text-center">
@@ -220,7 +220,7 @@ export function ModuleVisibilityAccessPanel({ policy: initialPolicy }: ModuleVis
                 <tr>
                   <td
                     colSpan={5}
-                    className="bg-brand-cloudDancer/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-brand-lea"
+                    className="bg-brand-cloudDancer/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-brand-lea dark:bg-white/5 dark:text-slate-100"
                   >
                     {group.group}
                   </td>
@@ -228,9 +228,9 @@ export function ModuleVisibilityAccessPanel({ policy: initialPolicy }: ModuleVis
                 {group.items.map((row) => {
                   const locked = row.id === "settings";
                   return (
-                    <tr key={row.id} className="border-t border-brand-lea/8">
+                    <tr key={row.id} className="border-t border-brand-lea/8 dark:border-white/10">
                       <td className="px-3 py-2 align-middle">
-                        <span className="text-sm font-medium text-brand-lea">{row.label}</span>
+                        <span className="text-sm font-medium text-brand-lea dark:text-slate-100">{row.label}</span>
                         {locked ? (
                           <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-brand-gold">
                             Locked

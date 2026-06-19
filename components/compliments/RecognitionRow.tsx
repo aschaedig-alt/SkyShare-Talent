@@ -34,10 +34,10 @@ export function RecognitionRow({ recognition, perspective = "received" }: Recogn
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-medium text-brand-lea">{line}</p>
-            <p className="mt-1 text-[13px] text-brand-grey">{recognition.message}</p>
+            <p className="font-medium text-brand-lea dark:text-slate-100">{line}</p>
+            <p className="mt-1 text-[13px] text-brand-grey dark:text-slate-400">{recognition.message}</p>
           </div>
-          <span className="shrink-0 whitespace-nowrap text-xs text-brand-grey">
+          <span className="shrink-0 whitespace-nowrap text-xs text-brand-grey dark:text-slate-400">
             {relativeTime(recognition.createdAt)}
           </span>
         </div>

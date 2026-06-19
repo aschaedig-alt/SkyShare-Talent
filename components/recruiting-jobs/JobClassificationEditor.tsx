@@ -60,21 +60,21 @@ export function JobClassificationEditor({ jobId, isPilotRole, pilotSeat, aircraf
   }
 
   return (
-    <div className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/40 p-3">
+    <div className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/40 p-3 dark:border-white/10 dark:bg-white/5">
       <div className="flex flex-wrap items-center gap-3">
-        <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey">Role type</span>
-        <div className="inline-flex overflow-hidden rounded border border-brand-lea/15">
+        <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Role type</span>
+        <div className="inline-flex overflow-hidden rounded border border-brand-lea/15 dark:border-white/10">
           <button
             type="button"
             onClick={() => setPilot(true)}
-            className={clsx("px-3 py-1.5 text-sm font-semibold transition hover:shadow-glow", pilot ? "bg-brand-lea text-white" : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60")}
+            className={clsx("px-3 py-1.5 text-sm font-semibold transition hover:shadow-glow", pilot ? "bg-brand-lea text-white" : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-[#10243a] dark:text-slate-400 dark:bg-white/5")}
           >
             Pilot
           </button>
           <button
             type="button"
             onClick={() => setPilot(false)}
-            className={clsx("px-3 py-1.5 text-sm font-semibold transition hover:shadow-glow", !pilot ? "bg-brand-lea text-white" : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60")}
+            className={clsx("px-3 py-1.5 text-sm font-semibold transition hover:shadow-glow", !pilot ? "bg-brand-lea text-white" : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-[#10243a] dark:text-slate-400 dark:bg-white/5")}
           >
             Support
           </button>
@@ -93,11 +93,11 @@ export function JobClassificationEditor({ jobId, isPilotRole, pilotSeat, aircraf
       {pilot ? (
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey">Seat</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Seat</span>
             <select
               value={seat}
               onChange={(e) => setSeat(e.target.value)}
-              className="mt-1 w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-lea"
+              className="mt-1 w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
             >
               <option value="">No seat</option>
               {SEATS.map((s) => (
@@ -108,12 +108,12 @@ export function JobClassificationEditor({ jobId, isPilotRole, pilotSeat, aircraf
             </select>
           </label>
           <div className="block">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey">Aircraft</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Aircraft</span>
             <div className="mt-1 flex flex-wrap gap-1.5">
               {aircraft.map((a) => (
-                <span key={a} className="inline-flex items-center gap-1 rounded border border-brand-sweet/60 bg-brand-sweet/18 px-2.5 py-1 text-[11px] font-semibold text-brand-lea">
+                <span key={a} className="inline-flex items-center gap-1 rounded border border-brand-sweet/60 bg-brand-sweet/18 px-2.5 py-1 text-[11px] font-semibold text-brand-lea dark:text-slate-100">
                   {a}
-                  <button type="button" onClick={() => setAircraft(aircraft.filter((x) => x !== a))} className="text-brand-grey hover:text-red-600" aria-label={`Remove ${a}`}>
+                  <button type="button" onClick={() => setAircraft(aircraft.filter((x) => x !== a))} className="text-brand-grey hover:text-red-600 dark:text-slate-400" aria-label={`Remove ${a}`}>
                     ×
                   </button>
                 </span>
@@ -130,16 +130,16 @@ export function JobClassificationEditor({ jobId, isPilotRole, pilotSeat, aircraf
                   }
                 }}
                 placeholder="Add aircraft, e.g. Gulfstream G450"
-                className="min-w-0 flex-1 rounded border border-brand-lea/15 bg-white px-3 py-1.5 text-sm"
+                className="min-w-0 flex-1 rounded border border-brand-lea/15 bg-white px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#10243a]"
               />
-              <button type="button" onClick={addAircraft} className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">
+              <button type="button" onClick={addAircraft} className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
                 Add
               </button>
             </div>
           </div>
         </div>
       ) : (
-        <p className="mt-3 text-sm text-brand-grey">
+        <p className="mt-3 text-sm text-brand-grey dark:text-slate-400">
           Support role — pilot seat and aircraft tags are cleared, and it&rsquo;s removed from Pilot Requirements on save.
         </p>
       )}

@@ -115,22 +115,22 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
   const appliedJobIds = new Set(selectedCandidate?.appliedJobs.map((j) => j.id) ?? []);
 
   return (
-    <section className="rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+    <section className="rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Schedule interview</p>
-      <h2 className="text-base font-semibold text-brand-lea">New interview</h2>
-      <p className="mt-1 text-xs text-brand-grey">
+      <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">New interview</h2>
+      <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
         Pick a candidate and contact details auto-fill from their profile.
       </p>
 
       <form action={scheduleInterview} className="mt-4 grid gap-3">
         {/* Candidate */}
-        <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+        <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
           Candidate
           <select
             value={selectedCandidateId}
             onChange={(e) => handleCandidateChange(e.target.value)}
             required
-            className="rounded-lg border border-brand-lea/20 bg-white px-3 py-2 text-sm"
+            className="rounded-lg border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
           >
             <option value="">Choose candidate</option>
             {candidates.map((candidate) => (
@@ -147,33 +147,33 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
             <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-gold">
               From profile (editable)
             </div>
-            <label className="flex items-center gap-2 text-xs text-brand-lea">
-              <Mail className="h-3.5 w-3.5 shrink-0 text-brand-grey" />
+            <label className="flex items-center gap-2 text-xs text-brand-lea dark:text-slate-100">
+              <Mail className="h-3.5 w-3.5 shrink-0 text-brand-grey dark:text-slate-400" />
               <input
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email"
-                className="w-full rounded border border-brand-lea/20 bg-white px-2 py-1.5 text-sm"
+                className="w-full rounded border border-brand-lea/20 bg-white px-2 py-1.5 text-sm dark:border-white/10 dark:bg-[#10243a]"
               />
             </label>
-            <label className="flex items-center gap-2 text-xs text-brand-lea">
-              <Phone className="h-3.5 w-3.5 shrink-0 text-brand-grey" />
+            <label className="flex items-center gap-2 text-xs text-brand-lea dark:text-slate-100">
+              <Phone className="h-3.5 w-3.5 shrink-0 text-brand-grey dark:text-slate-400" />
               <input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="Phone"
-                className="w-full rounded border border-brand-lea/20 bg-white px-2 py-1.5 text-sm"
+                className="w-full rounded border border-brand-lea/20 bg-white px-2 py-1.5 text-sm dark:border-white/10 dark:bg-[#10243a]"
               />
             </label>
           </div>
         )}
 
         {/* Job / role */}
-        <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+        <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
           <span className="flex items-center gap-1">
             <Briefcase className="h-3.5 w-3.5" /> Job / role
             {selectedCandidate && appliedJobIds.size > 0 && (
-              <span className="ml-1 rounded bg-brand-gold/20 px-1.5 py-0.5 text-[9px] font-bold text-brand-lea">
+              <span className="ml-1 rounded bg-brand-gold/20 px-1.5 py-0.5 text-[9px] font-bold text-brand-lea dark:text-slate-100">
                 applied
               </span>
             )}
@@ -181,7 +181,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
           <select
             value={jobId}
             onChange={(e) => setJobId(e.target.value)}
-            className="rounded-lg border border-brand-lea/20 bg-white px-3 py-2 text-sm"
+            className="rounded-lg border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
           >
             <option value="">No linked job</option>
             {selectedCandidate && selectedCandidate.appliedJobs.length > 0 && (
@@ -206,7 +206,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
         </label>
 
         {/* Interview stage picker (color-coded) */}
-        <div className="grid gap-1 text-xs font-semibold text-brand-lea">
+        <div className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
           Interview stage
           <div className="flex flex-wrap gap-1.5">
             {interviewTypes.map((type) => {
@@ -219,8 +219,8 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
                   onClick={() => setInterviewType(type)}
                   className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow ${
                     active
-                      ? `${meta.chip} ring-2 ring-offset-1 ring-brand-lea/30`
-                      : "bg-brand-cloudDancer/50 text-brand-grey hover:bg-brand-cloudDancer"
+                      ? `${meta.chip} ring-2 ring-offset-1 ring-brand-lea/30 dark:ring-white/10`
+                      : "bg-brand-cloudDancer/50 text-brand-grey hover:bg-brand-cloudDancer dark:bg-white/5 dark:text-slate-400"
                   }`}
                 >
                   <span className={`h-2 w-2 rounded-full ${active ? "bg-white/80" : meta.dot}`} />
@@ -232,18 +232,18 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
-          <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+          <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Title
             <input
               name="title"
               required
               defaultValue="Pilot interview"
-              className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm"
+              className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
             />
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+          <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Status
-            <select name="status" className="rounded-lg border border-brand-lea/20 bg-white px-3 py-2 text-sm">
+            <select name="status" className="rounded-lg border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]">
               {statusOptions.map((option) => (
                 <option key={option} value={option}>
                   {option}
@@ -254,7 +254,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
-          <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+          <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Start date/time
             <input
               name="startDateTime"
@@ -262,12 +262,12 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
               type="datetime-local"
               defaultValue={prefilledDate ? dateAtHour(prefilledDate, 9) : undefined}
               key={prefilledDate?.toISOString() ?? "no-date"}
-              className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm"
+              className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
             />
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+          <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Duration
-            <select name="durationMinutes" defaultValue="60" className="rounded-lg border border-brand-lea/20 bg-white px-3 py-2 text-sm">
+            <select name="durationMinutes" defaultValue="60" className="rounded-lg border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]">
               <option value="30">30 minutes</option>
               <option value="45">45 minutes</option>
               <option value="60">60 minutes</option>
@@ -278,13 +278,13 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
-          <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+          <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Interviewer
             <InterviewerPicker interviewers={interviewers} activeDepartmentKey={activeDepartmentKey} />
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+          <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Timezone
-            <select name="timezone" defaultValue={DEFAULT_TIMEZONE} className="rounded-lg border border-brand-lea/20 bg-white px-3 py-2 text-sm">
+            <select name="timezone" defaultValue={DEFAULT_TIMEZONE} className="rounded-lg border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]">
               {US_TIMEZONES.map((tz) => (
                 <option key={tz.value} value={tz.value}>
                   {tz.label}
@@ -294,19 +294,19 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
           </label>
         </div>
 
-        <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+        <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
           Location
-          <input name="location" placeholder="Office, room, or city" className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm" />
+          <input name="location" placeholder="Office, room, or city" className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10" />
         </label>
 
-        <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+        <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
           Meeting URL
-          <input name="meetingUrl" placeholder="https://..." className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm" />
+          <input name="meetingUrl" placeholder="https://..." className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10" />
         </label>
 
-        <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+        <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
           Notes
-          <textarea name="notes" rows={3} className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm" />
+          <textarea name="notes" rows={3} className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10" />
         </label>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -321,7 +321,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
             <span
               role={status === "error" ? "alert" : "status"}
               aria-live={status === "error" ? undefined : "polite"}
-              className={status === "error" ? "text-xs font-medium text-red-700" : "text-xs font-medium text-brand-grey"}
+              className={status === "error" ? "text-xs font-medium text-red-700" : "text-xs font-medium text-brand-grey dark:text-slate-400"}
             >
               {message}
             </span>

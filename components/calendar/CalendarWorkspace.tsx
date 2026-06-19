@@ -59,7 +59,7 @@ function statusBadgeColor(status: string) {
     case "CANCELLED":
       return "bg-slate-100 text-slate-500";
     default:
-      return "bg-brand-sweet/25 text-brand-lea";
+      return "bg-brand-sweet/25 text-brand-lea dark:text-slate-100";
   }
 }
 
@@ -82,10 +82,10 @@ function CompactInterviewList({
   onInterviewClick: (interview: Interview) => void;
 }) {
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10">
-      <div className="shrink-0 border-b border-brand-lea/10 px-4 py-3">
+    <section className="flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <div className="shrink-0 border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Interview manifest</p>
-        <h2 className="text-base font-semibold text-brand-lea">All interviews</h2>
+        <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">All interviews</h2>
       </div>
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
         {interviews.length > 0 ? (
@@ -94,12 +94,12 @@ function CompactInterviewList({
               key={interview.id}
               type="button"
               onClick={() => onInterviewClick(interview)}
-              className="block w-full rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-2 text-left transition hover:border-brand-sweet hover:bg-brand-sweet/10 hover:shadow-glow"
+              className="block w-full rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-2 text-left transition hover:border-brand-sweet hover:bg-brand-sweet/10 hover:shadow-glow dark:border-white/10 dark:bg-white/5"
             >
-              <div className="truncate text-xs font-semibold text-brand-lea">{interview.candidate.displayName}</div>
-              <div className="truncate text-[11px] text-brand-grey">{interview.title}</div>
+              <div className="truncate text-xs font-semibold text-brand-lea dark:text-slate-100">{interview.candidate.displayName}</div>
+              <div className="truncate text-[11px] text-brand-grey dark:text-slate-400">{interview.title}</div>
               <div className="mt-1 flex items-center justify-between gap-1">
-                <span className="truncate text-[10px] text-brand-grey">
+                <span className="truncate text-[10px] text-brand-grey dark:text-slate-400">
                   {formatDateTimeWithZone(interview.startDateTime, interview.timezone)}
                 </span>
                 <span className={clsx("shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold", statusBadgeColor(interview.status))}>
@@ -109,7 +109,7 @@ function CompactInterviewList({
             </button>
           ))
         ) : (
-          <p className="p-2 text-xs text-brand-grey">No interviews scheduled yet.</p>
+          <p className="p-2 text-xs text-brand-grey dark:text-slate-400">No interviews scheduled yet.</p>
         )}
       </div>
     </section>
@@ -201,25 +201,25 @@ export function CalendarWorkspace({
   }
 
   const headerPanel = (
-    <section className="flex h-full flex-col rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+    <section className="flex h-full flex-col rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Interview operations</p>
-          <h1 className="text-2xl font-semibold text-brand-lea">Calendar</h1>
-          <p className="mt-1 text-sm text-brand-grey">
+          <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Calendar</h1>
+          <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
             Schedule and manage candidate interviews. Click a day or time to schedule, click an interview to edit, or drag to reschedule.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Department filter (drill down into sub-groups) */}
-          <label className="flex items-center gap-1.5 rounded-lg border border-brand-lea/15 py-1 pl-2.5 pr-1 text-sm">
-            <Building2 className="h-4 w-4 shrink-0 text-brand-grey" />
+          <label className="flex items-center gap-1.5 rounded-lg border border-brand-lea/15 py-1 pl-2.5 pr-1 text-sm dark:border-white/10">
+            <Building2 className="h-4 w-4 shrink-0 text-brand-grey dark:text-slate-400" />
             <span className="sr-only">Filter by department</span>
             <select
               value={department}
               onChange={(event) => setDepartment(event.target.value)}
-              className="max-w-[12rem] cursor-pointer rounded bg-transparent py-1 pr-1 text-sm font-semibold text-brand-lea outline-none focus:ring-2 focus:ring-brand-gold/40"
+              className="max-w-[12rem] cursor-pointer rounded bg-transparent py-1 pr-1 text-sm font-semibold text-brand-lea outline-none focus:ring-2 focus:ring-brand-gold/40 dark:text-slate-100"
             >
               <option value="all">All departments</option>
               {DEPARTMENTS.map((dept) =>
@@ -243,15 +243,15 @@ export function CalendarWorkspace({
           </label>
 
           {/* Color mode: by department (default) or by interview stage */}
-          <div className="flex items-center gap-1 rounded-lg border border-brand-lea/15 p-1" title="Color interviews by">
-            <Palette className="ml-1 h-4 w-4 shrink-0 text-brand-grey" />
+          <div className="flex items-center gap-1 rounded-lg border border-brand-lea/15 p-1 dark:border-white/10" title="Color interviews by">
+            <Palette className="ml-1 h-4 w-4 shrink-0 text-brand-grey dark:text-slate-400" />
             {(["department", "stage"] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setColorMode(mode)}
                 className={clsx(
                   "rounded px-2 py-1.5 text-xs font-semibold transition hover:shadow-glow",
-                  colorMode === mode ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea"
+                  colorMode === mode ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100"
                 )}
               >
                 {mode === "department" ? "Dept" : "Stage"}
@@ -264,14 +264,14 @@ export function CalendarWorkspace({
             <button
               onClick={() => setColorEditorOpen(true)}
               title="Edit department colors"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-grey transition hover:text-brand-lea"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:text-slate-100"
             >
               <Palette className="h-4 w-4" /> Colors
             </button>
           )}
 
           {/* View Toggle */}
-          <div className="flex items-center gap-1 rounded-lg border border-brand-lea/15 p-1">
+          <div className="flex items-center gap-1 rounded-lg border border-brand-lea/15 p-1 dark:border-white/10">
             {viewOptions.map((option) => {
               const Icon = option.icon;
               return (
@@ -280,7 +280,7 @@ export function CalendarWorkspace({
                   onClick={() => setView(option.id)}
                   className={clsx(
                     "flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-semibold transition hover:shadow-glow",
-                    view === option.id ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea"
+                    view === option.id ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100"
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -297,9 +297,9 @@ export function CalendarWorkspace({
   const statsPanel = (
     <section className="grid h-full grid-cols-2 gap-3 sm:grid-cols-4">
       {statLabels.map(([key, label]) => (
-        <div key={key} className="rounded-xl bg-white p-3 shadow-panel ring-1 ring-brand-lea/10">
-          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey">{label}</div>
-          <div className="mt-1 text-xl font-semibold text-brand-lea">{data.stats[key]}</div>
+        <div key={key} className="rounded-xl bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey dark:text-slate-400">{label}</div>
+          <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{data.stats[key]}</div>
           <div className="mt-2 h-1 rounded-full bg-brand-gold/25">
             <div className="h-1 w-2/3 rounded-full bg-brand-sweet" />
           </div>

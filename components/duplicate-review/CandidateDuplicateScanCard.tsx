@@ -63,14 +63,14 @@ export function CandidateDuplicateScanCard() {
   const summary = formatResult(result);
 
   return (
-    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">
             Candidate duplicate scan
           </p>
-          <h2 className="text-base font-semibold text-brand-lea">Find likely duplicate candidate records</h2>
-          <p className="mt-1 max-w-3xl text-xs text-brand-grey">
+          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Find likely duplicate candidate records</h2>
+          <p className="mt-1 max-w-3xl text-xs text-brand-grey dark:text-slate-400">
             Uses indexed email, phone, and normalized-name buckets so large candidate lists do not need a full
             candidate-by-candidate comparison.
           </p>
@@ -89,7 +89,7 @@ export function CandidateDuplicateScanCard() {
         <div
           role="status"
           aria-live="polite"
-          className="mt-3 rounded border border-brand-sweet/40 bg-brand-cloudDancer/60 px-3 py-2 text-sm text-brand-lea"
+          className="mt-3 rounded border border-brand-sweet/40 bg-brand-cloudDancer/60 px-3 py-2 text-sm text-brand-lea dark:bg-white/5 dark:text-slate-100"
         >
           Scanning candidate buckets now. The review queue will refresh when it finishes.
         </div>

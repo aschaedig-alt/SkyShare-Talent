@@ -132,12 +132,12 @@ function ImportActionCard({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+    <form onSubmit={handleSubmit} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex min-h-[190px] flex-col justify-between gap-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">{eyebrow}</p>
-          <h2 className="mt-2 text-base font-semibold text-brand-lea">{title}</h2>
-          <p className="mt-2 text-sm leading-6 text-brand-grey">{detail}</p>
+          <h2 className="mt-2 text-base font-semibold text-brand-lea dark:text-slate-100">{title}</h2>
+          <p className="mt-2 text-sm leading-6 text-brand-grey dark:text-slate-400">{detail}</p>
         </div>
         <div className="space-y-2">
           <input
@@ -145,7 +145,7 @@ function ImportActionCard({
             type="file"
             accept={accept}
             multiple={multiple}
-            className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm"
+            className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
           />
           <button
             type="submit"
@@ -155,7 +155,7 @@ function ImportActionCard({
             {isPending ? busyLabel : idleLabel}
           </button>
           {isPending ? (
-            <div role="status" aria-live="polite" className="rounded border border-brand-sweet/50 bg-brand-sweet/20 p-2 text-xs font-semibold text-brand-lea">
+            <div role="status" aria-live="polite" className="rounded border border-brand-sweet/50 bg-brand-sweet/20 p-2 text-xs font-semibold text-brand-lea dark:text-slate-100">
               {busyDetail}
             </div>
           ) : null}
@@ -299,12 +299,12 @@ export function ResumeFileUploadImportCard() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+    <form onSubmit={handleSubmit} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex min-h-[190px] flex-col justify-between gap-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Active upload</p>
-          <h2 className="mt-2 text-base font-semibold text-brand-lea">Resume / file uploads</h2>
-          <p className="mt-2 text-sm leading-6 text-brand-grey">
+          <h2 className="mt-2 text-base font-semibold text-brand-lea dark:text-slate-100">Resume / file uploads</h2>
+          <p className="mt-2 text-sm leading-6 text-brand-grey dark:text-slate-400">
             Upload resumes and documents directly to private storage, then link them to candidates when ready.
           </p>
         </div>
@@ -314,7 +314,7 @@ export function ResumeFileUploadImportCard() {
             type="file"
             accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,.gif,.webp,.tif,.tiff,.bmp,.html,.htm,.doc,.docx,.txt,.rtf,.csv,.xls,.xlsx"
             multiple
-            className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm"
+            className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
           />
           <button
             type="submit"
@@ -324,7 +324,7 @@ export function ResumeFileUploadImportCard() {
             {isPending ? "Uploading files..." : "Upload files"}
           </button>
           {isPending || progress ? (
-            <div role="status" aria-live="polite" className="rounded border border-brand-sweet/50 bg-brand-sweet/20 p-2 text-xs font-semibold text-brand-lea">
+            <div role="status" aria-live="polite" className="rounded border border-brand-sweet/50 bg-brand-sweet/20 p-2 text-xs font-semibold text-brand-lea dark:text-slate-100">
               {progress ?? "Uploading files to private storage..."}
             </div>
           ) : null}
@@ -465,12 +465,12 @@ export function JobPdfImportCard() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+    <form onSubmit={handleSubmit} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex min-h-[190px] flex-col justify-between gap-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Active import</p>
-          <h2 className="mt-2 text-base font-semibold text-brand-lea">Job PDF import</h2>
-          <p className="mt-2 text-sm leading-6 text-brand-grey">
+          <h2 className="mt-2 text-base font-semibold text-brand-lea dark:text-slate-100">Job PDF import</h2>
+          <p className="mt-2 text-sm leading-6 text-brand-grey dark:text-slate-400">
             Extract job posts in your browser, then save parsed job rows and pilot requirement drafts.
           </p>
         </div>
@@ -480,7 +480,7 @@ export function JobPdfImportCard() {
             type="file"
             accept=".pdf,application/pdf"
             multiple
-            className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm"
+            className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
           />
           <button
             type="submit"
@@ -490,7 +490,7 @@ export function JobPdfImportCard() {
             {isPending ? "Extracting PDFs..." : "Import job PDFs"}
           </button>
           {isPending || progress ? (
-            <div role="status" aria-live="polite" className="rounded border border-brand-sweet/50 bg-brand-sweet/20 p-2 text-xs font-semibold text-brand-lea">
+            <div role="status" aria-live="polite" className="rounded border border-brand-sweet/50 bg-brand-sweet/20 p-2 text-xs font-semibold text-brand-lea dark:text-slate-100">
               {progress ?? "Extracting PDF text and preparing job rows..."}
             </div>
           ) : null}

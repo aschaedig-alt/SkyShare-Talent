@@ -22,8 +22,8 @@ export default async function BudgetPage() {
     return (
       <Card padding="lg">
         <div className="py-10 text-center">
-          <p className="text-sm font-medium text-brand-lea">Budget & admin is for administrators</p>
-          <p className="mt-1 text-sm text-brand-grey">
+          <p className="text-sm font-medium text-brand-lea dark:text-slate-100">Budget & admin is for administrators</p>
+          <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
             This area manages reward costs and program budget. Ask an admin for access.
           </p>
         </div>
@@ -40,8 +40,8 @@ export default async function BudgetPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-medium text-brand-lea">Budget &amp; cost overview</h2>
-        <p className="text-sm text-brand-grey">
+        <h2 className="text-lg font-medium text-brand-lea dark:text-slate-100">Budget &amp; cost overview</h2>
+        <p className="text-sm text-brand-grey dark:text-slate-400">
           What the recognition program costs — to share with leadership. {b.pointsPerDollar} points = $1.
         </p>
       </div>
@@ -70,20 +70,20 @@ export default async function BudgetPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card padding="lg">
           <div className="flex items-baseline justify-between">
-            <h3 className="text-base font-medium text-brand-lea">This month vs budget</h3>
-            <span className="text-xs text-brand-grey">Target {usd0.format(b.monthlyBudgetUsd)}/mo</span>
+            <h3 className="text-base font-medium text-brand-lea dark:text-slate-100">This month vs budget</h3>
+            <span className="text-xs text-brand-grey dark:text-slate-400">Target {usd0.format(b.monthlyBudgetUsd)}/mo</span>
           </div>
-          <p className="mt-3 text-[28px] font-medium leading-none text-brand-lea">
+          <p className="mt-3 text-[28px] font-medium leading-none text-brand-lea dark:text-slate-100">
             {usd2.format(b.thisMonthSpendUsd)}
           </p>
-          <p className="mt-1 text-xs text-brand-grey">spent this month · {usd2.format(b.lastMonthSpendUsd)} last month</p>
-          <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-brand-cloudDancer">
+          <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">spent this month · {usd2.format(b.lastMonthSpendUsd)} last month</p>
+          <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/5">
             <div
               className={clsx("h-full rounded-full", overBudget ? "bg-brand-red" : "bg-value-teamwork")}
               style={{ width: `${Math.min(100, b.budgetUsedPct)}%` }}
             />
           </div>
-          <p className={clsx("mt-2 text-xs", overBudget ? "text-brand-red" : "text-brand-grey")}>
+          <p className={clsx("mt-2 text-xs", overBudget ? "text-brand-red" : "text-brand-grey dark:text-slate-400")}>
             {overBudget
               ? `${b.budgetUsedPct}% of budget — over by ${usd2.format(b.thisMonthSpendUsd - b.monthlyBudgetUsd)}`
               : `${b.budgetUsedPct}% of budget used · ${usd2.format(b.budgetRemainingUsd)} remaining`}
@@ -91,7 +91,7 @@ export default async function BudgetPage() {
         </Card>
 
         <Card padding="lg">
-          <h3 className="text-base font-medium text-brand-lea">Run rate &amp; outlook</h3>
+          <h3 className="text-base font-medium text-brand-lea dark:text-slate-100">Run rate &amp; outlook</h3>
           <dl className="mt-3 space-y-2.5 text-sm">
             <Row label="Projected monthly spend" value={usd2.format(b.projectedMonthlyUsd)} />
             <Row label="Projected annual spend" value={usd0.format(b.projectedAnnualUsd)} />
@@ -109,20 +109,20 @@ export default async function BudgetPage() {
       {/* Breakdowns */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card padding="lg">
-          <h3 className="mb-4 text-base font-medium text-brand-lea">Spend by reward category</h3>
+          <h3 className="mb-4 text-base font-medium text-brand-lea dark:text-slate-100">Spend by reward category</h3>
           {b.byCategory.length === 0 ? (
-            <p className="text-sm text-brand-grey">No rewards have been redeemed yet.</p>
+            <p className="text-sm text-brand-grey dark:text-slate-400">No rewards have been redeemed yet.</p>
           ) : (
             <div className="space-y-3">
               {b.byCategory.map((c) => (
                 <div key={c.category}>
                   <div className="mb-1 flex justify-between text-[13px]">
-                    <span className="font-medium text-brand-lea">{c.label}</span>
-                    <span className="text-brand-grey">
+                    <span className="font-medium text-brand-lea dark:text-slate-100">{c.label}</span>
+                    <span className="text-brand-grey dark:text-slate-400">
                       {usd2.format(c.dollars)} · {c.count}
                     </span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-brand-cloudDancer">
+                  <div className="h-2 overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/5">
                     <div
                       className="h-full rounded-full bg-brand-eden"
                       style={{ width: `${Math.round((c.dollars / maxCategory) * 100)}%` }}
@@ -135,8 +135,8 @@ export default async function BudgetPage() {
         </Card>
 
         <Card padding="lg">
-          <h3 className="mb-4 text-base font-medium text-brand-lea">Monthly trend</h3>
-          <div className="mb-3 flex gap-4 text-xs text-brand-grey">
+          <h3 className="mb-4 text-base font-medium text-brand-lea dark:text-slate-100">Monthly trend</h3>
+          <div className="mb-3 flex gap-4 text-xs text-brand-grey dark:text-slate-400">
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-2 w-2 rounded-full bg-brand-eden" /> Awarded
             </span>
@@ -147,22 +147,22 @@ export default async function BudgetPage() {
           <div className="space-y-2.5">
             {b.monthly.map((m, i) => (
               <div key={i} className="flex items-center gap-3">
-                <span className="w-9 shrink-0 text-xs text-brand-grey">{m.label}</span>
+                <span className="w-9 shrink-0 text-xs text-brand-grey dark:text-slate-400">{m.label}</span>
                 <div className="flex-1 space-y-1">
-                  <div className="h-2 overflow-hidden rounded-full bg-brand-cloudDancer">
+                  <div className="h-2 overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/5">
                     <div
                       className="h-full rounded-full bg-brand-eden"
                       style={{ width: `${Math.round((m.awardedUsd / maxMonthly) * 100)}%` }}
                     />
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-brand-cloudDancer">
+                  <div className="h-2 overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/5">
                     <div
                       className="h-full rounded-full bg-value-teamwork"
                       style={{ width: `${Math.round((m.redeemedUsd / maxMonthly) * 100)}%` }}
                     />
                   </div>
                 </div>
-                <span className="w-16 shrink-0 text-right text-xs text-brand-grey">{usd0.format(m.redeemedUsd)}</span>
+                <span className="w-16 shrink-0 text-right text-xs text-brand-grey dark:text-slate-400">{usd0.format(m.redeemedUsd)}</span>
               </div>
             ))}
           </div>
@@ -178,12 +178,12 @@ export default async function BudgetPage() {
 
 function Row({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-brand-lea/5 pb-2 last:border-0">
-      <dt className="text-brand-grey">
+    <div className="flex items-center justify-between gap-3 border-b border-brand-lea/5 pb-2 last:border-0 dark:border-white/10">
+      <dt className="text-brand-grey dark:text-slate-400">
         {label}
         {hint ? <span className="ml-1 text-xs text-brand-grey/70">· {hint}</span> : null}
       </dt>
-      <dd className="font-medium text-brand-lea">{value}</dd>
+      <dd className="font-medium text-brand-lea dark:text-slate-100">{value}</dd>
     </div>
   );
 }

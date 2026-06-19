@@ -25,7 +25,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-brand-lea">Company recognition wall</h2>
+        <h2 className="text-lg font-medium text-brand-lea dark:text-slate-100">Company recognition wall</h2>
         <div className="flex gap-2">
           {FILTERS.map((f) => (
             <Link
@@ -35,7 +35,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
                 "rounded-element border-[0.5px] px-3 py-1.5 text-xs font-medium transition hover:shadow-glow",
                 filter === f.key
                   ? "border-brand-lea bg-brand-lea text-white"
-                  : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"
+                  : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:text-slate-100"
               )}
             >
               {f.label}
@@ -47,8 +47,8 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
       {recognitions.length === 0 ? (
         <Card padding="lg">
           <div className="py-10 text-center">
-            <p className="text-sm font-medium text-brand-lea">Nothing here yet</p>
-            <p className="mt-1 text-sm text-brand-grey">
+            <p className="text-sm font-medium text-brand-lea dark:text-slate-100">Nothing here yet</p>
+            <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
               No recognition in this range.{" "}
               <Link href="/compliments/give" className="text-value-innovation-dark hover:underline">
                 Give the first one →

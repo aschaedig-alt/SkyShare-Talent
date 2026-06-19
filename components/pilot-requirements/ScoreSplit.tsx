@@ -22,7 +22,7 @@ export function ScoreSplit({
 
   return (
     <div className="inline-flex items-center gap-2">
-      <div className="flex items-stretch overflow-hidden rounded border border-brand-lea/15">
+      <div className="flex items-stretch overflow-hidden rounded border border-brand-lea/15 dark:border-white/10">
         <div className={`${pad} text-center ${gated ? "bg-value-customerFocus-light" : "bg-value-teamwork-light"}`}>
           <div className={`text-[8px] font-bold uppercase tracking-wide ${gated ? "text-value-customerFocus-dark" : "text-value-teamwork-dark"}`}>
             Qualified
@@ -37,8 +37,8 @@ export function ScoreSplit({
         </div>
       </div>
       <div className="text-center">
-        <div className="text-[8px] font-bold uppercase tracking-wide text-brand-grey">Total</div>
-        <div className={`${valText} font-semibold leading-tight ${gated ? "text-value-customerFocus-dark" : "text-brand-lea"}`}>
+        <div className="text-[8px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Total</div>
+        <div className={`${valText} font-semibold leading-tight ${gated ? "text-value-customerFocus-dark" : "text-brand-lea dark:text-slate-100"}`}>
           {gated ? "gated" : qualified + bonus}
         </div>
       </div>

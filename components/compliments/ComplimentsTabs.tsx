@@ -23,7 +23,7 @@ export function ComplimentsTabs({ isAdmin = false }: { isAdmin?: boolean }) {
   }
 
   return (
-    <div className="border-b border-brand-lea/10">
+    <div className="border-b border-brand-lea/10 dark:border-white/10">
       <nav className="flex flex-wrap gap-6" aria-label="Compliments sections">
         {TABS.map((t) => {
           const active = isActive(t.href, t.exact);
@@ -35,8 +35,8 @@ export function ComplimentsTabs({ isAdmin = false }: { isAdmin?: boolean }) {
               className={clsx(
                 "border-b-2 px-1 py-3 text-sm font-semibold transition hover:shadow-glow",
                 active
-                  ? "border-brand-lea text-brand-lea"
-                  : "border-transparent text-brand-grey hover:text-brand-lea"
+                  ? "border-brand-lea text-brand-lea dark:text-slate-100"
+                  : "border-transparent text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100"
               )}
             >
               {t.label}

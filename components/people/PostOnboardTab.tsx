@@ -55,17 +55,17 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
   }
 
   if (hires.length === 0) {
-    return <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10">No post-onboard employees yet. Mark an active hire as onboarded and they will appear here.</p>;
+    return <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:text-slate-400 dark:ring-white/10">No post-onboard employees yet. Mark an active hire as onboarded and they will appear here.</p>;
   }
 
   const heads = hires[0].checkins.map((c) => c.short);
 
   return (
-    <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10">
+    <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-brand-lea/10 text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey">
+            <tr className="border-b border-brand-lea/10 text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:border-white/10 dark:text-slate-400">
               <th className="px-4 py-3 text-left">Employee</th>
               <th className="px-4 py-3 text-left">Department</th>
               <th className="px-4 py-3 text-left">Started</th>
@@ -80,14 +80,14 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
             {hires.map((h) => {
               const terminated = h.employmentStatus === "TERMINATED";
               return (
-              <tr key={h.id} className={clsx("border-b border-brand-lea/5 hover:bg-brand-cloudDancer/30", terminated && "bg-brand-cloudDancer/30")}>
+              <tr key={h.id} className={clsx("border-b border-brand-lea/5 hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:bg-white/5", terminated && "bg-brand-cloudDancer/30 dark:bg-white/5")}>
                 <td className="px-4 py-3">
-                  <Link href={`/people/${h.id}`} className={clsx("font-semibold hover:underline transition hover:shadow-glow", terminated ? "text-brand-grey" : "text-brand-lea")}>{h.name}</Link>
-                  <div className="text-xs text-brand-grey">{h.position ?? "—"}</div>
+                  <Link href={`/people/${h.id}`} className={clsx("font-semibold hover:underline transition hover:shadow-glow", terminated ? "text-brand-grey dark:text-slate-400" : "text-brand-lea dark:text-slate-100")}>{h.name}</Link>
+                  <div className="text-xs text-brand-grey dark:text-slate-400">{h.position ?? "—"}</div>
                 </td>
-                <td className="px-4 py-3 text-brand-grey">{h.department ?? "—"}</td>
-                <td className="px-4 py-3 text-brand-grey">{fmtDate(h.startDate)}</td>
-                <td className="px-4 py-3 text-brand-grey">{fmtDate(h.onboardedAt)}</td>
+                <td className="px-4 py-3 text-brand-grey dark:text-slate-400">{h.department ?? "—"}</td>
+                <td className="px-4 py-3 text-brand-grey dark:text-slate-400">{fmtDate(h.startDate)}</td>
+                <td className="px-4 py-3 text-brand-grey dark:text-slate-400">{fmtDate(h.onboardedAt)}</td>
                 <td className="px-4 py-3">
                   <select
                     value={h.employmentStatus}
@@ -114,7 +114,7 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
                           <svg width="13" height="13" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                         </span>
                       ) : c.dueSoon ? (
-                        <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold text-brand-lea">due</span>
+                        <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold text-brand-lea dark:text-slate-100">due</span>
                       ) : (
                         <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/30" />
                       )}
@@ -127,7 +127,7 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
           </tbody>
         </table>
       </div>
-      <p className="border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey">
+      <p className="border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey dark:border-white/10 dark:text-slate-400">
         Check-ins are 30 / 60 / 90-day + benefits for now — tell me the ones you actually run and I will swap them in.
       </p>
     </div>

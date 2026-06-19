@@ -89,33 +89,33 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
   return (
     <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
       {/* list */}
-      <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10">
-        <div className="border-b border-brand-lea/10 p-3">
+      <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <div className="border-b border-brand-lea/10 p-3 dark:border-white/10">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-brand-grey" />
+            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-brand-grey dark:text-slate-400" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search blocks..."
-              className="w-full rounded border border-brand-lea/15 bg-white py-2 pl-9 pr-3 text-sm text-brand-black outline-none focus:border-brand-eden"
+              className="w-full rounded border border-brand-lea/15 bg-white py-2 pl-9 pr-3 text-sm text-brand-black outline-none focus:border-brand-eden dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
             />
           </div>
         </div>
-        <div className="max-h-[560px] divide-y divide-brand-lea/8 overflow-y-auto">
+        <div className="max-h-[560px] divide-y divide-brand-lea/8 overflow-y-auto dark:divide-white/10">
           {filtered.map((b) => (
             <button
               key={b.id}
               type="button"
               onClick={() => select(b.id)}
-              className={clsx("w-full px-4 py-3 text-left transition hover:shadow-glow", selected?.id === b.id ? "bg-brand-sweet/35" : "hover:bg-brand-cloudDancer/70")}
+              className={clsx("w-full px-4 py-3 text-left transition hover:shadow-glow", selected?.id === b.id ? "bg-brand-sweet/35" : "hover:bg-brand-cloudDancer/70 dark:bg-white/5")}
             >
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-brand-lea">{b.name}</span>
+                <span className="text-sm font-bold text-brand-lea dark:text-slate-100">{b.name}</span>
                 {b.archivedAt ? (
-                  <span className="rounded bg-brand-grey/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand-grey">Archived</span>
+                  <span className="rounded bg-brand-grey/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand-grey dark:text-slate-400">Archived</span>
                 ) : null}
               </div>
-              <div className="mt-1 flex items-center gap-2 text-[11px] text-brand-grey">
+              <div className="mt-1 flex items-center gap-2 text-[11px] text-brand-grey dark:text-slate-400">
                 <span className="rounded bg-brand-lea px-1.5 py-0.5 font-bold uppercase tracking-wide text-white">{formatEnum(b.category)}</span>
                 <span>{b.usageCount ?? 0} jobs</span>
               </div>
@@ -125,20 +125,20 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
       </section>
 
       {/* management */}
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
         {!selected ? (
-          <p className="text-sm text-brand-grey">Select a block to manage.</p>
+          <p className="text-sm text-brand-grey dark:text-slate-400">Select a block to manage.</p>
         ) : (
           <>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-xl font-semibold text-brand-lea">{selected.name}</h2>
-                <p className="mt-1 text-sm text-brand-grey">{selected.description}</p>
+                <h2 className="text-xl font-semibold text-brand-lea dark:text-slate-100">{selected.name}</h2>
+                <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">{selected.description}</p>
               </div>
               <span
                 className={clsx(
                   "inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-bold",
-                  usage > 0 ? "bg-brand-gold/20 text-brand-lea" : "bg-emerald-50 text-emerald-800"
+                  usage > 0 ? "bg-brand-gold/20 text-brand-lea dark:text-slate-100" : "bg-emerald-50 text-emerald-800"
                 )}
               >
                 {usage > 0 ? <AlertTriangle className="h-3.5 w-3.5" /> : null}
@@ -147,19 +147,19 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
             </div>
 
             <div className="mt-4">
-              <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey">Jobs using this block</h3>
-              <div className="mt-2 max-h-56 divide-y divide-brand-lea/8 overflow-auto rounded border border-brand-lea/10">
+              <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Jobs using this block</h3>
+              <div className="mt-2 max-h-56 divide-y divide-brand-lea/8 overflow-auto rounded border border-brand-lea/10 dark:divide-white/10 dark:border-white/10">
                 {selected.usedByJobs?.length ? (
                   selected.usedByJobs.map((job) => (
                     <div key={job.id} className="flex items-center justify-between gap-3 px-3 py-2">
-                      <span className="text-sm font-semibold text-brand-lea">{job.title}</span>
-                      <span className="rounded bg-brand-cloudDancer px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-eden">
+                      <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">{job.title}</span>
+                      <span className="rounded bg-brand-cloudDancer px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-eden dark:bg-white/5">
                         {formatEnum(job.status)}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <div className="px-3 py-3 text-sm text-brand-grey">No jobs use this block.</div>
+                  <div className="px-3 py-3 text-sm text-brand-grey dark:text-slate-400">No jobs use this block.</div>
                 )}
               </div>
             </div>
@@ -175,12 +175,12 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
               Update jobs using this block to a replacement block first
             </label>
             <div className="mt-2">
-              <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey">Replacement block</label>
+              <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Replacement block</label>
               <select
                 value={replacementBlockId}
                 onChange={(e) => setReplacementBlockId(e.target.value)}
                 disabled={!migrateJobs || busy}
-                className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-lea"
+                className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
               >
                 <option value="">Choose replacement block...</option>
                 {replacements.map((b) => (
@@ -205,7 +205,7 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
                 type="button"
                 onClick={() => retire("DELETE")}
                 disabled={busy || deleteLocked || replacementRequired}
-                className="inline-flex items-center gap-2 rounded border border-brand-red/25 bg-white px-3 py-2 text-sm font-bold text-brand-red transition hover:bg-brand-red/8 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded border border-brand-red/25 bg-white px-3 py-2 text-sm font-bold text-brand-red transition hover:bg-brand-red/8 disabled:opacity-50 dark:bg-[#10243a]"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete block

@@ -87,8 +87,8 @@ export function RewardCatalogAdmin({ rewards, pointsPerDollar }: Props) {
     <Card padding="lg">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-base font-medium text-brand-lea">Rewards catalog</h3>
-          <p className="text-xs text-brand-grey">What you give out and what each costs ({pointsPerDollar} pts = $1).</p>
+          <h3 className="text-base font-medium text-brand-lea dark:text-slate-100">Rewards catalog</h3>
+          <p className="text-xs text-brand-grey dark:text-slate-400">What you give out and what each costs ({pointsPerDollar} pts = $1).</p>
         </div>
         {!adding ? (
           <button
@@ -121,7 +121,7 @@ export function RewardCatalogAdmin({ rewards, pointsPerDollar }: Props) {
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-brand-lea/10 text-xs text-brand-grey">
+            <tr className="border-b border-brand-lea/10 text-xs text-brand-grey dark:border-white/10 dark:text-slate-400">
               <th className="py-2 font-medium">Reward</th>
               <th className="py-2 font-medium">Category</th>
               <th className="py-2 text-right font-medium">Cost (pts)</th>
@@ -159,19 +159,19 @@ export function RewardCatalogAdmin({ rewards, pointsPerDollar }: Props) {
                   }}
                 />
               ) : (
-                <tr key={r.id} className="border-b border-brand-lea/5">
+                <tr key={r.id} className="border-b border-brand-lea/5 dark:border-white/10">
                   <td className="py-2.5">
                     <span className="flex items-center gap-2">
-                      <RewardIcon name="Gift" className="h-4 w-4 text-brand-grey" />
-                      <span className="font-medium text-brand-lea">{r.name}</span>
+                      <RewardIcon name="Gift" className="h-4 w-4 text-brand-grey dark:text-slate-400" />
+                      <span className="font-medium text-brand-lea dark:text-slate-100">{r.name}</span>
                     </span>
                   </td>
-                  <td className="py-2.5 text-brand-grey">
+                  <td className="py-2.5 text-brand-grey dark:text-slate-400">
                     {REWARD_CATEGORY_LABELS[r.category as RewardCategory] ?? r.category}
                   </td>
-                  <td className="py-2.5 text-right text-brand-lea">{r.pointCost.toLocaleString()}</td>
-                  <td className="py-2.5 text-right text-brand-lea">{dollars(r.pointCost, pointsPerDollar)}</td>
-                  <td className="py-2.5 text-right text-brand-grey">
+                  <td className="py-2.5 text-right text-brand-lea dark:text-slate-100">{r.pointCost.toLocaleString()}</td>
+                  <td className="py-2.5 text-right text-brand-lea dark:text-slate-100">{dollars(r.pointCost, pointsPerDollar)}</td>
+                  <td className="py-2.5 text-right text-brand-grey dark:text-slate-400">
                     {r.redeemedCount} · {dollars(r.pointsRedeemed, pointsPerDollar)}
                   </td>
                   <td className="py-2.5 text-center">
@@ -180,7 +180,7 @@ export function RewardCatalogAdmin({ rewards, pointsPerDollar }: Props) {
                         "inline-block rounded px-2 py-0.5 text-xs",
                         r.available
                           ? "bg-value-teamwork-light text-value-teamwork-dark"
-                          : "bg-brand-cloudDancer text-brand-grey"
+                          : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400"
                       )}
                     >
                       {r.available ? "Active" : "Off"}
@@ -191,7 +191,7 @@ export function RewardCatalogAdmin({ rewards, pointsPerDollar }: Props) {
                       <button
                         type="button"
                         onClick={() => startEdit(r)}
-                        className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer hover:text-brand-lea"
+                        className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer hover:text-brand-lea dark:text-slate-400 dark:bg-white/5 dark:text-slate-100"
                         aria-label={`Edit ${r.name}`}
                       >
                         <Pencil className="h-4 w-4" />
@@ -200,7 +200,7 @@ export function RewardCatalogAdmin({ rewards, pointsPerDollar }: Props) {
                         type="button"
                         onClick={() => run(() => deleteReward(r.id), "Reward deleted.")}
                         disabled={pending}
-                        className="rounded p-1.5 text-brand-grey transition hover:bg-value-customerFocus-light hover:text-value-customerFocus-dark"
+                        className="rounded p-1.5 text-brand-grey transition hover:bg-value-customerFocus-light hover:text-value-customerFocus-dark dark:text-slate-400"
                         aria-label={`Delete ${r.name}`}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -231,9 +231,9 @@ function EditRow({
   onCancel: () => void;
 }) {
   const inputCls =
-    "w-full rounded-element border-[0.5px] border-brand-lea/20 px-2 py-1 text-sm outline-none focus:border-value-innovation";
+    "w-full rounded-element border-[0.5px] border-brand-lea/20 px-2 py-1 text-sm outline-none focus:border-value-innovation dark:border-white/10";
   return (
-    <tr className="border-b border-brand-lea/10 bg-brand-cloudDancer/30">
+    <tr className="border-b border-brand-lea/10 bg-brand-cloudDancer/30 dark:border-white/10 dark:bg-white/5">
       <td className="py-2 pr-2">
         <input
           className={inputCls}
@@ -301,7 +301,7 @@ function EditRow({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer"
+            className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer dark:text-slate-400 dark:bg-white/5"
             aria-label="Cancel"
           >
             <X className="h-4 w-4" />

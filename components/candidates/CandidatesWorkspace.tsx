@@ -29,7 +29,7 @@ type StatConfig = {
 };
 
 const statConfig: StatConfig[] = [
-  { key: "total", label: "Total candidates", icon: Users, accent: "bg-brand-lea/10 text-brand-lea" },
+  { key: "total", label: "Total candidates", icon: Users, accent: "bg-brand-lea/10 text-brand-lea dark:text-slate-100" },
   { key: "active", label: "Active", icon: UserCheck, accent: "bg-emerald-100 text-emerald-700" },
   { key: "withFiles", label: "With files", icon: FileText, accent: "bg-amber-100 text-amber-700" },
   { key: "withApplications", label: "With applications", icon: Send, accent: "bg-indigo-100 text-indigo-700" },
@@ -47,7 +47,7 @@ function highlight(text: string, query: string) {
   const parts = text.split(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "ig"));
   return parts.map((part, i) =>
     part.toLowerCase() === q.toLowerCase() ? (
-      <mark key={i} className="rounded-sm bg-brand-gold/40 px-0.5 text-brand-lea">
+      <mark key={i} className="rounded-sm bg-brand-gold/40 px-0.5 text-brand-lea dark:text-slate-100">
         {part}
       </mark>
     ) : (
@@ -59,12 +59,12 @@ function highlight(text: string, query: string) {
 /** Color a stage pill by keyword so the pipeline reads at a glance. */
 function stagePill(stage: string | null) {
   const s = (stage ?? "").toLowerCase();
-  if (!stage) return "border-brand-lea/15 bg-brand-cloudDancer/60 text-brand-grey";
+  if (!stage) return "border-brand-lea/15 bg-brand-cloudDancer/60 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400";
   if (s.includes("hire") || s.includes("offer")) return "border-emerald-200 bg-emerald-50 text-emerald-700";
   if (s.includes("interview") || s.includes("screen")) return "border-indigo-200 bg-indigo-50 text-indigo-700";
   if (s.includes("reject") || s.includes("declin") || s.includes("withdraw")) return "border-slate-200 bg-slate-100 text-slate-500";
   if (s.includes("new") || s.includes("appl") || s.includes("lead")) return "border-amber-200 bg-amber-50 text-amber-700";
-  return "border-brand-gold/30 bg-brand-gold/10 text-brand-lea";
+  return "border-brand-gold/30 bg-brand-gold/10 text-brand-lea dark:text-slate-100";
 }
 
 function initials(name: string) {
@@ -97,12 +97,12 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
             </div>
             <form className="flex w-full gap-2">
               <div className="relative min-w-0 flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey dark:text-slate-400" />
                 <input
                   name="q"
                   defaultValue={query}
                   placeholder="Search name, role, tag, or text inside resumes & pilot apps"
-                  className="w-full rounded-lg border border-white/20 bg-white/95 py-2.5 pl-9 pr-3 text-sm text-brand-black shadow-sm outline-none transition focus:ring-2 focus:ring-brand-gold/50"
+                  className="w-full rounded-lg border border-white/20 bg-white/95 py-2.5 pl-9 pr-3 text-sm text-brand-black shadow-sm outline-none transition focus:ring-2 focus:ring-brand-gold/50 dark:text-slate-100"
                 />
               </div>
               <button type="submit" className="rounded-lg border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20">
@@ -118,28 +118,28 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
       {/* Stats */}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {statConfig.map(({ key, label, icon: Icon, accent }) => (
-          <div key={key} className="flex items-center gap-3 rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 transition hover:ring-brand-gold/40">
+          <div key={key} className="flex items-center gap-3 rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 transition hover:ring-brand-gold/40 dark:bg-[#10243a] dark:ring-white/10">
             <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${accent}`}>
               <Icon className="h-5 w-5" />
             </span>
             <div className="min-w-0">
-              <div className="text-2xl font-semibold leading-none text-brand-lea">{data.stats[key]}</div>
-              <div className="mt-1 truncate text-[11px] font-semibold uppercase tracking-wide text-brand-grey">{label}</div>
+              <div className="text-2xl font-semibold leading-none text-brand-lea dark:text-slate-100">{data.stats[key]}</div>
+              <div className="mt-1 truncate text-[11px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">{label}</div>
             </div>
           </div>
         ))}
       </section>
 
       {/* Records */}
-      <section className="overflow-hidden rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10">
-        <div className="flex items-center justify-between border-b border-brand-lea/10 px-5 py-4">
+      <section className="overflow-hidden rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <div className="flex items-center justify-between border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
           <div>
-            <h2 className="text-base font-semibold text-brand-lea">Candidate records</h2>
-            <p className="text-xs text-brand-grey">
+            <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Candidate records</h2>
+            <p className="text-xs text-brand-grey dark:text-slate-400">
               Showing up to 100 records{query ? ` matching "${query}"` : ""}.
             </p>
           </div>
-          <span className="rounded bg-brand-cloudDancer/70 px-3 py-1 text-xs font-semibold text-brand-lea">
+          <span className="rounded bg-brand-cloudDancer/70 px-3 py-1 text-xs font-semibold text-brand-lea dark:bg-white/5 dark:text-slate-100">
             {data.candidates.length} shown
           </span>
         </div>
@@ -147,7 +147,7 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
         {data.candidates.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[940px] border-collapse text-left text-sm">
-              <thead className="bg-brand-cloudDancer/60 text-[11px] uppercase tracking-[0.16em] text-brand-grey">
+              <thead className="bg-brand-cloudDancer/60 text-[11px] uppercase tracking-[0.16em] text-brand-grey dark:bg-white/5 dark:text-slate-400">
                 <tr>
                   <th className="px-5 py-3 font-bold">Candidate</th>
                   <th className="px-4 py-3 font-bold">Stage</th>
@@ -157,22 +157,22 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
                   <th className="px-4 py-3 font-bold">Updated</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-brand-lea/10">
+              <tbody className="divide-y divide-brand-lea/10 dark:divide-white/10">
                 {data.candidates.map((candidate) => (
                   <tr key={candidate.id} className="align-top transition hover:bg-brand-sweet/10">
                     <td className="px-5 py-4">
                       <div className="flex gap-3">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-lea/10 text-xs font-bold text-brand-lea">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-lea/10 text-xs font-bold text-brand-lea dark:text-slate-100">
                           {initials(candidate.displayName) || "—"}
                         </span>
                         <div className="min-w-0">
-                          <Link href={`/candidates/${candidate.id}`} className="font-semibold text-brand-lea hover:text-brand-eden">
+                          <Link href={`/candidates/${candidate.id}`} className="font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-100">
                             {candidate.displayName}
                           </Link>
-                          <div className="text-xs text-brand-grey">{candidate.currentTitle ?? "No current role"}</div>
+                          <div className="text-xs text-brand-grey dark:text-slate-400">{candidate.currentTitle ?? "No current role"}</div>
                           {candidate.docMatch && (
-                            <div className="mt-1.5 max-w-[380px] rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/50 px-2.5 py-1.5 text-[11px] leading-5 text-brand-grey">
-                              <span className="font-semibold text-brand-lea">{candidate.docMatch.filename}: </span>
+                            <div className="mt-1.5 max-w-[380px] rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/50 px-2.5 py-1.5 text-[11px] leading-5 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+                              <span className="font-semibold text-brand-lea dark:text-slate-100">{candidate.docMatch.filename}: </span>
                               {highlight(candidate.docMatch.snippet, query)}
                             </div>
                           )}
@@ -185,7 +185,7 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
                       </span>
                     </td>
                     <td className="px-4 py-4">
-                      <div className="space-y-1 text-xs text-brand-grey">
+                      <div className="space-y-1 text-xs text-brand-grey dark:text-slate-400">
                         <div className="flex items-center gap-1.5">
                           <Mail className="h-3 w-3 shrink-0 text-brand-lea/50" />
                           <span className="truncate">{candidate.primaryEmail ?? "No email"}</span>
@@ -200,21 +200,21 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
                       <div className="flex max-w-[240px] flex-wrap gap-1">
                         {candidate.tags.length > 0 ? (
                           candidate.tags.map((tag) => (
-                            <span key={tag} className="rounded bg-brand-sweet/25 px-2 py-0.5 text-[11px] font-semibold text-brand-lea">
+                            <span key={tag} className="rounded bg-brand-sweet/25 px-2 py-0.5 text-[11px] font-semibold text-brand-lea dark:text-slate-100">
                               {tag}
                             </span>
                           ))
                         ) : (
-                          <span className="text-xs text-brand-grey">No tags</span>
+                          <span className="text-xs text-brand-grey dark:text-slate-400">No tags</span>
                         )}
                       </div>
                     </td>
                     <td className="px-4 py-4">
-                      <div className="flex flex-wrap gap-1.5 text-[11px] font-medium text-brand-grey">
+                      <div className="flex flex-wrap gap-1.5 text-[11px] font-medium text-brand-grey dark:text-slate-400">
                         <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-amber-700" title="Files">
                           <FileText className="h-3 w-3" /> {candidate.fileCount}
                         </span>
-                        <span className="inline-flex items-center gap-1 rounded-md bg-brand-cloudDancer/70 px-1.5 py-0.5 text-brand-lea" title="Notes">
+                        <span className="inline-flex items-center gap-1 rounded-md bg-brand-cloudDancer/70 px-1.5 py-0.5 text-brand-lea dark:bg-white/5 dark:text-slate-100" title="Notes">
                           <StickyNote className="h-3 w-3" /> {candidate.noteCount}
                         </span>
                         <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-1.5 py-0.5 text-indigo-700" title="Applications">
@@ -222,7 +222,7 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-xs text-brand-grey">{formatDate(candidate.updatedAt)}</td>
+                    <td className="px-4 py-4 text-xs text-brand-grey dark:text-slate-400">{formatDate(candidate.updatedAt)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -230,11 +230,11 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
           </div>
         ) : (
           <div className="px-4 py-16 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-cloudDancer/70">
-              <Search className="h-5 w-5 text-brand-grey" />
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-cloudDancer/70 dark:bg-white/5">
+              <Search className="h-5 w-5 text-brand-grey dark:text-slate-400" />
             </div>
-            <div className="mt-3 text-base font-semibold text-brand-lea">No candidates found</div>
-            <p className="mt-1 text-sm text-brand-grey">
+            <div className="mt-3 text-base font-semibold text-brand-lea dark:text-slate-100">No candidates found</div>
+            <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
               Seed data will appear here after the local recruiting seed runs, or clear the search.
             </p>
           </div>

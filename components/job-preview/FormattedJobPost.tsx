@@ -29,9 +29,9 @@ type FormattedJobPostProps = {
 
 function SourceBadge({ label, tone = "block" }: { label: string; tone?: "block" | "field" | "warning" }) {
   const toneClass = {
-    block: "bg-brand-sweet/40 text-brand-lea",
+    block: "bg-brand-sweet/40 text-brand-lea dark:text-slate-100",
     field: "bg-emerald-50 text-emerald-800",
-    warning: "bg-brand-gold/25 text-brand-lea"
+    warning: "bg-brand-gold/25 text-brand-lea dark:text-slate-100"
   }[tone];
 
   return (
@@ -51,11 +51,11 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="border-t border-brand-lea/10 pt-5">
+    <section className="border-t border-brand-lea/10 pt-5 dark:border-white/10">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <div className="h-1.5 w-8 rounded-full bg-brand-gold" />
-          <h3 className="text-lg font-bold text-brand-lea">{title}</h3>
+          <h3 className="text-lg font-bold text-brand-lea dark:text-slate-100">{title}</h3>
         </div>
         {sourceBadges && <div className="flex flex-wrap gap-2">{sourceBadges}</div>}
       </div>
@@ -67,7 +67,7 @@ function Section({
 function BulletList({ value }: { value?: string | null }) {
   const lines = splitCleanLines(value);
   if (!lines.length) {
-    return <p className="text-sm italic text-brand-grey">No clean text entered yet.</p>;
+    return <p className="text-sm italic text-brand-grey dark:text-slate-400">No clean text entered yet.</p>;
   }
 
   return (
@@ -98,9 +98,9 @@ function formatSecondaryLocation(value?: string | null) {
 
 const blockColorClasses: Record<BlockTextColor, string> = {
   BLACK: "text-brand-black/82",
-  LEA: "text-brand-lea",
+  LEA: "text-brand-lea dark:text-slate-100",
   EDEN: "text-brand-eden",
-  GREY: "text-brand-grey",
+  GREY: "text-brand-grey dark:text-slate-400",
   GOLD: "text-brand-gold",
   RED: "text-brand-red",
   SWEET: "text-brand-sweet",
@@ -128,7 +128,7 @@ function FormattedBlockBody({
   const textClass = `${blockColorClasses[textColor]} ${blockWeightClasses[textWeight]}`;
 
   if (!lines.length) {
-    return <p className="text-sm italic text-brand-grey">No clean text entered yet.</p>;
+    return <p className="text-sm italic text-brand-grey dark:text-slate-400">No clean text entered yet.</p>;
   }
 
   if (bodyFormat === "MIXED") {
@@ -170,7 +170,7 @@ export function FormattedJobPost({
   const candidateSummary = joinPreviewParts([job.salaryRange, job.workSchedule]);
 
   return (
-    <article className={`preview-paper overflow-hidden rounded border border-brand-lea/12 shadow-sm ${className}`}>
+    <article className={`preview-paper overflow-hidden rounded border border-brand-lea/12 shadow-sm dark:border-white/10 ${className}`}>
       <div className="relative overflow-hidden bg-brand-lea px-6 py-7 text-white">
         <div className="absolute inset-0 opacity-25">
           <div className="absolute -right-16 top-6 h-44 w-44 rounded-full border border-brand-sweet/45" />
@@ -191,20 +191,20 @@ export function FormattedJobPost({
         </div>
       </div>
 
-      <div className="grid gap-3 border-b border-brand-lea/10 bg-brand-cloudDancer/70 px-6 py-4 sm:grid-cols-2">
-        <div className="flex items-center gap-2 text-sm font-semibold text-brand-lea">
+      <div className="grid gap-3 border-b border-brand-lea/10 bg-brand-cloudDancer/70 px-6 py-4 sm:grid-cols-2 dark:border-white/10 dark:bg-white/5">
+        <div className="flex items-center gap-2 text-sm font-semibold text-brand-lea dark:text-slate-100">
           <MapPin className="h-4 w-4 text-brand-eden" />
           {job.location || "Location required"}
         </div>
-        <div className="flex items-center gap-2 text-sm font-semibold text-brand-lea">
+        <div className="flex items-center gap-2 text-sm font-semibold text-brand-lea dark:text-slate-100">
           <MapPin className="h-4 w-4 text-brand-eden" />
           {formatSecondaryLocation(job.secondaryLocation)}
         </div>
-        <div className="flex items-center gap-2 text-sm font-semibold text-brand-lea">
+        <div className="flex items-center gap-2 text-sm font-semibold text-brand-lea dark:text-slate-100">
           <BriefcaseBusiness className="h-4 w-4 text-brand-eden" />
           {job.positionType || "Position type required"}
         </div>
-        <div className="flex items-center gap-2 text-sm font-semibold text-brand-lea">
+        <div className="flex items-center gap-2 text-sm font-semibold text-brand-lea dark:text-slate-100">
           <CalendarDays className="h-4 w-4 text-brand-eden" />
           {formatDateForDisplay(job.postedDate)}
         </div>
@@ -294,7 +294,7 @@ export function FormattedJobPost({
             </div>
             <p className="mt-1 text-xs text-white/68">Website copy, Paycom notes, and PDF export can share this layout.</p>
           </div>
-          <div className="rounded bg-brand-gold px-4 py-2 text-sm font-bold text-brand-lea">
+          <div className="rounded bg-brand-gold px-4 py-2 text-sm font-bold text-brand-lea dark:text-slate-100">
             Visit SkyShare.com
           </div>
         </div>

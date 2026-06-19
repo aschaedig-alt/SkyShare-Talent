@@ -14,7 +14,7 @@ const STATUS_COLOR: Record<string, string> = {
 const ALERT_STYLE: Record<string, { row: string; tag: string; label: string }> = {
   blocked: { row: "bg-red-50", tag: "text-red-700", label: "Blocked" },
   urgent: { row: "bg-red-50", tag: "text-red-700", label: "Urgent" },
-  missing: { row: "bg-brand-gold/10", tag: "text-brand-lea", label: "Missing" }
+  missing: { row: "bg-brand-gold/10", tag: "text-brand-lea dark:text-slate-100", label: "Missing" }
 };
 
 function fmtDate(iso: string) {
@@ -23,8 +23,8 @@ function fmtDate(iso: string) {
 
 function MetricCard({ label, value, tone }: { label: string; value: string; tone: string }) {
   return (
-    <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
-      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey">{label}</div>
+    <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{label}</div>
       <div className={clsx("mt-1 text-3xl font-semibold", tone)}>{value}</div>
     </div>
   );
@@ -71,7 +71,7 @@ function Donut({ data }: { data: ChartDatum[] }) {
       </svg>
       <div className="space-y-1.5">
         {data.map((d) => (
-          <div key={d.label} className="flex items-center gap-2 text-sm text-brand-grey">
+          <div key={d.label} className="flex items-center gap-2 text-sm text-brand-grey dark:text-slate-400">
             <span className="inline-block h-3 w-3 rounded-sm" style={{ background: STATUS_COLOR[d.label] ?? "#999" }} />
             {d.label} · {d.count}
           </div>
@@ -87,11 +87,11 @@ function HBars({ data, color }: { data: ChartDatum[]; color: string }) {
     <div className="space-y-2">
       {data.map((d) => (
         <div key={d.label} className="flex items-center gap-3 text-sm">
-          <span className="w-28 shrink-0 truncate text-brand-grey">{d.label}</span>
-          <span className="h-3.5 flex-1 overflow-hidden rounded bg-brand-cloudDancer">
+          <span className="w-28 shrink-0 truncate text-brand-grey dark:text-slate-400">{d.label}</span>
+          <span className="h-3.5 flex-1 overflow-hidden rounded bg-brand-cloudDancer dark:bg-white/5">
             <span className="block h-full rounded" style={{ width: `${(d.count / max) * 100}%`, background: color }} />
           </span>
-          <span className="w-6 text-right text-brand-grey">{d.count}</span>
+          <span className="w-6 text-right text-brand-grey dark:text-slate-400">{d.count}</span>
         </div>
       ))}
     </div>
@@ -104,12 +104,12 @@ function VBars({ data }: { data: ChartDatum[] }) {
     <div className="flex h-40 items-end justify-between gap-2">
       {data.map((d) => (
         <div key={d.label} className="flex flex-1 flex-col items-center gap-1">
-          <span className="text-xs text-brand-grey">{d.count}</span>
+          <span className="text-xs text-brand-grey dark:text-slate-400">{d.count}</span>
           <span
             className="w-full rounded-t bg-brand-gold"
             style={{ height: `${Math.max(4, (d.count / max) * 120)}px` }}
           />
-          <span className="text-[10px] text-brand-grey">{d.label}</span>
+          <span className="text-[10px] text-brand-grey dark:text-slate-400">{d.label}</span>
         </div>
       ))}
     </div>
@@ -123,34 +123,34 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
         <MetricCard label="Starting in 7 days" value={String(dashboard.startingSoon)} tone="text-sky-700" />
         <MetricCard label="Hires with missing items" value={String(dashboard.missingItems)} tone="text-brand-gold" />
         <MetricCard label="Urgent / blocked" value={String(dashboard.urgent)} tone="text-red-700" />
-        <MetricCard label="Avg. completion" value={`${dashboard.avgCompletion}%`} tone="text-brand-lea" />
+        <MetricCard label="Avg. completion" value={`${dashboard.avgCompletion}%`} tone="text-brand-lea dark:text-slate-100" />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
-          <h2 className="mb-3 text-base font-semibold text-brand-lea">By status</h2>
+        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <h2 className="mb-3 text-base font-semibold text-brand-lea dark:text-slate-100">By status</h2>
           <Donut data={dashboard.byStatus} />
         </div>
-        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
-          <h2 className="mb-3 text-base font-semibold text-brand-lea">By department</h2>
+        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <h2 className="mb-3 text-base font-semibold text-brand-lea dark:text-slate-100">By department</h2>
           <HBars data={dashboard.byDepartment} color="#1d6fb8" />
         </div>
-        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
-          <h2 className="mb-3 text-base font-semibold text-brand-lea">Starts by week</h2>
+        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <h2 className="mb-3 text-base font-semibold text-brand-lea dark:text-slate-100">Starts by week</h2>
           <VBars data={dashboard.startsByWeek} />
         </div>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
-          <h2 className="mb-3 text-base font-semibold text-brand-lea">Where active hires are in the process</h2>
+        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <h2 className="mb-3 text-base font-semibold text-brand-lea dark:text-slate-100">Where active hires are in the process</h2>
           <HBars data={dashboard.funnel} color="#2e7d32" />
         </div>
-        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
-          <h2 className="text-base font-semibold text-brand-lea">Needs attention</h2>
-          <div className="mt-3 divide-y divide-brand-lea/5 overflow-hidden rounded border border-brand-lea/10">
+        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Needs attention</h2>
+          <div className="mt-3 divide-y divide-brand-lea/5 overflow-hidden rounded border border-brand-lea/10 dark:divide-white/10 dark:border-white/10">
             {dashboard.alerts.length === 0 ? (
-              <p className="px-3 py-4 text-sm text-brand-grey">Nothing flagged — every active hire is on track.</p>
+              <p className="px-3 py-4 text-sm text-brand-grey dark:text-slate-400">Nothing flagged — every active hire is on track.</p>
             ) : (
               dashboard.alerts.map((a, i) => {
                 const s = ALERT_STYLE[a.level];
@@ -160,7 +160,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
                     href={`/people/${a.id}`}
                     className={clsx("flex items-center justify-between gap-3 px-3 py-2.5 text-sm transition hover:opacity-90 hover:shadow-glow", s.row)}
                   >
-                    <span className="text-brand-black">
+                    <span className="text-brand-black dark:text-slate-100">
                       <span className="font-semibold">{a.name}</span> — {a.text}
                     </span>
                     <span className={clsx("shrink-0 text-xs font-bold uppercase tracking-wide", s.tag)}>{s.label}</span>
@@ -172,18 +172,18 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
         </div>
       </section>
 
-      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
-        <h2 className="text-base font-semibold text-brand-lea">Upcoming start dates</h2>
+      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Upcoming start dates</h2>
         <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {dashboard.upcomingStarts.length === 0 ? (
-            <p className="text-sm text-brand-grey">No upcoming starts.</p>
+            <p className="text-sm text-brand-grey dark:text-slate-400">No upcoming starts.</p>
           ) : (
             dashboard.upcomingStarts.map((u) => (
               <Link key={u.id} href={`/people/${u.id}`} className="flex items-center gap-3 text-sm hover:underline transition hover:shadow-glow">
                 <span className="w-14 shrink-0 font-semibold text-sky-700">{fmtDate(u.startDate)}</span>
-                <span className="truncate text-brand-black">
+                <span className="truncate text-brand-black dark:text-slate-100">
                   {u.name}
-                  {u.position ? <span className="text-brand-grey"> · {u.position}</span> : null}
+                  {u.position ? <span className="text-brand-grey dark:text-slate-400"> · {u.position}</span> : null}
                 </span>
               </Link>
             ))

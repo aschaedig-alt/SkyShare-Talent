@@ -26,7 +26,7 @@ export function CurrencyPanel({ files }: { files: FileLike[] }) {
   const anyAlert = dated.some((d) => d.days <= 30);
 
   return (
-    <div className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+    <div className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
           <CalendarClock className="h-3.5 w-3.5" /> Currency
@@ -57,7 +57,7 @@ export function CurrencyPanel({ files }: { files: FileLike[] }) {
       )}
 
       {undated.length > 0 && (
-        <p className="mt-3 text-[11px] text-brand-grey">
+        <p className="mt-3 text-[11px] text-brand-grey dark:text-slate-400">
           No expiry set: {undated.map((f) => f.documentType || f.displayFilename).join(", ")}. Add a date on the document to track it.
         </p>
       )}

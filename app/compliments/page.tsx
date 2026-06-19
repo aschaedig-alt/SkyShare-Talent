@@ -53,7 +53,7 @@ export default async function ComplimentsDashboardPage() {
           </div>
           <Link
             href="/compliments/give"
-            className="inline-flex items-center gap-1.5 rounded-element bg-brand-gold px-4 py-2 text-sm font-medium text-brand-lea transition hover:bg-brand-gold/90"
+            className="inline-flex items-center gap-1.5 rounded-element bg-brand-gold px-4 py-2 text-sm font-medium text-brand-lea transition hover:bg-brand-gold/90 dark:text-slate-100"
           >
             <Sparkles className="h-4 w-4" />
             Give recognition
@@ -97,7 +97,7 @@ export default async function ComplimentsDashboardPage() {
       {/* Spotlight + values in action */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card padding="lg">
-          <h2 className="mb-4 text-base font-medium text-brand-lea">
+          <h2 className="mb-4 text-base font-medium text-brand-lea dark:text-slate-100">
             <span className="mr-1.5" aria-hidden="true">
               💜
             </span>
@@ -111,10 +111,10 @@ export default async function ComplimentsDashboardPage() {
                 colorKey={data.mostLoved.values[0]?.colorKey}
               />
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-brand-lea">
+                <p className="font-medium text-brand-lea dark:text-slate-100">
                   {data.mostLoved.giverName} recognized {data.mostLoved.recipientName}
                 </p>
-                <p className="mt-1 text-[13px] text-brand-grey">{data.mostLoved.message}</p>
+                <p className="mt-1 text-[13px] text-brand-grey dark:text-slate-400">{data.mostLoved.message}</p>
                 <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                   {data.mostLoved.values.map((v) => (
                     <ValueTag key={v.name} name={v.name} colorKey={v.colorKey} />
@@ -127,35 +127,35 @@ export default async function ComplimentsDashboardPage() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-brand-grey">No recognition to spotlight yet.</p>
+            <p className="text-sm text-brand-grey dark:text-slate-400">No recognition to spotlight yet.</p>
           )}
         </Card>
 
         <Card padding="lg">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-medium text-brand-lea">
+            <h2 className="text-base font-medium text-brand-lea dark:text-slate-100">
               <span className="mr-1.5" aria-hidden="true">
                 ✨
               </span>
               Values in action
             </h2>
             {leadingValue ? (
-              <span className="text-xs text-brand-grey">
-                Most lived: <span className="font-medium text-brand-lea">{leadingValue.name}</span>
+              <span className="text-xs text-brand-grey dark:text-slate-400">
+                Most lived: <span className="font-medium text-brand-lea dark:text-slate-100">{leadingValue.name}</span>
               </span>
             ) : null}
           </div>
           {data.valuesInAction.length === 0 ? (
-            <p className="text-sm text-brand-grey">No values recognized this month yet.</p>
+            <p className="text-sm text-brand-grey dark:text-slate-400">No values recognized this month yet.</p>
           ) : (
             <div className="space-y-3">
               {data.valuesInAction.map((v) => (
                 <div key={v.name}>
                   <div className="mb-1 flex justify-between text-[13px]">
-                    <span className="font-medium text-brand-lea">{v.name}</span>
-                    <span className="text-brand-grey">{v.count}</span>
+                    <span className="font-medium text-brand-lea dark:text-slate-100">{v.name}</span>
+                    <span className="text-brand-grey dark:text-slate-400">{v.count}</span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-brand-cloudDancer">
+                  <div className="h-2 overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/5">
                     <div
                       className={clsx("h-full rounded-full", valueColorClasses(v.colorKey).barFill)}
                       style={{ width: `${Math.round((v.count / maxValueCount) * 100)}%` }}

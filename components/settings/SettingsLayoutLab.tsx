@@ -275,12 +275,12 @@ export function SettingsLayoutLab() {
     <div className="flex flex-col gap-4 lg:flex-row">
       {/* Left rail: page list grouped by domain */}
       <aside className="shrink-0 lg:w-60">
-        <div className="rounded-lg bg-white p-3 shadow-panel ring-1 ring-brand-lea/10">
-          <p className="mb-2 px-1 text-[11px] font-bold uppercase tracking-wide text-brand-grey">Pages</p>
+        <div className="rounded-lg bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <p className="mb-2 px-1 text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Pages</p>
           <div className="max-h-[70vh] space-y-3 overflow-auto">
             {railGroups.map((g) => (
               <div key={g.domain}>
-                <div className="flex items-center gap-1.5 px-1 pb-1 text-[10px] font-bold uppercase tracking-wide text-brand-grey">
+                <div className="flex items-center gap-1.5 px-1 pb-1 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">
                   <span className={`h-2.5 w-2.5 rounded-full ${DOMAIN_DOT[g.domain as LabDomain]}`} /> {g.domain}
                 </div>
                 <div className="space-y-0.5">
@@ -290,10 +290,10 @@ export function SettingsLayoutLab() {
                       <button
                         key={p.id}
                         onClick={() => setActive(p.id)}
-                        className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition ${isActive ? "bg-brand-lea text-white" : "text-brand-black/80 hover:bg-brand-cloudDancer/50"}`}
+                        className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition ${isActive ? "bg-brand-lea text-white" : "text-brand-black/80 hover:bg-brand-cloudDancer/50 dark:bg-white/5"}`}
                       >
                         <span className="truncate">{p.label}</span>
-                        <span className={`shrink-0 rounded px-1.5 text-[10px] ${isActive ? "bg-white/25" : "bg-brand-lea/10 text-brand-grey"}`}>{pageCounts[p.id] ?? 0}</span>
+                        <span className={`shrink-0 rounded px-1.5 text-[10px] ${isActive ? "bg-white/25" : "bg-brand-lea/10 text-brand-grey dark:text-slate-400"}`}>{pageCounts[p.id] ?? 0}</span>
                       </button>
                     );
                   })}
@@ -306,56 +306,56 @@ export function SettingsLayoutLab() {
 
       {/* Right: controls + board */}
       <div className="min-w-0 flex-1">
-        <section className="mb-3 flex flex-wrap items-start justify-between gap-3 rounded-lg bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+        <section className="mb-3 flex flex-wrap items-start justify-between gap-3 rounded-lg bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Experimental</p>
-            <h2 className="flex items-center gap-2 text-xl font-semibold text-brand-lea">
+            <h2 className="flex items-center gap-2 text-xl font-semibold text-brand-lea dark:text-slate-100">
               <LayoutGrid className="h-5 w-5" /> {activePage?.label ?? "Layout Lab"}
             </h2>
-            <p className="mt-0.5 text-xs text-brand-grey">
+            <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
               {activePage?.route} · drag, resize, <Lock className="inline h-3 w-3" /> lock,{" "}
               <EyeOff className="inline h-3 w-3" /> hide, or <ArrowRightLeft className="inline h-3 w-3" /> move a box to
               another page. Boxes are colored by their home domain.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button onClick={() => setShowGrid((v) => !v)} className={`inline-flex items-center gap-1.5 rounded border px-3 py-2 text-sm font-semibold transition ${showGrid ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-lea hover:bg-brand-cloudDancer/60"}`}>
+            <button onClick={() => setShowGrid((v) => !v)} className={`inline-flex items-center gap-1.5 rounded border px-3 py-2 text-sm font-semibold transition ${showGrid ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-lea hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"}`}>
               <Grid3x3 className="h-4 w-4" /> Grid
             </button>
-            <button onClick={autoArrange} className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">
+            <button onClick={autoArrange} className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
               <RotateCcw className="h-4 w-4" /> Auto-arrange page
             </button>
             <button onClick={copyPage} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden">{copied ? "Copied!" : "Copy this page"}</button>
-            <button onClick={resetAll} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">Reset all</button>
+            <button onClick={resetAll} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">Reset all</button>
           </div>
         </section>
 
         {/* Density + grid controls */}
-        <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded border border-brand-lea/10 bg-white px-3 py-2">
+        <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded border border-brand-lea/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#10243a]">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Density:</span>
-            <div className="inline-flex overflow-hidden rounded border border-brand-lea/20">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Density:</span>
+            <div className="inline-flex overflow-hidden rounded border border-brand-lea/20 dark:border-white/10">
               {(["compact", "cozy", "roomy"] as Density[]).map((d) => (
-                <button key={d} onClick={() => changeDensity(d)} className={`px-3 py-1 text-[11px] font-semibold capitalize transition ${density === d ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60"}`}>{d}</button>
+                <button key={d} onClick={() => changeDensity(d)} className={`px-3 py-1 text-[11px] font-semibold capitalize transition ${density === d ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60 dark:text-slate-100 dark:bg-white/5"}`}>{d}</button>
               ))}
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Grid:</span>
-            <div className="inline-flex overflow-hidden rounded border border-brand-lea/20">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Grid:</span>
+            <div className="inline-flex overflow-hidden rounded border border-brand-lea/20 dark:border-white/10">
               {COL_OPTIONS.map((o) => (
-                <button key={o.n} onClick={() => changeCols(o.n)} title={`${o.n} columns`} className={`px-3 py-1 text-[11px] font-semibold transition ${cols === o.n ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60"}`}>{o.label}</button>
+                <button key={o.n} onClick={() => changeCols(o.n)} title={`${o.n} columns`} className={`px-3 py-1 text-[11px] font-semibold transition ${cols === o.n ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60 dark:text-slate-100 dark:bg-white/5"}`}>{o.label}</button>
               ))}
             </div>
-            <span className="text-[10px] text-brand-grey">finer = smaller snap steps</span>
+            <span className="text-[10px] text-brand-grey dark:text-slate-400">finer = smaller snap steps</span>
           </div>
         </div>
 
         {hiddenOnPage.length > 0 && (
-          <div className="mb-3 flex flex-wrap items-center gap-2 rounded border border-brand-lea/10 bg-white px-3 py-2">
-            <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Hidden ({hiddenOnPage.length}):</span>
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded border border-brand-lea/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#10243a]">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Hidden ({hiddenOnPage.length}):</span>
             {hiddenOnPage.map((b) => (
-              <button key={b.id} type="button" onClick={() => toggleHide(b.id)} className="inline-flex items-center gap-1 rounded border border-brand-lea/15 bg-brand-cloudDancer/50 px-2.5 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer" title="Show again">
+              <button key={b.id} type="button" onClick={() => toggleHide(b.id)} className="inline-flex items-center gap-1 rounded border border-brand-lea/15 bg-brand-cloudDancer/50 px-2.5 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-white/5 dark:text-slate-100" title="Show again">
                 <Eye className="h-3 w-3" /> {b.title}
               </button>
             ))}
@@ -363,14 +363,14 @@ export function SettingsLayoutLab() {
         )}
 
         {visibleBoxes.length === 0 && (
-          <div className="rounded-lg border border-dashed border-brand-lea/20 bg-white px-4 py-10 text-center text-sm text-brand-grey">
-            No boxes on <span className="font-semibold text-brand-lea">{activePage?.label}</span>. Move boxes here from
+          <div className="rounded-lg border border-dashed border-brand-lea/20 bg-white px-4 py-10 text-center text-sm text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">
+            No boxes on <span className="font-semibold text-brand-lea dark:text-slate-100">{activePage?.label}</span>. Move boxes here from
             another page, or restore hidden ones.
           </div>
         )}
 
         <div
-          className="rounded-lg bg-brand-cloudDancer/30 p-1"
+          className="rounded-lg bg-brand-cloudDancer/30 p-1 dark:bg-white/5"
           style={
             showGrid
               ? {
@@ -400,7 +400,7 @@ export function SettingsLayoutLab() {
               const moved = current !== b.page;
               const home = pageById(b.page);
               return (
-                <div key={b.id} className={`flex flex-col overflow-hidden rounded-lg border bg-white shadow-panel ${isLocked ? "border-brand-gold ring-2 ring-brand-gold/40" : "border-brand-lea/15"}`}>
+                <div key={b.id} className={`flex flex-col overflow-hidden rounded-lg border bg-white shadow-panel dark:bg-[#10243a] ${isLocked ? "border-brand-gold ring-2 ring-brand-gold/40" : "border-brand-lea/15 dark:border-white/10"}`}>
                   <div className={`lab-drag flex shrink-0 items-center justify-between gap-2 px-3 py-1.5 ${isLocked ? "cursor-default" : "cursor-move"} ${domainColor(current)}`}>
                     <span className="flex min-w-0 items-center gap-1.5">
                       <span className="truncate text-[11px] font-bold uppercase tracking-wide">{b.title}</span>
@@ -433,13 +433,13 @@ export function SettingsLayoutLab() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setMoveMenu(null)} />
           <div
-            className="fixed z-50 max-h-[60vh] w-60 overflow-auto rounded-lg border border-brand-lea/20 bg-white p-1.5 shadow-xl"
+            className="fixed z-50 max-h-[60vh] w-60 overflow-auto rounded-lg border border-brand-lea/20 bg-white p-1.5 shadow-xl dark:border-white/10 dark:bg-[#10243a]"
             style={{ left: Math.min(moveMenu.x, (typeof window !== "undefined" ? window.innerWidth : 1200) - 260), top: moveMenu.y + 6 }}
           >
-            <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-grey">Move this box to →</div>
+            <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Move this box to →</div>
             {railGroups.map((g) => (
               <div key={g.domain}>
-                <div className="flex items-center gap-1.5 px-2 pt-1.5 text-[9px] font-bold uppercase tracking-wide text-brand-grey">
+                <div className="flex items-center gap-1.5 px-2 pt-1.5 text-[9px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">
                   <span className={`h-2 w-2 rounded-full ${DOMAIN_DOT[g.domain as LabDomain]}`} /> {g.domain}
                 </div>
                 {g.pages.map((p) => {
@@ -447,11 +447,11 @@ export function SettingsLayoutLab() {
                   const cur = (assign[moveMenu.id] ?? box?.page) === p.id;
                   const isHome = box?.page === p.id;
                   return (
-                    <button key={p.id} onClick={() => reassign(moveMenu.id, p.id)} className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition ${cur ? "bg-brand-cloudDancer/60 font-semibold text-brand-lea" : "text-brand-black/80 hover:bg-brand-cloudDancer/40"}`}>
+                    <button key={p.id} onClick={() => reassign(moveMenu.id, p.id)} className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition ${cur ? "bg-brand-cloudDancer/60 font-semibold text-brand-lea dark:bg-white/5 dark:text-slate-100" : "text-brand-black/80 hover:bg-brand-cloudDancer/40 dark:bg-white/5"}`}>
                       <span className="flex items-center gap-2">
                         <span className={`h-2.5 w-2.5 rounded-full ${domainDot(p.id)}`} />
                         {p.label}
-                        {isHome && <span className="text-[9px] uppercase text-brand-grey">(home)</span>}
+                        {isHome && <span className="text-[9px] uppercase text-brand-grey dark:text-slate-400">(home)</span>}
                       </span>
                       {cur && <span className="text-brand-eden">✓</span>}
                     </button>

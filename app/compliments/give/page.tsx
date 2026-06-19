@@ -14,8 +14,8 @@ export default async function GiveRecognitionPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-4">
-        <h2 className="text-lg font-medium text-brand-lea">Give recognition</h2>
-        <p className="text-sm text-brand-grey">Celebrate great work and reinforce our values.</p>
+        <h2 className="text-lg font-medium text-brand-lea dark:text-slate-100">Give recognition</h2>
+        <p className="text-sm text-brand-grey dark:text-slate-400">Celebrate great work and reinforce our values.</p>
       </div>
       <GiveRecognitionForm roster={roster} values={values} strengthPoints={settings.strengthPoints} />
     </div>

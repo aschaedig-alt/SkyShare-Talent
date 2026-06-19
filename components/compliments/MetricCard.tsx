@@ -19,16 +19,16 @@ type MetricCardProps = {
 export function MetricCard({ label, value, sublabel, trend }: MetricCardProps) {
   return (
     <Card padding="sm">
-      <p className="text-xs font-medium text-brand-grey">{label}</p>
-      <p className="mt-2 text-[28px] font-medium leading-none text-brand-lea">{value}</p>
-      {sublabel ? <p className="mt-2 text-xs text-brand-grey">{sublabel}</p> : null}
+      <p className="text-xs font-medium text-brand-grey dark:text-slate-400">{label}</p>
+      <p className="mt-2 text-[28px] font-medium leading-none text-brand-lea dark:text-slate-100">{value}</p>
+      {sublabel ? <p className="mt-2 text-xs text-brand-grey dark:text-slate-400">{sublabel}</p> : null}
       {trend ? (
         <p
           className={clsx(
             "mt-1.5 text-xs",
             trend.direction === "up" && "text-value-teamwork-dark",
             trend.direction === "down" && "text-brand-red",
-            trend.direction === "flat" && "text-brand-grey"
+            trend.direction === "flat" && "text-brand-grey dark:text-slate-400"
           )}
         >
           {trend.direction === "up" ? "↑" : trend.direction === "down" ? "↓" : "→"} {trend.label}

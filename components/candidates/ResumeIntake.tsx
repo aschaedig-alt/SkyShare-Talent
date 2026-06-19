@@ -85,8 +85,8 @@ export function ResumeIntake({
 
   const btnClass =
     variant === "solid"
-      ? "inline-flex items-center gap-1.5 rounded-lg bg-brand-gold px-4 py-2.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-sweet"
-      : "inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-2.5 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60";
+      ? "inline-flex items-center gap-1.5 rounded-lg bg-brand-gold px-4 py-2.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-sweet dark:text-slate-100"
+      : "inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-2.5 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5";
 
   return (
     <>
@@ -96,14 +96,14 @@ export function ResumeIntake({
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-lea/40 p-4" onClick={() => { setOpen(false); reset(); }}>
-          <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl dark:bg-[#10243a]" onClick={(e) => e.stopPropagation()}>
             <div className="mb-1 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-brand-lea">Upload resumes</h2>
-              <button onClick={() => { setOpen(false); reset(); }} className="rounded p-1 text-brand-grey hover:text-brand-lea" aria-label="Close"><X className="h-5 w-5" /></button>
+              <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Upload resumes</h2>
+              <button onClick={() => { setOpen(false); reset(); }} className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100" aria-label="Close"><X className="h-5 w-5" /></button>
             </div>
-            <p className="mb-3 text-xs text-brand-grey">
+            <p className="mb-3 text-xs text-brand-grey dark:text-slate-400">
               Each resume becomes a candidate — name, email, and phone are read from the file and the resume is attached.
-              {jobTitle ? <> They&apos;ll be added to <span className="font-semibold text-brand-lea">{jobTitle}</span>.</> : null}
+              {jobTitle ? <> They&apos;ll be added to <span className="font-semibold text-brand-lea dark:text-slate-100">{jobTitle}</span>.</> : null}
             </p>
 
             {!results ? (
@@ -119,13 +119,13 @@ export function ResumeIntake({
                 {files.length > 0 && (
                   <ul className="mt-3 max-h-40 space-y-1 overflow-y-auto text-xs text-brand-black/80">
                     {files.map((f, i) => (
-                      <li key={i} className="truncate rounded bg-brand-cloudDancer/40 px-2 py-1">{f.name}</li>
+                      <li key={i} className="truncate rounded bg-brand-cloudDancer/40 px-2 py-1 dark:bg-white/5">{f.name}</li>
                     ))}
                   </ul>
                 )}
                 {error && <p className="mt-3 text-xs font-semibold text-red-600">{error}</p>}
                 <div className="mt-4 flex justify-end gap-2">
-                  <button onClick={() => { setOpen(false); reset(); }} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">Cancel</button>
+                  <button onClick={() => { setOpen(false); reset(); }} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">Cancel</button>
                   <button onClick={submit} disabled={busy} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
                     {busy ? (progress ? `Processing ${progress.done + 1} of ${progress.total}…` : "Processing…") : `Create ${files.length || ""} candidate${files.length === 1 ? "" : "s"}`.trim()}
                   </button>
@@ -135,24 +135,24 @@ export function ResumeIntake({
               <>
                 <div className="max-h-72 space-y-1.5 overflow-y-auto">
                   {results.map((r, i) => (
-                    <div key={i} className="flex items-start gap-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-2 text-xs">
+                    <div key={i} className="flex items-start gap-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/5">
                       {r.error ? <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" /> : <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />}
                       <div className="min-w-0">
                         {r.error ? (
                           <div className="text-red-600"><span className="font-semibold">{r.filename}</span> — {r.error}</div>
                         ) : (
                           <>
-                            <div className="font-semibold text-brand-lea">{r.displayName} {r.reused && <span className="font-normal text-brand-grey">(existing)</span>}</div>
-                            <div className="text-brand-grey">{[r.email, r.phone].filter(Boolean).join(" · ") || "no contact found — edit on profile"}{r.linkedToJob ? " · added to job" : ""}</div>
+                            <div className="font-semibold text-brand-lea dark:text-slate-100">{r.displayName} {r.reused && <span className="font-normal text-brand-grey dark:text-slate-400">(existing)</span>}</div>
+                            <div className="text-brand-grey dark:text-slate-400">{[r.email, r.phone].filter(Boolean).join(" · ") || "no contact found — edit on profile"}{r.linkedToJob ? " · added to job" : ""}</div>
                           </>
                         )}
                       </div>
                     </div>
                   ))}
                 </div>
-                <p className="mt-3 text-[11px] text-brand-grey">Names are best-guess from the file — open a profile to fix any that are off.</p>
+                <p className="mt-3 text-[11px] text-brand-grey dark:text-slate-400">Names are best-guess from the file — open a profile to fix any that are off.</p>
                 <div className="mt-4 flex justify-end gap-2">
-                  <button onClick={reset} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">Upload more</button>
+                  <button onClick={reset} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">Upload more</button>
                   <button onClick={() => { setOpen(false); reset(); }} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden">Done</button>
                 </div>
               </>

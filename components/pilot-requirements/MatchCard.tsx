@@ -35,13 +35,13 @@ const FIT_TAGS: Array<{ value: MatchVerdict; label: string; Icon: LucideIcon; on
   { value: "up", label: "Good fit", Icon: ThumbsUp, on: "bg-value-teamwork-light text-value-teamwork-dark" },
   { value: "neutral", label: "Maybe", Icon: Minus, on: "bg-value-leadership-light text-value-leadership-dark" },
   { value: "down", label: "Not a fit", Icon: ThumbsDown, on: "bg-value-customerFocus-light text-value-customerFocus-dark" },
-  { value: "under", label: "Underqualified", Icon: TrendingDown, on: "bg-brand-cloudDancer text-brand-eden" }
+  { value: "under", label: "Underqualified", Icon: TrendingDown, on: "bg-brand-cloudDancer text-brand-eden dark:bg-white/5" }
 ];
 
 export const readinessStyles: Record<ReadinessLabel, string> = {
   "Strong signal": "bg-value-teamwork-light text-value-teamwork-dark",
   "Worth a look": "bg-value-leadership-light text-value-leadership-dark",
-  "Needs review": "bg-brand-cloudDancer text-brand-grey"
+  "Needs review": "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400"
 };
 
 const READINESS_TIERS = Object.keys(readinessStyles) as ReadinessLabel[];
@@ -79,7 +79,7 @@ function FactorIcon({ status }: { status: FactorStatus }) {
     case "missing":
       return <AlertTriangle className="h-3.5 w-3.5 text-value-customerFocus-dark" aria-hidden />;
     default:
-      return <CircleHelp className="h-3.5 w-3.5 text-brand-grey" aria-hidden />;
+      return <CircleHelp className="h-3.5 w-3.5 text-brand-grey dark:text-slate-400" aria-hidden />;
   }
 }
 
@@ -93,25 +93,25 @@ function FactorList({ factors }: { factors: ScoredFactor[] }) {
     <div className="space-y-3">
       {Object.entries(grouped).map(([category, items]) => (
         <div key={category}>
-          <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey">{category}</div>
+          <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{category}</div>
           <div className="space-y-1">
             {items.map((factor) => (
               <div key={factor.key} className="flex items-center gap-2 text-[11px]">
                 <FactorIcon status={factor.status} />
-                <span className="font-medium text-brand-lea">{factor.label}</span>
+                <span className="font-medium text-brand-lea dark:text-slate-100">{factor.label}</span>
                 {factor.requirementStatus === "hard" ? (
                   <span className="rounded bg-brand-lea/8 px-1.5 text-[9px] font-bold uppercase tracking-wide text-brand-eden">
                     hard
                   </span>
                 ) : null}
-                <span className="min-w-0 flex-1 truncate text-brand-grey">{factor.detail}</span>
+                <span className="min-w-0 flex-1 truncate text-brand-grey dark:text-slate-400">{factor.detail}</span>
                 <span className="shrink-0 text-[10px] italic text-brand-grey/80">{factor.sourceLabel}</span>
               </div>
             ))}
           </div>
         </div>
       ))}
-      <p className="flex items-center gap-1.5 pt-1 text-[10px] text-brand-grey">
+      <p className="flex items-center gap-1.5 pt-1 text-[10px] text-brand-grey dark:text-slate-400">
         <ShieldCheck className="h-3 w-3 text-value-teamwork-dark" /> Age, name, gender and location are never used in
         scoring.
       </p>
@@ -192,12 +192,12 @@ export function MatchCard({
   return (
     <article
       className={clsx(
-        "rounded border bg-brand-cloudDancer/40 p-3 transition",
-        selected ? "border-brand-gold ring-1 ring-brand-gold/40" : "border-brand-lea/10"
+        "rounded border bg-brand-cloudDancer/40 p-3 transition dark:bg-white/5",
+        selected ? "border-brand-gold ring-1 ring-brand-gold/40" : "border-brand-lea/10 dark:border-white/10"
       )}
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-sweet/30 text-xs font-semibold text-brand-lea">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-sweet/30 text-xs font-semibold text-brand-lea dark:text-slate-100">
           {initials(match.candidateName)}
         </div>
         <div className="min-w-0 flex-1">
@@ -208,12 +208,12 @@ export function MatchCard({
                   <button
                     type="button"
                     onClick={() => onSelectName(match.candidateId)}
-                    className="text-left font-semibold text-brand-lea transition hover:text-brand-eden"
+                    className="text-left font-semibold text-brand-lea transition hover:text-brand-eden dark:text-slate-100"
                   >
                     {match.candidateName}
                   </button>
                 ) : (
-                  <Link href={`/candidates/${match.candidateId}`} className="font-semibold text-brand-lea hover:text-brand-eden">
+                  <Link href={`/candidates/${match.candidateId}`} className="font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-100">
                     {match.candidateName}
                   </Link>
                 )}
@@ -224,14 +224,14 @@ export function MatchCard({
                 ) : null}
                 {match.excludedReason ? (
                   <span
-                    className="rounded bg-brand-cloudDancer px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-grey"
+                    className="rounded bg-brand-cloudDancer px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-grey dark:bg-white/5 dark:text-slate-400"
                     title={match.excludedNote ?? undefined}
                   >
                     Ignored · {SCAN_EXCLUSION_LABELS[match.excludedReason]}
                   </span>
                 ) : null}
               </div>
-              <div className="mt-0.5 truncate text-xs text-brand-grey">
+              <div className="mt-0.5 truncate text-xs text-brand-grey dark:text-slate-400">
                 {[match.currentTitle, match.stage].filter(Boolean).join(" · ") || "No title on file"}
               </div>
             </div>
@@ -244,19 +244,19 @@ export function MatchCard({
                   Moved by you
                 </div>
               ) : match.minsTotal > 0 ? (
-                <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-brand-grey">
+                <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-brand-grey dark:text-slate-400">
                   {match.minsMet} of {match.minsTotal} mins met
                 </div>
               ) : null}
               {onMoveTier && canEdit ? (
                 <div className="mt-1.5 flex items-center justify-end gap-1">
-                  <span className="text-[9px] font-semibold uppercase tracking-wide text-brand-grey">Move to</span>
+                  <span className="text-[9px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">Move to</span>
                   <select
                     value={match.readiness}
                     disabled={moving}
                     onChange={(event) => onMoveTier(event.target.value as ReadinessLabel)}
                     aria-label={`Move ${match.candidateName} to another group`}
-                    className="rounded-element border border-brand-lea/20 bg-white px-1 py-0.5 text-[10px] font-medium text-brand-lea outline-none transition focus:border-brand-gold disabled:opacity-60"
+                    className="rounded-element border border-brand-lea/20 bg-white px-1 py-0.5 text-[10px] font-medium text-brand-lea outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
                   >
                     {READINESS_TIERS.map((tier) => (
                       <option key={tier} value={tier}>
@@ -298,8 +298,8 @@ export function MatchCard({
             {match.subScores.map((sub) => (
               <div key={sub.category}>
                 <div className="flex items-center justify-between gap-1">
-                  <span className="truncate text-[10px] font-medium text-brand-grey">{sub.label}</span>
-                  <span className="text-[10px] font-semibold text-brand-lea">{sub.score === null ? "—" : sub.score}</span>
+                  <span className="truncate text-[10px] font-medium text-brand-grey dark:text-slate-400">{sub.label}</span>
+                  <span className="text-[10px] font-semibold text-brand-lea dark:text-slate-100">{sub.score === null ? "—" : sub.score}</span>
                 </div>
                 <div className="mt-1 h-1.5 rounded-full bg-brand-lea/10">
                   <div
@@ -312,14 +312,14 @@ export function MatchCard({
           </div>
 
           {onExclude && canEdit ? (
-            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-element border border-brand-lea/10 bg-brand-cloudDancer/30 px-2.5 py-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-brand-grey">Scan eligibility</span>
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-element border border-brand-lea/10 bg-brand-cloudDancer/30 px-2.5 py-1.5 dark:border-white/10 dark:bg-white/5">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">Scan eligibility</span>
               <select
                 value={exReason}
                 disabled={excluding}
                 onChange={(event) => changeExclusion(event.target.value as ScanExclusionReason | "")}
                 aria-label={`Scan eligibility for ${match.candidateName}`}
-                className="rounded-element border border-brand-lea/20 bg-white px-1.5 py-0.5 text-[11px] font-medium text-brand-lea outline-none transition focus:border-brand-gold disabled:opacity-60"
+                className="rounded-element border border-brand-lea/20 bg-white px-1.5 py-0.5 text-[11px] font-medium text-brand-lea outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
               >
                 <option value="">In the pool</option>
                 {SCAN_EXCLUSION_REASONS.map((entry) => (
@@ -335,7 +335,7 @@ export function MatchCard({
                   onChange={(event) => setExNote(event.target.value)}
                   onBlur={() => onExclude("OTHER", exNote)}
                   placeholder="Reason note"
-                  className="min-w-0 flex-1 rounded-element border border-brand-lea/20 px-2 py-0.5 text-[11px] outline-none transition focus:border-brand-gold disabled:opacity-60"
+                  className="min-w-0 flex-1 rounded-element border border-brand-lea/20 px-2 py-0.5 text-[11px] outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10"
                 />
               ) : null}
             </div>
@@ -344,7 +344,7 @@ export function MatchCard({
           <button
             type="button"
             onClick={() => setOpen((value) => !value)}
-            className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-eden transition hover:text-brand-lea"
+            className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-eden transition hover:text-brand-lea dark:text-slate-100"
             aria-expanded={open}
           >
             {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -355,19 +355,19 @@ export function MatchCard({
             <button
               type="button"
               onClick={() => onViewRoles(match.candidateId)}
-              className="mt-3 ml-3 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-eden transition hover:text-brand-lea"
+              className="mt-3 ml-3 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-eden transition hover:text-brand-lea dark:text-slate-100"
             >
               View roles <ArrowRight className="h-3.5 w-3.5" />
             </button>
           ) : null}
 
           {open ? (
-            <div className="mt-3 space-y-2 border-t border-brand-lea/10 pt-3">
+            <div className="mt-3 space-y-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
               <FactorList factors={match.factors} />
 
               {canEdit && requirementId ? (
-                <div className="mt-3 rounded-element bg-white/70 p-2.5 ring-1 ring-brand-lea/10">
-                  <span className="text-[11px] font-medium text-brand-grey">Tag the fit</span>
+                <div className="mt-3 rounded-element bg-white/70 p-2.5 ring-1 ring-brand-lea/10 dark:ring-white/10">
+                  <span className="text-[11px] font-medium text-brand-grey dark:text-slate-400">Tag the fit</span>
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {FIT_TAGS.map((tag) => (
                       <button
@@ -379,7 +379,7 @@ export function MatchCard({
                         aria-label={tag.label}
                         className={clsx(
                           "inline-flex items-center gap-1 rounded-element px-2 py-1 text-[11px] font-semibold transition hover:shadow-glow",
-                          verdict === tag.value ? tag.on : "text-brand-grey hover:bg-brand-cloudDancer"
+                          verdict === tag.value ? tag.on : "text-brand-grey hover:bg-brand-cloudDancer dark:text-slate-400 dark:bg-white/5"
                         )}
                       >
                         <tag.Icon className="h-3.5 w-3.5" /> {tag.label}
@@ -393,7 +393,7 @@ export function MatchCard({
                         onChange={(event) => setReason(event.target.value)}
                         onBlur={saveReason}
                         placeholder="Why? (helps the system learn) — e.g. 'great hours, wrong base'"
-                        className="min-w-0 flex-1 rounded-element border-[0.5px] border-brand-lea/20 px-2 py-1 text-[11px] outline-none focus:border-brand-gold"
+                        className="min-w-0 flex-1 rounded-element border-[0.5px] border-brand-lea/20 px-2 py-1 text-[11px] outline-none focus:border-brand-gold dark:border-white/10"
                       />
                       <button
                         type="button"
@@ -405,7 +405,7 @@ export function MatchCard({
                       </button>
                     </div>
                   ) : null}
-                  {notice ? <p className="mt-1.5 text-[10px] text-brand-grey">{notice}</p> : null}
+                  {notice ? <p className="mt-1.5 text-[10px] text-brand-grey dark:text-slate-400">{notice}</p> : null}
                 </div>
               ) : null}
             </div>

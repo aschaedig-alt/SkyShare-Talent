@@ -57,16 +57,16 @@ function initials(name: string) {
 
 function EmptyState({ title, detail }: { title: string; detail: string }) {
   return (
-    <div className="rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm">
-      <div className="font-semibold text-brand-lea">{title}</div>
-      <p className="mt-1 text-brand-grey">{detail}</p>
+    <div className="rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm dark:border-white/10 dark:bg-white/5">
+      <div className="font-semibold text-brand-lea dark:text-slate-100">{title}</div>
+      <p className="mt-1 text-brand-grey dark:text-slate-400">{detail}</p>
     </div>
   );
 }
 
 const inputClass =
-  "mt-1 w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20";
-const labelClass = "text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey";
+  "mt-1 w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100";
+const labelClass = "text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400";
 
 export function CandidateProfileWorkspace({ candidate: initialCandidate }: CandidateProfileWorkspaceProps) {
   const [candidate, setCandidate] = useState<CandidateProfileData>(initialCandidate);
@@ -153,17 +153,17 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
       {success && <div className="rounded border border-green-500/30 bg-green-50 p-3 text-sm text-green-700">{success}</div>}
 
       {/* Header */}
-      <section className="rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
-        <Link href="/candidates" className="text-xs font-semibold text-brand-eden hover:text-brand-lea">
+      <section className="rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <Link href="/candidates" className="text-xs font-semibold text-brand-eden hover:text-brand-lea dark:text-slate-100">
           ← Back to candidates
         </Link>
         <div className="mt-3 flex flex-wrap items-start gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-sweet/25 text-lg font-semibold text-brand-lea">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-sweet/25 text-lg font-semibold text-brand-lea dark:text-slate-100">
             {initials(candidate.displayName) || "?"}
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold text-brand-lea">{candidate.displayName}</h1>
-            <p className="mt-1 text-sm text-brand-grey">
+            <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">{candidate.displayName}</h1>
+            <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
               {[candidate.currentTitle, candidate.stage].filter(Boolean).join(" · ") || "No title recorded"}
             </p>
             {candidate.tags.length > 0 && (
@@ -171,7 +171,7 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
                 {candidate.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded border border-brand-sweet/60 bg-brand-sweet/18 px-2.5 py-1 text-[11px] font-semibold text-brand-lea"
+                    className="rounded border border-brand-sweet/60 bg-brand-sweet/18 px-2.5 py-1 text-[11px] font-semibold text-brand-lea dark:text-slate-100"
                   >
                     {tag}
                   </span>
@@ -183,7 +183,7 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
             <span
               className={clsx(
                 "rounded px-3 py-1 text-xs font-semibold",
-                statusActive ? "bg-emerald-100 text-emerald-800" : "bg-brand-cloudDancer text-brand-grey"
+                statusActive ? "bg-emerald-100 text-emerald-800" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400"
               )}
             >
               {candidate.status}
@@ -191,7 +191,7 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
             <button
               onClick={() => (isEditing ? handleCancel() : setIsEditing(true))}
               disabled={isSaving}
-              className="rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50"
+              className="rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50 dark:text-slate-100"
             >
               {isEditing ? "Cancel" : "Edit"}
             </button>
@@ -201,7 +201,7 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
 
       {isEditing ? (
         /* Edit form */
-        <section className="rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+        <section className="rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Edit candidate</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div>
@@ -253,7 +253,7 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
             <button onClick={handleSave} disabled={isSaving} className="rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-eden disabled:opacity-50">
               {isSaving ? "Saving…" : "Save changes"}
             </button>
-            <button onClick={handleCancel} disabled={isSaving} className="rounded-lg border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/30">
+            <button onClick={handleCancel} disabled={isSaving} className="rounded-lg border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
               Cancel
             </button>
           </div>
@@ -261,7 +261,7 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
       ) : (
         <>
           {/* Profile tabs */}
-          <div className="flex gap-1 overflow-x-auto border-b border-brand-lea/15">
+          <div className="flex gap-1 overflow-x-auto border-b border-brand-lea/15 dark:border-white/10">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
@@ -271,12 +271,12 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
                   onClick={() => setActiveTab(tab.id)}
                   className={clsx(
                     "flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-semibold transition hover:shadow-glow",
-                    active ? "border-brand-lea text-brand-lea" : "border-transparent text-brand-grey hover:text-brand-lea"
+                    active ? "border-brand-lea text-brand-lea dark:text-slate-100" : "border-transparent text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100"
                   )}
                 >
                   <Icon className="h-4 w-4" />
                   {tab.label}
-                  <span className="rounded bg-brand-cloudDancer/70 px-1.5 py-0.5 text-[10px] font-bold text-brand-grey">
+                  <span className="rounded bg-brand-cloudDancer/70 px-1.5 py-0.5 text-[10px] font-bold text-brand-grey dark:bg-white/5 dark:text-slate-400">
                     {tab.count}
                   </span>
                 </button>
@@ -296,22 +296,22 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
                 <DocumentChecklist files={candidate.files} />
                 <CurrencyPanel files={candidate.files} />
                 <ProConPanel candidateId={candidate.id} initialPros={candidate.pros} initialCons={candidate.cons} />
-                <div className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+                <div className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
                   <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Contact</p>
                   <div className="mt-3 space-y-2 text-sm">
                     <div>
                       <div className={labelClass}>Email</div>
-                      <div className="mt-0.5 break-words text-brand-lea">{candidate.primaryEmail ?? "No email"}</div>
+                      <div className="mt-0.5 break-words text-brand-lea dark:text-slate-100">{candidate.primaryEmail ?? "No email"}</div>
                     </div>
                     <div>
                       <div className={labelClass}>Phone</div>
-                      <div className="mt-0.5 text-brand-lea">{candidate.primaryPhone ?? "No phone"}</div>
+                      <div className="mt-0.5 text-brand-lea dark:text-slate-100">{candidate.primaryPhone ?? "No phone"}</div>
                     </div>
                   </div>
                 </div>
-                <div className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+                <div className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
                   <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Record</p>
-                  <div className="mt-3 space-y-1.5 text-sm text-brand-grey">
+                  <div className="mt-3 space-y-1.5 text-sm text-brand-grey dark:text-slate-400">
                     <div>Owner: {candidate.owner ?? "Unassigned"}</div>
                     <div>Source: {candidate.source ?? "Not recorded"}</div>
                     <div>Created: {formatDate(candidate.createdAt)}</div>
@@ -326,26 +326,26 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
 
           {/* Applications tab */}
           {activeTab === "applications" && (
-            <section className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+            <section className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
               <div className="space-y-2">
                 {candidate.applications.length > 0 ? (
                   candidate.applications.map((application) => (
-                    <div key={application.id} className="rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-3">
+                    <div key={application.id} className="rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           {application.job ? (
-                            <Link href={`/recruiting-jobs?id=${application.job.id}`} className="font-semibold text-brand-lea hover:text-brand-eden">
+                            <Link href={`/recruiting-jobs?id=${application.job.id}`} className="font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-100">
                               {application.job.title}
                             </Link>
                           ) : (
-                            <div className="font-semibold text-brand-lea">Unlinked job</div>
+                            <div className="font-semibold text-brand-lea dark:text-slate-100">Unlinked job</div>
                           )}
-                          <div className="mt-1 text-xs text-brand-grey">
+                          <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">
                             {[application.stage, application.status, application.job?.location].filter(Boolean).join(" · ")}
                           </div>
                         </div>
                         {application.pilotRequirement ? (
-                          <Link href={`/pilot-requirements?id=${application.pilotRequirement.id}`} className="rounded bg-brand-sweet/25 px-2 py-1 text-[11px] font-semibold text-brand-lea">
+                          <Link href={`/pilot-requirements?id=${application.pilotRequirement.id}`} className="rounded bg-brand-sweet/25 px-2 py-1 text-[11px] font-semibold text-brand-lea dark:text-slate-100">
                             {application.pilotRequirement.title}
                           </Link>
                         ) : null}
@@ -367,14 +367,14 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
 
           {/* Interviews tab */}
           {activeTab === "interviews" && (
-            <section className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+            <section className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
               <div className="space-y-2">
                 {candidate.interviews.length > 0 ? (
                   candidate.interviews.map((interview) => (
-                    <div key={interview.id} className="rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-3">
-                      <div className="font-semibold text-brand-lea">{interview.title}</div>
-                      <div className="mt-1 text-xs text-brand-grey">{formatDateTime(interview.startDateTime)} · {interview.status}</div>
-                      <div className="mt-1 text-xs text-brand-grey">{[interview.interviewer, interview.location].filter(Boolean).join(" · ")}</div>
+                    <div key={interview.id} className="rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
+                      <div className="font-semibold text-brand-lea dark:text-slate-100">{interview.title}</div>
+                      <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{formatDateTime(interview.startDateTime)} · {interview.status}</div>
+                      <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{[interview.interviewer, interview.location].filter(Boolean).join(" · ")}</div>
                     </div>
                   ))
                 ) : (

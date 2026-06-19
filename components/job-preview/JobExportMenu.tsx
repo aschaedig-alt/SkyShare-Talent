@@ -178,19 +178,19 @@ export function JobExportMenu({ job, align = "right", onStatusChange }: JobExpor
 
       {open && (
         <div
-          className={`absolute z-40 mt-2 w-72 overflow-hidden rounded border border-brand-lea/10 bg-white text-brand-lea shadow-xl ${
+          className={`absolute z-40 mt-2 w-72 overflow-hidden rounded border border-brand-lea/10 bg-white text-brand-lea shadow-xl dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100 ${
             align === "right" ? "right-0" : "left-0"
           }`}
         >
           <button
             type="button"
             onClick={exportPdf}
-            className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-brand-cloudDancer/70"
+            className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-brand-cloudDancer/70 dark:bg-white/5"
           >
             <Printer className="mt-0.5 h-4 w-4 text-brand-eden" />
             <span>
               <span className="block text-sm font-bold">Export as PDF</span>
-              <span className="mt-0.5 block text-xs leading-5 text-brand-grey">
+              <span className="mt-0.5 block text-xs leading-5 text-brand-grey dark:text-slate-400">
                 Opens a print view so you can save as PDF.
               </span>
             </span>
@@ -198,12 +198,12 @@ export function JobExportMenu({ job, align = "right", onStatusChange }: JobExpor
           <button
             type="button"
             onClick={copyBasicHtml}
-            className="flex w-full items-start gap-3 border-t border-brand-lea/8 px-4 py-3 text-left hover:bg-brand-cloudDancer/70"
+            className="flex w-full items-start gap-3 border-t border-brand-lea/8 px-4 py-3 text-left hover:bg-brand-cloudDancer/70 dark:border-white/10 dark:bg-white/5"
           >
             <Code2 className="mt-0.5 h-4 w-4 text-brand-eden" />
             <span>
               <span className="block text-sm font-bold">Copy basic HTML</span>
-              <span className="mt-0.5 block text-xs leading-5 text-brand-grey">
+              <span className="mt-0.5 block text-xs leading-5 text-brand-grey dark:text-slate-400">
                 For strict boards that only accept simple code.
               </span>
             </span>
@@ -211,17 +211,17 @@ export function JobExportMenu({ job, align = "right", onStatusChange }: JobExpor
           <button
             type="button"
             onClick={copyFormattedText}
-            className="flex w-full items-start gap-3 border-t border-brand-lea/8 px-4 py-3 text-left hover:bg-brand-cloudDancer/70"
+            className="flex w-full items-start gap-3 border-t border-brand-lea/8 px-4 py-3 text-left hover:bg-brand-cloudDancer/70 dark:border-white/10 dark:bg-white/5"
           >
             <Copy className="mt-0.5 h-4 w-4 text-brand-eden" />
             <span>
               <span className="block text-sm font-bold">Copy fully formatted/color text</span>
-              <span className="mt-0.5 block text-xs leading-5 text-brand-grey">
+              <span className="mt-0.5 block text-xs leading-5 text-brand-grey dark:text-slate-400">
                 Keeps color, layout, and rich formatting where supported.
               </span>
             </span>
           </button>
-          <div className="border-t border-brand-lea/8 bg-brand-cloudDancer/45 px-4 py-2 text-[11px] font-semibold leading-5 text-brand-grey">
+          <div className="border-t border-brand-lea/8 bg-brand-cloudDancer/45 px-4 py-2 text-[11px] font-semibold leading-5 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
             Plain text fallback is included when formatted clipboard copy is unavailable.
           </div>
         </div>

@@ -125,24 +125,24 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-lg bg-white shadow-xl max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-lg rounded-lg bg-white shadow-xl max-h-[90vh] overflow-y-auto dark:bg-[#10243a]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 border-b border-brand-lea/10 bg-white px-6 py-4">
+        <div className="sticky top-0 border-b border-brand-lea/10 bg-white px-6 py-4 dark:border-white/10 dark:bg-[#10243a]">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-brand-lea">Edit Interview</h2>
-              <p className="mt-1 text-sm text-brand-grey">{interview.candidate.displayName}</p>
+              <h2 className="text-xl font-semibold text-brand-lea dark:text-slate-100">Edit Interview</h2>
+              <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">{interview.candidate.displayName}</p>
             </div>
             <div className="flex items-center gap-3">
               <Link
                 href={`/interviews/${interview.id}`}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
               >
                 <ClipboardCheck className="h-4 w-4" /> Scorecards
               </Link>
-              <button onClick={onClose} className="text-brand-grey hover:text-brand-lea">
+              <button onClick={onClose} className="text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100">
                 ✕
               </button>
             </div>
@@ -152,21 +152,21 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-3 p-6">
           <div className="grid gap-3 md:grid-cols-2">
-            <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+            <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
               Title
               <input
                 name="title"
                 required
                 defaultValue={interview.title}
-                className="rounded border border-brand-lea/20 px-3 py-2 text-sm"
+                className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
               />
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+            <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
               Status
               <select
                 name="status"
                 defaultValue={interview.status}
-                className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm"
+                className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
               >
                 {statusOptions.map((option) => (
                   <option key={option} value={option}>
@@ -178,7 +178,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
           </div>
 
           {/* Interview stage picker */}
-          <div className="grid gap-1 text-xs font-semibold text-brand-lea">
+          <div className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Interview stage
             <div className="flex flex-wrap gap-1.5">
               {interviewTypes.map((type) => {
@@ -191,8 +191,8 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
                     onClick={() => setInterviewType(type)}
                     className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow ${
                       active
-                        ? `${meta.chip} ring-2 ring-offset-1 ring-brand-lea/30`
-                        : "bg-brand-cloudDancer/50 text-brand-grey hover:bg-brand-cloudDancer"
+                        ? `${meta.chip} ring-2 ring-offset-1 ring-brand-lea/30 dark:ring-white/10`
+                        : "bg-brand-cloudDancer/50 text-brand-grey hover:bg-brand-cloudDancer dark:bg-white/5 dark:text-slate-400"
                     }`}
                   >
                     <span className={`h-2 w-2 rounded-full ${active ? "bg-white/80" : meta.dot}`} />
@@ -203,13 +203,13 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
             </div>
           </div>
 
-          <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+          <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Job / role
             <select
               name="jobId"
               defaultValue={interview.job?.id ?? ""}
               onChange={(e) => setSelectedJobId(e.target.value)}
-              className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm"
+              className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
             >
               <option value="">No linked job</option>
               {jobs.map((job) => (
@@ -221,22 +221,22 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
           </label>
 
           <div className="grid gap-3 md:grid-cols-2">
-            <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+            <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
               Start date/time
               <input
                 name="startDateTime"
                 required
                 type="datetime-local"
                 defaultValue={toDateTimeLocal(interview.startDateTime)}
-                className="rounded border border-brand-lea/20 px-3 py-2 text-sm"
+                className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
               />
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+            <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
               Duration
               <select
                 name="durationMinutes"
                 defaultValue={initialDuration}
-                className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm"
+                className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
               >
                 <option value="30">30 minutes</option>
                 <option value="45">45 minutes</option>
@@ -247,41 +247,41 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
             </label>
           </div>
 
-          <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+          <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Interviewer
             <InterviewerPicker
               defaultValue={interview.interviewer ?? ""}
               interviewers={interviewers}
               activeDepartmentKey={activeDepartmentKey}
-              className="rounded border border-brand-lea/20 px-3 py-2 text-sm"
+              className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
             />
           </label>
 
-          <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+          <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Location
             <input
               name="location"
               defaultValue={interview.location ?? ""}
-              className="rounded border border-brand-lea/20 px-3 py-2 text-sm"
+              className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
             />
           </label>
 
-          <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+          <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Meeting URL
             <input
               name="meetingUrl"
               defaultValue={interview.meetingUrl ?? ""}
-              className="rounded border border-brand-lea/20 px-3 py-2 text-sm"
+              className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
             />
           </label>
 
-          <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+          <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Notes
             <textarea
               name="notes"
               rows={3}
               defaultValue={interview.notes ?? ""}
-              className="rounded border border-brand-lea/20 px-3 py-2 text-sm"
+              className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
             />
           </label>
 
@@ -314,7 +314,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(false)}
-                  className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea"
+                  className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea dark:border-white/10 dark:text-slate-100"
                 >
                   Cancel
                 </button>
@@ -334,7 +334,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/20"
+                className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/20 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
               >
                 Cancel
               </button>

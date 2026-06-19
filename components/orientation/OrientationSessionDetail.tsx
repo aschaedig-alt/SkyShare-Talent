@@ -107,16 +107,16 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
 
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
-      <Link href="/orientation" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-grey hover:text-brand-lea">← Orientation</Link>
+      <Link href="/orientation" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100">← Orientation</Link>
 
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold text-brand-lea">Orientation · {fmtShort(session.date)}</h1>
-            <p className="mt-1 text-sm text-brand-grey">
+            <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Orientation · {fmtShort(session.date)}</h1>
+            <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
               {fmtTime(session.date)} · {session.location ?? "—"}
               {session.address ? ` · ${session.address}` : ""}
-              {session.meetLink ? <> · <a href={session.meetLink} className="text-brand-lea underline">Meet link</a></> : null}
+              {session.meetLink ? <> · <a href={session.meetLink} className="text-brand-lea underline dark:text-slate-100">Meet link</a></> : null}
             </p>
           </div>
           {session.status === "COMPLETE" ? (
@@ -133,8 +133,8 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
             ["Pilots · iPads", headcount.pilots],
             ["Prep", `${headDone}/${prep.length}`]
           ].map(([label, val]) => (
-            <span key={String(label)} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-1 text-brand-lea">
-              <span className="font-semibold">{val}</span> <span className="text-brand-grey">{label}</span>
+            <span key={String(label)} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-1 text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
+              <span className="font-semibold">{val}</span> <span className="text-brand-grey dark:text-slate-400">{label}</span>
             </span>
           ))}
         </div>
@@ -142,26 +142,26 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
         {/* Prep checklist */}
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
-          <h2 className="text-base font-semibold text-brand-lea">Prep checklist</h2>
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Prep checklist</h2>
           <div className="mt-3 space-y-1">
             {prep.map((t) => (
               <PrepRow key={t.id} t={t} onToggle={togglePrep} onRemove={removePrep} />
             ))}
           </div>
-          <div className="mt-3 flex items-center gap-2 border-t border-brand-lea/10 pt-3">
-            <input value={newPrep} onChange={(e) => setNewPrep(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addPrep()} placeholder="Add a prep task" className="flex-1 rounded border border-brand-lea/15 px-3 py-1.5 text-sm" />
-            <button onClick={addPrep} disabled={busy} className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">Add</button>
+          <div className="mt-3 flex items-center gap-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
+            <input value={newPrep} onChange={(e) => setNewPrep(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addPrep()} placeholder="Add a prep task" className="flex-1 rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10" />
+            <button onClick={addPrep} disabled={busy} className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">Add</button>
           </div>
         </section>
 
         {/* Attendees */}
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
-          <h2 className="text-base font-semibold text-brand-lea">Attendees</h2>
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Attendees</h2>
           <div className="mt-3 overflow-x-auto">
             <table className="min-w-full text-xs">
               <thead>
-                <tr className="text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey">
+                <tr className="text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">
                   <th className="py-2 pr-2">Name</th>
                   <th className="px-1 py-2">Confirm</th>
                   <th className="px-1 py-2">Travel</th>
@@ -173,26 +173,26 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
               </thead>
               <tbody>
                 {attendees.length === 0 ? (
-                  <tr><td colSpan={7} className="py-4 text-center text-brand-grey">No attendees yet. Add from the list below.</td></tr>
+                  <tr><td colSpan={7} className="py-4 text-center text-brand-grey dark:text-slate-400">No attendees yet. Add from the list below.</td></tr>
                 ) : attendees.map((a) => (
-                  <tr key={a.id} className="border-t border-brand-lea/10">
+                  <tr key={a.id} className="border-t border-brand-lea/10 dark:border-white/10">
                     <td className="py-2 pr-2">
-                      <div className="font-medium text-brand-lea">
+                      <div className="font-medium text-brand-lea dark:text-slate-100">
                         {a.name}
                         {a.isPilot ? <span className="ml-1 rounded bg-sky-50 px-1 text-[9px] font-semibold text-sky-700">pilot</span> : null}
-                        {a.rescheduleCount > 0 ? <span className="ml-1 rounded bg-brand-gold/15 px-1 text-[9px] font-semibold text-brand-lea" title="Times moved to a later orientation">moved {a.rescheduleCount}×</span> : null}
+                        {a.rescheduleCount > 0 ? <span className="ml-1 rounded bg-brand-gold/15 px-1 text-[9px] font-semibold text-brand-lea dark:text-slate-100" title="Times moved to a later orientation">moved {a.rescheduleCount}×</span> : null}
                       </div>
-                      <div className="text-[10px] text-brand-grey">{a.position ?? "—"}</div>
+                      <div className="text-[10px] text-brand-grey dark:text-slate-400">{a.position ?? "—"}</div>
                     </td>
                     <td className="px-1 py-2">
-                      <select value={a.confirmed} onChange={(e) => setConfirm(a, e.target.value as ConfirmStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.confirmed === "CONFIRMED" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : a.confirmed === "DECLINED" ? "border-red-200 bg-red-50 text-red-700" : "border-brand-lea/15 bg-white text-brand-grey")}>
+                      <select value={a.confirmed} onChange={(e) => setConfirm(a, e.target.value as ConfirmStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.confirmed === "CONFIRMED" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : a.confirmed === "DECLINED" ? "border-red-200 bg-red-50 text-red-700" : "border-brand-lea/15 bg-white text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400")}>
                         <option value="PENDING">Pending</option>
                         <option value="CONFIRMED">Confirmed</option>
                         <option value="DECLINED">Declined</option>
                       </select>
                     </td>
                     <td className="px-1 py-2">
-                      <select value={a.travelStatus} onChange={(e) => setTravel(a, e.target.value as TravelStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.travelStatus === "ARRANGED" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : a.travelStatus === "NEEDED" ? "border-brand-gold/40 bg-brand-gold/15 text-brand-lea" : "border-brand-lea/15 bg-white text-brand-grey")}>
+                      <select value={a.travelStatus} onChange={(e) => setTravel(a, e.target.value as TravelStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.travelStatus === "ARRANGED" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : a.travelStatus === "NEEDED" ? "border-brand-gold/40 bg-brand-gold/15 text-brand-lea dark:text-slate-100" : "border-brand-lea/15 bg-white text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400")}>
                         <option value="NA">Local</option>
                         <option value="NEEDED">Needed</option>
                         <option value="ARRANGED">Arranged</option>
@@ -208,7 +208,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                             value=""
                             onChange={(e) => moveAttendee(a.id, e.target.value)}
                             title="Move to another orientation"
-                            className="rounded border border-brand-lea/15 bg-white px-1 py-0.5 text-[11px] text-brand-grey"
+                            className="rounded border border-brand-lea/15 bg-white px-1 py-0.5 text-[11px] text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400"
                           >
                             <option value="">Move…</option>
                             {session.otherSessions.map((o) => (
@@ -224,8 +224,8 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
               </tbody>
             </table>
           </div>
-          <div className="mt-3 flex items-center gap-2 border-t border-brand-lea/10 pt-3">
-            <select value={addId} onChange={(e) => setAddId(e.target.value)} className="flex-1 rounded border border-brand-lea/15 px-2 py-1.5 text-sm text-brand-lea">
+          <div className="mt-3 flex items-center gap-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
+            <select value={addId} onChange={(e) => setAddId(e.target.value)} className="flex-1 rounded border border-brand-lea/15 px-2 py-1.5 text-sm text-brand-lea dark:border-white/10 dark:text-slate-100">
               <option value="">Add attendee…</option>
               {session.candidates.filter((c) => c.suggested).length > 0 ? (
                 <optgroup label="Suggested (this orientation date)">
@@ -243,21 +243,21 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
 
       {/* Email send tracker */}
       {attendees.length > 0 ? (
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
-          <h2 className="text-base font-semibold text-brand-lea">Who&apos;s been emailed</h2>
-          <p className="mt-1 text-sm text-brand-grey">Check a box when you send that email (via Front) so you can see who has what. Live sending is coming later.</p>
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Who&apos;s been emailed</h2>
+          <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">Check a box when you send that email (via Front) so you can see who has what. Live sending is coming later.</p>
           <div className="mt-3 overflow-x-auto">
             <table className="min-w-full text-xs">
               <thead>
-                <tr className="text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey">
+                <tr className="text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">
                   <th className="py-2 pr-3">Attendee</th>
                   {session.templates.map((t) => <th key={t.key} className="px-2 py-2 text-center" style={{ minWidth: 70 }}>{t.name}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {attendees.map((a) => (
-                  <tr key={a.id} className="border-t border-brand-lea/10">
-                    <td className="py-2 pr-3 font-medium text-brand-lea">{a.name}</td>
+                  <tr key={a.id} className="border-t border-brand-lea/10 dark:border-white/10">
+                    <td className="py-2 pr-3 font-medium text-brand-lea dark:text-slate-100">{a.name}</td>
                     {session.templates.map((t) => {
                       const sent = a.sentTemplateKeys.includes(t.key);
                       return (
@@ -291,13 +291,13 @@ function Flag({ on, onClick }: { on: boolean; onClick: () => void }) {
 
 function PrepRow({ t, onToggle, onRemove }: { t: PrepTaskView; onToggle: (id: string, done: boolean) => void; onRemove: (id: string) => void }) {
   return (
-    <div className="group flex items-center gap-2 border-b border-brand-lea/5 py-1.5">
+    <div className="group flex items-center gap-2 border-b border-brand-lea/5 py-1.5 dark:border-white/10">
       <button onClick={() => onToggle(t.id, !t.done)} className="shrink-0">
         {t.done ? <span className="text-emerald-600"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#d1fae5" /><path d="M5 8.5 L7 10.5 L11 6" fill="none" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span> : <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/40" />}
       </button>
-      <span className={clsx("flex-1 text-[12.5px]", t.done ? "text-brand-grey line-through" : "text-brand-black")}>{t.label}</span>
-      {t.owner ? <span className="rounded bg-brand-cloudDancer/70 px-2 py-0.5 text-[10px] text-brand-grey">{t.owner}</span> : null}
-      {t.dueDaysBefore != null && !t.done ? <span className="text-[10px] text-brand-grey">{t.dueDaysBefore}d before</span> : null}
+      <span className={clsx("flex-1 text-[12.5px]", t.done ? "text-brand-grey line-through dark:text-slate-400" : "text-brand-black dark:text-slate-100")}>{t.label}</span>
+      {t.owner ? <span className="rounded bg-brand-cloudDancer/70 px-2 py-0.5 text-[10px] text-brand-grey dark:bg-white/5 dark:text-slate-400">{t.owner}</span> : null}
+      {t.dueDaysBefore != null && !t.done ? <span className="text-[10px] text-brand-grey dark:text-slate-400">{t.dueDaysBefore}d before</span> : null}
       <button onClick={() => onRemove(t.id)} className="text-[11px] text-red-600 opacity-0 transition group-hover:opacity-100">×</button>
     </div>
   );
@@ -349,31 +349,31 @@ function EmailTemplates({ templates, session }: { templates: EmailTemplateDef[];
   }
 
   return (
-    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-brand-lea">Email templates</h2>
-        <button onClick={() => setAdding((a) => !a)} className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">{adding ? "Cancel" : "+ Add template"}</button>
+        <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Email templates</h2>
+        <button onClick={() => setAdding((a) => !a)} className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">{adding ? "Cancel" : "+ Add template"}</button>
       </div>
-      <p className="mt-1 text-xs text-brand-grey">Placeholders: {"{{name}} {{date}} {{time}} {{location}} {{address}} {{meetLink}}"}. Copy fills the session details; replace {"{{name}}"} per person.</p>
+      <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">Placeholders: {"{{name}} {{date}} {{time}} {{location}} {{address}} {{meetLink}}"}. Copy fills the session details; replace {"{{name}}"} per person.</p>
 
       {adding ? (
-        <div className="mt-3 space-y-2 rounded border border-brand-lea/10 p-3">
-          <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Template name" className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm" />
-          <input value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} placeholder="Subject" className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm" />
-          <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} placeholder="Body" rows={4} className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm" />
+        <div className="mt-3 space-y-2 rounded border border-brand-lea/10 p-3 dark:border-white/10">
+          <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Template name" className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10" />
+          <input value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} placeholder="Subject" className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10" />
+          <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} placeholder="Body" rows={4} className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10" />
           <button onClick={add} disabled={busy} className="rounded bg-brand-lea px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">Add template</button>
         </div>
       ) : null}
 
       <div className="mt-3 space-y-2">
         {templates.map((t) => (
-          <div key={t.key} className="rounded border border-brand-lea/10">
+          <div key={t.key} className="rounded border border-brand-lea/10 dark:border-white/10">
             <div className="flex items-center justify-between gap-2 px-3 py-2">
-              <button onClick={() => setOpenKey((k) => (k === t.key ? null : t.key))} className="flex items-center gap-2 text-left text-sm font-medium text-brand-lea transition hover:shadow-glow">
-                <span className="text-brand-grey">{openKey === t.key ? "▾" : "▸"}</span> {t.name}
+              <button onClick={() => setOpenKey((k) => (k === t.key ? null : t.key))} className="flex items-center gap-2 text-left text-sm font-medium text-brand-lea transition hover:shadow-glow dark:text-slate-100">
+                <span className="text-brand-grey dark:text-slate-400">{openKey === t.key ? "▾" : "▸"}</span> {t.name}
               </button>
               <div className="flex items-center gap-2">
-                <button onClick={() => copy(t)} className="text-xs font-semibold text-brand-lea hover:underline">{copied === t.key ? "Copied!" : "Copy"}</button>
+                <button onClick={() => copy(t)} className="text-xs font-semibold text-brand-lea hover:underline dark:text-slate-100">{copied === t.key ? "Copied!" : "Copy"}</button>
                 <button onClick={() => remove(t.key)} className="text-xs text-red-600 hover:underline">Remove</button>
               </div>
             </div>
@@ -391,10 +391,10 @@ function TemplateEditor({ t, onSave, busy }: { t: EmailTemplateDef; onSave: (key
   const [body, setBody] = useState(t.body);
   const dirty = name !== t.name || subject !== t.subject || body !== t.body;
   return (
-    <div className="space-y-2 border-t border-brand-lea/10 px-3 py-3">
-      <input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm" />
-      <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm" />
-      <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={6} className="w-full rounded border border-brand-lea/15 px-3 py-2 font-mono text-xs" />
+    <div className="space-y-2 border-t border-brand-lea/10 px-3 py-3 dark:border-white/10">
+      <input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10" />
+      <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10" />
+      <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={6} className="w-full rounded border border-brand-lea/15 px-3 py-2 font-mono text-xs dark:border-white/10" />
       <button onClick={() => onSave(t.key, name, subject, body)} disabled={busy || !dirty} className="rounded bg-brand-lea px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-40">Save</button>
     </div>
   );

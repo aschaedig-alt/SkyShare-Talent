@@ -106,32 +106,32 @@ export function MonthCalendar({
   }
 
   return (
-    <section className="rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10">
+    <section className="rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-brand-lea/10 px-4 py-3">
-        <h2 className="text-lg font-semibold text-brand-lea">
+      <div className="flex items-center justify-between border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
+        <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">
           {MONTHS[month]} {year}
         </h2>
         <div className="flex items-center gap-2">
           <button
             onClick={goToToday}
-            className="rounded-lg border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/30"
+            className="rounded-lg border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
           >
             Today
           </button>
-          <button onClick={goToPrevMonth} className="rounded-lg border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30" aria-label="Previous month">
+          <button onClick={goToPrevMonth} className="rounded-lg border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5" aria-label="Previous month">
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <button onClick={goToNextMonth} className="rounded-lg border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30" aria-label="Next month">
+          <button onClick={goToNextMonth} className="rounded-lg border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5" aria-label="Next month">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>
 
       {/* Weekday headers */}
-      <div className="grid grid-cols-7 border-b border-brand-lea/10">
+      <div className="grid grid-cols-7 border-b border-brand-lea/10 dark:border-white/10">
         {WEEKDAYS.map((day) => (
-          <div key={day} className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey">
+          <div key={day} className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
             <span className="hidden sm:inline">{day}</span>
             <span className="sm:hidden">{day[0]}</span>
           </div>
@@ -142,7 +142,7 @@ export function MonthCalendar({
       <div className="grid grid-cols-7">
         {cells.map((cell) => {
           if (cell.day === null) {
-            return <div key={cell.key} className="min-h-[80px] border-b border-r border-brand-lea/5 bg-brand-cloudDancer/10 sm:min-h-[110px]" />;
+            return <div key={cell.key} className="min-h-[80px] border-b border-r border-brand-lea/5 bg-brand-cloudDancer/10 sm:min-h-[110px] dark:border-white/10 dark:bg-white/5" />;
           }
 
           const dayInterviews = interviewsByDay.get(cell.key) ?? [];
@@ -163,15 +163,15 @@ export function MonthCalendar({
               onDragLeave={() => setDragOverKey(null)}
               onDrop={() => handleDrop(cell.day!)}
               className={clsx(
-                "relative min-h-[80px] border-b border-r border-brand-lea/5 p-1 transition sm:min-h-[110px]",
-                isDragOver ? "bg-brand-gold/20 ring-2 ring-inset ring-brand-gold" : "hover:bg-brand-cloudDancer/20"
+                "relative min-h-[80px] border-b border-r border-brand-lea/5 p-1 transition sm:min-h-[110px] dark:border-white/10",
+                isDragOver ? "bg-brand-gold/20 ring-2 ring-inset ring-brand-gold" : "hover:bg-brand-cloudDancer/20 dark:bg-white/5"
               )}
             >
               <button onClick={() => onDayClick?.(cellDate)} className="mb-1 flex w-full items-center px-1">
                 <span
                   className={clsx(
                     "flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold transition",
-                    isToday ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/50"
+                    isToday ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/50 dark:text-slate-100 dark:bg-white/5"
                   )}
                 >
                   {cell.day}
@@ -213,8 +213,8 @@ export function MonthCalendar({
               {isPopoverOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setPopoverDay(null)} />
-                  <div className="absolute left-1 right-1 top-8 z-20 max-h-64 overflow-y-auto rounded-lg border border-brand-lea/20 bg-white p-2 shadow-xl">
-                    <div className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.12em] text-brand-grey">
+                  <div className="absolute left-1 right-1 top-8 z-20 max-h-64 overflow-y-auto rounded-lg border border-brand-lea/20 bg-white p-2 shadow-xl dark:border-white/10 dark:bg-[#10243a]">
+                    <div className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.12em] text-brand-grey dark:text-slate-400">
                       {MONTHS[month]} {cell.day} · {dayInterviews.length} interviews
                     </div>
                     <div className="space-y-1">
@@ -240,7 +240,7 @@ export function MonthCalendar({
       </div>
 
       {/* Color legend + drag hint */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey dark:border-white/10 dark:text-slate-400">
         <CalendarLegend mode={colorMode} departmentColors={departmentColors} />
         <span className="hidden italic text-brand-grey/70 sm:inline">Drag an interview to another day to reschedule</span>
       </div>

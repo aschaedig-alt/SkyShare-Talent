@@ -23,22 +23,22 @@ const pad = (n: number) => String(n).padStart(2, "0");
 function SessionCard({ s }: { s: SessionListItem }) {
   const soon = new Date(s.date).getTime() - Date.now() <= 7 * 86_400_000 && s.status !== "COMPLETE";
   return (
-    <Link href={`/orientation/${s.id}`} className="block rounded-lg border border-brand-lea/10 bg-white p-4 shadow-panel transition hover:ring-2 hover:ring-brand-gold/30 hover:shadow-glow">
+    <Link href={`/orientation/${s.id}`} className="block rounded-lg border border-brand-lea/10 bg-white p-4 shadow-panel transition hover:ring-2 hover:ring-brand-gold/30 hover:shadow-glow dark:border-white/10 dark:bg-[#10243a]">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-base font-semibold text-brand-lea">{fmt(s.date)}</span>
-        <span className={clsx("rounded px-2 py-0.5 text-[11px] font-semibold", s.status === "COMPLETE" ? "bg-emerald-50 text-emerald-800" : soon ? "bg-brand-gold/15 text-brand-lea" : "bg-brand-cloudDancer text-brand-grey")}>
+        <span className="text-base font-semibold text-brand-lea dark:text-slate-100">{fmt(s.date)}</span>
+        <span className={clsx("rounded px-2 py-0.5 text-[11px] font-semibold", s.status === "COMPLETE" ? "bg-emerald-50 text-emerald-800" : soon ? "bg-brand-gold/15 text-brand-lea dark:text-slate-100" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400")}>
           {s.status === "COMPLETE" ? "Complete" : daysUntil(s.date)}
         </span>
       </div>
-      <div className="mt-1 text-xs text-brand-grey">{s.location ?? "—"}</div>
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-brand-grey">
+      <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{s.location ?? "—"}</div>
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-brand-grey dark:text-slate-400">
         <span>{s.attendeeCount} attendees</span>
         <span>prep {s.prepDone}/{s.prepTotal}</span>
       </div>
       {(s.notConfirmed > 0 || s.travelPending > 0) && s.status !== "COMPLETE" ? (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {s.notConfirmed > 0 ? <span className="rounded bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">{s.notConfirmed} not confirmed</span> : null}
-          {s.travelPending > 0 ? <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[11px] font-semibold text-brand-lea">{s.travelPending} travel pending</span> : null}
+          {s.travelPending > 0 ? <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[11px] font-semibold text-brand-lea dark:text-slate-100">{s.travelPending} travel pending</span> : null}
         </div>
       ) : null}
     </Link>
@@ -53,9 +53,9 @@ function MiniMonth({ year, month, markers }: { year: number; month: number; mark
   for (let d = 1; d <= days; d++) cells.push(d);
   const monthName = new Intl.DateTimeFormat("en", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(year, month, 1)));
   return (
-    <div className="rounded-lg border border-brand-lea/10 bg-white p-3 shadow-panel">
-      <div className="mb-2 text-sm font-semibold text-brand-lea">{monthName}</div>
-      <div className="grid grid-cols-7 gap-1 text-center text-[9px] text-brand-grey">
+    <div className="rounded-lg border border-brand-lea/10 bg-white p-3 shadow-panel dark:border-white/10 dark:bg-[#10243a]">
+      <div className="mb-2 text-sm font-semibold text-brand-lea dark:text-slate-100">{monthName}</div>
+      <div className="grid grid-cols-7 gap-1 text-center text-[9px] text-brand-grey dark:text-slate-400">
         {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <div key={i}>{d}</div>)}
         {cells.map((d, i) => {
           if (d === null) return <div key={i} />;
@@ -63,10 +63,10 @@ function MiniMonth({ year, month, markers }: { year: number; month: number; mark
           const m = markers.get(key);
           const content = (
             <div className={clsx("flex h-7 flex-col items-center justify-center rounded", m ? "bg-brand-gold/15" : "")}>
-              <span className={clsx("text-[11px]", m ? "font-semibold text-brand-lea" : "text-brand-black")}>{d}</span>
+              <span className={clsx("text-[11px]", m ? "font-semibold text-brand-lea dark:text-slate-100" : "text-brand-black dark:text-slate-100")}>{d}</span>
               {m ? (
                 <span className="flex items-center gap-0.5">
-                  {m.hireCount > 0 ? <span className="text-[8px] font-bold text-brand-lea">{m.hireCount}</span> : null}
+                  {m.hireCount > 0 ? <span className="text-[8px] font-bold text-brand-lea dark:text-slate-100">{m.hireCount}</span> : null}
                   {m.sessionId ? <span className="h-1 w-1 rounded-full bg-emerald-500" /> : null}
                 </span>
               ) : null}
@@ -81,14 +81,14 @@ function MiniMonth({ year, month, markers }: { year: number; month: number; mark
 
 function CohortCard({ c, onCreate, onAddMissing, busy }: { c: Cohort; onCreate: (c: Cohort) => void; onAddMissing: (c: Cohort) => void; busy: boolean }) {
   return (
-    <div className="rounded-lg border border-brand-lea/10 bg-white p-4 shadow-panel">
+    <div className="rounded-lg border border-brand-lea/10 bg-white p-4 shadow-panel dark:border-white/10 dark:bg-[#10243a]">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-base font-semibold text-brand-lea">{fmtDay(c.dateISO)}</span>
-        <span className="text-xs text-brand-grey">{c.hires.length} {c.hires.length === 1 ? "hire" : "hires"} · {daysUntil(c.dateISO)}</span>
+        <span className="text-base font-semibold text-brand-lea dark:text-slate-100">{fmtDay(c.dateISO)}</span>
+        <span className="text-xs text-brand-grey dark:text-slate-400">{c.hires.length} {c.hires.length === 1 ? "hire" : "hires"} · {daysUntil(c.dateISO)}</span>
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {c.hires.map((h) => (
-          <span key={h.id} className={clsx("rounded px-2 py-0.5 text-[11px]", h.isAttendee ? "bg-emerald-50 text-emerald-800" : "bg-brand-cloudDancer text-brand-grey")}>
+          <span key={h.id} className={clsx("rounded px-2 py-0.5 text-[11px]", h.isAttendee ? "bg-emerald-50 text-emerald-800" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400")}>
             {h.name}
           </span>
         ))}
@@ -98,7 +98,7 @@ function CohortCard({ c, onCreate, onAddMissing, busy }: { c: Cohort; onCreate: 
           <>
             <Link href={`/orientation/${c.sessionId}`} className="rounded bg-brand-lea px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-eden hover:shadow-glow">Open session</Link>
             {c.missingHireIds.length > 0 ? (
-              <button onClick={() => onAddMissing(c)} disabled={busy} className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-50">
+              <button onClick={() => onAddMissing(c)} disabled={busy} className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-50 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
                 Add {c.missingHireIds.length} to session
               </button>
             ) : (
@@ -218,11 +218,11 @@ export function OrientationOverview({
 
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
-      <section className="flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+      <section className="flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">People</p>
-          <h1 className="text-2xl font-semibold text-brand-lea">Orientation</h1>
-          <p className="mt-1 max-w-2xl text-sm text-brand-grey">Plan each in-person orientation: attendees, prep checklist with owners, headcounts, and email templates.</p>
+          <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Orientation</h1>
+          <p className="mt-1 max-w-2xl text-sm text-brand-grey dark:text-slate-400">Plan each in-person orientation: attendees, prep checklist with owners, headcounts, and email templates.</p>
         </div>
         <button onClick={() => setAdding(true)} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden">+ New session</button>
       </section>
@@ -236,17 +236,17 @@ export function OrientationOverview({
           <div className="mt-3 space-y-1.5">
             {unscheduled.map((h) => (
               <div key={h.id} className="flex flex-wrap items-center gap-2 rounded bg-white/70 px-3 py-2 text-sm">
-                <Link href={`/people/${h.id}`} className="font-medium text-brand-lea hover:underline transition hover:shadow-glow">{h.name}</Link>
-                <span className="text-xs text-brand-grey">{h.position ?? "—"}</span>
-                {h.rescheduleCount > 0 ? <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold text-brand-lea">moved {h.rescheduleCount}×</span> : null}
+                <Link href={`/people/${h.id}`} className="font-medium text-brand-lea hover:underline transition hover:shadow-glow dark:text-slate-100">{h.name}</Link>
+                <span className="text-xs text-brand-grey dark:text-slate-400">{h.position ?? "—"}</span>
+                {h.rescheduleCount > 0 ? <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold text-brand-lea dark:text-slate-100">moved {h.rescheduleCount}×</span> : null}
                 <span className="ml-auto">
                   {upcoming.length > 0 ? (
-                    <select value="" onChange={(e) => addToSession(h.id, e.target.value)} disabled={busyHire === h.id} className="rounded border border-brand-lea/15 bg-white px-2 py-1 text-xs text-brand-grey">
+                    <select value="" onChange={(e) => addToSession(h.id, e.target.value)} disabled={busyHire === h.id} className="rounded border border-brand-lea/15 bg-white px-2 py-1 text-xs text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">
                       <option value="">Add to…</option>
                       {upcoming.map((s) => <option key={s.id} value={s.id}>{fmt(s.date)}</option>)}
                     </select>
                   ) : (
-                    <span className="text-xs text-brand-grey">create a session first</span>
+                    <span className="text-xs text-brand-grey dark:text-slate-400">create a session first</span>
                   )}
                 </span>
               </div>
@@ -255,12 +255,12 @@ export function OrientationOverview({
         </section>
       ) : null}
 
-      <div className="border-b border-brand-lea/10">
+      <div className="border-b border-brand-lea/10 dark:border-white/10">
         <nav className="flex gap-6">
           {([["sessions", "Sessions"], ["cohorts", "Cohorts & calendar"]] as const).map(([key, label]) => (
-            <button key={key} onClick={() => setView(key)} className={clsx("border-b-2 px-1 py-3 text-sm font-semibold transition hover:shadow-glow", view === key ? "border-brand-lea text-brand-lea" : "border-transparent text-brand-grey hover:text-brand-lea")}>
+            <button key={key} onClick={() => setView(key)} className={clsx("border-b-2 px-1 py-3 text-sm font-semibold transition hover:shadow-glow", view === key ? "border-brand-lea text-brand-lea dark:text-slate-100" : "border-transparent text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100")}>
               {label}
-              {key === "cohorts" && cohorts.length > 0 ? <span className="ml-1.5 text-brand-grey">· {cohorts.length}</span> : null}
+              {key === "cohorts" && cohorts.length > 0 ? <span className="ml-1.5 text-brand-grey dark:text-slate-400">· {cohorts.length}</span> : null}
             </button>
           ))}
         </nav>
@@ -269,16 +269,16 @@ export function OrientationOverview({
       {view === "sessions" ? (
         <>
           <section>
-            <h2 className="mb-2 text-sm font-bold uppercase tracking-[0.14em] text-brand-grey">Upcoming</h2>
+            <h2 className="mb-2 text-sm font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Upcoming</h2>
             {upcoming.length === 0 ? (
-              <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10">No upcoming sessions. Create one, or use the Cohorts tab to spin one up from pre-onboarding orientation dates.</p>
+              <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:text-slate-400 dark:ring-white/10">No upcoming sessions. Create one, or use the Cohorts tab to spin one up from pre-onboarding orientation dates.</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{upcoming.map((s) => <SessionCard key={s.id} s={s} />)}</div>
             )}
           </section>
           {past.length > 0 ? (
             <section>
-              <h2 className="mb-2 text-sm font-bold uppercase tracking-[0.14em] text-brand-grey">Past</h2>
+              <h2 className="mb-2 text-sm font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Past</h2>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{past.map((s) => <SessionCard key={s.id} s={s} />)}</div>
             </section>
           ) : null}
@@ -287,18 +287,18 @@ export function OrientationOverview({
         <>
           <section>
             <div className="mb-2 flex items-center gap-3">
-              <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-brand-grey">Calendar</h2>
-              <span className="flex items-center gap-1 text-[11px] text-brand-grey"><span className="inline-block h-2 w-2 rounded bg-brand-gold/40" /> orientation date</span>
-              <span className="flex items-center gap-1 text-[11px] text-brand-grey"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> session</span>
+              <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Calendar</h2>
+              <span className="flex items-center gap-1 text-[11px] text-brand-grey dark:text-slate-400"><span className="inline-block h-2 w-2 rounded bg-brand-gold/40" /> orientation date</span>
+              <span className="flex items-center gap-1 text-[11px] text-brand-grey dark:text-slate-400"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> session</span>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {months.map(([y, m]) => <MiniMonth key={`${y}-${m}`} year={y} month={m} markers={markerMap} />)}
             </div>
           </section>
           <section>
-            <h2 className="mb-2 text-sm font-bold uppercase tracking-[0.14em] text-brand-grey">Cohorts by orientation date</h2>
+            <h2 className="mb-2 text-sm font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Cohorts by orientation date</h2>
             {cohorts.length === 0 ? (
-              <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10">No active hires have an orientation date set yet. Set one on a hire in Pre-onboarding and they&apos;ll group here.</p>
+              <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:text-slate-400 dark:ring-white/10">No active hires have an orientation date set yet. Set one on a hire in Pre-onboarding and they&apos;ll group here.</p>
             ) : (
               <div className="grid gap-3 lg:grid-cols-2">
                 {cohorts.map((c) => <CohortCard key={c.dateISO} c={c} onCreate={createFromCohort} onAddMissing={addMissing} busy={busy} />)}
@@ -311,26 +311,26 @@ export function OrientationOverview({
       {adding && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => !saving && setAdding(false)} />
-          <div className="relative w-full max-w-md rounded bg-white p-5 shadow-2xl">
-            <h2 className="text-lg font-semibold text-brand-lea">New orientation session</h2>
+          <div className="relative w-full max-w-md rounded bg-white p-5 shadow-2xl dark:bg-[#10243a]">
+            <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">New orientation session</h2>
             <div className="mt-4 space-y-3">
               <div className="flex gap-3">
-                <label className="flex-1 text-xs font-semibold uppercase tracking-wide text-brand-grey">
+                <label className="flex-1 text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
                   Date
-                  <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea" />
+                  <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:text-slate-100" />
                 </label>
-                <label className="w-28 text-xs font-semibold uppercase tracking-wide text-brand-grey">
+                <label className="w-28 text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
                   Time
-                  <input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea" />
+                  <input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:text-slate-100" />
                 </label>
               </div>
-              <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Location" className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm" />
-              <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Address" className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm" />
-              <input value={form.meetLink} onChange={(e) => setForm({ ...form, meetLink: e.target.value })} placeholder="Google Meet link" className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm" />
+              <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Location" className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10" />
+              <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Address" className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10" />
+              <input value={form.meetLink} onChange={(e) => setForm({ ...form, meetLink: e.target.value })} placeholder="Google Meet link" className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10" />
               {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
             </div>
             <div className="mt-5 flex justify-end gap-2">
-              <button onClick={() => setAdding(false)} disabled={saving} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">Cancel</button>
+              <button onClick={() => setAdding(false)} disabled={saving} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">Cancel</button>
               <button onClick={create} disabled={saving} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">{saving ? "Creating..." : "Create session"}</button>
             </div>
           </div>

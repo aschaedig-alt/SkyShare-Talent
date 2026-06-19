@@ -34,7 +34,7 @@ export function JobDuplicateClusters({ initialClusters = null }: JobDuplicateClu
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm text-brand-grey">
+        <div className="text-sm text-brand-grey dark:text-slate-400">
           {clusters === null
             ? "Run a scan to group jobs into duplicate clusters."
             : clusters.length === 0
@@ -211,8 +211,8 @@ function ClusterCard({ cluster, onMerged }: { cluster: DuplicateCluster; onMerge
   }
 
   return (
-    <section className="rounded border border-brand-lea/10 bg-white">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-lea/10 px-4 py-3">
+    <section className="rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
         <div className="flex items-center gap-3">
           <span
             className={`rounded px-2 py-1 text-[10px] font-bold uppercase ${
@@ -221,15 +221,15 @@ function ClusterCard({ cluster, onMerged }: { cluster: DuplicateCluster; onMerge
           >
             {cluster.matchType === "exact" ? "Exact" : "Similar"}
           </span>
-          <h3 className="font-semibold text-brand-lea">{cluster.title}</h3>
-          <span className="text-xs text-brand-grey">{cluster.jobs.length} jobs</span>
+          <h3 className="font-semibold text-brand-lea dark:text-slate-100">{cluster.title}</h3>
+          <span className="text-xs text-brand-grey dark:text-slate-400">{cluster.jobs.length} jobs</span>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={handleDismissCluster}
             disabled={busy}
-            className="flex items-center gap-2 rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/30 hover:text-brand-lea disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-2 rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/30 hover:text-brand-lea disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-400 dark:bg-white/5 dark:text-slate-100"
             title="These are all different jobs — stop showing this group"
           >
             {dismissing && <Loader className="h-4 w-4 animate-spin" />}
@@ -238,7 +238,7 @@ function ClusterCard({ cluster, onMerged }: { cluster: DuplicateCluster; onMerge
           <button
             onClick={handleMergeSelected}
             disabled={busy || selectedIds.length === 0}
-            className="flex items-center gap-2 rounded bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-2 rounded bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-100"
           >
             {merging && <Loader className="h-4 w-4 animate-spin" />}
             {merging ? "Merging…" : `Merge ${selectedIds.length} selected`}
@@ -265,7 +265,7 @@ function ClusterCard({ cluster, onMerged }: { cluster: DuplicateCluster; onMerge
         </div>
       )}
 
-      <div className="divide-y divide-brand-lea/10 p-2">
+      <div className="divide-y divide-brand-lea/10 p-2 dark:divide-white/10">
         {cluster.jobs.map((job) => (
           <JobRow
             key={job.id}
@@ -283,10 +283,10 @@ function ClusterCard({ cluster, onMerged }: { cluster: DuplicateCluster; onMerge
         ))}
       </div>
 
-      <div className="border-t border-brand-lea/10 px-4 py-2 text-xs text-brand-grey">
-        Select <span className="font-semibold text-brand-lea">Keep</span> for the job that survives, then check the
-        boxes for the jobs to merge into it. Use <span className="font-semibold text-brand-lea">Not a dup</span> to
-        drop a single job, or <span className="font-semibold text-brand-lea">Not duplicates</span> to dismiss the whole
+      <div className="border-t border-brand-lea/10 px-4 py-2 text-xs text-brand-grey dark:border-white/10 dark:text-slate-400">
+        Select <span className="font-semibold text-brand-lea dark:text-slate-100">Keep</span> for the job that survives, then check the
+        boxes for the jobs to merge into it. Use <span className="font-semibold text-brand-lea dark:text-slate-100">Not a dup</span> to
+        drop a single job, or <span className="font-semibold text-brand-lea dark:text-slate-100">Not duplicates</span> to dismiss the whole
         group.
       </div>
     </section>
@@ -334,7 +334,7 @@ function JobRow({
             onClick={onSetPrimary}
             disabled={disabled}
             className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition hover:shadow-glow ${
-              isPrimary ? "border-emerald-500 bg-emerald-500" : "border-brand-lea/30 hover:border-emerald-400"
+              isPrimary ? "border-emerald-500 bg-emerald-500" : "border-brand-lea/30 hover:border-emerald-400 dark:border-white/10"
             } disabled:opacity-50`}
             title={isPrimary ? "This job will be kept" : "Keep this job instead"}
           >
@@ -350,13 +350,13 @@ function JobRow({
               checked={isChecked}
               onChange={onToggleMerge}
               disabled={disabled}
-              className="h-4 w-4 shrink-0 rounded border-brand-lea/30"
+              className="h-4 w-4 shrink-0 rounded border-brand-lea/30 dark:border-white/10"
               title="Merge this job into the kept job"
             />
           )}
 
           <button onClick={onToggleExpand} className="min-w-0 text-left transition hover:shadow-glow">
-            <div className="flex items-center gap-2 text-sm font-medium text-brand-lea">
+            <div className="flex items-center gap-2 text-sm font-medium text-brand-lea dark:text-slate-100">
               <span className="truncate">{job.title}</span>
               {isPrimary && (
                 <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-700">
@@ -364,20 +364,20 @@ function JobRow({
                 </span>
               )}
               <ChevronDown
-                className={`h-3.5 w-3.5 shrink-0 text-brand-grey transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                className={`h-3.5 w-3.5 shrink-0 text-brand-grey transition-transform dark:text-slate-400 ${isExpanded ? "rotate-180" : ""}`}
               />
             </div>
-            {metaLine && <div className="mt-0.5 truncate text-xs text-brand-grey">{metaLine}</div>}
+            {metaLine && <div className="mt-0.5 truncate text-xs text-brand-grey dark:text-slate-400">{metaLine}</div>}
           </button>
         </div>
 
-        <div className="flex shrink-0 items-center gap-4 text-xs text-brand-grey">
+        <div className="flex shrink-0 items-center gap-4 text-xs text-brand-grey dark:text-slate-400">
           <span>{job.applications} apps</span>
           <span>{job.interviews} interviews</span>
           <Link
             href={`/recruiting-jobs?id=${job.id}`}
             target="_blank"
-            className="text-brand-lea underline hover:text-brand-gold transition hover:shadow-glow"
+            className="text-brand-lea underline hover:text-brand-gold transition hover:shadow-glow dark:text-slate-100"
           >
             Open
           </Link>
@@ -385,7 +385,7 @@ function JobRow({
             <button
               onClick={onDismiss}
               disabled={disabled}
-              className="rounded border border-brand-lea/15 px-2 py-1 font-semibold text-brand-grey transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+              className="rounded border border-brand-lea/15 px-2 py-1 font-semibold text-brand-grey transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:border-white/10 dark:text-slate-400"
               title="This job is not a duplicate of the others — remove it from this cluster"
             >
               Not a dup
@@ -414,24 +414,24 @@ function JobDetails({ job }: { job: DuplicateClusterJob }) {
   const shownFacts = facts.filter(([, v]) => Boolean(v));
 
   return (
-    <div className="mx-2 mb-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/30 p-3 text-xs">
+    <div className="mx-2 mb-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/30 p-3 text-xs dark:border-white/10 dark:bg-white/5">
       {shownFacts.length > 0 ? (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {shownFacts.map(([label, value]) => (
             <div key={label}>
-              <div className="font-bold uppercase tracking-[0.12em] text-brand-grey">{label}</div>
-              <div className="mt-0.5 text-brand-lea">{value}</div>
+              <div className="font-bold uppercase tracking-[0.12em] text-brand-grey dark:text-slate-400">{label}</div>
+              <div className="mt-0.5 text-brand-lea dark:text-slate-100">{value}</div>
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-brand-grey">No extra structured details on this job.</p>
+        <p className="text-brand-grey dark:text-slate-400">No extra structured details on this job.</p>
       )}
 
       {job.jobDescriptionText && (
         <div className="mt-3">
-          <div className="font-bold uppercase tracking-[0.12em] text-brand-grey">Description</div>
-          <p className="mt-1 whitespace-pre-wrap text-brand-lea line-clamp-6">
+          <div className="font-bold uppercase tracking-[0.12em] text-brand-grey dark:text-slate-400">Description</div>
+          <p className="mt-1 whitespace-pre-wrap text-brand-lea line-clamp-6 dark:text-slate-100">
             {job.jobDescriptionText.slice(0, 600)}
             {job.jobDescriptionText.length > 600 ? "…" : ""}
           </p>
@@ -440,8 +440,8 @@ function JobDetails({ job }: { job: DuplicateClusterJob }) {
 
       {job.rawMinimumRequirements && (
         <div className="mt-3">
-          <div className="font-bold uppercase tracking-[0.12em] text-brand-grey">Minimum Requirements</div>
-          <p className="mt-1 whitespace-pre-wrap text-brand-lea line-clamp-6">
+          <div className="font-bold uppercase tracking-[0.12em] text-brand-grey dark:text-slate-400">Minimum Requirements</div>
+          <p className="mt-1 whitespace-pre-wrap text-brand-lea line-clamp-6 dark:text-slate-100">
             {job.rawMinimumRequirements.slice(0, 600)}
             {job.rawMinimumRequirements.length > 600 ? "…" : ""}
           </p>

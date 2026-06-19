@@ -54,7 +54,7 @@ const ALL_PAGES = [...SOURCE_PAGES, ...TARGET_PAGES];
 const PAGE_COLOR: Record<string, string> = {
   "Job Builder": "bg-brand-lea text-white",
   "Final Review": "bg-emerald-600 text-white",
-  "Content Blocks": "bg-brand-gold text-brand-lea",
+  "Content Blocks": "bg-brand-gold text-brand-lea dark:text-slate-100",
   "Page 1": "bg-indigo-600 text-white",
   "Page 2": "bg-fuchsia-700 text-white"
 };
@@ -183,7 +183,7 @@ function fmtDate(iso: string | null) {
 }
 
 function BodyView({ body, format }: { body: string; format: BlockBodyFormat }) {
-  if (!body?.trim()) return <p className="text-xs italic text-brand-grey">No content.</p>;
+  if (!body?.trim()) return <p className="text-xs italic text-brand-grey dark:text-slate-400">No content.</p>;
   if (format === "MIXED") return <div className="text-xs leading-5 text-brand-black/80"><RichTextMixed value={body} /></div>;
   if (format === "PARAGRAPH") return <RichTextParagraphs value={body} paragraphClassName="text-xs leading-5 text-brand-black/80" />;
   return (
@@ -203,11 +203,11 @@ function FieldRows({ rows }: { rows: Array<[string, string | null]> }) {
     <div className="space-y-1.5">
       {rows.map(([label, value]) => (
         <div key={label} className="flex items-center gap-2">
-          <span className="w-24 shrink-0 text-[10px] font-bold uppercase tracking-wide text-brand-grey">{label}</span>
+          <span className="w-24 shrink-0 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">{label}</span>
           {value ? (
-            <span className="flex-1 truncate rounded border border-brand-lea/10 bg-brand-cloudDancer/30 px-2 py-1 text-xs text-brand-black/80">{value}</span>
+            <span className="flex-1 truncate rounded border border-brand-lea/10 bg-brand-cloudDancer/30 px-2 py-1 text-xs text-brand-black/80 dark:border-white/10 dark:bg-white/5">{value}</span>
           ) : (
-            <span className="h-6 flex-1 rounded border border-dashed border-brand-lea/15 bg-white" />
+            <span className="h-6 flex-1 rounded border border-dashed border-brand-lea/15 bg-white dark:border-white/10 dark:bg-[#10243a]" />
           )}
         </div>
       ))}
@@ -416,10 +416,10 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
 
   function renderSection(sectionKey: string) {
     const inst = sectionInstance.get(sectionKey);
-    if (!inst) return <p className="text-xs italic text-brand-grey">No block attached for this section.</p>;
+    if (!inst) return <p className="text-xs italic text-brand-grey dark:text-slate-400">No block attached for this section.</p>;
     return (
       <div>
-        <div className="mb-1 text-xs font-bold text-brand-lea">{getInstanceTitle(inst)}</div>
+        <div className="mb-1 text-xs font-bold text-brand-lea dark:text-slate-100">{getInstanceTitle(inst)}</div>
         <BodyView body={getInstanceBody(inst)} format={getInstanceFormatting(inst).bodyFormat} />
       </div>
     );
@@ -427,10 +427,10 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
 
   function renderPreview() {
     return job ? (
-      <div className="rounded border border-brand-lea/10">
+      <div className="rounded border border-brand-lea/10 dark:border-white/10">
         <FormattedJobPost job={job} />
       </div>
-    ) : <p className="text-xs italic text-brand-grey">No job.</p>;
+    ) : <p className="text-xs italic text-brand-grey dark:text-slate-400">No job.</p>;
   }
 
   function renderReadiness() {
@@ -438,7 +438,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
       <div className="space-y-1">
         {readiness.map((c) => (
           <div key={c.id} className="flex items-center gap-1.5 text-xs text-brand-black/80">
-            <span className={c.complete ? "text-emerald-600" : "text-brand-grey"}>{c.complete ? "✓" : "○"}</span> {c.label}
+            <span className={c.complete ? "text-emerald-600" : "text-brand-grey dark:text-slate-400"}>{c.complete ? "✓" : "○"}</span> {c.label}
           </div>
         ))}
       </div>
@@ -450,9 +450,9 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
       <div>
         <div className="mb-2 flex gap-1.5">
           <span className="rounded bg-brand-lea px-2 py-1 text-[11px] font-semibold text-white">Limited HTML</span>
-          <span className="rounded border border-brand-lea/15 px-2 py-1 text-[11px] text-brand-lea">Plain Text</span>
+          <span className="rounded border border-brand-lea/15 px-2 py-1 text-[11px] text-brand-lea dark:border-white/10 dark:text-slate-100">Plain Text</span>
         </div>
-        <pre className="max-h-full overflow-auto whitespace-pre-wrap rounded border border-brand-lea/10 bg-white p-2 font-mono text-[9px] leading-4 text-brand-grey">{(limitedHtml || "Nothing to export.").slice(0, 1200)}</pre>
+        <pre className="max-h-full overflow-auto whitespace-pre-wrap rounded border border-brand-lea/10 bg-white p-2 font-mono text-[9px] leading-4 text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">{(limitedHtml || "Nothing to export.").slice(0, 1200)}</pre>
       </div>
     );
   }
@@ -460,13 +460,13 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
   function renderSelector() {
     return (
       <div>
-        <div className="mb-2 rounded border border-brand-lea/15 px-2 py-1 text-xs text-brand-grey">Search jobs…</div>
+        <div className="mb-2 rounded border border-brand-lea/15 px-2 py-1 text-xs text-brand-grey dark:border-white/10 dark:text-slate-400">Search jobs…</div>
         <div className="flex flex-wrap gap-1.5">
           {["Active (19)", "Archived (60)", "All (79)"].map((t, i) => (
-            <span key={t} className={`rounded px-2 py-1 text-[11px] font-semibold ${i === 0 ? "bg-brand-lea text-white" : "bg-brand-cloudDancer text-brand-grey"}`}>{t}</span>
+            <span key={t} className={`rounded px-2 py-1 text-[11px] font-semibold ${i === 0 ? "bg-brand-lea text-white" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400"}`}>{t}</span>
           ))}
         </div>
-        <div className="mt-2 truncate rounded border border-brand-gold/40 bg-brand-sweet/20 px-2 py-1.5 text-xs font-semibold text-brand-lea">{job?.title ?? "No job"}</div>
+        <div className="mt-2 truncate rounded border border-brand-gold/40 bg-brand-sweet/20 px-2 py-1.5 text-xs font-semibold text-brand-lea dark:text-slate-100">{job?.title ?? "No job"}</div>
       </div>
     );
   }
@@ -487,7 +487,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
       case "jb-aviation":
         return <FieldRows rows={[["Seat code", job?.seatCode ?? null], ["Position", job?.positionCode ?? null], ["Travel %", job?.travelPercentage ?? null], ["Aircraft", null], ["Total time", null], ["Type rating", null]]} />;
       case "jb-summary":
-        return job?.summary ? <p className="text-xs leading-5 text-brand-black/80">{job.summary}</p> : <p className="text-xs italic text-brand-grey">No summary.</p>;
+        return job?.summary ? <p className="text-xs leading-5 text-brand-black/80">{job.summary}</p> : <p className="text-xs italic text-brand-grey dark:text-slate-400">No summary.</p>;
       case "jb-responsibilities":
         return renderSection("responsibilities");
       case "jb-qualifications":
@@ -498,11 +498,11 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
         return (
           <div className="space-y-1">
             {job?.blockInstances.length ? job.blockInstances.map((inst) => (
-              <div key={inst.id} className="flex items-center justify-between gap-2 rounded border border-brand-lea/10 bg-white px-2 py-1 text-xs">
-                <span className="truncate font-semibold text-brand-lea">{getInstanceTitle(inst)}</span>
+              <div key={inst.id} className="flex items-center justify-between gap-2 rounded border border-brand-lea/10 bg-white px-2 py-1 text-xs dark:border-white/10 dark:bg-[#10243a]">
+                <span className="truncate font-semibold text-brand-lea dark:text-slate-100">{getInstanceTitle(inst)}</span>
                 <span className="shrink-0 rounded bg-brand-lea/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-eden">{inst.contentBlock?.category ?? "—"}</span>
               </div>
-            )) : <p className="text-xs italic text-brand-grey">No blocks attached.</p>}
+            )) : <p className="text-xs italic text-brand-grey dark:text-slate-400">No blocks attached.</p>}
           </div>
         );
       case "jb-preview":
@@ -516,7 +516,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
         return renderExport();
       case "fr-status":
         return (
-          <div className={`rounded px-2 py-1.5 text-center text-xs font-bold ${readyCount === readiness.length ? "bg-emerald-50 text-emerald-800" : "bg-brand-gold/20 text-brand-lea"}`}>
+          <div className={`rounded px-2 py-1.5 text-center text-xs font-bold ${readyCount === readiness.length ? "bg-emerald-50 text-emerald-800" : "bg-brand-gold/20 text-brand-lea dark:text-slate-100"}`}>
             {readyCount === readiness.length ? "Ready to publish" : `${readiness.length - readyCount} item(s) to review`}
           </div>
         );
@@ -524,9 +524,9 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
         return (
           <div className="space-y-1">
             {blocks.slice(0, 10).map((b) => (
-              <div key={b.id} className="flex items-center justify-between gap-2 rounded border border-brand-lea/10 bg-white px-2 py-1 text-xs">
-                <span className="truncate font-semibold text-brand-lea">{b.name}</span>
-                <span className="shrink-0 rounded bg-brand-gold/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-lea">{b.category}</span>
+              <div key={b.id} className="flex items-center justify-between gap-2 rounded border border-brand-lea/10 bg-white px-2 py-1 text-xs dark:border-white/10 dark:bg-[#10243a]">
+                <span className="truncate font-semibold text-brand-lea dark:text-slate-100">{b.name}</span>
+                <span className="shrink-0 rounded bg-brand-gold/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-lea dark:text-slate-100">{b.category}</span>
               </div>
             ))}
           </div>
@@ -539,10 +539,10 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
               if (!inP.length) return null;
               return (
                 <div key={p.key}>
-                  <div className="text-[10px] font-bold uppercase tracking-wide text-brand-grey">{p.label}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">{p.label}</div>
                   <div className="mt-1 flex flex-wrap gap-1">
                     {inP.slice(0, 6).map((b) => (
-                      <span key={b.id} className="rounded border border-brand-lea/15 bg-brand-cloudDancer/40 px-2 py-1 text-[10px] font-semibold text-brand-lea" title={b.category}>{b.name}</span>
+                      <span key={b.id} className="rounded border border-brand-lea/15 bg-brand-cloudDancer/40 px-2 py-1 text-[10px] font-semibold text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-100" title={b.category}>{b.name}</span>
                     ))}
                   </div>
                 </div>
@@ -555,19 +555,19 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
         return sample?.currentVersion ? (
           <div>
             <div className="mb-1 flex gap-1">
-              <span className="rounded border border-brand-lea/15 px-1.5 py-0.5 text-[10px] font-bold text-brand-lea">B</span>
-              <span className="rounded border border-brand-lea/15 px-1.5 py-0.5 text-[10px] text-brand-grey">{sample.currentVersion.bodyFormat === "PARAGRAPH" ? "Paragraphs" : sample.currentVersion.bodyFormat === "MIXED" ? "Mixed" : "Bullets"}</span>
+              <span className="rounded border border-brand-lea/15 px-1.5 py-0.5 text-[10px] font-bold text-brand-lea dark:border-white/10 dark:text-slate-100">B</span>
+              <span className="rounded border border-brand-lea/15 px-1.5 py-0.5 text-[10px] text-brand-grey dark:border-white/10 dark:text-slate-400">{sample.currentVersion.bodyFormat === "PARAGRAPH" ? "Paragraphs" : sample.currentVersion.bodyFormat === "MIXED" ? "Mixed" : "Bullets"}</span>
             </div>
-            <div className="mb-1 text-xs font-bold text-brand-lea">{sample.name}</div>
+            <div className="mb-1 text-xs font-bold text-brand-lea dark:text-slate-100">{sample.name}</div>
             <BodyView body={sample.currentVersion.body} format={sample.currentVersion.bodyFormat} />
           </div>
-        ) : <p className="text-xs italic text-brand-grey">No blocks.</p>;
+        ) : <p className="text-xs italic text-brand-grey dark:text-slate-400">No blocks.</p>;
       }
       case "cb-apply":
         return (
           <div className="space-y-1.5 text-xs text-brand-black/80">
-            <div className="flex items-center gap-1.5"><span className="text-brand-lea">◉</span> Apply to all jobs (79)</div>
-            <div className="flex items-center gap-1.5"><span className="text-brand-grey">○</span> Apply to selected jobs</div>
+            <div className="flex items-center gap-1.5"><span className="text-brand-lea dark:text-slate-100">◉</span> Apply to all jobs (79)</div>
+            <div className="flex items-center gap-1.5"><span className="text-brand-grey dark:text-slate-400">○</span> Apply to selected jobs</div>
             <div className="mt-1 rounded bg-brand-lea px-2 py-1 text-center text-[11px] font-semibold text-white">Apply to all jobs</div>
           </div>
         );
@@ -576,16 +576,16 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
         return (
           <div className="space-y-1">
             {sample?.versions?.length ? sample.versions.slice(0, 5).map((v) => (
-              <div key={v.id} className="flex items-center justify-between gap-2 rounded border border-brand-lea/10 px-2 py-1 text-xs">
+              <div key={v.id} className="flex items-center justify-between gap-2 rounded border border-brand-lea/10 px-2 py-1 text-xs dark:border-white/10">
                 <span className="truncate text-brand-black/80">v{v.versionNumber} — {v.title}</span>
-                {v.id === sample.currentVersionId ? <span className="shrink-0 rounded bg-brand-gold/22 px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-lea">Current</span> : null}
+                {v.id === sample.currentVersionId ? <span className="shrink-0 rounded bg-brand-gold/22 px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-lea dark:text-slate-100">Current</span> : null}
               </div>
-            )) : <p className="text-xs italic text-brand-grey">No versions.</p>}
+            )) : <p className="text-xs italic text-brand-grey dark:text-slate-400">No versions.</p>}
           </div>
         );
       }
       case "jb-bulk":
-        return <p className="text-xs text-brand-grey">Archive inactive roles or restore archived roles.</p>;
+        return <p className="text-xs text-brand-grey dark:text-slate-400">Archive inactive roles or restore archived roles.</p>;
       default:
         return null;
     }
@@ -593,44 +593,44 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
 
   return (
     <div className="px-5 py-5 lg:px-8">
-      <section className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+      <section className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Experimental</p>
-          <h1 className="text-2xl font-semibold text-brand-lea">Layout Lab</h1>
-          <p className="mt-1 max-w-3xl text-sm text-brand-grey">
-            Every box from all three publishing pages, with real <span className="font-semibold text-brand-lea">{job?.title ?? "sample"}</span>{" "}
+          <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Layout Lab</h1>
+          <p className="mt-1 max-w-3xl text-sm text-brand-grey dark:text-slate-400">
+            Every box from all three publishing pages, with real <span className="font-semibold text-brand-lea dark:text-slate-100">{job?.title ?? "sample"}</span>{" "}
             content. Drag by the header, resize from the corner, <Lock className="inline h-3 w-3" /> lock a box so nothing
             pushes it, <EyeOff className="inline h-3 w-3" /> hide a duplicate, and{" "}
             <ArrowRightLeft className="inline h-3 w-3" /> move a box onto a consolidated <span className="font-semibold text-indigo-600">Page 1</span> /{" "}
             <span className="font-semibold text-fuchsia-700">Page 2</span> to rehearse merging. Try a{" "}
-            <span className="font-semibold text-brand-lea">preset</span>, then <span className="font-semibold text-brand-lea">Copy layout</span> when ready.
+            <span className="font-semibold text-brand-lea dark:text-slate-100">preset</span>, then <span className="font-semibold text-brand-lea dark:text-slate-100">Copy layout</span> when ready.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => setShowGrid((v) => !v)} className={`inline-flex items-center gap-1.5 rounded border px-3 py-2 text-sm font-semibold transition ${showGrid ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-lea hover:bg-brand-cloudDancer/60"}`}>
+          <button onClick={() => setShowGrid((v) => !v)} className={`inline-flex items-center gap-1.5 rounded border px-3 py-2 text-sm font-semibold transition ${showGrid ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-lea hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"}`}>
             <Grid3x3 className="h-4 w-4" /> Grid
           </button>
           <button onClick={copyLayout} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden">{copied ? "Copied!" : "Copy layout"}</button>
-          <button onClick={reset} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">Reset</button>
+          <button onClick={reset} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">Reset</button>
         </div>
       </section>
 
       {/* Controls: presets + density */}
-      <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded border border-brand-lea/10 bg-white px-3 py-2">
+      <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded border border-brand-lea/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#10243a]">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Presets:</span>
-          <button onClick={() => applyPreset("source")} className="rounded border border-brand-lea/20 px-3 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">Source (3 cols)</button>
+          <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Presets:</span>
+          <button onClick={() => applyPreset("source")} className="rounded border border-brand-lea/20 px-3 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">Source (3 cols)</button>
           <button onClick={() => applyPreset("one")} className="rounded border border-indigo-300 bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700 transition hover:bg-indigo-100">One-page draft</button>
           <button onClick={() => applyPreset("two")} className="rounded border border-fuchsia-300 bg-fuchsia-50 px-3 py-1 text-[11px] font-semibold text-fuchsia-700 transition hover:bg-fuchsia-100">Two-page split</button>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Density:</span>
-          <div className="inline-flex overflow-hidden rounded border border-brand-lea/20">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Density:</span>
+          <div className="inline-flex overflow-hidden rounded border border-brand-lea/20 dark:border-white/10">
             {(["compact", "cozy", "roomy"] as Density[]).map((d) => (
               <button
                 key={d}
                 onClick={() => changeDensity(d)}
-                className={`px-3 py-1 text-[11px] font-semibold capitalize transition ${density === d ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60"}`}
+                className={`px-3 py-1 text-[11px] font-semibold capitalize transition ${density === d ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60 dark:text-slate-100 dark:bg-white/5"}`}
               >
                 {d}
               </button>
@@ -638,26 +638,26 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Grid:</span>
-          <div className="inline-flex overflow-hidden rounded border border-brand-lea/20">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Grid:</span>
+          <div className="inline-flex overflow-hidden rounded border border-brand-lea/20 dark:border-white/10">
             {COL_OPTIONS.map((o) => (
               <button
                 key={o.n}
                 onClick={() => changeCols(o.n)}
                 title={`${o.n} columns`}
-                className={`px-3 py-1 text-[11px] font-semibold transition ${cols === o.n ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60"}`}
+                className={`px-3 py-1 text-[11px] font-semibold transition ${cols === o.n ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60 dark:text-slate-100 dark:bg-white/5"}`}
               >
                 {o.label}
               </button>
             ))}
           </div>
-          <span className="text-[10px] text-brand-grey">finer = smaller snap steps</span>
+          <span className="text-[10px] text-brand-grey dark:text-slate-400">finer = smaller snap steps</span>
         </div>
       </div>
 
       {/* Page filter chips (also the color legend) */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Pages:</span>
+        <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Pages:</span>
         {["All", ...ALL_PAGES].map((p) => {
           const active = pageFilter === p;
           const count = pageCounts[p] ?? 0;
@@ -665,25 +665,25 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
             <button
               key={p}
               onClick={() => setPageFilter(p)}
-              className={`inline-flex items-center gap-1.5 rounded border px-3 py-1 text-[11px] font-semibold transition ${active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/15 bg-white text-brand-lea hover:bg-brand-cloudDancer/50"}`}
+              className={`inline-flex items-center gap-1.5 rounded border px-3 py-1 text-[11px] font-semibold transition ${active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/15 bg-white text-brand-lea hover:bg-brand-cloudDancer/50 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100 dark:bg-white/5"}`}
             >
               {p !== "All" && <span className={`h-2.5 w-2.5 rounded-full ${PAGE_DOT[p]}`} />}
               {p}
-              <span className={`rounded px-1.5 text-[10px] ${active ? "bg-white/25" : "bg-brand-lea/10 text-brand-grey"}`}>{count}</span>
+              <span className={`rounded px-1.5 text-[10px] ${active ? "bg-white/25" : "bg-brand-lea/10 text-brand-grey dark:text-slate-400"}`}>{count}</span>
             </button>
           );
         })}
       </div>
 
       {hiddenWidgets.length > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-2 rounded border border-brand-lea/10 bg-white px-3 py-2">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Hidden ({hiddenWidgets.length}):</span>
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded border border-brand-lea/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#10243a]">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Hidden ({hiddenWidgets.length}):</span>
           {hiddenWidgets.map((w) => (
             <button
               key={w.id}
               type="button"
               onClick={() => toggleHide(w.id)}
-              className="inline-flex items-center gap-1 rounded border border-brand-lea/15 bg-brand-cloudDancer/50 px-2.5 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer"
+              className="inline-flex items-center gap-1 rounded border border-brand-lea/15 bg-brand-cloudDancer/50 px-2.5 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
               title="Show again"
             >
               <Eye className="h-3 w-3" /> {w.title}
@@ -693,14 +693,14 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
       )}
 
       {visibleWidgets.length === 0 && (
-        <div className="rounded-lg border border-dashed border-brand-lea/20 bg-white px-4 py-10 text-center text-sm text-brand-grey">
-          No boxes on <span className="font-semibold text-brand-lea">{pageFilter}</span> yet. Use a box&apos;s{" "}
+        <div className="rounded-lg border border-dashed border-brand-lea/20 bg-white px-4 py-10 text-center text-sm text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">
+          No boxes on <span className="font-semibold text-brand-lea dark:text-slate-100">{pageFilter}</span> yet. Use a box&apos;s{" "}
           <ArrowRightLeft className="inline h-3 w-3" /> move menu to assign boxes here.
         </div>
       )}
 
       <div
-        className="rounded-lg bg-brand-cloudDancer/30 p-1"
+        className="rounded-lg bg-brand-cloudDancer/30 p-1 dark:bg-white/5"
         style={
           showGrid
             ? {
@@ -729,7 +729,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
             const page = pageOf(w);
             const moved = page !== w.source;
             return (
-              <div key={w.id} className={`flex flex-col overflow-hidden rounded-lg border bg-white shadow-panel ${isLocked ? "border-brand-gold ring-2 ring-brand-gold/40" : "border-brand-lea/15"}`}>
+              <div key={w.id} className={`flex flex-col overflow-hidden rounded-lg border bg-white shadow-panel dark:bg-[#10243a] ${isLocked ? "border-brand-gold ring-2 ring-brand-gold/40" : "border-brand-lea/15 dark:border-white/10"}`}>
                 <div className={`lab-drag flex shrink-0 items-center justify-between gap-2 px-3 py-1.5 ${isLocked ? "cursor-default" : "cursor-move"} ${PAGE_COLOR[page]}`}>
                   <span className="flex min-w-0 items-center gap-1.5">
                     <span className="truncate text-[11px] font-bold uppercase tracking-wide">{w.title}</span>
@@ -778,10 +778,10 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setMoveMenu(null)} />
           <div
-            className="fixed z-50 w-56 rounded-lg border border-brand-lea/20 bg-white p-1.5 shadow-xl"
+            className="fixed z-50 w-56 rounded-lg border border-brand-lea/20 bg-white p-1.5 shadow-xl dark:border-white/10 dark:bg-[#10243a]"
             style={{ left: Math.min(moveMenu.x, (typeof window !== "undefined" ? window.innerWidth : 1200) - 240), top: moveMenu.y + 6 }}
           >
-            <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-grey">Move this box to →</div>
+            <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Move this box to →</div>
             {ALL_PAGES.map((p) => {
               const current = (assign[moveMenu.id] ?? WIDGETS.find((w) => w.id === moveMenu.id)?.source) === p;
               const isOrigin = WIDGETS.find((w) => w.id === moveMenu.id)?.source === p;
@@ -789,12 +789,12 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
                 <button
                   key={p}
                   onClick={() => reassign(moveMenu.id, p)}
-                  className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition ${current ? "bg-brand-cloudDancer/60 font-semibold text-brand-lea" : "text-brand-black/80 hover:bg-brand-cloudDancer/40"}`}
+                  className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition ${current ? "bg-brand-cloudDancer/60 font-semibold text-brand-lea dark:bg-white/5 dark:text-slate-100" : "text-brand-black/80 hover:bg-brand-cloudDancer/40 dark:bg-white/5"}`}
                 >
                   <span className="flex items-center gap-2">
                     <span className={`h-2.5 w-2.5 rounded-full ${PAGE_DOT[p]}`} />
                     {p}
-                    {isOrigin && <span className="text-[9px] uppercase text-brand-grey">(origin)</span>}
+                    {isOrigin && <span className="text-[9px] uppercase text-brand-grey dark:text-slate-400">(origin)</span>}
                   </span>
                   {current && <span className="text-brand-eden">✓</span>}
                 </button>

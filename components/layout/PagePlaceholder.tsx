@@ -10,7 +10,7 @@ type PagePlaceholderProps = {
 export function PagePlaceholder({ title, eyebrow, description, cards }: PagePlaceholderProps) {
   return (
     <div className="px-5 py-5 lg:px-8">
-      <div className="rounded bg-white p-8 shadow-panel ring-1 ring-brand-lea/10">
+      <div className="rounded bg-white p-8 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
         <div className="mb-6 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded bg-brand-lea text-white">
             <Sparkles className="h-5 w-5" />
@@ -19,18 +19,18 @@ export function PagePlaceholder({ title, eyebrow, description, cards }: PagePlac
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">
               {eyebrow}
             </p>
-            <h1 className="text-3xl font-semibold text-brand-lea">{title}</h1>
+            <h1 className="text-3xl font-semibold text-brand-lea dark:text-slate-100">{title}</h1>
           </div>
         </div>
         <p className="max-w-3xl text-sm leading-6 text-brand-black/72">{description}</p>
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {cards.map((card) => (
-            <div key={card} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/70 p-4">
-              <div className="mb-3 flex h-8 w-8 items-center justify-center rounded bg-brand-gold/20 text-brand-lea">
+            <div key={card} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/70 p-4 dark:border-white/10 dark:bg-white/5">
+              <div className="mb-3 flex h-8 w-8 items-center justify-center rounded bg-brand-gold/20 text-brand-lea dark:text-slate-100">
                 <Lock className="h-4 w-4" />
               </div>
-              <div className="text-sm font-semibold text-brand-lea">{card}</div>
-              <p className="mt-2 text-xs leading-5 text-brand-grey">
+              <div className="text-sm font-semibold text-brand-lea dark:text-slate-100">{card}</div>
+              <p className="mt-2 text-xs leading-5 text-brand-grey dark:text-slate-400">
                 Planned workspace area for controlled rollout.
               </p>
             </div>

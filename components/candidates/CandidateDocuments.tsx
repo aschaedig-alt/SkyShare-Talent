@@ -28,7 +28,7 @@ function effectiveType(file: { documentType: string | null; displayFilename: str
 // PDF.js highlight viewer — client-only, loaded on demand (used during search).
 const PdfViewer = dynamic(() => import("@/components/candidates/PdfViewer").then((m) => m.PdfViewer), {
   ssr: false,
-  loading: () => <div className="py-20 text-center text-sm text-brand-grey">Loading highlight viewer…</div>
+  loading: () => <div className="py-20 text-center text-sm text-brand-grey dark:text-slate-400">Loading highlight viewer…</div>
 });
 
 export type CandidateFileItem = {
@@ -87,10 +87,10 @@ function findPilotApp(files: CandidateFileItem[], excludeId?: string) {
 function FilePreview({ file, mode, searchTerm }: { file: CandidateFileItem; mode: "actual" | "fit"; searchTerm?: string }) {
   if (!file.storageKey) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-brand-lea/10 bg-white py-16 text-center">
+      <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-brand-lea/10 bg-white py-16 text-center dark:border-white/10 dark:bg-[#10243a]">
         <FileWarning className="h-8 w-8 text-brand-grey/50" />
-        <p className="font-semibold text-brand-lea">File content not stored</p>
-        <p className="text-sm text-brand-grey">Metadata only — re-upload to preview.</p>
+        <p className="font-semibold text-brand-lea dark:text-slate-100">File content not stored</p>
+        <p className="text-sm text-brand-grey dark:text-slate-400">Metadata only — re-upload to preview.</p>
       </div>
     );
   }
@@ -106,23 +106,23 @@ function FilePreview({ file, mode, searchTerm }: { file: CandidateFileItem; mode
         key={file.id}
         src={`/api/candidate-files/${file.id}${hash}`}
         title={file.displayFilename}
-        className={clsx("w-full rounded-lg border border-brand-lea/10 bg-white", heightClass)}
+        className={clsx("w-full rounded-lg border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]", heightClass)}
       />
     );
   }
   if (isImage(file)) {
     return (
-      <div className="flex justify-center rounded-lg border border-brand-lea/10 bg-white p-4">
+      <div className="flex justify-center rounded-lg border border-brand-lea/10 bg-white p-4 dark:border-white/10 dark:bg-[#10243a]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={`/api/candidate-files/${file.id}`} alt={file.displayFilename} className="max-h-[82vh] w-auto rounded" />
       </div>
     );
   }
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-brand-lea/10 bg-white py-16 text-center">
+    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-brand-lea/10 bg-white py-16 text-center dark:border-white/10 dark:bg-[#10243a]">
       <FileText className="h-8 w-8 text-brand-grey/50" />
-      <p className="font-semibold text-brand-lea">Inline preview not available</p>
-      <p className="max-w-sm text-sm text-brand-grey">{file.displayFilename} can&apos;t preview in the browser.</p>
+      <p className="font-semibold text-brand-lea dark:text-slate-100">Inline preview not available</p>
+      <p className="max-w-sm text-sm text-brand-grey dark:text-slate-400">{file.displayFilename} can&apos;t preview in the browser.</p>
       <a href={`/api/candidate-files/${file.id}`} download className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-eden">
         <Download className="h-4 w-4" /> Download
       </a>
@@ -327,14 +327,14 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
   const effectiveLayout: Layout = trimmedSearch ? "single" : layout;
 
   return (
-    <section className="rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10">
+    <section className="rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <input ref={fileInputRef} type="file" multiple accept={UPLOAD_ACCEPT} className="sr-only" onChange={(e) => handleUpload(e.currentTarget.files)} />
 
       {/* In-document search */}
       {files.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 border-b border-brand-lea/10 px-3 py-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-brand-lea/20 px-2.5 py-1.5">
-            <Search className="h-4 w-4 shrink-0 text-brand-grey" />
+        <div className="flex flex-wrap items-center gap-2 border-b border-brand-lea/10 px-3 py-2 dark:border-white/10">
+          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-brand-lea/20 px-2.5 py-1.5 dark:border-white/10">
+            <Search className="h-4 w-4 shrink-0 text-brand-grey dark:text-slate-400" />
             <input
               value={docSearch}
               onChange={(e) => setDocSearch(e.target.value)}
@@ -342,15 +342,15 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
               className="min-w-0 flex-1 bg-transparent text-sm outline-none"
             />
             {docSearch && (
-              <button onClick={() => setDocSearch("")} className="text-brand-grey hover:text-brand-lea" aria-label="Clear search">
+              <button onClick={() => setDocSearch("")} className="text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100" aria-label="Clear search">
                 <X className="h-4 w-4" />
               </button>
             )}
           </div>
           {trimmedSearch && (
-            <span className="text-xs text-brand-grey">
+            <span className="text-xs text-brand-grey dark:text-slate-400">
               {matchingIds.size > 0 ? (
-                <>Found in <span className="font-semibold text-brand-lea">{matchingIds.size}</span> document{matchingIds.size === 1 ? "" : "s"}</>
+                <>Found in <span className="font-semibold text-brand-lea dark:text-slate-100">{matchingIds.size}</span> document{matchingIds.size === 1 ? "" : "s"}</>
               ) : (
                 <>No documents contain “{trimmedSearch}”</>
               )}
@@ -361,10 +361,10 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
 
       {/* Type filter chips */}
       {files.length > 0 && presentTypes.length > 1 && (
-        <div className="flex flex-wrap items-center gap-1.5 border-b border-brand-lea/10 px-3 py-2">
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-brand-lea/10 px-3 py-2 dark:border-white/10">
           <button
             onClick={() => setTypeFilter("All")}
-            className={clsx("rounded px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow", typeFilter === "All" ? "bg-brand-lea text-white" : "bg-brand-cloudDancer/60 text-brand-grey hover:text-brand-lea")}
+            className={clsx("rounded px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow", typeFilter === "All" ? "bg-brand-lea text-white" : "bg-brand-cloudDancer/60 text-brand-grey hover:text-brand-lea dark:bg-white/5 dark:text-slate-400 dark:text-slate-100")}
           >
             All <span className="opacity-70">{files.length}</span>
           </button>
@@ -372,7 +372,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
             <button
               key={t}
               onClick={() => setTypeFilter(t)}
-              className={clsx("rounded px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow", typeFilter === t ? "bg-brand-lea text-white" : "bg-brand-cloudDancer/60 text-brand-grey hover:text-brand-lea")}
+              className={clsx("rounded px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow", typeFilter === t ? "bg-brand-lea text-white" : "bg-brand-cloudDancer/60 text-brand-grey hover:text-brand-lea dark:bg-white/5 dark:text-slate-400 dark:text-slate-100")}
             >
               {t} <span className="opacity-70">{typeCounts.get(t)}</span>
             </button>
@@ -382,7 +382,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
 
       {/* Tab strip + layout toggle (only when there are documents) */}
       {files.length > 0 && (
-      <div className="flex items-center gap-2 border-b border-brand-lea/10 px-2 py-1.5">
+      <div className="flex items-center gap-2 border-b border-brand-lea/10 px-2 py-1.5 dark:border-white/10">
         <div className="flex items-center gap-1 overflow-x-auto">
           {filteredFiles.map((file) => {
             const Icon = fileIcon(file);
@@ -397,13 +397,13 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                 }}
                 className={clsx(
                   "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition hover:shadow-glow",
-                  active ? "bg-brand-lea text-white" : "text-brand-grey hover:bg-brand-cloudDancer/40 hover:text-brand-lea"
+                  active ? "bg-brand-lea text-white" : "text-brand-grey hover:bg-brand-cloudDancer/40 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5 dark:text-slate-100"
                 )}
                 title={file.displayFilename}
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 <span className="max-w-[150px] truncate">{file.displayFilename}</span>
-                {isMatch && <span className={clsx("h-1.5 w-1.5 shrink-0 rounded-full", active ? "bg-white" : "bg-brand-gold")} />}
+                {isMatch && <span className={clsx("h-1.5 w-1.5 shrink-0 rounded-full", active ? "bg-white dark:bg-[#10243a]" : "bg-brand-gold")} />}
               </button>
             );
           })}
@@ -411,16 +411,16 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {canCompare && (
-            <div className="flex items-center rounded-lg border border-brand-lea/15 p-0.5">
+            <div className="flex items-center rounded-lg border border-brand-lea/15 p-0.5 dark:border-white/10">
               <button
                 onClick={() => setLayout("single")}
-                className={clsx("rounded px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow", layout === "single" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea")}
+                className={clsx("rounded px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow", layout === "single" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100")}
               >
                 Single
               </button>
               <button
                 onClick={() => setLayout("compare")}
-                className={clsx("rounded px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow", layout === "compare" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea")}
+                className={clsx("rounded px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow", layout === "compare" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100")}
               >
                 Side by side
               </button>
@@ -428,7 +428,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
           )}
           <button
             onClick={openLink}
-            className="flex items-center gap-1.5 rounded-lg border border-brand-lea/20 px-3 py-2 text-sm font-medium text-brand-grey transition hover:text-brand-lea"
+            className="flex items-center gap-1.5 rounded-lg border border-brand-lea/20 px-3 py-2 text-sm font-medium text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:text-slate-100"
             title="Attach a file that was uploaded via Imports"
           >
             <Link2 className="h-4 w-4" /> Link
@@ -436,7 +436,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="flex items-center gap-1.5 rounded-lg border border-dashed border-brand-lea/30 px-3 py-2 text-sm font-medium text-brand-grey transition hover:border-brand-gold hover:text-brand-lea disabled:opacity-60"
+            className="flex items-center gap-1.5 rounded-lg border border-dashed border-brand-lea/30 px-3 py-2 text-sm font-medium text-brand-grey transition hover:border-brand-gold hover:text-brand-lea disabled:opacity-60 dark:border-white/10 dark:text-slate-400 dark:text-slate-100"
           >
             {uploading ? <Loader className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             {uploading ? "Uploading…" : "Add"}
@@ -449,23 +449,23 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
 
       {/* Link an unassigned (Imports-uploaded) file */}
       {showLink && (
-        <div className="m-3 rounded-lg border border-brand-lea/15 bg-brand-cloudDancer/30 p-3">
+        <div className="m-3 rounded-lg border border-brand-lea/15 bg-brand-cloudDancer/30 p-3 dark:border-white/10 dark:bg-white/5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-brand-lea">Attach a file uploaded via Imports</span>
-            <button onClick={() => setShowLink(false)} className="text-brand-grey hover:text-brand-lea" aria-label="Close">
+            <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">Attach a file uploaded via Imports</span>
+            <button onClick={() => setShowLink(false)} className="text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100" aria-label="Close">
               <X className="h-4 w-4" />
             </button>
           </div>
           {linkLoading ? (
-            <div className="flex items-center gap-2 py-4 text-xs text-brand-grey"><Loader className="h-4 w-4 animate-spin" /> Loading…</div>
+            <div className="flex items-center gap-2 py-4 text-xs text-brand-grey dark:text-slate-400"><Loader className="h-4 w-4 animate-spin" /> Loading…</div>
           ) : unassigned.length === 0 ? (
-            <p className="py-3 text-xs text-brand-grey">No unassigned uploaded files. Files uploaded here attach automatically.</p>
+            <p className="py-3 text-xs text-brand-grey dark:text-slate-400">No unassigned uploaded files. Files uploaded here attach automatically.</p>
           ) : (
             <div className="mt-2 space-y-1.5">
               {unassigned.map((f) => (
-                <div key={f.id} className="flex items-center gap-2 rounded border border-brand-lea/10 bg-white px-2.5 py-1.5">
+                <div key={f.id} className="flex items-center gap-2 rounded border border-brand-lea/10 bg-white px-2.5 py-1.5 dark:border-white/10 dark:bg-[#10243a]">
                   <span className="rounded bg-red-100 px-1 py-0.5 text-[9px] font-bold text-red-800">PDF</span>
-                  <span className="min-w-0 flex-1 truncate text-sm text-brand-lea">{f.displayFilename}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm text-brand-lea dark:text-slate-100">{f.displayFilename}</span>
                   <button
                     onClick={() => linkFile(f.id)}
                     disabled={linkingId === f.id}
@@ -483,13 +483,13 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
       {!activeFile ? (
         <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
           <FileText className="h-10 w-10 text-brand-grey/50" />
-          <p className="font-semibold text-brand-lea">No documents yet</p>
-          <p className="max-w-sm text-sm text-brand-grey">Add a resume, pilot app, or other PDF — it previews right here.</p>
+          <p className="font-semibold text-brand-lea dark:text-slate-100">No documents yet</p>
+          <p className="max-w-sm text-sm text-brand-grey dark:text-slate-400">Add a resume, pilot app, or other PDF — it previews right here.</p>
           <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
             <button onClick={() => fileInputRef.current?.click()} className="rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-eden">
               Upload document
             </button>
-            <button onClick={openLink} className="flex items-center gap-1.5 rounded-lg border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/40">
+            <button onClick={openLink} className="flex items-center gap-1.5 rounded-lg border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/40 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
               <Link2 className="h-4 w-4" /> Link an uploaded file
             </button>
           </div>
@@ -501,12 +501,12 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
             { file: leftFile, set: setLeftId, fallback: "Left document" },
             { file: rightFile, set: setRightId, fallback: "Right document" }
           ].map((pane, idx) => (
-            <div key={idx} className="rounded-lg border border-brand-lea/10">
-              <div className="flex items-center gap-2 border-b border-brand-lea/10 px-2 py-2">
+            <div key={idx} className="rounded-lg border border-brand-lea/10 dark:border-white/10">
+              <div className="flex items-center gap-2 border-b border-brand-lea/10 px-2 py-2 dark:border-white/10">
                 <select
                   value={pane.file?.id ?? ""}
                   onChange={(e) => pane.set(e.target.value)}
-                  className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm font-medium text-brand-lea"
+                  className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm font-medium text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
                 >
                   {files.map((f) => (
                     <option key={f.id} value={f.id}>
@@ -515,13 +515,13 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                   ))}
                 </select>
                 {pane.file?.storageKey && (
-                  <a href={`/api/candidate-files/${pane.file.id}`} download className="rounded p-1.5 text-brand-grey hover:bg-brand-cloudDancer/40 hover:text-brand-lea" aria-label="Download">
+                  <a href={`/api/candidate-files/${pane.file.id}`} download className="rounded p-1.5 text-brand-grey hover:bg-brand-cloudDancer/40 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5 dark:text-slate-100" aria-label="Download">
                     <Download className="h-4 w-4" />
                   </a>
                 )}
               </div>
-              <div className="bg-brand-cloudDancer/30 p-2">
-                {pane.file ? <FilePreview file={pane.file} mode="fit" /> : <div className="py-16 text-center text-sm text-brand-grey">{pane.fallback}</div>}
+              <div className="bg-brand-cloudDancer/30 p-2 dark:bg-white/5">
+                {pane.file ? <FilePreview file={pane.file} mode="fit" /> : <div className="py-16 text-center text-sm text-brand-grey dark:text-slate-400">{pane.fallback}</div>}
               </div>
             </div>
           ))}
@@ -529,7 +529,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
       ) : (
         /* Single focus view */
         <>
-          <div className="flex flex-wrap items-center gap-2 border-b border-brand-lea/10 px-4 py-2.5">
+          <div className="flex flex-wrap items-center gap-2 border-b border-brand-lea/10 px-4 py-2.5 dark:border-white/10">
             <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-800">
               {isPdf(activeFile) ? "PDF" : (activeFile.mimeType?.split("/")[1] ?? "FILE").toUpperCase().slice(0, 4)}
             </span>
@@ -543,19 +543,19 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                     if (e.key === "Enter") handleRename(activeFile.id);
                     if (e.key === "Escape") setRenamingId(null);
                   }}
-                  className="min-w-0 flex-1 rounded border border-brand-lea/30 px-2 py-1 text-sm focus:border-brand-gold focus:outline-none"
+                  className="min-w-0 flex-1 rounded border border-brand-lea/30 px-2 py-1 text-sm focus:border-brand-gold focus:outline-none dark:border-white/10"
                 />
                 <button onClick={() => handleRename(activeFile.id)} disabled={busy} className="rounded p-1 text-emerald-700 hover:bg-emerald-50" aria-label="Save name"><Check className="h-4 w-4" /></button>
-                <button onClick={() => setRenamingId(null)} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/40" aria-label="Cancel"><X className="h-4 w-4" /></button>
+                <button onClick={() => setRenamingId(null)} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/40 dark:text-slate-400 dark:bg-white/5" aria-label="Cancel"><X className="h-4 w-4" /></button>
               </div>
             ) : (
               <>
-                <span className="flex-1 truncate text-sm font-medium text-brand-lea">{activeFile.displayFilename}</span>
-                {activeFile.sizeBytes ? <span className="text-xs text-brand-grey">{formatBytes(activeFile.sizeBytes)}</span> : null}
+                <span className="flex-1 truncate text-sm font-medium text-brand-lea dark:text-slate-100">{activeFile.displayFilename}</span>
+                {activeFile.sizeBytes ? <span className="text-xs text-brand-grey dark:text-slate-400">{formatBytes(activeFile.sizeBytes)}</span> : null}
                 <select
                   value={activeFile.documentType ?? ""}
                   onChange={(e) => handleSetType(activeFile.id, e.target.value)}
-                  className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-xs font-semibold text-brand-lea outline-none transition focus:border-brand-gold"
+                  className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-xs font-semibold text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
                   title="Document type"
                   aria-label="Document type"
                 >
@@ -565,19 +565,19 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                   ))}
                 </select>
                 {isExpirableType(effectiveType(activeFile)) && (
-                  <label className="flex items-center gap-1 text-[11px] text-brand-grey" title="Expiry date">
+                  <label className="flex items-center gap-1 text-[11px] text-brand-grey dark:text-slate-400" title="Expiry date">
                     <span className="hidden sm:inline">Exp</span>
                     <input
                       type="date"
                       value={activeFile.expiresAt ? activeFile.expiresAt.slice(0, 10) : ""}
                       onChange={(e) => handleSetExpiry(activeFile.id, e.target.value)}
-                      className="rounded border border-brand-lea/20 bg-white px-1.5 py-1 text-xs text-brand-lea outline-none focus:border-brand-gold"
+                      className="rounded border border-brand-lea/20 bg-white px-1.5 py-1 text-xs text-brand-lea outline-none focus:border-brand-gold dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
                     />
                   </label>
                 )}
-                <button onClick={() => { setRenamingId(activeFile.id); setRenameValue(activeFile.displayFilename); }} className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/40 hover:text-brand-lea" aria-label="Rename" title="Rename"><Pencil className="h-4 w-4" /></button>
+                <button onClick={() => { setRenamingId(activeFile.id); setRenameValue(activeFile.displayFilename); }} className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/40 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5 dark:text-slate-100" aria-label="Rename" title="Rename"><Pencil className="h-4 w-4" /></button>
                 {activeFile.storageKey && (
-                  <a href={`/api/candidate-files/${activeFile.id}`} download className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/40 hover:text-brand-lea" aria-label="Download" title="Download"><Download className="h-4 w-4" /></a>
+                  <a href={`/api/candidate-files/${activeFile.id}`} download className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/40 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5 dark:text-slate-100" aria-label="Download" title="Download"><Download className="h-4 w-4" /></a>
                 )}
                 <button onClick={() => setConfirmDeleteId(activeFile.id)} className="rounded p-1.5 text-red-600 transition hover:bg-red-50" aria-label="Delete" title="Delete"><Trash2 className="h-4 w-4" /></button>
               </>
@@ -596,7 +596,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
             </div>
           )}
 
-          <div className="bg-brand-cloudDancer/30 p-3">
+          <div className="bg-brand-cloudDancer/30 p-3 dark:bg-white/5">
             <FilePreview file={activeFile} mode="actual" searchTerm={trimmedSearch} />
           </div>
         </>

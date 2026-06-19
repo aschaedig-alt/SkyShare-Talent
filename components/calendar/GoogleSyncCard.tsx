@@ -39,11 +39,11 @@ export function GoogleSyncCard({ sync }: GoogleSyncCardProps) {
     : "Never";
 
   return (
-    <section className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+    <section className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Google Calendar</p>
-          <h2 className="text-base font-semibold text-brand-lea">Two-way sync</h2>
+          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Two-way sync</h2>
         </div>
         {sync.configured ? (
           <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase text-emerald-700">
@@ -58,14 +58,14 @@ export function GoogleSyncCard({ sync }: GoogleSyncCardProps) {
 
       {sync.configured ? (
         <>
-          <div className="mt-3 space-y-1 text-xs text-brand-grey">
+          <div className="mt-3 space-y-1 text-xs text-brand-grey dark:text-slate-400">
             <div className="flex justify-between">
               <span>Last synced</span>
-              <span className="font-medium text-brand-lea">{lastSynced}</span>
+              <span className="font-medium text-brand-lea dark:text-slate-100">{lastSynced}</span>
             </div>
             <div className="flex justify-between">
               <span>Status</span>
-              <span className="font-medium text-brand-lea">{sync.lastSyncStatus ?? "—"}</span>
+              <span className="font-medium text-brand-lea dark:text-slate-100">{sync.lastSyncStatus ?? "—"}</span>
             </div>
           </div>
 
@@ -97,13 +97,13 @@ export function GoogleSyncCard({ sync }: GoogleSyncCardProps) {
             </div>
           )}
 
-          <p className="mt-2 text-[11px] text-brand-grey">
+          <p className="mt-2 text-[11px] text-brand-grey dark:text-slate-400">
             Changes you make in the app sync to Google instantly. Use “Sync now” to pull changes made in Google back in
             (also runs automatically once a day).
           </p>
         </>
       ) : (
-        <div className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/50 p-3 text-sm text-brand-grey">
+        <div className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/50 p-3 text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
           Google Calendar credentials haven&apos;t been added yet. Once configured, interviews will sync to the shared
           SkyShare calendar automatically.
         </div>

@@ -15,13 +15,13 @@ export default async function ComplimentsLayout({ children }: { children: React.
 
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
-      <section className="flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+      <section className="flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">People</p>
-          <h1 className="text-2xl font-semibold text-brand-lea">
-            Compliments <span className="font-normal text-brand-grey">by SkyShare</span>
+          <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">
+            Compliments <span className="font-normal text-brand-grey dark:text-slate-400">by SkyShare</span>
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-brand-grey">
+          <p className="mt-1 max-w-2xl text-sm text-brand-grey dark:text-slate-400">
             Recognize new hires for living our values, celebrate wins on the company wall, and reward great work.
           </p>
         </div>

@@ -105,14 +105,14 @@ export function GiveRecognitionForm({ roster, values, strengthPoints }: Props) {
         />
 
         <div>
-          <label htmlFor="message" className="mb-2 block text-sm font-medium text-brand-lea">
+          <label htmlFor="message" className="mb-2 block text-sm font-medium text-brand-lea dark:text-slate-100">
             What&apos;s this recognition about?
           </label>
           <textarea
             id="message"
             {...register("message")}
             placeholder="Share what made this special. Be specific about the impact..."
-            className="min-h-[100px] w-full resize-none rounded-element border-[0.5px] border-brand-lea/20 px-3 py-2.5 text-sm text-brand-black outline-none focus:border-value-innovation focus:ring-2 focus:ring-value-innovation/30"
+            className="min-h-[100px] w-full resize-none rounded-element border-[0.5px] border-brand-lea/20 px-3 py-2.5 text-sm text-brand-black outline-none focus:border-value-innovation focus:ring-2 focus:ring-value-innovation/30 dark:border-white/10 dark:text-slate-100"
           />
           {errors.message ? <p className="mt-1 text-xs text-brand-red">{errors.message.message}</p> : null}
         </div>
@@ -139,11 +139,11 @@ export function GiveRecognitionForm({ roster, values, strengthPoints }: Props) {
           </p>
         ) : null}
 
-        <div className="flex gap-3 border-t border-brand-lea/10 pt-5">
+        <div className="flex gap-3 border-t border-brand-lea/10 pt-5 dark:border-white/10">
           <button
             type="button"
             onClick={() => router.push("/compliments")}
-            className="flex-1 rounded-element border-[0.5px] border-brand-lea/20 px-4 py-2.5 text-sm font-medium text-brand-lea transition hover:bg-brand-cloudDancer/60"
+            className="flex-1 rounded-element border-[0.5px] border-brand-lea/20 px-4 py-2.5 text-sm font-medium text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
           >
             Cancel
           </button>
@@ -177,8 +177,8 @@ function ValuePicker({
 
   return (
     <div>
-      <p className="mb-2.5 block text-sm font-medium text-brand-lea">
-        Which value does this reflect? <span className="font-normal text-brand-grey">(select all that apply)</span>
+      <p className="mb-2.5 block text-sm font-medium text-brand-lea dark:text-slate-100">
+        Which value does this reflect? <span className="font-normal text-brand-grey dark:text-slate-400">(select all that apply)</span>
       </p>
       <div className="grid grid-cols-2 gap-2">
         {values.map((v) => {
@@ -193,8 +193,8 @@ function ValuePicker({
               className={clsx(
                 "flex items-center justify-between gap-2 rounded-element border px-3 py-2.5 text-sm transition hover:shadow-glow",
                 isSelected
-                  ? clsx("border-2 font-medium text-brand-lea", colors.selected)
-                  : "border-[0.5px] border-brand-lea/20 text-brand-black hover:border-brand-lea/40"
+                  ? clsx("border-2 font-medium text-brand-lea dark:text-slate-100", colors.selected)
+                  : "border-[0.5px] border-brand-lea/20 text-brand-black hover:border-brand-lea/40 dark:border-white/10 dark:text-slate-100"
               )}
             >
               {v.name}
@@ -222,12 +222,12 @@ function StrengthSlider({
   const points = strengthPoints[current.value];
 
   return (
-    <div className="border-t border-brand-lea/10 pt-5">
+    <div className="border-t border-brand-lea/10 pt-5 dark:border-white/10">
       <div className="mb-3 flex items-center justify-between">
-        <label htmlFor="strength" className="text-sm font-medium text-brand-lea">
+        <label htmlFor="strength" className="text-sm font-medium text-brand-lea dark:text-slate-100">
           Recognition strength
         </label>
-        <span className="text-sm font-medium text-brand-lea">
+        <span className="text-sm font-medium text-brand-lea dark:text-slate-100">
           {current.label} · +{points} points
         </span>
       </div>
@@ -241,9 +241,9 @@ function StrengthSlider({
         onChange={(e) => onChange(STRENGTH_STOPS[Number(e.target.value) - 1].value)}
         className="w-full accent-brand-lea"
       />
-      <div className="mt-1 flex justify-between text-xs text-brand-grey">
+      <div className="mt-1 flex justify-between text-xs text-brand-grey dark:text-slate-400">
         {STRENGTH_STOPS.map((s) => (
-          <span key={s.value} className={clsx(s.value === current.value && "font-medium text-brand-lea")}>
+          <span key={s.value} className={clsx(s.value === current.value && "font-medium text-brand-lea dark:text-slate-100")}>
             {s.label}
           </span>
         ))}

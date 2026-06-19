@@ -114,7 +114,7 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
     }
   }
 
-  const inputCls = "rounded-lg border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold";
+  const inputCls = "rounded-lg border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10";
 
   return (
     <div className="space-y-5 px-5 py-5 lg:px-8">
@@ -132,9 +132,9 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
       <InterviewTabs active="guide" />
 
       {/* Controls */}
-      <section className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+      <section className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
         <div className="grid gap-4 md:grid-cols-3">
-          <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+          <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Department
             <select value={dept} onChange={(e) => setDept(e.target.value)} className={inputCls}>
               <option value="all">All departments</option>
@@ -145,7 +145,7 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
               ))}
             </select>
           </label>
-          <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+          <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Number of questions
             <select value={length} onChange={(e) => setLength(Number(e.target.value))} className={inputCls}>
               {[5, 8, 10, 12, 15].map((n) => (
@@ -156,15 +156,15 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
             </select>
           </label>
           <div className="flex items-end">
-            <span className="text-xs text-brand-grey">
+            <span className="text-xs text-brand-grey dark:text-slate-400">
               {pool().length} active question{pool().length === 1 ? "" : "s"} available
             </span>
           </div>
         </div>
 
         <div className="mt-3">
-          <span className="text-xs font-semibold text-brand-lea">Core values to cover</span>
-          <p className="mb-1.5 text-[11px] text-brand-grey">Leave empty to draw from all values.</p>
+          <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">Core values to cover</span>
+          <p className="mb-1.5 text-[11px] text-brand-grey dark:text-slate-400">Leave empty to draw from all values.</p>
           <div className="flex flex-wrap gap-1.5">
             {COMPANY_VALUES.map((v) => {
               const on = values.has(v.colorKey);
@@ -174,7 +174,7 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
                   type="button"
                   onClick={() => toggleValue(v.colorKey)}
                   className={`rounded border px-3 py-1 text-xs font-semibold transition hover:shadow-glow ${
-                    on ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"
+                    on ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:text-slate-100"
                   }`}
                 >
                   {v.name}
@@ -189,7 +189,7 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
             <Wand2 className="h-4 w-4" /> {guide ? "Regenerate" : "Generate guide"}
           </button>
           {guide && guide.length > 0 ? (
-            <button onClick={copyGuide} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea">
+            <button onClick={copyGuide} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:text-slate-100">
               {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />} {copied ? "Copied" : "Copy"}
             </button>
           ) : null}
@@ -199,12 +199,12 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
       {/* Result */}
       {guide ? (
         guide.length === 0 ? (
-          <section className="rounded-xl bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10">
-            <p className="text-sm font-semibold text-brand-lea">No matching questions</p>
-            <p className="mt-1 text-sm text-brand-grey">Add questions to the bank for this department/values, or widen the filters.</p>
+          <section className="rounded-xl bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+            <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">No matching questions</p>
+            <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">Add questions to the bank for this department/values, or widen the filters.</p>
           </section>
         ) : (
-          <section className="space-y-4 rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+          <section className="space-y-4 rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
             {guide.length < length ? (
               <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
                 Only {guide.length} matching question{guide.length === 1 ? "" : "s"} available — add more to the bank to reach {length}.
@@ -220,15 +220,15 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
                       n += 1;
                       return (
                         <li key={q.id} className="flex gap-2">
-                          <span className="shrink-0 text-sm font-semibold text-brand-grey">{n}.</span>
+                          <span className="shrink-0 text-sm font-semibold text-brand-grey dark:text-slate-400">{n}.</span>
                           <div>
-                            <p className="text-sm text-brand-black">
+                            <p className="text-sm text-brand-black dark:text-slate-100">
                               {q.text}
-                              <span className="ml-2 rounded bg-brand-cloudDancer/70 px-2 py-0.5 text-[10px] font-semibold text-brand-grey">
+                              <span className="ml-2 rounded bg-brand-cloudDancer/70 px-2 py-0.5 text-[10px] font-semibold text-brand-grey dark:bg-white/5 dark:text-slate-400">
                                 {CATEGORY_LABELS[q.category] ?? q.category}
                               </span>
                             </p>
-                            {q.guidance ? <p className="mt-0.5 text-xs italic text-brand-grey">Look for: {q.guidance}</p> : null}
+                            {q.guidance ? <p className="mt-0.5 text-xs italic text-brand-grey dark:text-slate-400">Look for: {q.guidance}</p> : null}
                           </div>
                         </li>
                       );
@@ -240,12 +240,12 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
           </section>
         )
       ) : (
-        <section className="rounded-xl bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-cloudDancer/70">
-            <Wand2 className="h-5 w-5 text-brand-grey" />
+        <section className="rounded-xl bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-cloudDancer/70 dark:bg-white/5">
+            <Wand2 className="h-5 w-5 text-brand-grey dark:text-slate-400" />
           </div>
-          <p className="mt-3 text-base font-semibold text-brand-lea">Set your options and generate</p>
-          <p className="mt-1 text-sm text-brand-grey">Pick a department and the values to cover, then click Generate guide.</p>
+          <p className="mt-3 text-base font-semibold text-brand-lea dark:text-slate-100">Set your options and generate</p>
+          <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">Pick a department and the values to cover, then click Generate guide.</p>
         </section>
       )}
     </div>

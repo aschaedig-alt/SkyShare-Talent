@@ -62,36 +62,36 @@ export function UsersManagementWorkspace({ users: initialUsers }: UsersManagemen
         </div>
       )}
 
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
           User Management
         </p>
-        <h1 className="text-2xl font-semibold text-brand-lea">Team Members</h1>
-        <p className="mt-1 text-sm text-brand-grey">Manage user roles and permissions</p>
+        <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Team Members</h1>
+        <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">Manage user roles and permissions</p>
       </section>
 
-      <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10">
+      <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b border-brand-lea/10 bg-brand-cloudDancer/30">
+            <thead className="border-b border-brand-lea/10 bg-brand-cloudDancer/30 dark:border-white/10 dark:bg-white/5">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold text-brand-lea">Name</th>
-                <th className="px-4 py-3 text-left font-semibold text-brand-lea">Email</th>
-                <th className="px-4 py-3 text-left font-semibold text-brand-lea">Current Role</th>
-                <th className="px-4 py-3 text-left font-semibold text-brand-lea">Actions</th>
+                <th className="px-4 py-3 text-left font-semibold text-brand-lea dark:text-slate-100">Name</th>
+                <th className="px-4 py-3 text-left font-semibold text-brand-lea dark:text-slate-100">Email</th>
+                <th className="px-4 py-3 text-left font-semibold text-brand-lea dark:text-slate-100">Current Role</th>
+                <th className="px-4 py-3 text-left font-semibold text-brand-lea dark:text-slate-100">Actions</th>
               </tr>
             </thead>
             <tbody>
               {users.map((user) => (
-                <tr key={user.id} className="border-b border-brand-lea/10 hover:bg-brand-cloudDancer/20">
+                <tr key={user.id} className="border-b border-brand-lea/10 hover:bg-brand-cloudDancer/20 dark:border-white/10 dark:bg-white/5">
                   <td className="px-4 py-3">
-                    <div className="font-medium text-brand-lea">{user.name || "Unknown"}</div>
+                    <div className="font-medium text-brand-lea dark:text-slate-100">{user.name || "Unknown"}</div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-brand-grey">{user.email}</div>
+                    <div className="text-brand-grey dark:text-slate-400">{user.email}</div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="rounded bg-brand-gold/20 px-2 py-1 text-xs font-semibold text-brand-lea">
+                    <span className="rounded bg-brand-gold/20 px-2 py-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
                       {user.role}
                     </span>
                   </td>
@@ -101,7 +101,7 @@ export function UsersManagementWorkspace({ users: initialUsers }: UsersManagemen
                         <select
                           value={selectedRole}
                           onChange={(e) => setSelectedRole(e.target.value)}
-                          className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm text-brand-lea"
+                          className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
                         >
                           <option value="">Select role...</option>
                           {VALID_ROLES.map((role) => (
@@ -113,13 +113,13 @@ export function UsersManagementWorkspace({ users: initialUsers }: UsersManagemen
                         <button
                           onClick={() => handleRoleChange(user.id, selectedRole)}
                           disabled={!selectedRole || saving}
-                          className="rounded bg-brand-gold px-3 py-1 text-xs font-semibold text-brand-black hover:bg-brand-gold/90 disabled:opacity-50"
+                          className="rounded bg-brand-gold px-3 py-1 text-xs font-semibold text-brand-black hover:bg-brand-gold/90 disabled:opacity-50 dark:text-slate-100"
                         >
                           {saving ? "Saving..." : "Save"}
                         </button>
                         <button
                           onClick={() => setEditingUserId(null)}
-                          className="rounded border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/30"
+                          className="rounded border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
                         >
                           Cancel
                         </button>
@@ -130,7 +130,7 @@ export function UsersManagementWorkspace({ users: initialUsers }: UsersManagemen
                           setEditingUserId(user.id);
                           setSelectedRole(user.role);
                         }}
-                        className="rounded bg-brand-sweet/20 px-3 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-sweet/30"
+                        className="rounded bg-brand-sweet/20 px-3 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-sweet/30 dark:text-slate-100"
                       >
                         Change Role
                       </button>
@@ -144,20 +144,20 @@ export function UsersManagementWorkspace({ users: initialUsers }: UsersManagemen
 
         {users.length === 0 && (
           <div className="flex items-center justify-center p-8">
-            <p className="text-brand-grey">No users found</p>
+            <p className="text-brand-grey dark:text-slate-400">No users found</p>
           </div>
         )}
       </section>
 
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
-        <h2 className="text-lg font-semibold text-brand-lea">Role Permissions</h2>
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Role Permissions</h2>
         <div className="mt-4 space-y-4">
           {VALID_ROLES.map((role) => (
-            <div key={role} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/30 p-3">
-              <h3 className="font-semibold text-brand-lea">{role}</h3>
+            <div key={role} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/30 p-3 dark:border-white/10 dark:bg-white/5">
+              <h3 className="font-semibold text-brand-lea dark:text-slate-100">{role}</h3>
               <div className="mt-2 flex flex-wrap gap-1">
                 {ROLE_PERMISSIONS[role].map((perm) => (
-                  <span key={perm} className="inline-block rounded bg-brand-gold/20 px-2 py-1 text-xs text-brand-lea">
+                  <span key={perm} className="inline-block rounded bg-brand-gold/20 px-2 py-1 text-xs text-brand-lea dark:text-slate-100">
                     {perm}
                   </span>
                 ))}

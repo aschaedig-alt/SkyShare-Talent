@@ -89,8 +89,8 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
 
   return (
     <div className="grid gap-4 xl:grid-cols-[280px_1fr]">
-      <aside className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10">
-        <div className="px-1 pb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey">Positions</div>
+      <aside className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <div className="px-1 pb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey dark:text-slate-400">Positions</div>
         <div className="space-y-1">
           {data.profiles.map((profile) => (
             <button
@@ -101,21 +101,21 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
                 "block w-full rounded border p-2.5 text-left transition hover:shadow-glow",
                 profile.key === selected
                   ? "border-brand-gold bg-brand-sweet/18"
-                  : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/60"
+                  : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-[#10243a] dark:bg-white/5"
               )}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-sm font-semibold text-brand-lea">{profile.label}</span>
+                <span className="truncate text-sm font-semibold text-brand-lea dark:text-slate-100">{profile.label}</span>
                 {doc.profiles[profile.key] || profile.key === DEFAULT_KEY ? (
                   <span className="shrink-0 rounded bg-value-teamwork-light px-1.5 py-0.5 text-[9px] font-bold uppercase text-value-teamwork-dark">
                     {profile.key === DEFAULT_KEY ? "base" : "custom"}
                   </span>
                 ) : (
-                  <span className="shrink-0 text-[9px] font-semibold uppercase text-brand-grey">defaults</span>
+                  <span className="shrink-0 text-[9px] font-semibold uppercase text-brand-grey dark:text-slate-400">defaults</span>
                 )}
               </div>
               {profile.key !== DEFAULT_KEY ? (
-                <div className="mt-0.5 text-[11px] text-brand-grey">{profile.count} requirement{profile.count === 1 ? "" : "s"}</div>
+                <div className="mt-0.5 text-[11px] text-brand-grey dark:text-slate-400">{profile.count} requirement{profile.count === 1 ? "" : "s"}</div>
               ) : null}
             </button>
           ))}
@@ -123,8 +123,8 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
       </aside>
 
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded bg-white px-4 py-3 shadow-panel ring-1 ring-brand-lea/10">
-          <div className="flex items-center gap-2 text-xs text-brand-grey">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded bg-white px-4 py-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <div className="flex items-center gap-2 text-xs text-brand-grey dark:text-slate-400">
             <Lock className="h-3.5 w-3.5" />
             {canEdit ? "Recruiters & admins can edit. " : "Read-only — recruiters and admins can edit. "}
             {selected === DEFAULT_KEY
@@ -138,7 +138,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
               <button
                 type="button"
                 onClick={resetProfile}
-                className="inline-flex items-center gap-1.5 rounded-element border border-brand-lea/15 px-3 py-1.5 text-xs font-semibold text-brand-grey transition hover:bg-brand-cloudDancer"
+                className="inline-flex items-center gap-1.5 rounded-element border border-brand-lea/15 px-3 py-1.5 text-xs font-semibold text-brand-grey transition hover:bg-brand-cloudDancer dark:border-white/10 dark:text-slate-400 dark:bg-white/5"
               >
                 <RotateCcw className="h-3.5 w-3.5" /> {selected === DEFAULT_KEY ? "Reset defaults" : "Use defaults"}
               </button>
@@ -167,13 +167,13 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
           </p>
         ) : null}
 
-        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
-          <h3 className="text-base font-semibold text-brand-lea">Category weights</h3>
-          <p className="mt-0.5 text-xs text-brand-grey">How much each sub-score counts toward the overall read.</p>
+        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Category weights</h3>
+          <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">How much each sub-score counts toward the overall read.</p>
           <div className="mt-4 space-y-3.5">
             {SCORING_CATEGORIES.map((key) => (
               <div key={key} className="grid grid-cols-[150px_1fr_84px] items-center gap-3">
-                <span className="text-sm text-brand-lea">{CATEGORY_LABELS[key]}</span>
+                <span className="text-sm text-brand-lea dark:text-slate-100">{CATEGORY_LABELS[key]}</span>
                 <input
                   type="range"
                   min={0}
@@ -184,8 +184,8 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
                   onChange={(event) => update((draft) => (draft.weights[key as CategoryKey] = Number(event.target.value)))}
                   className="w-full accent-brand-eden"
                 />
-                <span className="text-right text-xs text-brand-grey">
-                  <span className="font-semibold text-brand-lea">{cfg.weights[key]}</span> ·{" "}
+                <span className="text-right text-xs text-brand-grey dark:text-slate-400">
+                  <span className="font-semibold text-brand-lea dark:text-slate-100">{cfg.weights[key]}</span> ·{" "}
                   {Math.round((cfg.weights[key] / weightSum) * 100)}%
                 </span>
               </div>
@@ -193,28 +193,28 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
           </div>
         </section>
 
-        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
-          <h3 className="text-base font-semibold text-brand-lea">Requirements</h3>
-          <p className="mt-0.5 text-xs text-brand-grey">
-            Mark each as <span className="font-semibold text-brand-lea">hard</span> (a minimum — missing it flags the
-            candidate), <span className="font-semibold text-brand-lea">soft</span> (a minimum that counts toward the
-            qualified score), <span className="font-semibold text-brand-lea">bonus</span> (add-only extra, never
-            penalizes), or <span className="font-semibold text-brand-lea">none</span> (ignored for this position).
+        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Requirements</h3>
+          <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
+            Mark each as <span className="font-semibold text-brand-lea dark:text-slate-100">hard</span> (a minimum — missing it flags the
+            candidate), <span className="font-semibold text-brand-lea dark:text-slate-100">soft</span> (a minimum that counts toward the
+            qualified score), <span className="font-semibold text-brand-lea dark:text-slate-100">bonus</span> (add-only extra, never
+            penalizes), or <span className="font-semibold text-brand-lea dark:text-slate-100">none</span> (ignored for this position).
             Nothing here rejects a candidate.
           </p>
           <div className="mt-4 space-y-4">
             {SCORING_CATEGORIES.filter((category) => requirementsByCategory.has(category)).map((category) => (
               <div key={category}>
-                <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey">
+                <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">
                   {CATEGORY_LABELS[category]}
                 </div>
                 <div className="space-y-1.5">
                   {(requirementsByCategory.get(category) ?? []).map((req) => (
                     <div
                       key={req.key}
-                      className="flex items-center justify-between gap-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/30 px-3 py-2"
+                      className="flex items-center justify-between gap-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/30 px-3 py-2 dark:border-white/10 dark:bg-white/5"
                     >
-                      <span className="text-sm text-brand-lea">{req.label}</span>
+                      <span className="text-sm text-brand-lea dark:text-slate-100">{req.label}</span>
                       <StatusToggle
                         value={cfg.requirements[req.key] ?? req.defaultStatus}
                         disabled={!canEdit}
@@ -228,9 +228,9 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
           </div>
         </section>
 
-        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
-          <h3 className="text-base font-semibold text-brand-lea">Hours logic</h3>
-          <p className="mt-0.5 text-xs text-brand-grey">
+        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Hours logic</h3>
+          <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
             Meeting a minimum earns full credit. Higher numbers don&apos;t earn more — except time in type, where more is
             better.
           </p>
@@ -260,7 +260,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
               onChange={(v) => update((draft) => (draft.hours.completenessBonus = v))}
             />
             <div>
-              <label className="block text-sm font-medium text-brand-lea">Time-in-type target (hrs)</label>
+              <label className="block text-sm font-medium text-brand-lea dark:text-slate-100">Time-in-type target (hrs)</label>
               <input
                 type="number"
                 min={1}
@@ -270,19 +270,19 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
                 onChange={(event) =>
                   update((draft) => (draft.hours.timeInTypeTargetHours = Math.max(1, Number(event.target.value) || 1)))
                 }
-                className="mt-1 w-full rounded-element border-[0.5px] border-brand-lea/20 px-3 py-2 text-sm outline-none focus:border-brand-gold disabled:bg-brand-cloudDancer/40"
+                className="mt-1 w-full rounded-element border-[0.5px] border-brand-lea/20 px-3 py-2 text-sm outline-none focus:border-brand-gold disabled:bg-brand-cloudDancer/40 dark:border-white/10 dark:bg-white/5"
               />
-              <p className="mt-1 text-xs text-brand-grey">Hours in type that earn full time-in-type credit.</p>
+              <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">Hours in type that earn full time-in-type credit.</p>
             </div>
           </div>
         </section>
 
-        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
-          <h3 className="text-base font-semibold text-brand-lea">Readiness thresholds</h3>
-          <p className="mt-0.5 text-xs text-brand-grey">Where the overall score lands a candidate. Labels only — never a reject.</p>
+        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Readiness thresholds</h3>
+          <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">Where the overall score lands a candidate. Labels only — never a reject.</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="grid grid-cols-[150px_1fr_44px] items-center gap-3">
-              <span className="text-sm text-brand-lea">Worth a look ≥</span>
+              <span className="text-sm text-brand-lea dark:text-slate-100">Worth a look ≥</span>
               <input
                 type="range"
                 min={0}
@@ -297,10 +297,10 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
                 }
                 className="w-full accent-value-leadership"
               />
-              <span className="text-right text-sm font-semibold text-brand-lea">{cfg.readiness.possible}</span>
+              <span className="text-right text-sm font-semibold text-brand-lea dark:text-slate-100">{cfg.readiness.possible}</span>
             </div>
             <div className="grid grid-cols-[150px_1fr_44px] items-center gap-3">
-              <span className="text-sm text-brand-lea">Strong signal ≥</span>
+              <span className="text-sm text-brand-lea dark:text-slate-100">Strong signal ≥</span>
               <input
                 type="range"
                 min={cfg.readiness.possible}
@@ -310,7 +310,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
                 onChange={(event) => update((draft) => (draft.readiness.strong = Number(event.target.value)))}
                 className="w-full accent-value-teamwork"
               />
-              <span className="text-right text-sm font-semibold text-brand-lea">{cfg.readiness.strong}</span>
+              <span className="text-right text-sm font-semibold text-brand-lea dark:text-slate-100">{cfg.readiness.strong}</span>
             </div>
           </div>
         </section>
@@ -335,12 +335,12 @@ function StatusToggle({
 }) {
   const options: Array<{ key: ReqStatus; label: string; active: string }> = [
     { key: "hard", label: "Hard", active: "bg-brand-lea text-white" },
-    { key: "soft", label: "Soft", active: "bg-brand-sweet text-brand-lea" },
+    { key: "soft", label: "Soft", active: "bg-brand-sweet text-brand-lea dark:text-slate-100" },
     { key: "bonus", label: "Bonus", active: "bg-value-leadership-light text-value-leadership-dark" },
-    { key: "none", label: "None", active: "bg-brand-cloudDancer text-brand-grey" }
+    { key: "none", label: "None", active: "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400" }
   ];
   return (
-    <div className="inline-flex overflow-hidden rounded-element border-[0.5px] border-brand-lea/20 text-[11px] font-semibold">
+    <div className="inline-flex overflow-hidden rounded-element border-[0.5px] border-brand-lea/20 text-[11px] font-semibold dark:border-white/10">
       {options.map((option) => (
         <button
           key={option.key}
@@ -349,7 +349,7 @@ function StatusToggle({
           onClick={() => onChange(option.key)}
           className={clsx(
             "px-3 py-1 transition hover:shadow-glow",
-            value === option.key ? option.active : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60",
+            value === option.key ? option.active : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-[#10243a] dark:text-slate-400 dark:bg-white/5",
             disabled && "cursor-not-allowed opacity-60"
           )}
         >
@@ -379,8 +379,8 @@ function PctField({
   return (
     <div>
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-brand-lea">{label}</label>
-        <span className="text-sm font-semibold text-brand-lea">{pct}%</span>
+        <label className="text-sm font-medium text-brand-lea dark:text-slate-100">{label}</label>
+        <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">{pct}%</span>
       </div>
       <input
         type="range"
@@ -392,7 +392,7 @@ function PctField({
         onChange={(event) => onChange(Number(event.target.value) / 100)}
         className="mt-1 w-full accent-brand-eden"
       />
-      <p className="mt-1 text-xs text-brand-grey">{hint}</p>
+      <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">{hint}</p>
     </div>
   );
 }

@@ -22,7 +22,7 @@ export function RecognitionCard({ recognition, engagementSlot }: RecognitionCard
   const valueLabel = primary ? primary.name.toLowerCase() : "great work";
 
   return (
-    <article className="relative overflow-hidden rounded-card border-[0.5px] border-brand-lea/15 bg-white p-5">
+    <article className="relative overflow-hidden rounded-card border-[0.5px] border-brand-lea/15 bg-white p-5 dark:border-white/10 dark:bg-[#10243a]">
       <span className={`absolute inset-y-0 left-0 w-1 ${accent}`} aria-hidden="true" />
       <div className="flex gap-3 pl-1">
         <Avatar
@@ -33,12 +33,12 @@ export function RecognitionCard({ recognition, engagementSlot }: RecognitionCard
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="font-medium text-brand-lea">
+              <p className="font-medium text-brand-lea dark:text-slate-100">
                 {recognition.giverName} recognized {recognition.recipientName} for {valueLabel}
               </p>
-              <p className="mt-1 text-[13px] text-brand-grey">{recognition.message}</p>
+              <p className="mt-1 text-[13px] text-brand-grey dark:text-slate-400">{recognition.message}</p>
             </div>
-            <span className="shrink-0 whitespace-nowrap text-xs text-brand-grey">
+            <span className="shrink-0 whitespace-nowrap text-xs text-brand-grey dark:text-slate-400">
               {relativeTime(recognition.createdAt)}
             </span>
           </div>
@@ -48,7 +48,7 @@ export function RecognitionCard({ recognition, engagementSlot }: RecognitionCard
             ))}
             <PointsTag points={recognition.pointsAwarded} />
             {engagementSlot ?? (
-              <div className="ml-auto flex items-center gap-4 text-[13px] text-brand-grey">
+              <div className="ml-auto flex items-center gap-4 text-[13px] text-brand-grey dark:text-slate-400">
                 <span className="flex items-center gap-1.5">
                   <Heart className="h-4 w-4" aria-hidden="true" />
                   {recognition.likeCount}

@@ -28,7 +28,7 @@ export function PointsTag({ points, className }: { points: number; className?: s
   return (
     <span
       className={clsx(
-        "inline-flex items-center rounded-element bg-brand-cloudDancer px-2.5 py-1 text-xs font-medium text-brand-black",
+        "inline-flex items-center rounded-element bg-brand-cloudDancer px-2.5 py-1 text-xs font-medium text-brand-black dark:bg-white/5 dark:text-slate-100",
         className
       )}
     >

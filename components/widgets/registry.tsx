@@ -76,21 +76,21 @@ const STATUS_TEXT: Record<Status, string> = {
   ok: "text-emerald-600",
   warn: "text-amber-600",
   bad: "text-red-600",
-  neutral: "text-brand-grey"
+  neutral: "text-brand-grey dark:text-slate-400"
 };
 const STATUS_CHIP: Record<Status, string> = {
   ok: "bg-emerald-50 text-emerald-700",
   warn: "bg-amber-50 text-amber-700",
   bad: "bg-red-50 text-red-600",
-  neutral: "bg-brand-cloudDancer/70 text-brand-grey"
+  neutral: "bg-brand-cloudDancer/70 text-brand-grey dark:bg-white/5 dark:text-slate-400"
 };
 
 function Shell({ icon: Icon, title, children }: { icon: LucideIcon; title: string; children: ReactNode }) {
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="mb-2 flex shrink-0 items-center gap-2">
         <Icon className="h-4 w-4 text-brand-eden" />
-        <span className="truncate text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey">{title}</span>
+        <span className="truncate text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey dark:text-slate-400">{title}</span>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">{children}</div>
     </section>
@@ -118,11 +118,11 @@ export const WIDGETS: WidgetDef[] = [
       const ok = cur >= tgt;
       return (
         <Shell icon={Gauge} title={str(c.label, "Total time")}>
-          <div className="mb-1 flex justify-between text-xs text-brand-grey">
+          <div className="mb-1 flex justify-between text-xs text-brand-grey dark:text-slate-400">
             <span>{cur.toLocaleString()} hrs</span>
             <span>min {tgt.toLocaleString()}</span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-brand-cloudDancer">
+          <div className="h-2 overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/5">
             <div className={`h-full ${ok ? "bg-emerald-500" : "bg-amber-500"}`} style={{ width: `${pct}%` }} />
           </div>
           <div className={`mt-2 text-xs font-semibold ${ok ? "text-emerald-600" : "text-amber-600"}`}>
@@ -201,7 +201,7 @@ export const WIDGETS: WidgetDef[] = [
             const tone = days <= 14 ? "text-amber-600" : days <= 0 ? "text-red-600" : "text-emerald-600";
             return (
               <div key={i} className="flex justify-between">
-                <span className="text-brand-grey">{it.a}</span>
+                <span className="text-brand-grey dark:text-slate-400">{it.a}</span>
                 <span className={tone}>{days} days</span>
               </div>
             );
@@ -229,7 +229,7 @@ export const WIDGETS: WidgetDef[] = [
         <Shell icon={Trophy} title={str(c.label, "Readiness")}>
           <div className="flex items-baseline gap-1.5">
             <span className={`text-3xl font-semibold ${tone}`}>{score}</span>
-            <span className="text-xs text-brand-grey">/ 100</span>
+            <span className="text-xs text-brand-grey dark:text-slate-400">/ 100</span>
           </div>
           <div className="mt-2 flex gap-1">
             {parseLines(c.items).map((it, i) => {
@@ -256,20 +256,20 @@ export const WIDGETS: WidgetDef[] = [
       if (!dc) {
         return (
           <Shell icon={ShieldAlert} title="Document currency">
-            <p className="text-xs italic text-brand-grey">Live workspace data — available on pages wired with document currency.</p>
+            <p className="text-xs italic text-brand-grey dark:text-slate-400">Live workspace data — available on pages wired with document currency.</p>
           </Shell>
         );
       }
       return (
         <Shell icon={ShieldAlert} title="Document currency">
           <div className="mb-2 grid grid-cols-3 gap-1.5 text-center">
-            <div className="rounded bg-red-50 py-1"><div className="text-base font-semibold text-red-600">{dc.counts.expired}</div><div className="text-[9px] uppercase text-brand-grey">expired</div></div>
-            <div className="rounded bg-amber-50 py-1"><div className="text-base font-semibold text-amber-600">{dc.counts.due30}</div><div className="text-[9px] uppercase text-brand-grey">≤30d</div></div>
-            <div className="rounded bg-brand-cloudDancer/60 py-1"><div className="text-base font-semibold text-brand-lea">{dc.counts.due90}</div><div className="text-[9px] uppercase text-brand-grey">≤90d</div></div>
+            <div className="rounded bg-red-50 py-1"><div className="text-base font-semibold text-red-600">{dc.counts.expired}</div><div className="text-[9px] uppercase text-brand-grey dark:text-slate-400">expired</div></div>
+            <div className="rounded bg-amber-50 py-1"><div className="text-base font-semibold text-amber-600">{dc.counts.due30}</div><div className="text-[9px] uppercase text-brand-grey dark:text-slate-400">≤30d</div></div>
+            <div className="rounded bg-brand-cloudDancer/60 py-1 dark:bg-white/5"><div className="text-base font-semibold text-brand-lea dark:text-slate-100">{dc.counts.due90}</div><div className="text-[9px] uppercase text-brand-grey dark:text-slate-400">≤90d</div></div>
           </div>
           <div className="space-y-1">
             {dc.upcoming.slice(0, 6).map((it, i) => {
-              const tone = it.days < 0 ? "text-red-600" : it.days <= 30 ? "text-amber-600" : "text-brand-grey";
+              const tone = it.days < 0 ? "text-red-600" : it.days <= 30 ? "text-amber-600" : "text-brand-grey dark:text-slate-400";
               return (
                 <div key={i} className="flex items-center justify-between gap-2 text-[11px]">
                   <span className="truncate text-brand-black/80">{it.candidateName} · {it.documentType ?? "Doc"}</span>
@@ -277,7 +277,7 @@ export const WIDGETS: WidgetDef[] = [
                 </div>
               );
             })}
-            {dc.upcoming.length === 0 && <p className="text-xs italic text-brand-grey">All tracked documents current.</p>}
+            {dc.upcoming.length === 0 && <p className="text-xs italic text-brand-grey dark:text-slate-400">All tracked documents current.</p>}
           </div>
         </Shell>
       );
@@ -298,8 +298,8 @@ export const WIDGETS: WidgetDef[] = [
     ],
     render: (c) => (
       <Shell icon={Trophy} title={str(c.label, "Metric")}>
-        <div className="text-3xl font-semibold text-brand-lea">{str(c.value, "—")}</div>
-        <div className="mt-1 text-xs text-brand-grey">{str(c.sublabel)}</div>
+        <div className="text-3xl font-semibold text-brand-lea dark:text-slate-100">{str(c.value, "—")}</div>
+        <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{str(c.sublabel)}</div>
       </Shell>
     )
   },
@@ -322,11 +322,11 @@ export const WIDGETS: WidgetDef[] = [
           <div className="flex flex-col gap-1.5">
             {rows.map((r, i) => (
               <div key={i} className="flex items-center gap-2 text-[11px]">
-                <span className="w-16 shrink-0 text-brand-grey">{r.a}</span>
-                <div className="h-3 flex-1 overflow-hidden rounded bg-brand-cloudDancer">
+                <span className="w-16 shrink-0 text-brand-grey dark:text-slate-400">{r.a}</span>
+                <div className="h-3 flex-1 overflow-hidden rounded bg-brand-cloudDancer dark:bg-white/5">
                   <div className="h-full bg-brand-eden" style={{ width: `${Math.round((num(r.b) / max) * 100)}%` }} />
                 </div>
-                <span className="w-7 shrink-0 text-right font-semibold text-brand-lea">{num(r.b)}</span>
+                <span className="w-7 shrink-0 text-right font-semibold text-brand-lea dark:text-slate-100">{num(r.b)}</span>
               </div>
             ))}
           </div>
@@ -354,8 +354,8 @@ export const WIDGETS: WidgetDef[] = [
           <div className="flex flex-col gap-1.5 text-xs">
             {rows.map((r, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className="w-12 shrink-0 text-brand-grey">{r.a}</span>
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-brand-cloudDancer">
+                <span className="w-12 shrink-0 text-brand-grey dark:text-slate-400">{r.a}</span>
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/5">
                   <div className="h-full bg-brand-eden" style={{ width: `${Math.round((num(r.b) / max) * 100)}%` }} />
                 </div>
                 <span className="w-6 shrink-0 text-right">{num(r.b)}</span>
@@ -411,7 +411,7 @@ export const WIDGETS: WidgetDef[] = [
             <a
               key={i}
               href={it.b || "#"}
-              className="rounded-md border border-brand-lea/20 px-2.5 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60"
+              className="rounded-md border border-brand-lea/20 px-2.5 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
             >
               {it.a}
             </a>
@@ -435,8 +435,8 @@ export const WIDGETS: WidgetDef[] = [
     ],
     render: (c) => (
       <Shell icon={Plane} title="Aircraft spotlight">
-        <div className="mb-1 text-sm font-semibold text-brand-lea">{str(c.name, "Aircraft")}</div>
-        <div className="flex flex-col gap-1 text-[11px] text-brand-grey">
+        <div className="mb-1 text-sm font-semibold text-brand-lea dark:text-slate-100">{str(c.name, "Aircraft")}</div>
+        <div className="flex flex-col gap-1 text-[11px] text-brand-grey dark:text-slate-400">
           <div className="flex justify-between"><span>Range</span><span>{str(c.range, "—")}</span></div>
           <div className="flex justify-between"><span>Crew seat</span><span>{str(c.seat, "—")}</span></div>
           <div className="flex justify-between"><span>Base</span><span>{str(c.base, "—")}</span></div>

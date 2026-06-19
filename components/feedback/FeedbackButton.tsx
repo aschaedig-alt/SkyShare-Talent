@@ -80,10 +80,10 @@ export function FeedbackButton() {
 
       {/* Panel */}
       {open && (
-        <div className="fixed bottom-5 right-5 z-40 w-[min(360px,calc(100vw-2.5rem))] rounded-xl border border-brand-lea/15 bg-white shadow-2xl">
-          <div className="flex items-center justify-between border-b border-brand-lea/10 px-4 py-3">
-            <span className="text-sm font-semibold text-brand-lea">Send feedback</span>
-            <button onClick={close} className="text-brand-grey hover:text-brand-lea" aria-label="Close">
+        <div className="fixed bottom-5 right-5 z-40 w-[min(360px,calc(100vw-2.5rem))] rounded-xl border border-brand-lea/15 bg-white shadow-2xl dark:border-white/10 dark:bg-[#10243a]">
+          <div className="flex items-center justify-between border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
+            <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">Send feedback</span>
+            <button onClick={close} className="text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100" aria-label="Close">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -93,8 +93,8 @@ export function FeedbackButton() {
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
                 <Check className="h-5 w-5 text-emerald-700" />
               </div>
-              <p className="text-sm font-semibold text-brand-lea">Thanks for the feedback!</p>
-              <p className="text-xs text-brand-grey">We&apos;ll take a look.</p>
+              <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">Thanks for the feedback!</p>
+              <p className="text-xs text-brand-grey dark:text-slate-400">We&apos;ll take a look.</p>
             </div>
           ) : (
             <div className="p-4">
@@ -111,7 +111,7 @@ export function FeedbackButton() {
                         "flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-semibold transition hover:shadow-glow",
                         active
                           ? "border-brand-lea bg-brand-lea text-white"
-                          : "border-brand-lea/15 bg-white text-brand-grey hover:bg-brand-cloudDancer/40"
+                          : "border-brand-lea/15 bg-white text-brand-grey hover:bg-brand-cloudDancer/40 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400 dark:bg-white/5"
                       )}
                     >
                       <Icon className="h-3.5 w-3.5" />
@@ -133,10 +133,10 @@ export function FeedbackButton() {
                       ? "What would you like to know?"
                       : "What would make this better?"
                 }
-                className="w-full resize-none rounded-lg border border-brand-lea/20 px-3 py-2 text-sm focus:border-brand-lea focus:outline-none"
+                className="w-full resize-none rounded-lg border border-brand-lea/20 px-3 py-2 text-sm focus:border-brand-lea focus:outline-none dark:border-white/10"
               />
 
-              <p className="mt-2 flex items-center gap-1 text-[11px] text-brand-grey">
+              <p className="mt-2 flex items-center gap-1 text-[11px] text-brand-grey dark:text-slate-400">
                 <span className="truncate">Auto-attached: this page &amp; your account</span>
               </p>
 

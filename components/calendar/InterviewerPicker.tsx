@@ -15,7 +15,7 @@ export function InterviewerPicker({
   defaultValue = "",
   interviewers,
   activeDepartmentKey = null,
-  className = "rounded-lg border border-brand-lea/20 px-3 py-2 text-sm",
+  className = "rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10",
   onValueChange
 }: {
   name?: string;
@@ -62,13 +62,13 @@ export function InterviewerPicker({
           setValue(person.name);
           setOpen(false);
         }}
-        className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm text-brand-lea transition hover:bg-brand-cloudDancer/70 hover:shadow-glow"
+        className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm text-brand-lea transition hover:bg-brand-cloudDancer/70 hover:shadow-glow dark:text-slate-100 dark:bg-white/5"
       >
         <span className="truncate">{person.name}</span>
         {person.departments.length > 0 ? (
           <span className="flex shrink-0 gap-1">
             {person.departments.map((d) => (
-              <span key={d} className="rounded bg-brand-sweet/25 px-1.5 py-0.5 text-[10px] font-semibold text-brand-lea">
+              <span key={d} className="rounded bg-brand-sweet/25 px-1.5 py-0.5 text-[10px] font-semibold text-brand-lea dark:text-slate-100">
                 {DEPARTMENT_LABELS[d as DeptKey] ?? d}
               </span>
             ))}
@@ -93,9 +93,9 @@ export function InterviewerPicker({
         className={`w-full ${className}`}
       />
       {open && interviewers.length > 0 ? (
-        <div className="absolute z-30 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-brand-lea/15 bg-white p-1 shadow-lg">
+        <div className="absolute z-30 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-brand-lea/15 bg-white p-1 shadow-lg dark:border-white/10 dark:bg-[#10243a]">
           {filtered.length === 0 ? (
-            <p className="px-2 py-2 text-xs text-brand-grey">No matches — keep typing to enter a custom name.</p>
+            <p className="px-2 py-2 text-xs text-brand-grey dark:text-slate-400">No matches — keep typing to enter a custom name.</p>
           ) : null}
           {activeDepartmentKey && matching.length > 0 ? (
             <>
@@ -110,7 +110,7 @@ export function InterviewerPicker({
           {others.length > 0 ? (
             <>
               {activeDepartmentKey && matching.length > 0 ? (
-                <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-grey">Other team</div>
+                <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Other team</div>
               ) : null}
               {others.map((person) => (
                 <Row key={person.name} person={person} />

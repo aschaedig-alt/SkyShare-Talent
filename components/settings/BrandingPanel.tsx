@@ -135,12 +135,12 @@ export function BrandingPanel({ initialBranding }: BrandingPanelProps) {
   }
 
   return (
-    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Branding</p>
-          <h2 className="text-base font-semibold text-brand-lea">Logos</h2>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-brand-grey">
+          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Logos</h2>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-brand-grey dark:text-slate-400">
             Upload a library of logos, then assign one to each placement. Square, transparent PNG or SVG works best.
             Max ~650&nbsp;KB each, up to {MAX_LOGOS} logos.
           </p>
@@ -161,8 +161,8 @@ export function BrandingPanel({ initialBranding }: BrandingPanelProps) {
       {/* Library */}
       <div className="mt-5">
         <div className="flex items-center justify-between">
-          <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey">Logo library</h3>
-          <label className="cursor-pointer rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">
+          <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Logo library</h3>
+          <label className="cursor-pointer rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
             + Add logo
             <input
               ref={inputRef}
@@ -177,13 +177,13 @@ export function BrandingPanel({ initialBranding }: BrandingPanelProps) {
         </div>
 
         {branding.logos.length === 0 ? (
-          <p className="mt-3 rounded border border-dashed border-brand-lea/20 bg-brand-cloudDancer/40 px-3 py-6 text-center text-sm text-brand-grey">
+          <p className="mt-3 rounded border border-dashed border-brand-lea/20 bg-brand-cloudDancer/40 px-3 py-6 text-center text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
             No logos yet. Click &ldquo;Add logo&rdquo; to upload one or more.
           </p>
         ) : (
           <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {branding.logos.map((logo) => (
-              <div key={logo.id} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/30 p-3">
+              <div key={logo.id} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/30 p-3 dark:border-white/10 dark:bg-white/5">
                 <div className="flex items-center gap-3">
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[4px] bg-brand-gold/90 p-1.5">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -197,7 +197,7 @@ export function BrandingPanel({ initialBranding }: BrandingPanelProps) {
                 <input
                   value={logo.name}
                   onChange={(event) => renameLogo(logo.id, event.target.value)}
-                  className="mt-3 w-full rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-sm text-brand-lea"
+                  className="mt-3 w-full rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-sm text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
                   placeholder="Logo name"
                 />
                 <button
@@ -215,29 +215,29 @@ export function BrandingPanel({ initialBranding }: BrandingPanelProps) {
 
       {/* Assignments */}
       <div className="mt-6">
-        <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey">Where each logo is used</h3>
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Where each logo is used</h3>
         <div className="mt-3 grid gap-3 md:grid-cols-3">
           {BRANDING_SLOTS.map((slot) => {
             const assignedUrl = dataUrlFor(branding.assignments[slot.key]);
             return (
-              <div key={slot.key} className="rounded border border-brand-lea/10 bg-white p-3">
+              <div key={slot.key} className="rounded border border-brand-lea/10 bg-white p-3 dark:border-white/10 dark:bg-[#10243a]">
                 <div className="flex items-center gap-3">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[4px] bg-brand-gold/90 p-1.5">
                     {assignedUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={assignedUrl} alt={slot.label} className="h-full w-full object-contain" />
                     ) : (
-                      <span className="text-[9px] font-semibold text-brand-lea">None</span>
+                      <span className="text-[9px] font-semibold text-brand-lea dark:text-slate-100">None</span>
                     )}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-brand-lea">{slot.label}</div>
+                    <div className="text-sm font-semibold text-brand-lea dark:text-slate-100">{slot.label}</div>
                   </div>
                 </div>
                 <select
                   value={branding.assignments[slot.key] ?? ""}
                   onChange={(event) => assignSlot(slot.key, event.target.value)}
-                  className="mt-3 w-full rounded border border-brand-lea/15 bg-white px-2 py-2 text-sm text-brand-lea"
+                  className="mt-3 w-full rounded border border-brand-lea/15 bg-white px-2 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
                 >
                   <option value="">None</option>
                   {branding.logos.map((logo) => (

@@ -41,14 +41,14 @@ export function ProgramSettingsForm({ settings }: Props) {
     });
   }
 
-  const labelCls = "block text-sm font-medium text-brand-lea";
+  const labelCls = "block text-sm font-medium text-brand-lea dark:text-slate-100";
   const inputCls =
-    "mt-1 w-full rounded-element border-[0.5px] border-brand-lea/20 px-3 py-2 text-sm outline-none focus:border-value-innovation focus:ring-2 focus:ring-value-innovation/30";
+    "mt-1 w-full rounded-element border-[0.5px] border-brand-lea/20 px-3 py-2 text-sm outline-none focus:border-value-innovation focus:ring-2 focus:ring-value-innovation/30 dark:border-white/10";
 
   return (
     <Card padding="lg">
-      <h3 className="mb-1 text-base font-medium text-brand-lea">Program settings</h3>
-      <p className="mb-4 text-xs text-brand-grey">Company policy for points, conversion and budget.</p>
+      <h3 className="mb-1 text-base font-medium text-brand-lea dark:text-slate-100">Program settings</h3>
+      <p className="mb-4 text-xs text-brand-grey dark:text-slate-400">Company policy for points, conversion and budget.</p>
 
       {notice ? (
         <p
@@ -76,7 +76,7 @@ export function ProgramSettingsForm({ settings }: Props) {
             value={form.pointsPerDollar}
             onChange={(e) => setForm({ ...form, pointsPerDollar: e.target.value })}
           />
-          <p className="mt-1 text-xs text-brand-grey">{ratio} points = $1.00</p>
+          <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">{ratio} points = $1.00</p>
         </div>
         <div>
           <label className={labelCls} htmlFor="budget">
@@ -90,13 +90,13 @@ export function ProgramSettingsForm({ settings }: Props) {
             value={form.monthlyBudgetUsd}
             onChange={(e) => setForm({ ...form, monthlyBudgetUsd: e.target.value })}
           />
-          <p className="mt-1 text-xs text-brand-grey">Spend is tracked against this each month.</p>
+          <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">Spend is tracked against this each month.</p>
         </div>
       </div>
 
       <div className="mt-5">
         <p className={labelCls}>Recognition point values</p>
-        <p className="text-xs text-brand-grey">How many points each recognition strength awards.</p>
+        <p className="text-xs text-brand-grey dark:text-slate-400">How many points each recognition strength awards.</p>
         <div className="mt-2 grid gap-4 sm:grid-cols-3">
           {([
             ["good", "Good", form.good],
@@ -104,7 +104,7 @@ export function ProgramSettingsForm({ settings }: Props) {
             ["amazing", "Amazing", form.amazing]
           ] as const).map(([key, label, val]) => (
             <div key={key}>
-              <label className="text-xs font-medium text-brand-grey" htmlFor={key}>
+              <label className="text-xs font-medium text-brand-grey dark:text-slate-400" htmlFor={key}>
                 {label}
               </label>
               <input
@@ -115,7 +115,7 @@ export function ProgramSettingsForm({ settings }: Props) {
                 value={val}
                 onChange={(e) => setForm({ ...form, [key]: e.target.value })}
               />
-              <p className="mt-1 text-xs text-brand-grey">{asDollars(val)} value</p>
+              <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">{asDollars(val)} value</p>
             </div>
           ))}
         </div>

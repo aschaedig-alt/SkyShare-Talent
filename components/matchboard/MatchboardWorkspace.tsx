@@ -15,8 +15,8 @@ export type MatchboardMode = "role" | "candidate";
 function seatTag(seat: string | null) {
   const s = (seat ?? "").toLowerCase();
   if (s === "pic") return { label: "PIC", cls: "bg-value-teamwork-light text-value-teamwork-dark" };
-  if (s === "sic") return { label: "SIC", cls: "bg-brand-cloudDancer text-brand-grey" };
-  return { label: seat || "Support", cls: "bg-brand-cloudDancer text-brand-grey" };
+  if (s === "sic") return { label: "SIC", cls: "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400" };
+  return { label: seat || "Support", cls: "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400" };
 }
 
 export function MatchboardWorkspace({
@@ -58,23 +58,23 @@ export function MatchboardWorkspace({
 
   return (
     <div className="px-5 py-5 lg:px-8">
-      <section className="mb-4 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+      <section className="mb-4 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Recruiting</p>
-        <h1 className="flex items-center gap-2 text-2xl font-semibold text-brand-lea">
+        <h1 className="flex items-center gap-2 text-2xl font-semibold text-brand-lea dark:text-slate-100">
           <Radar className="h-6 w-6 text-brand-gold" /> Matchboard
         </h1>
-        <p className="mt-1 max-w-2xl text-sm text-brand-grey">
+        <p className="mt-1 max-w-2xl text-sm text-brand-grey dark:text-slate-400">
           Two-way candidate–role matching. View a role to see who qualifies, or a candidate to see every role that fits —
           and jump between the two. Seat fit flags pilots who are overqualified for a first-officer seat.
         </p>
 
-        <div className="mt-4 inline-flex rounded border border-brand-lea/15 bg-brand-cloudDancer/40 p-1">
+        <div className="mt-4 inline-flex rounded border border-brand-lea/15 bg-brand-cloudDancer/40 p-1 dark:border-white/10 dark:bg-white/5">
           <button
             type="button"
             onClick={() => go("role")}
             className={clsx(
               "inline-flex items-center gap-1.5 rounded px-4 py-1.5 text-sm font-semibold transition hover:shadow-glow",
-              mode === "role" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea"
+              mode === "role" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100"
             )}
           >
             <Plane className="h-4 w-4" /> By role
@@ -84,7 +84,7 @@ export function MatchboardWorkspace({
             onClick={() => go("candidate")}
             className={clsx(
               "inline-flex items-center gap-1.5 rounded px-4 py-1.5 text-sm font-semibold transition hover:shadow-glow",
-              mode === "candidate" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea"
+              mode === "candidate" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100"
             )}
           >
             <User className="h-4 w-4" /> By candidate
@@ -93,15 +93,15 @@ export function MatchboardWorkspace({
       </section>
 
       <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className="flex max-h-[78vh] flex-col overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10">
-          <div className="shrink-0 border-b border-brand-lea/10 p-3">
+        <aside className="flex max-h-[78vh] flex-col overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <div className="shrink-0 border-b border-brand-lea/10 p-3 dark:border-white/10">
             <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey" />
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey dark:text-slate-400" />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={mode === "role" ? "Search roles" : "Search candidates"}
-                className="w-full rounded border border-brand-lea/20 bg-white py-2 pl-8 pr-3 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20"
+                className="w-full rounded border border-brand-lea/20 bg-white py-2 pl-8 pr-3 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
               />
             </div>
           </div>
@@ -122,26 +122,26 @@ export function MatchboardWorkspace({
                       className={clsx(
                         "mb-1.5 block w-full rounded border p-2.5 text-left transition hover:shadow-glow",
                         disabled
-                          ? "cursor-default border-brand-lea/10 opacity-60"
+                          ? "cursor-default border-brand-lea/10 opacity-60 dark:border-white/10"
                           : active
                             ? "border-brand-gold bg-brand-sweet/18"
-                            : "border-brand-lea/10 hover:border-brand-sweet hover:bg-brand-cloudDancer/55"
+                            : "border-brand-lea/10 hover:border-brand-sweet hover:bg-brand-cloudDancer/55 dark:border-white/10 dark:bg-white/5"
                       )}
                     >
                       <div className="flex items-center gap-1.5">
-                        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-brand-lea">{role.title}</span>
+                        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-brand-lea dark:text-slate-100">{role.title}</span>
                         {role.noProfile ? (
                           <span className="shrink-0 rounded bg-value-leadership-light px-1.5 py-0.5 text-[9px] font-bold uppercase text-value-leadership-dark">No profile</span>
                         ) : null}
                         {role.status === "Archived" ? (
-                          <span className="shrink-0 rounded bg-brand-cloudDancer px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-grey">Archived</span>
+                          <span className="shrink-0 rounded bg-brand-cloudDancer px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-grey dark:bg-white/5 dark:text-slate-400">Archived</span>
                         ) : null}
                         {role.unmatched ? (
                           <span className="shrink-0 rounded bg-value-customerFocus-light px-1.5 py-0.5 text-[9px] font-bold uppercase text-value-customerFocus-dark">Review</span>
                         ) : null}
                         <span className={clsx("shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase", seat.cls)}>{seat.label}</span>
                       </div>
-                      <div className="mt-0.5 truncate text-xs text-brand-grey">
+                      <div className="mt-0.5 truncate text-xs text-brand-grey dark:text-slate-400">
                         {role.noProfile
                           ? "No requirement profile yet — not scannable"
                           : [role.typeRating, `${role.applicantCount} applied`, role.dupeCount > 1 ? `${role.dupeCount} variants` : null]
@@ -160,21 +160,21 @@ export function MatchboardWorkspace({
                       onClick={() => go("candidate", cand.id)}
                       className={clsx(
                         "mb-1.5 block w-full rounded border p-2.5 text-left transition hover:shadow-glow",
-                        active ? "border-brand-gold bg-brand-sweet/18" : "border-brand-lea/10 hover:border-brand-sweet hover:bg-brand-cloudDancer/55"
+                        active ? "border-brand-gold bg-brand-sweet/18" : "border-brand-lea/10 hover:border-brand-sweet hover:bg-brand-cloudDancer/55 dark:border-white/10 dark:bg-white/5"
                       )}
                     >
                       <div className="flex items-center gap-1.5">
-                        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-brand-lea">{cand.name}</span>
-                        {cand.excluded ? <AlertTriangle className="h-3 w-3 shrink-0 text-brand-grey" /> : null}
+                        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-brand-lea dark:text-slate-100">{cand.name}</span>
+                        {cand.excluded ? <AlertTriangle className="h-3 w-3 shrink-0 text-brand-grey dark:text-slate-400" /> : null}
                       </div>
-                      <div className="mt-0.5 truncate text-xs text-brand-grey">
+                      <div className="mt-0.5 truncate text-xs text-brand-grey dark:text-slate-400">
                         {[cand.title, cand.totalTime ? `${cand.totalTime.toLocaleString()} hr` : null].filter(Boolean).join(" · ") || "No title"}
                       </div>
                     </button>
                   );
                 })}
             {((mode === "role" && filteredRoles.length === 0) || (mode === "candidate" && filteredCandidates.length === 0)) ? (
-              <p className="p-3 text-sm text-brand-grey">No matches for “{query}”.</p>
+              <p className="p-3 text-sm text-brand-grey dark:text-slate-400">No matches for “{query}”.</p>
             ) : null}
           </div>
         </aside>
@@ -199,12 +199,12 @@ export function MatchboardWorkspace({
 
 function EmptyState({ mode }: { mode: MatchboardMode }) {
   return (
-    <section className="flex h-full min-h-[300px] flex-col items-center justify-center rounded bg-white p-8 text-center shadow-panel ring-1 ring-brand-lea/10">
+    <section className="flex h-full min-h-[300px] flex-col items-center justify-center rounded bg-white p-8 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       {mode === "role" ? <Plane className="h-7 w-7 text-brand-sweet" /> : <User className="h-7 w-7 text-brand-sweet" />}
-      <h2 className="mt-3 text-lg font-semibold text-brand-lea">
+      <h2 className="mt-3 text-lg font-semibold text-brand-lea dark:text-slate-100">
         {mode === "role" ? "Pick a role" : "Pick a candidate"}
       </h2>
-      <p className="mt-1 max-w-sm text-sm text-brand-grey">
+      <p className="mt-1 max-w-sm text-sm text-brand-grey dark:text-slate-400">
         {mode === "role"
           ? "Choose a role on the left to see the candidates who qualify, ranked and tagged."
           : "Choose a candidate on the left to see every role that fits them, ranked, with seat-fit flags."}
@@ -221,12 +221,12 @@ function CandidateRoles({
   onViewRole: (requirementId: string) => void;
 }) {
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Matching roles</p>
-          <h3 className="truncate text-base font-semibold text-brand-lea">{data.candidateName}</h3>
-          <p className="mt-0.5 text-xs text-brand-grey">
+          <h3 className="truncate text-base font-semibold text-brand-lea dark:text-slate-100">{data.candidateName}</h3>
+          <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
             {[data.currentTitle, data.totalTime ? `${data.totalTime.toLocaleString()} hr total` : null, data.stage]
               .filter(Boolean)
               .join(" · ") || "No flight data on file"}
@@ -234,13 +234,13 @@ function CandidateRoles({
         </div>
         <Link
           href={`/candidates/${data.candidateId}`}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-element border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-eden transition hover:border-brand-sweet hover:bg-brand-cloudDancer/60"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-element border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-eden transition hover:border-brand-sweet hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-white/5"
         >
           Full profile <ExternalLink className="h-3.5 w-3.5" />
         </Link>
       </div>
 
-      <p className="mt-2 text-xs text-brand-grey">
+      <p className="mt-2 text-xs text-brand-grey dark:text-slate-400">
         {data.roles.length} role{data.roles.length === 1 ? "" : "s"} this candidate qualifies for, best fit first.
         Overqualified first-officer seats are flagged.
       </p>
@@ -251,7 +251,7 @@ function CandidateRoles({
             <RoleMatchCard key={role.requirementId} role={role} onViewCandidates={onViewRole} />
           ))
         ) : (
-          <p className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm text-brand-grey">
+          <p className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
             No matching roles yet. Add candidate flight data or create pilot requirements, then check back.
           </p>
         )}

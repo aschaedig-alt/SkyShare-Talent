@@ -10,12 +10,12 @@ const NEXT: Record<GridTaskStatus, GridTaskStatus> = { TODO: "DONE", DONE: "NA",
 
 const STATUS_STYLE: Record<HireStatus, string> = {
   Ready: "bg-emerald-50 text-emerald-800",
-  "In process": "bg-brand-gold/15 text-brand-lea",
+  "In process": "bg-brand-gold/15 text-brand-lea dark:text-slate-100",
   Urgent: "bg-red-50 text-red-700",
   Blocked: "bg-red-50 text-red-700",
   Onboarded: "bg-sky-50 text-sky-800",
-  Archived: "bg-brand-cloudDancer text-brand-grey",
-  Canceled: "bg-brand-cloudDancer text-brand-grey"
+  Archived: "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400",
+  Canceled: "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400"
 };
 
 function fmtDate(iso: string | null) {
@@ -59,34 +59,34 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
   }
 
   if (hires.length === 0) {
-    return <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10">No active hires.</p>;
+    return <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:text-slate-400 dark:ring-white/10">No active hires.</p>;
   }
 
   return (
-    <div className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10">
-      <div className="border-b border-brand-lea/10 px-4 py-3">
-        <p className="text-sm text-brand-grey">
-          Click any cell to cycle <span className="font-semibold text-brand-lea">to-do → done → N/A</span>. Scroll sideways for more hires.
+    <div className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <div className="border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
+        <p className="text-sm text-brand-grey dark:text-slate-400">
+          Click any cell to cycle <span className="font-semibold text-brand-lea dark:text-slate-100">to-do → done → N/A</span>. Scroll sideways for more hires.
         </p>
       </div>
       <div className="overflow-x-auto">
         <table className="border-separate border-spacing-0 text-xs">
           <thead>
             <tr>
-              <th className="sticky left-0 z-30 border-b border-r border-brand-lea/10 bg-white px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey">
+              <th className="sticky left-0 z-30 border-b border-r border-brand-lea/10 bg-white px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">
                 Task
               </th>
               {hires.map((h) => {
                 const pct = h.applicableCount > 0 ? Math.round((h.doneCount / h.applicableCount) * 100) : 0;
                 return (
-                  <th key={h.id} className="sticky top-0 z-10 border-b border-brand-lea/10 bg-white px-3 py-2 align-bottom" style={{ minWidth: 132 }}>
-                    <Link href={`/people/${h.id}`} className="block text-center font-medium text-brand-lea hover:underline transition hover:shadow-glow">
+                  <th key={h.id} className="sticky top-0 z-10 border-b border-brand-lea/10 bg-white px-3 py-2 align-bottom dark:border-white/10 dark:bg-[#10243a]" style={{ minWidth: 132 }}>
+                    <Link href={`/people/${h.id}`} className="block text-center font-medium text-brand-lea hover:underline transition hover:shadow-glow dark:text-slate-100">
                       {h.name}
                     </Link>
-                    <div className="mx-auto mt-1.5 h-1.5 w-24 overflow-hidden rounded-full bg-brand-cloudDancer">
+                    <div className="mx-auto mt-1.5 h-1.5 w-24 overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/5">
                       <span className={clsx("block h-full rounded-full", pct === 100 ? "bg-emerald-500" : "bg-brand-gold")} style={{ width: `${pct}%` }} />
                     </div>
-                    <div className="mt-1 text-center text-[10px] text-brand-grey">{h.doneCount}/{h.applicableCount} done</div>
+                    <div className="mt-1 text-center text-[10px] text-brand-grey dark:text-slate-400">{h.doneCount}/{h.applicableCount} done</div>
                     <div className="mt-1.5 text-center">
                       <span className={clsx("rounded px-2 py-0.5 text-[10px] font-semibold", STATUS_STYLE[h.status])}>{h.status}</span>
                     </div>
@@ -104,9 +104,9 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
               ["Orientation", (h: GridHire) => fmtDate(h.orientationDate)]
             ] as Array<[string, (h: GridHire) => string]>).map(([label, get]) => (
               <tr key={label}>
-                <td className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-grey">{label}</td>
+                <td className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">{label}</td>
                 {hires.map((h) => (
-                  <td key={h.id} className="border-b border-brand-lea/5 px-3 py-1.5 text-center text-brand-grey">{get(h)}</td>
+                  <td key={h.id} className="border-b border-brand-lea/5 px-3 py-1.5 text-center text-brand-grey dark:border-white/10 dark:text-slate-400">{get(h)}</td>
                 ))}
               </tr>
             ))}
@@ -117,25 +117,25 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
               return (
                 <Fragment key={g.key}>
                   <tr>
-                    <td className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-brand-cloudDancer/60 px-3 py-1.5 text-right text-[10px] font-bold uppercase tracking-wide text-brand-gold">
+                    <td className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-brand-cloudDancer/60 px-3 py-1.5 text-right text-[10px] font-bold uppercase tracking-wide text-brand-gold dark:border-white/10 dark:bg-white/5">
                       {groupLabel(g.key)}
                     </td>
                     {hires.map((h) => (
-                      <td key={h.id} className="border-b border-brand-lea/5 bg-brand-cloudDancer/40" />
+                      <td key={h.id} className="border-b border-brand-lea/5 bg-brand-cloudDancer/40 dark:border-white/10 dark:bg-white/5" />
                     ))}
                   </tr>
                   {groupTasks.map((def) => (
                     <tr key={def.key}>
-                      <td className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-black">{def.label}</td>
+                      <td className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-black dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100">{def.label}</td>
                       {hires.map((h) => {
                         const task = h.tasks.find((t) => t.key === def.key);
-                        if (!task) return <td key={h.id} className="border-b border-brand-lea/5 text-center text-brand-grey/50">–</td>;
+                        if (!task) return <td key={h.id} className="border-b border-brand-lea/5 text-center text-brand-grey/50 dark:border-white/10">–</td>;
                         return (
-                          <td key={h.id} className="border-b border-brand-lea/5 text-center">
+                          <td key={h.id} className="border-b border-brand-lea/5 text-center dark:border-white/10">
                             <button
                               type="button"
                               onClick={() => cycle(h.id, task.id, task.status)}
-                              className="inline-flex h-8 w-full items-center justify-center transition hover:bg-brand-cloudDancer/50 hover:shadow-glow"
+                              className="inline-flex h-8 w-full items-center justify-center transition hover:bg-brand-cloudDancer/50 hover:shadow-glow dark:bg-white/5"
                               title="Click to change"
                             >
                               <Glyph status={task.status} />

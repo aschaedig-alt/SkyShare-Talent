@@ -17,7 +17,7 @@ import {
 import { InterviewerPicker } from "@/components/calendar/InterviewerPicker";
 import { formatDateTimeWithZone } from "@/lib/calendar/format";
 
-const inputCls = "w-full rounded-lg border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold";
+const inputCls = "w-full rounded-lg border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10";
 
 function recoTone(key: RecommendationKey): string {
   switch (key) {
@@ -99,7 +99,7 @@ function ScorecardEditor({
 
   return (
     <div className="rounded-xl border border-brand-gold/30 bg-brand-gold/5 p-4">
-      <label className="grid gap-1 text-xs font-semibold text-brand-lea">
+      <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
         Interviewer
         <InterviewerPicker
           interviewers={detail.interviewers}
@@ -110,13 +110,13 @@ function ScorecardEditor({
       </label>
 
       <div className="mt-3">
-        <span className="text-xs font-semibold text-brand-lea">Questions &amp; ratings</span>
+        <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">Questions &amp; ratings</span>
         <div className="mt-1.5 space-y-2">
           {items.map((item, idx) => (
-            <div key={idx} className="rounded-lg border border-brand-lea/10 bg-white p-2.5">
+            <div key={idx} className="rounded-lg border border-brand-lea/10 bg-white p-2.5 dark:border-white/10 dark:bg-[#10243a]">
               <div className="flex items-start gap-2">
                 <input value={item.q} onChange={(e) => setText(idx, e.target.value)} className={`${inputCls} flex-1`} />
-                <button type="button" onClick={() => removeItem(idx)} aria-label="Remove" className="mt-1 rounded p-1 text-brand-grey transition hover:text-red-600">
+                <button type="button" onClick={() => removeItem(idx)} aria-label="Remove" className="mt-1 rounded p-1 text-brand-grey transition hover:text-red-600 dark:text-slate-400">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
@@ -129,7 +129,7 @@ function ScorecardEditor({
                       type="button"
                       onClick={() => setRating(idx, r.key)}
                       className={`rounded border px-2.5 py-0.5 text-[11px] font-semibold transition hover:shadow-glow ${
-                        active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"
+                        active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:text-slate-100"
                       }`}
                     >
                       {r.label}
@@ -153,14 +153,14 @@ function ScorecardEditor({
             placeholder="Add a question to rate"
             className={`${inputCls} flex-1`}
           />
-          <button type="button" onClick={addItem} disabled={!newQ.trim()} className="inline-flex items-center gap-1 rounded-lg border border-brand-lea/20 px-2.5 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-50">
+          <button type="button" onClick={addItem} disabled={!newQ.trim()} className="inline-flex items-center gap-1 rounded-lg border border-brand-lea/20 px-2.5 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-50 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
             <Plus className="h-3.5 w-3.5" /> Add
           </button>
         </div>
       </div>
 
       <div className="mt-3">
-        <span className="text-xs font-semibold text-brand-lea">Overall recommendation</span>
+        <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">Overall recommendation</span>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {RECOMMENDATIONS.map((r) => {
             const active = recommendation === r.key;
@@ -170,7 +170,7 @@ function ScorecardEditor({
                 type="button"
                 onClick={() => setRecommendation(active ? "" : r.key)}
                 className={`rounded border px-3 py-1 text-xs font-semibold transition hover:shadow-glow ${
-                  active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"
+                  active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:text-slate-100"
                 }`}
               >
                 {r.label}
@@ -180,14 +180,14 @@ function ScorecardEditor({
         </div>
       </div>
 
-      <label className="mt-3 grid gap-1 text-xs font-semibold text-brand-lea">
+      <label className="mt-3 grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
         Comments
         <textarea value={comments} onChange={(e) => setComments(e.target.value)} rows={2} className={inputCls} />
       </label>
 
       <div className="mt-3 flex items-center justify-end gap-3">
         {error ? <span className="mr-auto text-xs font-medium text-red-700">{error}</span> : null}
-        <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea">
+        <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400 dark:text-slate-100">
           Cancel
         </button>
         <button type="button" onClick={save} disabled={busy || !interviewer.trim()} className="rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
@@ -244,21 +244,21 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
 
       {/* Aggregate */}
       <section className="grid gap-3 sm:grid-cols-[auto,1fr]">
-        <div className="flex items-center gap-4 rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+        <div className="flex items-center gap-4 rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
           <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl bg-brand-lea/5">
-            <span className="text-2xl font-semibold leading-none text-brand-lea">{avgText(agg.average)}</span>
-            <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-grey">of 4</span>
+            <span className="text-2xl font-semibold leading-none text-brand-lea dark:text-slate-100">{avgText(agg.average)}</span>
+            <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">of 4</span>
           </div>
           <div>
-            <div className="flex items-center gap-1.5 text-sm font-semibold text-brand-lea">
+            <div className="flex items-center gap-1.5 text-sm font-semibold text-brand-lea dark:text-slate-100">
               <Star className="h-4 w-4 text-brand-gold" /> Combined score
             </div>
-            <p className="text-xs text-brand-grey">
+            <p className="text-xs text-brand-grey dark:text-slate-400">
               Across {agg.count} scorecard{agg.count === 1 ? "" : "s"}. Each interviewer counts equally.
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
           {RECOMMENDATIONS.map((r) => {
             const n = agg.recommendations[r.key] ?? 0;
             if (n === 0) return null;
@@ -268,7 +268,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
               </span>
             );
           })}
-          {agg.count === 0 ? <span className="text-sm text-brand-grey">No scorecards yet.</span> : null}
+          {agg.count === 0 ? <span className="text-sm text-brand-grey dark:text-slate-400">No scorecards yet.</span> : null}
         </div>
       </section>
 
@@ -290,34 +290,34 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
       {/* Scorecards */}
       <section className="space-y-3">
         {detail.scorecards.length === 0 && !creating ? (
-          <div className="rounded-xl bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-cloudDancer/70">
-              <ClipboardCheck className="h-5 w-5 text-brand-grey" />
+          <div className="rounded-xl bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-cloudDancer/70 dark:bg-white/5">
+              <ClipboardCheck className="h-5 w-5 text-brand-grey dark:text-slate-400" />
             </div>
-            <p className="mt-3 text-base font-semibold text-brand-lea">No scorecards yet</p>
-            <p className="mt-1 text-sm text-brand-grey">Add the first interviewer&apos;s scorecard above.</p>
+            <p className="mt-3 text-base font-semibold text-brand-lea dark:text-slate-100">No scorecards yet</p>
+            <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">Add the first interviewer&apos;s scorecard above.</p>
           </div>
         ) : (
           detail.scorecards.map((card) =>
             editingId === card.id ? (
               <ScorecardEditor key={card.id} detail={detail} initial={card} onCancel={() => setEditingId(null)} onSaved={afterSave} />
             ) : (
-              <div key={card.id} className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+              <div key={card.id} className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-brand-lea">{card.interviewer}</span>
+                    <span className="font-semibold text-brand-lea dark:text-slate-100">{card.interviewer}</span>
                     {card.recommendation ? (
                       <span className={`rounded px-2.5 py-0.5 text-[11px] font-semibold ${recoTone(card.recommendation)}`}>
                         {RECOMMENDATION_LABEL[card.recommendation]}
                       </span>
                     ) : null}
-                    <span className="rounded bg-brand-lea/5 px-2.5 py-0.5 text-[11px] font-semibold text-brand-lea">{avgText(card.average)} / 4</span>
+                    <span className="rounded bg-brand-lea/5 px-2.5 py-0.5 text-[11px] font-semibold text-brand-lea dark:text-slate-100">{avgText(card.average)} / 4</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => { setCreating(false); setEditingId(card.id); }} title="Edit" className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea">
+                    <button onClick={() => { setCreating(false); setEditingId(card.id); }} title="Edit" className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5 dark:text-slate-100">
                       <Pencil className="h-4 w-4" />
                     </button>
-                    <button onClick={() => remove(card)} disabled={busyId === card.id} title="Delete" className="rounded p-1.5 text-brand-grey transition hover:bg-red-50 hover:text-red-600">
+                    <button onClick={() => remove(card)} disabled={busyId === card.id} title="Delete" className="rounded p-1.5 text-brand-grey transition hover:bg-red-50 hover:text-red-600 dark:text-slate-400">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
@@ -326,15 +326,15 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
                   <ul className="mt-2 space-y-1">
                     {card.items.map((it, i) => (
                       <li key={i} className="flex items-start justify-between gap-3 text-sm">
-                        <span className="text-brand-black">{it.q}</span>
-                        <span className={`shrink-0 text-xs font-semibold ${it.rating ? "text-brand-lea" : "text-brand-grey/60"}`}>
+                        <span className="text-brand-black dark:text-slate-100">{it.q}</span>
+                        <span className={`shrink-0 text-xs font-semibold ${it.rating ? "text-brand-lea dark:text-slate-100" : "text-brand-grey/60"}`}>
                           {it.rating ? RATING_LABEL[it.rating] : "—"}
                         </span>
                       </li>
                     ))}
                   </ul>
                 ) : null}
-                {card.comments ? <p className="mt-2 border-l-2 border-brand-sweet/40 pl-2 text-xs italic text-brand-grey">{card.comments}</p> : null}
+                {card.comments ? <p className="mt-2 border-l-2 border-brand-sweet/40 pl-2 text-xs italic text-brand-grey dark:text-slate-400">{card.comments}</p> : null}
               </div>
             )
           )

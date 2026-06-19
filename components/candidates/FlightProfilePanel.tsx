@@ -140,7 +140,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
   }
 
   return (
-    <section className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+    <section className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex items-center justify-between gap-2">
         <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
           <Plane className="h-3.5 w-3.5" /> Flight Profile
@@ -148,7 +148,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
         <button
           onClick={scan}
           disabled={scanning}
-          className="flex items-center gap-1 rounded-lg border border-brand-lea/20 px-2.5 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/40 disabled:opacity-60"
+          className="flex items-center gap-1 rounded-lg border border-brand-lea/20 px-2.5 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/40 disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
           title="Scan this candidate's documents for flight data"
         >
           {scanning ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
@@ -156,17 +156,17 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
         </button>
       </div>
 
-      {message && <div className="mt-2 rounded bg-brand-cloudDancer/50 px-2 py-1 text-[11px] text-brand-grey">{message}</div>}
+      {message && <div className="mt-2 rounded bg-brand-cloudDancer/50 px-2 py-1 text-[11px] text-brand-grey dark:bg-white/5 dark:text-slate-400">{message}</div>}
 
       {/* Confirmed values */}
       {confirmed.length > 0 && (
         <div className="mt-3 grid grid-cols-2 gap-2">
           {confirmed.map((m) => (
-            <div key={m.id} className="group rounded-lg bg-brand-cloudDancer/45 px-2.5 py-2">
+            <div key={m.id} className="group rounded-lg bg-brand-cloudDancer/45 px-2.5 py-2 dark:bg-white/5">
               <div className="flex items-center justify-between">
-                <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey">{m.label}</div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey dark:text-slate-400">{m.label}</div>
                 {editingId !== m.id && (
-                  <button onClick={() => startEdit(m)} className="text-brand-grey opacity-0 transition group-hover:opacity-100" aria-label="Edit">
+                  <button onClick={() => startEdit(m)} className="text-brand-grey opacity-0 transition group-hover:opacity-100 dark:text-slate-400" aria-label="Edit">
                     <Pencil className="h-3 w-3" />
                   </button>
                 )}
@@ -177,7 +177,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
                     value={editLabel}
                     onChange={(e) => setEditLabel(e.target.value)}
                     placeholder="Label"
-                    className="w-full rounded border border-brand-lea/30 px-1.5 py-0.5 text-xs font-semibold text-brand-lea focus:border-brand-gold focus:outline-none"
+                    className="w-full rounded border border-brand-lea/30 px-1.5 py-0.5 text-xs font-semibold text-brand-lea focus:border-brand-gold focus:outline-none dark:border-white/10 dark:text-slate-100"
                   />
                   <div className="flex items-center gap-1">
                     <input
@@ -189,16 +189,16 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
                         if (e.key === "Enter") saveEdit(m, false);
                         if (e.key === "Escape") setEditingId(null);
                       }}
-                      className="min-w-0 flex-1 rounded border border-brand-lea/30 px-1.5 py-0.5 text-sm focus:border-brand-gold focus:outline-none"
+                      className="min-w-0 flex-1 rounded border border-brand-lea/30 px-1.5 py-0.5 text-sm focus:border-brand-gold focus:outline-none dark:border-white/10"
                     />
                     <button onClick={() => saveEdit(m, false)} disabled={busyId === m.id} className="rounded p-0.5 text-emerald-700" aria-label="Save"><Check className="h-3.5 w-3.5" /></button>
-                    <button onClick={() => setEditingId(null)} className="rounded p-0.5 text-brand-grey" aria-label="Cancel"><X className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => setEditingId(null)} className="rounded p-0.5 text-brand-grey dark:text-slate-400" aria-label="Cancel"><X className="h-3.5 w-3.5" /></button>
                   </div>
                 </div>
               ) : (
-                <div className="mt-0.5 text-sm font-semibold text-brand-lea">
+                <div className="mt-0.5 text-sm font-semibold text-brand-lea dark:text-slate-100">
                   {metricValue(m)}
-                  {m.unit && m.valueNumber !== null ? <span className="ml-1 text-[10px] font-normal text-brand-grey">{m.unit}</span> : null}
+                  {m.unit && m.valueNumber !== null ? <span className="ml-1 text-[10px] font-normal text-brand-grey dark:text-slate-400">{m.unit}</span> : null}
                 </div>
               )}
             </div>
@@ -227,7 +227,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
                         value={editLabel}
                         onChange={(e) => setEditLabel(e.target.value)}
                         placeholder="Label"
-                        className="w-[42%] rounded border border-brand-lea/30 px-1.5 py-0.5 text-xs font-semibold text-brand-lea focus:border-brand-gold focus:outline-none"
+                        className="w-[42%] rounded border border-brand-lea/30 px-1.5 py-0.5 text-xs font-semibold text-brand-lea focus:border-brand-gold focus:outline-none dark:border-white/10 dark:text-slate-100"
                       />
                       <input
                         value={editVal}
@@ -238,14 +238,14 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
                           if (e.key === "Enter") saveEdit(m, true);
                           if (e.key === "Escape") setEditingId(null);
                         }}
-                        className="min-w-0 flex-1 rounded border border-brand-lea/30 px-1.5 py-0.5 text-sm focus:border-brand-gold focus:outline-none"
+                        className="min-w-0 flex-1 rounded border border-brand-lea/30 px-1.5 py-0.5 text-sm focus:border-brand-gold focus:outline-none dark:border-white/10"
                       />
                     </div>
                     <div className="flex items-center justify-end gap-1">
                       <button onClick={() => saveEdit(m, true)} disabled={busyId === m.id} className="flex items-center gap-1 rounded bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-emerald-700" aria-label="Save and accept">
                         {busyId === m.id ? <Loader className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} Save &amp; accept
                       </button>
-                      <button onClick={() => setEditingId(null)} className="rounded border border-brand-lea/20 px-2 py-0.5 text-[11px] font-semibold text-brand-grey" aria-label="Cancel">
+                      <button onClick={() => setEditingId(null)} className="rounded border border-brand-lea/20 px-2 py-0.5 text-[11px] font-semibold text-brand-grey dark:border-white/10 dark:text-slate-400" aria-label="Cancel">
                         Cancel
                       </button>
                     </div>
@@ -253,19 +253,19 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
                 ) : (
                   <div className="flex items-center gap-2">
                     <div className="min-w-0 flex-1">
-                      <span className="text-[11px] text-brand-grey">{m.label}</span>{" "}
-                      <span className="text-sm font-semibold text-brand-lea">
+                      <span className="text-[11px] text-brand-grey dark:text-slate-400">{m.label}</span>{" "}
+                      <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">
                         {metricValue(m)}
-                        {m.unit && m.valueNumber !== null ? <span className="ml-0.5 text-[10px] font-normal text-brand-grey">{m.unit}</span> : null}
+                        {m.unit && m.valueNumber !== null ? <span className="ml-0.5 text-[10px] font-normal text-brand-grey dark:text-slate-400">{m.unit}</span> : null}
                       </span>
                     </div>
-                    <button onClick={() => startEdit(m)} disabled={busyId === m.id} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/50" aria-label="Edit before accepting" title="Edit">
+                    <button onClick={() => startEdit(m)} disabled={busyId === m.id} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/50 dark:text-slate-400 dark:bg-white/5" aria-label="Edit before accepting" title="Edit">
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
                     <button onClick={() => act(m.id, "accept")} disabled={busyId === m.id} className="rounded p-1 text-emerald-700 hover:bg-emerald-100" aria-label="Accept">
                       {busyId === m.id ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                     </button>
-                    <button onClick={() => act(m.id, "dismiss")} disabled={busyId === m.id} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/50" aria-label="Dismiss">
+                    <button onClick={() => act(m.id, "dismiss")} disabled={busyId === m.id} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/50 dark:text-slate-400 dark:bg-white/5" aria-label="Dismiss">
                       <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -281,7 +281,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
 
       {/* Empty states */}
       {confirmed.length === 0 && suggested.length === 0 && (
-        <p className="mt-3 text-xs leading-5 text-brand-grey">
+        <p className="mt-3 text-xs leading-5 text-brand-grey dark:text-slate-400">
           {hasDocuments
             ? "No flight data yet — click “Scan docs” to pull Total Time, type ratings, and more from this candidate's documents."
             : "Add a resume or pilot app, then scan to extract flight hours and ratings."}
@@ -289,14 +289,14 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
       )}
 
       {/* Add a field manually */}
-      <div className="mt-3 border-t border-brand-lea/10 pt-3">
+      <div className="mt-3 border-t border-brand-lea/10 pt-3 dark:border-white/10">
         {adding ? (
           <div className="space-y-1.5">
             <input
               value={addLabel}
               onChange={(e) => setAddLabel(e.target.value)}
               placeholder="Field name (e.g. Tailwheel)"
-              className="w-full rounded border border-brand-lea/30 px-2 py-1 text-xs font-semibold text-brand-lea focus:border-brand-gold focus:outline-none"
+              className="w-full rounded border border-brand-lea/30 px-2 py-1 text-xs font-semibold text-brand-lea focus:border-brand-gold focus:outline-none dark:border-white/10 dark:text-slate-100"
             />
             <input
               value={addValue}
@@ -306,15 +306,15 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
                 if (e.key === "Enter") addField();
                 if (e.key === "Escape") setAdding(false);
               }}
-              className="w-full rounded border border-brand-lea/30 px-2 py-1 text-sm focus:border-brand-gold focus:outline-none"
+              className="w-full rounded border border-brand-lea/30 px-2 py-1 text-sm focus:border-brand-gold focus:outline-none dark:border-white/10"
             />
             <div className="flex items-center justify-end gap-1">
               <button onClick={addField} disabled={busyId === "add" || !addLabel.trim() || !addValue.trim()} className="flex items-center gap-1 rounded bg-brand-lea px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-brand-eden disabled:opacity-50">
                 {busyId === "add" ? <Loader className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} Add
               </button>
-              <button onClick={() => setAdding(false)} className="rounded border border-brand-lea/20 px-2.5 py-1 text-[11px] font-semibold text-brand-grey">Cancel</button>
+              <button onClick={() => setAdding(false)} className="rounded border border-brand-lea/20 px-2.5 py-1 text-[11px] font-semibold text-brand-grey dark:border-white/10 dark:text-slate-400">Cancel</button>
             </div>
-            <p className="text-[10px] text-brand-grey">A number becomes an hours field; anything else is saved as text.</p>
+            <p className="text-[10px] text-brand-grey dark:text-slate-400">A number becomes an hours field; anything else is saved as text.</p>
           </div>
         ) : (
           <button onClick={() => setAdding(true)} className="flex items-center gap-1 text-xs font-semibold text-brand-eden hover:underline">

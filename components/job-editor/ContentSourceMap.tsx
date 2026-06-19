@@ -19,10 +19,10 @@ function formatEnum(value: string) {
 
 function SourceBadge({ label, tone = "block" }: { label: string; tone?: "block" | "field" | "hidden" | "warning" }) {
   const toneClass = {
-    block: "bg-brand-sweet/40 text-brand-lea",
+    block: "bg-brand-sweet/40 text-brand-lea dark:text-slate-100",
     field: "bg-emerald-50 text-emerald-800",
-    hidden: "bg-brand-grey/12 text-brand-grey",
-    warning: "bg-brand-gold/22 text-brand-lea"
+    hidden: "bg-brand-grey/12 text-brand-grey dark:text-slate-400",
+    warning: "bg-brand-gold/22 text-brand-lea dark:text-slate-100"
   }[tone];
 
   return (
@@ -39,14 +39,14 @@ export function ContentSourceMap({ job }: ContentSourceMapProps) {
   const hiddenFieldCount = fieldSources.filter((source) => source.isHiddenByBlock).length;
 
   return (
-    <section className="rounded border border-brand-lea/10 bg-white p-3 shadow-sm">
+    <section className="rounded border border-brand-lea/10 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-[#10243a]">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-brand-eden">
             <MapPinned className="h-4 w-4" />
             Content Source Map
           </p>
-          <h3 className="mt-1 text-base font-bold text-brand-lea">What will publish for this job</h3>
+          <h3 className="mt-1 text-base font-bold text-brand-lea dark:text-slate-100">What will publish for this job</h3>
         </div>
         <div className="flex flex-wrap gap-1.5">
           <SourceBadge label={`${publishingBlocks.length} blocks`} />
@@ -63,13 +63,13 @@ export function ContentSourceMap({ job }: ContentSourceMapProps) {
           const blocks = publishingBlocks.filter((instance) => instance.contentBlock?.placement === placement.key);
 
           return (
-            <div key={placement.key} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-2">
+            <div key={placement.key} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-2 dark:border-white/10 dark:bg-white/5">
               <div className="mb-2 flex items-start justify-between gap-2">
                 <div>
-                  <div className="text-xs font-bold uppercase tracking-[0.12em] text-brand-lea">{placement.label}</div>
-                  <p className="mt-1 text-[11px] leading-4 text-brand-grey">{placement.description}</p>
+                  <div className="text-xs font-bold uppercase tracking-[0.12em] text-brand-lea dark:text-slate-100">{placement.label}</div>
+                  <p className="mt-1 text-[11px] leading-4 text-brand-grey dark:text-slate-400">{placement.description}</p>
                 </div>
-                <span className="rounded bg-white px-2 py-1 text-[10px] font-bold text-brand-eden">
+                <span className="rounded bg-white px-2 py-1 text-[10px] font-bold text-brand-eden dark:bg-[#10243a]">
                   {blocks.length}
                 </span>
               </div>
@@ -79,8 +79,8 @@ export function ContentSourceMap({ job }: ContentSourceMapProps) {
                   const outdated = isInstanceOutdated(instance);
 
                   return (
-                    <div key={instance.id} className="rounded border border-brand-lea/8 bg-white px-2 py-2">
-                      <div className="text-xs font-bold leading-5 text-brand-lea">{getInstanceTitle(instance)}</div>
+                    <div key={instance.id} className="rounded border border-brand-lea/8 bg-white px-2 py-2 dark:border-white/10 dark:bg-[#10243a]">
+                      <div className="text-xs font-bold leading-5 text-brand-lea dark:text-slate-100">{getInstanceTitle(instance)}</div>
                       <div className="mt-1 flex flex-wrap gap-1">
                         <SourceBadge label={getBlockSourceLabel(instance)} tone={instance.mode === "FORKED_CUSTOM" ? "warning" : "block"} />
                         <SourceBadge label={formatEnum(instance.contentBlock?.category ?? "CUSTOM")} tone="hidden" />
@@ -91,7 +91,7 @@ export function ContentSourceMap({ job }: ContentSourceMapProps) {
                 })}
 
                 {!blocks.length && (
-                  <div className="rounded border border-dashed border-brand-lea/15 bg-white/70 px-2 py-3 text-center text-xs font-semibold leading-5 text-brand-grey">
+                  <div className="rounded border border-dashed border-brand-lea/15 bg-white/70 px-2 py-3 text-center text-xs font-semibold leading-5 text-brand-grey dark:border-white/10 dark:text-slate-400">
                     No attached blocks in this lane.
                   </div>
                 )}
@@ -101,7 +101,7 @@ export function ContentSourceMap({ job }: ContentSourceMapProps) {
         })}
       </div>
 
-      <div className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/35 p-2">
+      <div className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/35 p-2 dark:border-white/10 dark:bg-white/5">
         <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-brand-eden">
           <Layers3 className="h-4 w-4" />
           Field Fallbacks
@@ -116,11 +116,11 @@ export function ContentSourceMap({ job }: ContentSourceMapProps) {
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <div className="text-xs font-bold text-brand-lea">{source.label}</div>
-                  <p className="mt-1 text-[11px] leading-4 text-brand-grey">{source.detail}</p>
+                  <div className="text-xs font-bold text-brand-lea dark:text-slate-100">{source.label}</div>
+                  <p className="mt-1 text-[11px] leading-4 text-brand-grey dark:text-slate-400">{source.detail}</p>
                 </div>
                 {source.isHiddenByBlock ? (
-                  <EyeOff className="h-4 w-4 shrink-0 text-brand-grey" />
+                  <EyeOff className="h-4 w-4 shrink-0 text-brand-grey dark:text-slate-400" />
                 ) : (
                   <Eye className="h-4 w-4 shrink-0 text-emerald-700" />
                 )}
