@@ -238,7 +238,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
   return (
     <div className="space-y-5 px-5 py-5 lg:px-8">
       {/* Header */}
-      <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
+      <section className="overflow-hidden rounded-xl bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Interview &amp; evaluation</p>
@@ -265,7 +265,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
       <InterviewTabs active="bank" />
 
       {/* Filters */}
-      <section className="flex flex-wrap items-center gap-2 rounded-2xl bg-white p-3 shadow-panel ring-1 ring-brand-lea/10">
+      <section className="flex flex-wrap items-center gap-2 rounded-xl bg-white p-3 shadow-panel ring-1 ring-brand-lea/10">
         <div className="relative min-w-0 flex-1 sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search questions" className={`${inputCls} pl-9`} />
@@ -304,7 +304,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
       {/* List */}
       <section className="space-y-2">
         {filtered.length === 0 ? (
-          <div className="rounded-2xl bg-white px-4 py-16 text-center shadow-panel ring-1 ring-brand-lea/10">
+          <div className="rounded-xl bg-white px-4 py-16 text-center shadow-panel ring-1 ring-brand-lea/10">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-cloudDancer/70">
               <ListChecks className="h-5 w-5 text-brand-grey" />
             </div>

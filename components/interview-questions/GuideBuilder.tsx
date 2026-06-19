@@ -118,7 +118,7 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
 
   return (
     <div className="space-y-5 px-5 py-5 lg:px-8">
-      <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
+      <section className="overflow-hidden rounded-xl bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Interview &amp; evaluation</p>
         <h1 className="mt-0.5 flex items-center gap-2 text-3xl font-semibold text-white">
           <Wand2 className="h-7 w-7" /> Build an interview guide
@@ -132,7 +132,7 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
       <InterviewTabs active="guide" />
 
       {/* Controls */}
-      <section className="rounded-2xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
+      <section className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
         <div className="grid gap-4 md:grid-cols-3">
           <label className="grid gap-1 text-xs font-semibold text-brand-lea">
             Department
@@ -199,12 +199,12 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
       {/* Result */}
       {guide ? (
         guide.length === 0 ? (
-          <section className="rounded-2xl bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10">
+          <section className="rounded-xl bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10">
             <p className="text-sm font-semibold text-brand-lea">No matching questions</p>
             <p className="mt-1 text-sm text-brand-grey">Add questions to the bank for this department/values, or widen the filters.</p>
           </section>
         ) : (
-          <section className="space-y-4 rounded-2xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+          <section className="space-y-4 rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
             {guide.length < length ? (
               <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
                 Only {guide.length} matching question{guide.length === 1 ? "" : "s"} available — add more to the bank to reach {length}.
@@ -240,7 +240,7 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
           </section>
         )
       ) : (
-        <section className="rounded-2xl bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10">
+        <section className="rounded-xl bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-cloudDancer/70">
             <Wand2 className="h-5 w-5 text-brand-grey" />
           </div>

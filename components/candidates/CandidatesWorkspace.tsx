@@ -80,7 +80,7 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
   return (
     <div className="space-y-5 px-5 py-5 lg:px-8">
       {/* Header */}
-      <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
+      <section className="overflow-hidden rounded-xl bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Candidate operations</p>
@@ -131,7 +131,7 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
       </section>
 
       {/* Records */}
-      <section className="overflow-hidden rounded-2xl bg-white shadow-panel ring-1 ring-brand-lea/10">
+      <section className="overflow-hidden rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10">
         <div className="flex items-center justify-between border-b border-brand-lea/10 px-5 py-4">
           <div>
             <h2 className="text-base font-semibold text-brand-lea">Candidate records</h2>

@@ -226,7 +226,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
   return (
     <div className="space-y-5 px-5 py-5 lg:px-8">
       {/* Header */}
-      <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
+      <section className="overflow-hidden rounded-xl bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
         <Link href="/calendar" className="inline-flex items-center gap-1 text-xs font-semibold text-white/70 transition hover:text-white">
           <ArrowLeft className="h-3.5 w-3.5" /> Calendar
         </Link>
@@ -244,7 +244,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
 
       {/* Aggregate */}
       <section className="grid gap-3 sm:grid-cols-[auto,1fr]">
-        <div className="flex items-center gap-4 rounded-2xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+        <div className="flex items-center gap-4 rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
           <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl bg-brand-lea/5">
             <span className="text-2xl font-semibold leading-none text-brand-lea">{avgText(agg.average)}</span>
             <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-grey">of 4</span>
@@ -258,7 +258,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
+        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10">
           {RECOMMENDATIONS.map((r) => {
             const n = agg.recommendations[r.key] ?? 0;
             if (n === 0) return null;
@@ -290,7 +290,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
       {/* Scorecards */}
       <section className="space-y-3">
         {detail.scorecards.length === 0 && !creating ? (
-          <div className="rounded-2xl bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10">
+          <div className="rounded-xl bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-cloudDancer/70">
               <ClipboardCheck className="h-5 w-5 text-brand-grey" />
             </div>

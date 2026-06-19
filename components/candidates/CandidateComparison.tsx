@@ -272,7 +272,7 @@ export function CandidateComparison({ data }: { data: CandidateComparisonData })
   return (
     <section className="space-y-3">
       {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white p-3 shadow-panel ring-1 ring-brand-lea/10">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl bg-white p-3 shadow-panel ring-1 ring-brand-lea/10">
         <div className="relative min-w-0 flex-1 sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey" />
           <input
@@ -355,7 +355,7 @@ export function CandidateComparison({ data }: { data: CandidateComparisonData })
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-2xl bg-white shadow-panel ring-1 ring-brand-lea/10">
+      <div className="overflow-hidden rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10">
         <div className="flex items-center justify-between border-b border-brand-lea/10 px-5 py-3">
           <p className="text-xs text-brand-grey">
             <span className="font-semibold text-brand-lea">{rows.length}</span> of {data.rows.length} candidates
