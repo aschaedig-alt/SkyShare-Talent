@@ -156,6 +156,7 @@ Working a candidate's record and acting on matcher results.
 - [x] Candidate notes & history (Jun 18) — the candidate profile Notes tab now adds/removes notes (attributed to the author) and a new Activity tab shows a per-candidate history timeline (edits, note add/remove, dedupe, interview changes) built from the activity log
 - [ ] Matcher bulk export — multi-select results in the resume matcher and bulk-export the selected candidates' contact info (name, phone, email, matched job) for Front emailing or Paycom re-entry; gate the export behind role-based permissions (ties into Phase 4 access controls)
 - [ ] Multiple & duplicate resumes per candidate — define how the system handles several resumes on one candidate and duplicate resumes (extends the candidate duplicate merge work)
+- [ ] Seed one complete sample application — upload a real Paycom candidate application and fill in every field (candidate details, application linked to a job, documents, flight metrics) so the system shows one fully complete, polished application end to end; doubles as a check that an application record looks good and complete
 
 ## Interview & Evaluation
 Streamline the end-to-end interview experience.
@@ -170,4 +171,9 @@ Streamline the end-to-end interview experience.
 - [x] Editable department colors (Jun 18) — admins recolor each department (Crew/Maintenance/FBO/Support) from an on-brand palette via a Colors button on the calendar; saved per workspace, no migration
 - [x] Interviewer roster + multi-department assignment (Jun 18) — team members (Scheduling) can each be assigned to one or more departments; the calendar interviewer field is now a roster picker that surfaces interviewers matching the selected job's department first (with their department tags), free text still allowed — foundation for per-interviewer scoring
 - [ ] Rename hiring manager to hiring team — update the label across the calendar view and likely the requisitions system-wide
+
+## Design & Consistency
+Make the whole app feel like one professionally designed product.
+- [ ] Match corner radii on the Interview guide & Candidates pages — these newer pages use larger rounded corners than the rest of the site; bring their radius and card styling in line with the standard
+- [ ] Full-site design review — go through every page from a professional graphic designer's perspective and make the design elements consistent (corner radius, spacing, typography, color usage, buttons, cards, headers); document the standard and apply it site-wide
 `;
