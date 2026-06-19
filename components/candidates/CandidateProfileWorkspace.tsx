@@ -11,11 +11,28 @@ import { ProConPanel } from "@/components/candidates/ProConPanel";
 import { CandidateNotes } from "@/components/candidates/CandidateNotes";
 import { CandidateActivityTimeline } from "@/components/candidates/CandidateActivityTimeline";
 import { FlightProfilePanel } from "@/components/candidates/FlightProfilePanel";
+import { EditableGrid, type EditablePanel, type GridItem } from "@/components/shared/EditableGrid";
+import type { WidgetInstance } from "@/lib/data/page-layout";
 import type { CandidateProfileData } from "@/lib/data/candidates";
 
 type CandidateProfileWorkspaceProps = {
   candidate: CandidateProfileData;
+  canEdit?: boolean;
+  savedLayout?: GridItem[] | null;
+  savedWidgets?: WidgetInstance[] | null;
 };
+
+// Default arrangement of the Documents-tab boxes (mirrors the current 240px
+// sidebar + wide document viewer); admins can drag/resize from here.
+const PROFILE_DEFAULT_LAYOUT: GridItem[] = [
+  { i: "doc-viewer", x: 3, y: 0, w: 9, h: 34 },
+  { i: "flight", x: 0, y: 0, w: 3, h: 8 },
+  { i: "checklist", x: 0, y: 8, w: 3, h: 7 },
+  { i: "currency", x: 0, y: 15, w: 3, h: 6 },
+  { i: "proscons", x: 0, y: 21, w: 3, h: 7 },
+  { i: "contact", x: 0, y: 28, w: 3, h: 4 },
+  { i: "record", x: 0, y: 32, w: 3, h: 5 }
+];
 
 type ProfileTab = "documents" | "applications" | "notes" | "interviews" | "activity";
 
@@ -68,7 +85,12 @@ const inputClass =
   "mt-1 w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100";
 const labelClass = "text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400";
 
-export function CandidateProfileWorkspace({ candidate: initialCandidate }: CandidateProfileWorkspaceProps) {
+export function CandidateProfileWorkspace({
+  candidate: initialCandidate,
+  canEdit = false,
+  savedLayout = null,
+  savedWidgets = null
+}: CandidateProfileWorkspaceProps) {
   const [candidate, setCandidate] = useState<CandidateProfileData>(initialCandidate);
   const [activeTab, setActiveTab] = useState<ProfileTab>("documents");
   const [isEditing, setIsEditing] = useState(false);
@@ -284,44 +306,96 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
             })}
           </div>
 
-          {/* Documents tab */}
+          {/* Documents tab — the same boxes as before, now a resizable board (Edit layout) */}
           {activeTab === "documents" && (
-            <section className="grid gap-4 xl:grid-cols-[240px_1fr]">
-              <aside className="space-y-3">
-                <FlightProfilePanel
-                  candidateId={candidate.id}
-                  metrics={candidate.metrics}
-                  hasDocuments={candidate.files.length > 0}
-                />
-                <DocumentChecklist files={candidate.files} />
-                <CurrencyPanel files={candidate.files} />
-                <ProConPanel candidateId={candidate.id} initialPros={candidate.pros} initialCons={candidate.cons} />
-                <div className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Contact</p>
-                  <div className="mt-3 space-y-2 text-sm">
-                    <div>
-                      <div className={labelClass}>Email</div>
-                      <div className="mt-0.5 break-words text-brand-lea dark:text-slate-100">{candidate.primaryEmail ?? "No email"}</div>
+            <EditableGrid
+              pageKey="candidate-profile"
+              canEdit={canEdit}
+              savedLayout={savedLayout}
+              savedWidgets={savedWidgets}
+              defaultLayout={PROFILE_DEFAULT_LAYOUT}
+              panels={[
+                {
+                  id: "doc-viewer",
+                  title: "Documents",
+                  node: (
+                    <div className="h-full overflow-auto">
+                      <CandidateDocuments candidateId={candidate.id} files={candidate.files} />
                     </div>
-                    <div>
-                      <div className={labelClass}>Phone</div>
-                      <div className="mt-0.5 text-brand-lea dark:text-slate-100">{candidate.primaryPhone ?? "No phone"}</div>
+                  )
+                },
+                {
+                  id: "flight",
+                  title: "Flight profile",
+                  node: (
+                    <div className="h-full overflow-auto">
+                      <FlightProfilePanel candidateId={candidate.id} metrics={candidate.metrics} hasDocuments={candidate.files.length > 0} />
                     </div>
-                  </div>
-                </div>
-                <div className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Record</p>
-                  <div className="mt-3 space-y-1.5 text-sm text-brand-grey dark:text-slate-400">
-                    <div>Owner: {candidate.owner ?? "Unassigned"}</div>
-                    <div>Source: {candidate.source ?? "Not recorded"}</div>
-                    <div>Created: {formatDate(candidate.createdAt)}</div>
-                    <div>Updated: {formatDate(candidate.updatedAt)}</div>
-                  </div>
-                </div>
-              </aside>
-
-              <CandidateDocuments candidateId={candidate.id} files={candidate.files} />
-            </section>
+                  )
+                },
+                {
+                  id: "checklist",
+                  title: "Document checklist",
+                  node: (
+                    <div className="h-full overflow-auto">
+                      <DocumentChecklist files={candidate.files} />
+                    </div>
+                  )
+                },
+                {
+                  id: "currency",
+                  title: "Currency",
+                  node: (
+                    <div className="h-full overflow-auto">
+                      <CurrencyPanel files={candidate.files} />
+                    </div>
+                  )
+                },
+                {
+                  id: "proscons",
+                  title: "Pros & cons",
+                  node: (
+                    <div className="h-full overflow-auto">
+                      <ProConPanel candidateId={candidate.id} initialPros={candidate.pros} initialCons={candidate.cons} />
+                    </div>
+                  )
+                },
+                {
+                  id: "contact",
+                  title: "Contact",
+                  node: (
+                    <div className="h-full overflow-auto rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Contact</p>
+                      <div className="mt-3 space-y-2 text-sm">
+                        <div>
+                          <div className={labelClass}>Email</div>
+                          <div className="mt-0.5 break-words text-brand-lea dark:text-slate-100">{candidate.primaryEmail ?? "No email"}</div>
+                        </div>
+                        <div>
+                          <div className={labelClass}>Phone</div>
+                          <div className="mt-0.5 text-brand-lea dark:text-slate-100">{candidate.primaryPhone ?? "No phone"}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                },
+                {
+                  id: "record",
+                  title: "Record",
+                  node: (
+                    <div className="h-full overflow-auto rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Record</p>
+                      <div className="mt-3 space-y-1.5 text-sm text-brand-grey dark:text-slate-400">
+                        <div>Owner: {candidate.owner ?? "Unassigned"}</div>
+                        <div>Source: {candidate.source ?? "Not recorded"}</div>
+                        <div>Created: {formatDate(candidate.createdAt)}</div>
+                        <div>Updated: {formatDate(candidate.updatedAt)}</div>
+                      </div>
+                    </div>
+                  )
+                }
+              ]}
+            />
           )}
 
           {/* Applications tab */}

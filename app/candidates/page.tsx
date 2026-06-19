@@ -1,16 +1,25 @@
 import { CandidatesWorkspace } from "@/components/candidates/CandidatesWorkspace";
 import { getCandidateListData } from "@/lib/data/candidates";
 import { requireModulePageAccess } from "@/lib/data/module-access";
+import { getPageLayout } from "@/lib/data/page-layout";
 
 type CandidatesPageProps = {
   searchParams?: Promise<{ q?: string }>;
 };
 
 export default async function CandidatesPage({ searchParams }: CandidatesPageProps) {
-  await requireModulePageAccess("candidates");
+  const access = await requireModulePageAccess("candidates");
   const params = await searchParams;
   const query = params?.q?.trim() ?? "";
-  const data = await getCandidateListData(query);
+  const [data, layout] = await Promise.all([getCandidateListData(query), getPageLayout("candidates")]);
 
-  return <CandidatesWorkspace data={data} query={query} />;
+  return (
+    <CandidatesWorkspace
+      data={data}
+      query={query}
+      canEdit={access.role === "ADMIN"}
+      savedLayout={layout.layout}
+      savedWidgets={layout.widgets}
+    />
+  );
 }

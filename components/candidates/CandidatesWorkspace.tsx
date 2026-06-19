@@ -15,11 +15,22 @@ import { NewCandidateButton } from "@/components/candidates/NewCandidateButton";
 import { ResumeIntake } from "@/components/candidates/ResumeIntake";
 import { DocumentIntake } from "@/components/candidates/DocumentIntake";
 import { CandidateViewTabs } from "@/components/candidates/CandidateViewTabs";
+import { EditableGrid, type GridItem } from "@/components/shared/EditableGrid";
+import type { WidgetInstance } from "@/lib/data/page-layout";
 
 type CandidatesWorkspaceProps = {
   data: CandidateListData;
   query: string;
+  canEdit?: boolean;
+  savedLayout?: GridItem[] | null;
+  savedWidgets?: WidgetInstance[] | null;
 };
+
+// Default arrangement of the resizable boxes (stats row + records table).
+const CANDIDATES_DEFAULT_LAYOUT: GridItem[] = [
+  { i: "stats", x: 0, y: 0, w: 12, h: 4 },
+  { i: "records", x: 0, y: 4, w: 12, h: 26 }
+];
 
 type StatConfig = {
   key: keyof CandidateListData["stats"];
@@ -76,74 +87,37 @@ function initials(name: string) {
     .join("");
 }
 
-export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
-  return (
-    <div className="space-y-5 px-5 py-5 lg:px-8">
-      {/* Header */}
-      <section className="overflow-hidden rounded-xl bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Candidate operations</p>
-            <h1 className="mt-0.5 text-3xl font-semibold text-white">Candidates</h1>
-            <p className="mt-1 max-w-2xl text-sm text-white/75">
-              Search and manage candidates — including the text inside their resumes and pilot apps.
-            </p>
-          </div>
-          <div className="flex w-full flex-col items-stretch gap-2 xl:w-[560px]">
-            <div className="flex flex-wrap justify-end gap-2">
-              <ResumeIntake variant="solid" />
-              <DocumentIntake variant="solid" />
-              <NewCandidateButton />
-            </div>
-            <form className="flex w-full gap-2">
-              <div className="relative min-w-0 flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey dark:text-slate-400" />
-                <input
-                  name="q"
-                  defaultValue={query}
-                  placeholder="Search name, role, tag, or text inside resumes & pilot apps"
-                  className="w-full rounded-lg border border-white/20 bg-white/95 py-2.5 pl-9 pr-3 text-sm text-brand-black shadow-sm outline-none transition focus:ring-2 focus:ring-brand-gold/50 dark:text-slate-100"
-                />
-              </div>
-              <button type="submit" className="rounded-lg border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20">
-                Search
-              </button>
-            </form>
-          </div>
-        </div>
-      </section>
-
-      <CandidateViewTabs active="list" />
-
-      {/* Stats */}
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {statConfig.map(({ key, label, icon: Icon, accent }) => (
-          <div key={key} className="flex items-center gap-3 rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 transition hover:ring-brand-gold/40 dark:bg-[#10243a] dark:ring-white/10">
-            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${accent}`}>
-              <Icon className="h-5 w-5" />
-            </span>
-            <div className="min-w-0">
-              <div className="text-2xl font-semibold leading-none text-brand-lea dark:text-slate-100">{data.stats[key]}</div>
-              <div className="mt-1 truncate text-[11px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">{label}</div>
-            </div>
-          </div>
-        ))}
-      </section>
-
-      {/* Records */}
-      <section className="overflow-hidden rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
-        <div className="flex items-center justify-between border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
-          <div>
-            <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Candidate records</h2>
-            <p className="text-xs text-brand-grey dark:text-slate-400">
-              Showing up to 100 records{query ? ` matching "${query}"` : ""}.
-            </p>
-          </div>
-          <span className="rounded bg-brand-cloudDancer/70 px-3 py-1 text-xs font-semibold text-brand-lea dark:bg-white/5 dark:text-slate-100">
-            {data.candidates.length} shown
+export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout = null, savedWidgets = null }: CandidatesWorkspaceProps) {
+  const statsPanel = (
+    <section className="grid h-full gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      {statConfig.map(({ key, label, icon: Icon, accent }) => (
+        <div key={key} className="flex items-center gap-3 rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 transition hover:ring-brand-gold/40 dark:bg-[#10243a] dark:ring-white/10">
+          <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${accent}`}>
+            <Icon className="h-5 w-5" />
           </span>
+          <div className="min-w-0">
+            <div className="text-2xl font-semibold leading-none text-brand-lea dark:text-slate-100">{data.stats[key]}</div>
+            <div className="mt-1 truncate text-[11px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">{label}</div>
+          </div>
         </div>
+      ))}
+    </section>
+  );
 
+  const recordsPanel = (
+    <section className="flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <div className="flex shrink-0 items-center justify-between border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
+        <div>
+          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Candidate records</h2>
+          <p className="text-xs text-brand-grey dark:text-slate-400">
+            Showing up to 100 records{query ? ` matching "${query}"` : ""}.
+          </p>
+        </div>
+        <span className="rounded bg-brand-cloudDancer/70 px-3 py-1 text-xs font-semibold text-brand-lea dark:bg-white/5 dark:text-slate-100">
+          {data.candidates.length} shown
+        </span>
+      </div>
+      <div className="min-h-0 flex-1 overflow-auto">
         {data.candidates.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[940px] border-collapse text-left text-sm">
@@ -239,7 +213,59 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
             </p>
           </div>
         )}
+      </div>
+    </section>
+  );
+
+  return (
+    <div className="space-y-5 px-5 py-5 lg:px-8">
+      {/* Header */}
+      <section className="overflow-hidden rounded-xl bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Candidate operations</p>
+            <h1 className="mt-0.5 text-3xl font-semibold text-white">Candidates</h1>
+            <p className="mt-1 max-w-2xl text-sm text-white/75">
+              Search and manage candidates — including the text inside their resumes and pilot apps.
+            </p>
+          </div>
+          <div className="flex w-full flex-col items-stretch gap-2 xl:w-[560px]">
+            <div className="flex flex-wrap justify-end gap-2">
+              <ResumeIntake variant="solid" />
+              <DocumentIntake variant="solid" />
+              <NewCandidateButton />
+            </div>
+            <form className="flex w-full gap-2">
+              <div className="relative min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey dark:text-slate-400" />
+                <input
+                  name="q"
+                  defaultValue={query}
+                  placeholder="Search name, role, tag, or text inside resumes & pilot apps"
+                  className="w-full rounded-lg border border-white/20 bg-white/95 py-2.5 pl-9 pr-3 text-sm text-brand-black shadow-sm outline-none transition focus:ring-2 focus:ring-brand-gold/50 dark:text-slate-100"
+                />
+              </div>
+              <button type="submit" className="rounded-lg border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20">
+                Search
+              </button>
+            </form>
+          </div>
+        </div>
       </section>
+
+      <CandidateViewTabs active="list" />
+
+      <EditableGrid
+        pageKey="candidates"
+        canEdit={canEdit}
+        savedLayout={savedLayout}
+        savedWidgets={savedWidgets}
+        defaultLayout={CANDIDATES_DEFAULT_LAYOUT}
+        panels={[
+          { id: "stats", title: "Statistics", node: statsPanel },
+          { id: "records", title: "Candidate records", node: recordsPanel }
+        ]}
+      />
     </div>
   );
 }
