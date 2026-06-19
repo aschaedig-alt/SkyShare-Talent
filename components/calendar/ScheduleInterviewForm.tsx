@@ -7,6 +7,8 @@ import type { CalendarData } from "@/lib/data/calendar";
 import { US_TIMEZONES, DEFAULT_TIMEZONE } from "@/lib/calendar/timezones";
 import { dateAtHour } from "@/lib/calendar/format";
 import { interviewTypes, INTERVIEW_TYPE_META, DEFAULT_INTERVIEW_TYPE } from "@/lib/calendar/interview-types";
+import { resolveDepartmentKey } from "@/lib/calendar/departments";
+import { InterviewerPicker } from "@/components/calendar/InterviewerPicker";
 
 type ScheduleInterviewFormProps = {
   candidates: CalendarData["candidates"];
@@ -31,6 +33,15 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
     () => candidates.find((c) => c.id === selectedCandidateId) ?? null,
     [candidates, selectedCandidateId]
   );
+
+  // The selected job's department drives which interviewers are surfaced first.
+  const activeDepartmentKey = useMemo(() => {
+    if (!jobId) return null;
+    const job = jobs.find((j) => j.id === jobId);
+    if (!job) return null;
+    const key = resolveDepartmentKey(job.department).deptKey;
+    return key === "unassigned" ? null : key;
+  }, [jobId, jobs]);
 
   // When candidate changes, auto-fill email/phone and suggest their applied job
   function handleCandidateChange(id: string) {
@@ -269,19 +280,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
         <div className="grid gap-3 md:grid-cols-2">
           <label className="grid gap-1 text-xs font-semibold text-brand-lea">
             Interviewer
-            <input
-              name="interviewer"
-              list="interviewer-options"
-              placeholder={interviewers.length ? "Pick or type a name" : "Type a name"}
-              className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm"
-            />
-            {interviewers.length > 0 && (
-              <datalist id="interviewer-options">
-                {interviewers.map((person) => (
-                  <option key={person.name} value={person.name} />
-                ))}
-              </datalist>
-            )}
+            <InterviewerPicker interviewers={interviewers} activeDepartmentKey={activeDepartmentKey} />
           </label>
           <label className="grid gap-1 text-xs font-semibold text-brand-lea">
             Timezone

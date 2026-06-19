@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { Loader, Trash2 } from "lucide-react";
 import type { CalendarData } from "@/lib/data/calendar";
 import { interviewTypes, INTERVIEW_TYPE_META, DEFAULT_INTERVIEW_TYPE } from "@/lib/calendar/interview-types";
+import { resolveDepartmentKey } from "@/lib/calendar/departments";
+import { InterviewerPicker } from "@/components/calendar/InterviewerPicker";
 
 type Interview = CalendarData["interviews"][number];
 
@@ -30,6 +32,16 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
   const [message, setMessage] = useState<{ type: string; text: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [interviewType, setInterviewType] = useState<string>(interview.interviewType || DEFAULT_INTERVIEW_TYPE);
+  const [selectedJobId, setSelectedJobId] = useState<string>(interview.job?.id ?? "");
+
+  // The linked job's department surfaces matching interviewers first in the picker.
+  const activeDepartmentKey = useMemo(() => {
+    if (!selectedJobId) return null;
+    const job = jobs.find((j) => j.id === selectedJobId);
+    if (!job) return null;
+    const key = resolveDepartmentKey(job.department).deptKey;
+    return key === "unassigned" ? null : key;
+  }, [selectedJobId, jobs]);
 
   // Derive the interview's actual duration so editing doesn't silently reset it to 60.
   const initialDuration = (() => {
@@ -187,6 +199,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
             <select
               name="jobId"
               defaultValue={interview.job?.id ?? ""}
+              onChange={(e) => setSelectedJobId(e.target.value)}
               className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm"
             >
               <option value="">No linked job</option>
@@ -227,20 +240,12 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
 
           <label className="grid gap-1 text-xs font-semibold text-brand-lea">
             Interviewer
-            <input
-              name="interviewer"
+            <InterviewerPicker
               defaultValue={interview.interviewer ?? ""}
-              list="edit-interviewer-options"
-              placeholder={interviewers.length ? "Pick or type a name" : "Type a name"}
+              interviewers={interviewers}
+              activeDepartmentKey={activeDepartmentKey}
               className="rounded border border-brand-lea/20 px-3 py-2 text-sm"
             />
-            {interviewers.length > 0 && (
-              <datalist id="edit-interviewer-options">
-                {interviewers.map((person) => (
-                  <option key={person.name} value={person.name} />
-                ))}
-              </datalist>
-            )}
           </label>
 
           <label className="grid gap-1 text-xs font-semibold text-brand-lea">

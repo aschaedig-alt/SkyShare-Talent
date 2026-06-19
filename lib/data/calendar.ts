@@ -22,6 +22,7 @@ export type CalendarData = {
     id: string;
     title: string;
     status: string;
+    department: string | null;
   }>;
   /** Recruiting team / hiring managers, keyed by name, for timeline avatars. */
   teamHosts: Array<{ name: string; avatarUrl: string | null }>;
@@ -132,7 +133,8 @@ export async function getCalendarData(): Promise<CalendarData> {
       select: {
         id: true,
         title: true,
-        status: true
+        status: true,
+        department: true
       }
     }),
     prisma.interview.count({ where: { status: "SCHEDULED" } }),
