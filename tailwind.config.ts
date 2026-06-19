@@ -32,12 +32,24 @@ const config: Config = {
         }
       },
       borderRadius: {
-        // Compliments shape tokens: card 12px, element 8px (handoff §3).
-        card: "12px",
-        element: "8px"
+        // Site standard: crisp 4px corners everywhere (matches the jobs page).
+        // The full scale is collapsed to 4px so every rounded-* class is uniform;
+        // rounded-full (circles) and rounded-none are untouched.
+        sm: "2px",
+        DEFAULT: "4px",
+        md: "4px",
+        lg: "4px",
+        xl: "4px",
+        "2xl": "4px",
+        "3xl": "6px",
+        card: "4px",
+        element: "4px"
       },
       boxShadow: {
-        panel: "0 18px 45px rgba(13, 44, 67, 0.10)"
+        panel: "0 18px 45px rgba(13, 44, 67, 0.10)",
+        // Gold hover glow — the "you're interacting" cue, used app-wide.
+        glow: "0 0 0 1px rgba(234, 170, 0, 0.85), 0 0 18px 3px rgba(234, 170, 0, 0.55)",
+        "glow-soft": "0 0 0 1px rgba(234, 170, 0, 0.5), 0 0 10px 1px rgba(234, 170, 0, 0.3)"
       }
     }
   },

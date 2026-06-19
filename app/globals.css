@@ -11,6 +11,8 @@
   --skyshare-lea: #0d2c43;
   --skyshare-grey: #76787b;
   --skyshare-black: #302f31;
+  /* Light-mode page background — "cool mist" tint so white cards lift off it. */
+  --skyshare-page: #eaf0f7;
 }
 
 * {
@@ -33,7 +35,7 @@ html {
 }
 
 body {
-  background: var(--skyshare-cloud-dancer);
+  background: var(--skyshare-page);
   color: var(--skyshare-black);
   font-family: Verdana, Geneva, sans-serif;
   font-size: 0.95rem;
