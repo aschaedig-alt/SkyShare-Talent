@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { canEditScoring, getScoringConfigDoc } from "@/lib/matching/scoring-config.server";
 import { profileKey, profileLabel, type ScoringConfigDoc } from "@/lib/matching/scoring-config";
+import { fleetOrderIndex, fleetSeatRank } from "@/lib/fleet/positions";
 
 export type ScoringProfileOption = {
   key: string;
@@ -16,6 +17,12 @@ export type ScoringSetupData = {
   profiles: ScoringProfileOption[];
   canEdit: boolean;
 };
+
+// Best canonical order from the aircraft tag, falling back to the profile label
+// ("Citation M2 · PIC" resolves even when a bare shared-rating tag can't).
+function orderOf(profile: { aircraft: string | null; label: string }): number {
+  return Math.min(fleetOrderIndex(profile.aircraft), fleetOrderIndex(profile.label));
+}
 
 function parseStringArray(value: string | null) {
   if (!value) return [];
@@ -66,7 +73,12 @@ export async function getScoringSetupData(): Promise<ScoringSetupData> {
       count: rows.length,
       configured: true
     },
-    ...Array.from(combos.values()).sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    ...Array.from(combos.values()).sort(
+      (a, b) =>
+        orderOf(a) - orderOf(b) ||
+        fleetSeatRank(a.seat) - fleetSeatRank(b.seat) ||
+        a.label.localeCompare(b.label)
+    )
   ];
 
   return { doc, profiles, canEdit };

@@ -28,6 +28,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
   const [pending, startTransition] = useTransition();
   const [doc, setDoc] = useState<ScoringConfigDoc>(data.doc);
   const [selected, setSelected] = useState<string>(DEFAULT_KEY);
+  const [checked, setChecked] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const { canEdit } = data;
 
@@ -63,6 +64,34 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
     }
   }
 
+  function toggleChecked(key: string) {
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  // Copy the settings currently on screen onto every checked position (staged in
+  // the doc — the user still clicks "Save scoring" to persist).
+  function applyToChecked() {
+    if (!canEdit || checked.size === 0) return;
+    const snapshot = clone(cfg);
+    const profiles = { ...doc.profiles };
+    for (const key of checked) {
+      if (key === DEFAULT_KEY) continue;
+      profiles[key] = clone(snapshot);
+    }
+    setDoc({ ...doc, profiles });
+    const count = checked.size;
+    setChecked(new Set());
+    setNotice({
+      kind: "ok",
+      text: `Applied these settings to ${count} position${count === 1 ? "" : "s"}. Click “Save scoring” to persist.`
+    });
+  }
+
   function save() {
     setNotice(null);
     startTransition(async () => {
@@ -91,35 +120,71 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
     <div className="grid gap-4 xl:grid-cols-[280px_1fr]">
       <aside className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
         <div className="px-1 pb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey dark:text-slate-400">Positions</div>
+        {canEdit ? (
+          <p className="px-1 pb-2 text-[11px] leading-snug text-brand-grey dark:text-slate-400">
+            Tick positions to copy the settings on screen to several at once.
+          </p>
+        ) : null}
         <div className="space-y-1">
           {data.profiles.map((profile) => (
-            <button
-              key={profile.key}
-              type="button"
-              onClick={() => setSelected(profile.key)}
-              className={clsx(
-                "block w-full rounded border p-2.5 text-left transition hover:shadow-glow",
-                profile.key === selected
-                  ? "border-brand-gold bg-brand-sweet/18"
-                  : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-[#10243a] dark:bg-white/5"
-              )}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-sm font-semibold text-brand-lea dark:text-slate-100">{profile.label}</span>
-                {doc.profiles[profile.key] || profile.key === DEFAULT_KEY ? (
-                  <span className="shrink-0 rounded bg-value-teamwork-light px-1.5 py-0.5 text-[9px] font-bold uppercase text-value-teamwork-dark">
-                    {profile.key === DEFAULT_KEY ? "base" : "custom"}
-                  </span>
-                ) : (
-                  <span className="shrink-0 text-[9px] font-semibold uppercase text-brand-grey dark:text-slate-400">defaults</span>
-                )}
-              </div>
-              {profile.key !== DEFAULT_KEY ? (
-                <div className="mt-0.5 text-[11px] text-brand-grey dark:text-slate-400">{profile.count} requirement{profile.count === 1 ? "" : "s"}</div>
+            <div key={profile.key} className="flex items-center gap-2">
+              {canEdit && profile.key !== DEFAULT_KEY ? (
+                <input
+                  type="checkbox"
+                  checked={checked.has(profile.key)}
+                  onChange={() => toggleChecked(profile.key)}
+                  aria-label={`Select ${profile.label}`}
+                  className="h-3.5 w-3.5 shrink-0 accent-brand-eden"
+                />
               ) : null}
-            </button>
+              <button
+                type="button"
+                onClick={() => setSelected(profile.key)}
+                className={clsx(
+                  "min-w-0 flex-1 rounded border p-2.5 text-left transition hover:shadow-glow",
+                  profile.key === selected
+                    ? "border-brand-gold bg-brand-sweet/18"
+                    : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-[#10243a] dark:bg-white/5"
+                )}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-sm font-semibold text-brand-lea dark:text-slate-100">{profile.label}</span>
+                  {doc.profiles[profile.key] || profile.key === DEFAULT_KEY ? (
+                    <span className="shrink-0 rounded bg-value-teamwork-light px-1.5 py-0.5 text-[9px] font-bold uppercase text-value-teamwork-dark">
+                      {profile.key === DEFAULT_KEY ? "base" : "custom"}
+                    </span>
+                  ) : (
+                    <span className="shrink-0 text-[9px] font-semibold uppercase text-brand-grey dark:text-slate-400">defaults</span>
+                  )}
+                </div>
+                {profile.key !== DEFAULT_KEY ? (
+                  <div className="mt-0.5 text-[11px] text-brand-grey dark:text-slate-400">{profile.count} requirement{profile.count === 1 ? "" : "s"}</div>
+                ) : null}
+              </button>
+            </div>
           ))}
         </div>
+        {canEdit && checked.size > 0 ? (
+          <div className="mt-3 space-y-2 rounded border border-brand-gold/40 bg-brand-gold/10 p-2.5">
+            <div className="text-[11px] font-semibold text-brand-lea dark:text-slate-100">
+              {checked.size} position{checked.size === 1 ? "" : "s"} selected
+            </div>
+            <button
+              type="button"
+              onClick={applyToChecked}
+              className="w-full rounded-element bg-brand-lea px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-eden"
+            >
+              Apply these settings
+            </button>
+            <button
+              type="button"
+              onClick={() => setChecked(new Set())}
+              className="w-full rounded-element border border-brand-lea/15 px-3 py-1.5 text-[11px] font-semibold text-brand-grey transition hover:bg-brand-cloudDancer dark:border-white/10 dark:text-slate-400"
+            >
+              Clear selection
+            </button>
+          </div>
+        ) : null}
       </aside>
 
       <div className="space-y-4">
@@ -171,25 +236,36 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
           <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Category weights</h3>
           <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">How much each sub-score counts toward the overall read.</p>
           <div className="mt-4 space-y-3.5">
-            {SCORING_CATEGORIES.map((key) => (
-              <div key={key} className="grid grid-cols-[150px_1fr_84px] items-center gap-3">
-                <span className="text-sm text-brand-lea dark:text-slate-100">{CATEGORY_LABELS[key]}</span>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={cfg.weights[key]}
-                  disabled={!canEdit}
-                  onChange={(event) => update((draft) => (draft.weights[key as CategoryKey] = Number(event.target.value)))}
-                  className="w-full accent-brand-eden"
-                />
-                <span className="text-right text-xs text-brand-grey dark:text-slate-400">
-                  <span className="font-semibold text-brand-lea dark:text-slate-100">{cfg.weights[key]}</span> ·{" "}
-                  {Math.round((cfg.weights[key] / weightSum) * 100)}%
-                </span>
-              </div>
-            ))}
+            {SCORING_CATEGORIES.map((key) => {
+              const locked = key === "recency";
+              return (
+                <div key={key} className="grid grid-cols-[150px_1fr_84px] items-center gap-3">
+                  <span className="text-sm text-brand-lea dark:text-slate-100">
+                    {CATEGORY_LABELS[key]}
+                    {locked ? (
+                      <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
+                        not scored yet
+                      </span>
+                    ) : null}
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={cfg.weights[key]}
+                    disabled={!canEdit || locked}
+                    title={locked ? "No currency data is tracked yet, so recency can't be weighted. See roadmap." : undefined}
+                    onChange={(event) => update((draft) => (draft.weights[key as CategoryKey] = Number(event.target.value)))}
+                    className="w-full accent-brand-eden disabled:opacity-50"
+                  />
+                  <span className="text-right text-xs text-brand-grey dark:text-slate-400">
+                    <span className="font-semibold text-brand-lea dark:text-slate-100">{cfg.weights[key]}</span> ·{" "}
+                    {Math.round((cfg.weights[key] / weightSum) * 100)}%
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </section>
 

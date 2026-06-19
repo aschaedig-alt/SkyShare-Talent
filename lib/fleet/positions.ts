@@ -176,3 +176,31 @@ export function positionFor(slug: string | null | undefined, rawTitle: string | 
   }
   return resolveFleetPosition(rawTitle);
 }
+
+// ---------------------------------------------------------------------------
+// Canonical ordering — every position list in the app should sort by the fleet
+// registry's size order (PC-12 → … → Legacy 650), not alphabetically or by
+// usage count. These helpers give a stable sort key from an aircraft name OR a
+// free-text title/tag, plus a PIC-before-SIC seat rank for tie-breaking.
+// ---------------------------------------------------------------------------
+
+const AIRCRAFT_ORDER = new Map(fleetAircraft().map((aircraft, index) => [aircraft, index]));
+
+/** Canonical size-order index for an aircraft name or free-text title. Unknown → last. */
+export function fleetOrderIndex(aircraftOrTitle: string | null | undefined): number {
+  if (!aircraftOrTitle) return Number.MAX_SAFE_INTEGER;
+  const direct = AIRCRAFT_ORDER.get(aircraftOrTitle);
+  if (direct !== undefined) return direct;
+  const resolved = resolveFleetPosition(aircraftOrTitle);
+  if (resolved) {
+    const viaResolve = AIRCRAFT_ORDER.get(resolved.aircraft);
+    if (viaResolve !== undefined) return viaResolve;
+  }
+  return Number.MAX_SAFE_INTEGER;
+}
+
+/** PIC/captain/lead sort before SIC/first-officer. Unknown seats sort with PIC. */
+export function fleetSeatRank(seat: string | null | undefined): number {
+  const value = (seat ?? "").toLowerCase();
+  return /\b(sic|first officer|f\/?o|second in command)\b/.test(value) ? 1 : 0;
+}

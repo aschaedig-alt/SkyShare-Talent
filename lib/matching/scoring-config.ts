@@ -71,7 +71,7 @@ export const SCORING_REQUIREMENTS: ScoringRequirementDef[] = [
   { key: "cross_country_time", label: "Cross-country time", category: "hourMins", kind: "hours", gateKey: "cross_country_time", metricKey: "cross_country", defaultStatus: "soft" },
   { key: "time_in_type", label: "Time in type", category: "timeInType", kind: "timeInType", defaultStatus: "soft" },
   { key: "type_rating", label: "Aircraft type rating", category: "aircraft", kind: "typeRating", metricKey: "type_ratings", defaultStatus: "hard" },
-  { key: "atp_certificate", label: "ATP certificate", category: "certs", kind: "cert", gateKey: "atp_certificate", metricKey: "certificates", defaultStatus: "hard" },
+  { key: "atp_certificate", label: "Commercial pilot certificate or ATP", category: "certs", kind: "cert", gateKey: "atp_certificate", metricKey: "certificates", defaultStatus: "hard" },
   { key: "medical_class", label: "Medical certificate", category: "certs", kind: "cert", metricKey: "medical_class", defaultStatus: "soft" },
   { key: "current_ifr", label: "Instrument currency", category: "certs", kind: "cert", gateKey: "current_ifr", metricKey: "instrument", defaultStatus: "soft" }
 ];
@@ -127,7 +127,10 @@ export const DEFAULT_WEIGHTS: Record<CategoryKey, number> = {
   seat: 20,
   hourMins: 25,
   timeInType: 12,
-  recency: 8,
+  // Recency is 0 by default: we don't yet track real currency (last-flown /
+  // hours-in-last-12-months), so the old keyword scan was just noise. Re-weight
+  // once a structured currency signal exists. See roadmap.
+  recency: 0,
   certs: 10
 };
 
@@ -205,6 +208,10 @@ export function normalizeProfileConfig(raw: unknown): ScoringProfileConfig {
       weights[key] = Math.round(clampNumber((r.weights as Record<string, unknown>)[key], base.weights[key], 0, 100));
     }
   }
+  // Recency has no structured signal yet (the old scan just looked for "current"
+  // in resume text), so force its weight to 0 — even on previously-saved configs
+  // — so it can't skew scores. Lift this when a real currency metric exists.
+  weights.recency = 0;
 
   const requirements = { ...base.requirements };
   if (r.requirements && typeof r.requirements === "object") {

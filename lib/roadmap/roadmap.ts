@@ -75,6 +75,12 @@ Restoring and streamlining the publishing toolset.
 - [ ] Changes / version history — build out later if needed
 - [ ] Approvals workflow — build out later if needed
 
+## Fleet Positions & Roles
+Keeping the position list consistent and modeling how SkyShare actually hires.
+- [x] Canonical position order site-wide (Jun 19) — every position list now sorts by the FLEET_POSITIONS size order (PC-12 → … → Legacy 650) instead of alphabetically / by usage count; the Pilot Requirements list also groups SkyShare vs Managed. Sorting where useful still allowed. lib/fleet/positions.ts fleetOrderIndex/fleetSeatRank are the shared sort keys
+- [ ] SkyShare vs Managed role split + de-duplicate — first-class split between SkyShare roles (consistent requirements/pay/schedule) and Managed roles (per managed-aircraft hours/base/pay/schedule vary). Merge the duplicate SkyShare variants (e.g. all PC-12 Captain rows) into one canonical SkyShare role plus a separate Managed role; decide how managed-aircraft-specific values attach. operatorType already exists on PilotRequirement — this is the bigger consolidation behind it. Needs a design pass with the user
+- [ ] Dual-aircraft positions — let one job link MULTIPLE fleet position profiles (e.g. PC-12 Captain + M2 First Officer) for the handful of pilots covering two aircraft. Today a requirement links to exactly one fleet position; needs a multi-link (join table or slug array) + resolver/scoring updates
+
 ## Platform & Infrastructure
 Behind-the-scenes work that keeps everything running.
 - [ ] Hard-delete test data — bulk-select checkboxes on the Candidates and Jobs lists to permanently remove test records; irreversible, admin-only, with confirmation (build when closer to going live)
@@ -107,6 +113,12 @@ Tools for assessing candidates — must stay transparent and fair.
 - [x] Candidate pros & cons (Jun 18) — a Pros & cons card on the candidate profile: add/remove strength and concern tags (green/amber chips), saved per candidate; recruiter observations, not an automated score (compliance note left in code for the later transparency review)
 - [ ] Hired-candidate evaluation score — score candidates after hire to learn what works
 - [ ] Scoring transparency & compliance — clear documented explanation of how a candidate is scored; review CA + NY law (NYC Local Law 144 bias audit, CA FEHA / automated-decision rules) to prevent discrimination — gates the scoring features; needs legal review
+- [x] Overqualified lowers seat fit (Jun 19) — an SIC/first-officer seat where the candidate already has >= 2x the role's total-time minimum now reduces the seat-fit sub-score (retention risk: likely wants a PIC seat). PIC seats are never penalized for more hours
+- [x] Commercial-or-ATP either/or cert (Jun 19) — the ATP cert requirement is now "Commercial pilot certificate or ATP" and awards credit if the candidate holds either (a pilot needs one or the other)
+- [x] Multi-select positions in scoring setup (Jun 19) — tick several positions in the scoring sidebar and copy the settings on screen to all of them at once (still saved on "Save scoring")
+- [x] Recency weight zeroed pending real data (Jun 19) — recency/currency defaulted to 0% because nothing structured feeds it (the old scan just looked for the word "current" in a resume)
+- [ ] Real recency / currency signal — track a structured currency metric per candidate so "a minimum of XX hours flown in the last 12 months = current" can actually score the recency category; then re-weight it above 0
+- [ ] Custom + either/or cert items — let recruiters add their own cert/rating rows to the scoring requirements (today the cert list is fixed: Commercial-or-ATP, medical, instrument) and define more either/or groups
 
 ## People Ops / Onboarding
 Supporting the team beyond recruiting.

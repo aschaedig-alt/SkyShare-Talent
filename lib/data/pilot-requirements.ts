@@ -5,7 +5,24 @@ import {
 } from "@/lib/matching/pilot-requirement-matches";
 import { canEditScoring, getProfileScoringConfig } from "@/lib/matching/scoring-config.server";
 import { getRequirementFeedback } from "@/lib/matching/match-feedback";
-import { positionFor } from "@/lib/fleet/positions";
+import { positionFor, fleetOrderIndex, fleetSeatRank } from "@/lib/fleet/positions";
+
+/** SkyShare roles first, then Managed, then anything unspecified. */
+function operatorRank(operatorType: string | null): number {
+  const value = (operatorType ?? "").toLowerCase();
+  if (value === "skyshare") return 0;
+  if (value === "managed") return 1;
+  return 2;
+}
+
+// Canonical order: trust the TITLE first (the authoritative position name, e.g.
+// "M2 Captain"). Only fall back to the aircraft tags when the title can't be
+// resolved — tags can be ambiguous shared ratings ("CE-525") or mislabeled.
+function bestFleetOrder(aircraftTypes: string[], title: string): number {
+  const byTitle = fleetOrderIndex(title);
+  if (byTitle !== Number.MAX_SAFE_INTEGER) return byTitle;
+  return aircraftTypes.reduce((best, clue) => Math.min(best, fleetOrderIndex(clue)), Number.MAX_SAFE_INTEGER);
+}
 
 export type RequirementGateView = {
   id: string;
@@ -250,7 +267,16 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
   ]);
 
   const allListItems = rows.map(toListItem);
-  const requirements = allListItems.filter((requirement) => matchesSearch(requirement, query));
+  const requirements = allListItems
+    .filter((requirement) => matchesSearch(requirement, query))
+    // Canonical order: SkyShare vs Managed, then fleet size order, then seat, then title.
+    .sort(
+      (a, b) =>
+        operatorRank(a.operatorType) - operatorRank(b.operatorType) ||
+        bestFleetOrder(a.aircraftTypes, a.title) - bestFleetOrder(b.aircraftTypes, b.title) ||
+        fleetSeatRank(a.pilotSeat) - fleetSeatRank(b.pilotSeat) ||
+        a.title.localeCompare(b.title)
+    );
   const selectedRow =
     rows.find((row) => row.id === selectedId) ??
     rows.find((row) => requirements.some((requirement) => requirement.id === row.id)) ??

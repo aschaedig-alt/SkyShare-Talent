@@ -365,6 +365,18 @@ export function scoreCandidate(
 
   // --- Seat fit ------------------------------------------------------------
   const seat = normalize(requirement.pilotSeat);
+  // Overqualified: an SIC (first-officer) seat where the candidate already has
+  // >= 2x the role's total-time minimum is likely a captain who won't be happy
+  // in the right seat — that LOWERS seat fit (a caution, never a hard gate).
+  // PIC seats are never penalized for more hours.
+  const totalTimeMin = gatesByKey.get("total_time")?.numericValue ?? null;
+  const totalTimeValue = metricsByKey.get("total_time")?.valueNumber ?? null;
+  const overqualified =
+    seat === "sic" &&
+    typeof totalTimeMin === "number" &&
+    totalTimeMin > 0 &&
+    typeof totalTimeValue === "number" &&
+    totalTimeValue >= totalTimeMin * 2;
   if (seat) {
     const seatAliases = seat === "pic" ? ["pic", "captain"] : seat === "sic" ? ["sic", "first officer", "fo"] : [seat];
     const seatMetric = seat === "pic" ? metricsByKey.get("pic") : seat === "sic" ? metricsByKey.get("sic") : undefined;
@@ -388,6 +400,24 @@ export function scoreCandidate(
       source = "none";
     }
 
+    let credit = status === "met" ? 1 : status === "near" ? 0.5 : 0;
+    let seatDetail =
+      status === "met"
+        ? hasSeatHours
+          ? `${(seatMetric?.valueNumber ?? 0).toLocaleString()} ${seat.toUpperCase()} hrs on file`
+          : `${requirement.pilotSeat} experience referenced`
+        : status === "near"
+          ? "Seat referenced in applications"
+          : `No clear ${requirement.pilotSeat} evidence`;
+
+    // Overqualified caps seat fit: a captain-level pilot in an SIC seat is a
+    // weaker seat match (retention/flight risk), even with the hours on file.
+    if (overqualified && credit > 0.35) {
+      status = "near";
+      credit = 0.35;
+      seatDetail = `${(totalTimeValue ?? 0).toLocaleString()} total hrs — ~2x the ${(totalTimeMin ?? 0).toLocaleString()} min; likely wants a PIC seat`;
+    }
+
     pushFactor({
       key: "seat",
       label: `Seat — ${requirement.pilotSeat}`,
@@ -395,17 +425,10 @@ export function scoreCandidate(
       categoryLabel: CATEGORY_LABELS.seat,
       status,
       requirementStatus: "soft",
-      detail:
-        status === "met"
-          ? hasSeatHours
-            ? `${(seatMetric?.valueNumber ?? 0).toLocaleString()} ${seat.toUpperCase()} hrs on file`
-            : `${requirement.pilotSeat} experience referenced`
-          : status === "near"
-            ? "Seat referenced in applications"
-            : `No clear ${requirement.pilotSeat} evidence`,
+      detail: seatDetail,
       source,
       sourceLabel: sourceLabelFor(source),
-      credit: status === "met" ? 1 : status === "near" ? 0.5 : 0,
+      credit,
       evaluated: true
     });
   }
@@ -532,14 +555,15 @@ export function scoreCandidate(
     let detail = "Not found on file";
 
     if (def.key === "atp_certificate") {
-      if (certsText.includes("atp")) {
+      // A pilot needs EITHER a Commercial certificate OR an ATP — credit either.
+      if (certsText.includes("atp") || certsText.includes("commercial") || certsText.includes("cpl")) {
         fStatus = "met";
         source = "structured";
-        detail = "ATP on file";
-      } else if (/\b(atp|airline transport)\b/.test(text)) {
+        detail = certsText.includes("atp") ? "ATP on file" : "Commercial certificate on file";
+      } else if (/\b(atp|airline transport|commercial pilot|commercial|cpl)\b/.test(text)) {
         fStatus = "met";
         source = "profile-text";
-        detail = "ATP referenced";
+        detail = /\b(atp|airline transport)\b/.test(text) ? "ATP referenced" : "Commercial certificate referenced";
       }
     } else if (def.key === "medical_class") {
       const med = metricsByKey.get("medical_class");
@@ -662,16 +686,7 @@ export function scoreCandidate(
     readiness = override;
   }
 
-  // Seat fit: an SIC role where the candidate has >= 2x the total-time minimum
-  // is likely a captain who won't want a first-officer seat.
-  const totalTimeMin = gatesByKey.get("total_time")?.numericValue ?? null;
-  const totalTimeValue = metricsByKey.get("total_time")?.valueNumber ?? null;
-  const overqualified =
-    seat === "sic" &&
-    typeof totalTimeMin === "number" &&
-    totalTimeMin > 0 &&
-    typeof totalTimeValue === "number" &&
-    totalTimeValue >= totalTimeMin * 2;
+  // `overqualified` is computed up in the seat-fit block (it also lowers seat fit).
 
   const summary = buildSummary(factors, minsMet, minsTotal, hardGaps, overall);
 

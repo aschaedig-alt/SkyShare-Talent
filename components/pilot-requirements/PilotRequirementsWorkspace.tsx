@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import type { PilotRequirementsData, PilotRequirementDetail } from "@/lib/data/pilot-requirements";
 import { PilotRequirementEditor } from "@/components/pilot-requirements/PilotRequirementEditor";
@@ -18,6 +19,13 @@ const statLabels: Array<[keyof PilotRequirementsData["stats"], string]> = [
 
 function compactNumber(value: number) {
   return new Intl.NumberFormat("en-US").format(value);
+}
+
+function operatorGroupLabel(operatorType: string | null): string {
+  const value = (operatorType ?? "").toLowerCase();
+  if (value === "skyshare") return "SkyShare roles";
+  if (value === "managed") return "Managed roles";
+  return "Other roles";
 }
 
 function getGateDisplayValue(gate: PilotRequirementDetail["gatesByCategory"][number]["gates"][number]) {
@@ -279,11 +287,18 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
           <div className="max-h-[calc(100vh-310px)] min-h-[360px] overflow-y-auto p-3">
             {data.requirements.length > 0 ? (
               <div className="space-y-2">
-                {data.requirements.map((requirement) => {
+                {data.requirements.map((requirement, index) => {
                   const isSelected = requirement.id === data.selectedRequirement?.id;
+                  const group = operatorGroupLabel(requirement.operatorType);
+                  const showHeader = index === 0 || group !== operatorGroupLabel(data.requirements[index - 1].operatorType);
                   return (
+                    <Fragment key={requirement.id}>
+                    {showHeader ? (
+                      <div className="px-1 pb-0.5 pt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey first:pt-0 dark:text-slate-400">
+                        {group}
+                      </div>
+                    ) : null}
                     <Link
-                      key={requirement.id}
                       href={`/pilot-requirements?id=${requirement.id}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
                       className={`block rounded border p-3 transition hover:shadow-glow ${
                         isSelected
@@ -327,6 +342,7 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
                         </div>
                       ) : null}
                     </Link>
+                    </Fragment>
                   );
                 })}
               </div>
