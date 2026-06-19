@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { clsx } from "clsx";
-import { FileText, Briefcase, StickyNote, CalendarClock } from "lucide-react";
+import { FileText, Briefcase, StickyNote, CalendarClock, History } from "lucide-react";
 import { CandidateDocuments } from "@/components/candidates/CandidateDocuments";
 import { DocumentChecklist } from "@/components/candidates/DocumentChecklist";
 import { CurrencyPanel } from "@/components/candidates/CurrencyPanel";
 import { ProConPanel } from "@/components/candidates/ProConPanel";
+import { CandidateNotes } from "@/components/candidates/CandidateNotes";
+import { CandidateActivityTimeline } from "@/components/candidates/CandidateActivityTimeline";
 import { FlightProfilePanel } from "@/components/candidates/FlightProfilePanel";
 import type { CandidateProfileData } from "@/lib/data/candidates";
 
@@ -15,7 +17,7 @@ type CandidateProfileWorkspaceProps = {
   candidate: CandidateProfileData;
 };
 
-type ProfileTab = "documents" | "applications" | "notes" | "interviews";
+type ProfileTab = "documents" | "applications" | "notes" | "interviews" | "activity";
 
 type CandidateEditForm = {
   displayName: string;
@@ -139,7 +141,8 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
     { id: "documents", label: "Documents", icon: FileText, count: candidate.files.length },
     { id: "applications", label: "Applications", icon: Briefcase, count: candidate.applications.length },
     { id: "notes", label: "Notes", icon: StickyNote, count: candidate.notes.length },
-    { id: "interviews", label: "Interviews", icon: CalendarClock, count: candidate.interviews.length }
+    { id: "interviews", label: "Interviews", icon: CalendarClock, count: candidate.interviews.length },
+    { id: "activity", label: "Activity", icon: History, count: candidate.activity.length }
   ];
 
   const statusActive = candidate.status === "ACTIVE";
@@ -357,22 +360,10 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
           )}
 
           {/* Notes tab */}
-          {activeTab === "notes" && (
-            <section className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
-              <div className="space-y-2">
-                {candidate.notes.length > 0 ? (
-                  candidate.notes.map((note) => (
-                    <div key={note.id} className="rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-3">
-                      <p className="text-sm leading-6 text-brand-black/78">{note.body}</p>
-                      <div className="mt-2 text-xs text-brand-grey">{note.source ?? "No source"} · {formatDate(note.createdAt)}</div>
-                    </div>
-                  ))
-                ) : (
-                  <EmptyState title="No notes yet" detail="Candidate notes will appear here." />
-                )}
-              </div>
-            </section>
-          )}
+          {activeTab === "notes" && <CandidateNotes candidateId={candidate.id} initialNotes={candidate.notes} />}
+
+          {/* Activity tab */}
+          {activeTab === "activity" && <CandidateActivityTimeline items={candidate.activity} />}
 
           {/* Interviews tab */}
           {activeTab === "interviews" && (

@@ -153,7 +153,7 @@ Auto-ingest applicants from Paycom into the system, hands-off.
 
 ## Candidates & Matcher
 Working a candidate's record and acting on matcher results.
-- [ ] Candidate notes & history on the record — view a candidate's previous notes and activity history right on their profile
+- [x] Candidate notes & history (Jun 18) — the candidate profile Notes tab now adds/removes notes (attributed to the author) and a new Activity tab shows a per-candidate history timeline (edits, note add/remove, dedupe, interview changes) built from the activity log
 - [ ] Matcher bulk export — multi-select results in the resume matcher and bulk-export the selected candidates' contact info (name, phone, email, matched job) for Front emailing or Paycom re-entry; gate the export behind role-based permissions (ties into Phase 4 access controls)
 - [ ] Multiple & duplicate resumes per candidate — define how the system handles several resumes on one candidate and duplicate resumes (extends the candidate duplicate merge work)
 

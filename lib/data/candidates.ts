@@ -83,8 +83,16 @@ export type CandidateProfileData = {
     id: string;
     body: string;
     source: string | null;
+    author: string | null;
     createdAt: string;
     updatedAt: string;
+  }>;
+  activity: Array<{
+    id: string;
+    activityType: string;
+    description: string;
+    actor: string | null;
+    createdAt: string;
   }>;
   applications: Array<{
     id: string;
@@ -384,7 +392,8 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
         orderBy: { createdAt: "asc" }
       },
       notes: {
-        orderBy: { createdAt: "desc" }
+        orderBy: { createdAt: "desc" },
+        include: { author: { select: { name: true, email: true } } }
       },
       applications: {
         orderBy: { updatedAt: "desc" },
@@ -418,6 +427,14 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
   if (!candidate) {
     return null;
   }
+
+  // Per-candidate activity history (edits, note add/remove, dedupe, etc.).
+  const activityRows = await prisma.activityLog.findMany({
+    where: { entityType: "Candidate", entityId: candidate.id },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+    include: { user: { select: { name: true, email: true } } }
+  });
 
   return {
     id: candidate.id,
@@ -473,8 +490,16 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
       id: note.id,
       body: note.body,
       source: note.source,
+      author: note.author?.name ?? note.author?.email ?? null,
       createdAt: note.createdAt.toISOString(),
       updatedAt: note.updatedAt.toISOString()
+    })),
+    activity: activityRows.map((row) => ({
+      id: row.id,
+      activityType: row.activityType,
+      description: row.description,
+      actor: row.user?.name ?? row.user?.email ?? row.userEmail ?? null,
+      createdAt: row.createdAt.toISOString()
     })),
     applications: candidate.applications.map((application) => ({
       id: application.id,
