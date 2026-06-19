@@ -159,9 +159,9 @@ Working a candidate's record and acting on matcher results.
 
 ## Interview & Evaluation
 Streamline the end-to-end interview experience.
-- [ ] Independent interviewer scoring — each interviewer scores a candidate on their own, separate from what others entered
-- [ ] Per-question interview rubric — score each question on a 4-point scale: Exceeds / Meets / Can Develop / Does Not Meet
-- [ ] Rubric to numeric mapping — decide whether the rubric rolls up to a number so candidates can be ranked and compared on interview performance
+- [x] Independent interviewer scoring (Jun 18) — dedicated /interviews/[id] page where each interviewer fills their own scorecard (multiple per interview), reachable from the calendar interview modal; an aggregate shows every recommendation side by side
+- [x] Per-question interview rubric (Jun 18) — each scorecard rates questions on the 4-point scale (Exceeds / Meets / Can Develop / Does Not Meet); questions pre-fill from the bank for the interview's department and are editable per scorecard
+- [x] Rubric to numeric mapping (Jun 18) — Exceeds=4 / Meets=3 / Can Develop=2 / Does Not Meet=1; shows the labels but computes a per-scorecard average and a combined interview score (each interviewer weighted equally) for ranking
 - [x] Interview question bank (Jun 18) — Recruiting > Question Bank: a reusable, searchable library of interview questions tagged by category, core value, and department, with full create / edit / delete and active toggle; the source the guide generator will draw from
 - [x] Interview guide generator (Jun 18) — Question Bank > Build guide: pick a department, the core values to cover, and a length, and it assembles a balanced set of active questions from the bank (grouped by value, with category badges and interviewer guidance), with regenerate and copy-to-clipboard
 

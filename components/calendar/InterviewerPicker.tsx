@@ -15,17 +15,24 @@ export function InterviewerPicker({
   defaultValue = "",
   interviewers,
   activeDepartmentKey = null,
-  className = "rounded-lg border border-brand-lea/20 px-3 py-2 text-sm"
+  className = "rounded-lg border border-brand-lea/20 px-3 py-2 text-sm",
+  onValueChange
 }: {
   name?: string;
   defaultValue?: string;
   interviewers: Person[];
   activeDepartmentKey?: DeptKey | null;
   className?: string;
+  onValueChange?: (value: string) => void;
 }) {
-  const [value, setValue] = useState(defaultValue);
+  const [value, setValueRaw] = useState(defaultValue);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  function setValue(next: string) {
+    setValueRaw(next);
+    onValueChange?.(next);
+  }
 
   useEffect(() => {
     if (!open) return;

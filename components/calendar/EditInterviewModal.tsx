@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
-import { Loader, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Loader, Trash2, ClipboardCheck } from "lucide-react";
 import type { CalendarData } from "@/lib/data/calendar";
 import { interviewTypes, INTERVIEW_TYPE_META, DEFAULT_INTERVIEW_TYPE } from "@/lib/calendar/interview-types";
 import { resolveDepartmentKey } from "@/lib/calendar/departments";
@@ -134,9 +135,17 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
               <h2 className="text-xl font-semibold text-brand-lea">Edit Interview</h2>
               <p className="mt-1 text-sm text-brand-grey">{interview.candidate.displayName}</p>
             </div>
-            <button onClick={onClose} className="text-brand-grey hover:text-brand-lea">
-              ✕
-            </button>
+            <div className="flex items-center gap-3">
+              <Link
+                href={`/interviews/${interview.id}`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60"
+              >
+                <ClipboardCheck className="h-4 w-4" /> Scorecards
+              </Link>
+              <button onClick={onClose} className="text-brand-grey hover:text-brand-lea">
+                ✕
+              </button>
+            </div>
           </div>
         </div>
 

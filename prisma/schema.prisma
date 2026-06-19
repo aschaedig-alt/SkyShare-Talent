@@ -656,10 +656,29 @@ model Interview {
 
   candidate            Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   job                  Job?       @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  scorecards           InterviewScorecard[]
 
   @@index([candidateId])
   @@index([jobId])
   @@index([startDateTime])
+}
+
+// One interviewer's independent scorecard for an interview. Multiple per
+// interview (one per interviewer). Items are rated questions (4-point rubric);
+// stored as JSON so the question set can be tailored per scorecard.
+model InterviewScorecard {
+  id             String    @id @default(cuid())
+  interviewId    String
+  interviewer    String    // name, from the team roster (or typed)
+  recommendation String?   // STRONG_YES | YES | NO | STRONG_NO
+  itemsJson      String    @default("[]") // [{ q: string, rating: RatingKey | null }]
+  comments       String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  interview      Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  @@index([interviewId])
 }
 
 model GoogleCalendarConnection {
