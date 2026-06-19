@@ -154,7 +154,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
                 className={clsx(
                   "min-w-0 flex-1 rounded border p-2.5 text-left transition hover:shadow-glow",
                   profile.key === selected
-                    ? "border-brand-gold bg-brand-sweet/18"
+                    ? "border-brand-gold bg-brand-sweet/18 dark:bg-brand-sweet/25"
                     : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-[#10243a] dark:bg-white/5"
                 )}
               >

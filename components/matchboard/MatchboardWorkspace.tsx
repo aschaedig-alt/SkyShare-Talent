@@ -124,7 +124,7 @@ export function MatchboardWorkspace({
                         disabled
                           ? "cursor-default border-brand-lea/10 opacity-60 dark:border-white/10"
                           : active
-                            ? "border-brand-gold bg-brand-sweet/18"
+                            ? "border-brand-gold bg-brand-sweet/18 dark:bg-brand-sweet/25"
                             : "border-brand-lea/10 hover:border-brand-sweet hover:bg-brand-cloudDancer/55 dark:border-white/10 dark:bg-white/5"
                       )}
                     >
@@ -160,7 +160,7 @@ export function MatchboardWorkspace({
                       onClick={() => go("candidate", cand.id)}
                       className={clsx(
                         "mb-1.5 block w-full rounded border p-2.5 text-left transition hover:shadow-glow",
-                        active ? "border-brand-gold bg-brand-sweet/18" : "border-brand-lea/10 hover:border-brand-sweet hover:bg-brand-cloudDancer/55 dark:border-white/10 dark:bg-white/5"
+                        active ? "border-brand-gold bg-brand-sweet/18 dark:bg-brand-sweet/25" : "border-brand-lea/10 hover:border-brand-sweet hover:bg-brand-cloudDancer/55 dark:border-white/10 dark:bg-white/5"
                       )}
                     >
                       <div className="flex items-center gap-1.5">

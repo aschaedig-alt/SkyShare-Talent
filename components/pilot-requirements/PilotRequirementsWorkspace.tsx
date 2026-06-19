@@ -309,7 +309,7 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
                       href={`/pilot-requirements?id=${requirement.id}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
                       className={`block rounded border p-3 transition hover:shadow-glow ${
                         isSelected
-                          ? "border-brand-gold bg-brand-sweet/18"
+                          ? "border-brand-gold bg-brand-sweet/18 dark:bg-brand-sweet/25"
                           : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/65 dark:border-white/10 dark:bg-[#10243a] dark:bg-white/5"
                       }`}
                     >
