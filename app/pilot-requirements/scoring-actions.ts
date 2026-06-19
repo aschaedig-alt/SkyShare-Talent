@@ -232,6 +232,93 @@ export async function setRequirementFleetPosition(input: {
   return { ok: true };
 }
 
+// --- Managed aircraft variants -------------------------------------------
+// A managed variant is a specific tail (N-number) flown under a canonical role,
+// carrying only its per-aircraft differences (pay, base, schedule). The role's
+// qualifications/gates are shared.
+
+export type ManagedVariantInput = {
+  tailNumber: string;
+  name?: string | null;
+  baseCity?: string | null;
+  baseState?: string | null;
+  baseAirport?: string | null;
+  payScaleRaw?: string | null;
+  scheduleSummary?: string | null;
+  notes?: string | null;
+};
+
+function cleanVariantFields(input: ManagedVariantInput) {
+  const str = (v: string | null | undefined, max: number) => {
+    const t = (v ?? "").trim();
+    return t ? t.slice(0, max) : null;
+  };
+  return {
+    tailNumber: (input.tailNumber ?? "").trim().toUpperCase().slice(0, 16),
+    name: str(input.name, 120),
+    baseCity: str(input.baseCity, 80),
+    baseState: str(input.baseState, 40),
+    baseAirport: str(input.baseAirport, 16),
+    payScaleRaw: str(input.payScaleRaw, 200),
+    scheduleSummary: str(input.scheduleSummary, 200),
+    notes: str(input.notes, 1000)
+  };
+}
+
+export async function addManagedVariant(requirementId: string, input: ManagedVariantInput): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+  if (!requirementId) return { ok: false, error: "Missing requirement." };
+
+  const fields = cleanVariantFields(input);
+  if (!fields.tailNumber) return { ok: false, error: "A tail number is required." };
+
+  try {
+    const count = await prisma.managedVariant.count({ where: { pilotRequirementId: requirementId } });
+    await prisma.managedVariant.create({
+      data: { pilotRequirementId: requirementId, sortOrder: count, ...fields }
+    });
+  } catch {
+    return { ok: false, error: "Could not add the managed aircraft." };
+  }
+
+  revalidatePath("/pilot-requirements");
+  return { ok: true };
+}
+
+export async function updateManagedVariant(variantId: string, input: ManagedVariantInput): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+  if (!variantId) return { ok: false, error: "Missing variant." };
+
+  const fields = cleanVariantFields(input);
+  if (!fields.tailNumber) return { ok: false, error: "A tail number is required." };
+
+  try {
+    await prisma.managedVariant.update({ where: { id: variantId }, data: fields });
+  } catch {
+    return { ok: false, error: "Could not update the managed aircraft." };
+  }
+
+  revalidatePath("/pilot-requirements");
+  return { ok: true };
+}
+
+export async function deleteManagedVariant(variantId: string): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+  if (!variantId) return { ok: false, error: "Missing variant." };
+
+  try {
+    await prisma.managedVariant.delete({ where: { id: variantId } });
+  } catch {
+    return { ok: false, error: "Could not remove the managed aircraft." };
+  }
+
+  revalidatePath("/pilot-requirements");
+  return { ok: true };
+}
+
 export async function setCandidateScanExclusion(input: {
   candidateId: string;
   reason: ScanExclusionReason | null; // null clears the exclusion (back in the pool)

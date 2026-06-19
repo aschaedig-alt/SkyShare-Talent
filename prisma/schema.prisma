@@ -547,10 +547,35 @@ model PilotRequirement {
   changes                    PilotRequirementChange[]
   jobPosts                   JobPost[]                 @relation("PilotRequirementToJobPosts")
   applications               CandidateApplication[]
+  managedVariants            ManagedVariant[]
 
   @@index([normalizedTitle])
   @@index([status])
   @@index([pilotSeat])
+}
+
+// A specific managed aircraft (by tail number) operated under a canonical role.
+// The role's qualifications/gates are shared; a variant only carries the
+// per-aircraft operational differences: pay, base, schedule, tail number.
+model ManagedVariant {
+  id                 String           @id @default(cuid())
+  pilotRequirementId String
+  tailNumber         String
+  name               String?
+  baseCity           String?
+  baseState          String?
+  baseAirport        String?
+  payScaleRaw        String?
+  scheduleSummary    String?
+  notes              String?
+  status             String           @default("ACTIVE")
+  sortOrder          Int              @default(0)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  pilotRequirement   PilotRequirement @relation(fields: [pilotRequirementId], references: [id], onDelete: Cascade)
+
+  @@index([pilotRequirementId])
 }
 
 model RequirementCatalogItem {

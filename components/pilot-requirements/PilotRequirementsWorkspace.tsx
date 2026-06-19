@@ -4,6 +4,7 @@ import type { PilotRequirementsData, PilotRequirementDetail } from "@/lib/data/p
 import { PilotRequirementEditor } from "@/components/pilot-requirements/PilotRequirementEditor";
 import { CandidateTriagePanel } from "@/components/pilot-requirements/CandidateTriagePanel";
 import { FleetPositionEditor } from "@/components/pilot-requirements/FleetPositionEditor";
+import { ManagedAircraftPanel } from "@/components/pilot-requirements/ManagedAircraftPanel";
 
 type PilotRequirementsWorkspaceProps = {
   data: PilotRequirementsData;
@@ -132,6 +133,12 @@ function RequirementDetail({
           rawTitle={requirement.title}
         />
       ) : null}
+
+      <ManagedAircraftPanel
+        requirementId={requirement.id}
+        variants={requirement.managedVariants}
+        canEdit={canEditScoring}
+      />
 
       <section className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">

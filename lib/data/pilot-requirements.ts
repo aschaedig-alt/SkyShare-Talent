@@ -55,9 +55,23 @@ export type PilotRequirementListItem = {
   numericSummary: Array<{ label: string; value: number }>;
 };
 
+export type ManagedVariantView = {
+  id: string;
+  tailNumber: string;
+  name: string | null;
+  baseCity: string | null;
+  baseState: string | null;
+  baseAirport: string | null;
+  payScaleRaw: string | null;
+  scheduleSummary: string | null;
+  notes: string | null;
+  status: string;
+};
+
 export type PilotRequirementDetail = PilotRequirementListItem & {
   version: number;
   payScaleRaw: string | null;
+  managedVariants: ManagedVariantView[];
   sourceJobTitle: string | null;
   sourceJobStatus: string | null;
   rawMinimumRequirements: string | null;
@@ -256,6 +270,9 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
         },
         gates: {
           orderBy: [{ category: "asc" }, { sortOrder: "asc" }]
+        },
+        managedVariants: {
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }]
         }
       }
     }),
@@ -291,6 +308,18 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
           ...selectedListItem,
           version: selectedRow.requirementVersion,
           payScaleRaw: selectedRow.payScaleRaw,
+          managedVariants: selectedRow.managedVariants.map((variant) => ({
+            id: variant.id,
+            tailNumber: variant.tailNumber,
+            name: variant.name,
+            baseCity: variant.baseCity,
+            baseState: variant.baseState,
+            baseAirport: variant.baseAirport,
+            payScaleRaw: variant.payScaleRaw,
+            scheduleSummary: variant.scheduleSummary,
+            notes: variant.notes,
+            status: variant.status
+          })),
           sourceJobTitle: selectedRow.sourceJobRecord?.title ?? null,
           sourceJobStatus: selectedRow.sourceJobRecord?.status ?? null,
           rawMinimumRequirements: selectedRow.rawMinimumRequirements,
