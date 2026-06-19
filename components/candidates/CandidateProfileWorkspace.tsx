@@ -319,7 +319,7 @@ export function CandidateProfileWorkspace({
                   id: "doc-viewer",
                   title: "Documents",
                   node: (
-                    <div className="h-full overflow-auto">
+                    <div className="h-full overflow-auto [&>*]:min-h-full">
                       <CandidateDocuments candidateId={candidate.id} files={candidate.files} />
                     </div>
                   )
@@ -328,7 +328,7 @@ export function CandidateProfileWorkspace({
                   id: "flight",
                   title: "Flight profile",
                   node: (
-                    <div className="h-full overflow-auto">
+                    <div className="h-full overflow-auto [&>*]:min-h-full">
                       <FlightProfilePanel candidateId={candidate.id} metrics={candidate.metrics} hasDocuments={candidate.files.length > 0} />
                     </div>
                   )
@@ -337,7 +337,7 @@ export function CandidateProfileWorkspace({
                   id: "checklist",
                   title: "Document checklist",
                   node: (
-                    <div className="h-full overflow-auto">
+                    <div className="h-full overflow-auto [&>*]:min-h-full">
                       <DocumentChecklist files={candidate.files} />
                     </div>
                   )
@@ -346,7 +346,7 @@ export function CandidateProfileWorkspace({
                   id: "currency",
                   title: "Currency",
                   node: (
-                    <div className="h-full overflow-auto">
+                    <div className="h-full overflow-auto [&>*]:min-h-full">
                       <CurrencyPanel files={candidate.files} />
                     </div>
                   )
@@ -355,7 +355,7 @@ export function CandidateProfileWorkspace({
                   id: "proscons",
                   title: "Pros & cons",
                   node: (
-                    <div className="h-full overflow-auto">
+                    <div className="h-full overflow-auto [&>*]:min-h-full">
                       <ProConPanel candidateId={candidate.id} initialPros={candidate.pros} initialCons={candidate.cons} />
                     </div>
                   )
