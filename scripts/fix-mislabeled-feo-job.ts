@@ -25,9 +25,25 @@ async function main() {
     console.log(`   ${APPLY ? "SET" : "would set"} tags: ${JSON.stringify(TARGET_TAGS)}`);
     if (APPLY) {
       await prisma.job.update({ where: { id: j.id }, data: { aircraftTypesJson: JSON.stringify(TARGET_TAGS) } });
-      console.log(`   ✓ updated`);
+      console.log(`   ✓ job updated`);
     }
   }
+
+  // Also fix the linked requirement's tags (same bad G450/CJ2/PC-12 set), so it
+  // sorts as a CJ2, not a PC-12/G450.
+  const reqs = await prisma.pilotRequirement.findMany({
+    where: { title: { contains: "CE-525 First Officer", mode: "insensitive" } },
+    select: { id: true, title: true, aircraftTypesJson: true }
+  });
+  for (const r of reqs) {
+    console.log(`\nREQ "${r.title}" (${r.id.slice(0, 8)}) current tags: ${r.aircraftTypesJson ?? "—"}`);
+    console.log(`   ${APPLY ? "SET" : "would set"} tags: ${JSON.stringify(TARGET_TAGS)}`);
+    if (APPLY) {
+      await prisma.pilotRequirement.update({ where: { id: r.id }, data: { aircraftTypesJson: JSON.stringify(TARGET_TAGS) } });
+      console.log(`   ✓ requirement updated`);
+    }
+  }
+
   console.log(`\n${APPLY ? "Applied." : "Dry run only. Re-run with --apply."}\n`);
 }
 
