@@ -15,7 +15,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = (await headers()).get("x-pathname") ?? "";
   if (pathname.startsWith("/book")) {
     return (
-      <div className="min-h-screen bg-brand-cloudDancer text-brand-black">{children}</div>
+      <div className="min-h-screen bg-[var(--skyshare-page)] text-brand-black">{children}</div>
     );
   }
 
@@ -28,7 +28,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   const showSidebar = Boolean(role);
 
   return (
-    <div className="min-h-screen bg-brand-cloudDancer text-brand-black">
+    <div className="min-h-screen bg-[var(--skyshare-page)] text-brand-black">
       <div className="flex min-h-screen">
         {showSidebar && role ? <Sidebar role={role} policy={policy} logoDataUrl={sidebarLogo} /> : null}
         <main className="min-w-0 flex-1">
