@@ -119,6 +119,10 @@ Tools for assessing candidates — must stay transparent and fair.
 - [x] Recency weight zeroed pending real data (Jun 19) — recency/currency defaulted to 0% because nothing structured feeds it (the old scan just looked for the word "current" in a resume)
 - [ ] Real recency / currency signal — track a structured currency metric per candidate so "a minimum of XX hours flown in the last 12 months = current" can actually score the recency category; then re-weight it above 0
 - [ ] Custom + either/or cert items — let recruiters add their own cert/rating rows to the scoring requirements (today the cert list is fixed: Commercial-or-ATP, medical, instrument) and define more either/or groups
+- [x] Category-weight explanations (Jun 19) — the scoring setup Category weights section now shows a short plain-English description under each name (what aircraft fit / seat fit / hour mins / time in type / recency / certs actually measure) so the weight can be set with confidence
+- [x] Scoring requirement row hover highlight (Jun 19) — requirement rows in the scoring setup highlight (gold border + tint + soft glow) on hover so it's clear which row you're on
+- [ ] Review cloned gates on new managed roles — the managed roles created during consolidation (560XLS+, Legacy 650, Phenom 300, and their FOs) carry hour minimums cloned from a sibling airframe; review/adjust the minimums per type
+- [ ] Verify scoring-setup positions completeness — confirm every (aircraft, seat) profile appears in the scoring setup sidebar after the fleet consolidation (user noted some positions may have been missing)
 
 ## People Ops / Onboarding
 Supporting the team beyond recruiting.

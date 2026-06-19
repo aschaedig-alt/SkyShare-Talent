@@ -19,6 +19,17 @@ import {
 
 const DEFAULT_KEY = "__default__";
 
+// Short, plain-English meaning of each category — shown under its slider so the
+// weight can be set with confidence.
+const CATEGORY_HELP: Record<CategoryKey, string> = {
+  aircraft: "Holds the type rating for this aircraft",
+  seat: "Hours in the seat the role needs (PIC vs SIC)",
+  hourMins: "Meets the role's flight-hour minimums",
+  timeInType: "Hours flown in this specific aircraft",
+  recency: "Recently / currently flying — not tracked yet",
+  certs: "Required certificates (Commercial/ATP, medical, instrument)"
+};
+
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -234,20 +245,25 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
 
         <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
           <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Category weights</h3>
-          <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">How much each sub-score counts toward the overall read.</p>
+          <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
+            How much each sub-score counts toward the overall read. The description under each name is what that score measures.
+          </p>
           <div className="mt-4 space-y-3.5">
             {SCORING_CATEGORIES.map((key) => {
               const locked = key === "recency";
               return (
-                <div key={key} className="grid grid-cols-[150px_1fr_84px] items-center gap-3">
-                  <span className="text-sm text-brand-lea dark:text-slate-100">
-                    {CATEGORY_LABELS[key]}
-                    {locked ? (
-                      <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
-                        not scored yet
-                      </span>
-                    ) : null}
-                  </span>
+                <div key={key} className="grid grid-cols-[210px_1fr_84px] items-center gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm text-brand-lea dark:text-slate-100">
+                      {CATEGORY_LABELS[key]}
+                      {locked ? (
+                        <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
+                          not scored yet
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="mt-0.5 text-[11px] leading-tight text-brand-grey dark:text-slate-400">{CATEGORY_HELP[key]}</div>
+                  </div>
                   <input
                     type="range"
                     min={0}
@@ -288,7 +304,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
                   {(requirementsByCategory.get(category) ?? []).map((req) => (
                     <div
                       key={req.key}
-                      className="flex items-center justify-between gap-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/30 px-3 py-2 dark:border-white/10 dark:bg-white/5"
+                      className="flex items-center justify-between gap-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/30 px-3 py-2 transition hover:border-brand-gold/50 hover:bg-brand-sweet/15 hover:shadow-glow-soft dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
                     >
                       <span className="text-sm text-brand-lea dark:text-slate-100">{req.label}</span>
                       <StatusToggle
