@@ -43,6 +43,8 @@ export type CandidateProfileData = {
   primaryPhone: string | null;
   tags: string[];
   folders: string[];
+  pros: string[];
+  cons: string[];
   createdAt: string;
   updatedAt: string;
   contacts: Array<{
@@ -431,6 +433,8 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
     primaryPhone: candidate.primaryPhone,
     tags: parseStringArray(candidate.tagsJson),
     folders: parseStringArray(candidate.foldersJson),
+    pros: parseStringArray(candidate.prosJson),
+    cons: parseStringArray(candidate.consJson),
     createdAt: candidate.createdAt.toISOString(),
     updatedAt: candidate.updatedAt.toISOString(),
     contacts: candidate.contacts.map((contact) => ({

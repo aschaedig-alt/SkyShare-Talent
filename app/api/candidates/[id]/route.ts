@@ -79,6 +79,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     updateData.owner = body.owner.trim() || null;
   }
 
+  // Pros & cons — structured strengths/concerns tags (recruiter observations).
+  // NOTE: a future compliance audit (CA FEHA, NYC Local Law 144) may require
+  // disclaimers/access gating; see roadmap "Scoring transparency & compliance".
+  if (Array.isArray(body.pros)) {
+    const cleaned = [...new Set(body.pros.map((p: unknown) => String(p).trim()).filter(Boolean))].slice(0, 30);
+    updateData.prosJson = cleaned.length ? JSON.stringify(cleaned) : null;
+  }
+  if (Array.isArray(body.cons)) {
+    const cleaned = [...new Set(body.cons.map((c: unknown) => String(c).trim()).filter(Boolean))].slice(0, 30);
+    updateData.consJson = cleaned.length ? JSON.stringify(cleaned) : null;
+  }
+
   // Handle email update
   if (typeof body.primaryEmail === "string") {
     const email = body.primaryEmail.trim();

@@ -7,6 +7,7 @@ import { FileText, Briefcase, StickyNote, CalendarClock } from "lucide-react";
 import { CandidateDocuments } from "@/components/candidates/CandidateDocuments";
 import { DocumentChecklist } from "@/components/candidates/DocumentChecklist";
 import { CurrencyPanel } from "@/components/candidates/CurrencyPanel";
+import { ProConPanel } from "@/components/candidates/ProConPanel";
 import { FlightProfilePanel } from "@/components/candidates/FlightProfilePanel";
 import type { CandidateProfileData } from "@/lib/data/candidates";
 
@@ -291,6 +292,7 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
                 />
                 <DocumentChecklist files={candidate.files} />
                 <CurrencyPanel files={candidate.files} />
+                <ProConPanel candidateId={candidate.id} initialPros={candidate.pros} initialCons={candidate.cons} />
                 <div className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
                   <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Contact</p>
                   <div className="mt-3 space-y-2 text-sm">

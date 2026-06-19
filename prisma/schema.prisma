@@ -347,6 +347,8 @@ model Candidate {
   source               String?
   tagsJson             String?
   foldersJson          String?
+  prosJson             String?
+  consJson             String?
   originalFieldsJson   String?
   sourceHistoryJson    String?
   mergeHistoryJson     String?

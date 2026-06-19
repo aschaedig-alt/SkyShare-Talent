@@ -104,7 +104,7 @@ Making candidate documents searchable and structured.
 
 ## Candidate Evaluation
 Tools for assessing candidates — must stay transparent and fair.
-- [ ] Candidate pros & cons — capture strengths and concerns on each candidate
+- [x] Candidate pros & cons (Jun 18) — a Pros & cons card on the candidate profile: add/remove strength and concern tags (green/amber chips), saved per candidate; recruiter observations, not an automated score (compliance note left in code for the later transparency review)
 - [ ] Hired-candidate evaluation score — score candidates after hire to learn what works
 - [ ] Scoring transparency & compliance — clear documented explanation of how a candidate is scored; review CA + NY law (NYC Local Law 144 bias audit, CA FEHA / automated-decision rules) to prevent discrimination — gates the scoring features; needs legal review
 
