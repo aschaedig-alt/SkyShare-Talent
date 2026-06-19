@@ -6,6 +6,7 @@ import { Plus, Pencil, Trash2, X, Search, ListChecks } from "lucide-react";
 import type { InterviewQuestionItem } from "@/lib/data/interview-questions";
 import { COMPANY_VALUES } from "@/lib/compliments/constants";
 import { DEPARTMENTS, DEPARTMENT_LABELS } from "@/lib/calendar/departments";
+import { InterviewTabs } from "@/components/interview-questions/InterviewTabs";
 
 const CATEGORY_LABELS: Record<string, string> = {
   BEHAVIORAL: "Behavioral",
@@ -260,6 +261,8 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
           </button>
         </div>
       </section>
+
+      <InterviewTabs active="bank" />
 
       {/* Filters */}
       <section className="flex flex-wrap items-center gap-2 rounded-2xl bg-white p-3 shadow-panel ring-1 ring-brand-lea/10">

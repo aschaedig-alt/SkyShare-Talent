@@ -163,7 +163,7 @@ Streamline the end-to-end interview experience.
 - [ ] Per-question interview rubric — score each question on a 4-point scale: Exceeds / Meets / Can Develop / Does Not Meet
 - [ ] Rubric to numeric mapping — decide whether the rubric rolls up to a number so candidates can be ranked and compared on interview performance
 - [x] Interview question bank (Jun 18) — Recruiting > Question Bank: a reusable, searchable library of interview questions tagged by category, core value, and department, with full create / edit / delete and active toggle; the source the guide generator will draw from
-- [ ] Interview guide generator — auto-build an interview guide from the question bank matched to the job, core values, and situation (depends on the question bank)
+- [x] Interview guide generator (Jun 18) — Question Bank > Build guide: pick a department, the core values to cover, and a length, and it assembles a balanced set of active questions from the bank (grouped by value, with category badges and interviewer guidance), with regenerate and copy-to-clipboard
 
 ## Calendar
 - [x] Calendar department filter + color-coding (Jun 18) — canonical departments (Crew, Maintenance, FBO, Support, each with sub-groups) drive a drill-down filter and color every interview on all calendar views by department; a Dept/Stage toggle switches the coloring (defaults to department); jobs map onto the taxonomy via an editable resolver; interviews with no linked job group under Unassigned
