@@ -29,7 +29,7 @@ function JobCard({ job, selectedId, query }: { job: Job; selectedId: string | nu
             {[job.department, job.status, locationLabel(job)].filter(Boolean).join(" - ")}
           </div>
         </div>
-        <span className="shrink-0 rounded-full border border-brand-sweet/50 bg-brand-sweet/20 px-2 py-0.5 text-[10px] font-bold text-brand-lea">
+        <span className="shrink-0 rounded border border-brand-sweet/50 bg-brand-sweet/20 px-2 py-0.5 text-[10px] font-bold text-brand-lea">
           {job.isPilotRole ? "Pilot" : "Support"}
         </span>
       </div>

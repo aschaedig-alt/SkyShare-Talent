@@ -75,7 +75,7 @@ function FacetFilter({
       >
         {label}
         {selected.size > 0 ? (
-          <span className="rounded-full bg-brand-lea px-1.5 text-[11px] font-bold text-white">{selected.size}</span>
+          <span className="rounded bg-brand-lea px-1.5 text-[11px] font-bold text-white">{selected.size}</span>
         ) : null}
       </button>
       {open ? (
@@ -470,7 +470,7 @@ function Chips({ items, highlight }: { items: string[]; highlight: Set<string> }
         return (
           <span
             key={item}
-            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+            className={`rounded px-2 py-0.5 text-[11px] font-semibold ${
               isMatch ? "bg-brand-gold/30 text-brand-lea" : "bg-brand-sweet/25 text-brand-lea"
             }`}
           >

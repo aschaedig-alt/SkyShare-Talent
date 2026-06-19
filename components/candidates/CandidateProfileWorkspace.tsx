@@ -171,7 +171,7 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
                 {candidate.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-full border border-brand-sweet/60 bg-brand-sweet/18 px-2.5 py-1 text-[11px] font-semibold text-brand-lea"
+                    className="rounded border border-brand-sweet/60 bg-brand-sweet/18 px-2.5 py-1 text-[11px] font-semibold text-brand-lea"
                   >
                     {tag}
                   </span>
@@ -182,7 +182,7 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
           <div className="flex items-center gap-2">
             <span
               className={clsx(
-                "rounded-full px-3 py-1 text-xs font-semibold",
+                "rounded px-3 py-1 text-xs font-semibold",
                 statusActive ? "bg-emerald-100 text-emerald-800" : "bg-brand-cloudDancer text-brand-grey"
               )}
             >
@@ -276,7 +276,7 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
                 >
                   <Icon className="h-4 w-4" />
                   {tab.label}
-                  <span className="rounded-full bg-brand-cloudDancer/70 px-1.5 py-0.5 text-[10px] font-bold text-brand-grey">
+                  <span className="rounded bg-brand-cloudDancer/70 px-1.5 py-0.5 text-[10px] font-bold text-brand-grey">
                     {tab.count}
                   </span>
                 </button>
@@ -345,7 +345,7 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
                           </div>
                         </div>
                         {application.pilotRequirement ? (
-                          <Link href={`/pilot-requirements?id=${application.pilotRequirement.id}`} className="rounded-full bg-brand-sweet/25 px-2 py-1 text-[11px] font-semibold text-brand-lea">
+                          <Link href={`/pilot-requirements?id=${application.pilotRequirement.id}`} className="rounded bg-brand-sweet/25 px-2 py-1 text-[11px] font-semibold text-brand-lea">
                             {application.pilotRequirement.title}
                           </Link>
                         ) : null}

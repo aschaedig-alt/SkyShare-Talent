@@ -43,7 +43,7 @@ export function UpcomingInterviews({ interviews, onInterviewClick }: UpcomingInt
       <div className="flex items-center gap-2 text-white">
         <CalendarClock className="h-5 w-5 text-brand-gold" />
         <h2 className="text-base font-semibold">Upcoming Interviews</h2>
-        <span className="ml-auto rounded-full bg-white/20 px-2 py-0.5 text-xs font-bold text-white">
+        <span className="ml-auto rounded bg-white/20 px-2 py-0.5 text-xs font-bold text-white">
           {upcoming.length}
         </span>
       </div>
@@ -78,7 +78,7 @@ export function UpcomingInterviews({ interviews, onInterviewClick }: UpcomingInt
                 {/* Quick contact + job chips */}
                 <div className="mt-2 flex flex-wrap items-center gap-1.5">
                   {interview.job && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-cloudDancer/60 px-2 py-0.5 text-[10px] font-medium text-brand-lea">
+                    <span className="inline-flex items-center gap-1 rounded bg-brand-cloudDancer/60 px-2 py-0.5 text-[10px] font-medium text-brand-lea">
                       <Briefcase className="h-3 w-3" /> {interview.job.title}
                     </span>
                   )}
@@ -86,7 +86,7 @@ export function UpcomingInterviews({ interviews, onInterviewClick }: UpcomingInt
                     <a
                       href={`mailto:${interview.candidate.email}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center gap-1 rounded-full bg-brand-cloudDancer/60 px-2 py-0.5 text-[10px] font-medium text-brand-lea hover:bg-brand-sweet/30"
+                      className="inline-flex items-center gap-1 rounded bg-brand-cloudDancer/60 px-2 py-0.5 text-[10px] font-medium text-brand-lea hover:bg-brand-sweet/30"
                     >
                       <Mail className="h-3 w-3" /> Email
                     </a>
@@ -95,7 +95,7 @@ export function UpcomingInterviews({ interviews, onInterviewClick }: UpcomingInt
                     <a
                       href={`tel:${interview.candidate.phone}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center gap-1 rounded-full bg-brand-cloudDancer/60 px-2 py-0.5 text-[10px] font-medium text-brand-lea hover:bg-brand-sweet/30"
+                      className="inline-flex items-center gap-1 rounded bg-brand-cloudDancer/60 px-2 py-0.5 text-[10px] font-medium text-brand-lea hover:bg-brand-sweet/30"
                     >
                       <Phone className="h-3 w-3" /> Call
                     </a>
@@ -106,13 +106,13 @@ export function UpcomingInterviews({ interviews, onInterviewClick }: UpcomingInt
                       target="_blank"
                       rel="noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700 hover:bg-blue-200"
+                      className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700 hover:bg-blue-200"
                     >
                       <Video className="h-3 w-3" /> Join
                     </a>
                   )}
                   {interview.location && !interview.meetingUrl && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-cloudDancer/60 px-2 py-0.5 text-[10px] font-medium text-brand-lea">
+                    <span className="inline-flex items-center gap-1 rounded bg-brand-cloudDancer/60 px-2 py-0.5 text-[10px] font-medium text-brand-lea">
                       <MapPin className="h-3 w-3" /> {interview.location}
                     </span>
                   )}

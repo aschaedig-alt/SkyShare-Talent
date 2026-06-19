@@ -124,7 +124,7 @@ export function OnboardingMilestonesTab({ data }: { data: MilestoneData }) {
                     className="flex-1 rounded border border-brand-lea/15 px-3 py-1.5 text-sm"
                   />
                   {m.custom ? (
-                    <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700">custom</span>
+                    <span className="rounded bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700">custom</span>
                   ) : null}
                   <button
                     onClick={() => saveLabel(m.key)}

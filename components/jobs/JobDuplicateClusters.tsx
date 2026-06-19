@@ -215,7 +215,7 @@ function ClusterCard({ cluster, onMerged }: { cluster: DuplicateCluster; onMerge
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-lea/10 px-4 py-3">
         <div className="flex items-center gap-3">
           <span
-            className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${
+            className={`rounded px-2 py-1 text-[10px] font-bold uppercase ${
               cluster.matchType === "exact" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
             }`}
           >

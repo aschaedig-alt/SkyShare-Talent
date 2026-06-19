@@ -861,7 +861,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
               <button
                 type="button"
                 onClick={() => setActiveFilter(null)}
-                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+                className={`rounded px-2.5 py-1 text-[11px] font-semibold transition ${
                   activeFilter === null ? "bg-brand-lea text-white" : "bg-brand-cloudDancer text-brand-grey hover:bg-brand-cloudDancer/70"
                 }`}
               >
@@ -872,7 +872,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                   key={chip.value}
                   type="button"
                   onClick={() => setActiveFilter(activeFilter === chip.value ? null : chip.value)}
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+                  className={`rounded px-2.5 py-1 text-[11px] font-semibold transition ${
                     activeFilter === chip.value ? "bg-brand-lea text-white" : "bg-brand-cloudDancer text-brand-grey hover:bg-brand-cloudDancer/70"
                   }`}
                 >

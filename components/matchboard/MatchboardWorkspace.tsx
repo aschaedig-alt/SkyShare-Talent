@@ -68,12 +68,12 @@ export function MatchboardWorkspace({
           and jump between the two. Seat fit flags pilots who are overqualified for a first-officer seat.
         </p>
 
-        <div className="mt-4 inline-flex rounded-full border border-brand-lea/15 bg-brand-cloudDancer/40 p-1">
+        <div className="mt-4 inline-flex rounded border border-brand-lea/15 bg-brand-cloudDancer/40 p-1">
           <button
             type="button"
             onClick={() => go("role")}
             className={clsx(
-              "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition",
+              "inline-flex items-center gap-1.5 rounded px-4 py-1.5 text-sm font-semibold transition",
               mode === "role" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea"
             )}
           >
@@ -83,7 +83,7 @@ export function MatchboardWorkspace({
             type="button"
             onClick={() => go("candidate")}
             className={clsx(
-              "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition",
+              "inline-flex items-center gap-1.5 rounded px-4 py-1.5 text-sm font-semibold transition",
               mode === "candidate" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea"
             )}
           >
@@ -131,15 +131,15 @@ export function MatchboardWorkspace({
                       <div className="flex items-center gap-1.5">
                         <span className="min-w-0 flex-1 truncate text-sm font-semibold text-brand-lea">{role.title}</span>
                         {role.noProfile ? (
-                          <span className="shrink-0 rounded-full bg-value-leadership-light px-1.5 py-0.5 text-[9px] font-bold uppercase text-value-leadership-dark">No profile</span>
+                          <span className="shrink-0 rounded bg-value-leadership-light px-1.5 py-0.5 text-[9px] font-bold uppercase text-value-leadership-dark">No profile</span>
                         ) : null}
                         {role.status === "Archived" ? (
-                          <span className="shrink-0 rounded-full bg-brand-cloudDancer px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-grey">Archived</span>
+                          <span className="shrink-0 rounded bg-brand-cloudDancer px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-grey">Archived</span>
                         ) : null}
                         {role.unmatched ? (
-                          <span className="shrink-0 rounded-full bg-value-customerFocus-light px-1.5 py-0.5 text-[9px] font-bold uppercase text-value-customerFocus-dark">Review</span>
+                          <span className="shrink-0 rounded bg-value-customerFocus-light px-1.5 py-0.5 text-[9px] font-bold uppercase text-value-customerFocus-dark">Review</span>
                         ) : null}
-                        <span className={clsx("shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase", seat.cls)}>{seat.label}</span>
+                        <span className={clsx("shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase", seat.cls)}>{seat.label}</span>
                       </div>
                       <div className="mt-0.5 truncate text-xs text-brand-grey">
                         {role.noProfile

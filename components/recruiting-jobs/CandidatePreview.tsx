@@ -54,7 +54,7 @@ export function CandidatePreview({
             {match ? (
               <div className="rounded-element border border-brand-lea/10 bg-brand-cloudDancer/30 p-2.5">
                 <div className="flex items-center gap-2">
-                  <span className={clsx("rounded-full px-2.5 py-0.5 text-[11px] font-semibold", readinessStyles[match.readiness])}>
+                  <span className={clsx("rounded px-2.5 py-0.5 text-[11px] font-semibold", readinessStyles[match.readiness])}>
                     {match.readiness}
                   </span>
                 </div>

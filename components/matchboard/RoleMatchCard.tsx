@@ -41,7 +41,7 @@ export function RoleMatchCard({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="font-semibold text-brand-lea">{role.title}</span>
-              <span className={clsx("rounded-full px-2 py-0.5 text-[10px] font-bold uppercase", seat.cls)}>{seat.label}</span>
+              <span className={clsx("rounded px-2 py-0.5 text-[10px] font-bold uppercase", seat.cls)}>{seat.label}</span>
             </div>
             <div className="mt-0.5 truncate text-xs text-brand-grey">
               {[role.aircraft[0], role.jobTitle].filter(Boolean).join(" · ") || "No linked job"}
@@ -49,7 +49,7 @@ export function RoleMatchCard({
           </div>
         </div>
         <div className="shrink-0 text-right">
-          <span className={clsx("rounded-full px-2.5 py-0.5 text-[11px] font-semibold", readinessStyles[match.readiness])}>
+          <span className={clsx("rounded px-2.5 py-0.5 text-[11px] font-semibold", readinessStyles[match.readiness])}>
             {match.readiness}
           </span>
         </div>
@@ -79,7 +79,7 @@ export function RoleMatchCard({
           {match.hardGaps.map((gap) => (
             <span
               key={gap}
-              className="inline-flex items-center gap-1 rounded-full bg-value-customerFocus-light px-2 py-0.5 text-[10px] font-semibold text-value-customerFocus-dark"
+              className="inline-flex items-center gap-1 rounded bg-value-customerFocus-light px-2 py-0.5 text-[10px] font-semibold text-value-customerFocus-dark"
             >
               <AlertTriangle className="h-3 w-3" /> {gap}
             </span>

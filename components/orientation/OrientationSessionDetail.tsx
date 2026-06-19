@@ -120,7 +120,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
             </p>
           </div>
           {session.status === "COMPLETE" ? (
-            <span className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">Complete</span>
+            <span className="rounded bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">Complete</span>
           ) : (
             <button onClick={markComplete} disabled={busy} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">Mark complete</button>
           )}
@@ -133,7 +133,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
             ["Pilots · iPads", headcount.pilots],
             ["Prep", `${headDone}/${prep.length}`]
           ].map(([label, val]) => (
-            <span key={String(label)} className="rounded-full border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-1 text-brand-lea">
+            <span key={String(label)} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-1 text-brand-lea">
               <span className="font-semibold">{val}</span> <span className="text-brand-grey">{label}</span>
             </span>
           ))}
@@ -296,7 +296,7 @@ function PrepRow({ t, onToggle, onRemove }: { t: PrepTaskView; onToggle: (id: st
         {t.done ? <span className="text-emerald-600"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#d1fae5" /><path d="M5 8.5 L7 10.5 L11 6" fill="none" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span> : <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/40" />}
       </button>
       <span className={clsx("flex-1 text-[12.5px]", t.done ? "text-brand-grey line-through" : "text-brand-black")}>{t.label}</span>
-      {t.owner ? <span className="rounded-full bg-brand-cloudDancer/70 px-2 py-0.5 text-[10px] text-brand-grey">{t.owner}</span> : null}
+      {t.owner ? <span className="rounded bg-brand-cloudDancer/70 px-2 py-0.5 text-[10px] text-brand-grey">{t.owner}</span> : null}
       {t.dueDaysBefore != null && !t.done ? <span className="text-[10px] text-brand-grey">{t.dueDaysBefore}d before</span> : null}
       <button onClick={() => onRemove(t.id)} className="text-[11px] text-red-600 opacity-0 transition group-hover:opacity-100">×</button>
     </div>

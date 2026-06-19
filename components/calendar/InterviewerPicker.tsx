@@ -68,7 +68,7 @@ export function InterviewerPicker({
         {person.departments.length > 0 ? (
           <span className="flex shrink-0 gap-1">
             {person.departments.map((d) => (
-              <span key={d} className="rounded-full bg-brand-sweet/25 px-1.5 py-0.5 text-[10px] font-semibold text-brand-lea">
+              <span key={d} className="rounded bg-brand-sweet/25 px-1.5 py-0.5 text-[10px] font-semibold text-brand-lea">
                 {DEPARTMENT_LABELS[d as DeptKey] ?? d}
               </span>
             ))}

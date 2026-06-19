@@ -100,7 +100,7 @@ function FactorList({ factors }: { factors: ScoredFactor[] }) {
                 <FactorIcon status={factor.status} />
                 <span className="font-medium text-brand-lea">{factor.label}</span>
                 {factor.requirementStatus === "hard" ? (
-                  <span className="rounded-full bg-brand-lea/8 px-1.5 text-[9px] font-bold uppercase tracking-wide text-brand-eden">
+                  <span className="rounded bg-brand-lea/8 px-1.5 text-[9px] font-bold uppercase tracking-wide text-brand-eden">
                     hard
                   </span>
                 ) : null}
@@ -218,13 +218,13 @@ export function MatchCard({
                   </Link>
                 )}
                 {applied ? (
-                  <span className="rounded-full bg-value-innovation-light px-1.5 py-0.5 text-[9px] font-bold uppercase text-value-innovation-dark">
+                  <span className="rounded bg-value-innovation-light px-1.5 py-0.5 text-[9px] font-bold uppercase text-value-innovation-dark">
                     applied
                   </span>
                 ) : null}
                 {match.excludedReason ? (
                   <span
-                    className="rounded-full bg-brand-cloudDancer px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-grey"
+                    className="rounded bg-brand-cloudDancer px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-grey"
                     title={match.excludedNote ?? undefined}
                   >
                     Ignored · {SCAN_EXCLUSION_LABELS[match.excludedReason]}
@@ -236,7 +236,7 @@ export function MatchCard({
               </div>
             </div>
             <div className="shrink-0 text-right">
-              <span className={clsx("rounded-full px-2.5 py-0.5 text-[11px] font-semibold", readinessStyles[match.readiness])}>
+              <span className={clsx("rounded px-2.5 py-0.5 text-[11px] font-semibold", readinessStyles[match.readiness])}>
                 {match.readiness}
               </span>
               {match.overridden ? (
@@ -280,7 +280,7 @@ export function MatchCard({
               {match.hardGaps.map((gap) => (
                 <span
                   key={gap}
-                  className="inline-flex items-center gap-1 rounded-full bg-value-customerFocus-light px-2 py-0.5 text-[10px] font-semibold text-value-customerFocus-dark"
+                  className="inline-flex items-center gap-1 rounded bg-value-customerFocus-light px-2 py-0.5 text-[10px] font-semibold text-value-customerFocus-dark"
                 >
                   <AlertTriangle className="h-3 w-3" /> {gap}
                 </span>

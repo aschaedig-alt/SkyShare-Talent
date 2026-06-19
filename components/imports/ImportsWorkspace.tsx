@@ -46,7 +46,7 @@ export function ImportsWorkspace({ data }: ImportsWorkspaceProps) {
               Central home for candidate imports, job imports, file uploads, requirement catalog updates, and manual review queues.
             </p>
           </div>
-          <div className="rounded-full bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden">
+          <div className="rounded bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden">
             Local-first foundation
           </div>
         </div>
@@ -94,7 +94,7 @@ export function ImportsWorkspace({ data }: ImportsWorkspaceProps) {
                           {batch.sourceFilename ?? "No filename"} - {formatDate(batch.completedAt)}
                         </div>
                       </div>
-                      <span className="rounded-full bg-brand-sweet/25 px-2 py-1 text-[11px] font-semibold text-brand-lea">
+                      <span className="rounded bg-brand-sweet/25 px-2 py-1 text-[11px] font-semibold text-brand-lea">
                         {batch.status}
                       </span>
                     </div>

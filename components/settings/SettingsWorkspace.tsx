@@ -130,8 +130,8 @@ export function SettingsWorkspace({ data, currentRole }: SettingsWorkspaceProps)
                 <span
                   className={
                     item.status === "ready"
-                      ? "rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-800"
-                      : "rounded-full bg-brand-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase text-brand-lea"
+                      ? "rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-800"
+                      : "rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase text-brand-lea"
                   }
                 >
                   {item.status === "ready" ? "Ready" : "To do"}
@@ -170,7 +170,7 @@ export function SettingsWorkspace({ data, currentRole }: SettingsWorkspaceProps)
           <div className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/50 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-sm font-semibold text-brand-lea">Auth mode: {data.auth.mode}</span>
-              <span className="rounded-full bg-brand-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase text-brand-lea">
+              <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase text-brand-lea">
                 {data.auth.requireAuth ? "Required" : "Local bypass"}
               </span>
             </div>

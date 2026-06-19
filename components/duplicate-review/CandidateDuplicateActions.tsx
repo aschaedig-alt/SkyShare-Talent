@@ -34,9 +34,9 @@ function CandidateCard({
       <div className="flex items-center justify-between gap-2">
         <span className="font-semibold text-brand-lea">{candidate.displayName}</span>
         {keep ? (
-          <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase text-white">Keep</span>
+          <span className="rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase text-white">Keep</span>
         ) : (
-          <span className="rounded-full bg-brand-cloudDancer px-2 py-0.5 text-[10px] font-bold uppercase text-brand-grey">Merge in</span>
+          <span className="rounded bg-brand-cloudDancer px-2 py-0.5 text-[10px] font-bold uppercase text-brand-grey">Merge in</span>
         )}
       </div>
       <div className="mt-1 text-xs text-brand-grey">{candidate.email ?? "No email"}</div>

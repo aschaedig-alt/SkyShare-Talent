@@ -137,12 +137,12 @@ export function PilotRequirementEditor({ requirement }: PilotRequirementEditorPr
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {message ? (
-              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+              <span className="rounded bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
                 {message}
               </span>
             ) : null}
             {error ? (
-              <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-800">
+              <span className="rounded bg-red-50 px-3 py-1 text-xs font-semibold text-red-800">
                 {error}
               </span>
             ) : null}
@@ -234,7 +234,7 @@ export function PilotRequirementEditor({ requirement }: PilotRequirementEditorPr
             </p>
             <h3 className="text-base font-semibold text-brand-lea">Turn requirements on/off and adjust hours</h3>
           </div>
-          <span className="rounded-full bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden">
+          <span className="rounded bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden">
             {gates.filter((gate) => gate.enabled).length} enabled
           </span>
         </div>

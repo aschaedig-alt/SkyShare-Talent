@@ -210,7 +210,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
       {suggested.length > 0 && (
         <div className="mt-3">
           <div className="mb-1.5 flex items-center justify-between">
-            <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800">
+            <span className="flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800">
               <Clock className="h-3 w-3" /> {suggested.length} to review
             </span>
             <button onClick={acceptAll} disabled={busyId === "all"} className="text-[11px] font-semibold text-brand-eden hover:underline disabled:opacity-60">

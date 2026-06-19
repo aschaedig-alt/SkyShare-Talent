@@ -102,7 +102,7 @@ function CompactInterviewList({
                 <span className="truncate text-[10px] text-brand-grey">
                   {formatDateTimeWithZone(interview.startDateTime, interview.timezone)}
                 </span>
-                <span className={clsx("shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold", statusBadgeColor(interview.status))}>
+                <span className={clsx("shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold", statusBadgeColor(interview.status))}>
                   {interview.status}
                 </span>
               </div>

@@ -293,7 +293,7 @@ export function SettingsLayoutLab() {
                         className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition ${isActive ? "bg-brand-lea text-white" : "text-brand-black/80 hover:bg-brand-cloudDancer/50"}`}
                       >
                         <span className="truncate">{p.label}</span>
-                        <span className={`shrink-0 rounded-full px-1.5 text-[10px] ${isActive ? "bg-white/25" : "bg-brand-lea/10 text-brand-grey"}`}>{pageCounts[p.id] ?? 0}</span>
+                        <span className={`shrink-0 rounded px-1.5 text-[10px] ${isActive ? "bg-white/25" : "bg-brand-lea/10 text-brand-grey"}`}>{pageCounts[p.id] ?? 0}</span>
                       </button>
                     );
                   })}
@@ -334,7 +334,7 @@ export function SettingsLayoutLab() {
         <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded border border-brand-lea/10 bg-white px-3 py-2">
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Density:</span>
-            <div className="inline-flex overflow-hidden rounded-full border border-brand-lea/20">
+            <div className="inline-flex overflow-hidden rounded border border-brand-lea/20">
               {(["compact", "cozy", "roomy"] as Density[]).map((d) => (
                 <button key={d} onClick={() => changeDensity(d)} className={`px-3 py-1 text-[11px] font-semibold capitalize transition ${density === d ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60"}`}>{d}</button>
               ))}
@@ -342,7 +342,7 @@ export function SettingsLayoutLab() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Grid:</span>
-            <div className="inline-flex overflow-hidden rounded-full border border-brand-lea/20">
+            <div className="inline-flex overflow-hidden rounded border border-brand-lea/20">
               {COL_OPTIONS.map((o) => (
                 <button key={o.n} onClick={() => changeCols(o.n)} title={`${o.n} columns`} className={`px-3 py-1 text-[11px] font-semibold transition ${cols === o.n ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60"}`}>{o.label}</button>
               ))}
@@ -355,7 +355,7 @@ export function SettingsLayoutLab() {
           <div className="mb-3 flex flex-wrap items-center gap-2 rounded border border-brand-lea/10 bg-white px-3 py-2">
             <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Hidden ({hiddenOnPage.length}):</span>
             {hiddenOnPage.map((b) => (
-              <button key={b.id} type="button" onClick={() => toggleHide(b.id)} className="inline-flex items-center gap-1 rounded-full border border-brand-lea/15 bg-brand-cloudDancer/50 px-2.5 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer" title="Show again">
+              <button key={b.id} type="button" onClick={() => toggleHide(b.id)} className="inline-flex items-center gap-1 rounded border border-brand-lea/15 bg-brand-cloudDancer/50 px-2.5 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer" title="Show again">
                 <Eye className="h-3 w-3" /> {b.title}
               </button>
             ))}

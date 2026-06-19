@@ -364,7 +364,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
         <div className="flex flex-wrap items-center gap-1.5 border-b border-brand-lea/10 px-3 py-2">
           <button
             onClick={() => setTypeFilter("All")}
-            className={clsx("rounded-full px-2.5 py-1 text-[11px] font-semibold transition", typeFilter === "All" ? "bg-brand-lea text-white" : "bg-brand-cloudDancer/60 text-brand-grey hover:text-brand-lea")}
+            className={clsx("rounded px-2.5 py-1 text-[11px] font-semibold transition", typeFilter === "All" ? "bg-brand-lea text-white" : "bg-brand-cloudDancer/60 text-brand-grey hover:text-brand-lea")}
           >
             All <span className="opacity-70">{files.length}</span>
           </button>
@@ -372,7 +372,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
             <button
               key={t}
               onClick={() => setTypeFilter(t)}
-              className={clsx("rounded-full px-2.5 py-1 text-[11px] font-semibold transition", typeFilter === t ? "bg-brand-lea text-white" : "bg-brand-cloudDancer/60 text-brand-grey hover:text-brand-lea")}
+              className={clsx("rounded px-2.5 py-1 text-[11px] font-semibold transition", typeFilter === t ? "bg-brand-lea text-white" : "bg-brand-cloudDancer/60 text-brand-grey hover:text-brand-lea")}
             >
               {t} <span className="opacity-70">{typeCounts.get(t)}</span>
             </button>

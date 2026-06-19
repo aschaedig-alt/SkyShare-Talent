@@ -114,7 +114,7 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
                           <svg width="13" height="13" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                         </span>
                       ) : c.dueSoon ? (
-                        <span className="rounded-full bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold text-brand-lea">due</span>
+                        <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold text-brand-lea">due</span>
                       ) : (
                         <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/30" />
                       )}

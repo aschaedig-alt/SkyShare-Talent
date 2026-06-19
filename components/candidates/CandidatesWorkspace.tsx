@@ -139,7 +139,7 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
               Showing up to 100 records{query ? ` matching "${query}"` : ""}.
             </p>
           </div>
-          <span className="rounded-full bg-brand-cloudDancer/70 px-3 py-1 text-xs font-semibold text-brand-lea">
+          <span className="rounded bg-brand-cloudDancer/70 px-3 py-1 text-xs font-semibold text-brand-lea">
             {data.candidates.length} shown
           </span>
         </div>
@@ -180,7 +180,7 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
                       </div>
                     </td>
                     <td className="px-4 py-4">
-                      <span className={`inline-block rounded-full border px-2.5 py-1 text-xs font-semibold ${stagePill(candidate.stage)}`}>
+                      <span className={`inline-block rounded border px-2.5 py-1 text-xs font-semibold ${stagePill(candidate.stage)}`}>
                         {candidate.stage ?? "No stage"}
                       </span>
                     </td>
@@ -200,7 +200,7 @@ export function CandidatesWorkspace({ data, query }: CandidatesWorkspaceProps) {
                       <div className="flex max-w-[240px] flex-wrap gap-1">
                         {candidate.tags.length > 0 ? (
                           candidate.tags.map((tag) => (
-                            <span key={tag} className="rounded-full bg-brand-sweet/25 px-2 py-0.5 text-[11px] font-semibold text-brand-lea">
+                            <span key={tag} className="rounded bg-brand-sweet/25 px-2 py-0.5 text-[11px] font-semibold text-brand-lea">
                               {tag}
                             </span>
                           ))

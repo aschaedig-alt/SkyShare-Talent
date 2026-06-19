@@ -88,7 +88,7 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
                     </div>
                     <div className="mt-1 text-center text-[10px] text-brand-grey">{h.doneCount}/{h.applicableCount} done</div>
                     <div className="mt-1.5 text-center">
-                      <span className={clsx("rounded-full px-2 py-0.5 text-[10px] font-semibold", STATUS_STYLE[h.status])}>{h.status}</span>
+                      <span className={clsx("rounded px-2 py-0.5 text-[10px] font-semibold", STATUS_STYLE[h.status])}>{h.status}</span>
                     </div>
                   </th>
                 );

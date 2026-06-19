@@ -117,7 +117,7 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
             </div>
             <p className="mb-3 text-xs text-brand-grey">Linking to <span className="font-semibold text-brand-lea">{jobTitle}</span></p>
 
-            <div className="mb-3 inline-flex overflow-hidden rounded-full border border-brand-lea/20 text-xs font-semibold">
+            <div className="mb-3 inline-flex overflow-hidden rounded border border-brand-lea/20 text-xs font-semibold">
               <button onClick={() => setMode("existing")} className={`px-3 py-1.5 transition ${mode === "existing" ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60"}`}>Existing candidate</button>
               <button onClick={() => setMode("new")} className={`px-3 py-1.5 transition ${mode === "new" ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60"}`}>New candidate</button>
             </div>

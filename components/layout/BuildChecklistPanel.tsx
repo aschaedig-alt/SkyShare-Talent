@@ -10,7 +10,7 @@ export function BuildChecklistPanel() {
           </p>
           <h2 className="text-base font-semibold text-brand-lea">What is next</h2>
         </div>
-        <span className="rounded-full bg-brand-sweet/25 px-2 py-1 text-[11px] font-semibold text-brand-lea">
+        <span className="rounded bg-brand-sweet/25 px-2 py-1 text-[11px] font-semibold text-brand-lea">
           Live tracker
         </span>
       </div>

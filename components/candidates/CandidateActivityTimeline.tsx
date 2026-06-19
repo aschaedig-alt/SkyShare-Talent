@@ -48,7 +48,7 @@ export function CandidateActivityTimeline({ items }: { items: ActivityItem[] }) 
           <li key={item.id} className="relative">
             <span className="absolute -left-[1.4rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-brand-gold" />
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-brand-cloudDancer/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-lea">
+              <span className="rounded bg-brand-cloudDancer/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-lea">
                 {TYPE_LABEL[item.activityType] ?? item.activityType}
               </span>
               <span className="text-xs text-brand-grey">{formatWhen(item.createdAt)}</span>

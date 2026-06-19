@@ -132,7 +132,7 @@ function QuestionForm({
                   key={d.key}
                   type="button"
                   onClick={() => toggleDept(d.key)}
-                  className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                  className={`rounded border px-3 py-1 text-xs font-semibold transition ${
                     active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"
                   }`}
                 >
@@ -178,7 +178,7 @@ function Badge({ children, tone = "sweet" }: { children: ReactNode; tone?: "swee
       : tone === "grey"
         ? "bg-brand-cloudDancer/70 text-brand-grey"
         : "bg-brand-sweet/25 text-brand-lea";
-  return <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${cls}`}>{children}</span>;
+  return <span className={`rounded px-2 py-0.5 text-[11px] font-semibold ${cls}`}>{children}</span>;
 }
 
 export function InterviewQuestionsWorkspace({ questions }: { questions: InterviewQuestionItem[] }) {
@@ -294,7 +294,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
             </option>
           ))}
         </select>
-        <span className="ml-auto rounded-full bg-brand-cloudDancer/70 px-3 py-1 text-xs font-semibold text-brand-lea">
+        <span className="ml-auto rounded bg-brand-cloudDancer/70 px-3 py-1 text-xs font-semibold text-brand-lea">
           {filtered.length} shown · {activeCount} active
         </span>
       </section>

@@ -131,11 +131,11 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
               <div key={item.id} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className={clsx("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold", meta.chip)}>
+                    <span className={clsx("inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold", meta.chip)}>
                       <Icon className="h-3 w-3" />
                       {meta.label}
                     </span>
-                    <span className={clsx("rounded-full px-2 py-0.5 text-[11px] font-semibold", STATUS_CHIP[item.status])}>
+                    <span className={clsx("rounded px-2 py-0.5 text-[11px] font-semibold", STATUS_CHIP[item.status])}>
                       {item.status}
                     </span>
                   </div>

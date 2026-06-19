@@ -67,7 +67,7 @@ export function FeedbackButton() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-brand-lea px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-brand-eden"
+          className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded bg-brand-lea px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-brand-eden"
           aria-label="Send feedback"
         >
           <MessageSquare className="h-5 w-5" />

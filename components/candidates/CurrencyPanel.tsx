@@ -32,7 +32,7 @@ export function CurrencyPanel({ files }: { files: FileLike[] }) {
           <CalendarClock className="h-3.5 w-3.5" /> Currency
         </p>
         {dated.length > 0 && (
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${anyAlert ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
+          <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${anyAlert ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
             {anyAlert ? "Action needed" : "Current"}
           </span>
         )}

@@ -44,7 +44,7 @@ function EvidencePanel({ requirement }: { requirement: PilotRequirementDetail })
           </p>
           <h3 className="text-base font-semibold text-brand-lea">Original imported job text</h3>
         </div>
-        <span className="rounded-full bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden">
+        <span className="rounded bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden">
           Preserved
         </span>
       </div>
@@ -97,7 +97,7 @@ function RequirementDetail({
                 .map((item) => (
                   <span
                     key={item}
-                    className="rounded-full border border-brand-sweet/60 bg-brand-sweet/18 px-2.5 py-1 text-[11px] font-semibold text-brand-lea"
+                    className="rounded border border-brand-sweet/60 bg-brand-sweet/18 px-2.5 py-1 text-[11px] font-semibold text-brand-lea"
                   >
                     {item}
                   </span>
@@ -135,7 +135,7 @@ function RequirementDetail({
                 </p>
                 <h3 className="text-base font-semibold text-brand-lea">Enabled requirement gates</h3>
               </div>
-              <span className="rounded-full bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden">
+              <span className="rounded bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden">
                 {requirement.activeGateCount} active
               </span>
             </div>
@@ -299,19 +299,19 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
                           </div>
                         </div>
                         {requirement.operatorType ? (
-                          <span className="rounded-full border border-brand-gold/40 bg-brand-gold/10 px-2 py-0.5 text-[10px] font-bold text-brand-lea">
+                          <span className="rounded border border-brand-gold/40 bg-brand-gold/10 px-2 py-0.5 text-[10px] font-bold text-brand-lea">
                             {requirement.operatorType}
                           </span>
                         ) : null}
                       </div>
                       <div className="mt-2 flex flex-wrap gap-1">
                         {requirement.aircraftTypes.slice(0, 2).map((aircraft) => (
-                          <span key={aircraft} className="rounded-full bg-brand-sweet/25 px-2 py-0.5 text-[10px] font-semibold text-brand-eden">
+                          <span key={aircraft} className="rounded bg-brand-sweet/25 px-2 py-0.5 text-[10px] font-semibold text-brand-eden">
                             {aircraft}
                           </span>
                         ))}
                         {requirement.base ? (
-                          <span className="rounded-full bg-brand-sweet/25 px-2 py-0.5 text-[10px] font-semibold text-brand-eden">
+                          <span className="rounded bg-brand-sweet/25 px-2 py-0.5 text-[10px] font-semibold text-brand-eden">
                             {requirement.base}
                           </span>
                         ) : null}

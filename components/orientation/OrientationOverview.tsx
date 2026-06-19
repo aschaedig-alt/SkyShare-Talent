@@ -26,7 +26,7 @@ function SessionCard({ s }: { s: SessionListItem }) {
     <Link href={`/orientation/${s.id}`} className="block rounded-lg border border-brand-lea/10 bg-white p-4 shadow-panel transition hover:ring-2 hover:ring-brand-gold/30">
       <div className="flex items-center justify-between gap-2">
         <span className="text-base font-semibold text-brand-lea">{fmt(s.date)}</span>
-        <span className={clsx("rounded-full px-2 py-0.5 text-[11px] font-semibold", s.status === "COMPLETE" ? "bg-emerald-50 text-emerald-800" : soon ? "bg-brand-gold/15 text-brand-lea" : "bg-brand-cloudDancer text-brand-grey")}>
+        <span className={clsx("rounded px-2 py-0.5 text-[11px] font-semibold", s.status === "COMPLETE" ? "bg-emerald-50 text-emerald-800" : soon ? "bg-brand-gold/15 text-brand-lea" : "bg-brand-cloudDancer text-brand-grey")}>
           {s.status === "COMPLETE" ? "Complete" : daysUntil(s.date)}
         </span>
       </div>
@@ -37,8 +37,8 @@ function SessionCard({ s }: { s: SessionListItem }) {
       </div>
       {(s.notConfirmed > 0 || s.travelPending > 0) && s.status !== "COMPLETE" ? (
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {s.notConfirmed > 0 ? <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">{s.notConfirmed} not confirmed</span> : null}
-          {s.travelPending > 0 ? <span className="rounded-full bg-brand-gold/15 px-2 py-0.5 text-[11px] font-semibold text-brand-lea">{s.travelPending} travel pending</span> : null}
+          {s.notConfirmed > 0 ? <span className="rounded bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">{s.notConfirmed} not confirmed</span> : null}
+          {s.travelPending > 0 ? <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[11px] font-semibold text-brand-lea">{s.travelPending} travel pending</span> : null}
         </div>
       ) : null}
     </Link>
@@ -88,7 +88,7 @@ function CohortCard({ c, onCreate, onAddMissing, busy }: { c: Cohort; onCreate: 
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {c.hires.map((h) => (
-          <span key={h.id} className={clsx("rounded-full px-2 py-0.5 text-[11px]", h.isAttendee ? "bg-emerald-50 text-emerald-800" : "bg-brand-cloudDancer text-brand-grey")}>
+          <span key={h.id} className={clsx("rounded px-2 py-0.5 text-[11px]", h.isAttendee ? "bg-emerald-50 text-emerald-800" : "bg-brand-cloudDancer text-brand-grey")}>
             {h.name}
           </span>
         ))}
@@ -238,7 +238,7 @@ export function OrientationOverview({
               <div key={h.id} className="flex flex-wrap items-center gap-2 rounded bg-white/70 px-3 py-2 text-sm">
                 <Link href={`/people/${h.id}`} className="font-medium text-brand-lea hover:underline">{h.name}</Link>
                 <span className="text-xs text-brand-grey">{h.position ?? "—"}</span>
-                {h.rescheduleCount > 0 ? <span className="rounded-full bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold text-brand-lea">moved {h.rescheduleCount}×</span> : null}
+                {h.rescheduleCount > 0 ? <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold text-brand-lea">moved {h.rescheduleCount}×</span> : null}
                 <span className="ml-auto">
                   {upcoming.length > 0 ? (
                     <select value="" onChange={(e) => addToSession(h.id, e.target.value)} disabled={busyHire === h.id} className="rounded border border-brand-lea/15 bg-white px-2 py-1 text-xs text-brand-grey">

@@ -107,7 +107,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate text-sm font-semibold text-brand-lea">{profile.label}</span>
                 {doc.profiles[profile.key] || profile.key === DEFAULT_KEY ? (
-                  <span className="shrink-0 rounded-full bg-value-teamwork-light px-1.5 py-0.5 text-[9px] font-bold uppercase text-value-teamwork-dark">
+                  <span className="shrink-0 rounded bg-value-teamwork-light px-1.5 py-0.5 text-[9px] font-bold uppercase text-value-teamwork-dark">
                     {profile.key === DEFAULT_KEY ? "base" : "custom"}
                   </span>
                 ) : (

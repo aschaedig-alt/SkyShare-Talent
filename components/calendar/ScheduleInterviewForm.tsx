@@ -173,7 +173,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
           <span className="flex items-center gap-1">
             <Briefcase className="h-3.5 w-3.5" /> Job / role
             {selectedCandidate && appliedJobIds.size > 0 && (
-              <span className="ml-1 rounded-full bg-brand-gold/20 px-1.5 py-0.5 text-[9px] font-bold text-brand-lea">
+              <span className="ml-1 rounded bg-brand-gold/20 px-1.5 py-0.5 text-[9px] font-bold text-brand-lea">
                 applied
               </span>
             )}
@@ -217,7 +217,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
                   key={type}
                   type="button"
                   onClick={() => setInterviewType(type)}
-                  className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+                  className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-semibold transition ${
                     active
                       ? `${meta.chip} ring-2 ring-offset-1 ring-brand-lea/30`
                       : "bg-brand-cloudDancer/50 text-brand-grey hover:bg-brand-cloudDancer"

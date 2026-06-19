@@ -30,13 +30,13 @@ export function FleetPositionsView() {
           <span className="font-mono text-xs text-brand-eden">npm run fleet:sync</span> to update it.
         </p>
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
-          <span className="rounded-full bg-value-teamwork-light px-2.5 py-1 font-semibold text-value-teamwork-dark">
+          <span className="rounded bg-value-teamwork-light px-2.5 py-1 font-semibold text-value-teamwork-dark">
             {activeCount} active
           </span>
-          <span className="rounded-full bg-brand-cloudDancer px-2.5 py-1 font-semibold text-brand-grey">
+          <span className="rounded bg-brand-cloudDancer px-2.5 py-1 font-semibold text-brand-grey">
             {archivedCount} archived
           </span>
-          <span className="rounded-full bg-brand-cloudDancer/60 px-2.5 py-1 font-semibold text-brand-grey">
+          <span className="rounded bg-brand-cloudDancer/60 px-2.5 py-1 font-semibold text-brand-grey">
             {aircraftOrder.length} aircraft
           </span>
         </div>
@@ -59,17 +59,17 @@ export function FleetPositionsView() {
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-base font-semibold text-brand-lea">{aircraft}</h2>
                   {typeRating ? (
-                    <span className="rounded-full bg-value-leadership-light px-2 py-0.5 text-[10px] font-semibold text-value-leadership-dark">
+                    <span className="rounded bg-value-leadership-light px-2 py-0.5 text-[10px] font-semibold text-value-leadership-dark">
                       {typeRating} rating
                     </span>
                   ) : (
-                    <span className="rounded-full bg-brand-cloudDancer px-2 py-0.5 text-[10px] font-medium text-brand-grey">
+                    <span className="rounded bg-brand-cloudDancer px-2 py-0.5 text-[10px] font-medium text-brand-grey">
                       No type rating
                     </span>
                   )}
                 </div>
                 {allArchived ? (
-                  <span className="rounded-full bg-brand-cloudDancer px-2 py-0.5 text-[10px] font-bold uppercase text-brand-grey">
+                  <span className="rounded bg-brand-cloudDancer px-2 py-0.5 text-[10px] font-bold uppercase text-brand-grey">
                     Archived
                   </span>
                 ) : null}
@@ -83,13 +83,13 @@ export function FleetPositionsView() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="truncate text-sm font-medium text-brand-lea">{position.title}</span>
-                        <span className={clsx("rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase", seatPill(position.seat))}>
+                        <span className={clsx("rounded px-1.5 py-0.5 text-[9px] font-bold uppercase", seatPill(position.seat))}>
                           {position.seat}
                         </span>
                       </div>
                       {position.notes ? <div className="mt-0.5 truncate text-[11px] text-brand-grey">{position.notes}</div> : null}
                     </div>
-                    <span className={clsx("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold", statusPill(position.status))}>
+                    <span className={clsx("shrink-0 rounded px-2 py-0.5 text-[10px] font-semibold", statusPill(position.status))}>
                       {position.status}
                     </span>
                   </div>

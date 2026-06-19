@@ -177,7 +177,7 @@ export function RewardCatalogAdmin({ rewards, pointsPerDollar }: Props) {
                   <td className="py-2.5 text-center">
                     <span
                       className={clsx(
-                        "inline-block rounded-full px-2 py-0.5 text-xs",
+                        "inline-block rounded px-2 py-0.5 text-xs",
                         r.available
                           ? "bg-value-teamwork-light text-value-teamwork-dark"
                           : "bg-brand-cloudDancer text-brand-grey"

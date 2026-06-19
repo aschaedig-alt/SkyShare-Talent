@@ -459,7 +459,7 @@ function Settings({
                   set("departments", active ? form.departments.filter((x) => x !== d.key) : [...form.departments, d.key])
                 }
                 className={clsx(
-                  "rounded-full border px-3 py-1 text-xs font-semibold transition",
+                  "rounded border px-3 py-1 text-xs font-semibold transition",
                   active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"
                 )}
               >

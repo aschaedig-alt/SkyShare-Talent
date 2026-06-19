@@ -619,13 +619,13 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
       <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded border border-brand-lea/10 bg-white px-3 py-2">
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Presets:</span>
-          <button onClick={() => applyPreset("source")} className="rounded-full border border-brand-lea/20 px-3 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">Source (3 cols)</button>
-          <button onClick={() => applyPreset("one")} className="rounded-full border border-indigo-300 bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700 transition hover:bg-indigo-100">One-page draft</button>
-          <button onClick={() => applyPreset("two")} className="rounded-full border border-fuchsia-300 bg-fuchsia-50 px-3 py-1 text-[11px] font-semibold text-fuchsia-700 transition hover:bg-fuchsia-100">Two-page split</button>
+          <button onClick={() => applyPreset("source")} className="rounded border border-brand-lea/20 px-3 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60">Source (3 cols)</button>
+          <button onClick={() => applyPreset("one")} className="rounded border border-indigo-300 bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700 transition hover:bg-indigo-100">One-page draft</button>
+          <button onClick={() => applyPreset("two")} className="rounded border border-fuchsia-300 bg-fuchsia-50 px-3 py-1 text-[11px] font-semibold text-fuchsia-700 transition hover:bg-fuchsia-100">Two-page split</button>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Density:</span>
-          <div className="inline-flex overflow-hidden rounded-full border border-brand-lea/20">
+          <div className="inline-flex overflow-hidden rounded border border-brand-lea/20">
             {(["compact", "cozy", "roomy"] as Density[]).map((d) => (
               <button
                 key={d}
@@ -639,7 +639,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey">Grid:</span>
-          <div className="inline-flex overflow-hidden rounded-full border border-brand-lea/20">
+          <div className="inline-flex overflow-hidden rounded border border-brand-lea/20">
             {COL_OPTIONS.map((o) => (
               <button
                 key={o.n}
@@ -665,11 +665,11 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
             <button
               key={p}
               onClick={() => setPageFilter(p)}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold transition ${active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/15 bg-white text-brand-lea hover:bg-brand-cloudDancer/50"}`}
+              className={`inline-flex items-center gap-1.5 rounded border px-3 py-1 text-[11px] font-semibold transition ${active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/15 bg-white text-brand-lea hover:bg-brand-cloudDancer/50"}`}
             >
               {p !== "All" && <span className={`h-2.5 w-2.5 rounded-full ${PAGE_DOT[p]}`} />}
               {p}
-              <span className={`rounded-full px-1.5 text-[10px] ${active ? "bg-white/25" : "bg-brand-lea/10 text-brand-grey"}`}>{count}</span>
+              <span className={`rounded px-1.5 text-[10px] ${active ? "bg-white/25" : "bg-brand-lea/10 text-brand-grey"}`}>{count}</span>
             </button>
           );
         })}
@@ -683,7 +683,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
               key={w.id}
               type="button"
               onClick={() => toggleHide(w.id)}
-              className="inline-flex items-center gap-1 rounded-full border border-brand-lea/15 bg-brand-cloudDancer/50 px-2.5 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer"
+              className="inline-flex items-center gap-1 rounded border border-brand-lea/15 bg-brand-cloudDancer/50 px-2.5 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer"
               title="Show again"
             >
               <Eye className="h-3 w-3" /> {w.title}

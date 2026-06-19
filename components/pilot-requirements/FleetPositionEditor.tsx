@@ -102,7 +102,7 @@ export function FleetPositionEditor({
           {tags.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1 rounded-full bg-brand-sweet/20 px-2 py-0.5 text-[11px] font-semibold text-brand-lea"
+              className="inline-flex items-center gap-1 rounded bg-brand-sweet/20 px-2 py-0.5 text-[11px] font-semibold text-brand-lea"
             >
               {tag}
               <button
@@ -110,7 +110,7 @@ export function FleetPositionEditor({
                 onClick={() => removeTag(tag)}
                 disabled={pending}
                 aria-label={`Remove ${tag}`}
-                className="rounded-full text-brand-grey transition hover:text-value-customerFocus-dark disabled:opacity-60"
+                className="rounded text-brand-grey transition hover:text-value-customerFocus-dark disabled:opacity-60"
               >
                 <X className="h-3 w-3" />
               </button>

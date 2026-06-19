@@ -46,11 +46,11 @@ export function GoogleSyncCard({ sync }: GoogleSyncCardProps) {
           <h2 className="text-base font-semibold text-brand-lea">Two-way sync</h2>
         </div>
         {sync.configured ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase text-emerald-700">
+          <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase text-emerald-700">
             <CheckCircle2 className="h-3 w-3" /> Connected
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase text-slate-500">
+          <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase text-slate-500">
             <CircleSlash className="h-3 w-3" /> Not configured
           </span>
         )}

@@ -189,7 +189,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
                     key={type}
                     type="button"
                     onClick={() => setInterviewType(type)}
-                    className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+                    className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-semibold transition ${
                       active
                         ? `${meta.chip} ring-2 ring-offset-1 ring-brand-lea/30`
                         : "bg-brand-cloudDancer/50 text-brand-grey hover:bg-brand-cloudDancer"

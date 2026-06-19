@@ -38,7 +38,7 @@ export function DocumentChecklist({ files }: { files: FileLike[] }) {
     <div className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10">
       <div className="flex items-center justify-between">
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Document checklist</p>
-        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${coreMissing === 0 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+        <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${coreMissing === 0 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
           {present}/{CHECKLIST.length}
         </span>
       </div>
@@ -56,7 +56,7 @@ export function DocumentChecklist({ files }: { files: FileLike[] }) {
                 {has ? <Check className="h-3 w-3" /> : c.core ? <X className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
               </span>
               <span className={`flex-1 truncate ${has ? "text-brand-black/80" : c.core ? "text-red-600" : "text-brand-grey"}`}>{c.type}</span>
-              {count > 1 && <span className="shrink-0 rounded-full bg-brand-lea/10 px-1.5 text-[10px] font-semibold text-brand-grey">{count}</span>}
+              {count > 1 && <span className="shrink-0 rounded bg-brand-lea/10 px-1.5 text-[10px] font-semibold text-brand-grey">{count}</span>}
             </li>
           );
         })}

@@ -62,7 +62,7 @@ export function OnboardingArchivedTab({ rows }: { rows: NewHireRow[] }) {
                 <td className="px-4 py-3 text-brand-grey">{r.department ?? "—"}</td>
                 <td className="px-4 py-3 text-brand-grey">{fmtDate(r.startDate)}</td>
                 <td className="px-4 py-3">
-                  <span className={clsx("rounded-full px-2.5 py-0.5 text-xs font-semibold", state.cls)}>{state.label}</span>
+                  <span className={clsx("rounded px-2.5 py-0.5 text-xs font-semibold", state.cls)}>{state.label}</span>
                 </td>
                 <td className="px-4 py-3 text-right">
                   {r.employmentStatus === "TERMINATED" ? (

@@ -128,7 +128,7 @@ function ScorecardEditor({
                       key={r.key}
                       type="button"
                       onClick={() => setRating(idx, r.key)}
-                      className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition ${
+                      className={`rounded border px-2.5 py-0.5 text-[11px] font-semibold transition ${
                         active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"
                       }`}
                     >
@@ -169,7 +169,7 @@ function ScorecardEditor({
                 key={r.key}
                 type="button"
                 onClick={() => setRecommendation(active ? "" : r.key)}
-                className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                className={`rounded border px-3 py-1 text-xs font-semibold transition ${
                   active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"
                 }`}
               >
@@ -263,7 +263,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
             const n = agg.recommendations[r.key] ?? 0;
             if (n === 0) return null;
             return (
-              <span key={r.key} className={`rounded-full px-3 py-1 text-xs font-semibold ${recoTone(r.key)}`}>
+              <span key={r.key} className={`rounded px-3 py-1 text-xs font-semibold ${recoTone(r.key)}`}>
                 {r.label}: {n}
               </span>
             );
@@ -307,11 +307,11 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-brand-lea">{card.interviewer}</span>
                     {card.recommendation ? (
-                      <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${recoTone(card.recommendation)}`}>
+                      <span className={`rounded px-2.5 py-0.5 text-[11px] font-semibold ${recoTone(card.recommendation)}`}>
                         {RECOMMENDATION_LABEL[card.recommendation]}
                       </span>
                     ) : null}
-                    <span className="rounded-full bg-brand-lea/5 px-2.5 py-0.5 text-[11px] font-semibold text-brand-lea">{avgText(card.average)} / 4</span>
+                    <span className="rounded bg-brand-lea/5 px-2.5 py-0.5 text-[11px] font-semibold text-brand-lea">{avgText(card.average)} / 4</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <button onClick={() => { setCreating(false); setEditingId(card.id); }} title="Edit" className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea">
