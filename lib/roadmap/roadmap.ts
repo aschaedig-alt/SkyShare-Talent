@@ -192,4 +192,7 @@ Streamline the end-to-end interview experience.
 Make the whole app feel like one professionally designed product.
 - [x] Match corner radii on the Interview guide & Candidates pages (Jun 18) — swapped the rounded-2xl heroes/cards on the Candidates (records + compare) and interview pages (question bank, guide, interview detail) to the site-standard rounded-xl (public booking + the color-editor modal left for the broader review)
 - [ ] Full-site design review — go through every page from a professional graphic designer's perspective and make the design elements consistent (corner radius, spacing, typography, color usage, buttons, cards, headers); document the standard and apply it site-wide
+- [x] Design system v1 (Jun 18) — locked tokens applied site-wide: 4px corners, cool-mist #eaf0f7 page background, strong gold-glow hover, navy+gold selected state; oval pills squared
+- [x] Dark mode v1 — opt-in (Jun 19) — class-based dark theme behind a sidebar toggle (persists to localStorage, with a no-flash script); page background flips to #0b1622, white cards to #10243a, body text to slate-100; dark: variants swept across the app incl. the newer Managed-aircraft panel and scoring-setup UI. Light mode is unaffected (dark: variants are inert in light)
+- [ ] Dark mode polish — refine the v1 rough spots: value-color chips, selected-state contrast in dark, wire the "sweet-filled" (light-on-dark) selected treatment into the selection logic, and a full dark-mode visual QA pass
 `;
