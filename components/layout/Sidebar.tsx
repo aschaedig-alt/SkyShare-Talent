@@ -6,6 +6,7 @@ import { Fragment, useEffect, useState } from "react";
 import { clsx } from "clsx";
 import { Plane, Menu, X, ChevronsLeft, ChevronsRight, ChevronDown, ChevronRight } from "lucide-react";
 import type { RoleName } from "@/lib/auth/roles";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import {
   getVisibleNavigationGroups,
   type ModuleAccessPolicy,
@@ -190,6 +191,9 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
                 ))
               )}
             </nav>
+            <div className="mt-auto border-t border-white/10 px-3 py-3">
+              <ThemeToggle />
+            </div>
           </aside>
         </div>
       )}
@@ -224,6 +228,8 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
               </Fragment>
             ))}
           </div>
+
+          <ThemeToggle collapsed />
 
           <button
             onClick={toggleCollapsed}
