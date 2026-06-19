@@ -1323,7 +1323,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                       key={item.key}
                       type="button"
                       onClick={() => setJobListView(item.key as JobListView)}
-                      className={`rounded px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] transition ${
+                      className={`rounded px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] transition hover:shadow-glow ${
                         active
                           ? "bg-brand-lea text-white shadow-sm"
                           : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer"
@@ -1749,7 +1749,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                       setSelectedJobId(job.id);
                       setJobListView("archived");
                     }}
-                    className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 p-3 text-left hover:bg-brand-sweet/30"
+                    className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 p-3 text-left hover:bg-brand-sweet/30 transition hover:shadow-glow"
                   >
                     <div className="text-sm font-bold text-brand-lea">{job.title}</div>
                     <div className="mt-1 text-xs font-semibold text-brand-grey">{job.department ?? "Department pending"}</div>

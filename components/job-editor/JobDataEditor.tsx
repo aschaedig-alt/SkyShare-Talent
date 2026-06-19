@@ -328,7 +328,7 @@ export function JobDataEditor({
                 key={item.key}
                 type="button"
                 onClick={() => onJobListViewChange(item.key as JobListView)}
-                className={`rounded px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] transition ${
+                className={`rounded px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] transition hover:shadow-glow ${
                   active
                     ? "bg-brand-lea text-white shadow-sm"
                     : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer"

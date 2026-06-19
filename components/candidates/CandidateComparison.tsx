@@ -67,7 +67,7 @@ function FacetFilter({
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold transition hover:shadow-glow ${
           selected.size > 0
             ? "border-brand-gold/50 bg-brand-gold/10 text-brand-lea"
             : "border-brand-lea/15 bg-white text-brand-grey hover:text-brand-lea"
@@ -103,7 +103,7 @@ function FacetFilter({
                     key={option}
                     type="button"
                     onClick={() => toggle(option)}
-                    className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-brand-lea transition hover:bg-brand-cloudDancer/70"
+                    className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-brand-lea transition hover:bg-brand-cloudDancer/70 hover:shadow-glow"
                   >
                     <span
                       className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
@@ -313,7 +313,7 @@ export function CandidateComparison({ data }: { data: CandidateComparisonData })
             <button
               type="button"
               onClick={() => setColumnsOpen((value) => !value)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/15 bg-white px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/15 bg-white px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea hover:shadow-glow"
             >
               <Columns3 className="h-4 w-4" /> Columns
             </button>
@@ -327,7 +327,7 @@ export function CandidateComparison({ data }: { data: CandidateComparisonData })
                         key={column.key}
                         type="button"
                         onClick={() => toggleColumn(column.key)}
-                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-brand-lea transition hover:bg-brand-cloudDancer/70"
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-brand-lea transition hover:bg-brand-cloudDancer/70 hover:shadow-glow"
                       >
                         <span
                           className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${

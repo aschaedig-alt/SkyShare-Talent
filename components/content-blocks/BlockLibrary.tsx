@@ -674,7 +674,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
         key={block.id}
         type="button"
         onClick={() => selectBlock(block.id)}
-        className={`w-full px-4 py-4 text-left transition ${
+        className={`w-full px-4 py-4 text-left transition hover:shadow-glow ${
           selectedBlock?.id === block.id && mode !== "create" ? "bg-brand-sweet/35" : "hover:bg-brand-cloudDancer/70"
         }`}
       >
@@ -764,7 +764,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
               key={item.key}
               type="button"
               onClick={() => setView(item.key as ViewMode)}
-              className={`inline-flex items-center gap-2 rounded px-3.5 py-2 text-sm font-bold transition ${
+              className={`inline-flex items-center gap-2 rounded px-3.5 py-2 text-sm font-bold transition hover:shadow-glow ${
                 active
                   ? "bg-brand-lea text-white shadow-sm"
                   : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer"
@@ -861,7 +861,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
               <button
                 type="button"
                 onClick={() => setActiveFilter(null)}
-                className={`rounded px-2.5 py-1 text-[11px] font-semibold transition ${
+                className={`rounded px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow ${
                   activeFilter === null ? "bg-brand-lea text-white" : "bg-brand-cloudDancer text-brand-grey hover:bg-brand-cloudDancer/70"
                 }`}
               >
@@ -872,7 +872,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                   key={chip.value}
                   type="button"
                   onClick={() => setActiveFilter(activeFilter === chip.value ? null : chip.value)}
-                  className={`rounded px-2.5 py-1 text-[11px] font-semibold transition ${
+                  className={`rounded px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow ${
                     activeFilter === chip.value ? "bg-brand-lea text-white" : "bg-brand-cloudDancer text-brand-grey hover:bg-brand-cloudDancer/70"
                   }`}
                 >
@@ -893,7 +893,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                     <button
                       type="button"
                       onClick={() => toggleGroup(group.key)}
-                      className="sticky top-0 z-10 flex w-full items-center justify-between bg-brand-cloudDancer/85 px-4 py-2.5 text-left backdrop-blur transition hover:bg-brand-cloudDancer"
+                      className="sticky top-0 z-10 flex w-full items-center justify-between bg-brand-cloudDancer/85 px-4 py-2.5 text-left backdrop-blur transition hover:bg-brand-cloudDancer hover:shadow-glow"
                     >
                       <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-brand-lea">
                         {group.label} <span className="text-brand-grey">· {group.blocks.length}</span>

@@ -56,7 +56,7 @@ export function OnboardingArchivedTab({ rows }: { rows: NewHireRow[] }) {
             return (
               <tr key={r.id} className="border-b border-brand-lea/5 hover:bg-brand-cloudDancer/30">
                 <td className="px-4 py-3">
-                  <Link href={`/people/${r.id}`} className="font-semibold text-brand-lea hover:underline">{r.name}</Link>
+                  <Link href={`/people/${r.id}`} className="font-semibold text-brand-lea hover:underline transition hover:shadow-glow">{r.name}</Link>
                 </td>
                 <td className="px-4 py-3 text-brand-grey">{r.position ?? "—"}</td>
                 <td className="px-4 py-3 text-brand-grey">{r.department ?? "—"}</td>

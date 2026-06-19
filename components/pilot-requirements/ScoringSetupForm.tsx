@@ -98,7 +98,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
               type="button"
               onClick={() => setSelected(profile.key)}
               className={clsx(
-                "block w-full rounded border p-2.5 text-left transition",
+                "block w-full rounded border p-2.5 text-left transition hover:shadow-glow",
                 profile.key === selected
                   ? "border-brand-gold bg-brand-sweet/18"
                   : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/60"
@@ -348,7 +348,7 @@ function StatusToggle({
           disabled={disabled}
           onClick={() => onChange(option.key)}
           className={clsx(
-            "px-3 py-1 transition",
+            "px-3 py-1 transition hover:shadow-glow",
             value === option.key ? option.active : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60",
             disabled && "cursor-not-allowed opacity-60"
           )}

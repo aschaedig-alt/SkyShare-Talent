@@ -23,7 +23,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 function SessionCard({ s }: { s: SessionListItem }) {
   const soon = new Date(s.date).getTime() - Date.now() <= 7 * 86_400_000 && s.status !== "COMPLETE";
   return (
-    <Link href={`/orientation/${s.id}`} className="block rounded-lg border border-brand-lea/10 bg-white p-4 shadow-panel transition hover:ring-2 hover:ring-brand-gold/30">
+    <Link href={`/orientation/${s.id}`} className="block rounded-lg border border-brand-lea/10 bg-white p-4 shadow-panel transition hover:ring-2 hover:ring-brand-gold/30 hover:shadow-glow">
       <div className="flex items-center justify-between gap-2">
         <span className="text-base font-semibold text-brand-lea">{fmt(s.date)}</span>
         <span className={clsx("rounded px-2 py-0.5 text-[11px] font-semibold", s.status === "COMPLETE" ? "bg-emerald-50 text-emerald-800" : soon ? "bg-brand-gold/15 text-brand-lea" : "bg-brand-cloudDancer text-brand-grey")}>
@@ -72,7 +72,7 @@ function MiniMonth({ year, month, markers }: { year: number; month: number; mark
               ) : null}
             </div>
           );
-          return m?.sessionId ? <Link key={i} href={`/orientation/${m.sessionId}`}>{content}</Link> : <div key={i}>{content}</div>;
+          return m?.sessionId ? <Link key={i} href={`/orientation/${m.sessionId}`} className="transition hover:shadow-glow">{content}</Link> : <div key={i}>{content}</div>;
         })}
       </div>
     </div>
@@ -96,7 +96,7 @@ function CohortCard({ c, onCreate, onAddMissing, busy }: { c: Cohort; onCreate: 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {c.sessionId ? (
           <>
-            <Link href={`/orientation/${c.sessionId}`} className="rounded bg-brand-lea px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-eden">Open session</Link>
+            <Link href={`/orientation/${c.sessionId}`} className="rounded bg-brand-lea px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-eden hover:shadow-glow">Open session</Link>
             {c.missingHireIds.length > 0 ? (
               <button onClick={() => onAddMissing(c)} disabled={busy} className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-50">
                 Add {c.missingHireIds.length} to session
@@ -236,7 +236,7 @@ export function OrientationOverview({
           <div className="mt-3 space-y-1.5">
             {unscheduled.map((h) => (
               <div key={h.id} className="flex flex-wrap items-center gap-2 rounded bg-white/70 px-3 py-2 text-sm">
-                <Link href={`/people/${h.id}`} className="font-medium text-brand-lea hover:underline">{h.name}</Link>
+                <Link href={`/people/${h.id}`} className="font-medium text-brand-lea hover:underline transition hover:shadow-glow">{h.name}</Link>
                 <span className="text-xs text-brand-grey">{h.position ?? "—"}</span>
                 {h.rescheduleCount > 0 ? <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold text-brand-lea">moved {h.rescheduleCount}×</span> : null}
                 <span className="ml-auto">
@@ -258,7 +258,7 @@ export function OrientationOverview({
       <div className="border-b border-brand-lea/10">
         <nav className="flex gap-6">
           {([["sessions", "Sessions"], ["cohorts", "Cohorts & calendar"]] as const).map(([key, label]) => (
-            <button key={key} onClick={() => setView(key)} className={clsx("border-b-2 px-1 py-3 text-sm font-semibold transition", view === key ? "border-brand-lea text-brand-lea" : "border-transparent text-brand-grey hover:text-brand-lea")}>
+            <button key={key} onClick={() => setView(key)} className={clsx("border-b-2 px-1 py-3 text-sm font-semibold transition hover:shadow-glow", view === key ? "border-brand-lea text-brand-lea" : "border-transparent text-brand-grey hover:text-brand-lea")}>
               {label}
               {key === "cohorts" && cohorts.length > 0 ? <span className="ml-1.5 text-brand-grey">· {cohorts.length}</span> : null}
             </button>

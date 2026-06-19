@@ -59,7 +59,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
               key={r.key}
               href={r.key === "30" ? "/compliments/analytics" : `/compliments/analytics?range=${r.key}`}
               className={clsx(
-                "rounded-element border-[0.5px] px-3 py-1.5 text-xs font-medium transition",
+                "rounded-element border-[0.5px] px-3 py-1.5 text-xs font-medium transition hover:shadow-glow",
                 range === r.key
                   ? "border-brand-lea bg-brand-lea text-white"
                   : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"

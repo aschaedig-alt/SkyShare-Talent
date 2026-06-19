@@ -56,7 +56,7 @@ export function JobPreview({ job, warnings, view: controlledView, onViewChange }
                   key={item.key}
                   type="button"
                   onClick={() => setView(item.key as "preview" | "code")}
-                  className={`rounded px-2.5 py-1.5 text-xs font-bold uppercase tracking-[0.08em] transition ${
+                  className={`rounded px-2.5 py-1.5 text-xs font-bold uppercase tracking-[0.08em] transition hover:shadow-glow ${
                     view === item.key ? "bg-white text-brand-lea shadow-sm" : "text-brand-eden hover:text-brand-lea"
                   }`}
                 >

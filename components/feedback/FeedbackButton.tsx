@@ -108,7 +108,7 @@ export function FeedbackButton() {
                       key={t.value}
                       onClick={() => setType(t.value)}
                       className={clsx(
-                        "flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-semibold transition",
+                        "flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-semibold transition hover:shadow-glow",
                         active
                           ? "border-brand-lea bg-brand-lea text-white"
                           : "border-brand-lea/15 bg-white text-brand-grey hover:bg-brand-cloudDancer/40"

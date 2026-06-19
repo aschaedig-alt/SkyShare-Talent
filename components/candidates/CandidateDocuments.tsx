@@ -364,7 +364,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
         <div className="flex flex-wrap items-center gap-1.5 border-b border-brand-lea/10 px-3 py-2">
           <button
             onClick={() => setTypeFilter("All")}
-            className={clsx("rounded px-2.5 py-1 text-[11px] font-semibold transition", typeFilter === "All" ? "bg-brand-lea text-white" : "bg-brand-cloudDancer/60 text-brand-grey hover:text-brand-lea")}
+            className={clsx("rounded px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow", typeFilter === "All" ? "bg-brand-lea text-white" : "bg-brand-cloudDancer/60 text-brand-grey hover:text-brand-lea")}
           >
             All <span className="opacity-70">{files.length}</span>
           </button>
@@ -372,7 +372,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
             <button
               key={t}
               onClick={() => setTypeFilter(t)}
-              className={clsx("rounded px-2.5 py-1 text-[11px] font-semibold transition", typeFilter === t ? "bg-brand-lea text-white" : "bg-brand-cloudDancer/60 text-brand-grey hover:text-brand-lea")}
+              className={clsx("rounded px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow", typeFilter === t ? "bg-brand-lea text-white" : "bg-brand-cloudDancer/60 text-brand-grey hover:text-brand-lea")}
             >
               {t} <span className="opacity-70">{typeCounts.get(t)}</span>
             </button>
@@ -396,7 +396,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                   setActiveId(file.id);
                 }}
                 className={clsx(
-                  "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition",
+                  "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition hover:shadow-glow",
                   active ? "bg-brand-lea text-white" : "text-brand-grey hover:bg-brand-cloudDancer/40 hover:text-brand-lea"
                 )}
                 title={file.displayFilename}
@@ -414,13 +414,13 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
             <div className="flex items-center rounded-lg border border-brand-lea/15 p-0.5">
               <button
                 onClick={() => setLayout("single")}
-                className={clsx("rounded px-2.5 py-1 text-xs font-semibold transition", layout === "single" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea")}
+                className={clsx("rounded px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow", layout === "single" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea")}
               >
                 Single
               </button>
               <button
                 onClick={() => setLayout("compare")}
-                className={clsx("rounded px-2.5 py-1 text-xs font-semibold transition", layout === "compare" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea")}
+                className={clsx("rounded px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow", layout === "compare" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea")}
               >
                 Side by side
               </button>

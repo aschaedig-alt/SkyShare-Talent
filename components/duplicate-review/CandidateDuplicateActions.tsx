@@ -27,7 +27,7 @@ function CandidateCard({
     <button
       onClick={onKeep}
       className={clsx(
-        "flex-1 rounded-lg border-2 p-3 text-left transition",
+        "flex-1 rounded-lg border-2 p-3 text-left transition hover:shadow-glow",
         keep ? "border-emerald-400 bg-emerald-50/60" : "border-brand-lea/10 bg-white hover:border-brand-lea/30"
       )}
     >
@@ -47,7 +47,7 @@ function CandidateCard({
       <Link
         href={`/candidates/${candidate.id}`}
         onClick={(e) => e.stopPropagation()}
-        className="mt-2 inline-block text-[11px] font-semibold text-brand-eden hover:text-brand-lea"
+        className="mt-2 inline-block text-[11px] font-semibold text-brand-eden hover:text-brand-lea transition hover:shadow-glow"
       >
         Open profile
       </Link>

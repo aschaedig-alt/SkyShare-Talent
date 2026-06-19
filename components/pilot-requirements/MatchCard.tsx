@@ -378,7 +378,7 @@ export function MatchCard({
                         aria-pressed={verdict === tag.value}
                         aria-label={tag.label}
                         className={clsx(
-                          "inline-flex items-center gap-1 rounded-element px-2 py-1 text-[11px] font-semibold transition",
+                          "inline-flex items-center gap-1 rounded-element px-2 py-1 text-[11px] font-semibold transition hover:shadow-glow",
                           verdict === tag.value ? tag.on : "text-brand-grey hover:bg-brand-cloudDancer"
                         )}
                       >

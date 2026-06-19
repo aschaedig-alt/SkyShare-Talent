@@ -109,7 +109,7 @@ export function RewardsWorkspace({ roster, rewards, pointsPerDollar }: Props) {
             type="button"
             onClick={() => setCategory(pill.key)}
             className={clsx(
-              "whitespace-nowrap rounded-element border-[0.5px] px-3.5 py-2 text-[13px] font-medium transition",
+              "whitespace-nowrap rounded-element border-[0.5px] px-3.5 py-2 text-[13px] font-medium transition hover:shadow-glow",
               category === pill.key
                 ? "border-brand-lea bg-brand-lea text-white"
                 : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"

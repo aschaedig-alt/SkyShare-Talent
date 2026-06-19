@@ -33,7 +33,7 @@ export function ComplimentsTabs({ isAdmin = false }: { isAdmin?: boolean }) {
               href={t.href}
               aria-current={active ? "page" : undefined}
               className={clsx(
-                "border-b-2 px-1 py-3 text-sm font-semibold transition",
+                "border-b-2 px-1 py-3 text-sm font-semibold transition hover:shadow-glow",
                 active
                   ? "border-brand-lea text-brand-lea"
                   : "border-transparent text-brand-grey hover:text-brand-lea"

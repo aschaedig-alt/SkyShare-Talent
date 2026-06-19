@@ -158,7 +158,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
                   <Link
                     key={`${a.id}-${i}`}
                     href={`/people/${a.id}`}
-                    className={clsx("flex items-center justify-between gap-3 px-3 py-2.5 text-sm transition hover:opacity-90", s.row)}
+                    className={clsx("flex items-center justify-between gap-3 px-3 py-2.5 text-sm transition hover:opacity-90 hover:shadow-glow", s.row)}
                   >
                     <span className="text-brand-black">
                       <span className="font-semibold">{a.name}</span> — {a.text}
@@ -179,7 +179,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
             <p className="text-sm text-brand-grey">No upcoming starts.</p>
           ) : (
             dashboard.upcomingStarts.map((u) => (
-              <Link key={u.id} href={`/people/${u.id}`} className="flex items-center gap-3 text-sm hover:underline">
+              <Link key={u.id} href={`/people/${u.id}`} className="flex items-center gap-3 text-sm hover:underline transition hover:shadow-glow">
                 <span className="w-14 shrink-0 font-semibold text-sky-700">{fmtDate(u.startDate)}</span>
                 <span className="truncate text-brand-black">
                   {u.name}

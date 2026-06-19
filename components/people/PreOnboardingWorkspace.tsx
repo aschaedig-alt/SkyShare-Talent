@@ -94,7 +94,7 @@ export function PreOnboardingWorkspace({ tab, counts, dashboard, grid, milestone
               key={t.key}
               href={`/people?tab=${t.key}`}
               className={clsx(
-                "border-b-2 px-1 py-3 text-sm font-semibold transition",
+                "border-b-2 px-1 py-3 text-sm font-semibold transition hover:shadow-glow",
                 tab === t.key ? "border-brand-lea text-brand-lea" : "border-transparent text-brand-grey hover:text-brand-lea"
               )}
             >

@@ -191,7 +191,7 @@ function ValuePicker({
               onClick={() => toggle(v.id)}
               aria-pressed={isSelected}
               className={clsx(
-                "flex items-center justify-between gap-2 rounded-element border px-3 py-2.5 text-sm transition",
+                "flex items-center justify-between gap-2 rounded-element border px-3 py-2.5 text-sm transition hover:shadow-glow",
                 isSelected
                   ? clsx("border-2 font-medium text-brand-lea", colors.selected)
                   : "border-[0.5px] border-brand-lea/20 text-brand-black hover:border-brand-lea/40"

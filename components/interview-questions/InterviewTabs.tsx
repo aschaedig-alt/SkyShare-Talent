@@ -18,7 +18,7 @@ export function InterviewTabs({ active }: { active: InterviewView }) {
             key={id}
             href={href}
             aria-current={isActive ? "page" : undefined}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition hover:shadow-glow ${
               isActive ? "bg-brand-lea text-white shadow-sm" : "text-brand-grey hover:bg-brand-cloudDancer/70 hover:text-brand-lea"
             }`}
           >

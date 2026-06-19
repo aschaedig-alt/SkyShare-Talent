@@ -54,7 +54,7 @@ export function UpcomingInterviews({ interviews, onInterviewClick }: UpcomingInt
             key={interview.id}
             onClick={() => onInterviewClick?.(interview)}
             className={clsx(
-              "block w-full rounded-lg border-l-4 bg-white p-3 text-left shadow-sm transition hover:shadow-md",
+              "block w-full rounded-lg border-l-4 bg-white p-3 text-left shadow-sm transition hover:shadow-md hover:shadow-glow",
               accentColor(interview.status)
             )}
           >

@@ -32,7 +32,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
               key={f.key}
               href={f.key === "all" ? "/compliments/feed" : `/compliments/feed?filter=${f.key}`}
               className={clsx(
-                "rounded-element border-[0.5px] px-3 py-1.5 text-xs font-medium transition",
+                "rounded-element border-[0.5px] px-3 py-1.5 text-xs font-medium transition hover:shadow-glow",
                 filter === f.key
                   ? "border-brand-lea bg-brand-lea text-white"
                   : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"

@@ -207,7 +207,7 @@ export function NewHireDetailWorkspace({ hire }: Props) {
                             key={s}
                             onClick={() => setTaskStatus(t.id, s)}
                             className={clsx(
-                              "px-2.5 py-1 text-xs font-semibold transition",
+                              "px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow",
                               t.status === s ? STATUS_BTN[s].on : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60"
                             )}
                           >

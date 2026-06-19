@@ -325,7 +325,7 @@ export function ScheduleTimeline({
                           onClick={() => onInterviewClick?.(interview)}
                           title={`${formatTime(interview.startDateTime, interview.timezone)} · ${interview.candidate.displayName}${interview.job ? ` (${interview.job.title})` : ""}`}
                           className={clsx(
-                            "absolute flex items-center gap-1.5 overflow-hidden rounded-md px-2 text-left text-[11px] font-medium shadow-sm transition hover:shadow-md",
+                            "absolute flex items-center gap-1.5 overflow-hidden rounded-md px-2 text-left text-[11px] font-medium shadow-sm transition hover:shadow-md hover:shadow-glow",
                             barClasses(interview, colorMode, departmentColors),
                             draggingId === interview.id && "opacity-40"
                           )}

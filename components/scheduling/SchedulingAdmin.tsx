@@ -177,7 +177,7 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
             <div
               key={h.id}
               className={clsx(
-                "flex items-stretch gap-1 rounded-lg border pr-1 transition",
+                "flex items-stretch gap-1 rounded-lg border pr-1 transition hover:shadow-glow",
                 h.id === selectedId ? "border-brand-sweet bg-brand-sweet/10" : "border-brand-lea/10 hover:bg-brand-cloudDancer/30"
               )}
             >
@@ -459,7 +459,7 @@ function Settings({
                   set("departments", active ? form.departments.filter((x) => x !== d.key) : [...form.departments, d.key])
                 }
                 className={clsx(
-                  "rounded border px-3 py-1 text-xs font-semibold transition",
+                  "rounded border px-3 py-1 text-xs font-semibold transition hover:shadow-glow",
                   active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"
                 )}
               >
@@ -645,7 +645,7 @@ function BookingTypes({
             </select>
             <button
               onClick={() => run(async () => void api(`/api/booking-types/${t.id}`, "PATCH", { isActive: !t.isActive }))}
-              className={clsx("rounded px-2 py-1 text-xs font-semibold", t.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}
+              className={clsx("rounded px-2 py-1 text-xs font-semibold transition hover:shadow-glow", t.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}
             >
               {t.isActive ? "Active" : "Off"}
             </button>

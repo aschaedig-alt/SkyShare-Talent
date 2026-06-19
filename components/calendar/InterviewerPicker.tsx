@@ -62,7 +62,7 @@ export function InterviewerPicker({
           setValue(person.name);
           setOpen(false);
         }}
-        className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm text-brand-lea transition hover:bg-brand-cloudDancer/70"
+        className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm text-brand-lea transition hover:bg-brand-cloudDancer/70 hover:shadow-glow"
       >
         <span className="truncate">{person.name}</span>
         {person.departments.length > 0 ? (

@@ -73,7 +73,7 @@ export function MatchboardWorkspace({
             type="button"
             onClick={() => go("role")}
             className={clsx(
-              "inline-flex items-center gap-1.5 rounded px-4 py-1.5 text-sm font-semibold transition",
+              "inline-flex items-center gap-1.5 rounded px-4 py-1.5 text-sm font-semibold transition hover:shadow-glow",
               mode === "role" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea"
             )}
           >
@@ -83,7 +83,7 @@ export function MatchboardWorkspace({
             type="button"
             onClick={() => go("candidate")}
             className={clsx(
-              "inline-flex items-center gap-1.5 rounded px-4 py-1.5 text-sm font-semibold transition",
+              "inline-flex items-center gap-1.5 rounded px-4 py-1.5 text-sm font-semibold transition hover:shadow-glow",
               mode === "candidate" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea"
             )}
           >
@@ -120,7 +120,7 @@ export function MatchboardWorkspace({
                         if (!disabled) go("role", role.id);
                       }}
                       className={clsx(
-                        "mb-1.5 block w-full rounded border p-2.5 text-left transition",
+                        "mb-1.5 block w-full rounded border p-2.5 text-left transition hover:shadow-glow",
                         disabled
                           ? "cursor-default border-brand-lea/10 opacity-60"
                           : active
@@ -159,7 +159,7 @@ export function MatchboardWorkspace({
                       type="button"
                       onClick={() => go("candidate", cand.id)}
                       className={clsx(
-                        "mb-1.5 block w-full rounded border p-2.5 text-left transition",
+                        "mb-1.5 block w-full rounded border p-2.5 text-left transition hover:shadow-glow",
                         active ? "border-brand-gold bg-brand-sweet/18" : "border-brand-lea/10 hover:border-brand-sweet hover:bg-brand-cloudDancer/55"
                       )}
                     >

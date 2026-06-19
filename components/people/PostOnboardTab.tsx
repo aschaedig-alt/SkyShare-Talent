@@ -82,7 +82,7 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
               return (
               <tr key={h.id} className={clsx("border-b border-brand-lea/5 hover:bg-brand-cloudDancer/30", terminated && "bg-brand-cloudDancer/30")}>
                 <td className="px-4 py-3">
-                  <Link href={`/people/${h.id}`} className={clsx("font-semibold hover:underline", terminated ? "text-brand-grey" : "text-brand-lea")}>{h.name}</Link>
+                  <Link href={`/people/${h.id}`} className={clsx("font-semibold hover:underline transition hover:shadow-glow", terminated ? "text-brand-grey" : "text-brand-lea")}>{h.name}</Link>
                   <div className="text-xs text-brand-grey">{h.position ?? "—"}</div>
                 </td>
                 <td className="px-4 py-3 text-brand-grey">{h.department ?? "—"}</td>
@@ -107,7 +107,7 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
                       type="button"
                       onClick={() => toggle(h.id, c)}
                       title={c.status === "DONE" ? "Done — click to undo" : c.dueSoon ? "Due — click when complete" : "Click when complete"}
-                      className="inline-flex items-center justify-center"
+                      className="inline-flex items-center justify-center transition hover:shadow-glow"
                     >
                       {c.status === "DONE" ? (
                         <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">

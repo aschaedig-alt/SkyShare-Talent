@@ -270,7 +270,7 @@ export function CandidateProfileWorkspace({ candidate: initialCandidate }: Candi
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={clsx(
-                    "flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-semibold transition",
+                    "flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-semibold transition hover:shadow-glow",
                     active ? "border-brand-lea text-brand-lea" : "border-transparent text-brand-grey hover:text-brand-lea"
                   )}
                 >

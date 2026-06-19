@@ -333,7 +333,7 @@ function JobRow({
           <button
             onClick={onSetPrimary}
             disabled={disabled}
-            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${
+            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition hover:shadow-glow ${
               isPrimary ? "border-emerald-500 bg-emerald-500" : "border-brand-lea/30 hover:border-emerald-400"
             } disabled:opacity-50`}
             title={isPrimary ? "This job will be kept" : "Keep this job instead"}
@@ -355,7 +355,7 @@ function JobRow({
             />
           )}
 
-          <button onClick={onToggleExpand} className="min-w-0 text-left">
+          <button onClick={onToggleExpand} className="min-w-0 text-left transition hover:shadow-glow">
             <div className="flex items-center gap-2 text-sm font-medium text-brand-lea">
               <span className="truncate">{job.title}</span>
               {isPrimary && (
@@ -377,7 +377,7 @@ function JobRow({
           <Link
             href={`/recruiting-jobs?id=${job.id}`}
             target="_blank"
-            className="text-brand-lea underline hover:text-brand-gold"
+            className="text-brand-lea underline hover:text-brand-gold transition hover:shadow-glow"
           >
             Open
           </Link>

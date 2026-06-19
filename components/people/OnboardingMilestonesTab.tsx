@@ -90,7 +90,7 @@ export function OnboardingMilestonesTab({ data }: { data: MilestoneData }) {
         <button
           onClick={() => setManaging((m) => !m)}
           className={clsx(
-            "rounded border px-3 py-1.5 text-sm font-semibold transition",
+            "rounded border px-3 py-1.5 text-sm font-semibold transition hover:shadow-glow",
             managing ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-lea hover:bg-brand-cloudDancer/60"
           )}
         >
@@ -188,7 +188,7 @@ export function OnboardingMilestonesTab({ data }: { data: MilestoneData }) {
                   return (
                     <tr key={h.id} className="hover:bg-brand-cloudDancer/30">
                       <td className="sticky left-0 z-10 border-b border-r border-brand-lea/10 bg-white px-3 py-2">
-                        <Link href={`/people/${h.id}`} className="font-medium text-brand-lea hover:underline">{h.name}</Link>
+                        <Link href={`/people/${h.id}`} className="font-medium text-brand-lea hover:underline transition hover:shadow-glow">{h.name}</Link>
                         <div className="text-[10px] text-brand-grey">
                           {h.position ?? "—"}
                           {h.department ? ` · ${h.department}` : ""}

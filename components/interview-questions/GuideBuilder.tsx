@@ -173,7 +173,7 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
                   key={v.colorKey}
                   type="button"
                   onClick={() => toggleValue(v.colorKey)}
-                  className={`rounded border px-3 py-1 text-xs font-semibold transition ${
+                  className={`rounded border px-3 py-1 text-xs font-semibold transition hover:shadow-glow ${
                     on ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"
                   }`}
                 >

@@ -67,14 +67,14 @@ export function JobClassificationEditor({ jobId, isPilotRole, pilotSeat, aircraf
           <button
             type="button"
             onClick={() => setPilot(true)}
-            className={clsx("px-3 py-1.5 text-sm font-semibold transition", pilot ? "bg-brand-lea text-white" : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60")}
+            className={clsx("px-3 py-1.5 text-sm font-semibold transition hover:shadow-glow", pilot ? "bg-brand-lea text-white" : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60")}
           >
             Pilot
           </button>
           <button
             type="button"
             onClick={() => setPilot(false)}
-            className={clsx("px-3 py-1.5 text-sm font-semibold transition", !pilot ? "bg-brand-lea text-white" : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60")}
+            className={clsx("px-3 py-1.5 text-sm font-semibold transition hover:shadow-glow", !pilot ? "bg-brand-lea text-white" : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60")}
           >
             Support
           </button>

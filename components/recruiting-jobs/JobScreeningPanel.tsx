@@ -237,7 +237,7 @@ export function JobScreeningPanel({
                 type="button"
                 onClick={() => setTab(entry.key)}
                 className={clsx(
-                  "inline-flex items-center gap-1 rounded border px-2.5 py-1 text-[11px] font-semibold transition",
+                  "inline-flex items-center gap-1 rounded border px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow",
                   tab === entry.key
                     ? "border-brand-gold bg-brand-sweet/20 text-brand-lea"
                     : "border-brand-lea/15 text-brand-grey hover:border-brand-sweet hover:bg-brand-cloudDancer/55"

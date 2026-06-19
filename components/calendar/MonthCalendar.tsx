@@ -190,7 +190,7 @@ export function MonthCalendar({
                     }}
                     onClick={() => onInterviewClick?.(interview)}
                     className={clsx(
-                      "block w-full cursor-pointer truncate rounded px-1.5 py-0.5 text-left text-[10px] font-medium shadow-sm transition",
+                      "block w-full cursor-pointer truncate rounded px-1.5 py-0.5 text-left text-[10px] font-medium shadow-sm transition hover:shadow-glow",
                       chipClasses(interview, colorMode, departmentColors),
                       draggingId === interview.id && "opacity-40"
                     )}
@@ -225,7 +225,7 @@ export function MonthCalendar({
                             setPopoverDay(null);
                             onInterviewClick?.(interview);
                           }}
-                          className={clsx("block w-full truncate rounded px-2 py-1 text-left text-[11px] font-medium", chipClasses(interview, colorMode, departmentColors))}
+                          className={clsx("block w-full truncate rounded px-2 py-1 text-left text-[11px] font-medium transition hover:shadow-glow", chipClasses(interview, colorMode, departmentColors))}
                         >
                           {formatTime(interview.startDateTime, interview.timezone)} · {interview.candidate.displayName}
                         </button>

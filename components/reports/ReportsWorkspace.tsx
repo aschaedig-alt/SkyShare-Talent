@@ -139,7 +139,7 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
                     return (
                       <tr key={i} className="transition hover:bg-brand-sweet/10">
                         <td className="px-3 py-2">
-                          <Link href={`/candidates/${item.candidateId}`} className="font-semibold text-brand-lea hover:text-brand-eden">
+                          <Link href={`/candidates/${item.candidateId}`} className="font-semibold text-brand-lea hover:text-brand-eden transition hover:shadow-glow">
                             {item.candidateName}
                           </Link>
                         </td>

@@ -80,7 +80,7 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
                 const pct = h.applicableCount > 0 ? Math.round((h.doneCount / h.applicableCount) * 100) : 0;
                 return (
                   <th key={h.id} className="sticky top-0 z-10 border-b border-brand-lea/10 bg-white px-3 py-2 align-bottom" style={{ minWidth: 132 }}>
-                    <Link href={`/people/${h.id}`} className="block text-center font-medium text-brand-lea hover:underline">
+                    <Link href={`/people/${h.id}`} className="block text-center font-medium text-brand-lea hover:underline transition hover:shadow-glow">
                       {h.name}
                     </Link>
                     <div className="mx-auto mt-1.5 h-1.5 w-24 overflow-hidden rounded-full bg-brand-cloudDancer">
@@ -135,7 +135,7 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
                             <button
                               type="button"
                               onClick={() => cycle(h.id, task.id, task.status)}
-                              className="inline-flex h-8 w-full items-center justify-center transition hover:bg-brand-cloudDancer/50"
+                              className="inline-flex h-8 w-full items-center justify-center transition hover:bg-brand-cloudDancer/50 hover:shadow-glow"
                               title="Click to change"
                             >
                               <Glyph status={task.status} />

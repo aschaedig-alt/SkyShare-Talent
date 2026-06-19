@@ -128,7 +128,7 @@ function ScorecardEditor({
                       key={r.key}
                       type="button"
                       onClick={() => setRating(idx, r.key)}
-                      className={`rounded border px-2.5 py-0.5 text-[11px] font-semibold transition ${
+                      className={`rounded border px-2.5 py-0.5 text-[11px] font-semibold transition hover:shadow-glow ${
                         active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"
                       }`}
                     >
@@ -169,7 +169,7 @@ function ScorecardEditor({
                 key={r.key}
                 type="button"
                 onClick={() => setRecommendation(active ? "" : r.key)}
-                className={`rounded border px-3 py-1 text-xs font-semibold transition ${
+                className={`rounded border px-3 py-1 text-xs font-semibold transition hover:shadow-glow ${
                   active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea"
                 }`}
               >

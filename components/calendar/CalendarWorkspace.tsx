@@ -94,7 +94,7 @@ function CompactInterviewList({
               key={interview.id}
               type="button"
               onClick={() => onInterviewClick(interview)}
-              className="block w-full rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-2 text-left transition hover:border-brand-sweet hover:bg-brand-sweet/10"
+              className="block w-full rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-2 text-left transition hover:border-brand-sweet hover:bg-brand-sweet/10 hover:shadow-glow"
             >
               <div className="truncate text-xs font-semibold text-brand-lea">{interview.candidate.displayName}</div>
               <div className="truncate text-[11px] text-brand-grey">{interview.title}</div>
@@ -250,7 +250,7 @@ export function CalendarWorkspace({
                 key={mode}
                 onClick={() => setColorMode(mode)}
                 className={clsx(
-                  "rounded px-2 py-1.5 text-xs font-semibold transition",
+                  "rounded px-2 py-1.5 text-xs font-semibold transition hover:shadow-glow",
                   colorMode === mode ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea"
                 )}
               >
@@ -279,7 +279,7 @@ export function CalendarWorkspace({
                   key={option.id}
                   onClick={() => setView(option.id)}
                   className={clsx(
-                    "flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-semibold transition",
+                    "flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-semibold transition hover:shadow-glow",
                     view === option.id ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea"
                   )}
                 >

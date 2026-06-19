@@ -285,7 +285,7 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
                     <Link
                       key={requirement.id}
                       href={`/pilot-requirements?id=${requirement.id}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
-                      className={`block rounded border p-3 transition ${
+                      className={`block rounded border p-3 transition hover:shadow-glow ${
                         isSelected
                           ? "border-brand-gold bg-brand-sweet/18"
                           : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/65"

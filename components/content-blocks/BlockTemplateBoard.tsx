@@ -150,7 +150,7 @@ function DraggableBlockCard({
       type="button"
       onClick={() => onSelect(block.id)}
       style={style}
-      className={`w-full rounded border bg-white p-3 text-left shadow-sm transition ${
+      className={`w-full rounded border bg-white p-3 text-left shadow-sm transition hover:shadow-glow ${
         selected ? "border-brand-gold ring-2 ring-brand-gold/30" : "border-brand-lea/10 hover:border-brand-eden/40"
       } ${isDragging ? "opacity-70" : ""}`}
     >
