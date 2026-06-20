@@ -58,7 +58,7 @@ function EvidencePanel({ requirement }: { requirement: PilotRequirementDetail })
         </span>
       </div>
       {evidence ? (
-        <div className="mt-3 max-h-[320px] overflow-auto rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm leading-6 text-brand-black/78 whitespace-pre-wrap dark:border-white/10 dark:bg-white/5">
+        <div className="mt-3 max-h-[320px] overflow-auto rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm leading-6 text-brand-black/78 dark:text-slate-300 whitespace-pre-wrap dark:border-white/10 dark:bg-white/5">
           {evidence}
         </div>
       ) : (
@@ -168,7 +168,7 @@ function RequirementDetail({
                         className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5"
                       >
                         <div className="text-sm font-semibold text-brand-lea dark:text-slate-100">{gate.label}</div>
-                        <div className="mt-1 text-sm text-brand-black/76">{getGateDisplayValue(gate)}</div>
+                        <div className="mt-1 text-sm text-brand-black/76 dark:text-slate-300">{getGateDisplayValue(gate)}</div>
                       </div>
                     ))}
                   </div>
@@ -226,7 +226,7 @@ function RequirementDetail({
               {requirement.sourceJobStatus ? `Source job status: ${requirement.sourceJobStatus}` : "A source job can be linked after import."}
             </p>
             {requirement.payScaleRaw ? (
-              <div className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 text-sm text-brand-black/76 dark:border-white/10 dark:bg-white/5">
+              <div className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 text-sm text-brand-black/76 dark:text-slate-300 dark:border-white/10 dark:bg-white/5">
                 {requirement.payScaleRaw}
               </div>
             ) : null}
@@ -310,7 +310,7 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
                       className={`block rounded border p-3 transition hover:shadow-glow ${
                         isSelected
                           ? "border-brand-gold bg-brand-sweet/18 dark:bg-brand-sweet/25"
-                          : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/65 dark:border-white/10 dark:bg-[#10243a] dark:bg-white/5"
+                          : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/65 dark:border-white/10 dark:bg-[#10243a]"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">

@@ -99,7 +99,7 @@ export function ResumeIntake({
           <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl dark:bg-[#10243a]" onClick={(e) => e.stopPropagation()}>
             <div className="mb-1 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Upload resumes</h2>
-              <button onClick={() => { setOpen(false); reset(); }} className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100" aria-label="Close"><X className="h-5 w-5" /></button>
+              <button onClick={() => { setOpen(false); reset(); }} className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close"><X className="h-5 w-5" /></button>
             </div>
             <p className="mb-3 text-xs text-brand-grey dark:text-slate-400">
               Each resume becomes a candidate — name, email, and phone are read from the file and the resume is attached.
@@ -117,7 +117,7 @@ export function ResumeIntake({
                   className="block w-full text-sm text-brand-grey file:mr-3 file:rounded file:border-0 file:bg-brand-lea file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-eden"
                 />
                 {files.length > 0 && (
-                  <ul className="mt-3 max-h-40 space-y-1 overflow-y-auto text-xs text-brand-black/80">
+                  <ul className="mt-3 max-h-40 space-y-1 overflow-y-auto text-xs text-brand-black/80 dark:text-slate-300">
                     {files.map((f, i) => (
                       <li key={i} className="truncate rounded bg-brand-cloudDancer/40 px-2 py-1 dark:bg-white/5">{f.name}</li>
                     ))}
@@ -142,7 +142,7 @@ export function ResumeIntake({
                           <div className="text-red-600"><span className="font-semibold">{r.filename}</span> — {r.error}</div>
                         ) : (
                           <>
-                            <div className="font-semibold text-brand-lea dark:text-slate-100">{r.displayName} {r.reused && <span className="font-normal text-brand-grey dark:text-slate-400">(existing)</span>}</div>
+                            <div className="font-semibold text-brand-lea">{r.displayName} {r.reused && <span className="font-normal text-brand-grey dark:text-slate-400">(existing)</span>}</div>
                             <div className="text-brand-grey dark:text-slate-400">{[r.email, r.phone].filter(Boolean).join(" · ") || "no contact found — edit on profile"}{r.linkedToJob ? " · added to job" : ""}</div>
                           </>
                         )}

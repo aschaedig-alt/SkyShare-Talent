@@ -22,7 +22,7 @@ export function PagePlaceholder({ title, eyebrow, description, cards }: PagePlac
             <h1 className="text-3xl font-semibold text-brand-lea dark:text-slate-100">{title}</h1>
           </div>
         </div>
-        <p className="max-w-3xl text-sm leading-6 text-brand-black/72">{description}</p>
+        <p className="max-w-3xl text-sm leading-6 text-brand-black/72 dark:text-slate-300">{description}</p>
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {cards.map((card) => (
             <div key={card} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/70 p-4 dark:border-white/10 dark:bg-white/5">

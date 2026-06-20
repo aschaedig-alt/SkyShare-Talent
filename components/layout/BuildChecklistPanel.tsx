@@ -39,7 +39,7 @@ export function BuildChecklistPanel() {
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-gold/20 text-[11px] font-bold text-brand-lea dark:text-slate-100">
                 {index + 1}
               </span>
-              <span className="text-xs font-semibold leading-5 text-brand-black/76">{item}</span>
+              <span className="text-xs font-semibold leading-5 text-brand-black/76 dark:text-slate-300">{item}</span>
             </div>
           ))}
         </div>

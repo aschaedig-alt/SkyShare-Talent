@@ -133,7 +133,7 @@ function QuestionForm({
                   type="button"
                   onClick={() => toggleDept(d.key)}
                   className={`rounded border px-3 py-1 text-xs font-semibold transition hover:shadow-glow ${
-                    active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:text-slate-100"
+                    active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
                   }`}
                 >
                   {d.label}
@@ -155,7 +155,7 @@ function QuestionForm({
 
       <div className="mt-3 flex items-center justify-end gap-3">
         {error ? <span className="mr-auto text-xs font-medium text-red-700">{error}</span> : null}
-        <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400 dark:text-slate-100">
+        <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400">
           Cancel
         </button>
         <button
@@ -255,7 +255,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
               setEditingId(null);
               setCreating(true);
             }}
-            className="inline-flex items-center gap-1.5 self-start rounded-lg bg-white px-4 py-2 text-sm font-semibold text-brand-lea shadow-sm transition hover:bg-brand-cloudDancer dark:bg-[#10243a] dark:text-slate-100 dark:bg-white/5"
+            className="inline-flex items-center gap-1.5 self-start rounded-lg bg-white px-4 py-2 text-sm font-semibold text-brand-lea shadow-sm transition hover:bg-brand-cloudDancer dark:bg-[#10243a] dark:text-slate-100"
           >
             <Plus className="h-4 w-4" /> New question
           </button>
@@ -322,10 +322,10 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-sm font-medium text-brand-black dark:text-slate-100">{item.text}</p>
                   <div className="flex shrink-0 items-center gap-1">
-                    <button onClick={() => toggleActive(item)} disabled={busyId === item.id} title={item.isActive ? "Mark inactive" : "Mark active"} className="rounded px-2 py-1 text-[11px] font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5 dark:text-slate-100">
+                    <button onClick={() => toggleActive(item)} disabled={busyId === item.id} title={item.isActive ? "Mark inactive" : "Mark active"} className="rounded px-2 py-1 text-[11px] font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5">
                       {item.isActive ? "Active" : "Inactive"}
                     </button>
-                    <button onClick={() => { setCreating(false); setEditingId(item.id); }} title="Edit" className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5 dark:text-slate-100">
+                    <button onClick={() => { setCreating(false); setEditingId(item.id); }} title="Edit" className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5">
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button onClick={() => remove(item)} disabled={busyId === item.id} title="Delete" className="rounded p-1.5 text-brand-grey transition hover:bg-red-50 hover:text-red-600 dark:text-slate-400">

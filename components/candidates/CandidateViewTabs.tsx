@@ -21,7 +21,7 @@ export function CandidateViewTabs({ active }: { active: CandidateView }) {
             className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition hover:shadow-glow ${
               isActive
                 ? "bg-brand-lea text-white shadow-sm"
-                : "text-brand-grey hover:bg-brand-cloudDancer/70 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5 dark:text-slate-100"
+                : "text-brand-grey hover:bg-brand-cloudDancer/70 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5"
             }`}
           >
             <Icon className="h-4 w-4" />

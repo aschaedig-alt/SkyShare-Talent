@@ -164,7 +164,7 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
               </div>
             </div>
 
-            <label className="mt-4 flex items-start gap-2 text-sm font-semibold text-brand-black/78">
+            <label className="mt-4 flex items-start gap-2 text-sm font-semibold text-brand-black/78 dark:text-slate-300">
               <input
                 type="checkbox"
                 className="mt-1"

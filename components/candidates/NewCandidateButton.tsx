@@ -59,7 +59,7 @@ export function NewCandidateButton() {
           <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl dark:bg-[#10243a]" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">New candidate</h2>
-              <button onClick={() => setOpen(false)} className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100" aria-label="Close"><X className="h-5 w-5" /></button>
+              <button onClick={() => setOpen(false)} className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close"><X className="h-5 w-5" /></button>
             </div>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">

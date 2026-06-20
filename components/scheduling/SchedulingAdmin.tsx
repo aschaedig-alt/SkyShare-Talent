@@ -460,7 +460,7 @@ function Settings({
                 }
                 className={clsx(
                   "rounded border px-3 py-1 text-xs font-semibold transition hover:shadow-glow",
-                  active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:text-slate-100"
+                  active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
                 )}
               >
                 {d.label}

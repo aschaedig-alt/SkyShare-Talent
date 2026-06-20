@@ -66,7 +66,7 @@ export function RoleMatchCard({
         />
       </div>
 
-      <p className="mt-2 text-xs leading-5 text-brand-black/75">{match.summary}</p>
+      <p className="mt-2 text-xs leading-5 text-brand-black/75 dark:text-slate-300">{match.summary}</p>
 
       {match.overqualified ? (
         <div className="mt-2 inline-flex items-center gap-1 rounded-element bg-value-leadership-light px-2 py-1 text-[10px] font-semibold text-value-leadership-dark">

@@ -70,7 +70,7 @@ function FacetFilter({
         className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold transition hover:shadow-glow ${
           selected.size > 0
             ? "border-brand-gold/50 bg-brand-gold/10 text-brand-lea dark:text-slate-100"
-            : "border-brand-lea/15 bg-white text-brand-grey hover:text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400 dark:text-slate-100"
+            : "border-brand-lea/15 bg-white text-brand-grey hover:text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400"
         }`}
       >
         {label}
@@ -313,7 +313,7 @@ export function CandidateComparison({ data }: { data: CandidateComparisonData })
             <button
               type="button"
               onClick={() => setColumnsOpen((value) => !value)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/15 bg-white px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea hover:shadow-glow dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400 dark:text-slate-100"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/15 bg-white px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea hover:shadow-glow dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400"
             >
               <Columns3 className="h-4 w-4" /> Columns
             </button>
@@ -347,7 +347,7 @@ export function CandidateComparison({ data }: { data: CandidateComparisonData })
           <button
             type="button"
             onClick={exportCsv}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/15 bg-white px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400 dark:text-slate-100"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/15 bg-white px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400"
           >
             <Download className="h-4 w-4" /> CSV
           </button>

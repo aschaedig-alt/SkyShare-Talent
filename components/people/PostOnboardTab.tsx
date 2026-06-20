@@ -82,7 +82,7 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
               return (
               <tr key={h.id} className={clsx("border-b border-brand-lea/5 hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:bg-white/5", terminated && "bg-brand-cloudDancer/30 dark:bg-white/5")}>
                 <td className="px-4 py-3">
-                  <Link href={`/people/${h.id}`} className={clsx("font-semibold hover:underline transition hover:shadow-glow", terminated ? "text-brand-grey dark:text-slate-400" : "text-brand-lea dark:text-slate-100")}>{h.name}</Link>
+                  <Link href={`/people/${h.id}`} className={clsx("font-semibold hover:underline transition hover:shadow-glow", terminated ? "text-brand-grey dark:text-slate-400" : "text-brand-lea")}>{h.name}</Link>
                   <div className="text-xs text-brand-grey dark:text-slate-400">{h.position ?? "—"}</div>
                 </td>
                 <td className="px-4 py-3 text-brand-grey dark:text-slate-400">{h.department ?? "—"}</td>

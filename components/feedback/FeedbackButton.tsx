@@ -83,7 +83,7 @@ export function FeedbackButton() {
         <div className="fixed bottom-5 right-5 z-40 w-[min(360px,calc(100vw-2.5rem))] rounded-xl border border-brand-lea/15 bg-white shadow-2xl dark:border-white/10 dark:bg-[#10243a]">
           <div className="flex items-center justify-between border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
             <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">Send feedback</span>
-            <button onClick={close} className="text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100" aria-label="Close">
+            <button onClick={close} className="text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -111,7 +111,7 @@ export function FeedbackButton() {
                         "flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-semibold transition hover:shadow-glow",
                         active
                           ? "border-brand-lea bg-brand-lea text-white"
-                          : "border-brand-lea/15 bg-white text-brand-grey hover:bg-brand-cloudDancer/40 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400 dark:bg-white/5"
+                          : "border-brand-lea/15 bg-white text-brand-grey hover:bg-brand-cloudDancer/40 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400"
                       )}
                     >
                       <Icon className="h-3.5 w-3.5" />

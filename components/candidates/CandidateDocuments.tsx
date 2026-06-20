@@ -343,7 +343,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
               className="min-w-0 flex-1 bg-transparent text-sm outline-none"
             />
             {docSearch && (
-              <button onClick={() => setDocSearch("")} className="text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100" aria-label="Clear search">
+              <button onClick={() => setDocSearch("")} className="text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Clear search">
                 <X className="h-4 w-4" />
               </button>
             )}
@@ -365,7 +365,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
         <div className="flex flex-wrap items-center gap-1.5 border-b border-brand-lea/10 px-3 py-2 dark:border-white/10">
           <button
             onClick={() => setTypeFilter("All")}
-            className={clsx("rounded px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow", typeFilter === "All" ? "bg-brand-lea text-white" : "bg-brand-cloudDancer/60 text-brand-grey hover:text-brand-lea dark:bg-white/5 dark:text-slate-400 dark:text-slate-100")}
+            className={clsx("rounded px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow", typeFilter === "All" ? "bg-brand-lea text-white" : "bg-brand-cloudDancer/60 text-brand-grey hover:text-brand-lea dark:bg-white/5 dark:text-slate-400")}
           >
             All <span className="opacity-70">{files.length}</span>
           </button>
@@ -373,7 +373,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
             <button
               key={t}
               onClick={() => setTypeFilter(t)}
-              className={clsx("rounded px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow", typeFilter === t ? "bg-brand-lea text-white" : "bg-brand-cloudDancer/60 text-brand-grey hover:text-brand-lea dark:bg-white/5 dark:text-slate-400 dark:text-slate-100")}
+              className={clsx("rounded px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow", typeFilter === t ? "bg-brand-lea text-white" : "bg-brand-cloudDancer/60 text-brand-grey hover:text-brand-lea dark:bg-white/5 dark:text-slate-400")}
             >
               {t} <span className="opacity-70">{typeCounts.get(t)}</span>
             </button>
@@ -398,7 +398,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                 }}
                 className={clsx(
                   "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition hover:shadow-glow",
-                  active ? "bg-brand-lea text-white" : "text-brand-grey hover:bg-brand-cloudDancer/40 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5 dark:text-slate-100"
+                  active ? "bg-brand-lea text-white" : "text-brand-grey hover:bg-brand-cloudDancer/40 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5"
                 )}
                 title={file.displayFilename}
               >
@@ -415,13 +415,13 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
             <div className="flex items-center rounded-lg border border-brand-lea/15 p-0.5 dark:border-white/10">
               <button
                 onClick={() => setLayout("single")}
-                className={clsx("rounded px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow", layout === "single" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100")}
+                className={clsx("rounded px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow", layout === "single" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400")}
               >
                 Single
               </button>
               <button
                 onClick={() => setLayout("compare")}
-                className={clsx("rounded px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow", layout === "compare" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100")}
+                className={clsx("rounded px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow", layout === "compare" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400")}
               >
                 Side by side
               </button>
@@ -429,7 +429,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
           )}
           <button
             onClick={openLink}
-            className="flex items-center gap-1.5 rounded-lg border border-brand-lea/20 px-3 py-2 text-sm font-medium text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:text-slate-100"
+            className="flex items-center gap-1.5 rounded-lg border border-brand-lea/20 px-3 py-2 text-sm font-medium text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
             title="Attach a file that was uploaded via Imports"
           >
             <Link2 className="h-4 w-4" /> Link
@@ -437,7 +437,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="flex items-center gap-1.5 rounded-lg border border-dashed border-brand-lea/30 px-3 py-2 text-sm font-medium text-brand-grey transition hover:border-brand-gold hover:text-brand-lea disabled:opacity-60 dark:border-white/10 dark:text-slate-400 dark:text-slate-100"
+            className="flex items-center gap-1.5 rounded-lg border border-dashed border-brand-lea/30 px-3 py-2 text-sm font-medium text-brand-grey transition hover:border-brand-gold hover:text-brand-lea disabled:opacity-60 dark:border-white/10 dark:text-slate-400"
           >
             {uploading ? <Loader className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             {uploading ? "Uploading…" : "Add"}
@@ -453,7 +453,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
         <div className="m-3 rounded-lg border border-brand-lea/15 bg-brand-cloudDancer/30 p-3 dark:border-white/10 dark:bg-white/5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">Attach a file uploaded via Imports</span>
-            <button onClick={() => setShowLink(false)} className="text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100" aria-label="Close">
+            <button onClick={() => setShowLink(false)} className="text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -516,7 +516,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                   ))}
                 </select>
                 {pane.file?.storageKey && (
-                  <a href={`/api/candidate-files/${pane.file.id}`} download className="rounded p-1.5 text-brand-grey hover:bg-brand-cloudDancer/40 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5 dark:text-slate-100" aria-label="Download">
+                  <a href={`/api/candidate-files/${pane.file.id}`} download className="rounded p-1.5 text-brand-grey hover:bg-brand-cloudDancer/40 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5" aria-label="Download">
                     <Download className="h-4 w-4" />
                   </a>
                 )}
@@ -576,9 +576,9 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                     />
                   </label>
                 )}
-                <button onClick={() => { setRenamingId(activeFile.id); setRenameValue(activeFile.displayFilename); }} className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/40 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5 dark:text-slate-100" aria-label="Rename" title="Rename"><Pencil className="h-4 w-4" /></button>
+                <button onClick={() => { setRenamingId(activeFile.id); setRenameValue(activeFile.displayFilename); }} className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/40 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5" aria-label="Rename" title="Rename"><Pencil className="h-4 w-4" /></button>
                 {activeFile.storageKey && (
-                  <a href={`/api/candidate-files/${activeFile.id}`} download className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/40 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5 dark:text-slate-100" aria-label="Download" title="Download"><Download className="h-4 w-4" /></a>
+                  <a href={`/api/candidate-files/${activeFile.id}`} download className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/40 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5" aria-label="Download" title="Download"><Download className="h-4 w-4" /></a>
                 )}
                 <button onClick={() => setConfirmDeleteId(activeFile.id)} className="rounded p-1.5 text-red-600 transition hover:bg-red-50" aria-label="Delete" title="Delete"><Trash2 className="h-4 w-4" /></button>
               </>

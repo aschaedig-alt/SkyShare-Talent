@@ -258,7 +258,7 @@ function SlotPicker({
       <div className="flex items-center justify-between gap-3">
         <div>
           {multiType ? (
-            <button onClick={onBack} className="mb-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100">
+            <button onClick={onBack} className="mb-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400">
               <ChevronLeft className="h-3.5 w-3.5" /> Meeting type
             </button>
           ) : null}
@@ -338,7 +338,7 @@ function BookingForm(props: {
         if (canSubmit) props.onSubmit();
       }}
     >
-      <button type="button" onClick={props.onBack} className="mb-3 inline-flex items-center gap-1 text-xs font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100">
+      <button type="button" onClick={props.onBack} className="mb-3 inline-flex items-center gap-1 text-xs font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400">
         <ChevronLeft className="h-3.5 w-3.5" /> Pick another time
       </button>
 

@@ -71,7 +71,7 @@ function BulletList({ value }: { value?: string | null }) {
   }
 
   return (
-    <ul className="space-y-2 text-sm leading-6 text-brand-black/82">
+    <ul className="space-y-2 text-sm leading-6 text-brand-black/82 dark:text-slate-300">
       {lines.map((line, index) => (
         <li key={`${line}-${index}`} className="flex gap-3">
           <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-eden" />
@@ -97,7 +97,7 @@ function formatSecondaryLocation(value?: string | null) {
 }
 
 const blockColorClasses: Record<BlockTextColor, string> = {
-  BLACK: "text-brand-black/82",
+  BLACK: "text-brand-black/82 dark:text-slate-300",
   LEA: "text-brand-lea dark:text-slate-100",
   EDEN: "text-brand-eden",
   GREY: "text-brand-grey dark:text-slate-400",

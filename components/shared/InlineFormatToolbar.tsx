@@ -35,7 +35,7 @@ export function InlineFormatToolbar({ onBold, onColor }: InlineFormatToolbarProp
               key={color.key}
               type="button"
               onClick={() => onColor(color)}
-              className="inline-flex h-8 items-center gap-1.5 rounded border border-brand-lea/15 bg-white px-2 text-[11px] font-bold text-brand-lea transition hover:border-brand-eden/45 hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100 dark:bg-white/5"
+              className="inline-flex h-8 items-center gap-1.5 rounded border border-brand-lea/15 bg-white px-2 text-[11px] font-bold text-brand-lea transition hover:border-brand-eden/45 hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
               title={`Color selected text ${color.label}`}
               aria-label={`Color selected text ${color.label}`}
             >

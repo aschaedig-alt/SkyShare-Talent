@@ -142,7 +142,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
               >
                 <ClipboardCheck className="h-4 w-4" /> Scorecards
               </Link>
-              <button onClick={onClose} className="text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100">
+              <button onClick={onClose} className="text-brand-grey hover:text-brand-lea dark:text-slate-400">
                 ✕
               </button>
             </div>

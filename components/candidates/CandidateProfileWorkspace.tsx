@@ -293,7 +293,7 @@ export function CandidateProfileWorkspace({
                   onClick={() => setActiveTab(tab.id)}
                   className={clsx(
                     "flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-semibold transition hover:shadow-glow",
-                    active ? "border-brand-lea text-brand-lea dark:text-slate-100" : "border-transparent text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100"
+                    active ? "border-brand-lea text-brand-lea" : "border-transparent text-brand-grey hover:text-brand-lea dark:text-slate-400"
                   )}
                 >
                   <Icon className="h-4 w-4" />

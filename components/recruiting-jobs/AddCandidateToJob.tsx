@@ -113,9 +113,9 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
           <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl dark:bg-[#10243a]" onClick={(e) => e.stopPropagation()}>
             <div className="mb-1 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Add candidate</h2>
-              <button onClick={() => setOpen(false)} className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100" aria-label="Close"><X className="h-5 w-5" /></button>
+              <button onClick={() => setOpen(false)} className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close"><X className="h-5 w-5" /></button>
             </div>
-            <p className="mb-3 text-xs text-brand-grey dark:text-slate-400">Linking to <span className="font-semibold text-brand-lea dark:text-slate-100">{jobTitle}</span></p>
+            <p className="mb-3 text-xs text-brand-grey dark:text-slate-400">Linking to <span className="font-semibold text-brand-lea">{jobTitle}</span></p>
 
             <div className="mb-3 inline-flex overflow-hidden rounded border border-brand-lea/20 text-xs font-semibold dark:border-white/10">
               <button onClick={() => setMode("existing")} className={`px-3 py-1.5 transition hover:shadow-glow ${mode === "existing" ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60 dark:text-slate-100 dark:bg-white/5"}`}>Existing candidate</button>

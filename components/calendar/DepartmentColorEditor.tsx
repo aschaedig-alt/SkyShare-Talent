@@ -79,7 +79,7 @@ export function DepartmentColorEditor({
             <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Department colors</h2>
             <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">Pick a color for each department. Used to color interviews across every calendar view.</p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5 dark:text-slate-100">
+          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -119,7 +119,7 @@ export function DepartmentColorEditor({
           </button>
           <div className="flex items-center gap-3">
             {error ? <span className="text-xs font-medium text-red-700">{error}</span> : null}
-            <button type="button" onClick={onClose} className="rounded-lg px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400 dark:text-slate-100">
+            <button type="button" onClick={onClose} className="rounded-lg px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400">
               Cancel
             </button>
             <button

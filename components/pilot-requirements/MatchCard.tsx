@@ -273,7 +273,7 @@ export function MatchCard({
             <ScoreSplit qualified={match.qualified} bonus={match.bonus} gated={match.gated} size="sm" />
           </div>
 
-          <p className="mt-2 text-xs leading-5 text-brand-black/75">{match.summary}</p>
+          <p className="mt-2 text-xs leading-5 text-brand-black/75 dark:text-slate-300">{match.summary}</p>
 
           {match.hardGaps.length > 0 ? (
             <div className="mt-2 flex flex-wrap gap-1">

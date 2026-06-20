@@ -142,7 +142,7 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
                   <span className="text-xs text-brand-grey dark:text-slate-400">{formatDate(item.createdAt)}</span>
                 </div>
 
-                <p className="mt-2 whitespace-pre-wrap text-sm text-brand-black/85">{item.message}</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-brand-black/85 dark:text-slate-300">{item.message}</p>
 
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
                   <div className="text-xs text-brand-grey dark:text-slate-400">

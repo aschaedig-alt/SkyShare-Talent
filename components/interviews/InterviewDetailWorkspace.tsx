@@ -129,7 +129,7 @@ function ScorecardEditor({
                       type="button"
                       onClick={() => setRating(idx, r.key)}
                       className={`rounded border px-2.5 py-0.5 text-[11px] font-semibold transition hover:shadow-glow ${
-                        active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:text-slate-100"
+                        active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
                       }`}
                     >
                       {r.label}
@@ -170,7 +170,7 @@ function ScorecardEditor({
                 type="button"
                 onClick={() => setRecommendation(active ? "" : r.key)}
                 className={`rounded border px-3 py-1 text-xs font-semibold transition hover:shadow-glow ${
-                  active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:text-slate-100"
+                  active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
                 }`}
               >
                 {r.label}
@@ -187,7 +187,7 @@ function ScorecardEditor({
 
       <div className="mt-3 flex items-center justify-end gap-3">
         {error ? <span className="mr-auto text-xs font-medium text-red-700">{error}</span> : null}
-        <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400 dark:text-slate-100">
+        <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400">
           Cancel
         </button>
         <button type="button" onClick={save} disabled={busy || !interviewer.trim()} className="rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
@@ -314,7 +314,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
                     <span className="rounded bg-brand-lea/5 px-2.5 py-0.5 text-[11px] font-semibold text-brand-lea dark:text-slate-100">{avgText(card.average)} / 4</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => { setCreating(false); setEditingId(card.id); }} title="Edit" className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5 dark:text-slate-100">
+                    <button onClick={() => { setCreating(false); setEditingId(card.id); }} title="Edit" className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5">
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button onClick={() => remove(card)} disabled={busyId === card.id} title="Delete" className="rounded p-1.5 text-brand-grey transition hover:bg-red-50 hover:text-red-600 dark:text-slate-400">

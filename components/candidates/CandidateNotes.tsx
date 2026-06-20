@@ -99,7 +99,7 @@ export function CandidateNotes({ candidateId, initialNotes }: { candidateId: str
           notes.map((note) => (
             <div key={note.id} className="group rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
               <div className="flex items-start justify-between gap-2">
-                <p className="text-sm leading-6 text-brand-black/80">{note.body}</p>
+                <p className="text-sm leading-6 text-brand-black/80 dark:text-slate-300">{note.body}</p>
                 <button
                   type="button"
                   onClick={() => remove(note.id)}

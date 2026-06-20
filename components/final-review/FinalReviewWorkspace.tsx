@@ -192,7 +192,7 @@ export function FinalReviewWorkspace({ jobs }: FinalReviewWorkspaceProps) {
                   className={`inline-flex items-center justify-center gap-2 rounded px-3 py-2 text-sm font-bold transition hover:shadow-glow ${
                     exportMode === "html"
                       ? "bg-brand-lea text-white"
-                      : "border border-brand-lea/12 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100 dark:bg-white/5"
+                      : "border border-brand-lea/12 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
                   }`}
                 >
                   <Code2 className="h-4 w-4" />
@@ -204,7 +204,7 @@ export function FinalReviewWorkspace({ jobs }: FinalReviewWorkspaceProps) {
                   className={`inline-flex items-center justify-center gap-2 rounded px-3 py-2 text-sm font-bold transition hover:shadow-glow ${
                     exportMode === "plain"
                       ? "bg-brand-lea text-white"
-                      : "border border-brand-lea/12 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100 dark:bg-white/5"
+                      : "border border-brand-lea/12 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
                   }`}
                 >
                   <FileText className="h-4 w-4" />
@@ -224,7 +224,7 @@ export function FinalReviewWorkspace({ jobs }: FinalReviewWorkspaceProps) {
                 <button
                   type="button"
                   onClick={() => copyExport("plain")}
-                  className="inline-flex items-center justify-center gap-2 rounded border border-brand-lea/12 bg-white px-3 py-2 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100 dark:bg-white/5"
+                  className="inline-flex items-center justify-center gap-2 rounded border border-brand-lea/12 bg-white px-3 py-2 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
                 >
                   <Clipboard className="h-3.5 w-3.5" />
                   {copied === "plain" ? "Copied Text" : "Copy Text"}

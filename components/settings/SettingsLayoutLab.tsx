@@ -290,7 +290,7 @@ export function SettingsLayoutLab() {
                       <button
                         key={p.id}
                         onClick={() => setActive(p.id)}
-                        className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition ${isActive ? "bg-brand-lea text-white" : "text-brand-black/80 hover:bg-brand-cloudDancer/50 dark:bg-white/5"}`}
+                        className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition ${isActive ? "bg-brand-lea text-white" : "text-brand-black/80 dark:text-slate-300 hover:bg-brand-cloudDancer/50 dark:bg-white/5"}`}
                       >
                         <span className="truncate">{p.label}</span>
                         <span className={`shrink-0 rounded px-1.5 text-[10px] ${isActive ? "bg-white/25" : "bg-brand-lea/10 text-brand-grey dark:text-slate-400"}`}>{pageCounts[p.id] ?? 0}</span>
@@ -419,7 +419,7 @@ export function SettingsLayoutLab() {
                     </div>
                   </div>
                   <div className="min-h-0 flex-1 overflow-auto p-3">
-                    <p className="text-xs leading-5 text-brand-black/80">{b.summary}</p>
+                    <p className="text-xs leading-5 text-brand-black/80 dark:text-slate-300">{b.summary}</p>
                   </div>
                 </div>
               );

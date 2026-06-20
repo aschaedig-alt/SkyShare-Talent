@@ -36,7 +36,7 @@ export function ComplimentsTabs({ isAdmin = false }: { isAdmin?: boolean }) {
                 "border-b-2 px-1 py-3 text-sm font-semibold transition hover:shadow-glow",
                 active
                   ? "border-brand-lea text-brand-lea dark:text-slate-100"
-                  : "border-transparent text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100"
+                  : "border-transparent text-brand-grey hover:text-brand-lea dark:text-slate-400"
               )}
             >
               {t.label}

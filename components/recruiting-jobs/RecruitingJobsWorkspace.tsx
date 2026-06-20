@@ -198,7 +198,7 @@ function SourceRecord({ job }: { job: RecruitingJobDetail }) {
         <div>Source: {job.sourceFilename ?? "Not recorded"}</div>
       </div>
       {sourceText ? (
-        <div className="mt-3 min-h-0 flex-1 overflow-auto rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm leading-6 text-brand-black/78 whitespace-pre-wrap dark:border-white/10 dark:bg-white/5">
+        <div className="mt-3 min-h-0 flex-1 overflow-auto rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm leading-6 text-brand-black/78 dark:text-slate-300 whitespace-pre-wrap dark:border-white/10 dark:bg-white/5">
           {sourceText}
         </div>
       ) : (

@@ -191,7 +191,7 @@ export function RewardCatalogAdmin({ rewards, pointsPerDollar }: Props) {
                       <button
                         type="button"
                         onClick={() => startEdit(r)}
-                        className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer hover:text-brand-lea dark:text-slate-400 dark:bg-white/5 dark:text-slate-100"
+                        className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer hover:text-brand-lea dark:text-slate-400 dark:bg-white/5"
                         aria-label={`Edit ${r.name}`}
                       >
                         <Pencil className="h-4 w-4" />

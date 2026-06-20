@@ -101,7 +101,7 @@ const drawerLabels: Record<DrawerKey, string> = {
 const inputClass =
   "w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-black outline-none transition placeholder:text-brand-grey/70 focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100";
 const templateInputClass =
-  "w-full rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-xs text-brand-black outline-none transition placeholder:text-[11px] placeholder:text-brand-grey/65 focus:border-brand-eden focus:ring-2 focus:ring-brand-sweet/35 disabled:bg-brand-cloudDancer/50 disabled:text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100 dark:bg-white/5 dark:text-slate-400";
+  "w-full rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-xs text-brand-black outline-none transition placeholder:text-[11px] placeholder:text-brand-grey/65 focus:border-brand-eden focus:ring-2 focus:ring-brand-sweet/35 disabled:bg-brand-cloudDancer/50 disabled:text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400";
 
 type SandboxTemplateField = {
   id: string;
@@ -1254,7 +1254,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                   type="button"
                   onClick={() => saveSelectedJob()}
                   disabled={isSaving}
-                  className="inline-flex items-center gap-2 rounded bg-white px-3.5 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer disabled:opacity-70 dark:bg-[#10243a] dark:text-slate-100 dark:bg-white/5"
+                  className="inline-flex items-center gap-2 rounded bg-white px-3.5 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer disabled:opacity-70 dark:bg-[#10243a] dark:text-slate-100"
                 >
                   <Save className="h-4 w-4" />
                   {isSaving ? "Saving..." : "Save Draft"}
@@ -1326,7 +1326,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                       className={`rounded px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] transition hover:shadow-glow ${
                         active
                           ? "bg-brand-lea text-white shadow-sm"
-                          : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100 dark:bg-white/5"
+                          : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
                       }`}
                     >
                       {item.label} ({item.count})
@@ -1377,7 +1377,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                       <button
                         type="button"
                         onClick={toggleAllBulkJobs}
-                        className="rounded border border-brand-lea/12 bg-white px-2.5 py-1.5 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100 dark:bg-white/5"
+                        className="rounded border border-brand-lea/12 bg-white px-2.5 py-1.5 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
                       >
                         {allEligibleSelected ? "Clear visible" : "Select visible"}
                       </button>
@@ -1395,7 +1395,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                       {bulkEligibleJobs.map((job) => (
                         <label
                           key={`${jobListView}-${job.id}`}
-                          className="flex cursor-pointer items-start gap-2 rounded border border-brand-lea/8 bg-white px-2.5 py-2 text-sm hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-[#10243a] dark:bg-white/5"
+                          className="flex cursor-pointer items-start gap-2 rounded border border-brand-lea/8 bg-white px-2.5 py-2 text-sm hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-[#10243a]"
                         >
                           <input
                             type="checkbox"

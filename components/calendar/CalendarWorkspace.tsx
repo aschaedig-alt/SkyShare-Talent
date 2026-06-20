@@ -251,7 +251,7 @@ export function CalendarWorkspace({
                 onClick={() => setColorMode(mode)}
                 className={clsx(
                   "rounded px-2 py-1.5 text-xs font-semibold transition hover:shadow-glow",
-                  colorMode === mode ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100"
+                  colorMode === mode ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400"
                 )}
               >
                 {mode === "department" ? "Dept" : "Stage"}
@@ -264,7 +264,7 @@ export function CalendarWorkspace({
             <button
               onClick={() => setColorEditorOpen(true)}
               title="Edit department colors"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:text-slate-100"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
             >
               <Palette className="h-4 w-4" /> Colors
             </button>
@@ -280,7 +280,7 @@ export function CalendarWorkspace({
                   onClick={() => setView(option.id)}
                   className={clsx(
                     "flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-semibold transition hover:shadow-glow",
-                    view === option.id ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100"
+                    view === option.id ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400"
                   )}
                 >
                   <Icon className="h-4 w-4" />

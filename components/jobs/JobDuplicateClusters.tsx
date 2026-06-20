@@ -229,7 +229,7 @@ function ClusterCard({ cluster, onMerged }: { cluster: DuplicateCluster; onMerge
           <button
             onClick={handleDismissCluster}
             disabled={busy}
-            className="flex items-center gap-2 rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/30 hover:text-brand-lea disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-400 dark:bg-white/5 dark:text-slate-100"
+            className="flex items-center gap-2 rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/30 hover:text-brand-lea disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-400 dark:bg-white/5"
             title="These are all different jobs — stop showing this group"
           >
             {dismissing && <Loader className="h-4 w-4 animate-spin" />}

@@ -331,7 +331,7 @@ export function JobDataEditor({
                 className={`rounded px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] transition hover:shadow-glow ${
                   active
                     ? "bg-brand-lea text-white shadow-sm"
-                    : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100 dark:bg-white/5"
+                    : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
                 }`}
               >
                 {item.label} ({jobCounts[item.key as JobListView]})
@@ -389,7 +389,7 @@ export function JobDataEditor({
               type="button"
               onClick={toggleAllBulkJobs}
               disabled={!bulkEligibleJobs.length || isBulkWorking}
-              className="rounded border border-brand-lea/12 bg-white px-2.5 py-1.5 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer disabled:opacity-60 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100 dark:bg-white/5"
+              className="rounded border border-brand-lea/12 bg-white px-2.5 py-1.5 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer disabled:opacity-60 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
             >
               {allEligibleSelected ? "Clear visible" : "Select visible"}
             </button>
@@ -420,7 +420,7 @@ export function JobDataEditor({
             {bulkEligibleJobs.map((job) => (
               <label
                 key={`${jobListView}-bulk-${job.id}`}
-                className="flex cursor-pointer items-start gap-2 rounded border border-brand-lea/8 bg-white px-2.5 py-2 text-sm hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-[#10243a] dark:bg-white/5"
+                className="flex cursor-pointer items-start gap-2 rounded border border-brand-lea/8 bg-white px-2.5 py-2 text-sm hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-[#10243a]"
               >
                 <input
                   type="checkbox"

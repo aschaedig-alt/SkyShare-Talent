@@ -184,10 +184,10 @@ function fmtDate(iso: string | null) {
 
 function BodyView({ body, format }: { body: string; format: BlockBodyFormat }) {
   if (!body?.trim()) return <p className="text-xs italic text-brand-grey dark:text-slate-400">No content.</p>;
-  if (format === "MIXED") return <div className="text-xs leading-5 text-brand-black/80"><RichTextMixed value={body} /></div>;
-  if (format === "PARAGRAPH") return <RichTextParagraphs value={body} paragraphClassName="text-xs leading-5 text-brand-black/80" />;
+  if (format === "MIXED") return <div className="text-xs leading-5 text-brand-black/80 dark:text-slate-300"><RichTextMixed value={body} /></div>;
+  if (format === "PARAGRAPH") return <RichTextParagraphs value={body} paragraphClassName="text-xs leading-5 text-brand-black/80 dark:text-slate-300" />;
   return (
-    <ul className="space-y-1 text-xs leading-5 text-brand-black/80">
+    <ul className="space-y-1 text-xs leading-5 text-brand-black/80 dark:text-slate-300">
       {splitCleanLines(body).map((line, i) => (
         <li key={i} className="flex gap-1.5">
           <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-brand-eden" />
@@ -205,7 +205,7 @@ function FieldRows({ rows }: { rows: Array<[string, string | null]> }) {
         <div key={label} className="flex items-center gap-2">
           <span className="w-24 shrink-0 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">{label}</span>
           {value ? (
-            <span className="flex-1 truncate rounded border border-brand-lea/10 bg-brand-cloudDancer/30 px-2 py-1 text-xs text-brand-black/80 dark:border-white/10 dark:bg-white/5">{value}</span>
+            <span className="flex-1 truncate rounded border border-brand-lea/10 bg-brand-cloudDancer/30 px-2 py-1 text-xs text-brand-black/80 dark:text-slate-300 dark:border-white/10 dark:bg-white/5">{value}</span>
           ) : (
             <span className="h-6 flex-1 rounded border border-dashed border-brand-lea/15 bg-white dark:border-white/10 dark:bg-[#10243a]" />
           )}
@@ -437,7 +437,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
     return (
       <div className="space-y-1">
         {readiness.map((c) => (
-          <div key={c.id} className="flex items-center gap-1.5 text-xs text-brand-black/80">
+          <div key={c.id} className="flex items-center gap-1.5 text-xs text-brand-black/80 dark:text-slate-300">
             <span className={c.complete ? "text-emerald-600" : "text-brand-grey dark:text-slate-400"}>{c.complete ? "✓" : "○"}</span> {c.label}
           </div>
         ))}
@@ -565,7 +565,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
       }
       case "cb-apply":
         return (
-          <div className="space-y-1.5 text-xs text-brand-black/80">
+          <div className="space-y-1.5 text-xs text-brand-black/80 dark:text-slate-300">
             <div className="flex items-center gap-1.5"><span className="text-brand-lea dark:text-slate-100">◉</span> Apply to all jobs (79)</div>
             <div className="flex items-center gap-1.5"><span className="text-brand-grey dark:text-slate-400">○</span> Apply to selected jobs</div>
             <div className="mt-1 rounded bg-brand-lea px-2 py-1 text-center text-[11px] font-semibold text-white">Apply to all jobs</div>
@@ -577,7 +577,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
           <div className="space-y-1">
             {sample?.versions?.length ? sample.versions.slice(0, 5).map((v) => (
               <div key={v.id} className="flex items-center justify-between gap-2 rounded border border-brand-lea/10 px-2 py-1 text-xs dark:border-white/10">
-                <span className="truncate text-brand-black/80">v{v.versionNumber} — {v.title}</span>
+                <span className="truncate text-brand-black/80 dark:text-slate-300">v{v.versionNumber} — {v.title}</span>
                 {v.id === sample.currentVersionId ? <span className="shrink-0 rounded bg-brand-gold/22 px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-lea dark:text-slate-100">Current</span> : null}
               </div>
             )) : <p className="text-xs italic text-brand-grey dark:text-slate-400">No versions.</p>}
@@ -665,7 +665,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
             <button
               key={p}
               onClick={() => setPageFilter(p)}
-              className={`inline-flex items-center gap-1.5 rounded border px-3 py-1 text-[11px] font-semibold transition ${active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/15 bg-white text-brand-lea hover:bg-brand-cloudDancer/50 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100 dark:bg-white/5"}`}
+              className={`inline-flex items-center gap-1.5 rounded border px-3 py-1 text-[11px] font-semibold transition ${active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/15 bg-white text-brand-lea hover:bg-brand-cloudDancer/50 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"}`}
             >
               {p !== "All" && <span className={`h-2.5 w-2.5 rounded-full ${PAGE_DOT[p]}`} />}
               {p}

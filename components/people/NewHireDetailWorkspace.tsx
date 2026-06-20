@@ -115,7 +115,7 @@ export function NewHireDetailWorkspace({ hire }: Props) {
 
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
-      <Link href="/people" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100">
+      <Link href="/people" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400">
         ← Pre-onboarding
       </Link>
 
@@ -200,7 +200,7 @@ export function NewHireDetailWorkspace({ hire }: Props) {
                 <div className="mt-2 space-y-1.5">
                   {items.map((t) => (
                     <div key={t.id} className="flex items-center justify-between gap-3 rounded border border-brand-lea/10 px-3 py-2 dark:border-white/10">
-                      <span className={clsx("text-sm", t.status === "DONE" ? "text-brand-grey line-through dark:text-slate-400" : "text-brand-black dark:text-slate-100")}>{t.label}</span>
+                      <span className={clsx("text-sm", t.status === "DONE" ? "text-brand-grey line-through dark:text-slate-400" : "text-brand-black")}>{t.label}</span>
                       <div className="flex shrink-0 overflow-hidden rounded border border-brand-lea/15 dark:border-white/10">
                         {(["TODO", "DONE", "NA"] as const).map((s) => (
                           <button
@@ -208,7 +208,7 @@ export function NewHireDetailWorkspace({ hire }: Props) {
                             onClick={() => setTaskStatus(t.id, s)}
                             className={clsx(
                               "px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow",
-                              t.status === s ? STATUS_BTN[s].on : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-[#10243a] dark:text-slate-400 dark:bg-white/5"
+                              t.status === s ? STATUS_BTN[s].on : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-[#10243a] dark:text-slate-400"
                             )}
                           >
                             {STATUS_BTN[s].label}
@@ -229,7 +229,7 @@ export function NewHireDetailWorkspace({ hire }: Props) {
                     .filter((t) => t.group === "CUSTOM")
                     .map((t) => (
                       <div key={t.id} className="flex items-center justify-between gap-3 rounded border border-brand-lea/10 px-3 py-2 dark:border-white/10">
-                        <span className={clsx("text-sm", t.status === "DONE" ? "text-brand-grey line-through dark:text-slate-400" : "text-brand-black dark:text-slate-100")}>{t.label}</span>
+                        <span className={clsx("text-sm", t.status === "DONE" ? "text-brand-grey line-through dark:text-slate-400" : "text-brand-black")}>{t.label}</span>
                         <div className="flex shrink-0 overflow-hidden rounded border border-brand-lea/15 dark:border-white/10">
                           {(["TODO", "DONE", "NA"] as const).map((s) => (
                             <button
@@ -237,7 +237,7 @@ export function NewHireDetailWorkspace({ hire }: Props) {
                               onClick={() => setTaskStatus(t.id, s)}
                               className={clsx(
                                 "px-2.5 py-1 text-xs font-semibold transition",
-                                t.status === s ? STATUS_BTN[s].on : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-[#10243a] dark:text-slate-400 dark:bg-white/5"
+                                t.status === s ? STATUS_BTN[s].on : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-[#10243a] dark:text-slate-400"
                               )}
                             >
                               {STATUS_BTN[s].label}

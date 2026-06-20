@@ -229,7 +229,7 @@ export function BlockTemplateBoard({
               Template Board
             </p>
             <h2 className="mt-1 text-2xl font-semibold text-brand-lea dark:text-slate-100">Organize reusable blocks by purpose</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-brand-black/68">
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-brand-black/68 dark:text-slate-300">
               Drag blocks between lanes to decide whether they are required, department specific, role specific, or optional.
             </p>
           </div>

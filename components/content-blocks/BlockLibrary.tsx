@@ -232,7 +232,7 @@ const inputClass =
 const labelClass = "mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-brand-eden";
 
 const blockColorClasses: Record<BlockTextColor, string> = {
-  BLACK: "text-brand-black/82",
+  BLACK: "text-brand-black/82 dark:text-slate-300",
   LEA: "text-brand-lea dark:text-slate-100",
   EDEN: "text-brand-eden",
   GREY: "text-brand-grey dark:text-slate-400",
@@ -767,7 +767,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
               className={`inline-flex items-center gap-2 rounded px-3.5 py-2 text-sm font-bold transition hover:shadow-glow ${
                 active
                   ? "bg-brand-lea text-white shadow-sm"
-                  : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100 dark:bg-white/5"
+                  : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -927,7 +927,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                   {mode !== "create" && selectedBlock ? (
                     <a
                       href="/settings/content-blocks"
-                      className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100"
+                      className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400"
                     >
                       Used by {selectedBlock.usageCount ?? 0} jobs · manage ›
                     </a>
@@ -1126,7 +1126,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                         ["ALL_LINKED_JOBS", `Apply to all jobs using this block (${selectedBlock.usageCount ?? 0})`],
                         ["SELECTED_JOBS", "Update selected jobs only"]
                       ].map(([value, label]) => (
-                        <label key={value} className="flex items-center gap-2 text-sm font-medium text-brand-black/78">
+                        <label key={value} className="flex items-center gap-2 text-sm font-medium text-brand-black/78 dark:text-slate-300">
                           <input
                             type="radio"
                             name="adoption"
@@ -1207,7 +1207,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                         <Users className="h-4 w-4 text-brand-eden" />
                         Apply this block to jobs
                       </h3>
-                      <p className="mt-2 text-sm leading-6 text-brand-black/68">
+                      <p className="mt-2 text-sm leading-6 text-brand-black/68 dark:text-slate-300">
                         Add this reusable block to every job, or choose specific jobs. Existing jobs that already use it are skipped.
                       </p>
                     </div>
@@ -1217,7 +1217,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                   </div>
 
                   <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm font-semibold text-brand-black/78">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-brand-black/78 dark:text-slate-300">
                       <input
                         type="radio"
                         name="apply-jobs"
@@ -1227,7 +1227,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                       />
                       Apply to all jobs in the system ({jobs.length})
                     </label>
-                    <label className="flex items-center gap-2 text-sm font-semibold text-brand-black/78">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-brand-black/78 dark:text-slate-300">
                       <input
                         type="radio"
                         name="apply-jobs"
@@ -1250,7 +1250,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                           <label
                             key={`${selectedBlock.id}-apply-${job.id}`}
                             className={`flex items-center justify-between gap-3 border-b border-brand-lea/8 px-3 py-2 last:border-b-0 dark:border-white/10 ${
-                              alreadyUsesBlock ? "bg-brand-cloudDancer/45 dark:bg-white/5" : "bg-white dark:bg-[#10243a]"
+                              alreadyUsesBlock ? "bg-brand-cloudDancer/45" : "bg-white dark:bg-[#10243a]"
                             }`}
                           >
                             <span>

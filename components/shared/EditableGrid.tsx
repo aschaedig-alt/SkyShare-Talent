@@ -214,7 +214,7 @@ export function EditableGrid({
         <div className="mb-3 rounded-lg border border-brand-lea/15 bg-white p-3 shadow-panel dark:border-white/10 dark:bg-[#10243a]">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Add a widget</span>
-            <button onClick={() => setAddOpen(false)} className="lab-nodrag rounded p-0.5 text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100" aria-label="Close"><X className="h-4 w-4" /></button>
+            <button onClick={() => setAddOpen(false)} className="lab-nodrag rounded p-0.5 text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close"><X className="h-4 w-4" /></button>
           </div>
           <div className="space-y-2.5">
             {WIDGET_CATEGORIES.map((cat) => (
@@ -284,7 +284,7 @@ export function EditableGrid({
           <div className="fixed left-1/2 top-1/2 z-50 w-[min(92vw,420px)] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-brand-lea/20 bg-white p-4 shadow-xl dark:border-white/10 dark:bg-[#10243a]">
             <div className="mb-3 flex items-center justify-between">
               <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">Configure: {configDef.name}</span>
-              <button onClick={() => setConfigFor(null)} className="rounded p-0.5 text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100" aria-label="Close"><X className="h-4 w-4" /></button>
+              <button onClick={() => setConfigFor(null)} className="rounded p-0.5 text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-3">
               {configDef.fields.map((field) => (

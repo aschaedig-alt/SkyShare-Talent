@@ -169,7 +169,7 @@ export const WIDGETS: WidgetDef[] = [
     ],
     render: (c) => (
       <Shell icon={ShieldCheck} title={str(c.title, "Compliance gates")}>
-        <div className="flex flex-col gap-1 text-xs text-brand-black/80">
+        <div className="flex flex-col gap-1 text-xs text-brand-black/80 dark:text-slate-300">
           {parseLines(c.items).map((it, i) => {
             const bad = statusOf(it.b) === "bad";
             return (
@@ -265,14 +265,14 @@ export const WIDGETS: WidgetDef[] = [
           <div className="mb-2 grid grid-cols-3 gap-1.5 text-center">
             <div className="rounded bg-red-50 py-1"><div className="text-base font-semibold text-red-600">{dc.counts.expired}</div><div className="text-[9px] uppercase text-brand-grey dark:text-slate-400">expired</div></div>
             <div className="rounded bg-amber-50 py-1"><div className="text-base font-semibold text-amber-600">{dc.counts.due30}</div><div className="text-[9px] uppercase text-brand-grey dark:text-slate-400">≤30d</div></div>
-            <div className="rounded bg-brand-cloudDancer/60 py-1 dark:bg-white/5"><div className="text-base font-semibold text-brand-lea dark:text-slate-100">{dc.counts.due90}</div><div className="text-[9px] uppercase text-brand-grey dark:text-slate-400">≤90d</div></div>
+            <div className="rounded bg-brand-cloudDancer/60 py-1 dark:bg-white/5"><div className="text-base font-semibold text-brand-lea">{dc.counts.due90}</div><div className="text-[9px] uppercase text-brand-grey dark:text-slate-400">≤90d</div></div>
           </div>
           <div className="space-y-1">
             {dc.upcoming.slice(0, 6).map((it, i) => {
               const tone = it.days < 0 ? "text-red-600" : it.days <= 30 ? "text-amber-600" : "text-brand-grey dark:text-slate-400";
               return (
                 <div key={i} className="flex items-center justify-between gap-2 text-[11px]">
-                  <span className="truncate text-brand-black/80">{it.candidateName} · {it.documentType ?? "Doc"}</span>
+                  <span className="truncate text-brand-black/80 dark:text-slate-300">{it.candidateName} · {it.documentType ?? "Doc"}</span>
                   <span className={`shrink-0 font-semibold ${tone}`}>{it.days < 0 ? `exp ${Math.abs(it.days)}d` : `${it.days}d`}</span>
                 </div>
               );
@@ -379,7 +379,7 @@ export const WIDGETS: WidgetDef[] = [
     ],
     render: (c) => (
       <Shell icon={ClipboardCheck} title={str(c.title, "Documents")}>
-        <div className="grid grid-cols-2 gap-1 text-[11px] text-brand-black/80">
+        <div className="grid grid-cols-2 gap-1 text-[11px] text-brand-black/80 dark:text-slate-300">
           {parseLines(c.items).map((it, i) => {
             const bad = statusOf(it.b) === "bad";
             return (
@@ -457,7 +457,7 @@ export const WIDGETS: WidgetDef[] = [
     ],
     render: (c) => (
       <Shell icon={StickyNote} title={str(c.title, "Note")}>
-        <p className="border-l-2 border-brand-gold/50 pl-2 text-xs leading-5 text-brand-black/80">{str(c.body)}</p>
+        <p className="border-l-2 border-brand-gold/50 pl-2 text-xs leading-5 text-brand-black/80 dark:text-slate-300">{str(c.body)}</p>
       </Shell>
     )
   }

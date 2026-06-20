@@ -74,7 +74,7 @@ export function MatchboardWorkspace({
             onClick={() => go("role")}
             className={clsx(
               "inline-flex items-center gap-1.5 rounded px-4 py-1.5 text-sm font-semibold transition hover:shadow-glow",
-              mode === "role" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100"
+              mode === "role" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400"
             )}
           >
             <Plane className="h-4 w-4" /> By role
@@ -84,7 +84,7 @@ export function MatchboardWorkspace({
             onClick={() => go("candidate")}
             className={clsx(
               "inline-flex items-center gap-1.5 rounded px-4 py-1.5 text-sm font-semibold transition hover:shadow-glow",
-              mode === "candidate" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:text-slate-100"
+              mode === "candidate" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400"
             )}
           >
             <User className="h-4 w-4" /> By candidate

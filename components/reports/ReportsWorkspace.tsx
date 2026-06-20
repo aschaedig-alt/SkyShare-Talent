@@ -143,7 +143,7 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
                             {item.candidateName}
                           </Link>
                         </td>
-                        <td className="px-3 py-2 text-brand-black/80">{item.documentType ?? item.displayFilename}</td>
+                        <td className="px-3 py-2 text-brand-black/80 dark:text-slate-300">{item.documentType ?? item.displayFilename}</td>
                         <td className="px-3 py-2 text-brand-grey dark:text-slate-400">{fmtDate(item.expiresAt)}</td>
                         <td className={`px-3 py-2 font-semibold ${tone}`}>
                           {item.days < 0 ? `expired ${Math.abs(item.days)}d ago` : `${item.days}d left`}

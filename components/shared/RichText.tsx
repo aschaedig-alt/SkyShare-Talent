@@ -78,7 +78,7 @@ export function RichTextMixed({ value, textClass = "" }: { value?: string | null
 export function RichTextParagraphs({
   value,
   className = "space-y-3",
-  paragraphClassName = "text-sm leading-6 text-brand-black/82",
+  paragraphClassName = "text-sm leading-6 text-brand-black/82 dark:text-slate-300",
   emptyText = "No clean text entered yet."
 }: {
   value?: string | null;

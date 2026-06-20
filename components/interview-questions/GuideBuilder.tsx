@@ -174,7 +174,7 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
                   type="button"
                   onClick={() => toggleValue(v.colorKey)}
                   className={`rounded border px-3 py-1 text-xs font-semibold transition hover:shadow-glow ${
-                    on ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:text-slate-100"
+                    on ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
                   }`}
                 >
                   {v.name}
@@ -189,7 +189,7 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
             <Wand2 className="h-4 w-4" /> {guide ? "Regenerate" : "Generate guide"}
           </button>
           {guide && guide.length > 0 ? (
-            <button onClick={copyGuide} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:text-slate-100">
+            <button onClick={copyGuide} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:text-slate-400">
               {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />} {copied ? "Copied" : "Copy"}
             </button>
           ) : null}

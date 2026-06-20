@@ -53,7 +53,7 @@ export function CandidateActivityTimeline({ items }: { items: ActivityItem[] }) 
               </span>
               <span className="text-xs text-brand-grey dark:text-slate-400">{formatWhen(item.createdAt)}</span>
             </div>
-            <p className="mt-1 text-sm text-brand-black/80">{item.description}</p>
+            <p className="mt-1 text-sm text-brand-black/80 dark:text-slate-300">{item.description}</p>
             {item.actor ? <p className="text-xs text-brand-grey dark:text-slate-400">by {item.actor}</p> : null}
           </li>
         ))}

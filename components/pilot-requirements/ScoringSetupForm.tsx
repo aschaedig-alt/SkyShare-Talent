@@ -155,7 +155,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
                   "min-w-0 flex-1 rounded border p-2.5 text-left transition hover:shadow-glow",
                   profile.key === selected
                     ? "border-brand-gold bg-brand-sweet/18 dark:bg-brand-sweet/25"
-                    : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-[#10243a] dark:bg-white/5"
+                    : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-[#10243a]"
                 )}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -441,7 +441,7 @@ function StatusToggle({
           onClick={() => onChange(option.key)}
           className={clsx(
             "px-3 py-1 transition hover:shadow-glow",
-            value === option.key ? option.active : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-[#10243a] dark:text-slate-400 dark:bg-white/5",
+            value === option.key ? option.active : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-[#10243a] dark:text-slate-400",
             disabled && "cursor-not-allowed opacity-60"
           )}
         >

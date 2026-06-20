@@ -40,7 +40,7 @@ export function CandidatePreview({
           type="button"
           onClick={onClose}
           aria-label="Close preview"
-          className="shrink-0 rounded p-1 text-brand-grey transition hover:bg-brand-cloudDancer hover:text-brand-lea dark:text-slate-400 dark:bg-white/5 dark:text-slate-100"
+          className="shrink-0 rounded p-1 text-brand-grey transition hover:bg-brand-cloudDancer hover:text-brand-lea dark:text-slate-400 dark:bg-white/5"
         >
           <X className="h-4 w-4" />
         </button>
@@ -61,7 +61,7 @@ export function CandidatePreview({
                 <div className="mt-2">
                   <ScoreSplit qualified={match.qualified} bonus={match.bonus} gated={match.gated} size="sm" />
                 </div>
-                <p className="mt-1.5 text-xs leading-5 text-brand-black/75">{match.summary}</p>
+                <p className="mt-1.5 text-xs leading-5 text-brand-black/75 dark:text-slate-300">{match.summary}</p>
               </div>
             ) : null}
 
@@ -74,13 +74,13 @@ export function CandidatePreview({
 
             <div className="space-y-1.5">
               {preview.primaryEmail ? (
-                <div className="flex items-center gap-2 text-xs text-brand-black/80">
+                <div className="flex items-center gap-2 text-xs text-brand-black/80 dark:text-slate-300">
                   <Mail className="h-3.5 w-3.5 shrink-0 text-brand-grey dark:text-slate-400" />
                   <span className="truncate">{preview.primaryEmail}</span>
                 </div>
               ) : null}
               {preview.primaryPhone ? (
-                <div className="flex items-center gap-2 text-xs text-brand-black/80">
+                <div className="flex items-center gap-2 text-xs text-brand-black/80 dark:text-slate-300">
                   <Phone className="h-3.5 w-3.5 shrink-0 text-brand-grey dark:text-slate-400" />
                   <span className="truncate">{preview.primaryPhone}</span>
                 </div>

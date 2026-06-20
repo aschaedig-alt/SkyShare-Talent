@@ -58,7 +58,7 @@ export function PersonPicker({
               onChange("");
               setQuery("");
             }}
-            className="rounded p-1 text-brand-grey transition hover:bg-white hover:text-brand-lea dark:text-slate-400 dark:bg-[#10243a] dark:text-slate-100"
+            className="rounded p-1 text-brand-grey transition hover:bg-white hover:text-brand-lea dark:text-slate-400 dark:bg-[#10243a]"
             aria-label={`Remove ${selected.name}`}
           >
             <X className="h-4 w-4" />
