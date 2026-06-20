@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { Lock, ShieldCheck, RotateCcw } from "lucide-react";
+import { Lock, ShieldCheck, RotateCcw, Plus, Trash2 } from "lucide-react";
 import { saveScoringConfig } from "@/app/pilot-requirements/scoring-actions";
 import type { ScoringSetupData } from "@/lib/data/scoring-setup";
 import {
@@ -307,6 +307,95 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
               </div>
             ))}
           </div>
+        </section>
+
+        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Custom certs &amp; ratings</h3>
+              <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
+                Add cert/rating rows beyond the built-in list. A row is credited if the candidate has{" "}
+                <span className="font-semibold text-brand-lea dark:text-slate-100">any</span> of its terms (an either/or group) — comma-separate them.
+              </p>
+            </div>
+            {canEdit ? (
+              <button
+                type="button"
+                onClick={() =>
+                  update((draft) => {
+                    draft.customCerts = [
+                      ...(draft.customCerts ?? []),
+                      { id: `cc-${Date.now()}-${draft.customCerts?.length ?? 0}`, label: "", terms: [], status: "soft" }
+                    ];
+                  })
+                }
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-element bg-brand-lea px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-eden"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add cert
+              </button>
+            ) : null}
+          </div>
+          {cfg.customCerts && cfg.customCerts.length > 0 ? (
+            <div className="mt-4 space-y-2">
+              {cfg.customCerts.map((cert) => (
+                <div key={cert.id} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/30 p-3 dark:border-white/10 dark:bg-white/5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      value={cert.label}
+                      disabled={!canEdit}
+                      placeholder="Cert name (e.g. G450 type rating)"
+                      onChange={(e) =>
+                        update((draft) => {
+                          draft.customCerts = (draft.customCerts ?? []).map((c) => (c.id === cert.id ? { ...c, label: e.target.value } : c));
+                        })
+                      }
+                      className="min-w-[160px] flex-1 rounded-element border-[0.5px] border-brand-lea/20 px-2.5 py-1.5 text-sm outline-none focus:border-brand-gold dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+                    />
+                    <StatusToggle
+                      value={cert.status}
+                      disabled={!canEdit}
+                      onChange={(status) =>
+                        update((draft) => {
+                          draft.customCerts = (draft.customCerts ?? []).map((c) => (c.id === cert.id ? { ...c, status } : c));
+                        })
+                      }
+                    />
+                    {canEdit ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          update((draft) => {
+                            draft.customCerts = (draft.customCerts ?? []).filter((c) => c.id !== cert.id);
+                          })
+                        }
+                        className="rounded-element border border-brand-lea/15 p-1.5 text-value-customerFocus-dark transition hover:bg-value-customerFocus-light dark:border-white/10"
+                        aria-label="Remove cert"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
+                  </div>
+                  <input
+                    value={cert.terms.join(", ")}
+                    disabled={!canEdit}
+                    placeholder="Match terms, comma-separated (e.g. G450, GV, G-V)"
+                    onChange={(e) =>
+                      update((draft) => {
+                        draft.customCerts = (draft.customCerts ?? []).map((c) =>
+                          c.id === cert.id ? { ...c, terms: e.target.value.split(",").map((t) => t.trim()).filter(Boolean) } : c
+                        );
+                      })
+                    }
+                    className="mt-2 w-full rounded-element border-[0.5px] border-brand-lea/20 px-2.5 py-1.5 text-xs outline-none focus:border-brand-gold dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-brand-grey dark:text-slate-400">
+              No custom certs yet{canEdit ? " — add one to score a rating the built-in list doesn't cover." : "."}
+            </p>
+          )}
         </section>
 
         <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">

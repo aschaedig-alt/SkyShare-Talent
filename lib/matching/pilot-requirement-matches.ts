@@ -627,6 +627,31 @@ export function scoreCandidate(
     });
   }
 
+  // --- Custom certs/ratings (recruiter-defined) ----------------------------
+  // Each is an either/or group: credited if ANY listed term appears in the
+  // candidate's certificates or profile text.
+  {
+    const certsText = normalize(metricsByKey.get("certificates")?.valueText ?? "");
+    for (const cc of config.customCerts ?? []) {
+      if (cc.status === "none" || !cc.label.trim()) continue;
+      const terms = cc.terms.map((t) => normalize(t)).filter(Boolean);
+      const hit = terms.length > 0 && terms.some((t) => certsText.includes(t) || text.includes(t));
+      pushFactor({
+        key: `custom_cert_${cc.id}`,
+        label: cc.label,
+        category: "certs",
+        categoryLabel: CATEGORY_LABELS.certs,
+        status: hit ? "met" : "unknown",
+        requirementStatus: cc.status,
+        detail: hit ? "On file / referenced" : `Not found${cc.terms.length ? ` (any of: ${cc.terms.join(", ")})` : ""}`,
+        source: hit ? "profile-text" : "none",
+        sourceLabel: sourceLabelFor(hit ? "profile-text" : "none"),
+        credit: hit ? 1 : 0,
+        evaluated: hit
+      });
+    }
+  }
+
   // --- Roll category sub-scores --------------------------------------------
   const subScores: SubScore[] = [];
   for (const category of SCORING_CATEGORIES) {
@@ -675,8 +700,14 @@ export function scoreCandidate(
     const def = SCORING_REQUIREMENT_MAP[key];
     return def ? config.requirements[def.key] ?? def.defaultStatus : "soft";
   };
+  const bonusCustomCertKeys = new Set(
+    (config.customCerts ?? []).filter((c) => c.status === "bonus").map((c) => `custom_cert_${c.id}`)
+  );
   const isBonusFactor = (factor: WorkingFactor): boolean =>
-    factor.key === "time_in_type" || factor.key === "recency" || effStatus(factor.key) === "bonus";
+    factor.key === "time_in_type" ||
+    factor.key === "recency" ||
+    effStatus(factor.key) === "bonus" ||
+    bonusCustomCertKeys.has(factor.key);
 
   const gateFactors = factors.filter((factor) => !isBonusFactor(factor) && factor.status !== "unknown");
   const gateWeight = gateFactors.reduce((sum, factor) => sum + statusWeight(factor.requirementStatus), 0);

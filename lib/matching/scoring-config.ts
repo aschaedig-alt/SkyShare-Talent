@@ -107,11 +107,22 @@ export type ReadinessThresholds = {
   possible: number;
 };
 
+/** A recruiter-defined cert/rating row. Matches if ANY of `terms` appears in the
+ *  candidate's certificates/text — i.e. each custom cert is its own either/or group. */
+export type CustomCert = {
+  id: string;
+  label: string;
+  terms: string[];
+  status: ReqStatus;
+};
+
 export type ScoringProfileConfig = {
   weights: Record<CategoryKey, number>;
   requirements: Record<string, ReqStatus>;
   hours: HoursLogic;
   readiness: ReadinessThresholds;
+  /** Recruiter-added cert/rating rows beyond the built-in set. */
+  customCerts: CustomCert[];
 };
 
 export type ScoringConfigDoc = {
@@ -157,7 +168,8 @@ export function defaultProfileConfig(): ScoringProfileConfig {
     weights: { ...DEFAULT_WEIGHTS },
     requirements: defaultRequirementStatuses(),
     hours: { ...DEFAULT_HOURS_LOGIC },
-    readiness: { ...DEFAULT_READINESS }
+    readiness: { ...DEFAULT_READINESS },
+    customCerts: []
   };
 }
 
@@ -232,7 +244,23 @@ export function normalizeProfileConfig(raw: unknown): ScoringProfileConfig {
   const possible = Math.round(clampNumber(r.readiness?.possible, base.readiness.possible, 0, 100));
   const strong = Math.round(clampNumber(r.readiness?.strong, base.readiness.strong, possible, 100));
 
-  return { weights, requirements, hours, readiness: { strong, possible } };
+  const rawCerts = Array.isArray((r as { customCerts?: unknown }).customCerts)
+    ? ((r as { customCerts: unknown[] }).customCerts)
+    : [];
+  const customCerts: CustomCert[] = rawCerts
+    .filter((c): c is Record<string, unknown> => Boolean(c) && typeof c === "object")
+    .map((c, i) => ({
+      id: typeof c.id === "string" && c.id ? c.id : `cc${i}`,
+      label: (typeof c.label === "string" ? c.label : "").slice(0, 80),
+      terms: Array.isArray(c.terms)
+        ? c.terms.filter((t): t is string => typeof t === "string" && t.trim().length > 0).map((t) => t.trim().slice(0, 60)).slice(0, 12)
+        : [],
+      status: normalizeStatus(c.status, "soft")
+    }))
+    .filter((c) => c.label.length > 0)
+    .slice(0, 20);
+
+  return { weights, requirements, hours, readiness: { strong, possible }, customCerts };
 }
 
 export function normalizeConfigDoc(raw: unknown): ScoringConfigDoc {
