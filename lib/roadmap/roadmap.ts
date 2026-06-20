@@ -121,7 +121,7 @@ Tools for assessing candidates — must stay transparent and fair.
 - [ ] Custom + either/or cert items — let recruiters add their own cert/rating rows to the scoring requirements (today the cert list is fixed: Commercial-or-ATP, medical, instrument) and define more either/or groups
 - [x] Category-weight explanations (Jun 19) — the scoring setup Category weights section now shows a short plain-English description under each name (what aircraft fit / seat fit / hour mins / time in type / recency / certs actually measure) so the weight can be set with confidence
 - [x] Scoring requirement row hover highlight (Jun 19) — requirement rows in the scoring setup highlight (gold border + tint + soft glow) on hover so it's clear which row you're on
-- [ ] Review cloned gates on new managed roles — the managed roles created during consolidation (560XLS+, Legacy 650, Phenom 300, and their FOs) carry hour minimums cloned from a sibling airframe; review/adjust the minimums per type
+- [x] Review cloned gates on new managed roles (Jun 20) — verified the cloned hour minimums against peer airframes: 560XLS+ matches 560XL, Phenom 300 matches the light-jet-captain template (Phenom 100/M2/CJ2 = 1,500/1,500/1,500), Legacy 650 matches the G450 large-jet tier. All consistent with the existing fleet; editable per role from the front end
 - [x] Verify scoring-setup positions completeness (Jun 20) — confirmed all 26 roles map to 24 clean (aircraft, seat) profiles with zero missing aircraft tags (no "Any aircraft" collapse); the earlier "missing positions" worry is resolved
 
 ## People Ops / Onboarding
