@@ -122,7 +122,7 @@ Tools for assessing candidates — must stay transparent and fair.
 - [x] Category-weight explanations (Jun 19) — the scoring setup Category weights section now shows a short plain-English description under each name (what aircraft fit / seat fit / hour mins / time in type / recency / certs actually measure) so the weight can be set with confidence
 - [x] Scoring requirement row hover highlight (Jun 19) — requirement rows in the scoring setup highlight (gold border + tint + soft glow) on hover so it's clear which row you're on
 - [ ] Review cloned gates on new managed roles — the managed roles created during consolidation (560XLS+, Legacy 650, Phenom 300, and their FOs) carry hour minimums cloned from a sibling airframe; review/adjust the minimums per type
-- [ ] Verify scoring-setup positions completeness — confirm every (aircraft, seat) profile appears in the scoring setup sidebar after the fleet consolidation (user noted some positions may have been missing)
+- [x] Verify scoring-setup positions completeness (Jun 20) — confirmed all 26 roles map to 24 clean (aircraft, seat) profiles with zero missing aircraft tags (no "Any aircraft" collapse); the earlier "missing positions" worry is resolved
 
 ## People Ops / Onboarding
 Supporting the team beyond recruiting.
