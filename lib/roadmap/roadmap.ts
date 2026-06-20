@@ -133,13 +133,14 @@ Supporting the team beyond recruiting.
 - [x] Orientation cohorts & calendar (Jun 12) — Cohorts tab on Orientation: a mini month calendar marking orientation dates (hire count) + sessions, and cohort cards grouping active pre-onboarding hires by their orientation date with one-click "Create session + add all" or "Add N to existing session" (auto-links hires to the matching session)
 - [ ] Orientation: live email send — wire actual sending (Front/Gmail) so templates go out and track received automatically
 - [x] Compliments by SkyShare recognition program (Jun 12) — peer-to-peer recognition on the NewHire roster: give to feed to points to redeem rewards to manager analytics, plus an ADMIN Budget tab (cost report, reward catalog CRUD, program settings). Nav item under People; verified end-to-end
-- [ ] Update Values in Action options — refresh the recognition categories on the Compliments page to match the current core values
+- [x] Update Values in Action options (Jun 20) — recognition values now match SkyShare's core values from the job posts: Safety First, Team Alignment, Deliver the Wow, Solutions Focused, Own the Outcome (each mapped to a distinct color slot; existing demo recognitions retagged)
 - [ ] Integrate the orientation tracker into the site — fold standalone orientation tracking into the existing Pre-onboarding / Orientation workstream so it lives in one place (extends the shipped Orientation module)
 
 ## Bugs & UX Fixes
 Smaller fixes and polish.
 - [x] Calendar weekly view errors (Jun 10) — dynamic hour range so interviews are never clipped; no column crushing
 - [x] Click outside a window/panel to close it (Jun 10) — interview editor + feedback panel close on outside click
+- [x] Movable feedback button (Jun 20) — shift-click and drag the floating Feedback button to reposition it (so it no longer covers resize handles); position persists across reloads via localStorage
 - [x] Feedback & suggestions inbox (Jun 10) — covered by the Feedback button + Settings inbox
 - [x] Candidate duplicate merge & dismiss (Jun 11) — review queue now lets you pick which record to keep, merge, or mark not-a-duplicate
 - [x] Candidate document upload fixes (Jun 11) — fixed upload error, removed the redundant upload button, and added "Link" to attach an Imports-uploaded file to a candidate

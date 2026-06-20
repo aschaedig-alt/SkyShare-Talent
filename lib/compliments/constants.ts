@@ -76,16 +76,17 @@ export const VALUE_COLOR_KEYS = {
 export type ValueColorKey =
   (typeof VALUE_COLOR_KEYS)[keyof typeof VALUE_COLOR_KEYS];
 
-// Canonical company values, in display order, with their semantic color.
+// SkyShare's core values (see the "Core Values" block in the job posts), in
+// display order, each mapped to one of the shared value-color slots. The
+// colorKey is only a palette slot — the name is what's shown on the chip.
 export const COMPANY_VALUES: {
   name: string;
   colorKey: ValueColorKey;
   sortOrder: number;
 }[] = [
-  { name: "Teamwork", colorKey: "teamwork", sortOrder: 0 },
-  { name: "Innovation", colorKey: "innovation", sortOrder: 1 },
-  { name: "Leadership", colorKey: "leadership", sortOrder: 2 },
-  { name: "Customer focus", colorKey: "customerFocus", sortOrder: 3 },
-  { name: "Growth mindset", colorKey: "growthMindset", sortOrder: 4 },
-  { name: "Integrity", colorKey: "integrity", sortOrder: 5 }
+  { name: "Safety First", colorKey: "innovation", sortOrder: 0 }, // blue — trust/safety
+  { name: "Team Alignment", colorKey: "teamwork", sortOrder: 1 }, // green
+  { name: "Deliver the Wow", colorKey: "customerFocus", sortOrder: 2 }, // orange — guest delight
+  { name: "Solutions Focused", colorKey: "growthMindset", sortOrder: 3 }, // purple
+  { name: "Own the Outcome", colorKey: "leadership", sortOrder: 4 } // gold — ownership
 ];

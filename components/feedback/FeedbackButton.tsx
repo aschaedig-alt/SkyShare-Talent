@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { MessageSquare, X, Lightbulb, Bug, HelpCircle, Check, Loader } from "lucide-react";
 import { clsx } from "clsx";
@@ -13,6 +13,26 @@ const TYPES: Array<{ value: FeedbackType; label: string; icon: typeof Lightbulb 
   { value: "QUESTION", label: "Question", icon: HelpCircle }
 ];
 
+// Where the user has dragged the button to, if anywhere. null = default corner.
+type Position = { x: number; y: number };
+const POSITION_KEY = "feedback-button-position";
+const EDGE = 8; // keep this far from the viewport edges
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+// Anchor the open panel near the (possibly moved) button, clamped on-screen.
+function panelPosition(pos: Position): { left: number; top: number } | undefined {
+  if (typeof window === "undefined") return undefined;
+  const panelW = Math.min(360, window.innerWidth - 40);
+  const panelH = 340; // approximate; clamp just keeps it fully visible
+  return {
+    left: clamp(pos.x, EDGE, window.innerWidth - panelW - EDGE),
+    top: clamp(pos.y, EDGE, window.innerHeight - panelH - EDGE)
+  };
+}
+
 export function FeedbackButton() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -21,6 +41,70 @@ export function FeedbackButton() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Draggable position (shift-click + drag). Persisted so it stays out of the way.
+  const [pos, setPos] = useState<Position | null>(null);
+  const [dragging, setDragging] = useState(false);
+  // Set true at the end of a drag so the trailing click doesn't open the panel.
+  const suppressClickRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(POSITION_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<Position>;
+        if (typeof parsed?.x === "number" && typeof parsed?.y === "number") {
+          setPos({ x: parsed.x, y: parsed.y });
+        }
+      }
+    } catch {
+      /* ignore corrupt storage */
+    }
+  }, []);
+
+  function startDrag(e: React.PointerEvent<HTMLButtonElement>) {
+    if (!e.shiftKey) return; // plain click opens the panel; shift-drag moves it
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+    const { width, height } = rect;
+    setDragging(true);
+
+    const onMove = (ev: PointerEvent) => {
+      suppressClickRef.current = true;
+      setPos({
+        x: clamp(ev.clientX - offsetX, EDGE, window.innerWidth - width - EDGE),
+        y: clamp(ev.clientY - offsetY, EDGE, window.innerHeight - height - EDGE)
+      });
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      setDragging(false);
+      setPos((current) => {
+        if (current) {
+          try {
+            localStorage.setItem(POSITION_KEY, JSON.stringify(current));
+          } catch {
+            /* ignore */
+          }
+        }
+        return current;
+      });
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
+
+  function handleClick(e: React.MouseEvent) {
+    if (e.shiftKey) return; // shift is reserved for dragging
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return; // this click is the tail end of a drag
+    }
+    setOpen(true);
+  }
 
   function reset() {
     setType("IDEA");
@@ -63,12 +147,20 @@ export function FeedbackButton() {
 
   return (
     <>
-      {/* Floating button */}
+      {/* Floating button. Shift-click + drag to reposition (stays out of the
+          way when resizing panels); position persists across reloads. */}
       {!open && (
         <button
-          onClick={() => setOpen(true)}
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded bg-brand-lea px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-brand-eden"
+          onPointerDown={startDrag}
+          onClick={handleClick}
+          style={pos ? { left: pos.x, top: pos.y, bottom: "auto", right: "auto" } : undefined}
+          className={clsx(
+            "fixed z-40 flex items-center gap-2 rounded bg-brand-lea px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-brand-eden",
+            !pos && "bottom-5 right-5",
+            dragging ? "cursor-grabbing select-none" : "cursor-pointer"
+          )}
           aria-label="Send feedback"
+          title="Shift-click and drag to move"
         >
           <MessageSquare className="h-5 w-5" />
           <span className="hidden sm:inline">Feedback</span>
@@ -78,9 +170,15 @@ export function FeedbackButton() {
       {/* Click-away backdrop (transparent) */}
       {open && <div className="fixed inset-0 z-30" onClick={close} aria-hidden="true" />}
 
-      {/* Panel */}
+      {/* Panel — anchored to the button's (possibly moved) location. */}
       {open && (
-        <div className="fixed bottom-5 right-5 z-40 w-[min(360px,calc(100vw-2.5rem))] rounded border border-brand-lea/15 bg-white shadow-2xl dark:border-white/10 dark:bg-[#10243a]">
+        <div
+          style={pos ? panelPosition(pos) : undefined}
+          className={clsx(
+            "fixed z-40 w-[min(360px,calc(100vw-2.5rem))] rounded border border-brand-lea/15 bg-white shadow-2xl dark:border-white/10 dark:bg-[#10243a]",
+            !pos && "bottom-5 right-5"
+          )}
+        >
           <div className="flex items-center justify-between border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
             <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">Send feedback</span>
             <button onClick={close} className="text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close">
