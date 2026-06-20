@@ -66,10 +66,10 @@ function HeaderPanel({ query }: { query: string }) {
 
 function StatsPanel({ stats }: { stats: RecruitingJobsData["stats"] }) {
   return (
-    <section className="grid h-full grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+    <section className="grid h-full content-start grid-cols-[repeat(auto-fit,minmax(108px,1fr))] gap-3">
       {statLabels.map(([key, label]) => (
         <div key={key} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
-          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey dark:text-slate-400">{label}</div>
+          <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">{label}</div>
           <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{stats[key]}</div>
           <div className="mt-2 h-1 rounded-full bg-brand-gold/25">
             <div className="h-1 w-2/3 rounded-full bg-brand-sweet" />
@@ -83,7 +83,7 @@ function StatsPanel({ stats }: { stats: RecruitingJobsData["stats"] }) {
 function JobDetailHeader({ job }: { job: RecruitingJobDetail }) {
   return (
     <section className="flex h-full min-h-0 flex-col overflow-y-auto rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
-      <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
+      <div className="flex flex-col gap-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Job detail</p>
           <h2 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">{job.title}</h2>
@@ -98,16 +98,16 @@ function JobDetailHeader({ job }: { job: RecruitingJobDetail }) {
             aircraftTypes={job.aircraftTypes}
           />
         </div>
-        <div className="grid w-full grid-cols-2 gap-2 text-sm 2xl:max-w-[360px]">
+        <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(128px,1fr))] gap-2 text-sm">
           <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-3 dark:border-white/10 dark:bg-white/5">
-            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Candidates</div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Candidates</div>
             <div className="mt-1 text-lg font-semibold text-brand-lea dark:text-slate-100">{job.candidateCount}</div>
           </div>
           <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-3 dark:border-white/10 dark:bg-white/5">
-            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Requirements</div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Requirements</div>
             <div className="mt-1 text-lg font-semibold text-brand-lea dark:text-slate-100">{job.requirementCount}</div>
           </div>
-          <div className="col-span-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-3 dark:border-white/10 dark:bg-white/5">
+          <div className="col-[1/-1] rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-3 dark:border-white/10 dark:bg-white/5">
             <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Pay</div>
             <div className="mt-1 break-words text-sm font-semibold text-brand-lea dark:text-slate-100">
               {job.paySummary ?? job.rawPayScale ?? "No pay recorded"}
@@ -151,12 +151,12 @@ function LinkedRequirements({ job }: { job: RecruitingJobDetail }) {
 function LinkedCandidates({ job }: { job: RecruitingJobDetail }) {
   return (
     <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
-      <div className="flex items-start justify-between gap-2">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+        <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Linked candidates</p>
           <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Applied or associated candidates</h3>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <ResumeIntake jobId={job.id} jobTitle={job.title} />
           <DocumentIntake jobId={job.id} />
           <AddCandidateToJob jobId={job.id} jobTitle={job.title} />

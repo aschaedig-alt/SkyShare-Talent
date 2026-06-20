@@ -91,7 +91,7 @@ export function JobClassificationEditor({ jobId, isPilotRole, pilotSeat, aircraf
       </div>
 
       {pilot ? (
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="mt-3 grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
           <label className="block">
             <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Seat</span>
             <select
