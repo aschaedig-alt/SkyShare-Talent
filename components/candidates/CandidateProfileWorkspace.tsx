@@ -11,7 +11,7 @@ import { ProConPanel } from "@/components/candidates/ProConPanel";
 import { CandidateNotes } from "@/components/candidates/CandidateNotes";
 import { CandidateActivityTimeline } from "@/components/candidates/CandidateActivityTimeline";
 import { FlightProfilePanel } from "@/components/candidates/FlightProfilePanel";
-import { EditableGrid, type EditablePanel, type GridItem } from "@/components/shared/EditableGrid";
+import { EditableGrid, type GridItem } from "@/components/shared/EditableGrid";
 import type { WidgetInstance } from "@/lib/data/page-layout";
 import type { CandidateProfileData } from "@/lib/data/candidates";
 

@@ -13,7 +13,7 @@ import {
   Check,
   X
 } from "lucide-react";
-import type { CandidateComparisonData, CandidateComparisonRow, ComparisonColumn } from "@/lib/data/candidates";
+import type { CandidateComparisonData, CandidateComparisonRow } from "@/lib/data/candidates";
 
 type SortKey = string; // a column key, or "name", "type_ratings", "certificates"
 type SortDir = "asc" | "desc";

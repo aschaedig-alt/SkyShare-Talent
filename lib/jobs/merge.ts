@@ -145,7 +145,6 @@ export async function undoMerge(mergedJobId: string): Promise<MergeResult> {
         throw new Error("Job was not merged into another job");
       }
 
-      const primaryJobId = mergedJob.mergedIntoJobId;
 
       // Most recent un-undone merge record for this job, if any.
       const record = await tx.jobMergeRecord.findFirst({

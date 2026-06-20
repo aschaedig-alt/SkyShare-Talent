@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Wand2, RefreshCw, Copy, Check } from "lucide-react";
+import { Wand2, Copy, Check } from "lucide-react";
 import type { InterviewQuestionItem } from "@/lib/data/interview-questions";
 import { COMPANY_VALUES } from "@/lib/compliments/constants";
 import { DEPARTMENTS, DEPARTMENT_LABELS } from "@/lib/calendar/departments";

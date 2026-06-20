@@ -72,12 +72,6 @@ function statusOf(token: string): Status {
   if (["no", "x", "red", "missing", "fail", "expired"].includes(t)) return "bad";
   return "neutral";
 }
-const STATUS_TEXT: Record<Status, string> = {
-  ok: "text-emerald-600",
-  warn: "text-amber-600",
-  bad: "text-red-600",
-  neutral: "text-brand-grey dark:text-slate-400"
-};
 const STATUS_CHIP: Record<Status, string> = {
   ok: "bg-emerald-50 text-emerald-700",
   warn: "bg-amber-50 text-amber-700",

@@ -260,7 +260,7 @@ export function SettingsLayoutLab() {
       counts[p] = (counts[p] ?? 0) + 1;
     }
     return counts;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [assign]);
 
   const dim = DENSITY_MAP[density];

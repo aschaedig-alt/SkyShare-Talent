@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Clock, Video, MapPin, ChevronLeft, Check, CalendarClock, Globe } from "lucide-react";
-import { clsx } from "clsx";
 import type { PublicHost, PublicBookingType } from "@/lib/data/booking";
 import { formatDateTimeLongWithZone, formatTime, zoneLabel } from "@/lib/calendar/format";
 import { US_TIMEZONES } from "@/lib/calendar/timezones";

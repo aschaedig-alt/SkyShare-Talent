@@ -44,7 +44,6 @@ export function EditableGrid({
   const router = useRouter();
 
   const [widgets, setWidgets] = useState<WidgetInstance[]>(savedWidgets ?? []);
-  const widgetIds = useMemo(() => new Set(widgets.map((w) => w.i)), [widgets]);
 
   const itemIds = useMemo(() => [...panels.map((p) => p.id), ...widgets.map((w) => w.i)], [panels, widgets]);
 

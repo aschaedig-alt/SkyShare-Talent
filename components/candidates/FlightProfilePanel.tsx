@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plane, Sparkles, Check, X, Loader, Clock, Pencil, Plus } from "lucide-react";
-import { clsx } from "clsx";
 
 type Metric = {
   id: string;

@@ -3,13 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
-  Archive,
   Blocks,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
   Copy,
-  Edit3,
   GitBranch,
   History,
   LayoutGrid,
@@ -17,9 +15,7 @@ import {
   Plus,
   Save,
   Search,
-  Trash2,
-  Users,
-  X
+  Users
 } from "lucide-react";
 import type {
   BlockBodyFormat,
@@ -330,10 +326,6 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
   }, [blocks, query]);
 
   const selectedBlock = blocks.find((block) => block.id === selectedBlockId) ?? filteredBlocks[0] ?? blocks[0];
-  const replacementBlocks = blocks.filter((block) => block.id !== selectedBlock?.id && !block.archivedAt);
-  const selectedBlockUsageCount = selectedBlock?.usedByJobs?.length ?? selectedBlock?.usageCount ?? 0;
-  const deleteNeedsReplacement = selectedBlockUsageCount > 0 && !retirementForm.migrateJobs;
-  const replacementRequired = retirementForm.migrateJobs && !retirementForm.replacementBlockId;
   const isWorking = isSaving || isDuplicating || isRetiring || isApplying;
   const activityMessage = isSaving
     ? "Saving block changes..."

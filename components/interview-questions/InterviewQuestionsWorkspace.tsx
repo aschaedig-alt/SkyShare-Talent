@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, X, Search, ListChecks } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ListChecks } from "lucide-react";
 import type { InterviewQuestionItem } from "@/lib/data/interview-questions";
 import { COMPANY_VALUES } from "@/lib/compliments/constants";
 import { DEPARTMENTS, DEPARTMENT_LABELS } from "@/lib/calendar/departments";
