@@ -99,7 +99,7 @@ function CompactInterviewList({
               <div className="truncate text-xs font-semibold text-brand-lea dark:text-slate-100">{interview.candidate.displayName}</div>
               <div className="truncate text-[11px] text-brand-grey dark:text-slate-400">{interview.title}</div>
               <div className="mt-1 flex items-center justify-between gap-1">
-                <span className="truncate text-[10px] text-brand-grey dark:text-slate-400">
+                <span className="min-w-0 truncate text-[10px] text-brand-grey dark:text-slate-400">
                   {formatDateTimeWithZone(interview.startDateTime, interview.timezone)}
                 </span>
                 <span className={clsx("shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold", statusBadgeColor(interview.status))}>

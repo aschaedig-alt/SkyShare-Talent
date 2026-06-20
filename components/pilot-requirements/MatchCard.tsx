@@ -298,7 +298,7 @@ export function MatchCard({
             {match.subScores.map((sub) => (
               <div key={sub.category}>
                 <div className="flex items-center justify-between gap-1">
-                  <span className="truncate text-[10px] font-medium text-brand-grey dark:text-slate-400">{sub.label}</span>
+                  <span className="min-w-0 truncate text-[10px] font-medium text-brand-grey dark:text-slate-400">{sub.label}</span>
                   <span className="text-[10px] font-semibold text-brand-lea dark:text-slate-100">{sub.score === null ? "—" : sub.score}</span>
                 </div>
                 <div className="mt-1 h-1.5 rounded-full bg-brand-lea/10">

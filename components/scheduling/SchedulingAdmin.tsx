@@ -183,7 +183,7 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
             >
               <button onClick={() => setSelectedId(h.id)} className="min-w-0 flex-1 px-3 py-2 text-left">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-sm font-semibold text-brand-lea dark:text-slate-100">{h.name}</span>
+                  <span className="min-w-0 truncate text-sm font-semibold text-brand-lea dark:text-slate-100">{h.name}</span>
                   {!h.isActive ? <span className="text-[10px] font-bold uppercase text-brand-grey dark:text-slate-400">off</span> : null}
                 </div>
                 <div className="truncate text-[11px] text-brand-grey dark:text-slate-400">/book/{h.slug}</div>

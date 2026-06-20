@@ -82,7 +82,7 @@ export function FleetPositionsView() {
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="truncate text-sm font-medium text-brand-lea dark:text-slate-100">{position.title}</span>
+                        <span className="min-w-0 truncate text-sm font-medium text-brand-lea dark:text-slate-100">{position.title}</span>
                         <span className={clsx("rounded px-1.5 py-0.5 text-[9px] font-bold uppercase", seatPill(position.seat))}>
                           {position.seat}
                         </span>
