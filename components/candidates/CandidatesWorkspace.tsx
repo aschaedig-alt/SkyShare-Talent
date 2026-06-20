@@ -89,7 +89,7 @@ function initials(name: string) {
 
 export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout = null, savedWidgets = null }: CandidatesWorkspaceProps) {
   const statsPanel = (
-    <section className="grid h-full gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    <section className="grid h-full content-start gap-3 grid-cols-[repeat(auto-fit,minmax(150px,1fr))]">
       {statConfig.map(({ key, label, icon: Icon, accent }) => (
         <div key={key} className="flex items-center gap-3 rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 transition hover:ring-brand-gold/40 dark:bg-[#10243a] dark:ring-white/10">
           <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${accent}`}>

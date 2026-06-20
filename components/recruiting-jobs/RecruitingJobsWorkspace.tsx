@@ -192,7 +192,7 @@ function SourceRecord({ job }: { job: RecruitingJobDetail }) {
     <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Source record</p>
       <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Imported job text</h3>
-      <div className="mt-2 grid gap-2 text-xs text-brand-grey sm:grid-cols-3 dark:text-slate-400">
+      <div className="mt-2 grid gap-2 text-xs text-brand-grey grid-cols-[repeat(auto-fit,minmax(140px,1fr))] dark:text-slate-400">
         <div>Req ID: {job.jobReqId ?? "Not recorded"}</div>
         <div>Recruiter: {job.recruiter ?? "Not recorded"}</div>
         <div>Source: {job.sourceFilename ?? "Not recorded"}</div>

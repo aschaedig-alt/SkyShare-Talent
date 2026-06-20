@@ -295,7 +295,7 @@ export function CalendarWorkspace({
   );
 
   const statsPanel = (
-    <section className="grid h-full grid-cols-2 gap-3 sm:grid-cols-4">
+    <section className="grid h-full content-start gap-3 grid-cols-[repeat(auto-fit,minmax(120px,1fr))]">
       {statLabels.map(([key, label]) => (
         <div key={key} className="rounded-xl bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
           <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey dark:text-slate-400">{label}</div>

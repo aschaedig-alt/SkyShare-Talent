@@ -231,7 +231,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
           <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Title
             <input
@@ -253,7 +253,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
           </label>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
           <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Start date/time
             <input
@@ -277,7 +277,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
           </label>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
           <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Interviewer
             <InterviewerPicker interviewers={interviewers} activeDepartmentKey={activeDepartmentKey} />

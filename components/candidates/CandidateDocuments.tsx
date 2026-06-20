@@ -497,7 +497,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
         </div>
       ) : effectiveLayout === "compare" ? (
         /* Side-by-side compare */
-        <div className="grid min-h-0 flex-1 gap-3 p-3 lg:grid-cols-2">
+        <div className="grid min-h-0 flex-1 gap-3 p-3 grid-cols-[repeat(auto-fit,minmax(320px,1fr))]">
           {[
             { file: leftFile, set: setLeftId, fallback: "Left document" },
             { file: rightFile, set: setRightId, fallback: "Right document" }
