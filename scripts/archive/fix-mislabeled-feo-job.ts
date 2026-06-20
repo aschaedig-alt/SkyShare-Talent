@@ -5,7 +5,7 @@
  *
  *   npx tsx scripts/fix-mislabeled-feo-job.ts --apply   (omit for dry run)
  */
-import { prisma } from "../lib/prisma";
+import { prisma } from "../../lib/prisma";
 
 const APPLY = process.argv.includes("--apply");
 const TARGET_TAGS = ["Citation CJ2"];

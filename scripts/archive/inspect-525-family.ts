@@ -5,7 +5,7 @@
  *   $145k-$160k            -> Managed M2,  tail N785PD
  *   $140k-160k / $150k-160k-> Managed CJ,  tail N443BC
  */
-import { prisma } from "../lib/prisma";
+import { prisma } from "../../lib/prisma";
 
 function arr(v: string | null): string[] {
   if (!v) return [];

@@ -13,7 +13,7 @@
  *   • Managed M2 First Officer N785PD = cmq5jxek
  *   • SkyShare CJ2 First Officer  = cmq5lght  (already retagged)
  */
-import { prisma } from "../lib/prisma";
+import { prisma } from "../../lib/prisma";
 
 const APPLY = process.argv.includes("--apply");
 const log = (s: string) => console.log(s);

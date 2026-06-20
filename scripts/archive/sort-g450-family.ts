@@ -7,7 +7,7 @@
  *   npx tsx scripts/sort-g450-family.ts            (dry run)
  *   npx tsx scripts/sort-g450-family.ts --apply
  */
-import { prisma } from "../lib/prisma";
+import { prisma } from "../../lib/prisma";
 
 const APPLY = process.argv.includes("--apply");
 const log = (s: string) => console.log(s);

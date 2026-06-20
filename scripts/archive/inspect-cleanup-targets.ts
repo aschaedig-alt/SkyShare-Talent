@@ -1,5 +1,5 @@
 /** READ-ONLY: inspect the cleanup targets before mutating anything. */
-import { prisma } from "../lib/prisma";
+import { prisma } from "../../lib/prisma";
 
 function arr(v: string | null): string[] {
   if (!v) return [];

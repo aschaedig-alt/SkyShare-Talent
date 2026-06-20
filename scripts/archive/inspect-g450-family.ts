@@ -1,6 +1,6 @@
 /** READ-ONLY: every G450 / GV pilot requirement with base + pay, to sort out
  * UT (SkyShare, 2 aircraft) vs NV (managed tail N787JS). */
-import { prisma } from "../lib/prisma";
+import { prisma } from "../../lib/prisma";
 
 function arr(v: string | null): string[] {
   if (!v) return [];

@@ -1,7 +1,7 @@
 /** READ-ONLY: find existing requirement rows for the remaining managed aircraft
  * (560XLS+/XLS+, Legacy 650, Phenom 300, PC-12 NG, PC-12 NGX). Shows ALL rows
  * incl. archived + merged-away, so we know what to update vs. create. */
-import { prisma } from "../lib/prisma";
+import { prisma } from "../../lib/prisma";
 
 function arr(v: string | null): string[] {
   if (!v) return [];

@@ -2,8 +2,8 @@
  *  1) the cloned hour-minimum gates on the new managed roles
  *  2) which (aircraft, seat) profiles the scoring setup will list, vs every role
  */
-import { prisma } from "../lib/prisma";
-import { profileKey, profileLabel } from "../lib/matching/scoring-config";
+import { prisma } from "../../lib/prisma";
+import { profileKey, profileLabel } from "../../lib/matching/scoring-config";
 
 function arr(v: string | null): string[] {
   if (!v) return [];

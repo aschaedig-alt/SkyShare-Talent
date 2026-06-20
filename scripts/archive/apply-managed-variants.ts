@@ -9,8 +9,8 @@
  *  - Phenom 100 Captain + First Officer → Managed, tail N450JF
  *  - CJ Captain (the $150-160k role) → Managed variant tail N443BC  (it's a CJ, not CJ2)
  */
-import { prisma } from "../lib/prisma";
-import { resolveFleetPosition } from "../lib/fleet/positions";
+import { prisma } from "../../lib/prisma";
+import { resolveFleetPosition } from "../../lib/fleet/positions";
 
 const APPLY = process.argv.includes("--apply");
 

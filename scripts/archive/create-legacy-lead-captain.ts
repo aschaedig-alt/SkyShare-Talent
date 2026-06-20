@@ -5,8 +5,8 @@
  *   npx tsx scripts/create-legacy-lead-captain.ts            (dry run)
  *   npx tsx scripts/create-legacy-lead-captain.ts --apply
  */
-import { prisma } from "../lib/prisma";
-import { FLEET_POSITIONS } from "../lib/fleet/positions";
+import { prisma } from "../../lib/prisma";
+import { FLEET_POSITIONS } from "../../lib/fleet/positions";
 
 const APPLY = process.argv.includes("--apply");
 const log = (s: string) => console.log(s);

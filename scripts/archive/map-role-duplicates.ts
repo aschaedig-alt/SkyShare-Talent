@@ -9,8 +9,8 @@
  * rows collapse into it and what differs (base, pay, status, gate count,
  * linked applications) so we can decide what merges and what stays separate.
  */
-import { prisma } from "../lib/prisma";
-import { positionFor, resolveFleetPosition } from "../lib/fleet/positions";
+import { prisma } from "../../lib/prisma";
+import { positionFor, resolveFleetPosition } from "../../lib/fleet/positions";
 
 function parseStringArray(value: string | null): string[] {
   if (!value) return [];

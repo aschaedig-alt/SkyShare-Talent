@@ -6,8 +6,8 @@
  *   npx tsx scripts/create-fo-roles.ts            (dry run)
  *   npx tsx scripts/create-fo-roles.ts --apply
  */
-import { prisma } from "../lib/prisma";
-import { FLEET_POSITIONS } from "../lib/fleet/positions";
+import { prisma } from "../../lib/prisma";
+import { FLEET_POSITIONS } from "../../lib/fleet/positions";
 
 const APPLY = process.argv.includes("--apply");
 const log = (s: string) => console.log(s);

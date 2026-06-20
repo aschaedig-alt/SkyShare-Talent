@@ -9,8 +9,8 @@
  *   npx tsx scripts/add-remaining-managed-aircraft.ts            (dry run)
  *   npx tsx scripts/add-remaining-managed-aircraft.ts --apply
  */
-import { prisma } from "../lib/prisma";
-import { FLEET_POSITIONS } from "../lib/fleet/positions";
+import { prisma } from "../../lib/prisma";
+import { FLEET_POSITIONS } from "../../lib/fleet/positions";
 
 const APPLY = process.argv.includes("--apply");
 const log = (s: string) => console.log(s);
