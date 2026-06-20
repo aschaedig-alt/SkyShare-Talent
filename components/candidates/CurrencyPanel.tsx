@@ -21,7 +21,22 @@ export function CurrencyPanel({ files }: { files: FileLike[] }) {
 
   const undated = files.filter((f) => !f.expiresAt && isExpirableType(f.documentType));
 
-  if (dated.length === 0 && undated.length === 0) return null;
+  if (dated.length === 0 && undated.length === 0) {
+    return (
+      <div className="flex h-full flex-col rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
+          <CalendarClock className="h-3.5 w-3.5" /> Currency
+        </p>
+        <div className="flex flex-1 flex-col items-center justify-center py-6 text-center">
+          <CalendarClock className="h-5 w-5 text-brand-grey/50 dark:text-slate-500" />
+          <p className="mt-2 text-sm font-medium text-brand-lea dark:text-slate-100">No dated documents yet</p>
+          <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
+            Add an expiration date to a document (medical, passport, etc.) to track its currency here.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const anyAlert = dated.some((d) => d.days <= 30);
 
@@ -46,7 +61,7 @@ export function CurrencyPanel({ files }: { files: FileLike[] }) {
             return (
               <li key={i} className="flex items-center gap-2 text-xs">
                 <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
-                <span className="flex-1 truncate text-brand-black/80">{d.label}</span>
+                <span className="flex-1 truncate text-brand-black/80 dark:text-slate-200">{d.label}</span>
                 <span className={`shrink-0 font-semibold ${tone}`} title={fmt(d.iso)}>
                   {d.days < 0 ? `expired ${Math.abs(d.days)}d` : `${d.days}d`}
                 </span>
