@@ -76,13 +76,13 @@ export function CandidatePreview({
               {preview.primaryEmail ? (
                 <div className="flex items-center gap-2 text-xs text-brand-black/80 dark:text-slate-300">
                   <Mail className="h-3.5 w-3.5 shrink-0 text-brand-grey dark:text-slate-400" />
-                  <span className="truncate">{preview.primaryEmail}</span>
+                  <span className="min-w-0 truncate">{preview.primaryEmail}</span>
                 </div>
               ) : null}
               {preview.primaryPhone ? (
                 <div className="flex items-center gap-2 text-xs text-brand-black/80 dark:text-slate-300">
                   <Phone className="h-3.5 w-3.5 shrink-0 text-brand-grey dark:text-slate-400" />
-                  <span className="truncate">{preview.primaryPhone}</span>
+                  <span className="min-w-0 truncate">{preview.primaryPhone}</span>
                 </div>
               ) : null}
             </div>
@@ -128,7 +128,7 @@ export function CandidatePreview({
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                   {preview.metrics.map((metric) => (
                     <div key={metric.key} className="flex items-center justify-between gap-2 text-xs">
-                      <span className="truncate text-brand-grey dark:text-slate-400">{metric.label}</span>
+                      <span className="min-w-0 truncate text-brand-grey dark:text-slate-400">{metric.label}</span>
                       <span className="shrink-0 font-semibold text-brand-lea dark:text-slate-100">{metric.value}</span>
                     </div>
                   ))}

@@ -146,7 +146,7 @@ export const WIDGETS: WidgetDef[] = [
           {parseLines(c.items).map((it, i) => {
             const s = statusOf(it.b || "ok");
             return (
-              <span key={i} className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_CHIP[s]}`}>
+              <span key={i} className={`rounded px-2 py-0.5 text-[11px] font-semibold ${STATUS_CHIP[s]}`}>
                 {it.a}
                 {s === "bad" ? " exp" : ""}
               </span>

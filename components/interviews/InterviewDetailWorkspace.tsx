@@ -231,7 +231,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
           <ArrowLeft className="h-3.5 w-3.5" /> Calendar
         </Link>
         <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Interview</p>
-        <h1 className="mt-0.5 text-3xl font-semibold text-white">{detail.title}</h1>
+        <h1 className="mt-0.5 text-2xl font-semibold text-white">{detail.title}</h1>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/80">
           <Link href={`/candidates/${detail.candidate.id}`} className="font-semibold text-white underline-offset-2 hover:underline">
             {detail.candidate.displayName}

@@ -551,7 +551,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
               </div>
             ) : (
               <>
-                <span className="flex-1 truncate text-sm font-medium text-brand-lea dark:text-slate-100">{activeFile.displayFilename}</span>
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-brand-lea dark:text-slate-100">{activeFile.displayFilename}</span>
                 {activeFile.sizeBytes ? <span className="text-xs text-brand-grey dark:text-slate-400">{formatBytes(activeFile.sizeBytes)}</span> : null}
                 <select
                   value={activeFile.documentType ?? ""}

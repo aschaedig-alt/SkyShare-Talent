@@ -96,7 +96,7 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
             <Icon className="h-5 w-5" />
           </span>
           <div className="min-w-0">
-            <div className="text-2xl font-semibold leading-none text-brand-lea dark:text-slate-100">{data.stats[key]}</div>
+            <div className="text-xl font-semibold leading-none text-brand-lea dark:text-slate-100">{data.stats[key]}</div>
             <div className="mt-1 truncate text-[11px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">{label}</div>
           </div>
         </div>
@@ -162,7 +162,7 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
                       <div className="space-y-1 text-xs text-brand-grey dark:text-slate-400">
                         <div className="flex items-center gap-1.5">
                           <Mail className="h-3 w-3 shrink-0 text-brand-lea/50" />
-                          <span className="truncate">{candidate.primaryEmail ?? "No email"}</span>
+                          <span className="min-w-0 truncate">{candidate.primaryEmail ?? "No email"}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Phone className="h-3 w-3 shrink-0 text-brand-lea/50" />
@@ -224,7 +224,7 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Candidate operations</p>
-            <h1 className="mt-0.5 text-3xl font-semibold text-white">Candidates</h1>
+            <h1 className="mt-0.5 text-2xl font-semibold text-white">Candidates</h1>
             <p className="mt-1 max-w-2xl text-sm text-white/75">
               Search and manage candidates — including the text inside their resumes and pilot apps.
             </p>
