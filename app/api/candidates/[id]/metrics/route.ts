@@ -25,7 +25,7 @@ export async function POST(request: Request, context: RouteContext) {
   const { id } = await context.params;
 
   try {
-    const body = (await request.json()) as { label?: string; value?: string };
+    const body = (await request.json()) as { label?: string; value?: string; key?: string; unit?: string };
     const label = (body.label ?? "").trim();
     const value = (body.value ?? "").trim();
     if (label.length < 1) return NextResponse.json({ message: "A field name is required." }, { status: 400 });
@@ -38,6 +38,17 @@ export async function POST(request: Request, context: RouteContext) {
     const numeric = /^[\d,]+(\.\d+)?$/.test(value);
     const valueNumber = numeric ? Math.round(Number(value.replace(/,/g, ""))) : null;
     const valueText = numeric ? null : value;
+    const unit = body.unit ?? (numeric ? "hrs" : null);
+
+    // Explicit stable key (e.g. recency_12mo for currency scoring) → upsert by key.
+    if (body.key && /^[a-z0-9_]+$/.test(body.key)) {
+      const metric = await prisma.candidateMetric.upsert({
+        where: { candidateId_key: { candidateId: id, key: body.key } },
+        update: { label, valueNumber, valueText, unit, status: "CONFIRMED", sourceSnippet: "Added manually" },
+        create: { candidateId: id, key: body.key, label, valueNumber, valueText, unit, status: "CONFIRMED", sourceSnippet: "Added manually" }
+      });
+      return NextResponse.json({ ok: true, metric });
+    }
 
     // Unique key per candidate.
     let key = `custom_${slugify(label)}`;

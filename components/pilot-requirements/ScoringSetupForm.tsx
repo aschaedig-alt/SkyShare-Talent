@@ -26,7 +26,7 @@ const CATEGORY_HELP: Record<CategoryKey, string> = {
   seat: "Hours in the seat the role needs (PIC vs SIC)",
   hourMins: "Meets the role's flight-hour minimums",
   timeInType: "Hours flown in this specific aircraft",
-  recency: "Recently / currently flying — not tracked yet",
+  recency: "Hours flown in the last 12 months (currency)",
   certs: "Required certificates (Commercial/ATP, medical, instrument)"
 };
 
@@ -249,39 +249,28 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
             How much each sub-score counts toward the overall read. The description under each name is what that score measures.
           </p>
           <div className="mt-4 space-y-3.5">
-            {SCORING_CATEGORIES.map((key) => {
-              const locked = key === "recency";
-              return (
-                <div key={key} className="grid grid-cols-[210px_1fr_84px] items-center gap-3">
-                  <div className="min-w-0">
-                    <div className="text-sm text-brand-lea dark:text-slate-100">
-                      {CATEGORY_LABELS[key]}
-                      {locked ? (
-                        <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
-                          not scored yet
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="mt-0.5 text-[11px] leading-tight text-brand-grey dark:text-slate-400">{CATEGORY_HELP[key]}</div>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={cfg.weights[key]}
-                    disabled={!canEdit || locked}
-                    title={locked ? "No currency data is tracked yet, so recency can't be weighted. See roadmap." : undefined}
-                    onChange={(event) => update((draft) => (draft.weights[key as CategoryKey] = Number(event.target.value)))}
-                    className="w-full accent-brand-eden disabled:opacity-50"
-                  />
-                  <span className="text-right text-xs text-brand-grey dark:text-slate-400">
-                    <span className="font-semibold text-brand-lea dark:text-slate-100">{cfg.weights[key]}</span> ·{" "}
-                    {Math.round((cfg.weights[key] / weightSum) * 100)}%
-                  </span>
+            {SCORING_CATEGORIES.map((key) => (
+              <div key={key} className="grid grid-cols-[210px_1fr_84px] items-center gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm text-brand-lea dark:text-slate-100">{CATEGORY_LABELS[key]}</div>
+                  <div className="mt-0.5 text-[11px] leading-tight text-brand-grey dark:text-slate-400">{CATEGORY_HELP[key]}</div>
                 </div>
-              );
-            })}
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={cfg.weights[key]}
+                  disabled={!canEdit}
+                  onChange={(event) => update((draft) => (draft.weights[key as CategoryKey] = Number(event.target.value)))}
+                  className="w-full accent-brand-eden disabled:opacity-50"
+                />
+                <span className="text-right text-xs text-brand-grey dark:text-slate-400">
+                  <span className="font-semibold text-brand-lea dark:text-slate-100">{cfg.weights[key]}</span> ·{" "}
+                  {Math.round((cfg.weights[key] / weightSum) * 100)}%
+                </span>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -365,6 +354,21 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
                 className="mt-1 w-full rounded-element border-[0.5px] border-brand-lea/20 px-3 py-2 text-sm outline-none focus:border-brand-gold disabled:bg-brand-cloudDancer/40 dark:border-white/10 dark:bg-white/5"
               />
               <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">Hours in type that earn full time-in-type credit.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-brand-lea dark:text-slate-100">Currency threshold (hrs / last 12 mo)</label>
+              <input
+                type="number"
+                min={0}
+                max={5000}
+                value={cfg.hours.recencyMinHours12mo}
+                disabled={!canEdit}
+                onChange={(event) =>
+                  update((draft) => (draft.hours.recencyMinHours12mo = Math.max(0, Number(event.target.value) || 0)))
+                }
+                className="mt-1 w-full rounded-element border-[0.5px] border-brand-lea/20 px-3 py-2 text-sm outline-none focus:border-brand-gold disabled:bg-brand-cloudDancer/40 dark:border-white/10 dark:bg-white/5"
+              />
+              <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">Hours flown in the last 12 months at/above which a candidate reads as current (Recency category).</p>
             </div>
           </div>
         </section>

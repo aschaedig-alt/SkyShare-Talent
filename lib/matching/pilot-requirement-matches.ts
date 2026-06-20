@@ -516,21 +516,52 @@ export function scoreCandidate(
     });
   }
 
-  // --- Recency / currency (best effort — limited data today) ---------------
+  // --- Recency / currency --------------------------------------------------
+  // Primary signal: the candidate's "hours flown in the last 12 months" metric
+  // (recency_12mo) vs the configurable currency threshold. Falls back to a weak
+  // resume-keyword hint when no hours are on file.
   {
-    const recencyHit = /\b(202[3-9]|current|recurrent|type current|recent)\b/.test(text);
+    const recencyMetric = metricsByKey.get("recency_12mo");
+    const recencyHours = typeof recencyMetric?.valueNumber === "number" ? recencyMetric.valueNumber : null;
+    const minHrs = config.hours.recencyMinHours12mo;
+    let status: FactorStatus;
+    let credit: number;
+    let detail: string;
+    let source: FactorSource;
+    if (recencyHours !== null) {
+      source = "structured";
+      if (minHrs <= 0 || recencyHours >= minHrs) {
+        status = "met";
+        credit = 1;
+        detail = `${recencyHours.toLocaleString()} hrs in last 12 mo — current`;
+      } else if (recencyHours >= minHrs * 0.5) {
+        status = "near";
+        credit = 0.5;
+        detail = `${recencyHours.toLocaleString()} hrs in last 12 mo — below ${minHrs.toLocaleString()}-hr current threshold`;
+      } else {
+        status = "missing";
+        credit = 0;
+        detail = `${recencyHours.toLocaleString()} hrs in last 12 mo — not current (min ${minHrs.toLocaleString()})`;
+      }
+    } else {
+      const recencyHit = /\b(202[3-9]|current|recurrent|type current|recent)\b/.test(text);
+      status = recencyHit ? "near" : "unknown";
+      credit = recencyHit ? 0.5 : 0;
+      detail = recencyHit ? "Recent activity referenced (no 12-mo hours on file)" : "No recency data on file";
+      source = recencyHit ? "profile-text" : "none";
+    }
     pushFactor({
       key: "recency",
-      label: "Recent flying evidence",
+      label: "Recency / currency",
       category: "recency",
       categoryLabel: CATEGORY_LABELS.recency,
-      status: recencyHit ? "met" : "unknown",
+      status,
       requirementStatus: "soft",
-      detail: recencyHit ? "Recent activity referenced" : "No recency signal yet",
-      source: recencyHit ? "profile-text" : "none",
-      sourceLabel: sourceLabelFor(recencyHit ? "profile-text" : "none"),
-      credit: recencyHit ? 0.85 : 0,
-      evaluated: recencyHit
+      detail,
+      source,
+      sourceLabel: sourceLabelFor(source),
+      credit,
+      evaluated: status !== "unknown"
     });
   }
 

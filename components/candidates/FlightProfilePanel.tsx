@@ -30,6 +30,9 @@ function metricValue(m: Metric) {
 
 export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: FlightProfilePanelProps) {
   const router = useRouter();
+  const recencyMetric = metrics.find((m) => m.key === "recency_12mo");
+  const [recencyDraft, setRecencyDraft] = useState(recencyMetric?.valueNumber != null ? String(recencyMetric.valueNumber) : "");
+  const [savingRecency, setSavingRecency] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -87,8 +90,24 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
     }
   }
 
-  const confirmed = metrics.filter((m) => m.status === "CONFIRMED");
+  const confirmed = metrics.filter((m) => m.status === "CONFIRMED" && m.key !== "recency_12mo");
   const suggested = metrics.filter((m) => m.status === "SUGGESTED");
+
+  async function saveRecency() {
+    const v = recencyDraft.trim();
+    if (!/^[\d,]*$/.test(v)) return;
+    setSavingRecency(true);
+    try {
+      await fetch(`/api/candidates/${candidateId}/metrics`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "recency_12mo", label: "Hours (last 12 mo)", value: v || "0", unit: "hrs" })
+      });
+      router.refresh();
+    } finally {
+      setSavingRecency(false);
+    }
+  }
 
   async function scan() {
     setScanning(true);
@@ -156,6 +175,26 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
       </div>
 
       {message && <div className="mt-2 rounded bg-brand-cloudDancer/50 px-2 py-1 text-[11px] text-brand-grey dark:bg-white/5 dark:text-slate-400">{message}</div>}
+
+      {/* Currency — hours flown in the last 12 months; drives the Recency score */}
+      <div className="mt-3 flex items-center gap-2 rounded bg-brand-cloudDancer/45 px-2.5 py-2 dark:bg-white/5">
+        <Clock className="h-3.5 w-3.5 shrink-0 text-brand-eden" />
+        <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey dark:text-slate-400">Hours (last 12 mo)</span>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={recencyDraft}
+          onChange={(e) => setRecencyDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") saveRecency();
+          }}
+          placeholder="—"
+          className="ml-auto w-16 rounded border border-brand-lea/20 px-1.5 py-0.5 text-right text-sm text-brand-lea focus:border-brand-gold focus:outline-none dark:border-white/10 dark:text-slate-100"
+        />
+        <button onClick={saveRecency} disabled={savingRecency} className="rounded p-0.5 text-emerald-700 disabled:opacity-50" aria-label="Save recent hours">
+          {savingRecency ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+        </button>
+      </div>
 
       {/* Confirmed values */}
       {confirmed.length > 0 && (

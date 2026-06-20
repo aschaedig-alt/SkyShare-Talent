@@ -96,6 +96,8 @@ export type HoursLogic = {
   completenessBonus: number;
   /** Hours in type that earn full time-in-type credit ("more is better" caps here). */
   timeInTypeTargetHours: number;
+  /** Hours flown in the last 12 months at/above which a candidate reads as "current". */
+  recencyMinHours12mo: number;
 };
 
 export type ReadinessThresholds = {
@@ -127,10 +129,9 @@ export const DEFAULT_WEIGHTS: Record<CategoryKey, number> = {
   seat: 20,
   hourMins: 25,
   timeInType: 12,
-  // Recency is 0 by default: we don't yet track real currency (last-flown /
-  // hours-in-last-12-months), so the old keyword scan was just noise. Re-weight
-  // once a structured currency signal exists. See roadmap.
-  recency: 0,
+  // Recency = currency: scored from the candidate's "hours flown in last 12
+  // months" metric vs the configurable threshold (see recencyMinHours12mo).
+  recency: 8,
   certs: 10
 };
 
@@ -138,7 +139,8 @@ export const DEFAULT_HOURS_LOGIC: HoursLogic = {
   nearMissTolerancePct: 0.1,
   nearMissCredit: 0.5,
   completenessBonus: 0.25,
-  timeInTypeTargetHours: 500
+  timeInTypeTargetHours: 500,
+  recencyMinHours12mo: 100
 };
 
 export const DEFAULT_READINESS: ReadinessThresholds = {
@@ -208,10 +210,6 @@ export function normalizeProfileConfig(raw: unknown): ScoringProfileConfig {
       weights[key] = Math.round(clampNumber((r.weights as Record<string, unknown>)[key], base.weights[key], 0, 100));
     }
   }
-  // Recency has no structured signal yet (the old scan just looked for "current"
-  // in resume text), so force its weight to 0 — even on previously-saved configs
-  // — so it can't skew scores. Lift this when a real currency metric exists.
-  weights.recency = 0;
 
   const requirements = { ...base.requirements };
   if (r.requirements && typeof r.requirements === "object") {
@@ -227,7 +225,8 @@ export function normalizeProfileConfig(raw: unknown): ScoringProfileConfig {
     nearMissTolerancePct: clampNumber(r.hours?.nearMissTolerancePct, base.hours.nearMissTolerancePct, 0, 0.5),
     nearMissCredit: clampNumber(r.hours?.nearMissCredit, base.hours.nearMissCredit, 0, 1),
     completenessBonus: clampNumber(r.hours?.completenessBonus, base.hours.completenessBonus, 0, 1),
-    timeInTypeTargetHours: Math.round(clampNumber(r.hours?.timeInTypeTargetHours, base.hours.timeInTypeTargetHours, 1, 20000))
+    timeInTypeTargetHours: Math.round(clampNumber(r.hours?.timeInTypeTargetHours, base.hours.timeInTypeTargetHours, 1, 20000)),
+    recencyMinHours12mo: Math.round(clampNumber(r.hours?.recencyMinHours12mo, base.hours.recencyMinHours12mo, 0, 5000))
   };
 
   const possible = Math.round(clampNumber(r.readiness?.possible, base.readiness.possible, 0, 100));

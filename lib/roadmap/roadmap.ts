@@ -117,7 +117,7 @@ Tools for assessing candidates — must stay transparent and fair.
 - [x] Commercial-or-ATP either/or cert (Jun 19) — the ATP cert requirement is now "Commercial pilot certificate or ATP" and awards credit if the candidate holds either (a pilot needs one or the other)
 - [x] Multi-select positions in scoring setup (Jun 19) — tick several positions in the scoring sidebar and copy the settings on screen to all of them at once (still saved on "Save scoring")
 - [x] Recency weight zeroed pending real data (Jun 19) — recency/currency defaulted to 0% because nothing structured feeds it (the old scan just looked for the word "current" in a resume)
-- [ ] Real recency / currency signal — track a structured currency metric per candidate so "a minimum of XX hours flown in the last 12 months = current" can actually score the recency category; then re-weight it above 0
+- [x] Real recency / currency signal (Jun 20) — added a structured "Hours (last 12 mo)" metric (recency_12mo) entered on the Flight Profile panel; the Recency category now scores off it vs a configurable currency threshold (Scoring setup > Hours logic, default 100 hrs): at/above = current (full), half-to-threshold = partial, below = not current. Recency weight re-enabled (default 8%); falls back to a weak resume-keyword hint when no hours are on file
 - [ ] Custom + either/or cert items — let recruiters add their own cert/rating rows to the scoring requirements (today the cert list is fixed: Commercial-or-ATP, medical, instrument) and define more either/or groups
 - [x] Category-weight explanations (Jun 19) — the scoring setup Category weights section now shows a short plain-English description under each name (what aircraft fit / seat fit / hour mins / time in type / recency / certs actually measure) so the weight can be set with confidence
 - [x] Scoring requirement row hover highlight (Jun 19) — requirement rows in the scoring setup highlight (gold border + tint + soft glow) on hover so it's clear which row you're on
@@ -186,7 +186,7 @@ Streamline the end-to-end interview experience.
 - [x] Calendar department filter + color-coding (Jun 18) — canonical departments (Crew, Maintenance, FBO, Support, each with sub-groups) drive a drill-down filter and color every interview on all calendar views by department; a Dept/Stage toggle switches the coloring (defaults to department); jobs map onto the taxonomy via an editable resolver; interviews with no linked job group under Unassigned
 - [x] Editable department colors (Jun 18) — admins recolor each department (Crew/Maintenance/FBO/Support) from an on-brand palette via a Colors button on the calendar; saved per workspace, no migration
 - [x] Interviewer roster + multi-department assignment (Jun 18) — team members (Scheduling) can each be assigned to one or more departments; the calendar interviewer field is now a roster picker that surfaces interviewers matching the selected job's department first (with their department tags), free text still allowed — foundation for per-interviewer scoring
-- [ ] Rename hiring manager to hiring team — update the label across the calendar view and likely the requisitions system-wide
+- [x] Rename hiring manager to hiring team (Jun 20) — renamed the user-facing label to "Hiring Team" across the interview-type roles, scheduling host roles, and the Job Builder field; stored enum values (HIRING_MANAGER) kept for data integrity
 
 ## Design & Consistency
 Make the whole app feel like one professionally designed product.
