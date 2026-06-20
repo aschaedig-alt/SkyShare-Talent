@@ -200,6 +200,7 @@ export async function setRequirementFleetPosition(input: {
   fleetPositionSlug: string | null; // null = clear (fall back to title matching)
   advertisedTitle: string | null;
   aircraftTypes?: string[]; // when provided, replaces the requirement's aircraft tags
+  linkedFleetPositionSlugs?: string[]; // additional fleet positions for dual-aircraft roles
 }): Promise<ActionResult> {
   const denied = await guard();
   if (denied) return denied;
@@ -214,13 +215,23 @@ export async function setRequirementFleetPosition(input: {
     aircraftTypesJson = JSON.stringify(cleaned);
   }
 
+  // Dual-aircraft links: valid known slugs, excluding the primary, de-duped.
+  let linkedJson: string | null | undefined;
+  if (input.linkedFleetPositionSlugs) {
+    const cleaned = [...new Set(input.linkedFleetPositionSlugs.filter(Boolean))]
+      .filter((s) => s !== input.fleetPositionSlug && Boolean(fleetPositionBySlug(s)))
+      .slice(0, 6);
+    linkedJson = cleaned.length > 0 ? JSON.stringify(cleaned) : null;
+  }
+
   try {
     await prisma.pilotRequirement.update({
       where: { id: input.requirementId },
       data: {
         fleetPositionSlug: input.fleetPositionSlug,
         advertisedTitle: input.advertisedTitle?.trim() ? input.advertisedTitle.trim().slice(0, 200) : null,
-        ...(aircraftTypesJson !== undefined ? { aircraftTypesJson } : {})
+        ...(aircraftTypesJson !== undefined ? { aircraftTypesJson } : {}),
+        ...(linkedJson !== undefined ? { linkedFleetPositionSlugs: linkedJson } : {})
       }
     });
   } catch {

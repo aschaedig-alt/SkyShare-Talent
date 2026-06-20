@@ -204,3 +204,17 @@ export function fleetSeatRank(seat: string | null | undefined): number {
   const value = (seat ?? "").toLowerCase();
   return /\b(sic|first officer|f\/?o|second in command)\b/.test(value) ? 1 : 0;
 }
+
+/** Distinct aircraft names for a set of fleet-position slugs (registry order). */
+export function aircraftForSlugs(slugs: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const slug of slugs) {
+    const fp = BY_SLUG.get(slug);
+    if (fp && !seen.has(fp.aircraft)) {
+      seen.add(fp.aircraft);
+      out.push(fp.aircraft);
+    }
+  }
+  return out;
+}

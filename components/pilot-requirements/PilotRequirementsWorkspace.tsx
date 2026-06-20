@@ -112,6 +112,14 @@ function RequirementDetail({
                   </span>
                 ))}
             </div>
+            {requirement.linkedPositions.length > 0 ? (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-eden">Dual position</span>
+                <span className="text-brand-grey dark:text-slate-400">
+                  also covers {requirement.linkedPositions.map((p) => p.title).join(", ")}
+                </span>
+              </div>
+            ) : null}
           </div>
           <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4 xl:min-w-[420px]">
             {requirement.numericSummary.map((item) => (
@@ -130,6 +138,7 @@ function RequirementDetail({
           currentSlug={requirement.fleetPositionSlug}
           currentAdvertised={requirement.advertisedTitle}
           currentAircraftTypes={requirement.aircraftTypes}
+          currentLinkedSlugs={requirement.linkedPositions.map((p) => p.slug)}
           rawTitle={requirement.title}
         />
       ) : null}

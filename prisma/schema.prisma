@@ -511,6 +511,7 @@ model PilotRequirement {
   normalizedTitle            String?
   fleetPositionSlug          String?
   advertisedTitle            String?
+  linkedFleetPositionSlugs   String?                   // JSON array of additional fleet-position slugs for dual-aircraft roles
   status                     String                    @default("ACTIVE")
   reviewStatus               String                    @default("DRAFT")
   operatorType               String?

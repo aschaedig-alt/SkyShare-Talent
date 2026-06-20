@@ -5,7 +5,7 @@ import {
 } from "@/lib/matching/pilot-requirement-matches";
 import { canEditScoring, getProfileScoringConfig } from "@/lib/matching/scoring-config.server";
 import { getRequirementFeedback } from "@/lib/matching/match-feedback";
-import { positionFor, fleetOrderIndex, fleetSeatRank } from "@/lib/fleet/positions";
+import { positionFor, fleetOrderIndex, fleetSeatRank, fleetPositionBySlug, aircraftForSlugs } from "@/lib/fleet/positions";
 import { parseStringArray } from "@/lib/json";
 
 /** SkyShare roles first, then Managed, then anything unspecified. */
@@ -73,6 +73,8 @@ export type PilotRequirementDetail = PilotRequirementListItem & {
   version: number;
   payScaleRaw: string | null;
   managedVariants: ManagedVariantView[];
+  /** Additional fleet positions this role also covers (dual-aircraft). */
+  linkedPositions: Array<{ slug: string; title: string }>;
   sourceJobTitle: string | null;
   sourceJobStatus: string | null;
   rawMinimumRequirements: string | null;
@@ -309,6 +311,10 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
             notes: variant.notes,
             status: variant.status
           })),
+          linkedPositions: parseStringArray(selectedRow.linkedFleetPositionSlugs).map((s) => ({
+            slug: s,
+            title: fleetPositionBySlug(s)?.title ?? s
+          })),
           sourceJobTitle: selectedRow.sourceJobRecord?.title ?? null,
           sourceJobStatus: selectedRow.sourceJobRecord?.status ?? null,
           rawMinimumRequirements: selectedRow.rawMinimumRequirements,
@@ -334,7 +340,11 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
           id: selectedRow.id,
           title: selectedRow.title,
           pilotSeat: selectedRow.pilotSeat,
-          aircraftTypesJson: selectedRow.aircraftTypesJson,
+          // Fold linked dual-aircraft positions into the aircraft considered for fit.
+          aircraftTypesJson: JSON.stringify([
+            ...parseStringArray(selectedRow.aircraftTypesJson),
+            ...aircraftForSlugs(parseStringArray(selectedRow.linkedFleetPositionSlugs))
+          ]),
           baseCity: selectedRow.baseCity,
           baseState: selectedRow.baseState,
           baseAirport: selectedRow.baseAirport,

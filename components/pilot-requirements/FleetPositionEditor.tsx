@@ -2,21 +2,25 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plane, Megaphone, Tags, X, Plus } from "lucide-react";
+import { Plane, Megaphone, Tags, X, Plus, Layers } from "lucide-react";
 import { setRequirementFleetPosition } from "@/app/pilot-requirements/scoring-actions";
 import { FLEET_POSITIONS } from "@/lib/fleet/positions";
+
+const TITLE_BY_SLUG = new Map(FLEET_POSITIONS.map((p) => [p.slug, p.title]));
 
 export function FleetPositionEditor({
   requirementId,
   currentSlug,
   currentAdvertised,
   currentAircraftTypes,
+  currentLinkedSlugs = [],
   rawTitle
 }: {
   requirementId: string;
   currentSlug: string | null;
   currentAdvertised: string | null;
   currentAircraftTypes: string[];
+  currentLinkedSlugs?: string[];
   rawTitle: string | null;
 }) {
   const router = useRouter();
@@ -24,6 +28,7 @@ export function FleetPositionEditor({
   const [advertised, setAdvertised] = useState(currentAdvertised ?? "");
   const [tags, setTags] = useState<string[]>(currentAircraftTypes);
   const [newTag, setNewTag] = useState("");
+  const [linked, setLinked] = useState<string[]>(currentLinkedSlugs);
   const [pending, start] = useTransition();
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -44,7 +49,8 @@ export function FleetPositionEditor({
         requirementId,
         fleetPositionSlug: slug || null,
         advertisedTitle: advertised || null,
-        aircraftTypes: tags
+        aircraftTypes: tags,
+        linkedFleetPositionSlugs: linked
       });
       setNotice(res.ok ? "Saved." : res.error ?? "Could not save.");
       if (res.ok) router.refresh();
@@ -140,6 +146,52 @@ export function FleetPositionEditor({
             <Plus className="h-3.5 w-3.5" /> Add
           </button>
         </div>
+      </div>
+
+      <div className="mt-3">
+        <span className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">
+          <Layers className="h-3.5 w-3.5" /> Also covers (dual position)
+        </span>
+        <p className="mb-1.5 text-[11px] text-brand-grey dark:text-slate-400">
+          Link other fleet positions this one role covers (e.g. PC-12 Captain + M2 First Officer). Their aircraft count toward candidate aircraft-fit.
+        </p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {linked.length === 0 ? <span className="text-xs text-brand-grey dark:text-slate-400">Single position</span> : null}
+          {linked.map((s) => (
+            <span
+              key={s}
+              className="inline-flex items-center gap-1 rounded bg-brand-sweet/20 px-2 py-0.5 text-[11px] font-semibold text-brand-lea dark:text-slate-100"
+            >
+              {TITLE_BY_SLUG.get(s) ?? s}
+              <button
+                type="button"
+                onClick={() => setLinked((current) => current.filter((x) => x !== s))}
+                disabled={pending}
+                aria-label={`Remove ${TITLE_BY_SLUG.get(s) ?? s}`}
+                className="rounded text-brand-grey transition hover:text-value-customerFocus-dark disabled:opacity-60 dark:text-slate-400"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+        <select
+          value=""
+          disabled={pending}
+          onChange={(event) => {
+            const v = event.target.value;
+            if (v) setLinked((current) => (current.includes(v) ? current : [...current, v]));
+          }}
+          className="mt-2 w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+        >
+          <option value="">+ Add a linked position…</option>
+          {FLEET_POSITIONS.filter((p) => p.slug !== slug && !linked.includes(p.slug)).map((p) => (
+            <option key={p.slug} value={p.slug}>
+              {p.title}
+              {p.status === "Archived" ? " (archived)" : ""}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="mt-3 flex items-center gap-3">

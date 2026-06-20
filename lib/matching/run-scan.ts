@@ -6,6 +6,7 @@ import {
 import { getProfileScoringConfig } from "@/lib/matching/scoring-config.server";
 import { getRequirementFeedback } from "@/lib/matching/match-feedback";
 import { getRequirementTierOverrides } from "@/lib/matching/tier-override";
+import { aircraftForSlugs } from "@/lib/fleet/positions";
 import { parseStringArray } from "@/lib/json";
 
 export type RequirementScan = {
@@ -32,6 +33,7 @@ export async function runRequirementScan(requirementId: string, includeExcluded 
       title: true,
       pilotSeat: true,
       aircraftTypesJson: true,
+      linkedFleetPositionSlugs: true,
       baseCity: true,
       baseState: true,
       baseAirport: true,
@@ -62,7 +64,11 @@ export async function runRequirementScan(requirementId: string, includeExcluded 
       id: requirement.id,
       title: requirement.title,
       pilotSeat: requirement.pilotSeat,
-      aircraftTypesJson: requirement.aircraftTypesJson,
+      // Fold linked dual-aircraft positions into the aircraft considered for fit.
+      aircraftTypesJson: JSON.stringify([
+        ...aircraftTypes,
+        ...aircraftForSlugs(parseStringArray(requirement.linkedFleetPositionSlugs))
+      ]),
       baseCity: requirement.baseCity,
       baseState: requirement.baseState,
       baseAirport: requirement.baseAirport,
