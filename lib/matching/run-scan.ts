@@ -6,6 +6,7 @@ import {
 import { getProfileScoringConfig } from "@/lib/matching/scoring-config.server";
 import { getRequirementFeedback } from "@/lib/matching/match-feedback";
 import { getRequirementTierOverrides } from "@/lib/matching/tier-override";
+import { parseStringArray } from "@/lib/json";
 
 export type RequirementScan = {
   matches: PilotRequirementCandidateMatch[];
@@ -13,15 +14,6 @@ export type RequirementScan = {
   scannedAt: string; // ISO timestamp
 };
 
-function parseStringArray(value: string | null) {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
-  } catch {
-    return [];
-  }
-}
 
 /**
  * Run a fresh candidate scan for one pilot requirement. Loads the requirement,

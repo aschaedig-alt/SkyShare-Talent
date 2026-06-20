@@ -6,6 +6,7 @@ import {
 import { canEditScoring, getProfileScoringConfig } from "@/lib/matching/scoring-config.server";
 import { getRequirementFeedback } from "@/lib/matching/match-feedback";
 import { positionFor, fleetOrderIndex, fleetSeatRank } from "@/lib/fleet/positions";
+import { parseStringArray } from "@/lib/json";
 
 /** SkyShare roles first, then Managed, then anything unspecified. */
 function operatorRank(operatorType: string | null): number {
@@ -104,18 +105,6 @@ export type PilotRequirementsData = {
   };
 };
 
-function parseStringArray(value: string | null) {
-  if (!value) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
-  } catch {
-    return [];
-  }
-}
 
 function formatBase(city: string | null, state: string | null, airport: string | null) {
   const location = [city, state].filter(Boolean).join(", ");

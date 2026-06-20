@@ -13,16 +13,8 @@ import { getRequirementFeedback, getCandidateFeedback } from "@/lib/matching/mat
 import { getRequirementTierOverrides, getCandidateTierOverrides } from "@/lib/matching/tier-override";
 import { FLEET_POSITIONS, resolveFleetPosition, positionFor } from "@/lib/fleet/positions";
 import type { JobScreeningData } from "@/lib/data/job-screening";
+import { parseStringArray } from "@/lib/json";
 
-function parseStringArray(value: string | null): string[] {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
-  } catch {
-    return [];
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Subjects for the two pickers

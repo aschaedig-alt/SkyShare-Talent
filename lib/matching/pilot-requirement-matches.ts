@@ -14,6 +14,7 @@ import type { MatchFeedbackEntry, RequirementFeedback } from "@/lib/matching/mat
 import type { OverrideTier, TierOverrides } from "@/lib/matching/tier-override";
 import { isScanExclusionReason, type ScanExclusionReason } from "@/lib/candidates/scan-exclusion";
 import { resolveFleetPosition, aircraftSharingTypeRating } from "@/lib/fleet/positions";
+import { parseStringArray } from "@/lib/json";
 
 // ---------------------------------------------------------------------------
 // Inputs
@@ -129,15 +130,6 @@ export type PilotRequirementCandidateMatch = {
 // Text helpers
 // ---------------------------------------------------------------------------
 
-function parseStringArray(value: string | null) {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
-  } catch {
-    return [];
-  }
-}
 
 function normalize(value: string | null | undefined) {
   return (value ?? "")

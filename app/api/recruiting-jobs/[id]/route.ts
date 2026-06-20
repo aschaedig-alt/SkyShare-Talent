@@ -2,18 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { detectSeat, extractAircraftTypes, createPilotRequirementGates } from "@/lib/imports/job-import";
+import { parseStringArray } from "@/lib/json";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-function parseStringArray(value: string | null): string[] {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [];
-  } catch {
-    return [];
-  }
-}
 
 export async function PATCH(request: Request, context: RouteContext) {
   const auth = await requireApiPermission("jobs:write");

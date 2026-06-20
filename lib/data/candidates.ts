@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { METRIC_DEFS, type MetricKind } from "@/lib/extraction/pilot-metrics";
+import { parseStringArray } from "@/lib/json";
 
 export type CandidateListItem = {
   id: string;
@@ -128,18 +129,6 @@ export type CandidateProfileData = {
   }>;
 };
 
-function parseStringArray(value: string | null) {
-  if (!value) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
-  } catch {
-    return [];
-  }
-}
 
 /** Build a short excerpt around the first match of query in text. */
 function buildSnippet(text: string, query: string): string {

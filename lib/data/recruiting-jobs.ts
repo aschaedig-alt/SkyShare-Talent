@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { canonicalTitle } from "@/lib/fleet/positions";
+import { parseStringArray } from "@/lib/json";
 
 export type RecruitingJobListItem = {
   id: string;
@@ -52,18 +53,6 @@ export type RecruitingJobsData = {
   };
 };
 
-function parseStringArray(value: string | null) {
-  if (!value) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
-  } catch {
-    return [];
-  }
-}
 
 function locationLabel(city: string | null, state: string | null) {
   return [city, state].filter(Boolean).join(", ") || null;

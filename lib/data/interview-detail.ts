@@ -7,6 +7,7 @@ import {
   type RecommendationKey,
   type ScorecardItem
 } from "@/lib/interviews/scorecard";
+import { parseStringArray } from "@/lib/json";
 
 export type ScorecardView = {
   id: string;
@@ -36,15 +37,6 @@ export type InterviewDetail = {
   interviewers: Array<{ name: string; role: string; departments: string[] }>;
 };
 
-function parseStringArray(value: string | null): string[] {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((i): i is string => typeof i === "string") : [];
-  } catch {
-    return [];
-  }
-}
 
 function parseItems(json: string): ScorecardItem[] {
   try {

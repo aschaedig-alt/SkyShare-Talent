@@ -42,7 +42,7 @@ export async function POST(request: Request, context: RouteContext) {
     // Unique key per candidate.
     let key = `custom_${slugify(label)}`;
     let n = 1;
-    // eslint-disable-next-line no-await-in-loop
+     
     while (await prisma.candidateMetric.findUnique({ where: { candidateId_key: { candidateId: id, key } } })) {
       n += 1;
       key = `custom_${slugify(label)}_${n}`;

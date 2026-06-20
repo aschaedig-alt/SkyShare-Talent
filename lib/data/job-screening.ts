@@ -8,6 +8,7 @@ import {
 import { canEditScoring, getProfileScoringConfig } from "@/lib/matching/scoring-config.server";
 import { getRequirementFeedback } from "@/lib/matching/match-feedback";
 import { getRequirementTierOverrides } from "@/lib/matching/tier-override";
+import { parseStringArray } from "@/lib/json";
 
 export type JobScreeningData = {
   hasRequirement: boolean;
@@ -20,15 +21,6 @@ export type JobScreeningData = {
   canEdit: boolean;
 };
 
-function parseStringArray(value: string | null) {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
-  } catch {
-    return [];
-  }
-}
 
 /**
  * Screening for a single job: scores the people who applied AND the best

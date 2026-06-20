@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { isGoogleCalendarConfigured } from "@/lib/google/calendar";
+import { parseStringArray } from "@/lib/json";
 
 export type CalendarCandidate = {
   id: string;
@@ -71,15 +72,6 @@ function addDays(date: Date, days: number) {
   return next;
 }
 
-function parseStringArray(value: string | null): string[] {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
-  } catch {
-    return [];
-  }
-}
 
 export async function getCalendarData(): Promise<CalendarData> {
   const now = new Date();
