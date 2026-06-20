@@ -41,7 +41,6 @@ type BlockLibraryProps = {
 type EditorMode = "detail" | "edit" | "create";
 type ViewMode = "library" | "board";
 type AdoptionMode = "NEW_VERSION_ONLY" | "ALL_LINKED_JOBS" | "SELECTED_JOBS";
-type RetirementAction = "ARCHIVE" | "DELETE";
 
 const categories: BlockCategory[] = [
   "ABOUT",
@@ -97,11 +96,6 @@ const emptyForm = {
   changeNote: "",
   adoption: "NEW_VERSION_ONLY" as AdoptionMode,
   selectedJobIds: [] as string[]
-};
-
-const emptyRetirementForm = {
-  migrateJobs: false,
-  replacementBlockId: ""
 };
 
 const emptyApplyForm = {
@@ -306,9 +300,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
-  const [isRetiring, setIsRetiring] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
-  const [retirementForm, setRetirementForm] = useState(emptyRetirementForm);
 
   const filteredBlocks = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -326,16 +318,14 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
   }, [blocks, query]);
 
   const selectedBlock = blocks.find((block) => block.id === selectedBlockId) ?? filteredBlocks[0] ?? blocks[0];
-  const isWorking = isSaving || isDuplicating || isRetiring || isApplying;
+  const isWorking = isSaving || isDuplicating || isApplying;
   const activityMessage = isSaving
     ? "Saving block changes..."
     : isDuplicating
       ? "Duplicating block..."
-      : isRetiring
-        ? "Updating block archive/delete..."
-        : isApplying
-          ? "Applying block to jobs..."
-          : error ?? message;
+      : isApplying
+        ? "Applying block to jobs..."
+        : error ?? message;
 
   useEffect(() => {
     if (mode === "edit" && selectedBlock) {
@@ -364,7 +354,6 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
   function selectBlock(blockId: string) {
     setSelectedBlockId(blockId);
     setMode("edit");
-    setRetirementForm(emptyRetirementForm);
     setApplyForm(emptyApplyForm);
     setMessage(null);
     setError(null);
@@ -478,57 +467,6 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
       setError(duplicateError instanceof Error ? duplicateError.message : "Unable to duplicate block.");
     } finally {
       setIsDuplicating(false);
-    }
-  }
-
-  async function retireBlock(action: RetirementAction) {
-    if (!selectedBlock) {
-      return;
-    }
-
-    if (retirementForm.migrateJobs && !retirementForm.replacementBlockId) {
-      setError("Choose a replacement block before updating jobs.");
-      return;
-    }
-
-    setIsRetiring(true);
-    setError(null);
-    setMessage(null);
-
-    try {
-      const response = await fetch(`/api/blocks/${selectedBlock.id}/retire`, {
-        method: action === "ARCHIVE" ? "PATCH" : "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          migrateJobs: retirementForm.migrateJobs,
-          replacementBlockId: retirementForm.replacementBlockId || null
-        })
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null);
-        throw new Error(payload?.message ?? `Unable to ${action === "ARCHIVE" ? "archive" : "delete"} block.`);
-      }
-
-      if (action === "DELETE") {
-        const payload = (await response.json()) as { deletedId: string };
-        setBlocks((current) => current.filter((block) => block.id !== payload.deletedId));
-        const nextBlock = blocks.find((block) => block.id !== payload.deletedId);
-        setSelectedBlockId(nextBlock?.id ?? "");
-        setMessage("Block deleted.");
-      } else {
-        const archivedBlock = (await response.json()) as SerializedContentBlock;
-        setBlocks((current) => current.map((block) => (block.id === archivedBlock.id ? archivedBlock : block)));
-        setSelectedBlockId(archivedBlock.id);
-        setMessage("Block archived.");
-      }
-
-      setRetirementForm(emptyRetirementForm);
-      setMode("detail");
-    } catch (retireError) {
-      setError(retireError instanceof Error ? retireError.message : "Unable to retire block.");
-    } finally {
-      setIsRetiring(false);
     }
   }
 
