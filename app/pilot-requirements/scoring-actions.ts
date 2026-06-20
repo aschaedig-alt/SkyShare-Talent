@@ -319,6 +319,56 @@ export async function deleteManagedVariant(variantId: string): Promise<ActionRes
   return { ok: true };
 }
 
+// --- Matcher bulk export -------------------------------------------------
+// Returns contact rows for the selected candidates so the matcher can export a
+// CSV (name, email, phone, current title, matched job). Recruiter/admin only.
+export type MatchContactRow = {
+  name: string;
+  email: string;
+  phone: string;
+  currentTitle: string;
+  matchedJob: string;
+};
+export type MatchContactsResult = { ok: boolean; rows?: MatchContactRow[]; error?: string };
+
+export async function exportMatchContacts(input: {
+  candidateIds: string[];
+  requirementId: string | null;
+}): Promise<MatchContactsResult> {
+  const denied = await guard();
+  if (denied) return { ok: false, error: denied.error };
+  const ids = [...new Set((input?.candidateIds ?? []).filter(Boolean))].slice(0, 500);
+  if (ids.length === 0) return { ok: false, error: "No candidates selected." };
+
+  try {
+    const [candidates, requirement] = await Promise.all([
+      prisma.candidate.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, displayName: true, primaryEmail: true, primaryPhone: true, currentTitle: true }
+      }),
+      input.requirementId
+        ? prisma.pilotRequirement.findUnique({ where: { id: input.requirementId }, select: { title: true } })
+        : Promise.resolve(null)
+    ]);
+    const matchedJob = requirement?.title ?? "";
+    // Preserve the caller's selection order.
+    const byId = new Map(candidates.map((c) => [c.id, c]));
+    const rows: MatchContactRow[] = ids
+      .map((id) => byId.get(id))
+      .filter((c): c is NonNullable<typeof c> => Boolean(c))
+      .map((c) => ({
+        name: c.displayName,
+        email: c.primaryEmail ?? "",
+        phone: c.primaryPhone ?? "",
+        currentTitle: c.currentTitle ?? "",
+        matchedJob
+      }));
+    return { ok: true, rows };
+  } catch {
+    return { ok: false, error: "Could not export contacts." };
+  }
+}
+
 export async function setCandidateScanExclusion(input: {
   candidateId: string;
   reason: ScanExclusionReason | null; // null clears the exclusion (back in the pool)
