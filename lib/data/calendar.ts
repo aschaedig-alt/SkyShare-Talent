@@ -25,7 +25,7 @@ export type CalendarData = {
     status: string;
     department: string | null;
   }>;
-  /** Recruiting team / hiring managers, keyed by name, for timeline avatars. */
+  /** Recruiting team / hiring team, keyed by name, for timeline avatars. */
   teamHosts: Array<{ name: string; avatarUrl: string | null }>;
   /** Active team members offered as interviewer choices (name + their departments). */
   interviewers: Array<{ name: string; role: string; departments: string[] }>;

@@ -855,7 +855,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
     },
     {
       id: "hiringManager",
-      label: "Hiring manager",
+      label: "Hiring team",
       value: getSupplementalField("hiringManager", selectedJob.reportsTo ?? "Chief Pilot"),
       onChange: (value) => updateSupplementalField("hiringManager", value),
       purpose: "internal"
@@ -1185,7 +1185,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
     {
       key: "internal",
       title: "Internal role tracking",
-      subtitle: "Used by recruiting, hiring managers, approvals, and source tracking.",
+      subtitle: "Used by recruiting, hiring team, approvals, and source tracking.",
       badge: `${internalRoleFields.length} fields`,
       fields: internalRoleFields
     },

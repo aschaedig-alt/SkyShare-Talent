@@ -46,8 +46,8 @@ export const INTERVIEW_TYPE_META: Record<InterviewType, InterviewTypeMeta> = {
   },
   HIRING_MANAGER: {
     value: "HIRING_MANAGER",
-    label: "Hiring Manager",
-    shortLabel: "Hiring Mgr",
+    label: "Hiring Team",
+    shortLabel: "Hiring Team",
     googleColorId: "3", // Grape (purple)
     chip: "bg-purple-500 text-white hover:bg-purple-600",
     dot: "bg-purple-500",

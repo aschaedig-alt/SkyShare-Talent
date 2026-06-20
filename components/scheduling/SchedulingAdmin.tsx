@@ -157,7 +157,7 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Scheduling</p>
         <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Booking links</h1>
         <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-          Give each recruiter and hiring manager a &quot;schedule with me&quot; link. Bookings land on the shared SkyShare calendar.
+          Give each recruiter and hiring team member a &quot;schedule with me&quot; link. Bookings land on the shared SkyShare calendar.
         </p>
       </div>
 
@@ -396,7 +396,7 @@ function Settings({
         <Field label="Role">
           <select value={form.role} onChange={(e) => set("role", e.target.value)} className={inp}>
             <option value="RECRUITER">Recruiter</option>
-            <option value="HIRING_MANAGER">Hiring Manager</option>
+            <option value="HIRING_MANAGER">Hiring Team</option>
             <option value="OTHER">Other</option>
           </select>
         </Field>
