@@ -99,14 +99,15 @@ function FilePreview({ file, mode, searchTerm }: { file: CandidateFileItem; mode
     if (searchTerm && searchTerm.trim()) {
       return <PdfViewer key={file.id} fileUrl={`/api/candidate-files/${file.id}`} searchTerm={searchTerm} />;
     }
-    const hash = mode === "actual" ? "#zoom=100" : "#view=FitH";
-    const heightClass = mode === "actual" ? "h-[1120px]" : "h-[760px]";
+    // Fill the available panel height; a minimum keeps it usable when the layout
+    // stacks (mobile) or there's no height context. The frame now follows the box.
+    const minH = mode === "actual" ? "min-h-[560px]" : "min-h-[420px]";
     return (
       <iframe
         key={file.id}
-        src={`/api/candidate-files/${file.id}${hash}`}
+        src={`/api/candidate-files/${file.id}#view=FitH`}
         title={file.displayFilename}
-        className={clsx("w-full rounded-lg border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]", heightClass)}
+        className={clsx("h-full w-full rounded-lg border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]", minH)}
       />
     );
   }
@@ -327,7 +328,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
   const effectiveLayout: Layout = trimmedSearch ? "single" : layout;
 
   return (
-    <section className="rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="flex h-full flex-col rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <input ref={fileInputRef} type="file" multiple accept={UPLOAD_ACCEPT} className="sr-only" onChange={(e) => handleUpload(e.currentTarget.files)} />
 
       {/* In-document search */}
@@ -481,7 +482,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
       )}
 
       {!activeFile ? (
-        <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-16 text-center">
           <FileText className="h-10 w-10 text-brand-grey/50" />
           <p className="font-semibold text-brand-lea dark:text-slate-100">No documents yet</p>
           <p className="max-w-sm text-sm text-brand-grey dark:text-slate-400">Add a resume, pilot app, or other PDF — it previews right here.</p>
@@ -496,12 +497,12 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
         </div>
       ) : effectiveLayout === "compare" ? (
         /* Side-by-side compare */
-        <div className="grid gap-3 p-3 lg:grid-cols-2">
+        <div className="grid min-h-0 flex-1 gap-3 p-3 lg:grid-cols-2">
           {[
             { file: leftFile, set: setLeftId, fallback: "Left document" },
             { file: rightFile, set: setRightId, fallback: "Right document" }
           ].map((pane, idx) => (
-            <div key={idx} className="rounded-lg border border-brand-lea/10 dark:border-white/10">
+            <div key={idx} className="flex flex-col rounded-lg border border-brand-lea/10 dark:border-white/10">
               <div className="flex items-center gap-2 border-b border-brand-lea/10 px-2 py-2 dark:border-white/10">
                 <select
                   value={pane.file?.id ?? ""}
@@ -520,7 +521,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                   </a>
                 )}
               </div>
-              <div className="bg-brand-cloudDancer/30 p-2 dark:bg-white/5">
+              <div className="min-h-0 flex-1 bg-brand-cloudDancer/30 p-2 dark:bg-white/5">
                 {pane.file ? <FilePreview file={pane.file} mode="fit" /> : <div className="py-16 text-center text-sm text-brand-grey dark:text-slate-400">{pane.fallback}</div>}
               </div>
             </div>
@@ -596,7 +597,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
             </div>
           )}
 
-          <div className="bg-brand-cloudDancer/30 p-3 dark:bg-white/5">
+          <div className="min-h-0 flex-1 bg-brand-cloudDancer/30 p-3 dark:bg-white/5">
             <FilePreview file={activeFile} mode="actual" searchTerm={trimmedSearch} />
           </div>
         </>
