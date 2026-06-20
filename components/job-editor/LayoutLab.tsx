@@ -693,14 +693,14 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
       )}
 
       {visibleWidgets.length === 0 && (
-        <div className="rounded-lg border border-dashed border-brand-lea/20 bg-white px-4 py-10 text-center text-sm text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">
+        <div className="rounded border border-dashed border-brand-lea/20 bg-white px-4 py-10 text-center text-sm text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">
           No boxes on <span className="font-semibold text-brand-lea dark:text-slate-100">{pageFilter}</span> yet. Use a box&apos;s{" "}
           <ArrowRightLeft className="inline h-3 w-3" /> move menu to assign boxes here.
         </div>
       )}
 
       <div
-        className="rounded-lg bg-brand-cloudDancer/30 p-1 dark:bg-white/5"
+        className="rounded bg-brand-cloudDancer/30 p-1 dark:bg-white/5"
         style={
           showGrid
             ? {
@@ -729,7 +729,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
             const page = pageOf(w);
             const moved = page !== w.source;
             return (
-              <div key={w.id} className={`flex flex-col overflow-hidden rounded-lg border bg-white shadow-panel dark:bg-[#10243a] ${isLocked ? "border-brand-gold ring-2 ring-brand-gold/40" : "border-brand-lea/15 dark:border-white/10"}`}>
+              <div key={w.id} className={`flex flex-col overflow-hidden rounded border bg-white shadow-panel dark:bg-[#10243a] ${isLocked ? "border-brand-gold ring-2 ring-brand-gold/40" : "border-brand-lea/15 dark:border-white/10"}`}>
                 <div className={`lab-drag flex shrink-0 items-center justify-between gap-2 px-3 py-1.5 ${isLocked ? "cursor-default" : "cursor-move"} ${PAGE_COLOR[page]}`}>
                   <span className="flex min-w-0 items-center gap-1.5">
                     <span className="truncate text-[11px] font-bold uppercase tracking-wide">{w.title}</span>
@@ -778,7 +778,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setMoveMenu(null)} />
           <div
-            className="fixed z-50 w-56 rounded-lg border border-brand-lea/20 bg-white p-1.5 shadow-xl dark:border-white/10 dark:bg-[#10243a]"
+            className="fixed z-50 w-56 rounded border border-brand-lea/20 bg-white p-1.5 shadow-xl dark:border-white/10 dark:bg-[#10243a]"
             style={{ left: Math.min(moveMenu.x, (typeof window !== "undefined" ? window.innerWidth : 1200) - 240), top: moveMenu.y + 6 }}
           >
             <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Move this box to →</div>

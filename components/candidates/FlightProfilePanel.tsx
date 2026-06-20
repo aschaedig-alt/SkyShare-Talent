@@ -139,7 +139,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
   }
 
   return (
-    <section className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex items-center justify-between gap-2">
         <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
           <Plane className="h-3.5 w-3.5" /> Flight Profile
@@ -147,7 +147,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
         <button
           onClick={scan}
           disabled={scanning}
-          className="flex items-center gap-1 rounded-lg border border-brand-lea/20 px-2.5 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/40 disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+          className="flex items-center gap-1 rounded border border-brand-lea/20 px-2.5 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/40 disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
           title="Scan this candidate's documents for flight data"
         >
           {scanning ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
@@ -161,7 +161,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
       {confirmed.length > 0 && (
         <div className="mt-3 grid grid-cols-2 gap-2">
           {confirmed.map((m) => (
-            <div key={m.id} className="group rounded-lg bg-brand-cloudDancer/45 px-2.5 py-2 dark:bg-white/5">
+            <div key={m.id} className="group rounded bg-brand-cloudDancer/45 px-2.5 py-2 dark:bg-white/5">
               <div className="flex items-center justify-between">
                 <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey dark:text-slate-400">{m.label}</div>
                 {editingId !== m.id && (
@@ -218,7 +218,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
           </div>
           <div className="space-y-1.5">
             {suggested.map((m) => (
-              <div key={m.id} className="rounded-lg border border-amber-200 bg-amber-50/60 px-2.5 py-1.5">
+              <div key={m.id} className="rounded border border-amber-200 bg-amber-50/60 px-2.5 py-1.5">
                 {editingId === m.id ? (
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-1.5">

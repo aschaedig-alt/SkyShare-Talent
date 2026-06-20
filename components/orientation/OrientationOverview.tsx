@@ -23,7 +23,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 function SessionCard({ s }: { s: SessionListItem }) {
   const soon = new Date(s.date).getTime() - Date.now() <= 7 * 86_400_000 && s.status !== "COMPLETE";
   return (
-    <Link href={`/orientation/${s.id}`} className="block rounded-lg border border-brand-lea/10 bg-white p-4 shadow-panel transition hover:ring-2 hover:ring-brand-gold/30 hover:shadow-glow dark:border-white/10 dark:bg-[#10243a]">
+    <Link href={`/orientation/${s.id}`} className="block rounded border border-brand-lea/10 bg-white p-4 shadow-panel transition hover:ring-2 hover:ring-brand-gold/30 hover:shadow-glow dark:border-white/10 dark:bg-[#10243a]">
       <div className="flex items-center justify-between gap-2">
         <span className="text-base font-semibold text-brand-lea dark:text-slate-100">{fmt(s.date)}</span>
         <span className={clsx("rounded px-2 py-0.5 text-[11px] font-semibold", s.status === "COMPLETE" ? "bg-emerald-50 text-emerald-800" : soon ? "bg-brand-gold/15 text-brand-lea" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400")}>
@@ -53,7 +53,7 @@ function MiniMonth({ year, month, markers }: { year: number; month: number; mark
   for (let d = 1; d <= days; d++) cells.push(d);
   const monthName = new Intl.DateTimeFormat("en", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(year, month, 1)));
   return (
-    <div className="rounded-lg border border-brand-lea/10 bg-white p-3 shadow-panel dark:border-white/10 dark:bg-[#10243a]">
+    <div className="rounded border border-brand-lea/10 bg-white p-3 shadow-panel dark:border-white/10 dark:bg-[#10243a]">
       <div className="mb-2 text-sm font-semibold text-brand-lea dark:text-slate-100">{monthName}</div>
       <div className="grid grid-cols-7 gap-1 text-center text-[9px] text-brand-grey dark:text-slate-400">
         {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <div key={i}>{d}</div>)}
@@ -81,7 +81,7 @@ function MiniMonth({ year, month, markers }: { year: number; month: number; mark
 
 function CohortCard({ c, onCreate, onAddMissing, busy }: { c: Cohort; onCreate: (c: Cohort) => void; onAddMissing: (c: Cohort) => void; busy: boolean }) {
   return (
-    <div className="rounded-lg border border-brand-lea/10 bg-white p-4 shadow-panel dark:border-white/10 dark:bg-[#10243a]">
+    <div className="rounded border border-brand-lea/10 bg-white p-4 shadow-panel dark:border-white/10 dark:bg-[#10243a]">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-base font-semibold text-brand-lea dark:text-slate-100">{fmtDay(c.dateISO)}</span>
         <span className="text-xs text-brand-grey dark:text-slate-400">{c.hires.length} {c.hires.length === 1 ? "hire" : "hires"} · {daysUntil(c.dateISO)}</span>
@@ -228,7 +228,7 @@ export function OrientationOverview({
       </section>
 
       {unscheduled.length > 0 ? (
-        <section className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+        <section className="rounded border border-amber-300 bg-amber-50 p-4">
           <div className="text-sm font-semibold text-amber-900">
             {unscheduled.length} {unscheduled.length === 1 ? "hire still needs" : "hires still need"} an orientation
           </div>

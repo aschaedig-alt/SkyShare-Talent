@@ -50,7 +50,7 @@ export type AdminOverride = {
 };
 
 const DOW = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const inp = "w-full rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10";
+const inp = "w-full rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10";
 
 function toHHMM(min: number) {
   const h = Math.floor(min / 60);
@@ -169,7 +169,7 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
           <button
             onClick={addHost}
             disabled={busy}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-brand-lea/30 px-3 py-2 text-sm font-semibold text-brand-lea hover:border-brand-sweet hover:bg-brand-sweet/5 dark:border-white/10 dark:text-slate-100"
+            className="flex w-full items-center justify-center gap-1.5 rounded border border-dashed border-brand-lea/30 px-3 py-2 text-sm font-semibold text-brand-lea hover:border-brand-sweet hover:bg-brand-sweet/5 dark:border-white/10 dark:text-slate-100"
           >
             <Plus className="h-4 w-4" /> New team member
           </button>
@@ -177,7 +177,7 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
             <div
               key={h.id}
               className={clsx(
-                "flex items-stretch gap-1 rounded-lg border pr-1 transition hover:shadow-glow",
+                "flex items-stretch gap-1 rounded border pr-1 transition hover:shadow-glow",
                 h.id === selectedId ? "border-brand-sweet bg-brand-sweet/10" : "border-brand-lea/10 hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:bg-white/5"
               )}
             >
@@ -207,7 +207,7 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
           {selected ? (
             <HostDetail key={selected.id} host={selected} overrides={overrides} busy={busy} run={run} onDeleted={() => setSelectedId(null)} />
           ) : (
-            <div className="rounded-xl bg-white p-8 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:text-slate-400 dark:ring-white/10">
+            <div className="rounded bg-white p-8 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:text-slate-400 dark:ring-white/10">
               Select or create a team member to manage their availability.
             </div>
           )}
@@ -219,7 +219,7 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
 
 function Card({ title, icon: Icon, children }: { title: string; icon: typeof Clock; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.12em] text-brand-grey dark:text-slate-400">
         <Icon className="h-4 w-4 text-brand-gold" /> {title}
       </h2>
@@ -298,7 +298,7 @@ function PhotoCard({
             <button
               onClick={() => inputRef.current?.click()}
               disabled={busy || reading}
-              className="rounded-lg bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-lea/90 disabled:opacity-50"
+              className="rounded bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-lea/90 disabled:opacity-50"
             >
               {reading ? "Reading…" : host.avatarUrl ? "Replace photo" : "Upload photo"}
             </button>
@@ -306,7 +306,7 @@ function PhotoCard({
               <button
                 onClick={() => run(async () => void api(`/api/booking-hosts/${host.id}`, "PATCH", { avatarUrl: null }))}
                 disabled={busy}
-                className="rounded-lg border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+                className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
               >
                 Remove
               </button>
@@ -326,14 +326,14 @@ function ShareLink({ slug }: { slug: string }) {
   return (
     <Card title="Share link" icon={LinkIcon}>
       <div className="flex items-center gap-2">
-        <code className="flex-1 truncate rounded-lg bg-brand-cloudDancer/40 px-3 py-2 text-sm text-brand-lea dark:bg-white/5 dark:text-slate-100">{url}</code>
+        <code className="flex-1 truncate rounded bg-brand-cloudDancer/40 px-3 py-2 text-sm text-brand-lea dark:bg-white/5 dark:text-slate-100">{url}</code>
         <button
           onClick={() => {
             navigator.clipboard?.writeText(url);
             setCopied(true);
             setTimeout(() => setCopied(false), 1500);
           }}
-          className="flex items-center gap-1 rounded-lg bg-brand-lea px-3 py-2 text-sm font-semibold text-white hover:bg-brand-lea/90"
+          className="flex items-center gap-1 rounded bg-brand-lea px-3 py-2 text-sm font-semibold text-white hover:bg-brand-lea/90"
         >
           {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {copied ? "Copied" : "Copy"}
         </button>
@@ -341,7 +341,7 @@ function ShareLink({ slug }: { slug: string }) {
           href={url}
           target="_blank"
           rel="noreferrer"
-          className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+          className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
         >
           Open
         </a>
@@ -494,7 +494,7 @@ function Settings({
             })
           }
           disabled={busy}
-          className="rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-lea/90 disabled:opacity-50"
+          className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-lea/90 disabled:opacity-50"
         >
           Save settings
         </button>
@@ -554,7 +554,7 @@ function WeeklyAvailability({
             <div className="flex flex-1 flex-wrap items-center gap-2">
               {days[d].length === 0 ? <span className="py-2 text-xs text-brand-grey dark:text-slate-400">Unavailable</span> : null}
               {days[d].map((range, i) => (
-                <div key={i} className="flex items-center gap-1 rounded-lg bg-brand-cloudDancer/40 px-2 py-1 dark:bg-white/5">
+                <div key={i} className="flex items-center gap-1 rounded bg-brand-cloudDancer/40 px-2 py-1 dark:bg-white/5">
                   <input
                     type="time"
                     value={toHHMM(range.startMinute)}
@@ -575,7 +575,7 @@ function WeeklyAvailability({
               ))}
               <button
                 onClick={() => update(d, [...days[d], { startMinute: 9 * 60, endMinute: 17 * 60 }])}
-                className="rounded-lg border border-brand-lea/20 px-2 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+                className="rounded border border-brand-lea/20 px-2 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
               >
                 + Add hours
               </button>
@@ -594,7 +594,7 @@ function WeeklyAvailability({
             })
           }
           disabled={busy}
-          className="rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-lea/90 disabled:opacity-50"
+          className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-lea/90 disabled:opacity-50"
         >
           Save availability
         </button>
@@ -618,7 +618,7 @@ function BookingTypes({
     <Card title="Meeting types" icon={Clock}>
       <div className="space-y-2">
         {host.bookingTypes.map((t) => (
-          <div key={t.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-brand-lea/10 p-2 dark:border-white/10">
+          <div key={t.id} className="flex flex-wrap items-center gap-2 rounded border border-brand-lea/10 p-2 dark:border-white/10">
             <span className="flex-1 text-sm font-semibold text-brand-lea dark:text-slate-100">
               {t.name} <span className="text-xs font-normal text-brand-grey dark:text-slate-400">· {t.kind === "MEETING" ? "Meeting" : "Interview"}</span>
             </span>
@@ -658,7 +658,7 @@ function BookingTypes({
       </div>
 
       {/* Add */}
-      <div className="mt-3 grid gap-2 rounded-lg bg-brand-cloudDancer/30 p-3 sm:grid-cols-2 dark:bg-white/5">
+      <div className="mt-3 grid gap-2 rounded bg-brand-cloudDancer/30 p-3 sm:grid-cols-2 dark:bg-white/5">
         <input
           placeholder="Name (e.g. Candidate screen)"
           value={draft.name}
@@ -699,7 +699,7 @@ function BookingTypes({
             })
           }
           disabled={busy}
-          className="flex items-center justify-center gap-1 rounded-lg bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-lea/90 disabled:opacity-50 sm:col-span-2"
+          className="flex items-center justify-center gap-1 rounded bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-lea/90 disabled:opacity-50 sm:col-span-2"
         >
           <Plus className="h-4 w-4" /> Add meeting type
         </button>
@@ -733,7 +733,7 @@ function Overrides({
     <Card title="Date overrides (vacation, holidays, special hours)" icon={Ban}>
       <div className="space-y-2">
         {overrides.map((o) => (
-          <div key={o.id} className="flex items-center gap-2 rounded-lg border border-brand-lea/10 p-2 text-sm dark:border-white/10">
+          <div key={o.id} className="flex items-center gap-2 rounded border border-brand-lea/10 p-2 text-sm dark:border-white/10">
             <span
               className={clsx(
                 "rounded px-2 py-0.5 text-[11px] font-semibold",
@@ -759,7 +759,7 @@ function Overrides({
         {overrides.length === 0 ? <p className="text-xs text-brand-grey dark:text-slate-400">No overrides. Recurring schedule applies every week.</p> : null}
       </div>
 
-      <div className="mt-3 grid gap-2 rounded-lg bg-brand-cloudDancer/30 p-3 sm:grid-cols-2 dark:bg-white/5">
+      <div className="mt-3 grid gap-2 rounded bg-brand-cloudDancer/30 p-3 sm:grid-cols-2 dark:bg-white/5">
         <Field label="Applies to">
           <select value={draft.scope} onChange={(e) => setDraft({ ...draft, scope: e.target.value as "host" | "org" })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10">
             <option value="host">{host.name} only</option>
@@ -808,7 +808,7 @@ function Overrides({
             })
           }
           disabled={busy}
-          className="flex items-center justify-center gap-1 rounded-lg bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-lea/90 disabled:opacity-50 sm:col-span-2"
+          className="flex items-center justify-center gap-1 rounded bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-lea/90 disabled:opacity-50 sm:col-span-2"
         >
           <Plus className="h-4 w-4" /> Add override
         </button>

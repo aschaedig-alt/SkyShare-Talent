@@ -39,7 +39,7 @@ export function UpcomingInterviews({ interviews, onInterviewClick }: UpcomingInt
   }
 
   return (
-    <section className="rounded-xl bg-gradient-to-br from-brand-lea to-brand-eden p-5 shadow-panel">
+    <section className="rounded bg-gradient-to-br from-brand-lea to-brand-eden p-5 shadow-panel">
       <div className="flex items-center gap-2 text-white">
         <CalendarClock className="h-5 w-5 text-brand-gold" />
         <h2 className="text-base font-semibold">Upcoming Interviews</h2>
@@ -54,7 +54,7 @@ export function UpcomingInterviews({ interviews, onInterviewClick }: UpcomingInt
             key={interview.id}
             onClick={() => onInterviewClick?.(interview)}
             className={clsx(
-              "block w-full rounded-lg border-l-4 bg-white p-3 text-left shadow-sm transition hover:shadow-md hover:shadow-glow dark:bg-[#10243a]",
+              "block w-full rounded border-l-4 bg-white p-3 text-left shadow-sm transition hover:shadow-md hover:shadow-glow dark:bg-[#10243a]",
               accentColor(interview.status)
             )}
           >
@@ -122,7 +122,7 @@ export function UpcomingInterviews({ interviews, onInterviewClick }: UpcomingInt
               <Link
                 href={`/candidates/${interview.candidate.id}`}
                 onClick={(e) => e.stopPropagation()}
-                className="shrink-0 rounded-lg border border-brand-lea/20 px-2 py-1 text-[10px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+                className="shrink-0 rounded border border-brand-lea/20 px-2 py-1 text-[10px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
               >
                 Profile
               </Link>

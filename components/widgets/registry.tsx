@@ -405,7 +405,7 @@ export const WIDGETS: WidgetDef[] = [
             <a
               key={i}
               href={it.b || "#"}
-              className="rounded-md border border-brand-lea/20 px-2.5 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+              className="rounded border border-brand-lea/20 px-2.5 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
             >
               {it.a}
             </a>

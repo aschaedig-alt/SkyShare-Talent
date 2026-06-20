@@ -185,11 +185,11 @@ export function BrandingPanel({ initialBranding }: BrandingPanelProps) {
             {branding.logos.map((logo) => (
               <div key={logo.id} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/30 p-3 dark:border-white/10 dark:bg-white/5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[4px] bg-brand-gold/90 p-1.5">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded bg-brand-gold/90 p-1.5">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={logo.dataUrl} alt={logo.name} className="h-full w-full object-contain" />
                   </div>
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[4px] bg-brand-eden p-1.5">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded bg-brand-eden p-1.5">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={logo.dataUrl} alt={`${logo.name} on dark`} className="h-full w-full object-contain" />
                   </div>
@@ -222,7 +222,7 @@ export function BrandingPanel({ initialBranding }: BrandingPanelProps) {
             return (
               <div key={slot.key} className="rounded border border-brand-lea/10 bg-white p-3 dark:border-white/10 dark:bg-[#10243a]">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[4px] bg-brand-gold/90 p-1.5">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded bg-brand-gold/90 p-1.5">
                     {assignedUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={assignedUrl} alt={slot.label} className="h-full w-full object-contain" />

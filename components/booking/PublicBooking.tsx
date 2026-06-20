@@ -145,7 +145,7 @@ export function PublicBooking({ slug, host }: Props) {
         </div>
       </div>
 
-      <div className="mt-8 rounded-2xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 sm:p-8 dark:bg-[#10243a] dark:ring-white/10">
+      <div className="mt-8 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 sm:p-8 dark:bg-[#10243a] dark:ring-white/10">
         {confirmed ? (
           <ConfirmedCard confirmed={confirmed} tz={tz} hostName={host.name} hostTimezone={host.timezone} email={email} />
         ) : !type ? (
@@ -216,7 +216,7 @@ function TypePicker({ types, onPick }: { types: PublicBookingType[]; onPick: (t:
           <button
             key={t.id}
             onClick={() => onPick(t)}
-            className="flex w-full items-start justify-between gap-3 rounded-xl border border-brand-lea/15 p-4 text-left transition hover:border-brand-sweet hover:bg-brand-sweet/5 hover:shadow-glow dark:border-white/10"
+            className="flex w-full items-start justify-between gap-3 rounded border border-brand-lea/15 p-4 text-left transition hover:border-brand-sweet hover:bg-brand-sweet/5 hover:shadow-glow dark:border-white/10"
           >
             <div>
               <div className="font-semibold text-brand-lea dark:text-slate-100">{t.name}</div>
@@ -296,7 +296,7 @@ function SlotPicker({
                   <button
                     key={t.iso}
                     onClick={() => onPick(t.iso)}
-                    className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:border-brand-sweet hover:bg-brand-sweet/10 hover:shadow-glow dark:border-white/10 dark:text-slate-100"
+                    className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:border-brand-sweet hover:bg-brand-sweet/10 hover:shadow-glow dark:border-white/10 dark:text-slate-100"
                   >
                     {t.label}
                   </button>
@@ -341,7 +341,7 @@ function BookingForm(props: {
         <ChevronLeft className="h-3.5 w-3.5" /> Pick another time
       </button>
 
-      <div className="rounded-xl bg-brand-cloudDancer/40 p-4 dark:bg-white/5">
+      <div className="rounded bg-brand-cloudDancer/40 p-4 dark:bg-white/5">
         <div className="font-semibold text-brand-lea dark:text-slate-100">{type.name}</div>
         <div className="mt-1 flex items-center gap-2 text-sm text-brand-grey dark:text-slate-400">
           <CalendarClock className="h-4 w-4 text-brand-gold" />
@@ -357,7 +357,7 @@ function BookingForm(props: {
             value={props.name}
             onChange={(e) => props.setName(e.target.value)}
             required
-            className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
+            className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
           />
         </label>
         <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
@@ -367,7 +367,7 @@ function BookingForm(props: {
             value={props.email}
             onChange={(e) => props.setEmail(e.target.value)}
             required
-            className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
+            className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
           />
         </label>
         <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
@@ -375,7 +375,7 @@ function BookingForm(props: {
           <input
             value={props.phone}
             onChange={(e) => props.setPhone(e.target.value)}
-            className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
+            className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
           />
         </label>
         <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
@@ -384,7 +384,7 @@ function BookingForm(props: {
             value={props.notes}
             onChange={(e) => props.setNotes(e.target.value)}
             rows={3}
-            className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
+            className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
           />
         </label>
       </div>
@@ -394,7 +394,7 @@ function BookingForm(props: {
       <button
         type="submit"
         disabled={!canSubmit}
-        className="mt-4 w-full rounded-lg bg-brand-lea px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-lea/90 disabled:opacity-50"
+        className="mt-4 w-full rounded bg-brand-lea px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-lea/90 disabled:opacity-50"
       >
         {submitting ? "Booking…" : "Confirm booking"}
       </button>
@@ -427,7 +427,7 @@ function ConfirmedCard({
       <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
         {confirmed.typeName} with {hostName}
       </p>
-      <div className="mx-auto mt-4 max-w-sm rounded-xl bg-brand-cloudDancer/40 p-4 text-left text-sm text-brand-lea dark:bg-white/5 dark:text-slate-100">
+      <div className="mx-auto mt-4 max-w-sm rounded bg-brand-cloudDancer/40 p-4 text-left text-sm text-brand-lea dark:bg-white/5 dark:text-slate-100">
         <div className="flex items-center gap-2">
           <CalendarClock className="h-4 w-4 text-brand-gold" /> {when}
         </div>

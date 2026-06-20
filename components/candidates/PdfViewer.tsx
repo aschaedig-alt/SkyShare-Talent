@@ -96,17 +96,17 @@ export function PdfViewer({ fileUrl, searchTerm }: PdfViewerProps) {
   if (error) {
     // Fallback to the browser's native viewer if PDF.js fails to load.
     return (
-      <div className="rounded-lg border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]">
+      <div className="rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]">
         <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
           <AlertTriangle className="h-3.5 w-3.5" /> Highlight viewer unavailable — showing the standard preview.
         </div>
-        <iframe src={`${fileUrl}#zoom=100`} title="PDF preview" className="h-[1000px] w-full rounded-b-lg bg-white dark:bg-[#10243a]" />
+        <iframe src={`${fileUrl}#zoom=100`} title="PDF preview" className="h-[1000px] w-full rounded-b bg-white dark:bg-[#10243a]" />
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]">
+    <div className="rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]">
       {/* Search match navigation (sticky so the arrows stay visible while scrolling) */}
       {term ? (
         <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-brand-lea/10 bg-brand-cloudDancer px-3 py-1.5 text-xs text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">

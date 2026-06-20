@@ -91,8 +91,8 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
   const statsPanel = (
     <section className="grid h-full content-start gap-3 grid-cols-[repeat(auto-fit,minmax(150px,1fr))]">
       {statConfig.map(({ key, label, icon: Icon, accent }) => (
-        <div key={key} className="flex items-center gap-3 rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 transition hover:ring-brand-gold/40 dark:bg-[#10243a] dark:ring-white/10">
-          <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${accent}`}>
+        <div key={key} className="flex items-center gap-3 rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 transition hover:ring-brand-gold/40 dark:bg-[#10243a] dark:ring-white/10">
+          <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded ${accent}`}>
             <Icon className="h-5 w-5" />
           </span>
           <div className="min-w-0">
@@ -105,7 +105,7 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
   );
 
   const recordsPanel = (
-    <section className="flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="flex h-full flex-col overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex shrink-0 items-center justify-between border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
         <div>
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Candidate records</h2>
@@ -145,7 +145,7 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
                           </Link>
                           <div className="text-xs text-brand-grey dark:text-slate-400">{candidate.currentTitle ?? "No current role"}</div>
                           {candidate.docMatch && (
-                            <div className="mt-1.5 max-w-[380px] rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/50 px-2.5 py-1.5 text-[11px] leading-5 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+                            <div className="mt-1.5 max-w-[380px] rounded border border-brand-lea/10 bg-brand-cloudDancer/50 px-2.5 py-1.5 text-[11px] leading-5 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
                               <span className="font-semibold text-brand-lea dark:text-slate-100">{candidate.docMatch.filename}: </span>
                               {highlight(candidate.docMatch.snippet, query)}
                             </div>
@@ -185,13 +185,13 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex flex-wrap gap-1.5 text-[11px] font-medium text-brand-grey dark:text-slate-400">
-                        <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-amber-700" title="Files">
+                        <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-amber-700" title="Files">
                           <FileText className="h-3 w-3" /> {candidate.fileCount}
                         </span>
-                        <span className="inline-flex items-center gap-1 rounded-md bg-brand-cloudDancer/70 px-1.5 py-0.5 text-brand-lea dark:bg-white/5 dark:text-slate-100" title="Notes">
+                        <span className="inline-flex items-center gap-1 rounded bg-brand-cloudDancer/70 px-1.5 py-0.5 text-brand-lea dark:bg-white/5 dark:text-slate-100" title="Notes">
                           <StickyNote className="h-3 w-3" /> {candidate.noteCount}
                         </span>
-                        <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-1.5 py-0.5 text-indigo-700" title="Applications">
+                        <span className="inline-flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 text-indigo-700" title="Applications">
                           <Send className="h-3 w-3" /> {candidate.applicationCount}
                         </span>
                       </div>
@@ -220,7 +220,7 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
   return (
     <div className="space-y-5 px-5 py-5 lg:px-8">
       {/* Header */}
-      <section className="overflow-hidden rounded-xl bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
+      <section className="overflow-hidden rounded bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Candidate operations</p>
@@ -242,10 +242,10 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
                   name="q"
                   defaultValue={query}
                   placeholder="Search name, role, tag, or text inside resumes & pilot apps"
-                  className="w-full rounded-lg border border-white/20 bg-white/95 py-2.5 pl-9 pr-3 text-sm text-brand-black shadow-sm outline-none transition focus:ring-2 focus:ring-brand-gold/50 dark:text-slate-100"
+                  className="w-full rounded border border-white/20 bg-white/95 py-2.5 pl-9 pr-3 text-sm text-brand-black shadow-sm outline-none transition focus:ring-2 focus:ring-brand-gold/50 dark:text-slate-100"
                 />
               </div>
-              <button type="submit" className="rounded-lg border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20">
+              <button type="submit" className="rounded border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20">
                 Search
               </button>
             </form>

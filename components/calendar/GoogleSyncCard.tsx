@@ -39,7 +39,7 @@ export function GoogleSyncCard({ sync }: GoogleSyncCardProps) {
     : "Never";
 
   return (
-    <section className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Google Calendar</p>
@@ -79,7 +79,7 @@ export function GoogleSyncCard({ sync }: GoogleSyncCardProps) {
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-lea/90 disabled:opacity-60"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-lea/90 disabled:opacity-60"
           >
             <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
             {syncing ? "Syncing…" : "Sync now"}

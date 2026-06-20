@@ -125,7 +125,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-lg bg-white shadow-xl max-h-[90vh] overflow-y-auto dark:bg-[#10243a]"
+        className="w-full max-w-lg rounded bg-white shadow-xl max-h-[90vh] overflow-y-auto dark:bg-[#10243a]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -138,7 +138,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
             <div className="flex items-center gap-3">
               <Link
                 href={`/interviews/${interview.id}`}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+                className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
               >
                 <ClipboardCheck className="h-4 w-4" /> Scorecards
               </Link>

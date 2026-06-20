@@ -82,7 +82,7 @@ function CompactInterviewList({
   onInterviewClick: (interview: Interview) => void;
 }) {
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="flex h-full flex-col overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="shrink-0 border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Interview manifest</p>
         <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">All interviews</h2>
@@ -94,7 +94,7 @@ function CompactInterviewList({
               key={interview.id}
               type="button"
               onClick={() => onInterviewClick(interview)}
-              className="block w-full rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-2 text-left transition hover:border-brand-sweet hover:bg-brand-sweet/10 hover:shadow-glow dark:border-white/10 dark:bg-white/5"
+              className="block w-full rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-2 text-left transition hover:border-brand-sweet hover:bg-brand-sweet/10 hover:shadow-glow dark:border-white/10 dark:bg-white/5"
             >
               <div className="truncate text-xs font-semibold text-brand-lea dark:text-slate-100">{interview.candidate.displayName}</div>
               <div className="truncate text-[11px] text-brand-grey dark:text-slate-400">{interview.title}</div>
@@ -201,7 +201,7 @@ export function CalendarWorkspace({
   }
 
   const headerPanel = (
-    <section className="flex h-full flex-col rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="flex h-full flex-col rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Interview operations</p>
@@ -213,7 +213,7 @@ export function CalendarWorkspace({
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Department filter (drill down into sub-groups) */}
-          <label className="flex items-center gap-1.5 rounded-lg border border-brand-lea/15 py-1 pl-2.5 pr-1 text-sm dark:border-white/10">
+          <label className="flex items-center gap-1.5 rounded border border-brand-lea/15 py-1 pl-2.5 pr-1 text-sm dark:border-white/10">
             <Building2 className="h-4 w-4 shrink-0 text-brand-grey dark:text-slate-400" />
             <span className="sr-only">Filter by department</span>
             <select
@@ -243,7 +243,7 @@ export function CalendarWorkspace({
           </label>
 
           {/* Color mode: by department (default) or by interview stage */}
-          <div className="flex items-center gap-1 rounded-lg border border-brand-lea/15 p-1 dark:border-white/10" title="Color interviews by">
+          <div className="flex items-center gap-1 rounded border border-brand-lea/15 p-1 dark:border-white/10" title="Color interviews by">
             <Palette className="ml-1 h-4 w-4 shrink-0 text-brand-grey dark:text-slate-400" />
             {(["department", "stage"] as const).map((mode) => (
               <button
@@ -264,14 +264,14 @@ export function CalendarWorkspace({
             <button
               onClick={() => setColorEditorOpen(true)}
               title="Edit department colors"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
+              className="inline-flex items-center gap-1.5 rounded border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
             >
               <Palette className="h-4 w-4" /> Colors
             </button>
           )}
 
           {/* View Toggle */}
-          <div className="flex items-center gap-1 rounded-lg border border-brand-lea/15 p-1 dark:border-white/10">
+          <div className="flex items-center gap-1 rounded border border-brand-lea/15 p-1 dark:border-white/10">
             {viewOptions.map((option) => {
               const Icon = option.icon;
               return (
@@ -297,7 +297,7 @@ export function CalendarWorkspace({
   const statsPanel = (
     <section className="grid h-full content-start gap-3 grid-cols-[repeat(auto-fit,minmax(120px,1fr))]">
       {statLabels.map(([key, label]) => (
-        <div key={key} className="rounded-xl bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <div key={key} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
           <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey dark:text-slate-400">{label}</div>
           <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{data.stats[key]}</div>
           <div className="mt-2 h-1 rounded-full bg-brand-gold/25">

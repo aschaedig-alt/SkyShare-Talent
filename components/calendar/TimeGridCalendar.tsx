@@ -171,27 +171,27 @@ export function TimeGridCalendar({
       : `${WEEKDAYS[days[0].getDay()]}, ${MONTHS[days[0].getMonth()]} ${days[0].getDate()}, ${days[0].getFullYear()}`;
 
   return (
-    <section className="rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">{headerLabel}</h2>
         <div className="flex items-center gap-2">
           <button
             onClick={goToToday}
-            className="rounded-lg border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+            className="rounded border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
           >
             Today
           </button>
           <button
             onClick={() => navigate(-1)}
-            className="rounded-lg border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+            className="rounded border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
             aria-label="Previous"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <button
             onClick={() => navigate(1)}
-            className="rounded-lg border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+            className="rounded border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
             aria-label="Next"
           >
             <ChevronRight className="h-4 w-4" />
@@ -293,7 +293,7 @@ export function TimeGridCalendar({
                     onClick={() => onInterviewClick?.(interview)}
                     style={blockStyle(interview)}
                     className={clsx(
-                      "absolute left-0.5 right-0.5 cursor-pointer overflow-hidden rounded-md border px-1.5 py-1 text-left text-[10px] shadow-sm transition hover:shadow-glow",
+                      "absolute left-0.5 right-0.5 cursor-pointer overflow-hidden rounded border px-1.5 py-1 text-left text-[10px] shadow-sm transition hover:shadow-glow",
                       blockClasses(interview, colorMode, departmentColors),
                       draggingId === interview.id && "opacity-40"
                     )}

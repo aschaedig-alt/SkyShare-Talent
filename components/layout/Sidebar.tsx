@@ -102,7 +102,7 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
           href={firstHref(group)}
           title={group.label}
           className={clsx(
-            "flex w-[58px] flex-col items-center gap-0.5 rounded-[4px] py-2 transition",
+            "flex w-[58px] flex-col items-center gap-0.5 rounded py-2 transition",
             groupActive ? "bg-brand-gold text-brand-lea" : "text-white/85 hover:bg-white/10 hover:text-white"
           )}
         >
@@ -112,7 +112,7 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
 
         {collapsed && (
           <div className="invisible absolute left-full top-0 z-50 ml-1 w-56 opacity-0 transition group-hover:visible group-hover:opacity-100">
-            <div className="rounded-[4px] border border-white/10 bg-brand-lea p-2 shadow-2xl">
+            <div className="rounded border border-white/10 bg-brand-lea p-2 shadow-2xl">
               {group.sections.map((section) => (
                 <div key={section.id} className="mb-1 last:mb-0">
                   <div className="px-2 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-brand-gold">
@@ -125,7 +125,7 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
                         key={item.href}
                         href={item.href}
                         className={clsx(
-                          "flex items-center gap-2.5 rounded-[3px] px-2.5 py-2 text-sm font-medium transition",
+                          "flex items-center gap-2.5 rounded-sm px-2.5 py-2 text-sm font-medium transition",
                           item.href === activeHref ? "bg-white text-brand-lea" : "text-white/90 hover:bg-white/10 hover:text-white"
                         )}
                       >
@@ -151,7 +151,7 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="fixed left-3 top-3 z-40 flex h-9 w-9 items-center justify-center rounded-[4px] bg-brand-lea text-white shadow-lg lg:hidden"
+        className="fixed left-3 top-3 z-40 flex h-9 w-9 items-center justify-center rounded bg-brand-lea text-white shadow-lg lg:hidden"
         aria-label="Open menu"
       >
         <Menu className="h-5 w-5" />
@@ -164,7 +164,7 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
           <aside className="absolute left-0 top-0 h-full w-72 overflow-y-auto bg-brand-lea text-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
               <Link href="/command-center" className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-[4px] bg-brand-gold/90 p-1 text-brand-lea">
+                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded bg-brand-gold/90 p-1 text-brand-lea">
                   {logoDataUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={logoDataUrl} alt="Home" className="h-full w-full object-contain" />
@@ -207,7 +207,7 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
             title="Home"
             aria-label="Home"
             className={clsx(
-              "mb-3 flex h-11 w-11 items-center justify-center overflow-hidden rounded-[4px] bg-brand-gold/90 p-1 text-brand-lea transition",
+              "mb-3 flex h-11 w-11 items-center justify-center overflow-hidden rounded bg-brand-gold/90 p-1 text-brand-lea transition",
               onHome ? "ring-2 ring-white/90" : "hover:ring-2 hover:ring-white/40"
             )}
           >
@@ -233,7 +233,7 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
 
           <button
             onClick={toggleCollapsed}
-            className="mt-2 flex h-9 w-9 items-center justify-center rounded-[4px] text-white/70 transition hover:bg-white/10 hover:text-white"
+            className="mt-2 flex h-9 w-9 items-center justify-center rounded text-white/70 transition hover:bg-white/10 hover:text-white"
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -289,7 +289,7 @@ function SectionBlock({ section, activeHref, collapsed, onToggle, collapsible = 
           type="button"
           onClick={onToggle}
           aria-expanded={isOpen}
-          className="flex w-full items-center justify-between rounded-[3px] px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-brand-gold transition hover:bg-white/5"
+          className="flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-brand-gold transition hover:bg-white/5"
         >
           <span>{section.label}</span>
           {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
@@ -310,7 +310,7 @@ function SectionBlock({ section, activeHref, collapsed, onToggle, collapsible = 
                 key={item.href}
                 href={item.href}
                 className={clsx(
-                  "flex items-center gap-3 rounded-[3px] px-3 py-2.5 text-sm font-medium transition",
+                  "flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition",
                   active ? "bg-white text-brand-lea shadow-sm" : "text-white/90 hover:bg-white/10 hover:text-white"
                 )}
               >

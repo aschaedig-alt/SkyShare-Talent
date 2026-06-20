@@ -106,7 +106,7 @@ export function MonthCalendar({
   }
 
   return (
-    <section className="rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">
@@ -115,14 +115,14 @@ export function MonthCalendar({
         <div className="flex items-center gap-2">
           <button
             onClick={goToToday}
-            className="rounded-lg border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+            className="rounded border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
           >
             Today
           </button>
-          <button onClick={goToPrevMonth} className="rounded-lg border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5" aria-label="Previous month">
+          <button onClick={goToPrevMonth} className="rounded border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5" aria-label="Previous month">
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <button onClick={goToNextMonth} className="rounded-lg border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5" aria-label="Next month">
+          <button onClick={goToNextMonth} className="rounded border border-brand-lea/20 p-1 text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5" aria-label="Next month">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
@@ -213,7 +213,7 @@ export function MonthCalendar({
               {isPopoverOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setPopoverDay(null)} />
-                  <div className="absolute left-1 right-1 top-8 z-20 max-h-64 overflow-y-auto rounded-lg border border-brand-lea/20 bg-white p-2 shadow-xl dark:border-white/10 dark:bg-[#10243a]">
+                  <div className="absolute left-1 right-1 top-8 z-20 max-h-64 overflow-y-auto rounded border border-brand-lea/20 bg-white p-2 shadow-xl dark:border-white/10 dark:bg-[#10243a]">
                     <div className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.12em] text-brand-grey dark:text-slate-400">
                       {MONTHS[month]} {cell.day} · {dayInterviews.length} interviews
                     </div>

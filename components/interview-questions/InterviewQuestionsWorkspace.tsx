@@ -27,7 +27,7 @@ type FormState = {
   isActive: boolean;
 };
 
-const inputCls = "w-full rounded-lg border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10";
+const inputCls = "w-full rounded border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10";
 
 function toForm(q?: InterviewQuestionItem): FormState {
   return {
@@ -90,7 +90,7 @@ function QuestionForm({
   }
 
   return (
-    <div className="rounded-xl border border-brand-gold/30 bg-brand-gold/5 p-4">
+    <div className="rounded border border-brand-gold/30 bg-brand-gold/5 p-4">
       <div className="grid gap-3">
         <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
           Question
@@ -155,14 +155,14 @@ function QuestionForm({
 
       <div className="mt-3 flex items-center justify-end gap-3">
         {error ? <span className="mr-auto text-xs font-medium text-red-700">{error}</span> : null}
-        <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400">
+        <button type="button" onClick={onCancel} className="rounded px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400">
           Cancel
         </button>
         <button
           type="button"
           onClick={save}
           disabled={busy || form.text.trim().length < 5}
-          className="rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60"
+          className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60"
         >
           {busy ? "Saving…" : initial ? "Save changes" : "Add question"}
         </button>
@@ -238,7 +238,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
   return (
     <div className="space-y-5 px-5 py-5 lg:px-8">
       {/* Header */}
-      <section className="overflow-hidden rounded-xl bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
+      <section className="overflow-hidden rounded bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Interview &amp; evaluation</p>
@@ -255,7 +255,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
               setEditingId(null);
               setCreating(true);
             }}
-            className="inline-flex items-center gap-1.5 self-start rounded-lg bg-white px-4 py-2 text-sm font-semibold text-brand-lea shadow-sm transition hover:bg-brand-cloudDancer dark:bg-[#10243a] dark:text-slate-100"
+            className="inline-flex items-center gap-1.5 self-start rounded bg-white px-4 py-2 text-sm font-semibold text-brand-lea shadow-sm transition hover:bg-brand-cloudDancer dark:bg-[#10243a] dark:text-slate-100"
           >
             <Plus className="h-4 w-4" /> New question
           </button>
@@ -265,12 +265,12 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
       <InterviewTabs active="bank" />
 
       {/* Filters */}
-      <section className="flex flex-wrap items-center gap-2 rounded-xl bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="flex flex-wrap items-center gap-2 rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
         <div className="relative min-w-0 flex-1 sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey dark:text-slate-400" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search questions" className={`${inputCls} pl-9`} />
         </div>
-        <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10">
+        <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10">
           <option value="all">All categories</option>
           {CATEGORIES.map((c) => (
             <option key={c} value={c}>
@@ -278,7 +278,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
             </option>
           ))}
         </select>
-        <select value={fVal} onChange={(e) => setFVal(e.target.value)} className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10">
+        <select value={fVal} onChange={(e) => setFVal(e.target.value)} className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10">
           <option value="all">All values</option>
           {COMPANY_VALUES.map((v) => (
             <option key={v.colorKey} value={v.colorKey}>
@@ -286,7 +286,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
             </option>
           ))}
         </select>
-        <select value={fDept} onChange={(e) => setFDept(e.target.value)} className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10">
+        <select value={fDept} onChange={(e) => setFDept(e.target.value)} className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10">
           <option value="all">All departments</option>
           {DEPARTMENTS.map((d) => (
             <option key={d.key} value={d.key}>
@@ -304,7 +304,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
       {/* List */}
       <section className="space-y-2">
         {filtered.length === 0 ? (
-          <div className="rounded-xl bg-white px-4 py-16 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <div className="rounded bg-white px-4 py-16 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-cloudDancer/70 dark:bg-white/5">
               <ListChecks className="h-5 w-5 text-brand-grey dark:text-slate-400" />
             </div>
@@ -318,7 +318,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
             editingId === item.id ? (
               <QuestionForm key={item.id} initial={item} onCancel={() => setEditingId(null)} onSaved={afterSave} />
             ) : (
-              <div key={item.id} className={`rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10 ${item.isActive ? "" : "opacity-60"}`}>
+              <div key={item.id} className={`rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10 ${item.isActive ? "" : "opacity-60"}`}>
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-sm font-medium text-brand-black dark:text-slate-100">{item.text}</p>
                   <div className="flex shrink-0 items-center gap-1">

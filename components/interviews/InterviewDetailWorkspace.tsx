@@ -17,7 +17,7 @@ import {
 import { InterviewerPicker } from "@/components/calendar/InterviewerPicker";
 import { formatDateTimeWithZone } from "@/lib/calendar/format";
 
-const inputCls = "w-full rounded-lg border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10";
+const inputCls = "w-full rounded border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10";
 
 function recoTone(key: RecommendationKey): string {
   switch (key) {
@@ -98,7 +98,7 @@ function ScorecardEditor({
   }
 
   return (
-    <div className="rounded-xl border border-brand-gold/30 bg-brand-gold/5 p-4">
+    <div className="rounded border border-brand-gold/30 bg-brand-gold/5 p-4">
       <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
         Interviewer
         <InterviewerPicker
@@ -113,7 +113,7 @@ function ScorecardEditor({
         <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">Questions &amp; ratings</span>
         <div className="mt-1.5 space-y-2">
           {items.map((item, idx) => (
-            <div key={idx} className="rounded-lg border border-brand-lea/10 bg-white p-2.5 dark:border-white/10 dark:bg-[#10243a]">
+            <div key={idx} className="rounded border border-brand-lea/10 bg-white p-2.5 dark:border-white/10 dark:bg-[#10243a]">
               <div className="flex items-start gap-2">
                 <input value={item.q} onChange={(e) => setText(idx, e.target.value)} className={`${inputCls} flex-1`} />
                 <button type="button" onClick={() => removeItem(idx)} aria-label="Remove" className="mt-1 rounded p-1 text-brand-grey transition hover:text-red-600 dark:text-slate-400">
@@ -153,7 +153,7 @@ function ScorecardEditor({
             placeholder="Add a question to rate"
             className={`${inputCls} flex-1`}
           />
-          <button type="button" onClick={addItem} disabled={!newQ.trim()} className="inline-flex items-center gap-1 rounded-lg border border-brand-lea/20 px-2.5 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-50 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
+          <button type="button" onClick={addItem} disabled={!newQ.trim()} className="inline-flex items-center gap-1 rounded border border-brand-lea/20 px-2.5 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-50 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
             <Plus className="h-3.5 w-3.5" /> Add
           </button>
         </div>
@@ -187,10 +187,10 @@ function ScorecardEditor({
 
       <div className="mt-3 flex items-center justify-end gap-3">
         {error ? <span className="mr-auto text-xs font-medium text-red-700">{error}</span> : null}
-        <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400">
+        <button type="button" onClick={onCancel} className="rounded px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400">
           Cancel
         </button>
-        <button type="button" onClick={save} disabled={busy || !interviewer.trim()} className="rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
+        <button type="button" onClick={save} disabled={busy || !interviewer.trim()} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
           {busy ? "Saving…" : initial ? "Save scorecard" : "Add scorecard"}
         </button>
       </div>
@@ -226,7 +226,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
   return (
     <div className="space-y-5 px-5 py-5 lg:px-8">
       {/* Header */}
-      <section className="overflow-hidden rounded-xl bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
+      <section className="overflow-hidden rounded bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
         <Link href="/calendar" className="inline-flex items-center gap-1 text-xs font-semibold text-white/70 transition hover:text-white">
           <ArrowLeft className="h-3.5 w-3.5" /> Calendar
         </Link>
@@ -244,8 +244,8 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
 
       {/* Aggregate */}
       <section className="grid gap-3 sm:grid-cols-[auto,1fr]">
-        <div className="flex items-center gap-4 rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
-          <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl bg-brand-lea/5">
+        <div className="flex items-center gap-4 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded bg-brand-lea/5">
             <span className="text-2xl font-semibold leading-none text-brand-lea dark:text-slate-100">{avgText(agg.average)}</span>
             <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">of 4</span>
           </div>
@@ -258,7 +258,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <div className="flex flex-wrap items-center gap-2 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
           {RECOMMENDATIONS.map((r) => {
             const n = agg.recommendations[r.key] ?? 0;
             if (n === 0) return null;
@@ -279,7 +279,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
             setEditingId(null);
             setCreating(true);
           }}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden"
+          className="inline-flex items-center gap-1.5 rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden"
         >
           <Plus className="h-4 w-4" /> Add scorecard
         </button>
@@ -290,7 +290,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
       {/* Scorecards */}
       <section className="space-y-3">
         {detail.scorecards.length === 0 && !creating ? (
-          <div className="rounded-xl bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <div className="rounded bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-cloudDancer/70 dark:bg-white/5">
               <ClipboardCheck className="h-5 w-5 text-brand-grey dark:text-slate-400" />
             </div>
@@ -302,7 +302,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
             editingId === card.id ? (
               <ScorecardEditor key={card.id} detail={detail} initial={card} onCancel={() => setEditingId(null)} onSaved={afterSave} />
             ) : (
-              <div key={card.id} className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+              <div key={card.id} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-brand-lea dark:text-slate-100">{card.interviewer}</span>

@@ -10,7 +10,7 @@ export default async function CandidateComparePage() {
   return (
     <div className="space-y-5 px-5 py-5 lg:px-8">
       {/* Header */}
-      <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
+      <section className="overflow-hidden rounded bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Candidate operations</p>
         <h1 className="mt-0.5 text-3xl font-semibold text-white">Compare candidates</h1>
         <p className="mt-1 max-w-2xl text-sm text-white/75">

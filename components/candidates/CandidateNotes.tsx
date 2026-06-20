@@ -67,7 +67,7 @@ export function CandidateNotes({ candidateId, initialNotes }: { candidateId: str
   }
 
   return (
-    <section className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       {/* Composer */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <label className="flex-1">
@@ -77,14 +77,14 @@ export function CandidateNotes({ candidateId, initialNotes }: { candidateId: str
             onChange={(e) => setDraft(e.target.value)}
             rows={2}
             placeholder="Record a note about this candidate…"
-            className="w-full rounded-lg border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10"
+            className="w-full rounded border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10"
           />
         </label>
         <button
           type="button"
           onClick={add}
           disabled={busy || !draft.trim()}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60"
         >
           <Send className="h-4 w-4" /> Add
         </button>
@@ -97,7 +97,7 @@ export function CandidateNotes({ candidateId, initialNotes }: { candidateId: str
           <p className="py-6 text-center text-sm text-brand-grey dark:text-slate-400">No notes yet. Add the first one above.</p>
         ) : (
           notes.map((note) => (
-            <div key={note.id} className="group rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
+            <div key={note.id} className="group rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
               <div className="flex items-start justify-between gap-2">
                 <p className="text-sm leading-6 text-brand-black/80 dark:text-slate-300">{note.body}</p>
                 <button

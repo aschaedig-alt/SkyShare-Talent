@@ -87,7 +87,7 @@ function findPilotApp(files: CandidateFileItem[], excludeId?: string) {
 function FilePreview({ file, mode, searchTerm }: { file: CandidateFileItem; mode: "actual" | "fit"; searchTerm?: string }) {
   if (!file.storageKey) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-brand-lea/10 bg-white py-16 text-center dark:border-white/10 dark:bg-[#10243a]">
+      <div className="flex flex-col items-center justify-center gap-2 rounded border border-brand-lea/10 bg-white py-16 text-center dark:border-white/10 dark:bg-[#10243a]">
         <FileWarning className="h-8 w-8 text-brand-grey/50" />
         <p className="font-semibold text-brand-lea dark:text-slate-100">File content not stored</p>
         <p className="text-sm text-brand-grey dark:text-slate-400">Metadata only — re-upload to preview.</p>
@@ -107,24 +107,24 @@ function FilePreview({ file, mode, searchTerm }: { file: CandidateFileItem; mode
         key={file.id}
         src={`/api/candidate-files/${file.id}#view=FitH`}
         title={file.displayFilename}
-        className={clsx("h-full w-full rounded-lg border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]", minH)}
+        className={clsx("h-full w-full rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]", minH)}
       />
     );
   }
   if (isImage(file)) {
     return (
-      <div className="flex justify-center rounded-lg border border-brand-lea/10 bg-white p-4 dark:border-white/10 dark:bg-[#10243a]">
+      <div className="flex justify-center rounded border border-brand-lea/10 bg-white p-4 dark:border-white/10 dark:bg-[#10243a]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={`/api/candidate-files/${file.id}`} alt={file.displayFilename} className="max-h-[82vh] w-auto rounded" />
       </div>
     );
   }
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-brand-lea/10 bg-white py-16 text-center dark:border-white/10 dark:bg-[#10243a]">
+    <div className="flex flex-col items-center justify-center gap-3 rounded border border-brand-lea/10 bg-white py-16 text-center dark:border-white/10 dark:bg-[#10243a]">
       <FileText className="h-8 w-8 text-brand-grey/50" />
       <p className="font-semibold text-brand-lea dark:text-slate-100">Inline preview not available</p>
       <p className="max-w-sm text-sm text-brand-grey dark:text-slate-400">{file.displayFilename} can&apos;t preview in the browser.</p>
-      <a href={`/api/candidate-files/${file.id}`} download className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-eden">
+      <a href={`/api/candidate-files/${file.id}`} download className="mt-1 inline-flex items-center gap-1.5 rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-eden">
         <Download className="h-4 w-4" /> Download
       </a>
     </div>
@@ -328,13 +328,13 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
   const effectiveLayout: Layout = trimmedSearch ? "single" : layout;
 
   return (
-    <section className="flex h-full flex-col rounded-xl bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="flex h-full flex-col rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <input ref={fileInputRef} type="file" multiple accept={UPLOAD_ACCEPT} className="sr-only" onChange={(e) => handleUpload(e.currentTarget.files)} />
 
       {/* In-document search */}
       {files.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 border-b border-brand-lea/10 px-3 py-2 dark:border-white/10">
-          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-brand-lea/20 px-2.5 py-1.5 dark:border-white/10">
+          <div className="flex min-w-0 flex-1 items-center gap-2 rounded border border-brand-lea/20 px-2.5 py-1.5 dark:border-white/10">
             <Search className="h-4 w-4 shrink-0 text-brand-grey dark:text-slate-400" />
             <input
               value={docSearch}
@@ -397,7 +397,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                   setActiveId(file.id);
                 }}
                 className={clsx(
-                  "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition hover:shadow-glow",
+                  "flex shrink-0 items-center gap-1.5 rounded px-3 py-2 text-sm font-medium transition hover:shadow-glow",
                   active ? "bg-brand-lea text-white" : "text-brand-grey hover:bg-brand-cloudDancer/40 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5"
                 )}
                 title={file.displayFilename}
@@ -412,7 +412,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {canCompare && (
-            <div className="flex items-center rounded-lg border border-brand-lea/15 p-0.5 dark:border-white/10">
+            <div className="flex items-center rounded border border-brand-lea/15 p-0.5 dark:border-white/10">
               <button
                 onClick={() => setLayout("single")}
                 className={clsx("rounded px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow", layout === "single" ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400")}
@@ -429,7 +429,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
           )}
           <button
             onClick={openLink}
-            className="flex items-center gap-1.5 rounded-lg border border-brand-lea/20 px-3 py-2 text-sm font-medium text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
+            className="flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-2 text-sm font-medium text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
             title="Attach a file that was uploaded via Imports"
           >
             <Link2 className="h-4 w-4" /> Link
@@ -437,7 +437,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="flex items-center gap-1.5 rounded-lg border border-dashed border-brand-lea/30 px-3 py-2 text-sm font-medium text-brand-grey transition hover:border-brand-gold hover:text-brand-lea disabled:opacity-60 dark:border-white/10 dark:text-slate-400"
+            className="flex items-center gap-1.5 rounded border border-dashed border-brand-lea/30 px-3 py-2 text-sm font-medium text-brand-grey transition hover:border-brand-gold hover:text-brand-lea disabled:opacity-60 dark:border-white/10 dark:text-slate-400"
           >
             {uploading ? <Loader className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             {uploading ? "Uploading…" : "Add"}
@@ -450,7 +450,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
 
       {/* Link an unassigned (Imports-uploaded) file */}
       {showLink && (
-        <div className="m-3 rounded-lg border border-brand-lea/15 bg-brand-cloudDancer/30 p-3 dark:border-white/10 dark:bg-white/5">
+        <div className="m-3 rounded border border-brand-lea/15 bg-brand-cloudDancer/30 p-3 dark:border-white/10 dark:bg-white/5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">Attach a file uploaded via Imports</span>
             <button onClick={() => setShowLink(false)} className="text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close">
@@ -487,10 +487,10 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
           <p className="font-semibold text-brand-lea dark:text-slate-100">No documents yet</p>
           <p className="max-w-sm text-sm text-brand-grey dark:text-slate-400">Add a resume, pilot app, or other PDF — it previews right here.</p>
           <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
-            <button onClick={() => fileInputRef.current?.click()} className="rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-eden">
+            <button onClick={() => fileInputRef.current?.click()} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-eden">
               Upload document
             </button>
-            <button onClick={openLink} className="flex items-center gap-1.5 rounded-lg border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/40 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
+            <button onClick={openLink} className="flex items-center gap-1.5 rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/40 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
               <Link2 className="h-4 w-4" /> Link an uploaded file
             </button>
           </div>
@@ -502,7 +502,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
             { file: leftFile, set: setLeftId, fallback: "Left document" },
             { file: rightFile, set: setRightId, fallback: "Right document" }
           ].map((pane, idx) => (
-            <div key={idx} className="flex flex-col rounded-lg border border-brand-lea/10 dark:border-white/10">
+            <div key={idx} className="flex flex-col rounded border border-brand-lea/10 dark:border-white/10">
               <div className="flex items-center gap-2 border-b border-brand-lea/10 px-2 py-2 dark:border-white/10">
                 <select
                   value={pane.file?.id ?? ""}

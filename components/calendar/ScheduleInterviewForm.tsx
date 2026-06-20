@@ -115,7 +115,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
   const appliedJobIds = new Set(selectedCandidate?.appliedJobs.map((j) => j.id) ?? []);
 
   return (
-    <section className="rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Schedule interview</p>
       <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">New interview</h2>
       <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
@@ -130,7 +130,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
             value={selectedCandidateId}
             onChange={(e) => handleCandidateChange(e.target.value)}
             required
-            className="rounded-lg border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
+            className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
           >
             <option value="">Choose candidate</option>
             {candidates.map((candidate) => (
@@ -143,7 +143,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
 
         {/* Auto-filled contact info */}
         {selectedCandidate && (
-          <div className="grid gap-2 rounded-lg border border-brand-sweet/30 bg-brand-sweet/10 p-3">
+          <div className="grid gap-2 rounded border border-brand-sweet/30 bg-brand-sweet/10 p-3">
             <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-gold">
               From profile (editable)
             </div>
@@ -181,7 +181,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
           <select
             value={jobId}
             onChange={(e) => setJobId(e.target.value)}
-            className="rounded-lg border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
+            className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
           >
             <option value="">No linked job</option>
             {selectedCandidate && selectedCandidate.appliedJobs.length > 0 && (
@@ -238,12 +238,12 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
               name="title"
               required
               defaultValue="Pilot interview"
-              className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
+              className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
             />
           </label>
           <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Status
-            <select name="status" className="rounded-lg border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]">
+            <select name="status" className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]">
               {statusOptions.map((option) => (
                 <option key={option} value={option}>
                   {option}
@@ -262,12 +262,12 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
               type="datetime-local"
               defaultValue={prefilledDate ? dateAtHour(prefilledDate, 9) : undefined}
               key={prefilledDate?.toISOString() ?? "no-date"}
-              className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
+              className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
             />
           </label>
           <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Duration
-            <select name="durationMinutes" defaultValue="60" className="rounded-lg border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]">
+            <select name="durationMinutes" defaultValue="60" className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]">
               <option value="30">30 minutes</option>
               <option value="45">45 minutes</option>
               <option value="60">60 minutes</option>
@@ -284,7 +284,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
           </label>
           <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Timezone
-            <select name="timezone" defaultValue={DEFAULT_TIMEZONE} className="rounded-lg border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]">
+            <select name="timezone" defaultValue={DEFAULT_TIMEZONE} className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]">
               {US_TIMEZONES.map((tz) => (
                 <option key={tz.value} value={tz.value}>
                   {tz.label}
@@ -296,24 +296,24 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
 
         <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
           Location
-          <input name="location" placeholder="Office, room, or city" className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10" />
+          <input name="location" placeholder="Office, room, or city" className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10" />
         </label>
 
         <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
           Meeting URL
-          <input name="meetingUrl" placeholder="https://..." className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10" />
+          <input name="meetingUrl" placeholder="https://..." className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10" />
         </label>
 
         <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
           Notes
-          <textarea name="notes" rows={3} className="rounded-lg border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10" />
+          <textarea name="notes" rows={3} className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10" />
         </label>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="submit"
             disabled={status === "saving"}
-            className="rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-lea/90 disabled:cursor-wait disabled:opacity-70"
+            className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-lea/90 disabled:cursor-wait disabled:opacity-70"
           >
             {status === "saving" ? "Scheduling..." : "Schedule interview"}
           </button>

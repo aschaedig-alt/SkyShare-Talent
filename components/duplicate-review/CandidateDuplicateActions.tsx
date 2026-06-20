@@ -27,7 +27,7 @@ function CandidateCard({
     <button
       onClick={onKeep}
       className={clsx(
-        "flex-1 rounded-lg border-2 p-3 text-left transition hover:shadow-glow",
+        "flex-1 rounded border-2 p-3 text-left transition hover:shadow-glow",
         keep ? "border-emerald-400 bg-emerald-50/60" : "border-brand-lea/10 bg-white hover:border-brand-lea/30 dark:border-white/10 dark:bg-[#10243a]"
       )}
     >
@@ -77,7 +77,7 @@ export function CandidateDuplicateActions({ itemId, primary, secondary }: Candid
             router.refresh();
           }}
           disabled={busy !== null}
-          className="rounded-lg border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/40 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+          className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/40 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
         >
           Dismiss
         </button>
@@ -145,7 +145,7 @@ export function CandidateDuplicateActions({ itemId, primary, secondary }: Candid
       )}
 
       {confirmMerge ? (
-        <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3">
+        <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-3">
           <p className="text-xs text-amber-900">
             Merge <span className="font-semibold">{dropName}</span> into <span className="font-semibold">{keepName}</span>? All of {dropName}&apos;s files, applications, interviews, and notes move to {keepName}, and {dropName} is archived.
           </p>
@@ -171,14 +171,14 @@ export function CandidateDuplicateActions({ itemId, primary, secondary }: Candid
           <button
             onClick={() => setConfirmMerge(true)}
             disabled={busy !== null || !keepId}
-            className="ml-auto flex items-center gap-1 rounded-lg bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black hover:bg-brand-gold/90 disabled:opacity-60 dark:text-slate-100"
+            className="ml-auto flex items-center gap-1 rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black hover:bg-brand-gold/90 disabled:opacity-60 dark:text-slate-100"
           >
             <GitMerge className="h-3.5 w-3.5" /> Merge
           </button>
           <button
             onClick={doDismiss}
             disabled={busy !== null}
-            className="flex items-center gap-1 rounded-lg border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/40 disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+            className="flex items-center gap-1 rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea hover:bg-brand-cloudDancer/40 disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
           >
             {busy === "dismiss" ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />} Not a duplicate
           </button>

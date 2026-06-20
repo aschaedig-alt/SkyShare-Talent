@@ -74,7 +74,7 @@ function initials(name: string) {
 
 function EmptyState({ title, detail }: { title: string; detail: string }) {
   return (
-    <div className="rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm dark:border-white/10 dark:bg-white/5">
+    <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm dark:border-white/10 dark:bg-white/5">
       <div className="font-semibold text-brand-lea dark:text-slate-100">{title}</div>
       <p className="mt-1 text-brand-grey dark:text-slate-400">{detail}</p>
     </div>
@@ -175,7 +175,7 @@ export function CandidateProfileWorkspace({
       {success && <div className="rounded border border-green-500/30 bg-green-50 p-3 text-sm text-green-700">{success}</div>}
 
       {/* Header */}
-      <section className="rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
         <Link href="/candidates" className="text-xs font-semibold text-brand-eden hover:text-brand-lea dark:text-slate-100">
           ← Back to candidates
         </Link>
@@ -213,7 +213,7 @@ export function CandidateProfileWorkspace({
             <button
               onClick={() => (isEditing ? handleCancel() : setIsEditing(true))}
               disabled={isSaving}
-              className="rounded-lg bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50 dark:text-slate-100"
+              className="rounded bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50 dark:text-slate-100"
             >
               {isEditing ? "Cancel" : "Edit"}
             </button>
@@ -223,7 +223,7 @@ export function CandidateProfileWorkspace({
 
       {isEditing ? (
         /* Edit form */
-        <section className="rounded-xl bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Edit candidate</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div>
@@ -272,10 +272,10 @@ export function CandidateProfileWorkspace({
             </div>
           </div>
           <div className="mt-4 flex gap-2">
-            <button onClick={handleSave} disabled={isSaving} className="rounded-lg bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-eden disabled:opacity-50">
+            <button onClick={handleSave} disabled={isSaving} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-eden disabled:opacity-50">
               {isSaving ? "Saving…" : "Save changes"}
             </button>
-            <button onClick={handleCancel} disabled={isSaving} className="rounded-lg border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
+            <button onClick={handleCancel} disabled={isSaving} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
               Cancel
             </button>
           </div>
@@ -364,7 +364,7 @@ export function CandidateProfileWorkspace({
                   id: "contact",
                   title: "Contact",
                   node: (
-                    <div className="h-full overflow-auto rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+                    <div className="h-full overflow-auto rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
                       <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Contact</p>
                       <div className="mt-3 space-y-2 text-sm">
                         <div>
@@ -383,7 +383,7 @@ export function CandidateProfileWorkspace({
                   id: "record",
                   title: "Record",
                   node: (
-                    <div className="h-full overflow-auto rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+                    <div className="h-full overflow-auto rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
                       <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Record</p>
                       <div className="mt-3 space-y-1.5 text-sm text-brand-grey dark:text-slate-400">
                         <div>Owner: {candidate.owner ?? "Unassigned"}</div>
@@ -400,11 +400,11 @@ export function CandidateProfileWorkspace({
 
           {/* Applications tab */}
           {activeTab === "applications" && (
-            <section className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+            <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
               <div className="space-y-2">
                 {candidate.applications.length > 0 ? (
                   candidate.applications.map((application) => (
-                    <div key={application.id} className="rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
+                    <div key={application.id} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           {application.job ? (
@@ -441,11 +441,11 @@ export function CandidateProfileWorkspace({
 
           {/* Interviews tab */}
           {activeTab === "interviews" && (
-            <section className="rounded-xl bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+            <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
               <div className="space-y-2">
                 {candidate.interviews.length > 0 ? (
                   candidate.interviews.map((interview) => (
-                    <div key={interview.id} className="rounded-lg border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
+                    <div key={interview.id} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
                       <div className="font-semibold text-brand-lea dark:text-slate-100">{interview.title}</div>
                       <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{formatDateTime(interview.startDateTime)} · {interview.status}</div>
                       <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{[interview.interviewer, interview.location].filter(Boolean).join(" · ")}</div>
