@@ -171,6 +171,32 @@ export async function getTravelTripsForCandidate(candidateId: string): Promise<T
   return (trips as TripWithRelations[]).map(toTravelTripView);
 }
 
+// ---- Traveler loyalty (stored on the person, auto-pulled into new trips) ----
+
+export type TravelerLoyalty = {
+  frequentFlyer: string | null;
+  hotelLoyalty: string | null;
+  rentalLoyalty: string | null;
+};
+
+const EMPTY_LOYALTY: TravelerLoyalty = { frequentFlyer: null, hotelLoyalty: null, rentalLoyalty: null };
+
+export async function getNewHireLoyalty(newHireId: string): Promise<TravelerLoyalty> {
+  const hire = await prisma.newHire.findUnique({
+    where: { id: newHireId },
+    select: { frequentFlyer: true, hotelLoyalty: true, rentalLoyalty: true }
+  });
+  return hire ?? EMPTY_LOYALTY;
+}
+
+export async function getCandidateLoyalty(candidateId: string): Promise<TravelerLoyalty> {
+  const candidate = await prisma.candidate.findUnique({
+    where: { id: candidateId },
+    select: { frequentFlyer: true, hotelLoyalty: true, rentalLoyalty: true }
+  });
+  return candidate ?? EMPTY_LOYALTY;
+}
+
 export async function getTravelTripView(tripId: string): Promise<TravelTripView | null> {
   const trip = await prisma.travelTrip.findUnique({ where: { id: tripId }, include: tripInclude });
   return trip ? toTravelTripView(trip as TripWithRelations) : null;

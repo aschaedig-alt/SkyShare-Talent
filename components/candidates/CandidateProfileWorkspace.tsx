@@ -15,7 +15,7 @@ import { EditableGrid, type GridItem } from "@/components/shared/EditableGrid";
 import { TravelPanel } from "@/components/travel/TravelPanel";
 import type { WidgetInstance } from "@/lib/data/page-layout";
 import type { CandidateProfileData } from "@/lib/data/candidates";
-import type { TravelTripView } from "@/lib/data/travel";
+import type { TravelTripView, TravelerLoyalty } from "@/lib/data/travel";
 
 type CandidateProfileWorkspaceProps = {
   candidate: CandidateProfileData;
@@ -23,6 +23,7 @@ type CandidateProfileWorkspaceProps = {
   savedLayout?: GridItem[] | null;
   savedWidgets?: WidgetInstance[] | null;
   travelTrips?: TravelTripView[];
+  travelLoyalty?: TravelerLoyalty;
 };
 
 // Default arrangement of the Documents-tab boxes (mirrors the current 240px
@@ -93,7 +94,8 @@ export function CandidateProfileWorkspace({
   canEdit = false,
   savedLayout = null,
   savedWidgets = null,
-  travelTrips = []
+  travelTrips = [],
+  travelLoyalty
 }: CandidateProfileWorkspaceProps) {
   const [candidate, setCandidate] = useState<CandidateProfileData>(initialCandidate);
   const [activeTab, setActiveTab] = useState<ProfileTab>("documents");
@@ -443,7 +445,7 @@ export function CandidateProfileWorkspace({
 
           {/* Travel tab — pre-hire fly-outs and any other travel for this candidate */}
           {activeTab === "travel" && (
-            <TravelPanel subjectType="candidate" subjectId={candidate.id} initialTrips={travelTrips} />
+            <TravelPanel subjectType="candidate" subjectId={candidate.id} initialTrips={travelTrips} loyalty={travelLoyalty} />
           )}
 
           {/* Activity tab */}

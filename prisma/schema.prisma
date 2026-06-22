@@ -220,6 +220,10 @@ model NewHire {
   orientationRescheduleCount Int @default(0)
   canceled         Boolean  @default(false)
   travelStatus    String?
+  // Travel loyalty numbers — auto-pulled into new trips (see TravelTrip).
+  frequentFlyer   String?
+  hotelLoyalty    String?
+  rentalLoyalty   String?
   notes           String?
   candidateId     String?
   importKey       String?  @unique
@@ -433,6 +437,10 @@ model Candidate {
   foldersJson          String?
   prosJson             String?
   consJson             String?
+  // Travel loyalty numbers — auto-pulled into new trips (see TravelTrip).
+  frequentFlyer        String?
+  hotelLoyalty         String?
+  rentalLoyalty        String?
   originalFieldsJson   String?
   sourceHistoryJson    String?
   mergeHistoryJson     String?

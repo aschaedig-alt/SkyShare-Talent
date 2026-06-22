@@ -1,6 +1,6 @@
 ﻿import { CandidateProfileWorkspace } from "@/components/candidates/CandidateProfileWorkspace";
 import { getCandidateProfileData } from "@/lib/data/candidates";
-import { getTravelTripsForCandidate } from "@/lib/data/travel";
+import { getTravelTripsForCandidate, getCandidateLoyalty } from "@/lib/data/travel";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { getPageLayout } from "@/lib/data/page-layout";
 import { notFound } from "next/navigation";
@@ -17,7 +17,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
   if (!candidate) {
     notFound();
   }
-  const travelTrips = await getTravelTripsForCandidate(id);
+  const [travelTrips, travelLoyalty] = await Promise.all([getTravelTripsForCandidate(id), getCandidateLoyalty(id)]);
 
   return (
     <CandidateProfileWorkspace
@@ -26,6 +26,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
       savedLayout={layout.layout}
       savedWidgets={layout.widgets}
       travelTrips={travelTrips}
+      travelLoyalty={travelLoyalty}
     />
   );
 }

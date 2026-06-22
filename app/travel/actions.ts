@@ -12,9 +12,12 @@ import {
 } from "@/lib/travel/constants";
 import {
   getTravelTripView,
+  getNewHireLoyalty,
+  getCandidateLoyalty,
   toTravelTripView,
   type TravelItemView,
-  type TravelTripView
+  type TravelTripView,
+  type TravelerLoyalty
 } from "@/lib/data/travel";
 
 export type TripResult = { ok: boolean; error?: string; trip?: TravelTripView };
@@ -89,11 +92,53 @@ export async function createTrip(input: {
 
   const purpose = isTravelPurpose(input.purpose) ? input.purpose : "ORIENTATION";
 
+  // Auto-pull the traveler's saved loyalty numbers onto the new trip so they
+  // are already there and don't have to be looked up or re-typed.
+  const loyalty = newHireId
+    ? await getNewHireLoyalty(newHireId)
+    : await getCandidateLoyalty(candidateId!);
+
   const trip = await prisma.travelTrip.create({
-    data: { newHireId, candidateId, purpose, bookedBy: await actorLabel() },
+    data: {
+      newHireId,
+      candidateId,
+      purpose,
+      bookedBy: await actorLabel(),
+      frequentFlyer: loyalty.frequentFlyer,
+      hotelLoyalty: loyalty.hotelLoyalty,
+      rentalLoyalty: loyalty.rentalLoyalty
+    },
     include: { items: true, receipts: true }
   });
   return { ok: true, trip: toTravelTripView(trip) };
+}
+
+// Save the traveler's loyalty numbers to their profile (NewHire or Candidate).
+// New trips auto-pull these; existing trips keep their snapshot.
+export async function saveTravelerLoyalty(input: {
+  newHireId?: string | null;
+  candidateId?: string | null;
+  frequentFlyer?: unknown;
+  hotelLoyalty?: unknown;
+  rentalLoyalty?: unknown;
+}): Promise<{ ok: boolean; error?: string; loyalty?: TravelerLoyalty }> {
+  if (!(await canEditTravel())) return { ok: false, error: "You do not have permission to edit travel." };
+
+  const newHireId = cleanString(input.newHireId);
+  const candidateId = cleanString(input.candidateId);
+  if (!newHireId && !candidateId) return { ok: false, error: "Missing traveler." };
+
+  const data: Record<string, string | null> = {};
+  if ("frequentFlyer" in input) data.frequentFlyer = cleanString(input.frequentFlyer);
+  if ("hotelLoyalty" in input) data.hotelLoyalty = cleanString(input.hotelLoyalty);
+  if ("rentalLoyalty" in input) data.rentalLoyalty = cleanString(input.rentalLoyalty);
+
+  const select = { frequentFlyer: true, hotelLoyalty: true, rentalLoyalty: true } as const;
+  const updated = newHireId
+    ? await prisma.newHire.update({ where: { id: newHireId }, data, select })
+    : await prisma.candidate.update({ where: { id: candidateId! }, data, select });
+
+  return { ok: true, loyalty: updated };
 }
 
 const TRIP_STRING_FIELDS = [

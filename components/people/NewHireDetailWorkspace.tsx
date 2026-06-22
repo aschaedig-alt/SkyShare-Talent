@@ -7,9 +7,9 @@ import { clsx } from "clsx";
 import { ONBOARDING_GROUPS, groupLabel } from "@/lib/onboarding/tasks";
 import type { NewHireDetail, TaskView } from "@/lib/data/onboarding";
 import { TravelPanel } from "@/components/travel/TravelPanel";
-import type { TravelTripView } from "@/lib/data/travel";
+import type { TravelTripView, TravelerLoyalty } from "@/lib/data/travel";
 
-type Props = { hire: NewHireDetail; travelTrips: TravelTripView[] };
+type Props = { hire: NewHireDetail; travelTrips: TravelTripView[]; travelLoyalty: TravelerLoyalty };
 
 function toDateInput(iso: string | null) {
   return iso ? iso.slice(0, 10) : "";
@@ -21,7 +21,7 @@ const STATUS_BTN: Record<TaskView["status"], { label: string; on: string }> = {
   NA: { label: "N/A", on: "bg-brand-grey text-white" }
 };
 
-export function NewHireDetailWorkspace({ hire, travelTrips }: Props) {
+export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskView[]>(hire.tasks);
   const [details, setDetails] = useState({
@@ -255,7 +255,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips }: Props) {
         </section>
       </div>
 
-      <TravelPanel subjectType="newHire" subjectId={hire.id} initialTrips={travelTrips} />
+      <TravelPanel subjectType="newHire" subjectId={hire.id} initialTrips={travelTrips} loyalty={travelLoyalty} />
     </div>
   );
 }

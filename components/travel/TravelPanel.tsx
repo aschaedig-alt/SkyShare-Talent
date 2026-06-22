@@ -20,23 +20,24 @@ import {
   TRAVEL_STATUSES,
   TRAVEL_ITEM_TYPES,
   travelPurposeLabel,
-  travelStatusLabel,
   formatUsd
 } from "@/lib/travel/constants";
-import type { TravelItemView, TravelReceiptView, TravelTripView } from "@/lib/data/travel";
+import type { TravelItemView, TravelReceiptView, TravelTripView, TravelerLoyalty } from "@/lib/data/travel";
 import {
   createTrip,
   updateTrip,
   deleteTrip,
   addItem,
   updateItem,
-  deleteItem
+  deleteItem,
+  saveTravelerLoyalty
 } from "@/app/travel/actions";
 
 type Props = {
   subjectType: "newHire" | "candidate";
   subjectId: string;
   initialTrips: TravelTripView[];
+  loyalty?: TravelerLoyalty;
 };
 
 const STATUS_STYLE: Record<string, string> = {
@@ -77,12 +78,14 @@ function tripWithRecomputedTotal(trip: TravelTripView, items: TravelItemView[]):
   return { ...trip, items, total: items.reduce((sum, i) => sum + (i.amount ?? 0), 0) };
 }
 
-export function TravelPanel({ subjectType, subjectId, initialTrips }: Props) {
+export function TravelPanel({ subjectType, subjectId, initialTrips, loyalty }: Props) {
   const [trips, setTrips] = useState<TravelTripView[]>(initialTrips);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const grandTotal = useMemo(() => trips.reduce((sum, t) => sum + t.total, 0), [trips]);
+
+  const subjectKey = subjectType === "newHire" ? "newHireId" : "candidateId";
 
   async function handleCreate(purpose: string) {
     setCreating(true);
@@ -122,6 +125,8 @@ export function TravelPanel({ subjectType, subjectId, initialTrips }: Props) {
       </div>
 
       {error && <p className="mt-2 text-xs font-medium text-red-600">{error}</p>}
+
+      <LoyaltyCard subjectKey={subjectKey} subjectId={subjectId} loyalty={loyalty} />
 
       {trips.length === 0 ? (
         <div className="mt-3 rounded border border-dashed border-brand-lea/20 bg-brand-cloudDancer/40 p-4 text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
@@ -169,6 +174,42 @@ function NewTripButton({ creating, onCreate }: { creating: boolean; onCreate: (p
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function LoyaltyCard({
+  subjectKey,
+  subjectId,
+  loyalty
+}: {
+  subjectKey: "newHireId" | "candidateId";
+  subjectId: string;
+  loyalty?: TravelerLoyalty;
+}) {
+  const [saved, setSaved] = useState(false);
+
+  async function save(field: "frequentFlyer" | "hotelLoyalty" | "rentalLoyalty", value: string) {
+    const res = await saveTravelerLoyalty({ [subjectKey]: subjectId, [field]: value });
+    if (res.ok) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded border border-brand-lea/12 bg-brand-cloudDancer/30 p-3 dark:border-white/10 dark:bg-white/5">
+      <div className="flex items-center justify-between">
+        <p className={labelClass}>Traveler loyalty numbers</p>
+        <span className="text-[11px] text-brand-grey dark:text-slate-400">
+          {saved ? "Saved · auto-fills new trips" : "Saved to profile · auto-fills new trips"}
+        </span>
+      </div>
+      <div className="mt-2 grid gap-2 sm:grid-cols-3">
+        <TextField label="Frequent flyer #" defaultValue={loyalty?.frequentFlyer ?? ""} onSave={(v) => save("frequentFlyer", v)} />
+        <TextField label="Hotel loyalty #" defaultValue={loyalty?.hotelLoyalty ?? ""} onSave={(v) => save("hotelLoyalty", v)} />
+        <TextField label="Rental car loyalty #" defaultValue={loyalty?.rentalLoyalty ?? ""} onSave={(v) => save("rentalLoyalty", v)} />
+      </div>
     </div>
   );
 }
@@ -301,9 +342,6 @@ function RequestDetails({ trip, onSave }: { trip: TravelTripView; onSave: (field
         <DateTimeField label="Requested arrival" defaultValue={toDateTimeLocal(trip.requestedArrival)} onSave={(v) => onSave("requestedArrival", v)} />
         <DateTimeField label="Requested return" defaultValue={toDateTimeLocal(trip.requestedReturn)} onSave={(v) => onSave("requestedReturn", v)} />
         {text("preferredAirline", "Preferred airline / seat")}
-        {text("frequentFlyer", "Frequent flyer #")}
-        {text("hotelLoyalty", "Hotel loyalty #")}
-        {text("rentalLoyalty", "Rental car loyalty #")}
         {text("preferences", "Hotel / car preferences")}
         {text("additionalTransport", "Additional transport")}
       </div>
