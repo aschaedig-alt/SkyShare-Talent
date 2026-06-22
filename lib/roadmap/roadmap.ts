@@ -135,6 +135,9 @@ Supporting the team beyond recruiting.
 - [x] Compliments by SkyShare recognition program (Jun 12) — peer-to-peer recognition on the NewHire roster: give to feed to points to redeem rewards to manager analytics, plus an ADMIN Budget tab (cost report, reward catalog CRUD, program settings). Nav item under People; verified end-to-end
 - [x] Update Values in Action options (Jun 20) — recognition values now match SkyShare's core values from the job posts: Safety First, Team Alignment, Deliver the Wow, Solutions Focused, Own the Outcome (each mapped to a distinct color slot; existing demo recognitions retagged)
 - [ ] Integrate the orientation tracker into the site — fold standalone orientation tracking into the existing Pre-onboarding / Orientation workstream so it lives in one place (extends the shipped Orientation module)
+- [ ] Travel & logistics tracker (onboarding + candidate fly-outs) — new People module to record every trip SkyShare books: flights (airline, confirmation/PNR, dates/times, cost), rental cars (company, confirmation number, cost), hotels, and receipts/attachments. Attaches to the correct new hire OR candidate (we sometimes fly candidates out before hiring). Hannah-friendly: clean entry, status at a glance (Needed to Booked to Completed), per-trip totals. Replaces the loose travelStatus flag on NewHire/OrientationAttendee and shows on the orientation + candidate records. Links out to FlightBridge (deep-link) where possible.
+- [ ] Travel auto-fill from FlightBridge / forwarded confirmations — import-to-fill so Hannah does no manual typing: drop in a FlightBridge export or forward an airline/rental confirmation email to a dedicated intake address, parse it, and pre-fill the travel record on the matching candidate (extends the Document Intelligence extraction + Candidate Intake email patterns).
+- [ ] Travel spend reporting — roll travel costs up for budgets: annual spend split by hired vs. not-hired candidates, cost per hire, and per-department / per-cohort, so we can answer "how much should we spend"; feeds the Reports area.
 
 ## Bugs & UX Fixes
 Smaller fixes and polish.
@@ -168,6 +171,11 @@ Auto-ingest applicants from Paycom into the system, hands-off.
 - [ ] Paycom new-applicant email — configure Paycom to auto-send a new-applicant notification to a dedicated address on every application (confirm whether the resume can ride along as an attachment)
 - [ ] Recruiting intake Google account + Drive folder — stand up a dedicated account and intake folder with least-privilege access (only what the script needs)
 - [ ] Daily intake script — scan the intake Drive folder, create the candidate (with resume) in the system, then move the processed file to an archived / uploaded state so it is not re-imported
+
+## Candidate Sourcing (paid job boards)
+Surface matches from the boards we already pay for: ClimbTo350 + BizJetJobs (pilots) and JSFirm (maintenance).
+- [ ] Job-board sourcing integration — pull resume-database candidates from the paid board accounts that match our open pilot requirements, dedupe against existing candidates, and queue them for recruiter review inside the Matcher. Decide the connection per board before building: official API / resume-database access (preferred) vs. authorized bulk export vs. assisted login — each has different ToS, reliability, and cost. Document which boards even offer an employer resume-search / API tier.
+- [ ] Sourcing cost & matching model — scope cost (per board, per month, plus any per-search or compute cost) and the cheapest viable path (periodic export + import vs. live automated scan), and how a sourced profile is scored against a requirement before it reaches the recruiter.
 
 ## Candidates & Matcher
 Working a candidate's record and acting on matcher results.
