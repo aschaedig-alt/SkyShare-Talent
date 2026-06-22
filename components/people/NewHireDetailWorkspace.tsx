@@ -6,8 +6,10 @@ import { useMemo, useState } from "react";
 import { clsx } from "clsx";
 import { ONBOARDING_GROUPS, groupLabel } from "@/lib/onboarding/tasks";
 import type { NewHireDetail, TaskView } from "@/lib/data/onboarding";
+import { TravelPanel } from "@/components/travel/TravelPanel";
+import type { TravelTripView } from "@/lib/data/travel";
 
-type Props = { hire: NewHireDetail };
+type Props = { hire: NewHireDetail; travelTrips: TravelTripView[] };
 
 function toDateInput(iso: string | null) {
   return iso ? iso.slice(0, 10) : "";
@@ -19,7 +21,7 @@ const STATUS_BTN: Record<TaskView["status"], { label: string; on: string }> = {
   NA: { label: "N/A", on: "bg-brand-grey text-white" }
 };
 
-export function NewHireDetailWorkspace({ hire }: Props) {
+export function NewHireDetailWorkspace({ hire, travelTrips }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskView[]>(hire.tasks);
   const [details, setDetails] = useState({
@@ -252,6 +254,8 @@ export function NewHireDetailWorkspace({ hire }: Props) {
           </div>
         </section>
       </div>
+
+      <TravelPanel subjectType="newHire" subjectId={hire.id} initialTrips={travelTrips} />
     </div>
   );
 }

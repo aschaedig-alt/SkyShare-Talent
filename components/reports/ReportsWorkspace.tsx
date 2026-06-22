@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReportsData } from "@/lib/data/reports";
+import { formatUsd, travelPurposeLabel } from "@/lib/travel/constants";
 
 type ReportsWorkspaceProps = {
   data: ReportsData;
@@ -19,8 +20,8 @@ function MetricList({ items }: { items: Array<{ label: string; value: number }> 
 
   return (
     <div className="space-y-2">
-      {items.map((item) => (
-        <div key={item.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
+      {items.map((item, i) => (
+        <div key={`${item.label}-${i}`} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">{item.label}</span>
             <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">{item.value}</span>
@@ -158,6 +159,57 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
             <p className="text-sm text-brand-grey dark:text-slate-400">No documents are expired or expiring within 90 days. Set expiry dates on Medical, Passport, and license documents to track currency here.</p>
           )}
         </div>
+      </section>
+
+      {/* Travel spend — onboarding + candidate fly-out budget roll-up */}
+      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Travel spend</p>
+        <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Recruiting &amp; onboarding travel</h2>
+        <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
+          Booked travel across {data.travelSpend.tripCount} {data.travelSpend.tripCount === 1 ? "trip" : "trips"} (excludes canceled).
+        </p>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: "Total spend", value: formatUsd(data.travelSpend.totalSpend), tone: "text-brand-lea dark:text-slate-100" },
+            { label: "Hired travelers", value: formatUsd(data.travelSpend.hiredSpend), tone: "text-emerald-600" },
+            { label: "Not hired", value: formatUsd(data.travelSpend.notHiredSpend), tone: "text-amber-600" },
+            {
+              label: "Cost per hire",
+              value: data.travelSpend.costPerHire === null ? "—" : formatUsd(data.travelSpend.costPerHire),
+              tone: "text-brand-lea dark:text-slate-100"
+            }
+          ].map((c) => (
+            <div key={c.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
+              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{c.label}</div>
+              <div className={`mt-1 text-xl font-semibold ${c.tone}`}>{c.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {data.travelSpend.byPurpose.length > 0 && (
+          <div className="mt-4">
+            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">By purpose</div>
+            <div className="mt-2 space-y-2">
+              {data.travelSpend.byPurpose.map((p) => {
+                const max = Math.max(...data.travelSpend.byPurpose.map((x) => x.spend), 1);
+                return (
+                  <div key={p.purpose} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">
+                        {travelPurposeLabel(p.purpose)} <span className="text-brand-grey dark:text-slate-400">· {p.trips} {p.trips === 1 ? "trip" : "trips"}</span>
+                      </span>
+                      <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">{formatUsd(p.spend)}</span>
+                    </div>
+                    <div className="mt-2 h-1 rounded-full bg-brand-gold/20">
+                      <div className="h-1 rounded-full bg-brand-sweet" style={{ width: `${Math.max(8, (p.spend / max) * 100)}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

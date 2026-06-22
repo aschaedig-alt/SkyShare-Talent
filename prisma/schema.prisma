@@ -232,6 +232,7 @@ model NewHire {
 
   tasks           OnboardingTask[]
   orientationAttendances OrientationAttendee[]
+  travelTrips     TravelTrip[]
 
   recognitionsGiven    Recognition[] @relation("giver")
   recognitionsReceived Recognition[] @relation("recipient")
@@ -309,6 +310,89 @@ model OnboardingTask {
   @@index([newHireId])
 }
 
+// Travel & logistics — flights, rental cars, hotels, and receipts SkyShare
+// books for a new hire (orientation / indoc) or a candidate (pre-hire fly-out).
+// Exactly one of newHireId / candidateId is set per trip. Supersedes the loose
+// travelStatus flag on NewHire / OrientationAttendee.
+model TravelTrip {
+  id          String    @id @default(cuid())
+  newHireId   String?
+  candidateId String?
+  // ORIENTATION | INDOC | TRAINING | INTERVIEW | RECRUITING_VISIT | OTHER
+  purpose     String    @default("ORIENTATION")
+  // NEEDED | BOOKED | COMPLETED | CANCELED
+  status      String    @default("NEEDED")
+
+  // Request side — what the traveler needs (mirrors the pilot travel form).
+  originAirport       String?
+  destinationAirport  String?
+  orientationDate     DateTime?
+  indocStart          DateTime?
+  indocEnd            DateTime?
+  requestedArrival    DateTime?
+  requestedReturn     DateTime?
+  preferredAirline    String?
+  frequentFlyer       String?
+  hotelLoyalty        String?
+  rentalLoyalty       String?
+  preferences         String?
+  additionalTransport String?
+  specialRequests     String?
+
+  notes       String?
+  bookedBy    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  newHire   NewHire?        @relation(fields: [newHireId], references: [id], onDelete: Cascade)
+  candidate Candidate?      @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  items     TravelItem[]
+  receipts  TravelReceipt[]
+
+  @@index([newHireId])
+  @@index([candidateId])
+  @@index([status])
+}
+
+// A single booked thing on a trip: a flight, rental car, hotel, etc.
+model TravelItem {
+  id           String    @id @default(cuid())
+  tripId       String
+  // FLIGHT | CAR | HOTEL | TRANSPORT | OTHER
+  type         String    @default("FLIGHT")
+  vendor       String?
+  confirmation String?
+  detail       String?
+  startsAt     DateTime?
+  endsAt       DateTime?
+  amount       Float?
+  currency     String    @default("USD")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  trip TravelTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+}
+
+// A receipt / confirmation document attached to a trip (and optionally a item).
+model TravelReceipt {
+  id               String   @id @default(cuid())
+  tripId           String
+  itemId           String?
+  originalFilename String
+  displayFilename  String
+  storageKey       String?
+  mimeType         String?
+  sizeBytes        Int?
+  amount           Float?
+  uploadedAt       DateTime @default(now())
+
+  trip TravelTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+}
+
 model Feedback {
   id          String   @id @default(cuid())
   type        String   @default("IDEA")
@@ -365,6 +449,7 @@ model Candidate {
   duplicateAsPrimary   DuplicateReviewItem[]  @relation("DuplicateCandidatePrimary")
   duplicateAsSecondary DuplicateReviewItem[]  @relation("DuplicateCandidateSecondary")
   importRows           ImportRow[]
+  travelTrips          TravelTrip[]
 
   @@index([normalizedEmail])
   @@index([normalizedPhone])

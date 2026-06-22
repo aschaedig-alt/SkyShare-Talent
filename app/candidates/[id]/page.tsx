@@ -1,5 +1,6 @@
 ﻿import { CandidateProfileWorkspace } from "@/components/candidates/CandidateProfileWorkspace";
 import { getCandidateProfileData } from "@/lib/data/candidates";
+import { getTravelTripsForCandidate } from "@/lib/data/travel";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { getPageLayout } from "@/lib/data/page-layout";
 import { notFound } from "next/navigation";
@@ -16,6 +17,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
   if (!candidate) {
     notFound();
   }
+  const travelTrips = await getTravelTripsForCandidate(id);
 
   return (
     <CandidateProfileWorkspace
@@ -23,6 +25,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
       canEdit={access.role === "ADMIN"}
       savedLayout={layout.layout}
       savedWidgets={layout.widgets}
+      travelTrips={travelTrips}
     />
   );
 }

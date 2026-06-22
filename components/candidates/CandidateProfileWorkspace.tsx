@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { clsx } from "clsx";
-import { FileText, Briefcase, StickyNote, CalendarClock, History } from "lucide-react";
+import { FileText, Briefcase, StickyNote, CalendarClock, History, Plane } from "lucide-react";
 import { CandidateDocuments } from "@/components/candidates/CandidateDocuments";
 import { DocumentChecklist } from "@/components/candidates/DocumentChecklist";
 import { CurrencyPanel } from "@/components/candidates/CurrencyPanel";
@@ -12,14 +12,17 @@ import { CandidateNotes } from "@/components/candidates/CandidateNotes";
 import { CandidateActivityTimeline } from "@/components/candidates/CandidateActivityTimeline";
 import { FlightProfilePanel } from "@/components/candidates/FlightProfilePanel";
 import { EditableGrid, type GridItem } from "@/components/shared/EditableGrid";
+import { TravelPanel } from "@/components/travel/TravelPanel";
 import type { WidgetInstance } from "@/lib/data/page-layout";
 import type { CandidateProfileData } from "@/lib/data/candidates";
+import type { TravelTripView } from "@/lib/data/travel";
 
 type CandidateProfileWorkspaceProps = {
   candidate: CandidateProfileData;
   canEdit?: boolean;
   savedLayout?: GridItem[] | null;
   savedWidgets?: WidgetInstance[] | null;
+  travelTrips?: TravelTripView[];
 };
 
 // Default arrangement of the Documents-tab boxes (mirrors the current 240px
@@ -34,7 +37,7 @@ const PROFILE_DEFAULT_LAYOUT: GridItem[] = [
   { i: "record", x: 0, y: 32, w: 3, h: 5 }
 ];
 
-type ProfileTab = "documents" | "applications" | "notes" | "interviews" | "activity";
+type ProfileTab = "documents" | "applications" | "notes" | "interviews" | "activity" | "travel";
 
 type CandidateEditForm = {
   displayName: string;
@@ -89,7 +92,8 @@ export function CandidateProfileWorkspace({
   candidate: initialCandidate,
   canEdit = false,
   savedLayout = null,
-  savedWidgets = null
+  savedWidgets = null,
+  travelTrips = []
 }: CandidateProfileWorkspaceProps) {
   const [candidate, setCandidate] = useState<CandidateProfileData>(initialCandidate);
   const [activeTab, setActiveTab] = useState<ProfileTab>("documents");
@@ -164,6 +168,7 @@ export function CandidateProfileWorkspace({
     { id: "applications", label: "Applications", icon: Briefcase, count: candidate.applications.length },
     { id: "notes", label: "Notes", icon: StickyNote, count: candidate.notes.length },
     { id: "interviews", label: "Interviews", icon: CalendarClock, count: candidate.interviews.length },
+    { id: "travel", label: "Travel", icon: Plane, count: travelTrips.length },
     { id: "activity", label: "Activity", icon: History, count: candidate.activity.length }
   ];
 
@@ -435,6 +440,11 @@ export function CandidateProfileWorkspace({
 
           {/* Notes tab */}
           {activeTab === "notes" && <CandidateNotes candidateId={candidate.id} initialNotes={candidate.notes} />}
+
+          {/* Travel tab — pre-hire fly-outs and any other travel for this candidate */}
+          {activeTab === "travel" && (
+            <TravelPanel subjectType="candidate" subjectId={candidate.id} initialTrips={travelTrips} />
+          )}
 
           {/* Activity tab */}
           {activeTab === "activity" && <CandidateActivityTimeline items={candidate.activity} />}
