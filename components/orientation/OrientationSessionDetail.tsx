@@ -6,6 +6,7 @@ import { useState } from "react";
 import { clsx } from "clsx";
 import type { AttendeeView, ConfirmStatus, PrepTaskView, SessionDetail, TravelStatus } from "@/lib/data/orientation";
 import type { EmailTemplateDef } from "@/lib/orientation/defaults";
+import { formatUsd } from "@/lib/travel/constants";
 
 function fmtShort(iso: string) {
   return new Intl.DateTimeFormat("en", { weekday: "long", month: "long", day: "numeric" }).format(new Date(iso));
@@ -31,6 +32,12 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
     outOfTown: attendees.filter((a) => a.travelStatus !== "NA").length,
     pilots: attendees.filter((a) => a.isPilot).length,
     confirmed: attendees.filter((a) => a.confirmed === "CONFIRMED").length
+  };
+  // Live travel roll-up from each attendee's real trips.
+  const travelRollup = {
+    traveling: attendees.filter((a) => a.travel.tripCount > 0 || a.travelStatus !== "NA").length,
+    booked: attendees.filter((a) => a.travel.status === "BOOKED").length,
+    totalCost: attendees.reduce((sum, a) => sum + a.travel.total, 0)
   };
 
   // ---- prep ----
@@ -130,6 +137,8 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
             ["Attendees", headcount.total],
             ["Confirmed", `${headcount.confirmed}/${headcount.total}`],
             ["Out-of-town · travel", headcount.outOfTown],
+            ["Travel booked", `${travelRollup.booked}/${travelRollup.traveling}`],
+            ["Travel spend", formatUsd(travelRollup.totalCost)],
             ["Pilots · iPads", headcount.pilots],
             ["Prep", `${headDone}/${prep.length}`]
           ].map(([label, val]) => (
@@ -192,11 +201,32 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                       </select>
                     </td>
                     <td className="px-1 py-2">
-                      <select value={a.travelStatus} onChange={(e) => setTravel(a, e.target.value as TravelStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.travelStatus === "ARRANGED" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : a.travelStatus === "NEEDED" ? "border-brand-gold/40 bg-brand-gold/15 text-brand-lea" : "border-brand-lea/15 bg-white text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400")}>
-                        <option value="NA">Local</option>
-                        <option value="NEEDED">Needed</option>
-                        <option value="ARRANGED">Arranged</option>
-                      </select>
+                      {a.travel.tripCount > 0 ? (
+                        <Link
+                          href={`/people/${a.newHireId}`}
+                          title={`${a.travel.tripCount} trip${a.travel.tripCount === 1 ? "" : "s"} — view / edit travel`}
+                          className={clsx(
+                            "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-semibold transition hover:shadow-glow",
+                            a.travel.status === "BOOKED"
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                              : "border-brand-gold/40 bg-brand-gold/15 text-brand-lea"
+                          )}
+                        >
+                          {a.travel.status === "BOOKED" ? "Booked" : "Needed"}
+                          {a.travel.total > 0 ? ` · ${formatUsd(a.travel.total)}` : ""}
+                        </Link>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <select value={a.travelStatus} onChange={(e) => setTravel(a, e.target.value as TravelStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.travelStatus === "ARRANGED" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : a.travelStatus === "NEEDED" ? "border-brand-gold/40 bg-brand-gold/15 text-brand-lea" : "border-brand-lea/15 bg-white text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400")}>
+                            <option value="NA">Local</option>
+                            <option value="NEEDED">Needed</option>
+                            <option value="ARRANGED">Arranged</option>
+                          </select>
+                          <Link href={`/people/${a.newHireId}`} className="text-[10px] font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400" title="Add travel for this hire">
+                            +add
+                          </Link>
+                        </div>
+                      )}
                     </td>
                     <td className="px-1 py-2 text-center">{a.isPilot ? <Flag on={a.ipadReady} onClick={() => toggleFlag(a, "ipadReady")} /> : <span className="text-brand-grey/40">—</span>}</td>
                     <td className="px-1 py-2 text-center"><Flag on={a.cardReady} onClick={() => toggleFlag(a, "cardReady")} /></td>

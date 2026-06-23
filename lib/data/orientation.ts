@@ -59,6 +59,8 @@ export type AttendeeView = {
   isPilot: boolean;
   confirmed: ConfirmStatus;
   travelStatus: TravelStatus;
+  // Derived from the hire's real TravelTrips (supersedes the manual flag above).
+  travel: { tripCount: number; status: "NONE" | "NEEDED" | "BOOKED"; total: number };
   ipadReady: boolean;
   cardReady: boolean;
   swagReady: boolean;
@@ -89,6 +91,7 @@ export type SessionDetail = {
   attendees: AttendeeView[];
   prepTasks: PrepTaskView[];
   headcount: { total: number; outOfTown: number; pilots: number; confirmed: number };
+  travelRollup: { traveling: number; booked: number; needsBooking: number; totalCost: number };
   candidates: SessionCandidate[];
   templates: EmailTemplateDef[];
   otherSessions: SessionRef[];
@@ -108,7 +111,21 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
     where: { id },
     include: {
       attendees: {
-        include: { newHire: { select: { id: true, name: true, position: true, department: true, orientationRescheduleCount: true } } },
+        include: {
+          newHire: {
+            select: {
+              id: true,
+              name: true,
+              position: true,
+              department: true,
+              orientationRescheduleCount: true,
+              travelTrips: {
+                where: { status: { not: "CANCELED" } },
+                select: { status: true, items: { select: { amount: true } } }
+              }
+            }
+          }
+        },
         orderBy: { newHire: { name: "asc" } }
       },
       prepTasks: { orderBy: { order: "asc" } }
@@ -116,21 +133,33 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
   });
   if (!s) return null;
 
-  const attendees: AttendeeView[] = s.attendees.map((a) => ({
-    id: a.id,
-    newHireId: a.newHireId,
-    name: a.newHire.name,
-    position: a.newHire.position,
-    department: a.newHire.department,
-    isPilot: isPilotPosition(a.newHire.position),
-    confirmed: a.confirmed as ConfirmStatus,
-    travelStatus: a.travelStatus as TravelStatus,
-    ipadReady: a.ipadReady,
-    cardReady: a.cardReady,
-    swagReady: a.swagReady,
-    sentTemplateKeys: parseKeys(a.sentTemplateKeys),
-    rescheduleCount: a.newHire.orientationRescheduleCount
-  }));
+  const attendees: AttendeeView[] = s.attendees.map((a) => {
+    const trips = a.newHire.travelTrips;
+    const total = trips.reduce((sum, t) => sum + t.items.reduce((x, i) => x + (i.amount ?? 0), 0), 0);
+    const booked = trips.some((t) => t.status === "BOOKED" || t.status === "COMPLETED");
+    const needed = trips.some((t) => t.status === "NEEDED");
+    const travel = {
+      tripCount: trips.length,
+      status: (booked ? "BOOKED" : needed ? "NEEDED" : "NONE") as "NONE" | "NEEDED" | "BOOKED",
+      total
+    };
+    return {
+      id: a.id,
+      newHireId: a.newHireId,
+      name: a.newHire.name,
+      position: a.newHire.position,
+      department: a.newHire.department,
+      isPilot: isPilotPosition(a.newHire.position),
+      confirmed: a.confirmed as ConfirmStatus,
+      travelStatus: a.travelStatus as TravelStatus,
+      travel,
+      ipadReady: a.ipadReady,
+      cardReady: a.cardReady,
+      swagReady: a.swagReady,
+      sentTemplateKeys: parseKeys(a.sentTemplateKeys),
+      rescheduleCount: a.newHire.orientationRescheduleCount
+    };
+  });
 
   const otherSessions: SessionRef[] = (
     await prisma.orientationSession.findMany({
@@ -171,6 +200,14 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
       outOfTown: attendees.filter((a) => a.travelStatus !== "NA").length,
       pilots: attendees.filter((a) => a.isPilot).length,
       confirmed: attendees.filter((a) => a.confirmed === "CONFIRMED").length
+    },
+    travelRollup: {
+      traveling: attendees.filter((a) => a.travel.tripCount > 0 || a.travelStatus !== "NA").length,
+      booked: attendees.filter((a) => a.travel.status === "BOOKED").length,
+      needsBooking: attendees.filter((a) =>
+        a.travel.tripCount > 0 ? a.travel.status === "NEEDED" : a.travelStatus === "NEEDED"
+      ).length,
+      totalCost: attendees.reduce((sum, a) => sum + a.travel.total, 0)
     },
     candidates,
     templates: await getEmailTemplates(),
