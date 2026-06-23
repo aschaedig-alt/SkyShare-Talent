@@ -13,13 +13,16 @@ import {
   ChevronDown,
   ChevronRight,
   Upload,
-  Paperclip
+  Paperclip,
+  Sparkles,
+  ClipboardPaste
 } from "lucide-react";
 import {
   TRAVEL_PURPOSES,
   TRAVEL_STATUSES,
   TRAVEL_ITEM_TYPES,
   travelPurposeLabel,
+  travelItemTypeLabel,
   formatUsd
 } from "@/lib/travel/constants";
 import type { TravelItemView, TravelReceiptView, TravelTripView, TravelerLoyalty } from "@/lib/data/travel";
@@ -30,8 +33,10 @@ import {
   addItem,
   updateItem,
   deleteItem,
-  saveTravelerLoyalty
+  saveTravelerLoyalty,
+  extractTravelConfirmation
 } from "@/app/travel/actions";
+import type { ParsedTravel } from "@/lib/extraction/travel-confirmation";
 
 type Props = {
   subjectType: "newHire" | "candidate";
@@ -311,6 +316,7 @@ function TripCard({
       {expanded && (
         <div className="space-y-4 border-t border-brand-lea/10 px-3 py-3 dark:border-white/10">
           <RequestDetails trip={trip} onSave={saveField} />
+          <ConfirmationImport trip={trip} onApplied={onChange} />
           <ItemsTable
             items={trip.items}
             onAdd={handleAddItem}
@@ -345,6 +351,137 @@ function RequestDetails({ trip, onSave }: { trip: TravelTripView; onSave: (field
         {text("preferences", "Hotel / car preferences")}
         {text("additionalTransport", "Additional transport")}
       </div>
+    </div>
+  );
+}
+
+function ConfirmationImport({ trip, onApplied }: { trip: TravelTripView; onApplied: (t: TravelTripView) => void }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [parsing, setParsing] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [parsed, setParsed] = useState<ParsedTravel | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function runExtract() {
+    setParsing(true);
+    setError(null);
+    setParsed(null);
+    const res = await extractTravelConfirmation(text);
+    setParsing(false);
+    if (!res.ok || !res.parsed) {
+      setError(res.error ?? "Could not read that confirmation.");
+      return;
+    }
+    setParsed(res.parsed);
+  }
+
+  async function apply() {
+    if (!parsed) return;
+    setApplying(true);
+    for (const pi of parsed.items) {
+      const added = await addItem(trip.id, { type: pi.type });
+      if (!added.ok || !added.item) continue;
+      const patch: Record<string, string> = {};
+      if (pi.vendor) patch.vendor = pi.vendor;
+      if (pi.confirmation) patch.confirmation = pi.confirmation;
+      if (pi.detail) patch.detail = pi.detail;
+      if (pi.amount !== null) patch.amount = String(pi.amount);
+      if (pi.startsAt) patch.startsAt = pi.startsAt;
+      if (Object.keys(patch).length) await updateItem(added.item.id, patch);
+    }
+    // Fill empty trip-level fields from the parse (never overwrite existing).
+    const tripPatch: Record<string, string> = {};
+    if (parsed.originAirport && !trip.originAirport) tripPatch.originAirport = parsed.originAirport;
+    if (parsed.destinationAirport && !trip.destinationAirport) tripPatch.destinationAirport = parsed.destinationAirport;
+    if (parsed.preferredAirline && !trip.preferredAirline) tripPatch.preferredAirline = parsed.preferredAirline;
+
+    // An (even empty) updateTrip returns the canonical fresh trip incl. new items.
+    const ut = await updateTrip(trip.id, tripPatch);
+    setApplying(false);
+    if (ut.ok && ut.trip) onApplied(ut.trip);
+    setText("");
+    setParsed(null);
+    setOpen(false);
+  }
+
+  return (
+    <div className="rounded border border-dashed border-brand-gold/40 bg-brand-gold/5 p-2.5">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-1.5 text-left text-[11px] font-bold uppercase tracking-[0.14em] text-brand-gold"
+      >
+        <Sparkles className="h-3.5 w-3.5" />
+        Auto-fill from a confirmation
+        <span className="ml-1 font-normal normal-case tracking-normal text-brand-grey dark:text-slate-400">
+          paste an airline / hotel / rental email
+        </span>
+      </button>
+
+      {open && (
+        <div className="mt-2 space-y-2">
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={4}
+            placeholder="Paste the confirmation email or itinerary text here…"
+            className={clsx(inputClass, "resize-y font-mono text-xs")}
+          />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={runExtract}
+              disabled={parsing || text.trim().length < 8}
+              className="inline-flex items-center gap-1.5 rounded bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60"
+            >
+              <ClipboardPaste className="h-4 w-4" />
+              {parsing ? "Reading…" : "Extract"}
+            </button>
+            {error && <span className="text-xs font-medium text-red-600">{error}</span>}
+          </div>
+
+          {parsed && (
+            <div className="rounded border border-brand-lea/15 bg-white p-2.5 dark:border-white/10 dark:bg-[#10243a]">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
+                Found {parsed.items.length} {parsed.items.length === 1 ? "item" : "items"} — review &amp; apply
+              </p>
+              {(parsed.originAirport || parsed.destinationAirport) && (
+                <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
+                  Route: {[parsed.originAirport, parsed.destinationAirport].filter(Boolean).join(" → ")}
+                </p>
+              )}
+              <div className="mt-2 space-y-1">
+                {parsed.items.map((pi, i) => {
+                  const Icon = ITEM_ICON[pi.type] ?? Receipt;
+                  return (
+                    <div key={i} className="flex items-center gap-2 text-sm text-brand-lea dark:text-slate-100">
+                      <Icon className="h-3.5 w-3.5 shrink-0 text-brand-gold" />
+                      <span className="font-semibold">{travelItemTypeLabel(pi.type)}</span>
+                      {pi.vendor && <span className="text-brand-grey dark:text-slate-400">· {pi.vendor}</span>}
+                      {pi.confirmation && <span className="text-brand-grey dark:text-slate-400">· {pi.confirmation}</span>}
+                      {pi.amount !== null && <span className="text-brand-grey dark:text-slate-400">· {formatUsd(pi.amount)}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={apply}
+                  disabled={applying}
+                  className="rounded bg-brand-gold px-3 py-1.5 text-sm font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-60 dark:text-slate-100"
+                >
+                  {applying ? "Adding…" : `Add ${parsed.items.length} to trip`}
+                </button>
+                <button
+                  onClick={() => setParsed(null)}
+                  className="rounded border border-brand-lea/15 px-3 py-1.5 text-sm font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-400"
+                >
+                  Discard
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

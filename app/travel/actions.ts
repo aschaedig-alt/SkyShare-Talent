@@ -10,6 +10,7 @@ import {
   isTravelPurpose,
   isTravelStatus
 } from "@/lib/travel/constants";
+import { parseTravelConfirmation, type ParsedTravel } from "@/lib/extraction/travel-confirmation";
 import {
   getTravelTripView,
   getNewHireLoyalty,
@@ -223,4 +224,17 @@ export async function deleteItem(itemId: string): Promise<SimpleResult> {
   if (!(await canEditTravel())) return { ok: false, error: "You do not have permission to edit travel." };
   await prisma.travelItem.delete({ where: { id: itemId } });
   return { ok: true };
+}
+
+// Parse a pasted confirmation / itinerary into suggested items + trip fields.
+// Pure read: writes nothing. The client reviews the suggestions, then applies
+// them with the normal addItem / updateItem / updateTrip actions.
+export async function extractTravelConfirmation(
+  text: string
+): Promise<{ ok: boolean; error?: string; parsed?: ParsedTravel }> {
+  if (!(await canEditTravel())) return { ok: false, error: "You do not have permission to edit travel." };
+  if (typeof text !== "string" || text.trim().length < 8) {
+    return { ok: false, error: "Paste a bit more of the confirmation to extract from." };
+  }
+  return { ok: true, parsed: parseTravelConfirmation(text) };
 }
