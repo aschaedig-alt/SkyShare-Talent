@@ -202,6 +202,80 @@ export async function getTravelTripView(tripId: string): Promise<TravelTripView 
   return trip ? toTravelTripView(trip as TripWithRelations) : null;
 }
 
+// ---- Travel hub (all trips across hires + candidates) -----------------------
+
+export type TravelHubRow = {
+  tripId: string;
+  travelerName: string;
+  travelerType: "newHire" | "candidate";
+  travelerHref: string;
+  purpose: string;
+  status: string;
+  destination: string | null;
+  startsAt: string | null;
+  itemCount: number;
+  receiptCount: number;
+  total: number;
+  updatedAt: string;
+};
+
+export type TravelHubData = {
+  rows: TravelHubRow[];
+  stats: { tripCount: number; needsBooking: number; booked: number; totalSpend: number };
+};
+
+export async function getTravelOverview(): Promise<TravelHubData> {
+  const trips = await prisma.travelTrip.findMany({
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      purpose: true,
+      status: true,
+      originAirport: true,
+      destinationAirport: true,
+      requestedArrival: true,
+      orientationDate: true,
+      indocStart: true,
+      updatedAt: true,
+      newHire: { select: { id: true, name: true } },
+      candidate: { select: { id: true, displayName: true } },
+      items: { select: { amount: true } },
+      _count: { select: { receipts: true } }
+    }
+  });
+
+  const rows: TravelHubRow[] = trips.map((t) => {
+    const isHire = Boolean(t.newHire);
+    const route = [t.originAirport, t.destinationAirport].filter(Boolean).join(" → ") || null;
+    const startDate = t.requestedArrival ?? t.orientationDate ?? t.indocStart ?? null;
+    return {
+      tripId: t.id,
+      travelerName: t.newHire?.name ?? t.candidate?.displayName ?? "Unknown",
+      travelerType: isHire ? "newHire" : "candidate",
+      travelerHref: isHire ? `/people/${t.newHire!.id}` : `/candidates/${t.candidate?.id ?? ""}`,
+      purpose: t.purpose,
+      status: t.status,
+      destination: route,
+      startsAt: startDate ? startDate.toISOString() : null,
+      itemCount: t.items.length,
+      receiptCount: t._count.receipts,
+      total: t.items.reduce((sum, i) => sum + (i.amount ?? 0), 0),
+      updatedAt: t.updatedAt.toISOString()
+    };
+  });
+
+  const active = rows.filter((r) => r.status !== "CANCELED");
+  return {
+    rows,
+    stats: {
+      tripCount: rows.length,
+      needsBooking: rows.filter((r) => r.status === "NEEDED").length,
+      booked: rows.filter((r) => r.status === "BOOKED" || r.status === "COMPLETED").length,
+      totalSpend: active.reduce((sum, r) => sum + r.total, 0)
+    }
+  };
+}
+
 // ---- Reporting --------------------------------------------------------------
 
 export type TravelSpendSummary = {
