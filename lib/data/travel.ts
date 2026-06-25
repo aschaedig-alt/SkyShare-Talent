@@ -219,9 +219,18 @@ export type TravelHubRow = {
   updatedAt: string;
 };
 
+export type TravelTravelerOption = {
+  id: string;
+  name: string;
+  type: "newHire" | "candidate";
+  href: string;
+  subtitle: string | null;
+};
+
 export type TravelHubData = {
   rows: TravelHubRow[];
   stats: { tripCount: number; needsBooking: number; booked: number; totalSpend: number };
+  travelers: TravelTravelerOption[];
 };
 
 export async function getTravelOverview(): Promise<TravelHubData> {
@@ -265,6 +274,37 @@ export async function getTravelOverview(): Promise<TravelHubData> {
   });
 
   const active = rows.filter((r) => r.status !== "CANCELED");
+
+  // Who a new trip can be created for: current hires + active candidates.
+  const [hires, candidates] = await Promise.all([
+    prisma.newHire.findMany({
+      where: { stage: { not: "ARCHIVED" } },
+      select: { id: true, name: true, position: true },
+      orderBy: { name: "asc" }
+    }),
+    prisma.candidate.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true, displayName: true, currentTitle: true },
+      orderBy: { displayName: "asc" }
+    })
+  ]);
+  const travelers: TravelTravelerOption[] = [
+    ...hires.map((h) => ({
+      id: h.id,
+      name: h.name,
+      type: "newHire" as const,
+      href: `/people/${h.id}`,
+      subtitle: h.position
+    })),
+    ...candidates.map((c) => ({
+      id: c.id,
+      name: c.displayName,
+      type: "candidate" as const,
+      href: `/candidates/${c.id}`,
+      subtitle: c.currentTitle
+    }))
+  ];
+
   return {
     rows,
     stats: {
@@ -272,7 +312,8 @@ export async function getTravelOverview(): Promise<TravelHubData> {
       needsBooking: rows.filter((r) => r.status === "NEEDED").length,
       booked: rows.filter((r) => r.status === "BOOKED" || r.status === "COMPLETED").length,
       totalSpend: active.reduce((sum, r) => sum + r.total, 0)
-    }
+    },
+    travelers
   };
 }
 
