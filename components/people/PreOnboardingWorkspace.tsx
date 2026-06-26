@@ -16,6 +16,7 @@ import { OnboardingGridTab } from "@/components/people/OnboardingGridTab";
 import { OnboardingMilestonesTab } from "@/components/people/OnboardingMilestonesTab";
 import { PostOnboardTab } from "@/components/people/PostOnboardTab";
 import { OnboardingArchivedTab } from "@/components/people/OnboardingArchivedTab";
+import { ImportHiresButton } from "@/components/people/ImportHiresButton";
 
 export type PeopleTab = "dashboard" | "grid" | "milestones" | "post" | "archived";
 
@@ -78,13 +79,16 @@ export function PreOnboardingWorkspace({ tab, counts, dashboard, grid, milestone
             Track every new hire from offer to orientation. Fully onboarded hires move to post-onboard, then archive.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden"
-        >
-          + Add new hire
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <ImportHiresButton />
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden"
+          >
+            + Add new hire
+          </button>
+        </div>
       </section>
 
       <div className="border-b border-brand-lea/10 dark:border-white/10">
