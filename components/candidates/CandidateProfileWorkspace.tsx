@@ -103,6 +103,7 @@ export function CandidateProfileWorkspace({
 }: CandidateProfileWorkspaceProps) {
   const [candidate, setCandidate] = useState<CandidateProfileData>(initialCandidate);
   const [activeTab, setActiveTab] = useState<ProfileTab>("documents");
+  const [tagsOpen, setTagsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -203,8 +204,8 @@ export function CandidateProfileWorkspace({
               {[candidate.currentTitle, candidate.stage].filter(Boolean).join(" · ") || "No title recorded"}
             </p>
             {candidate.tags.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {candidate.tags.map((tag) => (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {(tagsOpen ? candidate.tags : candidate.tags.slice(0, 4)).map((tag) => (
                   <span
                     key={tag}
                     className="rounded border border-brand-sweet/60 bg-brand-sweet/18 px-2.5 py-1 text-[11px] font-semibold text-brand-lea dark:text-slate-100"
@@ -212,6 +213,14 @@ export function CandidateProfileWorkspace({
                     {tag}
                   </span>
                 ))}
+                {candidate.tags.length > 4 && (
+                  <button
+                    onClick={() => setTagsOpen((v) => !v)}
+                    className="rounded border border-brand-lea/20 px-2 py-1 text-[11px] font-semibold text-brand-eden transition hover:bg-brand-cloudDancer/40 dark:border-white/10 dark:text-slate-300"
+                  >
+                    {tagsOpen ? "Show less" : `+${candidate.tags.length - 4} more`}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -490,6 +499,11 @@ export function CandidateProfileWorkspace({
                       <div className="font-semibold text-brand-lea dark:text-slate-100">{interview.title}</div>
                       <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{formatDateTime(interview.startDateTime)} · {interview.status}</div>
                       <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{[interview.interviewer, interview.location].filter(Boolean).join(" · ")}</div>
+                      {interview.notes && interview.notes.trim() && (
+                        <p className="mt-2 whitespace-pre-wrap rounded border border-brand-lea/10 bg-white/70 p-2 text-xs text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+                          {interview.notes.trim()}
+                        </p>
+                      )}
                     </div>
                   ))
                 ) : (

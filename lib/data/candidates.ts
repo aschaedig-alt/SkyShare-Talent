@@ -465,9 +465,6 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
       interviews: {
         orderBy: { startDateTime: "asc" }
       },
-      timelineEvents: {
-        orderBy: { occurredAt: "asc" }
-      },
       aiSummary: true,
       candidateTags: { include: { tag: { select: { label: true } } } },
       communications: {
@@ -501,6 +498,38 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
         hired
       }
     : null;
+
+  // Unified timeline built from the real relations so everything links together
+  // chronologically — every application (with its job), interview, and note —
+  // even when the candidate applied to more than one job.
+  const timeline = [
+    ...candidate.applications
+      .filter((a) => a.appliedAt)
+      .map((a) => ({
+        id: `app-${a.id}`,
+        type: a.disposition ?? "APPLIED",
+        title: a.job?.title ?? a.historicalJobTitle ?? "Application",
+        detail: a.status ?? null,
+        occurredAt: a.appliedAt!.toISOString(),
+        origin: a.origin
+      })),
+    ...candidate.interviews.map((i) => ({
+      id: `iv-${i.id}`,
+      type: "INTERVIEWED",
+      title: i.title,
+      detail: [i.interviewer, i.notes?.trim()].filter(Boolean).join(" · ") || null,
+      occurredAt: i.startDateTime.toISOString(),
+      origin: i.source === "JAZZ" ? "JAZZ" : "PAYCOM"
+    })),
+    ...candidate.notes.map((n) => ({
+      id: `note-${n.id}`,
+      type: n.source === "JAZZ_FEEDBACK" ? "INTERVIEW_NOTE" : "NOTE",
+      title: n.body.replace(/\s+/g, " ").slice(0, 240),
+      detail: null as string | null,
+      occurredAt: n.createdAt.toISOString(),
+      origin: n.source === "JAZZ_FEEDBACK" || n.source === "JAZZ" ? "JAZZ" : "PAYCOM"
+    }))
+  ].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
 
   // Per-candidate activity history (edits, note add/remove, dedupe, etc.).
   const activityRows = await prisma.activityLog.findMany({
@@ -615,14 +644,7 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
     jazzCandidateNumber: candidate.jazzCandidateNumber,
     isHistorical,
     historicalMatch,
-    timeline: candidate.timelineEvents.map((event) => ({
-      id: event.id,
-      type: event.type,
-      title: event.title,
-      detail: event.detail,
-      occurredAt: event.occurredAt.toISOString(),
-      origin: event.origin
-    })),
+    timeline,
     aiSummary: candidate.aiSummary
       ? { summary: candidate.aiSummary.summary, generatedAt: candidate.aiSummary.generatedAt.toISOString() }
       : null,
