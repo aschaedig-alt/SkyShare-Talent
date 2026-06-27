@@ -104,6 +104,7 @@ export function CandidateProfileWorkspace({
   const [candidate, setCandidate] = useState<CandidateProfileData>(initialCandidate);
   const [activeTab, setActiveTab] = useState<ProfileTab>("documents");
   const [tagsOpen, setTagsOpen] = useState(false);
+  const [openApp, setOpenApp] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -456,6 +457,26 @@ export function CandidateProfileWorkspace({
                           </Link>
                         ) : null}
                       </div>
+                      {application.questionnaire.length > 0 && (
+                        <div className="mt-2">
+                          <button
+                            onClick={() => setOpenApp(openApp === application.id ? null : application.id)}
+                            className="text-xs font-semibold text-brand-eden transition hover:text-brand-lea dark:text-slate-300"
+                          >
+                            {openApp === application.id ? "Hide" : "Show"} questionnaire ({application.questionnaire.length})
+                          </button>
+                          {openApp === application.id && (
+                            <dl className="mt-2 space-y-2 border-t border-brand-lea/10 pt-2 dark:border-white/10">
+                              {application.questionnaire.map((q, idx) => (
+                                <div key={idx}>
+                                  <dt className="text-xs font-semibold text-brand-lea dark:text-slate-200">{q.question}</dt>
+                                  <dd className="whitespace-pre-wrap text-xs text-brand-grey dark:text-slate-400">{q.answer || "—"}</dd>
+                                </div>
+                              ))}
+                            </dl>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (

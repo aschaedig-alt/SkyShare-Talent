@@ -115,6 +115,7 @@ export type CandidateProfileData = {
       status: string;
       reviewStatus: string;
     } | null;
+    questionnaire: Array<{ questionnaireName: string | null; question: string | null; answer: string | null }>;
   }>;
   interviews: Array<{
     id: string;
@@ -459,6 +460,9 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
               status: true,
               reviewStatus: true
             }
+          },
+          questionnaireAnswers: {
+            select: { questionnaireName: true, question: true, answer: true }
           }
         }
       },
@@ -626,7 +630,12 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
             status: application.pilotRequirement.status,
             reviewStatus: application.pilotRequirement.reviewStatus
           }
-        : null
+        : null,
+      questionnaire: application.questionnaireAnswers.map((q) => ({
+        questionnaireName: q.questionnaireName,
+        question: q.question,
+        answer: q.answer
+      }))
     })),
     interviews: candidate.interviews.map((interview) => ({
       id: interview.id,

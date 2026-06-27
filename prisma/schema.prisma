@@ -469,6 +469,7 @@ model Candidate {
   candidateTags        CandidateTag[]
   aiSummary            CandidateAiSummary?
   communications       CandidateCommunication[]
+  questionnaireAnswers CandidateQuestionnaireAnswer[]
 
   @@index([normalizedEmail])
   @@index([normalizedPhone])
@@ -772,6 +773,7 @@ model CandidateApplication {
   job                  Job?               @relation(fields: [jobId], references: [id], onDelete: SetNull)
   pilotRequirement     PilotRequirement?  @relation(fields: [pilotRequirementId], references: [id], onDelete: SetNull)
   historicalSource     HistoricalSource?  @relation(fields: [historicalSourceId], references: [id], onDelete: SetNull)
+  questionnaireAnswers CandidateQuestionnaireAnswer[]
 
   @@index([candidateId])
   @@index([jobId])
@@ -1313,4 +1315,24 @@ model CandidateCommunication {
 
   @@index([candidateId, sentAt])
   @@index([jazzCommId])
+}
+
+// A single question/answer from a Jazz application questionnaire (e.g. the HR
+// Generalist or pilot questionnaires). Linked to the candidate and, when known,
+// the specific application it was answered for.
+model CandidateQuestionnaireAnswer {
+  id                String    @id @default(cuid())
+  candidateId       String
+  applicationId     String?
+  questionnaireName String?
+  question          String?
+  answer            String?
+  origin            String    @default("JAZZ")
+  createdAt         DateTime  @default(now())
+
+  candidate         Candidate             @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  application       CandidateApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+
+  @@index([candidateId])
+  @@index([applicationId])
 }
