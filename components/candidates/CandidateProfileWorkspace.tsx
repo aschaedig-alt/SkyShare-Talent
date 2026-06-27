@@ -3,13 +3,17 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { clsx } from "clsx";
-import { FileText, Briefcase, StickyNote, CalendarClock, History, Plane } from "lucide-react";
+import { FileText, Briefcase, StickyNote, CalendarClock, History, Plane, Clock, Sparkles, Mail } from "lucide-react";
 import { CandidateDocuments } from "@/components/candidates/CandidateDocuments";
 import { DocumentChecklist } from "@/components/candidates/DocumentChecklist";
 import { CurrencyPanel } from "@/components/candidates/CurrencyPanel";
 import { ProConPanel } from "@/components/candidates/ProConPanel";
 import { CandidateNotes } from "@/components/candidates/CandidateNotes";
 import { CandidateActivityTimeline } from "@/components/candidates/CandidateActivityTimeline";
+import { HistoricalMatchPanel } from "@/components/candidates/HistoricalMatchPanel";
+import { CandidateTimeline } from "@/components/candidates/CandidateTimeline";
+import { AiSummaryCard } from "@/components/candidates/AiSummaryCard";
+import { CandidateCommunications } from "@/components/candidates/CandidateCommunications";
 import { FlightProfilePanel } from "@/components/candidates/FlightProfilePanel";
 import { EditableGrid, type GridItem } from "@/components/shared/EditableGrid";
 import { TravelPanel } from "@/components/travel/TravelPanel";
@@ -38,7 +42,7 @@ const PROFILE_DEFAULT_LAYOUT: GridItem[] = [
   { i: "record", x: 0, y: 32, w: 3, h: 5 }
 ];
 
-type ProfileTab = "documents" | "applications" | "notes" | "interviews" | "activity" | "travel";
+type ProfileTab = "documents" | "applications" | "notes" | "interviews" | "timeline" | "summary" | "communications" | "activity" | "travel";
 
 type CandidateEditForm = {
   displayName: string;
@@ -170,6 +174,9 @@ export function CandidateProfileWorkspace({
     { id: "applications", label: "Applications", icon: Briefcase, count: candidate.applications.length },
     { id: "notes", label: "Notes", icon: StickyNote, count: candidate.notes.length },
     { id: "interviews", label: "Interviews", icon: CalendarClock, count: candidate.interviews.length },
+    { id: "timeline", label: "Timeline", icon: Clock, count: candidate.timeline.length },
+    { id: "communications", label: "Communication", icon: Mail, count: candidate.communicationCount },
+    { id: "summary", label: "AI summary", icon: Sparkles, count: candidate.aiSummary ? 1 : 0 },
     { id: "travel", label: "Travel", icon: Plane, count: travelTrips.length },
     { id: "activity", label: "Activity", icon: History, count: candidate.activity.length }
   ];
@@ -227,6 +234,15 @@ export function CandidateProfileWorkspace({
           </div>
         </div>
       </section>
+
+      {/* Historical Candidate Archive — match banner (Jazz history present) */}
+      {!isEditing && candidate.isHistorical && candidate.historicalMatch && (
+        <HistoricalMatchPanel
+          match={candidate.historicalMatch}
+          jazzCandidateNumber={candidate.jazzCandidateNumber}
+          onViewTimeline={() => setActiveTab("timeline")}
+        />
+      )}
 
       {isEditing ? (
         /* Edit form */
@@ -442,6 +458,19 @@ export function CandidateProfileWorkspace({
 
           {/* Notes tab */}
           {activeTab === "notes" && <CandidateNotes candidateId={candidate.id} initialNotes={candidate.notes} />}
+
+          {/* Timeline tab — unified candidate lifecycle (live + historical) */}
+          {activeTab === "timeline" && <CandidateTimeline events={candidate.timeline} />}
+
+          {/* Communication history tab — archived email/messages */}
+          {activeTab === "communications" && (
+            <CandidateCommunications communications={candidate.communications} total={candidate.communicationCount} />
+          )}
+
+          {/* AI summary tab */}
+          {activeTab === "summary" && (
+            <AiSummaryCard candidateId={candidate.id} summary={candidate.aiSummary} isHistorical={candidate.isHistorical} canEdit={canEdit} />
+          )}
 
           {/* Travel tab — pre-hire fly-outs and any other travel for this candidate */}
           {activeTab === "travel" && (

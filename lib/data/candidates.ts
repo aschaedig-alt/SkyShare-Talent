@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { METRIC_DEFS, type MetricKind } from "@/lib/extraction/pilot-metrics";
 import { parseStringArray } from "@/lib/json";
+import { normalizeEmail } from "@/lib/candidates/normalize";
 
 export type CandidateListItem = {
   id: string;
@@ -127,8 +128,56 @@ export type CandidateProfileData = {
     status: string;
     notes: string | null;
   }>;
+  // Historical Candidate Archive surfaces. `origin` is internal (PAYCOM | JAZZ |
+  // MANUAL); `isHistorical` is true when the profile carries legacy (Jazz) data,
+  // whether it was created from it or merged into an existing candidate.
+  origin: string;
+  jazzCandidateNumber: string | null;
+  isHistorical: boolean;
+  historicalMatch: {
+    applicationCount: number;
+    interviewers: string[];
+    hasNotes: boolean;
+    declinedOffer: boolean;
+    resumeArchived: boolean;
+    hired: boolean;
+  } | null;
+  timeline: Array<{
+    id: string;
+    type: string;
+    title: string;
+    detail: string | null;
+    occurredAt: string;
+    origin: string;
+  }>;
+  aiSummary: { summary: string; generatedAt: string } | null;
+  communications: Array<{
+    id: string;
+    subject: string | null;
+    senderEmail: string | null;
+    recipientEmail: string | null;
+    sentAt: string | null;
+    body: string | null;
+    fromCandidate: boolean;
+  }>;
+  communicationCount: number;
 };
 
+
+/** Merge legacy tagsJson tags with normalized CandidateTag labels (case-insensitive dedupe). */
+function mergeTags(jsonTags: string[], normalizedTags: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const t of [...jsonTags, ...normalizedTags]) {
+    const trimmed = t.trim();
+    const key = trimmed.toLowerCase();
+    if (trimmed && !seen.has(key)) {
+      seen.add(key);
+      out.push(trimmed);
+    }
+  }
+  return out;
+}
 
 /** Build a short excerpt around the first match of query in text. */
 function buildSnippet(text: string, query: string): string {
@@ -148,9 +197,11 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
   const normalizedQuery = query.trim().toLowerCase();
   const hasQuery = normalizedQuery.length > 0;
 
+  // When searching, span ALL candidates including archived/historical (Jazz)
+  // ones so legacy records are findable. With no query, the default list stays
+  // active-only (archivedAt: null) so the historical archive doesn't flood it.
   const candidateWhere = hasQuery
     ? {
-        archivedAt: null,
         OR: [
           { normalizedName: { contains: normalizedQuery } },
           { normalizedEmail: { contains: normalizedQuery } },
@@ -185,6 +236,7 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
       orderBy: [{ updatedAt: "desc" }, { displayName: "asc" }],
       include: {
         files: filesInclude,
+        candidateTags: { include: { tag: { select: { label: true } } } },
         _count: {
           select: {
             notes: true,
@@ -219,7 +271,10 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
       source: candidate.source,
       primaryEmail: candidate.primaryEmail,
       primaryPhone: candidate.primaryPhone,
-      tags: parseStringArray(candidate.tagsJson),
+      tags: mergeTags(
+        parseStringArray(candidate.tagsJson),
+        (candidate as typeof candidate & { candidateTags?: Array<{ tag: { label: string } }> }).candidateTags?.map((ct) => ct.tag.label) ?? []
+      ),
       updatedAt: candidate.updatedAt.toISOString(),
       noteCount: candidate._count.notes,
       fileCount: candidate._count.files,
@@ -409,13 +464,43 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
       },
       interviews: {
         orderBy: { startDateTime: "asc" }
-      }
+      },
+      timelineEvents: {
+        orderBy: { occurredAt: "asc" }
+      },
+      aiSummary: true,
+      candidateTags: { include: { tag: { select: { label: true } } } },
+      communications: {
+        orderBy: { sentAt: "desc" },
+        take: 100
+      },
+      _count: { select: { communications: true } }
     }
   });
 
   if (!candidate) {
     return null;
   }
+
+  // Derive the "historical match" facts that drive the banner. A profile counts
+  // as historical when it originated from Jazz, or had Jazz data merged into it.
+  const isHistorical = candidate.origin === "JAZZ" || Boolean(candidate.historicalSourceId);
+  const interviewers = [
+    ...new Set(candidate.interviews.map((i) => i.interviewer).filter((v): v is string => Boolean(v)))
+  ];
+  const declinedOffer = candidate.applications.some((a) => (a.status ?? "").toLowerCase().includes("declined"));
+  const hired = candidate.applications.some((a) => (a.status ?? "").toLowerCase().includes("hired") && !(a.status ?? "").toLowerCase().includes("elsewhere"));
+  const resumeArchived = candidate.files.some((f) => (f.documentType ?? "").toLowerCase() === "resume");
+  const historicalMatch = isHistorical
+    ? {
+        applicationCount: candidate.applications.length,
+        interviewers,
+        hasNotes: candidate.notes.length > 0,
+        declinedOffer,
+        resumeArchived,
+        hired
+      }
+    : null;
 
   // Per-candidate activity history (edits, note add/remove, dedupe, etc.).
   const activityRows = await prisma.activityLog.findMany({
@@ -437,7 +522,7 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
     source: candidate.source,
     primaryEmail: candidate.primaryEmail,
     primaryPhone: candidate.primaryPhone,
-    tags: parseStringArray(candidate.tagsJson),
+    tags: mergeTags(parseStringArray(candidate.tagsJson), candidate.candidateTags.map((ct) => ct.tag.label)),
     folders: parseStringArray(candidate.foldersJson),
     pros: parseStringArray(candidate.prosJson),
     cons: parseStringArray(candidate.consJson),
@@ -525,6 +610,31 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
       meetingUrl: interview.meetingUrl,
       status: interview.status,
       notes: interview.notes
-    }))
+    })),
+    origin: candidate.origin,
+    jazzCandidateNumber: candidate.jazzCandidateNumber,
+    isHistorical,
+    historicalMatch,
+    timeline: candidate.timelineEvents.map((event) => ({
+      id: event.id,
+      type: event.type,
+      title: event.title,
+      detail: event.detail,
+      occurredAt: event.occurredAt.toISOString(),
+      origin: event.origin
+    })),
+    aiSummary: candidate.aiSummary
+      ? { summary: candidate.aiSummary.summary, generatedAt: candidate.aiSummary.generatedAt.toISOString() }
+      : null,
+    communications: candidate.communications.map((c) => ({
+      id: c.id,
+      subject: c.subject,
+      senderEmail: c.senderEmail,
+      recipientEmail: c.recipientEmail,
+      sentAt: c.sentAt ? c.sentAt.toISOString() : null,
+      body: c.body,
+      fromCandidate: Boolean(candidate.normalizedEmail) && normalizeEmail(c.senderEmail) === candidate.normalizedEmail
+    })),
+    communicationCount: candidate._count.communications
   };
 }
