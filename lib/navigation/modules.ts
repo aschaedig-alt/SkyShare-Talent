@@ -45,6 +45,7 @@ export const moduleIds = [
   "imports",
   "duplicate-review",
   "reports",
+  "archive",
   "jobs",
   "review",
   "templates",
@@ -146,7 +147,8 @@ export const navigationGroups: readonly NavigationGroup[] = [
         items: [
           { id: "imports", href: "/imports", label: "Imports / Uploads", icon: Import },
           { id: "duplicate-review", href: "/duplicate-review", label: "Duplicate Review", icon: CheckCircle2 },
-          { id: "reports", href: "/reports", label: "Reports", icon: BarChart3 }
+          { id: "reports", href: "/reports", label: "Reports", icon: BarChart3 },
+          { id: "archive", href: "/archive", label: "Historical Archive", icon: Database }
         ]
       }
     ]
