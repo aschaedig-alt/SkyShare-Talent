@@ -433,6 +433,12 @@ model Candidate {
   scanExcludedBy       String?
   owner                String?
   source               String?
+  // Where this profile originated. Internal only — never surfaced to recruiters.
+  // PAYCOM | JAZZ | MANUAL. Lets historical (Jazz) records live alongside live
+  // ones as ordinary candidates, and keeps imports fully separable/reversible.
+  origin               String                 @default("PAYCOM")
+  jazzCandidateNumber  String?
+  historicalSourceId   String?
   tagsJson             String?
   foldersJson          String?
   prosJson             String?
@@ -458,11 +464,19 @@ model Candidate {
   duplicateAsSecondary DuplicateReviewItem[]  @relation("DuplicateCandidateSecondary")
   importRows           ImportRow[]
   travelTrips          TravelTrip[]
+  historicalSource     HistoricalSource?      @relation(fields: [historicalSourceId], references: [id], onDelete: SetNull)
+  timelineEvents       TimelineEvent[]
+  candidateTags        CandidateTag[]
+  aiSummary            CandidateAiSummary?
+  communications       CandidateCommunication[]
 
   @@index([normalizedEmail])
   @@index([normalizedPhone])
   @@index([normalizedName])
   @@index([status])
+  @@index([origin])
+  @@index([jazzCandidateNumber])
+  @@index([historicalSourceId])
 }
 
 model CandidateContact {
@@ -740,16 +754,31 @@ model CandidateApplication {
   disposition          String?
   source               String?
   appliedAt            DateTime?
+  // Historical (Jazz) application support. origin mirrors Candidate.origin so the
+  // live pipeline and the archive share one table; "Historical Applications" on
+  // the profile is just an origin=JAZZ filter, not a second table.
+  origin               String             @default("PAYCOM")
+  jazzApplicationNumber String?
+  historicalJobTitle   String?
+  recruiterName        String?
+  hiringManager        String?
+  rejectionReason      String?
+  decidedAt            DateTime?
+  historicalSourceId   String?
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
 
   candidate            Candidate          @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   job                  Job?               @relation(fields: [jobId], references: [id], onDelete: SetNull)
   pilotRequirement     PilotRequirement?  @relation(fields: [pilotRequirementId], references: [id], onDelete: SetNull)
+  historicalSource     HistoricalSource?  @relation(fields: [historicalSourceId], references: [id], onDelete: SetNull)
 
   @@index([candidateId])
   @@index([jobId])
   @@index([pilotRequirementId])
+  @@index([origin])
+  @@index([jazzApplicationNumber])
+  @@index([historicalSourceId])
 }
 
 model Interview {
@@ -1184,4 +1213,104 @@ model InterviewQuestion {
 
   @@index([category])
   @@index([isActive])
+}
+
+// ─── Historical Candidate Archive ──────────────────────────────────────────
+// Records a single ingest of legacy ATS data (e.g. a JazzHR export). Every
+// Candidate / CandidateApplication created by that ingest points back here, so
+// an import is named, auditable, and removable as one unit.
+model HistoricalSource {
+  id            String   @id @default(cuid())
+  system        String                       // JAZZ
+  label         String                       // e.g. "Jazz export — 2025-06-16"
+  rootPath      String?
+  importBatchId String?
+  createdAt     DateTime @default(now())
+
+  candidates    Candidate[]
+  applications  CandidateApplication[]
+}
+
+// One entry in a candidate's unified chronology. Synthesized from applications,
+// interviews, notes, and file uploads (live + historical) so the profile shows
+// a single timeline regardless of where each event came from.
+model TimelineEvent {
+  id          String    @id @default(cuid())
+  candidateId String
+  type        String    // APPLIED | INTERVIEWED | OFFER | REJECTED | HIRED | NOTE | INTERVIEW_NOTE | RESUME_UPLOADED | CERT_UPDATED
+  title       String
+  detail      String?
+  occurredAt  DateTime
+  origin      String    @default("PAYCOM")
+  sourceType  String?   // Application | Interview | Note | File
+  sourceId    String?
+  createdAt   DateTime  @default(now())
+
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId, occurredAt])
+  @@index([type])
+}
+
+// Normalized tag (replaces the legacy tagsJson string column over time).
+model Tag {
+  id         String         @id @default(cuid())
+  label      String         @unique
+  normalized String         @unique
+  color      String?
+  createdAt  DateTime       @default(now())
+
+  candidates CandidateTag[]
+}
+
+model CandidateTag {
+  candidateId String
+  tagId       String
+  source      String?   // JAZZ | MANUAL
+  createdAt   DateTime  @default(now())
+
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  tag         Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([candidateId, tagId])
+  @@index([tagId])
+}
+
+// AI-generated narrative summary of a candidate's full history. Regenerated when
+// underlying data changes (inputHash guards against needless regeneration).
+model CandidateAiSummary {
+  id          String    @id @default(cuid())
+  candidateId String    @unique
+  summary     String
+  model       String?
+  inputHash   String?
+  generatedAt DateTime  @default(now())
+  staleAt     DateTime?
+
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+}
+
+// A single archived email/message between the team and a candidate (Communication
+// History — imported from the legacy ATS). Linked to the candidate; the two
+// parties are kept as raw addresses so direction can be derived for display.
+model CandidateCommunication {
+  id                 String    @id @default(cuid())
+  candidateId        String
+  jazzCommId         String?
+  jazzProspectId     String?
+  senderEmail        String?
+  recipientEmail     String?
+  cc                 String?
+  bcc                String?
+  subject            String?
+  body               String?
+  sentAt             DateTime?
+  origin             String    @default("JAZZ")
+  historicalSourceId String?
+  createdAt          DateTime  @default(now())
+
+  candidate          Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId, sentAt])
+  @@index([jazzCommId])
 }
