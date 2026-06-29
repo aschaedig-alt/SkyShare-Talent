@@ -7,12 +7,14 @@ import { clsx } from "clsx";
 import type { AttendeeView, ConfirmStatus, PrepTaskView, SessionDetail, TravelStatus } from "@/lib/data/orientation";
 import type { EmailTemplateDef } from "@/lib/orientation/defaults";
 import { formatUsd } from "@/lib/travel/constants";
+import { formatDateLong, formatTime, zoneLabel, toMountainDateTimeParts, mountainWallClockToIso } from "@/lib/calendar/format";
 
 function fmtShort(iso: string) {
-  return new Intl.DateTimeFormat("en", { weekday: "long", month: "long", day: "numeric" }).format(new Date(iso));
+  // Always Mountain Time, regardless of the viewer's / server's zone.
+  return formatDateLong(iso);
 }
 function fmtTime(iso: string) {
-  return new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" }).format(new Date(iso));
+  return `${formatTime(iso)} ${zoneLabel()}`;
 }
 
 async function patchJson(url: string, body: unknown, method = "PATCH") {
@@ -25,6 +27,25 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
   const [attendees, setAttendees] = useState(session.attendees);
   const [prep, setPrep] = useState(session.prepTasks);
   const [busy, setBusy] = useState(false);
+  const [rescheduling, setRescheduling] = useState(false);
+  const [resched, setResched] = useState({ date: "", time: "" });
+  const [savingDate, setSavingDate] = useState(false);
+
+  function openReschedule() {
+    setResched(toMountainDateTimeParts(session.date));
+    setRescheduling(true);
+  }
+  async function saveReschedule() {
+    const iso = mountainWallClockToIso(resched.date, resched.time);
+    if (!iso) return;
+    setSavingDate(true);
+    const ok = await patchJson(`/api/orientation/sessions/${session.id}`, { date: iso });
+    setSavingDate(false);
+    if (ok) {
+      setRescheduling(false);
+      router.refresh();
+    }
+  }
 
   const headDone = prep.filter((p) => p.done).length;
   const headcount = {
@@ -126,12 +147,34 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
               {session.meetLink ? <> · <a href={session.meetLink} className="text-brand-lea underline dark:text-slate-100">Meet link</a></> : null}
             </p>
           </div>
-          {session.status === "COMPLETE" ? (
-            <span className="rounded bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">Complete</span>
-          ) : (
-            <button onClick={markComplete} disabled={busy} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">Mark complete</button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => (rescheduling ? setRescheduling(false) : openReschedule())} className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
+              {rescheduling ? "Cancel" : "Reschedule"}
+            </button>
+            {session.status === "COMPLETE" ? (
+              <span className="rounded bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">Complete</span>
+            ) : (
+              <button onClick={markComplete} disabled={busy} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">Mark complete</button>
+            )}
+          </div>
         </div>
+
+        {rescheduling ? (
+          <div className="mt-3 flex flex-wrap items-end gap-3 rounded border border-brand-lea/15 bg-brand-cloudDancer/40 p-3 dark:border-white/10 dark:bg-white/5">
+            <label className="block">
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">New date</span>
+              <input type="date" value={resched.date} onChange={(e) => setResched({ ...resched, date: e.target.value })} className="mt-1 block rounded border border-brand-lea/20 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100" />
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Time (MT)</span>
+              <input type="time" value={resched.time} onChange={(e) => setResched({ ...resched, time: e.target.value })} className="mt-1 block rounded border border-brand-lea/20 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100" />
+            </label>
+            <button onClick={saveReschedule} disabled={savingDate || !resched.date} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
+              {savingDate ? "Saving…" : "Save new date"}
+            </button>
+            <span className="text-xs text-brand-grey dark:text-slate-400">Attendees keep their spots; this only moves the session date/time.</span>
+          </div>
+        ) : null}
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
           {[
             ["Attendees", headcount.total],
