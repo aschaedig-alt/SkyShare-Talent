@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clsx } from "clsx";
 import type { Cohort, CalendarDay, SessionListItem, UnscheduledHire } from "@/lib/data/orientation";
+import { formatDateTimeWithZone, mountainWallClockToIso } from "@/lib/calendar/format";
 
 function fmt(iso: string) {
-  return new Intl.DateTimeFormat("en", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(iso));
+  // Session date/time always shown in Mountain Time (with an "MT" label).
+  return formatDateTimeWithZone(iso);
 }
 function fmtDay(iso: string) {
   return new Intl.DateTimeFormat("en", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" }).format(new Date(iso));
@@ -157,7 +159,7 @@ export function OrientationOverview({
     setSaving(true);
     setError(null);
     try {
-      const iso = new Date(`${form.date}T${form.time || "09:00"}:00`).toISOString();
+      const iso = mountainWallClockToIso(form.date, form.time) ?? new Date(`${form.date}T${form.time || "09:00"}:00`).toISOString();
       const res = await fetch("/api/orientation/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -178,7 +180,8 @@ export function OrientationOverview({
       const res = await fetch("/api/orientation/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: c.dateISO, attendeeHireIds: c.hires.map((h) => h.id) })
+        // Cohort dates carry no time — default the session to 9:00 AM Mountain.
+        body: JSON.stringify({ date: mountainWallClockToIso(c.dateISO, "09:00") ?? c.dateISO, attendeeHireIds: c.hires.map((h) => h.id) })
       });
       const p = (await res.json().catch(() => null)) as { id?: string } | null;
       if (p?.id) router.push(`/orientation/${p.id}`);

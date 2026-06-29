@@ -1,4 +1,5 @@
-import { timezoneAbbr, resolveTimezone } from "@/lib/calendar/timezones";
+import { timezoneAbbr, resolveTimezone, DEFAULT_TIMEZONE } from "@/lib/calendar/timezones";
+import { zonedWallClockToUtc } from "@/lib/booking/timezone";
 
 /**
  * Canonical date/time formatting for the whole app.
@@ -116,4 +117,41 @@ export function toDateTimeLocal(value: string | Date): string {
 export function dateAtHour(date: Date, hour = 9, minute = 0): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(hour)}:${pad(minute)}`;
+}
+
+/**
+ * Split an instant into its Mountain-time calendar date ("YYYY-MM-DD") and
+ * 24-hour time ("HH:MM") — for prefilling separate date + time inputs so what
+ * the user edits matches what they see, regardless of their computer's zone.
+ */
+export function toMountainDateTimeParts(value: string | Date): { date: string; time: string } {
+  const d = toDate(value);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: DEFAULT_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).formatToParts(d);
+  const m: Record<string, string> = {};
+  for (const p of parts) if (p.type !== "literal") m[p.type] = p.value;
+  const hour = m.hour === "24" ? "00" : m.hour;
+  return { date: `${m.year}-${m.month}-${m.day}`, time: `${hour}:${m.minute}` };
+}
+
+/**
+ * Interpret a date ("YYYY-MM-DD") + time ("HH:MM") entered as Mountain wall-clock
+ * and return the absolute UTC instant as an ISO string. So 9:30 AM is stored as
+ * 9:30 AM Mountain no matter where the code runs (browser zone or UTC server).
+ * Returns null if the inputs don't parse.
+ */
+export function mountainWallClockToIso(date: string, time: string): string | null {
+  const dm = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec((date ?? "").trim());
+  if (!dm) return null;
+  const tm = /^(\d{1,2}):(\d{2})$/.exec((time || "09:00").trim());
+  if (!tm) return null;
+  const utc = zonedWallClockToUtc(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3]), Number(tm[1]), Number(tm[2]), DEFAULT_TIMEZONE);
+  return utc.toISOString();
 }

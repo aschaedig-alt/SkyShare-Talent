@@ -1,10 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
 import { clsx } from "clsx";
+import { CircleCheck, Archive, CalendarClock, Building2 } from "lucide-react";
 import { ONBOARDING_GROUPS, ONBOARDING_TASKS, groupLabel } from "@/lib/onboarding/tasks";
 import type { GridHire, GridTaskStatus, HireStatus } from "@/lib/data/onboarding";
+import { BulkActionBar, bulkUpdateHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
+
+const GRID_BULK_ACTIONS: BulkAction[] = [
+  { kind: "patch", key: "onboard", label: "Mark onboarded", icon: CircleCheck, patch: { stage: "POST_ONBOARD" }, tone: "primary" },
+  { kind: "patch", key: "archive", label: "Archive", icon: Archive, patch: { stage: "ARCHIVED" }, confirm: true, tone: "danger" },
+  { kind: "date", key: "orientation", label: "Set orientation date", icon: CalendarClock },
+  { kind: "text", key: "dept", label: "Set department", icon: Building2, placeholder: "Department" }
+];
 
 const NEXT: Record<GridTaskStatus, GridTaskStatus> = { TODO: "DONE", DONE: "NA", NA: "TODO" };
 
@@ -36,7 +46,33 @@ function Glyph({ status }: { status: GridTaskStatus }) {
 }
 
 export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
+  const router = useRouter();
   const [hires, setHires] = useState(initial);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const allSelected = hires.length > 0 && selected.size === hires.length;
+  function toggleOne(id: string) {
+    setSelected((s) => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  }
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(hires.map((h) => h.id)));
+  }
+  async function applyBulk(patch: BulkPatch) {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    setBulkBusy(true);
+    const res = await bulkUpdateHires(ids, patch);
+    setBulkBusy(false);
+    if (!res.ok) return;
+    if (patch.stage) setHires((cur) => cur.filter((h) => !selected.has(h.id)));
+    setSelected(new Set());
+    router.refresh();
+  }
 
   async function cycle(hireId: string, taskId: string, current: GridTaskStatus) {
     const next = NEXT[current];
@@ -63,10 +99,12 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
   }
 
   return (
-    <div className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <div className="space-y-3">
+      <BulkActionBar count={selected.size} actions={GRID_BULK_ACTIONS} onApply={applyBulk} onClear={() => setSelected(new Set())} busy={bulkBusy} />
+      <div className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
         <p className="text-sm text-brand-grey dark:text-slate-400">
-          Click any cell to cycle <span className="font-semibold text-brand-lea dark:text-slate-100">to-do → done → N/A</span>. Scroll sideways for more hires.
+          Click any cell to cycle <span className="font-semibold text-brand-lea dark:text-slate-100">to-do → done → N/A</span>. Tick a name to select; scroll sideways for more.
         </p>
       </div>
       <div className="overflow-x-auto">
@@ -74,13 +112,19 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
           <thead>
             <tr>
               <th className="sticky left-0 z-30 border-b border-r border-brand-lea/10 bg-white px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">
-                Task
+                <label className="flex items-center gap-1.5">
+                  <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all hires" className="h-3.5 w-3.5" />
+                  Task
+                </label>
               </th>
               {hires.map((h) => {
                 const pct = h.applicableCount > 0 ? Math.round((h.doneCount / h.applicableCount) * 100) : 0;
                 return (
-                  <th key={h.id} className="sticky top-0 z-10 border-b border-brand-lea/10 bg-white px-3 py-2 align-bottom dark:border-white/10 dark:bg-[#10243a]" style={{ minWidth: 132 }}>
-                    <Link href={`/people/${h.id}`} className="block text-center font-medium text-brand-lea hover:underline transition hover:shadow-glow dark:text-slate-100">
+                  <th key={h.id} className={clsx("sticky top-0 z-10 border-b border-brand-lea/10 px-3 py-2 align-bottom dark:border-white/10", selected.has(h.id) ? "bg-brand-eden/10 dark:bg-white/10" : "bg-white dark:bg-[#10243a]")} style={{ minWidth: 132 }}>
+                    <div className="flex justify-center">
+                      <input type="checkbox" checked={selected.has(h.id)} onChange={() => toggleOne(h.id)} aria-label={`Select ${h.name}`} className="h-3.5 w-3.5" />
+                    </div>
+                    <Link href={`/people/${h.id}`} className="mt-1 block text-center font-medium text-brand-lea hover:underline transition hover:shadow-glow dark:text-slate-100">
                       {h.name}
                     </Link>
                     <div className="mx-auto mt-1.5 h-1.5 w-24 overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/5">
@@ -150,6 +194,7 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
             })}
           </tbody>
         </table>
+      </div>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { METRIC_DEFS, type MetricKind } from "@/lib/extraction/pilot-metrics";
 import { parseStringArray } from "@/lib/json";
+import { normalizeEmail } from "@/lib/candidates/normalize";
 
 export type CandidateListItem = {
   id: string;
@@ -114,6 +115,7 @@ export type CandidateProfileData = {
       status: string;
       reviewStatus: string;
     } | null;
+    questionnaire: Array<{ questionnaireName: string | null; question: string | null; answer: string | null }>;
   }>;
   interviews: Array<{
     id: string;
@@ -127,8 +129,56 @@ export type CandidateProfileData = {
     status: string;
     notes: string | null;
   }>;
+  // Historical Candidate Archive surfaces. `origin` is internal (PAYCOM | JAZZ |
+  // MANUAL); `isHistorical` is true when the profile carries legacy (Jazz) data,
+  // whether it was created from it or merged into an existing candidate.
+  origin: string;
+  jazzCandidateNumber: string | null;
+  isHistorical: boolean;
+  historicalMatch: {
+    applicationCount: number;
+    interviewers: string[];
+    hasNotes: boolean;
+    declinedOffer: boolean;
+    resumeArchived: boolean;
+    hired: boolean;
+  } | null;
+  timeline: Array<{
+    id: string;
+    type: string;
+    title: string;
+    detail: string | null;
+    occurredAt: string;
+    origin: string;
+  }>;
+  aiSummary: { summary: string; generatedAt: string } | null;
+  communications: Array<{
+    id: string;
+    subject: string | null;
+    senderEmail: string | null;
+    recipientEmail: string | null;
+    sentAt: string | null;
+    body: string | null;
+    fromCandidate: boolean;
+  }>;
+  communicationCount: number;
 };
 
+
+/** Merge legacy tagsJson tags with normalized CandidateTag labels (case-insensitive dedupe). */
+function mergeTags(jsonTags: string[], normalizedTags: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const t of [...jsonTags, ...normalizedTags]) {
+    const trimmed = t.trim();
+    const key = trimmed.toLowerCase();
+    if (trimmed && !seen.has(key)) {
+      seen.add(key);
+      out.push(trimmed);
+    }
+  }
+  return out;
+}
 
 /** Build a short excerpt around the first match of query in text. */
 function buildSnippet(text: string, query: string): string {
@@ -148,9 +198,11 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
   const normalizedQuery = query.trim().toLowerCase();
   const hasQuery = normalizedQuery.length > 0;
 
+  // When searching, span ALL candidates including archived/historical (Jazz)
+  // ones so legacy records are findable. With no query, the default list stays
+  // active-only (archivedAt: null) so the historical archive doesn't flood it.
   const candidateWhere = hasQuery
     ? {
-        archivedAt: null,
         OR: [
           { normalizedName: { contains: normalizedQuery } },
           { normalizedEmail: { contains: normalizedQuery } },
@@ -185,6 +237,7 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
       orderBy: [{ updatedAt: "desc" }, { displayName: "asc" }],
       include: {
         files: filesInclude,
+        candidateTags: { include: { tag: { select: { label: true } } } },
         _count: {
           select: {
             notes: true,
@@ -219,7 +272,10 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
       source: candidate.source,
       primaryEmail: candidate.primaryEmail,
       primaryPhone: candidate.primaryPhone,
-      tags: parseStringArray(candidate.tagsJson),
+      tags: mergeTags(
+        parseStringArray(candidate.tagsJson),
+        (candidate as typeof candidate & { candidateTags?: Array<{ tag: { label: string } }> }).candidateTags?.map((ct) => ct.tag.label) ?? []
+      ),
       updatedAt: candidate.updatedAt.toISOString(),
       noteCount: candidate._count.notes,
       fileCount: candidate._count.files,
@@ -404,18 +460,80 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
               status: true,
               reviewStatus: true
             }
+          },
+          questionnaireAnswers: {
+            select: { questionnaireName: true, question: true, answer: true }
           }
         }
       },
       interviews: {
         orderBy: { startDateTime: "asc" }
-      }
+      },
+      aiSummary: true,
+      candidateTags: { include: { tag: { select: { label: true } } } },
+      communications: {
+        orderBy: { sentAt: "desc" },
+        take: 100
+      },
+      _count: { select: { communications: true } }
     }
   });
 
   if (!candidate) {
     return null;
   }
+
+  // Derive the "historical match" facts that drive the banner. A profile counts
+  // as historical when it originated from Jazz, or had Jazz data merged into it.
+  const isHistorical = candidate.origin === "JAZZ" || Boolean(candidate.historicalSourceId);
+  const interviewers = [
+    ...new Set(candidate.interviews.map((i) => i.interviewer).filter((v): v is string => Boolean(v)))
+  ];
+  const declinedOffer = candidate.applications.some((a) => (a.status ?? "").toLowerCase().includes("declined"));
+  const hired = candidate.applications.some((a) => (a.status ?? "").toLowerCase().includes("hired") && !(a.status ?? "").toLowerCase().includes("elsewhere"));
+  const resumeArchived = candidate.files.some((f) => (f.documentType ?? "").toLowerCase() === "resume");
+  const historicalMatch = isHistorical
+    ? {
+        applicationCount: candidate.applications.length,
+        interviewers,
+        hasNotes: candidate.notes.length > 0,
+        declinedOffer,
+        resumeArchived,
+        hired
+      }
+    : null;
+
+  // Unified timeline built from the real relations so everything links together
+  // chronologically — every application (with its job), interview, and note —
+  // even when the candidate applied to more than one job.
+  const timeline = [
+    ...candidate.applications
+      .filter((a) => a.appliedAt)
+      .map((a) => ({
+        id: `app-${a.id}`,
+        type: a.disposition ?? "APPLIED",
+        title: a.job?.title ?? a.historicalJobTitle ?? "Application",
+        detail: a.status ?? null,
+        occurredAt: a.appliedAt!.toISOString(),
+        origin: a.origin
+      })),
+    ...candidate.interviews.map((i) => ({
+      id: `iv-${i.id}`,
+      type: "INTERVIEWED",
+      title: i.title,
+      detail: [i.interviewer, i.notes?.trim()].filter(Boolean).join(" · ") || null,
+      occurredAt: i.startDateTime.toISOString(),
+      origin: i.source === "JAZZ" ? "JAZZ" : "PAYCOM"
+    })),
+    ...candidate.notes.map((n) => ({
+      id: `note-${n.id}`,
+      type: n.source === "JAZZ_FEEDBACK" ? "INTERVIEW_NOTE" : "NOTE",
+      title: n.body.replace(/\s+/g, " ").slice(0, 240),
+      detail: null as string | null,
+      occurredAt: n.createdAt.toISOString(),
+      origin: n.source === "JAZZ_FEEDBACK" || n.source === "JAZZ" ? "JAZZ" : "PAYCOM"
+    }))
+  ].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
 
   // Per-candidate activity history (edits, note add/remove, dedupe, etc.).
   const activityRows = await prisma.activityLog.findMany({
@@ -437,7 +555,7 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
     source: candidate.source,
     primaryEmail: candidate.primaryEmail,
     primaryPhone: candidate.primaryPhone,
-    tags: parseStringArray(candidate.tagsJson),
+    tags: mergeTags(parseStringArray(candidate.tagsJson), candidate.candidateTags.map((ct) => ct.tag.label)),
     folders: parseStringArray(candidate.foldersJson),
     pros: parseStringArray(candidate.prosJson),
     cons: parseStringArray(candidate.consJson),
@@ -512,7 +630,12 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
             status: application.pilotRequirement.status,
             reviewStatus: application.pilotRequirement.reviewStatus
           }
-        : null
+        : null,
+      questionnaire: application.questionnaireAnswers.map((q) => ({
+        questionnaireName: q.questionnaireName,
+        question: q.question,
+        answer: q.answer
+      }))
     })),
     interviews: candidate.interviews.map((interview) => ({
       id: interview.id,
@@ -525,6 +648,24 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
       meetingUrl: interview.meetingUrl,
       status: interview.status,
       notes: interview.notes
-    }))
+    })),
+    origin: candidate.origin,
+    jazzCandidateNumber: candidate.jazzCandidateNumber,
+    isHistorical,
+    historicalMatch,
+    timeline,
+    aiSummary: candidate.aiSummary
+      ? { summary: candidate.aiSummary.summary, generatedAt: candidate.aiSummary.generatedAt.toISOString() }
+      : null,
+    communications: candidate.communications.map((c) => ({
+      id: c.id,
+      subject: c.subject,
+      senderEmail: c.senderEmail,
+      recipientEmail: c.recipientEmail,
+      sentAt: c.sentAt ? c.sentAt.toISOString() : null,
+      body: c.body,
+      fromCandidate: Boolean(candidate.normalizedEmail) && normalizeEmail(c.senderEmail) === candidate.normalizedEmail
+    })),
+    communicationCount: candidate._count.communications
   };
 }

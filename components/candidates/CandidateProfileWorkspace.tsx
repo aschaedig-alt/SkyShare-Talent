@@ -3,13 +3,17 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { clsx } from "clsx";
-import { FileText, Briefcase, StickyNote, CalendarClock, History, Plane } from "lucide-react";
+import { FileText, Briefcase, StickyNote, CalendarClock, History, Plane, Clock, Sparkles, Mail } from "lucide-react";
 import { CandidateDocuments } from "@/components/candidates/CandidateDocuments";
 import { DocumentChecklist } from "@/components/candidates/DocumentChecklist";
 import { CurrencyPanel } from "@/components/candidates/CurrencyPanel";
 import { ProConPanel } from "@/components/candidates/ProConPanel";
 import { CandidateNotes } from "@/components/candidates/CandidateNotes";
 import { CandidateActivityTimeline } from "@/components/candidates/CandidateActivityTimeline";
+import { HistoricalMatchPanel } from "@/components/candidates/HistoricalMatchPanel";
+import { CandidateTimeline } from "@/components/candidates/CandidateTimeline";
+import { AiSummaryCard } from "@/components/candidates/AiSummaryCard";
+import { CandidateCommunications } from "@/components/candidates/CandidateCommunications";
 import { FlightProfilePanel } from "@/components/candidates/FlightProfilePanel";
 import { EditableGrid, type GridItem } from "@/components/shared/EditableGrid";
 import { TravelPanel } from "@/components/travel/TravelPanel";
@@ -38,7 +42,7 @@ const PROFILE_DEFAULT_LAYOUT: GridItem[] = [
   { i: "record", x: 0, y: 32, w: 3, h: 5 }
 ];
 
-type ProfileTab = "documents" | "applications" | "notes" | "interviews" | "activity" | "travel";
+type ProfileTab = "documents" | "applications" | "notes" | "interviews" | "timeline" | "summary" | "communications" | "activity" | "travel";
 
 type CandidateEditForm = {
   displayName: string;
@@ -99,6 +103,8 @@ export function CandidateProfileWorkspace({
 }: CandidateProfileWorkspaceProps) {
   const [candidate, setCandidate] = useState<CandidateProfileData>(initialCandidate);
   const [activeTab, setActiveTab] = useState<ProfileTab>("documents");
+  const [tagsOpen, setTagsOpen] = useState(false);
+  const [openApp, setOpenApp] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -170,6 +176,9 @@ export function CandidateProfileWorkspace({
     { id: "applications", label: "Applications", icon: Briefcase, count: candidate.applications.length },
     { id: "notes", label: "Notes", icon: StickyNote, count: candidate.notes.length },
     { id: "interviews", label: "Interviews", icon: CalendarClock, count: candidate.interviews.length },
+    { id: "timeline", label: "Timeline", icon: Clock, count: candidate.timeline.length },
+    { id: "communications", label: "Communication", icon: Mail, count: candidate.communicationCount },
+    { id: "summary", label: "AI summary", icon: Sparkles, count: candidate.aiSummary ? 1 : 0 },
     { id: "travel", label: "Travel", icon: Plane, count: travelTrips.length },
     { id: "activity", label: "Activity", icon: History, count: candidate.activity.length }
   ];
@@ -196,8 +205,8 @@ export function CandidateProfileWorkspace({
               {[candidate.currentTitle, candidate.stage].filter(Boolean).join(" · ") || "No title recorded"}
             </p>
             {candidate.tags.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {candidate.tags.map((tag) => (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {(tagsOpen ? candidate.tags : candidate.tags.slice(0, 4)).map((tag) => (
                   <span
                     key={tag}
                     className="rounded border border-brand-sweet/60 bg-brand-sweet/18 px-2.5 py-1 text-[11px] font-semibold text-brand-lea dark:text-slate-100"
@@ -205,6 +214,14 @@ export function CandidateProfileWorkspace({
                     {tag}
                   </span>
                 ))}
+                {candidate.tags.length > 4 && (
+                  <button
+                    onClick={() => setTagsOpen((v) => !v)}
+                    className="rounded border border-brand-lea/20 px-2 py-1 text-[11px] font-semibold text-brand-eden transition hover:bg-brand-cloudDancer/40 dark:border-white/10 dark:text-slate-300"
+                  >
+                    {tagsOpen ? "Show less" : `+${candidate.tags.length - 4} more`}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -227,6 +244,15 @@ export function CandidateProfileWorkspace({
           </div>
         </div>
       </section>
+
+      {/* Historical Candidate Archive — match banner (Jazz history present) */}
+      {!isEditing && candidate.isHistorical && candidate.historicalMatch && (
+        <HistoricalMatchPanel
+          match={candidate.historicalMatch}
+          jazzCandidateNumber={candidate.jazzCandidateNumber}
+          onViewTimeline={() => setActiveTab("timeline")}
+        />
+      )}
 
       {isEditing ? (
         /* Edit form */
@@ -431,6 +457,26 @@ export function CandidateProfileWorkspace({
                           </Link>
                         ) : null}
                       </div>
+                      {application.questionnaire.length > 0 && (
+                        <div className="mt-2">
+                          <button
+                            onClick={() => setOpenApp(openApp === application.id ? null : application.id)}
+                            className="text-xs font-semibold text-brand-eden transition hover:text-brand-lea dark:text-slate-300"
+                          >
+                            {openApp === application.id ? "Hide" : "Show"} questionnaire ({application.questionnaire.length})
+                          </button>
+                          {openApp === application.id && (
+                            <dl className="mt-2 space-y-2 border-t border-brand-lea/10 pt-2 dark:border-white/10">
+                              {application.questionnaire.map((q, idx) => (
+                                <div key={idx}>
+                                  <dt className="text-xs font-semibold text-brand-lea dark:text-slate-200">{q.question}</dt>
+                                  <dd className="whitespace-pre-wrap text-xs text-brand-grey dark:text-slate-400">{q.answer || "—"}</dd>
+                                </div>
+                              ))}
+                            </dl>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (
@@ -442,6 +488,19 @@ export function CandidateProfileWorkspace({
 
           {/* Notes tab */}
           {activeTab === "notes" && <CandidateNotes candidateId={candidate.id} initialNotes={candidate.notes} />}
+
+          {/* Timeline tab — unified candidate lifecycle (live + historical) */}
+          {activeTab === "timeline" && <CandidateTimeline events={candidate.timeline} />}
+
+          {/* Communication history tab — archived email/messages */}
+          {activeTab === "communications" && (
+            <CandidateCommunications communications={candidate.communications} total={candidate.communicationCount} />
+          )}
+
+          {/* AI summary tab */}
+          {activeTab === "summary" && (
+            <AiSummaryCard candidateId={candidate.id} summary={candidate.aiSummary} isHistorical={candidate.isHistorical} canEdit={canEdit} />
+          )}
 
           {/* Travel tab — pre-hire fly-outs and any other travel for this candidate */}
           {activeTab === "travel" && (
@@ -461,6 +520,11 @@ export function CandidateProfileWorkspace({
                       <div className="font-semibold text-brand-lea dark:text-slate-100">{interview.title}</div>
                       <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{formatDateTime(interview.startDateTime)} · {interview.status}</div>
                       <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{[interview.interviewer, interview.location].filter(Boolean).join(" · ")}</div>
+                      {interview.notes && interview.notes.trim() && (
+                        <p className="mt-2 whitespace-pre-wrap rounded border border-brand-lea/10 bg-white/70 p-2 text-xs text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+                          {interview.notes.trim()}
+                        </p>
+                      )}
                     </div>
                   ))
                 ) : (
