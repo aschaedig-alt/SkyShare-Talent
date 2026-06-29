@@ -4,15 +4,48 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clsx } from "clsx";
+import { Archive, CalendarClock, Building2 } from "lucide-react";
 import type { Checkin, EmploymentStatus, GridTaskStatus, PostOnboardHire } from "@/lib/data/onboarding";
+import { BulkActionBar, bulkUpdateHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
 
 function fmtDate(iso: string | null) {
   return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(iso)) : "—";
 }
 
+const POST_ONBOARD_BULK_ACTIONS: BulkAction[] = [
+  { kind: "patch", key: "archive", label: "Archive", icon: Archive, patch: { stage: "ARCHIVED" }, confirm: true, tone: "danger" },
+  { kind: "date", key: "orientation", label: "Set orientation date", icon: CalendarClock },
+  { kind: "text", key: "dept", label: "Set department", icon: Building2, placeholder: "Department" }
+];
+
 export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] }) {
   const router = useRouter();
   const [hires, setHires] = useState(initial);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
+
+  const allSelected = hires.length > 0 && selected.size === hires.length;
+  function toggleOne(id: string) {
+    setSelected((s) => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  }
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(hires.map((h) => h.id)));
+  }
+  async function applyBulk(patch: BulkPatch) {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    setBusy(true);
+    const res = await bulkUpdateHires(ids, patch);
+    setBusy(false);
+    if (!res.ok) return;
+    if (patch.stage) setHires((cur) => cur.filter((h) => !selected.has(h.id)));
+    setSelected(new Set());
+    router.refresh();
+  }
 
   async function setEmployment(hireId: string, status: EmploymentStatus) {
     const prev = hires;
@@ -61,11 +94,14 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
   const heads = hires[0].checkins.map((c) => c.short);
 
   return (
-    <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <div className="space-y-3">
+      <BulkActionBar count={selected.size} actions={POST_ONBOARD_BULK_ACTIONS} onApply={applyBulk} onClear={() => setSelected(new Set())} busy={busy} />
+      <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-brand-lea/10 text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:border-white/10 dark:text-slate-400">
+              <th className="w-10 px-3 py-3 text-center"><input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" className="h-4 w-4 align-middle" /></th>
               <th className="px-4 py-3 text-left">Employee</th>
               <th className="px-4 py-3 text-left">Department</th>
               <th className="px-4 py-3 text-left">Started</th>
@@ -80,7 +116,10 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
             {hires.map((h) => {
               const terminated = h.employmentStatus === "TERMINATED";
               return (
-              <tr key={h.id} className={clsx("border-b border-brand-lea/5 hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:bg-white/5", terminated && "bg-brand-cloudDancer/30 dark:bg-white/5")}>
+              <tr key={h.id} className={clsx("border-b border-brand-lea/5 hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:bg-white/5", selected.has(h.id) ? "bg-brand-eden/10" : terminated && "bg-brand-cloudDancer/30 dark:bg-white/5")}>
+                <td className="px-3 py-3 text-center">
+                  <input type="checkbox" checked={selected.has(h.id)} onChange={() => toggleOne(h.id)} aria-label={`Select ${h.name}`} className="h-4 w-4 align-middle" />
+                </td>
                 <td className="px-4 py-3">
                   <Link href={`/people/${h.id}`} className={clsx("font-semibold hover:underline transition hover:shadow-glow", terminated ? "text-brand-grey dark:text-slate-400" : "text-brand-lea")}>{h.name}</Link>
                   <div className="text-xs text-brand-grey dark:text-slate-400">{h.position ?? "—"}</div>
@@ -130,6 +169,7 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
       <p className="border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey dark:border-white/10 dark:text-slate-400">
         Check-ins are 30 / 60 / 90-day + benefits for now — tell me the ones you actually run and I will swap them in.
       </p>
+      </div>
     </div>
   );
 }
