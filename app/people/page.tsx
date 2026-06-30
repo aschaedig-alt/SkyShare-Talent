@@ -11,9 +11,11 @@ import { PreOnboardingWorkspace, type PeopleTab } from "@/components/people/PreO
 
 export const dynamic = "force-dynamic";
 
-const TABS: PeopleTab[] = ["dashboard", "grid", "milestones", "post", "archived"];
+const TABS: PeopleTab[] = ["dashboard", "grid", "post", "archived"];
 
 function tabFromParam(value: string | undefined): PeopleTab {
+  // Grid + Milestones merged into one tab; keep old ?tab=milestones links working.
+  if (value === "milestones") return "grid";
   return TABS.includes(value as PeopleTab) ? (value as PeopleTab) : "dashboard";
 }
 
@@ -27,10 +29,8 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
     return <PreOnboardingWorkspace tab={tab} counts={counts} dashboard={await getActiveDashboard()} />;
   }
   if (tab === "grid") {
-    return <PreOnboardingWorkspace tab={tab} counts={counts} grid={await getActiveGridHires()} />;
-  }
-  if (tab === "milestones") {
-    return <PreOnboardingWorkspace tab={tab} counts={counts} milestones={await getActiveMilestoneData()} />;
+    const [grid, milestones] = await Promise.all([getActiveGridHires(), getActiveMilestoneData()]);
+    return <PreOnboardingWorkspace tab={tab} counts={counts} grid={grid} milestones={milestones} />;
   }
   if (tab === "post") {
     return <PreOnboardingWorkspace tab={tab} counts={counts} post={await getPostOnboardHires()} />;

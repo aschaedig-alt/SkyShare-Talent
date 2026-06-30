@@ -18,7 +18,7 @@ import { PostOnboardTab } from "@/components/people/PostOnboardTab";
 import { OnboardingArchivedTab } from "@/components/people/OnboardingArchivedTab";
 import { ImportHiresButton } from "@/components/people/ImportHiresButton";
 
-export type PeopleTab = "dashboard" | "grid" | "milestones" | "post" | "archived";
+export type PeopleTab = "dashboard" | "grid" | "post" | "archived";
 
 type Props = {
   tab: PeopleTab;
@@ -36,11 +36,11 @@ export function PreOnboardingWorkspace({ tab, counts, dashboard, grid, milestone
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: "", position: "", department: "", startDate: "" });
   const [error, setError] = useState<string | null>(null);
+  const [gridView, setGridView] = useState<"grid" | "milestones">("grid");
 
   const tabs: Array<{ key: PeopleTab; label: string; badge?: number }> = [
     { key: "dashboard", label: "Dashboard" },
-    { key: "grid", label: "Grid", badge: counts.active },
-    { key: "milestones", label: "Milestones", badge: counts.active },
+    { key: "grid", label: "Grid & milestones", badge: counts.active },
     { key: "post", label: "Post-onboard", badge: counts.postOnboard },
     { key: "archived", label: "Archived", badge: counts.archived }
   ];
@@ -110,8 +110,25 @@ export function PreOnboardingWorkspace({ tab, counts, dashboard, grid, milestone
       </div>
 
       {tab === "dashboard" && dashboard ? <OnboardingDashboardTab dashboard={dashboard} /> : null}
-      {tab === "grid" && grid ? <OnboardingGridTab hires={grid} /> : null}
-      {tab === "milestones" && milestones ? <OnboardingMilestonesTab data={milestones} /> : null}
+      {tab === "grid" && grid ? (
+        <div className="space-y-3">
+          <div className="flex w-fit gap-1 rounded bg-white p-1 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+            {(["grid", "milestones"] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setGridView(v)}
+                className={clsx(
+                  "rounded px-3 py-1.5 text-sm font-semibold transition hover:shadow-glow",
+                  gridView === v ? "bg-brand-lea text-white shadow-sm" : "text-brand-grey hover:text-brand-lea dark:text-slate-400"
+                )}
+              >
+                {v === "grid" ? "Grid" : "Milestones"}
+              </button>
+            ))}
+          </div>
+          {gridView === "grid" ? <OnboardingGridTab hires={grid} /> : milestones ? <OnboardingMilestonesTab data={milestones} /> : null}
+        </div>
+      ) : null}
       {tab === "post" && post ? <PostOnboardTab hires={post} /> : null}
       {tab === "archived" && archived ? <OnboardingArchivedTab rows={archived} /> : null}
 
