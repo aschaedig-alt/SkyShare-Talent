@@ -7,8 +7,9 @@ import { parseHiresText, type HireParseResult } from "@/lib/onboarding/import-hi
 
 type ImportResult = {
   created: number;
-  skipped: number;
-  results: { name: string; status: "created" | "skipped"; reason?: string }[];
+  updated: number;
+  unchanged: number;
+  results: { name: string; status: "created" | "updated" | "unchanged"; changed?: string[] }[];
 };
 
 const PREVIEW_COLS: { key: keyof HireParseResult["rows"][number]; label: string }[] = [
@@ -83,8 +84,9 @@ export function ImportHiresButton() {
           <div className="relative w-full max-w-2xl rounded bg-white p-5 shadow-2xl dark:bg-[#10243a]">
             <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Import hires from your spreadsheet</h2>
             <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-              Paste rows straight from your sheet (include the header row), or upload a CSV. Re-uploading the whole sheet is safe —
-              people already in the system are skipped, so only new rows are added.
+              Paste or upload your sheet (works whether names run across the top or down the first column). Re-importing the whole
+              sheet is safe — people already here get any changed dates/info updated (never wiped), unchanged ones are left alone, and
+              anyone new is added.
             </p>
 
             {!result ? (
@@ -122,12 +124,13 @@ export function ImportHiresButton() {
                 {parsed && (
                   <div className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/40 p-3 dark:border-white/10 dark:bg-white/5">
                     <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">
-                      {parsed.rows.length} {parsed.rows.length === 1 ? "person" : "people"} ready to import
+                      {parsed.rows.length} {parsed.rows.length === 1 ? "person" : "people"} found
+                      <span className="font-normal text-brand-grey dark:text-slate-400"> · {parsed.layout === "transposed" ? "names down the first column" : "one person per row"} detected</span>
                       {parsed.skippedNoName > 0 ? ` · ${parsed.skippedNoName} row(s) skipped (no name)` : ""}
                     </p>
                     {parsed.unmapped.length > 0 && (
                       <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
-                        Ignored columns (no matching field): {parsed.unmapped.join(", ")}
+                        Not imported (no matching field): {parsed.unmapped.slice(0, 6).join(", ")}{parsed.unmapped.length > 6 ? ` +${parsed.unmapped.length - 6} more` : ""}
                       </p>
                     )}
                     {parsed.rows.length > 0 && (
@@ -178,17 +181,17 @@ export function ImportHiresButton() {
               <div className="mt-4">
                 <div className="rounded border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
                   <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-                    Added {result.created} {result.created === 1 ? "hire" : "hires"}
-                    {result.skipped > 0 ? ` · skipped ${result.skipped} already in the system` : ""}.
+                    Added {result.created} · Updated {result.updated} · Unchanged {result.unchanged}.
                   </p>
                 </div>
-                {result.skipped > 0 && (
+                {result.updated > 0 && (
                   <div className="mt-2 max-h-40 overflow-auto rounded border border-brand-lea/10 p-2 text-xs dark:border-white/10">
+                    <p className="mb-1 font-semibold text-brand-lea dark:text-slate-100">Updated</p>
                     {result.results
-                      .filter((r) => r.status === "skipped")
+                      .filter((r) => r.status === "updated")
                       .map((r, i) => (
                         <div key={i} className="text-brand-grey dark:text-slate-400">
-                          {r.name} — {r.reason}
+                          {r.name}{r.changed && r.changed.length > 0 ? ` — ${r.changed.join(", ")}` : ""}
                         </div>
                       ))}
                   </div>

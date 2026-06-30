@@ -1,6 +1,12 @@
-// Parse a pasted/uploaded new-hire roster (CSV or tab-separated copy from a
-// spreadsheet) into canonical hire rows. Pure + shared so the import modal and
-// the API agree on the column mapping. Nothing is created here.
+// Parse a pasted/uploaded new-hire roster into canonical hire rows. Pure +
+// shared so the import modal and the API agree on the mapping. Nothing is
+// created here.
+//
+// Handles BOTH layouts, auto-detected:
+//  - Standard: field names across the top row, one person per row.
+//  - Transposed: field names down the first column, one person per COLUMN
+//    (the SkyShare "Pre-Onboarding Status" sheet). Blank/label columns with no
+//    name (e.g. the Archived sheet's Role Tag / Owner columns) are skipped.
 
 export type ParsedHireRow = {
   name: string;
@@ -17,9 +23,10 @@ export type ParsedHireRow = {
 
 export type HireParseResult = {
   rows: ParsedHireRow[];
-  mapped: string[]; // original headers that matched a field
-  unmapped: string[]; // original headers with no matching field
-  skippedNoName: number; // data rows dropped because they had no name
+  mapped: string[]; // original labels that matched a field
+  unmapped: string[]; // original labels with no matching field
+  skippedNoName: number; // people dropped because they had no name
+  layout: "standard" | "transposed";
 };
 
 type FieldKey =
@@ -34,7 +41,9 @@ type FieldKey =
   | "startDate"
   | "orientationDate";
 
-// Normalized header text -> canonical field key (synonyms included).
+const DATE_FIELDS = new Set<FieldKey>(["offerSentDate", "offerSignedDate", "startDate", "orientationDate"]);
+
+// Normalized label text -> canonical field key (synonyms included).
 const HEADER_MAP: Record<string, FieldKey> = {
   name: "name",
   fullname: "name",
@@ -47,6 +56,7 @@ const HEADER_MAP: Record<string, FieldKey> = {
   phonenumber: "phone",
   cell: "phone",
   mobile: "phone",
+  email: "ssEmail",
   ssemail: "ssEmail",
   skyshareemail: "ssEmail",
   workemail: "ssEmail",
@@ -63,7 +73,31 @@ const HEADER_MAP: Record<string, FieldKey> = {
   orientation: "orientationDate"
 };
 
-const normalizeHeader = (h: string) => h.toLowerCase().replace(/[^a-z0-9]/g, "");
+const normalizeLabel = (h: string) => h.toLowerCase().replace(/[^a-z0-9]/g, "");
+const fieldOf = (label: string): FieldKey | null => HEADER_MAP[normalizeLabel(label ?? "")] ?? null;
+
+// Treat placeholder values as empty (esp. for dates: "TBD", "N/A", "-", "n/a").
+function cleanValue(field: FieldKey, raw: string | undefined): string | null {
+  const v = (raw ?? "").trim();
+  if (!v) return null;
+  if (DATE_FIELDS.has(field) && /^(tbd|n\/?a|na|none|-|—)$/i.test(v)) return null;
+  return v;
+}
+
+function emptyRow(): Record<FieldKey, string | null> {
+  return {
+    name: null,
+    position: null,
+    department: null,
+    phone: null,
+    ssEmail: null,
+    personalEmail: null,
+    offerSentDate: null,
+    offerSignedDate: null,
+    startDate: null,
+    orientationDate: null
+  };
+}
 
 // Split one delimited line, honoring double-quoted fields (which may contain the delimiter).
 function splitLine(line: string, delimiter: string): string[] {
@@ -96,20 +130,34 @@ function splitLine(line: string, delimiter: string): string[] {
   return out.map((c) => c.trim());
 }
 
+function uniq(values: string[]): string[] {
+  return [...new Set(values.filter((v) => v.trim()))];
+}
+
 export function parseHiresText(text: string): HireParseResult {
   const lines = (text ?? "").split(/\r?\n/).filter((l) => l.trim().length > 0);
   if (lines.length === 0) {
-    return { rows: [], mapped: [], unmapped: [], skippedNoName: 0 };
+    return { rows: [], mapped: [], unmapped: [], skippedNoName: 0, layout: "standard" };
   }
 
-  // Tab-separated if the header row has a tab (Excel/Sheets copy), else CSV.
   const delimiter = lines[0].includes("\t") ? "\t" : ",";
-  const headerCells = splitLine(lines[0], delimiter);
+  const grid = lines.map((l) => splitLine(l, delimiter));
 
+  // Detect orientation: do the field labels run across the first row, or down
+  // the first column? Whichever has more known-field matches wins.
+  const firstRowMatches = (grid[0] ?? []).filter((c) => fieldOf(c)).length;
+  const firstColMatches = grid.filter((r) => fieldOf(r[0] ?? "")).length;
+  const transposed = firstColMatches > firstRowMatches;
+
+  return transposed ? parseTransposed(grid) : parseStandard(grid);
+}
+
+function parseStandard(grid: string[][]): HireParseResult {
+  const header = grid[0] ?? [];
   const mapped: string[] = [];
   const unmapped: string[] = [];
-  const colToField: (FieldKey | null)[] = headerCells.map((h) => {
-    const field = HEADER_MAP[normalizeHeader(h)] ?? null;
+  const colToField: (FieldKey | null)[] = header.map((h) => {
+    const field = fieldOf(h);
     if (field) mapped.push(h);
     else if (h.trim()) unmapped.push(h);
     return field;
@@ -117,25 +165,11 @@ export function parseHiresText(text: string): HireParseResult {
 
   const rows: ParsedHireRow[] = [];
   let skippedNoName = 0;
-
-  for (let i = 1; i < lines.length; i++) {
-    const cells = splitLine(lines[i], delimiter);
-    const row: Record<FieldKey, string | null> = {
-      name: null,
-      position: null,
-      department: null,
-      phone: null,
-      ssEmail: null,
-      personalEmail: null,
-      offerSentDate: null,
-      offerSignedDate: null,
-      startDate: null,
-      orientationDate: null
-    };
+  for (let i = 1; i < grid.length; i++) {
+    const cells = grid[i];
+    const row = emptyRow();
     colToField.forEach((field, idx) => {
-      if (!field) return;
-      const value = (cells[idx] ?? "").trim();
-      row[field] = value.length ? value : null;
+      if (field) row[field] = cleanValue(field, cells[idx]);
     });
     if (!row.name) {
       skippedNoName++;
@@ -143,6 +177,41 @@ export function parseHiresText(text: string): HireParseResult {
     }
     rows.push(row as ParsedHireRow);
   }
+  return { rows, mapped: uniq(mapped), unmapped: uniq(unmapped), skippedNoName, layout: "standard" };
+}
 
-  return { rows, mapped, unmapped, skippedNoName };
+function parseTransposed(grid: string[][]): HireParseResult {
+  const mapped: string[] = [];
+  const unmapped: string[] = [];
+  // field -> the row's cells excluding the leading label cell.
+  const fieldRows = new Map<FieldKey, string[]>();
+  for (const r of grid) {
+    const label = r[0] ?? "";
+    const field = fieldOf(label);
+    if (field) {
+      mapped.push(label);
+      if (!fieldRows.has(field)) fieldRows.set(field, r.slice(1));
+    } else if (label.trim()) {
+      unmapped.push(label);
+    }
+  }
+
+  const nameRow = fieldRows.get("name");
+  if (!nameRow) {
+    return { rows: [], mapped: uniq(mapped), unmapped: uniq(unmapped), skippedNoName: 0, layout: "transposed" };
+  }
+
+  const colCount = Math.max(0, ...[...fieldRows.values()].map((a) => a.length));
+  const rows: ParsedHireRow[] = [];
+  for (let c = 0; c < colCount; c++) {
+    const name = (nameRow[c] ?? "").trim();
+    if (!name) continue; // blank / label-only column — not a person
+    const row = emptyRow();
+    for (const [field, cells] of fieldRows) {
+      row[field] = cleanValue(field, cells[c]);
+    }
+    rows.push(row as ParsedHireRow);
+  }
+  // In transposed mode there is no "row missing a name" — empty columns are gaps.
+  return { rows, mapped: uniq(mapped), unmapped: uniq(unmapped), skippedNoName: 0, layout: "transposed" };
 }
