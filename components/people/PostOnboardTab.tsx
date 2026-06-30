@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clsx } from "clsx";
-import { Archive, CalendarClock, Building2 } from "lucide-react";
+import { Archive, CalendarClock, Building2, Trash2 } from "lucide-react";
 import type { Checkin, EmploymentStatus, GridTaskStatus, PostOnboardHire } from "@/lib/data/onboarding";
-import { BulkActionBar, bulkUpdateHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
+import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
 
 function fmtDate(iso: string | null) {
   return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(iso)) : "—";
@@ -15,7 +15,8 @@ function fmtDate(iso: string | null) {
 const POST_ONBOARD_BULK_ACTIONS: BulkAction[] = [
   { kind: "patch", key: "archive", label: "Archive", icon: Archive, patch: { stage: "ARCHIVED" }, confirm: true, tone: "danger" },
   { kind: "date", key: "orientation", label: "Set orientation date", icon: CalendarClock },
-  { kind: "text", key: "dept", label: "Set department", icon: Building2, placeholder: "Department" }
+  { kind: "text", key: "dept", label: "Set department", icon: Building2, placeholder: "Department" },
+  { kind: "delete", key: "delete", label: "Delete", icon: Trash2 }
 ];
 
 export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] }) {
@@ -43,6 +44,20 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
     setBusy(false);
     if (!res.ok) return;
     if (patch.stage) setHires((cur) => cur.filter((h) => !selected.has(h.id)));
+    setSelected(new Set());
+    router.refresh();
+  }
+  async function deleteSelected() {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    setBusy(true);
+    const res = await bulkDeleteHires(ids);
+    setBusy(false);
+    if (!res.ok) {
+      window.alert(res.message ?? "Could not delete.");
+      return;
+    }
+    setHires((cur) => cur.filter((h) => !selected.has(h.id)));
     setSelected(new Set());
     router.refresh();
   }
@@ -95,7 +110,7 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
 
   return (
     <div className="space-y-3">
-      <BulkActionBar count={selected.size} actions={POST_ONBOARD_BULK_ACTIONS} onApply={applyBulk} onClear={() => setSelected(new Set())} busy={busy} />
+      <BulkActionBar count={selected.size} actions={POST_ONBOARD_BULK_ACTIONS} onApply={applyBulk} onDelete={deleteSelected} onClear={() => setSelected(new Set())} busy={busy} />
       <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">

@@ -4,14 +4,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clsx } from "clsx";
-import { RotateCcw, Building2, CalendarClock } from "lucide-react";
+import { RotateCcw, Building2, CalendarClock, Trash2 } from "lucide-react";
 import type { NewHireRow } from "@/lib/data/onboarding";
-import { BulkActionBar, bulkUpdateHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
+import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
 
 const ARCHIVED_BULK_ACTIONS: BulkAction[] = [
   { kind: "patch", key: "restore", label: "Restore to active", icon: RotateCcw, patch: { stage: "ACTIVE" }, tone: "primary" },
   { kind: "date", key: "orientation", label: "Set orientation date", icon: CalendarClock },
-  { kind: "text", key: "dept", label: "Set department", icon: Building2, placeholder: "Department" }
+  { kind: "text", key: "dept", label: "Set department", icon: Building2, placeholder: "Department" },
+  { kind: "delete", key: "delete", label: "Delete", icon: Trash2 }
 ];
 
 function fmtDate(iso: string | null) {
@@ -51,6 +52,19 @@ export function OnboardingArchivedTab({ rows }: { rows: NewHireRow[] }) {
     setSelected(new Set());
     router.refresh();
   }
+  async function deleteSelected() {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    setBulkBusy(true);
+    const res = await bulkDeleteHires(ids);
+    setBulkBusy(false);
+    if (!res.ok) {
+      window.alert(res.message ?? "Could not delete.");
+      return;
+    }
+    setSelected(new Set());
+    router.refresh();
+  }
 
   async function restore(id: string) {
     setBusy(id);
@@ -58,7 +72,7 @@ export function OnboardingArchivedTab({ rows }: { rows: NewHireRow[] }) {
       await fetch(`/api/new-hires/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ employmentStatus: "ACTIVE" })
+        body: JSON.stringify({ stage: "ACTIVE" })
       });
       router.refresh();
     } finally {
@@ -71,7 +85,7 @@ export function OnboardingArchivedTab({ rows }: { rows: NewHireRow[] }) {
   }
   return (
     <div className="space-y-3">
-      <BulkActionBar count={selected.size} actions={ARCHIVED_BULK_ACTIONS} onApply={applyBulk} onClear={() => setSelected(new Set())} busy={bulkBusy} />
+      <BulkActionBar count={selected.size} actions={ARCHIVED_BULK_ACTIONS} onApply={applyBulk} onDelete={deleteSelected} onClear={() => setSelected(new Set())} busy={bulkBusy} />
       <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <table className="min-w-full text-sm">
         <thead>
@@ -103,15 +117,13 @@ export function OnboardingArchivedTab({ rows }: { rows: NewHireRow[] }) {
                   <span className={clsx("rounded px-2.5 py-0.5 text-xs font-semibold", state.cls)}>{state.label}</span>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  {r.employmentStatus === "TERMINATED" ? (
-                    <button
-                      onClick={() => restore(r.id)}
-                      disabled={busy === r.id}
-                      className="rounded border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-50 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
-                    >
-                      {busy === r.id ? "..." : "Restore to post-onboard"}
-                    </button>
-                  ) : null}
+                  <button
+                    onClick={() => restore(r.id)}
+                    disabled={busy === r.id}
+                    className="rounded border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-50 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+                  >
+                    {busy === r.id ? "..." : "Restore to active"}
+                  </button>
                 </td>
               </tr>
             );

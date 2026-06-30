@@ -5,16 +5,16 @@ import { clsx } from "clsx";
 import type { ChartDatum, OnboardingDashboard } from "@/lib/data/onboarding";
 
 const STATUS_COLOR: Record<string, string> = {
-  "In process": "#b8860b",
+  "In progress": "#b8860b",
   Ready: "#2e7d32",
-  Urgent: "#e2904a",
-  Blocked: "#a32d2d"
+  "Due soon": "#e2904a",
+  Overdue: "#a32d2d"
 };
 
 const ALERT_STYLE: Record<string, { row: string; tag: string; label: string }> = {
-  blocked: { row: "bg-red-50", tag: "text-red-700", label: "Blocked" },
+  blocked: { row: "bg-red-50", tag: "text-red-700", label: "Overdue" },
   urgent: { row: "bg-red-50", tag: "text-red-700", label: "Urgent" },
-  missing: { row: "bg-brand-gold/10", tag: "text-brand-lea dark:text-slate-100", label: "Missing" }
+  missing: { row: "bg-brand-gold/10", tag: "text-brand-lea dark:text-slate-100", label: "To do" }
 };
 
 function fmtDate(iso: string) {
@@ -122,7 +122,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Starting in 7 days" value={String(dashboard.startingSoon)} tone="text-sky-700" />
         <MetricCard label="Hires with missing items" value={String(dashboard.missingItems)} tone="text-brand-gold" />
-        <MetricCard label="Urgent / blocked" value={String(dashboard.urgent)} tone="text-red-700" />
+        <MetricCard label="Needs attention" value={String(dashboard.urgent)} tone="text-red-700" />
         <MetricCard label="Avg. completion" value={`${dashboard.avgCompletion}%`} tone="text-brand-lea dark:text-slate-100" />
       </section>
 

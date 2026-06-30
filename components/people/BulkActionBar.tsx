@@ -17,20 +17,33 @@ export async function bulkUpdateHires(ids: string[], patch: BulkPatch): Promise<
   return { ok: true, count: data.count };
 }
 
+export async function bulkDeleteHires(ids: string[]): Promise<{ ok: boolean; count?: number; message?: string }> {
+  const res = await fetch("/api/new-hires/bulk-delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ids })
+  });
+  const data = (await res.json().catch(() => null)) as { ok?: boolean; count?: number; message?: string } | null;
+  if (!res.ok || !data?.ok) return { ok: false, message: data?.message ?? "Could not delete." };
+  return { ok: true, count: data.count };
+}
+
 export type BulkAction =
   | { kind: "patch"; key: string; label: string; icon: LucideIcon; patch: BulkPatch; confirm?: boolean; tone?: "primary" | "default" | "danger" }
   | { kind: "date"; key: string; label: string; icon: LucideIcon } // sets orientationDate
-  | { kind: "text"; key: string; label: string; icon: LucideIcon; placeholder: string }; // sets department
+  | { kind: "text"; key: string; label: string; icon: LucideIcon; placeholder: string } // sets department
+  | { kind: "delete"; key: string; label: string; icon: LucideIcon }; // permanent delete
 
 type Props = {
   count: number;
   actions: BulkAction[];
   onApply: (patch: BulkPatch) => Promise<void> | void;
   onClear: () => void;
+  onDelete?: () => Promise<void> | void;
   busy?: boolean;
 };
 
-export function BulkActionBar({ count, actions, onApply, onClear, busy }: Props) {
+export function BulkActionBar({ count, actions, onApply, onClear, onDelete, busy }: Props) {
   const [openInput, setOpenInput] = useState<BulkAction | null>(null);
   const [value, setValue] = useState("");
 
@@ -39,6 +52,15 @@ export function BulkActionBar({ count, actions, onApply, onClear, busy }: Props)
   async function runPatch(action: Extract<BulkAction, { kind: "patch" }>) {
     if (action.confirm && !window.confirm(`${action.label} ${count} ${count === 1 ? "person" : "people"}?`)) return;
     await onApply(action.patch);
+  }
+
+  async function runDelete() {
+    const noun = count === 1 ? "person" : "people";
+    const ok = window.confirm(
+      `Permanently delete ${count} ${noun} from onboarding?\n\nThis erases their record and all their onboarding data. It cannot be undone.`
+    );
+    if (!ok) return;
+    await onDelete?.();
   }
 
   async function applyInput() {
@@ -94,12 +116,19 @@ export function BulkActionBar({ count, actions, onApply, onClear, busy }: Props)
               <button
                 key={a.key}
                 disabled={busy}
-                onClick={() => (a.kind === "patch" ? runPatch(a) : (setOpenInput(a), setValue("")))}
+                onClick={() => {
+                  if (a.kind === "patch") runPatch(a);
+                  else if (a.kind === "delete") runDelete();
+                  else {
+                    setOpenInput(a);
+                    setValue("");
+                  }
+                }}
                 className={clsx(
                   "inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold transition disabled:opacity-60",
                   a.kind === "patch" && a.tone === "primary"
                     ? "bg-brand-lea text-white hover:bg-brand-eden"
-                    : a.kind === "patch" && a.tone === "danger"
+                    : (a.kind === "patch" && a.tone === "danger") || a.kind === "delete"
                       ? "border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
                       : "border border-brand-lea/20 text-brand-lea hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
                 )}

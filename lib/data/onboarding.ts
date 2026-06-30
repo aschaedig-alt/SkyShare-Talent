@@ -11,7 +11,7 @@ import { getMilestoneCatalog } from "@/lib/data/onboarding-milestones";
 const DAY = 86_400_000;
 
 export type HireStage = "ACTIVE" | "POST_ONBOARD" | "ARCHIVED";
-export type HireStatus = "Ready" | "In process" | "Urgent" | "Blocked" | "Onboarded" | "Archived" | "Canceled";
+export type HireStatus = "Ready" | "In progress" | "Due soon" | "Overdue" | "Onboarded" | "Archived" | "Canceled";
 export type AlertLevel = "blocked" | "urgent" | "missing";
 
 export type TaskView = {
@@ -101,9 +101,9 @@ function deriveStatus(hire: HireWithTasks, doneCount: number, applicableCount: n
   if (hire.stage === "POST_ONBOARD") return "Onboarded";
   if (applicableCount > 0 && doneCount === applicableCount) return "Ready";
   const startMs = hire.startDate ? hire.startDate.getTime() : null;
-  if (startMs !== null && startMs < now - DAY) return "Blocked";
-  if (startMs !== null && startMs - now <= 7 * DAY) return "Urgent";
-  return "In process";
+  if (startMs !== null && startMs < now - DAY) return "Overdue";
+  if (startMs !== null && startMs - now <= 7 * DAY) return "Due soon";
+  return "In progress";
 }
 
 function toRow(hire: HireWithTasks, now: number): NewHireRow {
@@ -143,19 +143,19 @@ function buildDashboard(active: HireWithTasks[], now: number): OnboardingDashboa
     ({ row }) => row.startDate && new Date(row.startDate).getTime() - now <= 7 * DAY && new Date(row.startDate).getTime() - now >= -DAY
   ).length;
   const missingItems = rows.filter(({ row }) => row.applicableCount - row.doneCount > 0).length;
-  const urgent = rows.filter(({ row }) => row.status === "Urgent" || row.status === "Blocked").length;
+  const urgent = rows.filter(({ row }) => row.status === "Due soon" || row.status === "Overdue").length;
 
   const alerts: Alert[] = [];
   for (const { hire, row } of rows) {
     const signed = hire.tasks.find((t) => t.key === "candidate_signed");
     const startMs = row.startDate ? new Date(row.startDate).getTime() : null;
     const soon = startMs !== null && startMs - now <= 14 * DAY;
-    if (row.status === "Blocked") {
+    if (row.status === "Overdue") {
       alerts.push({ id: hire.id, name: hire.name, level: "blocked", text: `start date passed, ${row.doneCount} of ${row.applicableCount} tasks done` });
     } else if (signed && signed.status === "TODO") {
       alerts.push({ id: hire.id, name: hire.name, level: soon ? "urgent" : "missing", text: "offer letter not signed yet" });
-    } else if (row.nextAction && (row.status === "Urgent" || row.applicableCount - row.doneCount > 0)) {
-      alerts.push({ id: hire.id, name: hire.name, level: row.status === "Urgent" ? "urgent" : "missing", text: `${row.nextAction.toLowerCase()}` });
+    } else if (row.nextAction && (row.status === "Due soon" || row.applicableCount - row.doneCount > 0)) {
+      alerts.push({ id: hire.id, name: hire.name, level: row.status === "Due soon" ? "urgent" : "missing", text: `${row.nextAction.toLowerCase()}` });
     }
   }
   const severity: Record<AlertLevel, number> = { blocked: 0, urgent: 1, missing: 2 };
@@ -168,7 +168,7 @@ function buildDashboard(active: HireWithTasks[], now: number): OnboardingDashboa
     .map(({ row }) => ({ id: row.id, name: row.name, position: row.position, startDate: row.startDate as string }));
 
   // Charts
-  const statusOrder: HireStatus[] = ["In process", "Ready", "Urgent", "Blocked"];
+  const statusOrder: HireStatus[] = ["In progress", "Ready", "Due soon", "Overdue"];
   const byStatus: ChartDatum[] = statusOrder
     .map((s) => ({ label: s, count: rows.filter(({ row }) => row.status === s).length }))
     .filter((d) => d.count > 0);

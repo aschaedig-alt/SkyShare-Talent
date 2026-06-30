@@ -4,25 +4,26 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
 import { clsx } from "clsx";
-import { CircleCheck, Archive, CalendarClock, Building2 } from "lucide-react";
+import { CircleCheck, Archive, CalendarClock, Building2, Trash2 } from "lucide-react";
 import { ONBOARDING_GROUPS, ONBOARDING_TASKS, groupLabel } from "@/lib/onboarding/tasks";
 import type { GridHire, GridTaskStatus, HireStatus } from "@/lib/data/onboarding";
-import { BulkActionBar, bulkUpdateHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
+import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
 
 const GRID_BULK_ACTIONS: BulkAction[] = [
   { kind: "patch", key: "onboard", label: "Mark onboarded", icon: CircleCheck, patch: { stage: "POST_ONBOARD" }, tone: "primary" },
   { kind: "patch", key: "archive", label: "Archive", icon: Archive, patch: { stage: "ARCHIVED" }, confirm: true, tone: "danger" },
   { kind: "date", key: "orientation", label: "Set orientation date", icon: CalendarClock },
-  { kind: "text", key: "dept", label: "Set department", icon: Building2, placeholder: "Department" }
+  { kind: "text", key: "dept", label: "Set department", icon: Building2, placeholder: "Department" },
+  { kind: "delete", key: "delete", label: "Delete", icon: Trash2 }
 ];
 
 const NEXT: Record<GridTaskStatus, GridTaskStatus> = { TODO: "DONE", DONE: "NA", NA: "TODO" };
 
 const STATUS_STYLE: Record<HireStatus, string> = {
   Ready: "bg-emerald-50 text-emerald-800",
-  "In process": "bg-brand-gold/15 text-brand-lea dark:text-slate-100",
-  Urgent: "bg-red-50 text-red-700",
-  Blocked: "bg-red-50 text-red-700",
+  "In progress": "bg-brand-gold/15 text-brand-lea dark:text-slate-100",
+  "Due soon": "bg-amber-50 text-amber-700",
+  Overdue: "bg-red-50 text-red-700",
   Onboarded: "bg-sky-50 text-sky-800",
   Archived: "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400",
   Canceled: "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400"
@@ -73,6 +74,20 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
     setSelected(new Set());
     router.refresh();
   }
+  async function deleteSelected() {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    setBulkBusy(true);
+    const res = await bulkDeleteHires(ids);
+    setBulkBusy(false);
+    if (!res.ok) {
+      window.alert(res.message ?? "Could not delete.");
+      return;
+    }
+    setHires((cur) => cur.filter((h) => !selected.has(h.id)));
+    setSelected(new Set());
+    router.refresh();
+  }
 
   async function cycle(hireId: string, taskId: string, current: GridTaskStatus) {
     const next = NEXT[current];
@@ -100,7 +115,7 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
 
   return (
     <div className="space-y-3">
-      <BulkActionBar count={selected.size} actions={GRID_BULK_ACTIONS} onApply={applyBulk} onClear={() => setSelected(new Set())} busy={bulkBusy} />
+      <BulkActionBar count={selected.size} actions={GRID_BULK_ACTIONS} onApply={applyBulk} onDelete={deleteSelected} onClear={() => setSelected(new Set())} busy={bulkBusy} />
       <div className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
       <div className="border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
         <p className="text-sm text-brand-grey dark:text-slate-400">
