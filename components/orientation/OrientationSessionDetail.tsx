@@ -108,6 +108,18 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
     await fetch(`/api/orientation/attendees/${id}/move`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ toSessionId }) });
     router.refresh();
   }
+  // One-click: move to the next scheduled orientation, or — if none yet — drop
+  // them to the waiting list so they resurface to be added once one is created.
+  async function moveToNext(a: AttendeeView) {
+    if (session.nextSessionId) {
+      await moveAttendee(a.id, session.nextSessionId);
+    } else {
+      await removeAttendee(a.id);
+      setNotice(`No upcoming orientation yet — ${a.name} is on the waiting list (People → Orientation) and will show under Suggested when you create the next session.`);
+      setTimeout(() => setNotice(null), 8000);
+    }
+  }
+  const [notice, setNotice] = useState<string | null>(null);
   const [addId, setAddId] = useState("");
   async function addAttendee() {
     if (!addId) return;
@@ -211,6 +223,9 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
         {/* Attendees */}
         <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Attendees</h2>
+          {notice ? (
+            <p className="mt-2 rounded border border-brand-gold/30 bg-brand-gold/10 px-3 py-2 text-xs text-brand-lea dark:text-slate-100">{notice}</p>
+          ) : null}
           <div className="mt-3 overflow-x-auto">
             <table className="min-w-full text-xs">
               <thead>
@@ -238,8 +253,9 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                       <div className="text-[10px] text-brand-grey dark:text-slate-400">{a.position ?? "—"}</div>
                     </td>
                     <td className="px-1 py-2">
-                      <select value={a.confirmed} onChange={(e) => setConfirm(a, e.target.value as ConfirmStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.confirmed === "CONFIRMED" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : a.confirmed === "DECLINED" ? "border-red-200 bg-red-50 text-red-700" : "border-brand-lea/15 bg-white text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400")}>
+                      <select value={a.confirmed} onChange={(e) => setConfirm(a, e.target.value as ConfirmStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.confirmed === "CONFIRMED" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : a.confirmed === "TENTATIVE" ? "border-amber-300 bg-amber-50 text-amber-700" : a.confirmed === "DECLINED" ? "border-red-200 bg-red-50 text-red-700" : "border-brand-lea/15 bg-white text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400")}>
                         <option value="PENDING">Pending</option>
+                        <option value="TENTATIVE">Tentative</option>
                         <option value="CONFIRMED">Confirmed</option>
                         <option value="DECLINED">Declined</option>
                       </select>
@@ -276,15 +292,22 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                     <td className="px-1 py-2 text-center"><Flag on={a.cardReady} onClick={() => toggleFlag(a, "cardReady")} /></td>
                     <td className="px-1 py-2 text-center"><Flag on={a.swagReady} onClick={() => toggleFlag(a, "swagReady")} /></td>
                     <td className="px-1 py-2">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => moveToNext(a)}
+                          title={session.nextSessionId ? "Move to the next scheduled orientation" : "No next orientation yet — moves them to the waiting list"}
+                          className="inline-flex items-center gap-0.5 whitespace-nowrap rounded border border-brand-lea/15 bg-white px-1.5 py-0.5 text-[11px] font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400"
+                        >
+                          Move to next →
+                        </button>
                         {session.otherSessions.length > 0 ? (
                           <select
                             value=""
                             onChange={(e) => moveAttendee(a.id, e.target.value)}
-                            title="Move to another orientation"
+                            title="Move to a specific orientation"
                             className="rounded border border-brand-lea/15 bg-white px-1 py-0.5 text-[11px] text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400"
                           >
-                            <option value="">Move…</option>
+                            <option value="">Move to…</option>
                             {session.otherSessions.map((o) => (
                               <option key={o.id} value={o.id}>→ {new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(o.date))}</option>
                             ))}
@@ -302,11 +325,11 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
             <select value={addId} onChange={(e) => setAddId(e.target.value)} className="flex-1 rounded border border-brand-lea/15 px-2 py-1.5 text-sm text-brand-lea dark:border-white/10 dark:text-slate-100">
               <option value="">Add attendee…</option>
               {session.candidates.filter((c) => c.suggested).length > 0 ? (
-                <optgroup label="Suggested (this orientation date)">
+                <optgroup label="Suggested · in pre-onboarding, not yet attended">
                   {session.candidates.filter((c) => c.suggested).map((c) => <option key={c.id} value={c.id}>{c.name}{c.position ? ` · ${c.position}` : ""}</option>)}
                 </optgroup>
               ) : null}
-              <optgroup label="All hires">
+              <optgroup label="All employees">
                 {session.candidates.filter((c) => !c.suggested).map((c) => <option key={c.id} value={c.id}>{c.name}{c.position ? ` · ${c.position}` : ""}</option>)}
               </optgroup>
             </select>

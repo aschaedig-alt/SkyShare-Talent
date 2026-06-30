@@ -4,7 +4,7 @@ import { getEmailTemplates } from "@/lib/data/orientation-templates";
 import type { EmailTemplateDef } from "@/lib/orientation/defaults";
 
 export type SessionStatus = "UPCOMING" | "COMPLETE" | "CANCELED";
-export type ConfirmStatus = "PENDING" | "CONFIRMED" | "DECLINED";
+export type ConfirmStatus = "PENDING" | "TENTATIVE" | "CONFIRMED" | "DECLINED";
 export type TravelStatus = "NA" | "NEEDED" | "ARRANGED";
 
 function iso(d: Date | null) {
@@ -95,6 +95,7 @@ export type SessionDetail = {
   candidates: SessionCandidate[];
   templates: EmailTemplateDef[];
   otherSessions: SessionRef[];
+  nextSessionId: string | null;
 };
 
 function parseKeys(json: string): string[] {
@@ -170,20 +171,31 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
   ).map((o) => ({ id: o.id, date: o.date.toISOString() }));
 
   const attendeeHireIds = new Set(s.attendees.map((a) => a.newHireId));
-  const sessionDay = s.date.toISOString().slice(0, 10);
+  // Candidates to add: anyone not already on this session and not archived.
+  // "Suggested" = active pre-onboarding hires who have not attended orientation
+  // yet, so the people most likely being missed surface first.
   const hires = await prisma.newHire.findMany({
-    where: { id: { notIn: [...attendeeHireIds] } },
-    select: { id: true, name: true, position: true, orientationDate: true, stage: true },
+    where: { id: { notIn: [...attendeeHireIds] }, stage: { not: "ARCHIVED" } },
+    select: {
+      id: true,
+      name: true,
+      position: true,
+      stage: true,
+      tasks: { where: { key: "attended_orientation" }, select: { status: true } }
+    },
     orderBy: { name: "asc" }
   });
   const candidates: SessionCandidate[] = hires.map((h) => ({
     id: h.id,
     name: h.name,
     position: h.position,
-    suggested: h.orientationDate ? h.orientationDate.toISOString().slice(0, 10) === sessionDay : false
+    suggested: h.stage === "ACTIVE" && (h.tasks[0]?.status ?? "TODO") !== "DONE"
   }));
   // suggested first
   candidates.sort((a, b) => Number(b.suggested) - Number(a.suggested) || a.name.localeCompare(b.name));
+
+  // The soonest upcoming session AFTER this one — for one-click "Move to next".
+  const nextSessionId = otherSessions.find((o) => new Date(o.date).getTime() > s.date.getTime())?.id ?? null;
 
   return {
     id: s.id,
@@ -211,7 +223,8 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
     },
     candidates,
     templates: await getEmailTemplates(),
-    otherSessions
+    otherSessions,
+    nextSessionId
   };
 }
 

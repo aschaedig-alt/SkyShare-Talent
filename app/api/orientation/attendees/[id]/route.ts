@@ -12,7 +12,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
     const body = (await request.json()) as Record<string, unknown>;
     const data: Record<string, unknown> = {};
 
-    if (body.confirmed === "PENDING" || body.confirmed === "CONFIRMED" || body.confirmed === "DECLINED") data.confirmed = body.confirmed;
+    if (body.confirmed === "PENDING" || body.confirmed === "TENTATIVE" || body.confirmed === "CONFIRMED" || body.confirmed === "DECLINED") data.confirmed = body.confirmed;
     if (body.travelStatus === "NA" || body.travelStatus === "NEEDED" || body.travelStatus === "ARRANGED") data.travelStatus = body.travelStatus;
     for (const f of ["ipadReady", "cardReady", "swagReady"]) {
       if (typeof body[f] === "boolean") data[f] = body[f];
