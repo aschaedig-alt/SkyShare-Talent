@@ -21,7 +21,7 @@ const normName = (s: string | null | undefined) => (s ?? "").toLowerCase().repla
 const normEmail = (s: string | null | undefined) => (s ?? "").toLowerCase().trim();
 
 const STRING_FIELDS = ["position", "department", "phone", "ssEmail", "personalEmail"] as const;
-const DATE_FIELDS = ["offerSentDate", "offerSignedDate", "startDate", "orientationDate"] as const;
+const DATE_FIELDS = ["offerSentDate", "offerSignedDate", "startDate", "orientationDate", "terminationDate"] as const;
 
 type ExistingHire = {
   id: string;
@@ -35,6 +35,9 @@ type ExistingHire = {
   offerSignedDate: Date | null;
   startDate: Date | null;
   orientationDate: Date | null;
+  terminationDate: Date | null;
+  stage: string;
+  employmentStatus: string;
 };
 
 type RowResult = { name: string; status: "created" | "updated" | "unchanged"; changed?: string[] };
@@ -85,7 +88,10 @@ export async function POST(request: Request) {
         offerSentDate: true,
         offerSignedDate: true,
         startDate: true,
-        orientationDate: true
+        orientationDate: true,
+        terminationDate: true,
+        stage: true,
+        employmentStatus: true
       }
     })) as ExistingHire[];
 
@@ -98,6 +104,7 @@ export async function POST(request: Request) {
 
     const results: RowResult[] = [];
     let taskChanges = 0;
+    let archived = 0;
 
     for (const row of rows) {
       const name = strOrNull(row.name);
@@ -105,6 +112,10 @@ export async function POST(request: Request) {
       const incomingTasks = Array.isArray(row.tasks) ? row.tasks : [];
       const ss = normEmail(row.ssEmail);
       const personal = normEmail(row.personalEmail);
+
+      // Terminated former employees auto-archive (TERMINATED + ARCHIVED stage).
+      const terminated = row.terminated === true;
+      if (terminated) archived++;
 
       const match = byName.get(normName(name)) ?? (ss ? byEmail.get(ss) : undefined) ?? (personal ? byEmail.get(personal) : undefined);
 
@@ -124,6 +135,16 @@ export async function POST(request: Request) {
           if (incoming !== null && !sameDay(incoming, match[f])) {
             data[f] = incoming;
             changed.push(f);
+          }
+        }
+        if (terminated) {
+          if (match.employmentStatus !== "TERMINATED") {
+            data.employmentStatus = "TERMINATED";
+            changed.push("employmentStatus");
+          }
+          if (match.stage !== "ARCHIVED") {
+            data.stage = "ARCHIVED";
+            changed.push("archived");
           }
         }
         if (changed.length > 0) {
@@ -153,8 +174,11 @@ export async function POST(request: Request) {
           offerSignedDate: parseDate(row.offerSignedDate),
           startDate: parseDate(row.startDate),
           orientationDate: parseDate(row.orientationDate),
-          stage: "ACTIVE",
-          tasks: { create: defaultTaskCreateData() }
+          terminationDate: parseDate(row.terminationDate),
+          stage: terminated ? "ARCHIVED" : "ACTIVE",
+          employmentStatus: terminated ? "TERMINATED" : "ACTIVE",
+          // Former employees are records-only — skip the onboarding checklist.
+          ...(terminated ? {} : { tasks: { create: defaultTaskCreateData() } })
         },
         select: {
           id: true,
@@ -167,11 +191,16 @@ export async function POST(request: Request) {
           offerSentDate: true,
           offerSignedDate: true,
           startDate: true,
-          orientationDate: true
+          orientationDate: true,
+          terminationDate: true,
+          stage: true,
+          employmentStatus: true
         }
       });
-      await ensureCustomMilestoneTasks(hire.id);
-      taskChanges += await applyTasks(hire.id, incomingTasks);
+      if (!terminated) {
+        await ensureCustomMilestoneTasks(hire.id);
+        taskChanges += await applyTasks(hire.id, incomingTasks);
+      }
 
       // Register so duplicate rows within the same file match this new record.
       const created = hire as ExistingHire;
@@ -185,7 +214,7 @@ export async function POST(request: Request) {
     const updated = results.filter((r) => r.status === "updated").length;
     const unchanged = results.filter((r) => r.status === "unchanged").length;
 
-    return NextResponse.json({ ok: true, created, updated, unchanged, taskChanges, results });
+    return NextResponse.json({ ok: true, created, updated, unchanged, taskChanges, archived, results });
   } catch (error) {
     console.error("New hire import error:", error);
     return NextResponse.json({ message: "Unable to import hires." }, { status: 500 });

@@ -95,6 +95,7 @@ export function OnboardingArchivedTab({ rows }: { rows: NewHireRow[] }) {
             <th className="px-4 py-3 text-left">Position</th>
             <th className="px-4 py-3 text-left">Department</th>
             <th className="px-4 py-3 text-left">Start date</th>
+            <th className="px-4 py-3 text-left">Termination date</th>
             <th className="px-4 py-3 text-left">State</th>
             <th className="px-4 py-3 text-left"></th>
           </tr>
@@ -113,6 +114,7 @@ export function OnboardingArchivedTab({ rows }: { rows: NewHireRow[] }) {
                 <td className="px-4 py-3 text-brand-grey dark:text-slate-400">{r.position ?? "—"}</td>
                 <td className="px-4 py-3 text-brand-grey dark:text-slate-400">{r.department ?? "—"}</td>
                 <td className="px-4 py-3 text-brand-grey dark:text-slate-400">{fmtDate(r.startDate)}</td>
+                <td className="px-4 py-3 text-brand-grey dark:text-slate-400">{fmtDate(r.terminationDate)}</td>
                 <td className="px-4 py-3">
                   <span className={clsx("rounded px-2.5 py-0.5 text-xs font-semibold", state.cls)}>{state.label}</span>
                 </td>

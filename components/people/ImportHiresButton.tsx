@@ -10,10 +10,12 @@ type ImportResult = {
   updated: number;
   unchanged: number;
   taskChanges: number;
+  archived: number;
   results: { name: string; status: "created" | "updated" | "unchanged"; changed?: string[] }[];
 };
 
-const PREVIEW_COLS: { key: "name" | "position" | "department" | "startDate"; label: string }[] = [
+type PreviewCol = { key: "name" | "position" | "department" | "startDate" | "terminationDate"; label: string };
+const BASE_PREVIEW_COLS: PreviewCol[] = [
   { key: "name", label: "Name" },
   { key: "position", label: "Position" },
   { key: "department", label: "Dept" },
@@ -30,6 +32,11 @@ export function ImportHiresButton() {
   const [error, setError] = useState<string | null>(null);
 
   const parsed = useMemo(() => (text.trim() ? parseHiresText(text) : null), [text]);
+  const terminatedCount = useMemo(() => parsed?.rows.filter((r) => r.terminated).length ?? 0, [parsed]);
+  const cols: PreviewCol[] = useMemo(
+    () => (terminatedCount > 0 ? [...BASE_PREVIEW_COLS, { key: "terminationDate", label: "Terminated" } as PreviewCol] : BASE_PREVIEW_COLS),
+    [terminatedCount]
+  );
 
   function reset() {
     setText("");
@@ -134,6 +141,11 @@ export function ImportHiresButton() {
                         Checklist statuses detected — they&apos;ll be applied too (TRUE → done, FALSE → to-do, N/A → n/a; blanks left alone).
                       </p>
                     )}
+                    {terminatedCount > 0 && (
+                      <p className="mt-1 text-xs font-medium text-red-700 dark:text-red-400">
+                        {terminatedCount} marked terminated — they&apos;ll be saved as former employees (status Terminated) and archived automatically. Existing people are updated in place.
+                      </p>
+                    )}
                     {parsed.unmapped.length > 0 && (
                       <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
                         Not imported (no matching field): {parsed.unmapped.slice(0, 6).join(", ")}{parsed.unmapped.length > 6 ? ` +${parsed.unmapped.length - 6} more` : ""}
@@ -144,7 +156,7 @@ export function ImportHiresButton() {
                         <table className="min-w-full text-xs">
                           <thead>
                             <tr className="text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">
-                              {PREVIEW_COLS.map((c) => (
+                              {cols.map((c) => (
                                 <th key={c.key} className="px-2 py-1">{c.label}</th>
                               ))}
                             </tr>
@@ -152,7 +164,7 @@ export function ImportHiresButton() {
                           <tbody>
                             {parsed.rows.slice(0, 8).map((r, i) => (
                               <tr key={i} className="border-t border-brand-lea/10 dark:border-white/10">
-                                {PREVIEW_COLS.map((c) => (
+                                {cols.map((c) => (
                                   <td key={c.key} className="px-2 py-1 text-brand-lea dark:text-slate-100">{r[c.key] ?? "—"}</td>
                                 ))}
                               </tr>
@@ -188,6 +200,7 @@ export function ImportHiresButton() {
                 <div className="rounded border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
                   <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
                     Added {result.created} · Updated {result.updated} · Unchanged {result.unchanged}
+                    {result.archived > 0 ? ` · ${result.archived} archived as terminated` : ""}
                     {result.taskChanges > 0 ? ` · ${result.taskChanges} checklist item${result.taskChanges === 1 ? "" : "s"} updated` : ""}.
                   </p>
                 </div>

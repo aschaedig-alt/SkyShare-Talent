@@ -24,6 +24,10 @@ export type ParsedHireRow = {
   offerSignedDate: string | null;
   startDate: string | null;
   orientationDate: string | null;
+  // Former-employee fields (e.g. a terminated-roster import). terminated drives
+  // auto-archive + employmentStatus=TERMINATED on the server.
+  terminationDate: string | null;
+  terminated: boolean;
   // Checklist statuses pulled from the sheet's task rows/columns (only cells with
   // a definite value; blanks are omitted so they never overwrite existing state).
   tasks: ParsedHireTask[];
@@ -39,6 +43,8 @@ export type HireParseResult = {
 
 type FieldKey =
   | "name"
+  | "firstName"
+  | "lastName"
   | "position"
   | "department"
   | "phone"
@@ -47,14 +53,21 @@ type FieldKey =
   | "offerSentDate"
   | "offerSignedDate"
   | "startDate"
-  | "orientationDate";
+  | "orientationDate"
+  | "terminationDate"
+  | "status";
 
-const DATE_FIELDS = new Set<FieldKey>(["offerSentDate", "offerSignedDate", "startDate", "orientationDate"]);
+const DATE_FIELDS = new Set<FieldKey>(["offerSentDate", "offerSignedDate", "startDate", "orientationDate", "terminationDate"]);
 
 // Normalized label text -> canonical field key (synonyms included).
 const HEADER_MAP: Record<string, FieldKey> = {
   name: "name",
   fullname: "name",
+  firstname: "firstName",
+  first: "firstName",
+  lastname: "lastName",
+  last: "lastName",
+  surname: "lastName",
   position: "position",
   title: "position",
   role: "position",
@@ -77,8 +90,18 @@ const HEADER_MAP: Record<string, FieldKey> = {
   offersigneddate: "offerSignedDate",
   startdate: "startDate",
   start: "startDate",
+  hiredate: "startDate",
+  dateofhire: "startDate",
+  hired: "startDate",
   orientationdate: "orientationDate",
-  orientation: "orientationDate"
+  orientation: "orientationDate",
+  terminationdate: "terminationDate",
+  termdate: "terminationDate",
+  termination: "terminationDate",
+  separationdate: "terminationDate",
+  enddate: "terminationDate",
+  status: "status",
+  employmentstatus: "status"
 };
 
 const normalizeLabel = (h: string) => h.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -118,6 +141,8 @@ function cleanValue(field: FieldKey, raw: string | undefined): string | null {
 function emptyRow(): Record<FieldKey, string | null> {
   return {
     name: null,
+    firstName: null,
+    lastName: null,
     position: null,
     department: null,
     phone: null,
@@ -126,7 +151,43 @@ function emptyRow(): Record<FieldKey, string | null> {
     offerSentDate: null,
     offerSignedDate: null,
     startDate: null,
-    orientationDate: null
+    orientationDate: null,
+    terminationDate: null,
+    status: null
+  };
+}
+
+// Build the canonical name. Prefers an explicit Name column; otherwise joins
+// First + Last (the terminated-roster layout splits them).
+function resolveName(row: Record<FieldKey, string | null>): string | null {
+  if (row.name) return row.name;
+  const joined = [row.firstName, row.lastName].filter((p) => p && p.trim()).join(" ").trim();
+  return joined.length ? joined : null;
+}
+
+// A Status cell counts as terminated when it says so (terminated/term/separated/inactive).
+function isTerminatedStatus(raw: string | null): boolean {
+  return /\b(terminat|separat|former|inactive|offboard)/i.test(raw ?? "");
+}
+
+// Turn a parsed field record into the output row (name resolution + termination flags).
+function finishRow(row: Record<FieldKey, string | null>, tasks: ParsedHireTask[]): ParsedHireRow | null {
+  const name = resolveName(row);
+  if (!name) return null;
+  return {
+    name,
+    position: row.position,
+    department: row.department,
+    phone: row.phone,
+    ssEmail: row.ssEmail,
+    personalEmail: row.personalEmail,
+    offerSentDate: row.offerSentDate,
+    offerSignedDate: row.offerSignedDate,
+    startDate: row.startDate,
+    orientationDate: row.orientationDate,
+    terminationDate: row.terminationDate,
+    terminated: isTerminatedStatus(row.status) || row.terminationDate !== null,
+    tasks
   };
 }
 
@@ -206,17 +267,18 @@ function parseStandard(grid: string[][]): HireParseResult {
     colToField.forEach((field, idx) => {
       if (field) row[field] = cleanValue(field, cells[idx]);
     });
-    if (!row.name) {
-      skippedNoName++;
-      continue;
-    }
     const tasks: ParsedHireTask[] = [];
     colToTask.forEach((key, idx) => {
       if (!key) return;
       const status = taskStatusOf(cells[idx]);
       if (status) tasks.push({ key, status });
     });
-    rows.push({ ...row, tasks } as ParsedHireRow);
+    const finished = finishRow(row, tasks);
+    if (!finished) {
+      skippedNoName++;
+      continue;
+    }
+    rows.push(finished);
   }
   return { rows, mapped: uniq(mapped), unmapped: uniq(unmapped), skippedNoName, layout: "standard" };
 }
@@ -242,7 +304,7 @@ function parseTransposed(grid: string[][]): HireParseResult {
     }
   }
 
-  const nameRow = fieldRows.get("name");
+  const nameRow = fieldRows.get("name") ?? fieldRows.get("firstName") ?? fieldRows.get("lastName");
   if (!nameRow) {
     return { rows: [], mapped: uniq(mapped), unmapped: uniq(unmapped), skippedNoName: 0, layout: "transposed" };
   }
@@ -250,18 +312,18 @@ function parseTransposed(grid: string[][]): HireParseResult {
   const colCount = Math.max(0, ...[...fieldRows.values()].map((a) => a.length), ...[...taskRows.values()].map((a) => a.length));
   const rows: ParsedHireRow[] = [];
   for (let c = 0; c < colCount; c++) {
-    const name = (nameRow[c] ?? "").trim();
-    if (!name) continue; // blank / label-only column — not a person
     const row = emptyRow();
     for (const [field, cells] of fieldRows) {
       row[field] = cleanValue(field, cells[c]);
     }
+    if (!resolveName(row)) continue; // blank / label-only column — not a person
     const tasks: ParsedHireTask[] = [];
     for (const [key, cells] of taskRows) {
       const status = taskStatusOf(cells[c]);
       if (status) tasks.push({ key, status });
     }
-    rows.push({ ...row, tasks } as ParsedHireRow);
+    const finished = finishRow(row, tasks);
+    if (finished) rows.push(finished);
   }
   // In transposed mode there is no "row missing a name" — empty columns are gaps.
   return { rows, mapped: uniq(mapped), unmapped: uniq(unmapped), skippedNoName: 0, layout: "transposed" };

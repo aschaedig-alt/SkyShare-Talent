@@ -211,6 +211,8 @@ model NewHire {
   offerSignedDate DateTime?
   startDate       DateTime?
   orientationDate DateTime?
+  // Last day with SkyShare — set for former employees (employmentStatus TERMINATED).
+  terminationDate DateTime?
   // Lifecycle: ACTIVE (being onboarded) -> POST_ONBOARD (maintenance) -> ARCHIVED
   stage            String   @default("ACTIVE")
   onboardedAt      DateTime?
