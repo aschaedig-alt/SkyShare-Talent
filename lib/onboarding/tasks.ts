@@ -92,6 +92,7 @@ export const SHEET_LABEL_TO_KEY: Record<string, string> = {
   "candidate signed offer letter": "candidate_signed",
   "confirm pilot app on file, if missing, send request": "pilot_app",
   "confirm ebco form on file, if missing, send request": "ebco_form",
+  "confirm titan form on file, if missing, send request": "ebco_form",
   "send pilot document request email via front": "pilot_doc_request",
   "send “start your onboarding journey” email via front": "onboarding_journey",
   "send start your onboarding journey email via front": "onboarding_journey",

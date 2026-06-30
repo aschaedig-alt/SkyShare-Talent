@@ -9,6 +9,7 @@ type ImportResult = {
   created: number;
   updated: number;
   unchanged: number;
+  taskChanges: number;
   results: { name: string; status: "created" | "updated" | "unchanged"; changed?: string[] }[];
 };
 
@@ -128,6 +129,11 @@ export function ImportHiresButton() {
                       <span className="font-normal text-brand-grey dark:text-slate-400"> · {parsed.layout === "transposed" ? "names down the first column" : "one person per row"} detected</span>
                       {parsed.skippedNoName > 0 ? ` · ${parsed.skippedNoName} row(s) skipped (no name)` : ""}
                     </p>
+                    {parsed.rows.some((r) => r.tasks.length > 0) && (
+                      <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
+                        Checklist statuses detected — they&apos;ll be applied too (TRUE → done, FALSE → to-do, N/A → n/a; blanks left alone).
+                      </p>
+                    )}
                     {parsed.unmapped.length > 0 && (
                       <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
                         Not imported (no matching field): {parsed.unmapped.slice(0, 6).join(", ")}{parsed.unmapped.length > 6 ? ` +${parsed.unmapped.length - 6} more` : ""}
@@ -181,7 +187,8 @@ export function ImportHiresButton() {
               <div className="mt-4">
                 <div className="rounded border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
                   <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-                    Added {result.created} · Updated {result.updated} · Unchanged {result.unchanged}.
+                    Added {result.created} · Updated {result.updated} · Unchanged {result.unchanged}
+                    {result.taskChanges > 0 ? ` · ${result.taskChanges} checklist item${result.taskChanges === 1 ? "" : "s"} updated` : ""}.
                   </p>
                 </div>
                 {result.updated > 0 && (

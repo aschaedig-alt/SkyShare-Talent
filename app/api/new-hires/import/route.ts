@@ -41,6 +41,20 @@ type RowResult = { name: string; status: "created" | "updated" | "unchanged"; ch
 
 const sameDay = (a: Date | null, b: Date | null) => (a ? a.getTime() : null) === (b ? b.getTime() : null);
 
+// Apply the sheet's checklist statuses to a hire's tasks. Only flips a task when
+// it actually differs (so re-imports are idempotent); returns how many changed.
+async function applyTasks(hireId: string, tasks: { key: string; status: string }[]): Promise<number> {
+  let changed = 0;
+  for (const t of tasks) {
+    const res = await prisma.onboardingTask.updateMany({
+      where: { newHireId: hireId, key: t.key, status: { not: t.status } },
+      data: { status: t.status, completedAt: t.status === "DONE" ? new Date() : null }
+    });
+    changed += res.count;
+  }
+  return changed;
+}
+
 export async function POST(request: Request) {
   const auth = await requireApiPermission("candidates:write");
   if (!auth.ok) {
@@ -83,10 +97,12 @@ export async function POST(request: Request) {
     }
 
     const results: RowResult[] = [];
+    let taskChanges = 0;
 
     for (const row of rows) {
       const name = strOrNull(row.name);
       if (!name) continue;
+      const incomingTasks = Array.isArray(row.tasks) ? row.tasks : [];
       const ss = normEmail(row.ssEmail);
       const personal = normEmail(row.personalEmail);
 
@@ -114,6 +130,10 @@ export async function POST(request: Request) {
           await prisma.newHire.update({ where: { id: match.id }, data });
           // Reflect the update in our in-memory copy for later rows in the batch.
           Object.assign(match, data);
+        }
+        const taskChanged = await applyTasks(match.id, incomingTasks);
+        taskChanges += taskChanged;
+        if (changed.length > 0 || taskChanged > 0) {
           results.push({ name, status: "updated", changed });
         } else {
           results.push({ name, status: "unchanged" });
@@ -151,6 +171,7 @@ export async function POST(request: Request) {
         }
       });
       await ensureCustomMilestoneTasks(hire.id);
+      taskChanges += await applyTasks(hire.id, incomingTasks);
 
       // Register so duplicate rows within the same file match this new record.
       const created = hire as ExistingHire;
@@ -164,7 +185,7 @@ export async function POST(request: Request) {
     const updated = results.filter((r) => r.status === "updated").length;
     const unchanged = results.filter((r) => r.status === "unchanged").length;
 
-    return NextResponse.json({ ok: true, created, updated, unchanged, results });
+    return NextResponse.json({ ok: true, created, updated, unchanged, taskChanges, results });
   } catch (error) {
     console.error("New hire import error:", error);
     return NextResponse.json({ message: "Unable to import hires." }, { status: 500 });

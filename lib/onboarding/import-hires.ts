@@ -8,6 +8,11 @@
 //    (the SkyShare "Pre-Onboarding Status" sheet). Blank/label columns with no
 //    name (e.g. the Archived sheet's Role Tag / Owner columns) are skipped.
 
+import { SHEET_LABEL_TO_KEY } from "@/lib/onboarding/tasks";
+
+export type ImportTaskStatus = "DONE" | "TODO" | "NA";
+export type ParsedHireTask = { key: string; status: ImportTaskStatus };
+
 export type ParsedHireRow = {
   name: string;
   position: string | null;
@@ -19,6 +24,9 @@ export type ParsedHireRow = {
   offerSignedDate: string | null;
   startDate: string | null;
   orientationDate: string | null;
+  // Checklist statuses pulled from the sheet's task rows/columns (only cells with
+  // a definite value; blanks are omitted so they never overwrite existing state).
+  tasks: ParsedHireTask[];
 };
 
 export type HireParseResult = {
@@ -75,6 +83,29 @@ const HEADER_MAP: Record<string, FieldKey> = {
 
 const normalizeLabel = (h: string) => h.toLowerCase().replace(/[^a-z0-9]/g, "");
 const fieldOf = (label: string): FieldKey | null => HEADER_MAP[normalizeLabel(label ?? "")] ?? null;
+
+// Task-label matching keeps words/commas/parens but strips quotes + collapses
+// spaces, so the sheet's verbose checklist rows map to our task keys.
+const normTaskLabel = (s: string) =>
+  (s ?? "")
+    .toLowerCase()
+    .replace(/[‘’“”"']/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+const TASK_LOOKUP = new Map<string, string>(Object.entries(SHEET_LABEL_TO_KEY).map(([label, key]) => [normTaskLabel(label), key]));
+const taskKeyOf = (label: string): string | null => TASK_LOOKUP.get(normTaskLabel(label)) ?? null;
+
+// Interpret a checklist cell. Blank -> null (leave the task untouched).
+function taskStatusOf(raw: string | undefined): ImportTaskStatus | null {
+  const v = (raw ?? "").trim();
+  if (!v) return null;
+  const low = v.toLowerCase();
+  if (/^(true|yes|y|complete|completed|done|x|✓|✔)$/.test(low)) return "DONE";
+  if (/^(false|no|n|todo|to do|incomplete|pending|not started)$/.test(low)) return "TODO";
+  if (/^(n\/?a|na|not applicable)$/.test(low)) return "NA";
+  // Any other non-empty content (a name, a group list, a note) means it happened.
+  return "DONE";
+}
 
 // Treat placeholder values as empty (esp. for dates: "TBD", "N/A", "-", "n/a").
 function cleanValue(field: FieldKey, raw: string | undefined): string | null {
@@ -156,11 +187,15 @@ function parseStandard(grid: string[][]): HireParseResult {
   const header = grid[0] ?? [];
   const mapped: string[] = [];
   const unmapped: string[] = [];
-  const colToField: (FieldKey | null)[] = header.map((h) => {
+  const colToField: (FieldKey | null)[] = [];
+  const colToTask: (string | null)[] = [];
+  header.forEach((h) => {
     const field = fieldOf(h);
-    if (field) mapped.push(h);
+    const taskKey = field ? null : taskKeyOf(h);
+    colToField.push(field);
+    colToTask.push(taskKey);
+    if (field || taskKey) mapped.push(h);
     else if (h.trim()) unmapped.push(h);
-    return field;
   });
 
   const rows: ParsedHireRow[] = [];
@@ -175,7 +210,13 @@ function parseStandard(grid: string[][]): HireParseResult {
       skippedNoName++;
       continue;
     }
-    rows.push(row as ParsedHireRow);
+    const tasks: ParsedHireTask[] = [];
+    colToTask.forEach((key, idx) => {
+      if (!key) return;
+      const status = taskStatusOf(cells[idx]);
+      if (status) tasks.push({ key, status });
+    });
+    rows.push({ ...row, tasks } as ParsedHireRow);
   }
   return { rows, mapped: uniq(mapped), unmapped: uniq(unmapped), skippedNoName, layout: "standard" };
 }
@@ -183,14 +224,19 @@ function parseStandard(grid: string[][]): HireParseResult {
 function parseTransposed(grid: string[][]): HireParseResult {
   const mapped: string[] = [];
   const unmapped: string[] = [];
-  // field -> the row's cells excluding the leading label cell.
+  // label -> the row's cells excluding the leading label cell.
   const fieldRows = new Map<FieldKey, string[]>();
+  const taskRows = new Map<string, string[]>();
   for (const r of grid) {
     const label = r[0] ?? "";
     const field = fieldOf(label);
+    const taskKey = field ? null : taskKeyOf(label);
     if (field) {
       mapped.push(label);
       if (!fieldRows.has(field)) fieldRows.set(field, r.slice(1));
+    } else if (taskKey) {
+      mapped.push(label);
+      if (!taskRows.has(taskKey)) taskRows.set(taskKey, r.slice(1));
     } else if (label.trim()) {
       unmapped.push(label);
     }
@@ -201,7 +247,7 @@ function parseTransposed(grid: string[][]): HireParseResult {
     return { rows: [], mapped: uniq(mapped), unmapped: uniq(unmapped), skippedNoName: 0, layout: "transposed" };
   }
 
-  const colCount = Math.max(0, ...[...fieldRows.values()].map((a) => a.length));
+  const colCount = Math.max(0, ...[...fieldRows.values()].map((a) => a.length), ...[...taskRows.values()].map((a) => a.length));
   const rows: ParsedHireRow[] = [];
   for (let c = 0; c < colCount; c++) {
     const name = (nameRow[c] ?? "").trim();
@@ -210,7 +256,12 @@ function parseTransposed(grid: string[][]): HireParseResult {
     for (const [field, cells] of fieldRows) {
       row[field] = cleanValue(field, cells[c]);
     }
-    rows.push(row as ParsedHireRow);
+    const tasks: ParsedHireTask[] = [];
+    for (const [key, cells] of taskRows) {
+      const status = taskStatusOf(cells[c]);
+      if (status) tasks.push({ key, status });
+    }
+    rows.push({ ...row, tasks } as ParsedHireRow);
   }
   // In transposed mode there is no "row missing a name" — empty columns are gaps.
   return { rows, mapped: uniq(mapped), unmapped: uniq(unmapped), skippedNoName: 0, layout: "transposed" };
