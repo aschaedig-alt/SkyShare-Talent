@@ -157,15 +157,20 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
           <tbody>
             {/* facts */}
             {([
-              ["Position", (h: GridHire) => h.position ?? "—"],
-              ["Department", (h: GridHire) => h.department ?? "—"],
+              ["Offer sent", (h: GridHire) => fmtDate(h.offerSentDate)],
+              ["Offer signed", (h: GridHire) => fmtDate(h.offerSignedDate)],
               ["Start date", (h: GridHire) => fmtDate(h.startDate)],
-              ["Orientation", (h: GridHire) => fmtDate(h.orientationDate)]
+              ["Orientation", (h: GridHire) => fmtDate(h.orientationDate)],
+              ["Phone", (h: GridHire) => h.phone ?? "—"],
+              ["SkyShare email", (h: GridHire) => h.ssEmail ?? "—"],
+              ["Personal email", (h: GridHire) => h.personalEmail ?? "—"],
+              ["Position", (h: GridHire) => h.position ?? "—"],
+              ["Department", (h: GridHire) => h.department ?? "—"]
             ] as Array<[string, (h: GridHire) => string]>).map(([label, get]) => (
               <tr key={label}>
                 <td className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">{label}</td>
                 {hires.map((h) => (
-                  <td key={h.id} className="border-b border-brand-lea/5 px-3 py-1.5 text-center text-brand-grey dark:border-white/10 dark:text-slate-400">{get(h)}</td>
+                  <td key={h.id} className="border-b border-brand-lea/5 px-3 py-1.5 text-center text-brand-grey break-words dark:border-white/10 dark:text-slate-400">{get(h)}</td>
                 ))}
               </tr>
             ))}

@@ -322,8 +322,13 @@ export type GridHire = {
   name: string;
   position: string | null;
   department: string | null;
+  offerSentDate: string | null;
+  offerSignedDate: string | null;
   startDate: string | null;
   orientationDate: string | null;
+  phone: string | null;
+  ssEmail: string | null;
+  personalEmail: string | null;
   status: HireStatus;
   doneCount: number;
   applicableCount: number;
@@ -349,8 +354,13 @@ export async function getActiveGridHires(): Promise<GridHire[]> {
       name: h.name,
       position: h.position,
       department: h.department,
+      offerSentDate: iso(h.offerSentDate),
+      offerSignedDate: iso(h.offerSignedDate),
       startDate: iso(h.startDate),
       orientationDate: iso(h.orientationDate),
+      phone: h.phone,
+      ssEmail: h.ssEmail,
+      personalEmail: h.personalEmail,
       status: row.status,
       doneCount: row.doneCount,
       applicableCount: row.applicableCount,

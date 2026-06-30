@@ -144,7 +144,8 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
             <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
               {fmtTime(session.date)} · {session.location ?? "—"}
               {session.address ? ` · ${session.address}` : ""}
-              {session.meetLink ? <> · <a href={session.meetLink} className="text-brand-lea underline dark:text-slate-100">Meet link</a></> : null}
+              {session.address ? <> · <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(session.address)}`} target="_blank" rel="noreferrer" className="text-brand-lea underline dark:text-slate-100">Map</a></> : null}
+              {session.meetLink ? <> · <a href={session.meetLink} target="_blank" rel="noreferrer" className="text-brand-lea underline dark:text-slate-100">Meet link</a></> : null}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

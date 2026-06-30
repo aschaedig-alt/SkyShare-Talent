@@ -322,8 +322,8 @@ export function OrientationOverview({
                   Date
                   <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:text-slate-100" />
                 </label>
-                <label className="w-28 text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
-                  Time
+                <label className="flex-1 text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
+                  Time (MT)
                   <input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:text-slate-100" />
                 </label>
               </div>
