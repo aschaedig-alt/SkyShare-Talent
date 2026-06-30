@@ -51,6 +51,16 @@ export type UpcomingStart = { id: string; name: string; position: string | null;
 
 export type ChartDatum = { label: string; count: number };
 
+export type DrillPerson = {
+  id: string;
+  name: string;
+  position: string | null;
+  startDate: string | null;
+  status: HireStatus;
+  doneCount: number;
+  applicableCount: number;
+};
+
 export type OnboardingDashboard = {
   startingSoon: number;
   missingItems: number;
@@ -63,6 +73,10 @@ export type OnboardingDashboard = {
   byDepartment: ChartDatum[];
   startsByWeek: ChartDatum[];
   funnel: ChartDatum[];
+  // People behind the headline metrics, for click-to-drill on the cards.
+  startingSoonList: DrillPerson[];
+  needsAttentionList: DrillPerson[];
+  missingItemsList: DrillPerson[];
 };
 
 export type OnboardingWorkspaceData = {
@@ -219,6 +233,31 @@ function buildDashboard(active: HireWithTasks[], now: number): OnboardingDashboa
             100
         );
 
+  const toDrill = ({ row }: { row: NewHireRow }): DrillPerson => ({
+    id: row.id,
+    name: row.name,
+    position: row.position,
+    startDate: row.startDate,
+    status: row.status,
+    doneCount: row.doneCount,
+    applicableCount: row.applicableCount
+  });
+  const byStartAsc = (a: DrillPerson, b: DrillPerson) =>
+    (a.startDate ? new Date(a.startDate).getTime() : Infinity) - (b.startDate ? new Date(b.startDate).getTime() : Infinity);
+
+  const startingSoonList = rows
+    .filter(({ row }) => row.startDate && new Date(row.startDate).getTime() - now <= 7 * DAY && new Date(row.startDate).getTime() - now >= -DAY)
+    .map(toDrill)
+    .sort(byStartAsc);
+  const needsAttentionList = rows
+    .filter(({ row }) => row.status === "Overdue" || row.status === "Due soon")
+    .map(toDrill)
+    .sort((a, b) => (a.status === "Overdue" ? 0 : 1) - (b.status === "Overdue" ? 0 : 1) || byStartAsc(a, b));
+  const missingItemsList = rows
+    .filter(({ row }) => row.applicableCount - row.doneCount > 0)
+    .map(toDrill)
+    .sort((a, b) => b.applicableCount - b.doneCount - (a.applicableCount - a.doneCount));
+
   return {
     startingSoon,
     missingItems,
@@ -230,7 +269,10 @@ function buildDashboard(active: HireWithTasks[], now: number): OnboardingDashboa
     byStatus,
     byDepartment,
     startsByWeek,
-    funnel
+    funnel,
+    startingSoonList,
+    needsAttentionList,
+    missingItemsList
   };
 }
 

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { clsx } from "clsx";
-import type { ChartDatum, OnboardingDashboard } from "@/lib/data/onboarding";
+import type { ChartDatum, DrillPerson, OnboardingDashboard } from "@/lib/data/onboarding";
 
 const STATUS_COLOR: Record<string, string> = {
   "In progress": "#b8860b",
@@ -21,11 +22,75 @@ function fmtDate(iso: string) {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(iso));
 }
 
-function MetricCard({ label, value, tone }: { label: string; value: string; tone: string }) {
+function MetricCard({
+  label,
+  value,
+  tone,
+  onClick,
+  active,
+  count
+}: {
+  label: string;
+  value: string;
+  tone: string;
+  onClick?: () => void;
+  active?: boolean;
+  count?: number;
+}) {
+  const clickable = Boolean(onClick) && (count ?? 1) > 0;
   return (
-    <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
-      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{label}</div>
+    <button
+      type="button"
+      onClick={clickable ? onClick : undefined}
+      aria-expanded={clickable ? active : undefined}
+      className={clsx(
+        "rounded bg-white p-4 text-left shadow-panel ring-1 ring-brand-lea/10 transition dark:bg-[#10243a] dark:ring-white/10",
+        clickable ? "cursor-pointer hover:shadow-glow hover:ring-brand-gold/40" : "cursor-default",
+        active && "ring-2 ring-brand-gold/60"
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{label}</div>
+        {clickable && <span className="text-[10px] font-semibold text-brand-gold">{active ? "hide" : "view"}</span>}
+      </div>
       <div className={clsx("mt-1 text-3xl font-semibold", tone)}>{value}</div>
+    </button>
+  );
+}
+
+const DRILL_STATUS_STYLE: Record<string, string> = {
+  Overdue: "bg-red-50 text-red-700",
+  "Due soon": "bg-amber-50 text-amber-700",
+  "In progress": "bg-brand-gold/15 text-brand-lea dark:text-slate-100",
+  Ready: "bg-emerald-50 text-emerald-800"
+};
+
+function DrillPanel({ title, people, onClose }: { title: string; people: DrillPerson[]; onClose: () => void }) {
+  return (
+    <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-gold/30 dark:bg-[#10243a] dark:ring-white/10">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-brand-lea dark:text-slate-100">{title} · {people.length}</h3>
+        <button onClick={onClose} className="text-xs font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400">Close</button>
+      </div>
+      {people.length === 0 ? (
+        <p className="mt-2 text-sm text-brand-grey dark:text-slate-400">No one right now.</p>
+      ) : (
+        <div className="mt-2 divide-y divide-brand-lea/5 dark:divide-white/10">
+          {people.map((p) => (
+            <Link key={p.id} href={`/people/${p.id}`} className="flex items-center justify-between gap-3 py-2 text-sm transition hover:opacity-90 hover:shadow-glow">
+              <span className="min-w-0 truncate">
+                <span className="font-semibold text-brand-lea dark:text-slate-100">{p.name}</span>
+                {p.position ? <span className="text-brand-grey dark:text-slate-400"> · {p.position}</span> : null}
+              </span>
+              <span className="flex shrink-0 items-center gap-2">
+                {p.startDate ? <span className="text-xs text-brand-grey dark:text-slate-400">starts {fmtDate(p.startDate)}</span> : null}
+                <span className="text-xs text-brand-grey dark:text-slate-400">{p.doneCount}/{p.applicableCount}</span>
+                <span className={clsx("rounded px-2 py-0.5 text-[10px] font-semibold", DRILL_STATUS_STYLE[p.status] ?? "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400")}>{p.status}</span>
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -117,14 +182,28 @@ function VBars({ data }: { data: ChartDatum[] }) {
 }
 
 export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDashboard }) {
+  const [drill, setDrill] = useState<null | "starting" | "missing" | "attention">(null);
+  const toggle = (key: "starting" | "missing" | "attention") => setDrill((cur) => (cur === key ? null : key));
+
+  const drillView =
+    drill === "starting"
+      ? { title: "Starting in 7 days", people: dashboard.startingSoonList }
+      : drill === "missing"
+        ? { title: "Hires with missing items", people: dashboard.missingItemsList }
+        : drill === "attention"
+          ? { title: "Needs attention", people: dashboard.needsAttentionList }
+          : null;
+
   return (
     <div className="space-y-4">
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Starting in 7 days" value={String(dashboard.startingSoon)} tone="text-sky-700" />
-        <MetricCard label="Hires with missing items" value={String(dashboard.missingItems)} tone="text-brand-gold" />
-        <MetricCard label="Needs attention" value={String(dashboard.urgent)} tone="text-red-700" />
+        <MetricCard label="Starting in 7 days" value={String(dashboard.startingSoon)} tone="text-sky-700" count={dashboard.startingSoon} active={drill === "starting"} onClick={() => toggle("starting")} />
+        <MetricCard label="Hires with missing items" value={String(dashboard.missingItems)} tone="text-brand-gold" count={dashboard.missingItems} active={drill === "missing"} onClick={() => toggle("missing")} />
+        <MetricCard label="Needs attention" value={String(dashboard.urgent)} tone="text-red-700" count={dashboard.urgent} active={drill === "attention"} onClick={() => toggle("attention")} />
         <MetricCard label="Avg. completion" value={`${dashboard.avgCompletion}%`} tone="text-brand-lea dark:text-slate-100" />
       </section>
+
+      {drillView ? <DrillPanel title={drillView.title} people={drillView.people} onClose={() => setDrill(null)} /> : null}
 
       <section className="grid gap-4 lg:grid-cols-3">
         <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
