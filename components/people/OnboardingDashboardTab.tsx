@@ -163,6 +163,17 @@ function HBars({ data, color }: { data: ChartDatum[]; color: string }) {
   );
 }
 
+function SegBar({ segments }: { segments: { value: number; color: string }[] }) {
+  const total = segments.reduce((a, s) => a + s.value, 0);
+  return (
+    <div className="mt-2 flex h-2.5 w-full overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/10">
+      {total === 0
+        ? null
+        : segments.map((s, i) => (s.value > 0 ? <span key={i} style={{ width: `${(s.value / total) * 100}%`, background: s.color }} /> : null))}
+    </div>
+  );
+}
+
 function VBars({ data }: { data: ChartDatum[] }) {
   const max = Math.max(1, ...data.map((d) => d.count));
   return (
@@ -204,6 +215,90 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
       </section>
 
       {drillView ? <DrillPanel title={drillView.title} people={drillView.people} onClose={() => setDrill(null)} /> : null}
+
+      {/* Ready for their start — quick scan of who's starting soon and how ready */}
+      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Ready for their start?</h2>
+        <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">Starting in the next 3 weeks · {dashboard.readyForStart.length}</p>
+        {dashboard.readyForStart.length === 0 ? (
+          <p className="mt-3 text-sm text-brand-grey dark:text-slate-400">No one starts in the next three weeks.</p>
+        ) : (
+          <div className="mt-3 divide-y divide-brand-lea/5 dark:divide-white/10">
+            {dashboard.readyForStart.map((p) => {
+              const pct = p.applicableCount > 0 ? Math.round((p.doneCount / p.applicableCount) * 100) : 0;
+              return (
+                <Link key={p.id} href={`/people/${p.id}`} className="flex items-center gap-3 py-2 text-sm transition hover:opacity-90 hover:shadow-glow">
+                  <span className="w-12 shrink-0 font-semibold text-sky-700">{p.startDate ? fmtDate(p.startDate) : "—"}</span>
+                  <span className="min-w-0 flex-1 truncate">
+                    <span className="font-semibold text-brand-lea dark:text-slate-100">{p.name}</span>
+                    {p.position ? <span className="text-brand-grey dark:text-slate-400"> · {p.position}</span> : null}
+                  </span>
+                  <span className="h-2 w-24 shrink-0 overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/10">
+                    <span className={clsx("block h-full rounded-full", pct === 100 ? "bg-emerald-500" : "bg-brand-gold")} style={{ width: `${Math.max(4, pct)}%` }} />
+                  </span>
+                  <span className="w-10 shrink-0 text-right text-xs text-brand-grey dark:text-slate-400">{pct}%</span>
+                  <span className={clsx("w-20 shrink-0 rounded px-2 py-0.5 text-center text-[10px] font-semibold", DRILL_STATUS_STYLE[p.status] ?? "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400")}>{p.status}</span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Bottlenecks + orientation timing + travel readiness */}
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Where it&apos;s jamming</h2>
+          <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">Onboarding tasks still to-do across the most active hires</p>
+          <div className="mt-3">
+            {dashboard.bottlenecks.length === 0 ? (
+              <p className="text-sm text-brand-grey dark:text-slate-400">Nothing outstanding — every active hire is caught up.</p>
+            ) : (
+              <HBars data={dashboard.bottlenecks} color="#d8772f" />
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+            <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Orientation timing</h2>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-3xl font-semibold text-brand-lea dark:text-slate-100">{dashboard.orientationTimeliness.pct}%</span>
+              <span className="text-xs text-brand-grey dark:text-slate-400">scheduled within a month of start</span>
+            </div>
+            <SegBar
+              segments={[
+                { value: dashboard.orientationTimeliness.onTime, color: "#2e7d32" },
+                { value: dashboard.orientationTimeliness.outsideMonth, color: "#e2904a" },
+                { value: dashboard.orientationTimeliness.unscheduled, color: "#c9c7bf" }
+              ]}
+            />
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-brand-grey dark:text-slate-400">
+              <span><b className="text-emerald-700">{dashboard.orientationTimeliness.onTime}</b> within a month</span>
+              <span><b className="text-amber-700">{dashboard.orientationTimeliness.outsideMonth}</b> outside a month</span>
+              <span><b>{dashboard.orientationTimeliness.unscheduled}</b> no date</span>
+              <span>of {dashboard.orientationTimeliness.total} with a start date</span>
+            </div>
+          </div>
+
+          <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+            <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Travel readiness</h2>
+            <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">Upcoming starters · {dashboard.travelReadiness.total}</p>
+            <SegBar
+              segments={[
+                { value: dashboard.travelReadiness.booked, color: "#2e7d32" },
+                { value: dashboard.travelReadiness.needed, color: "#e2904a" },
+                { value: dashboard.travelReadiness.none, color: "#c9c7bf" }
+              ]}
+            />
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-brand-grey dark:text-slate-400">
+              <span><b className="text-emerald-700">{dashboard.travelReadiness.booked}</b> booked</span>
+              <span><b className="text-amber-700">{dashboard.travelReadiness.needed}</b> needs booking</span>
+              <span><b>{dashboard.travelReadiness.none}</b> no travel logged</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
         <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">

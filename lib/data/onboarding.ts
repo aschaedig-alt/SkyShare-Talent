@@ -77,6 +77,14 @@ export type OnboardingDashboard = {
   startingSoonList: DrillPerson[];
   needsAttentionList: DrillPerson[];
   missingItemsList: DrillPerson[];
+  // Top onboarding tasks still incomplete across active hires (where it's jamming).
+  bottlenecks: ChartDatum[];
+  // Hires starting in the next ~3 weeks, with progress + status, for the quick scan.
+  readyForStart: DrillPerson[];
+  // Of active hires with a start date: orientation scheduled within a month of it.
+  orientationTimeliness: { onTime: number; outsideMonth: number; unscheduled: number; total: number; pct: number };
+  // Travel booked vs needed among upcoming starters (ties in the Travel module).
+  travelReadiness: { booked: number; needed: number; none: number; total: number };
 };
 
 export type OnboardingWorkspaceData = {
@@ -150,7 +158,26 @@ function toRow(hire: HireWithTasks, now: number): NewHireRow {
   };
 }
 
-function buildDashboard(active: HireWithTasks[], now: number): OnboardingDashboard {
+type HireTravelStatus = { hasTrips: boolean; hasNeeded: boolean };
+
+async function travelStatusByHire(hireIds: string[]): Promise<Map<string, HireTravelStatus>> {
+  const map = new Map<string, HireTravelStatus>();
+  if (hireIds.length === 0) return map;
+  const trips = await prisma.travelTrip.findMany({
+    where: { newHireId: { in: hireIds }, status: { not: "CANCELED" } },
+    select: { newHireId: true, status: true }
+  });
+  for (const t of trips) {
+    if (!t.newHireId) continue;
+    const cur = map.get(t.newHireId) ?? { hasTrips: false, hasNeeded: false };
+    cur.hasTrips = true;
+    if (t.status === "NEEDED") cur.hasNeeded = true;
+    map.set(t.newHireId, cur);
+  }
+  return map;
+}
+
+function buildDashboard(active: HireWithTasks[], now: number, travelByHire: Map<string, HireTravelStatus>): OnboardingDashboard {
   const rows = active.map((h) => ({ hire: h, row: toRow(h, now) }));
 
   const startingSoon = rows.filter(
@@ -258,6 +285,63 @@ function buildDashboard(active: HireWithTasks[], now: number): OnboardingDashboa
     .map(toDrill)
     .sort((a, b) => b.applicableCount - b.doneCount - (a.applicableCount - a.doneCount));
 
+  // Checklist bottlenecks: onboarding tasks still TODO across the most hires.
+  const todoByTask = new Map<string, { label: string; count: number }>();
+  for (const { hire } of rows) {
+    for (const t of hire.tasks) {
+      if (t.group === MAINTENANCE_GROUP || t.group === CUSTOM_GROUP) continue;
+      if (t.status !== "TODO") continue;
+      const e = todoByTask.get(t.key) ?? { label: t.label, count: 0 };
+      e.count += 1;
+      todoByTask.set(t.key, e);
+    }
+  }
+  const bottlenecks: ChartDatum[] = [...todoByTask.values()]
+    .map((e) => ({ label: e.label, count: e.count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6);
+
+  // Ready for their start: starting within ~3 weeks, with progress + status.
+  const readyForStart = rows
+    .filter(({ row }) => row.startDate && new Date(row.startDate).getTime() - now <= 21 * DAY && new Date(row.startDate).getTime() - now >= -DAY)
+    .map(toDrill)
+    .sort(byStartAsc);
+
+  // Orientation timeliness: of active hires with a start date, is orientation
+  // scheduled within a month of it?
+  const withStart = rows.filter(({ row }) => row.startDate);
+  let onTime = 0;
+  let outsideMonth = 0;
+  let unscheduled = 0;
+  for (const { row } of withStart) {
+    if (!row.orientationDate) {
+      unscheduled += 1;
+    } else if (Math.abs(new Date(row.orientationDate).getTime() - new Date(row.startDate as string).getTime()) <= 31 * DAY) {
+      onTime += 1;
+    } else {
+      outsideMonth += 1;
+    }
+  }
+  const orientationTimeliness = {
+    onTime,
+    outsideMonth,
+    unscheduled,
+    total: withStart.length,
+    pct: withStart.length ? Math.round((onTime / withStart.length) * 100) : 0
+  };
+
+  // Travel readiness among the upcoming starters.
+  let travBooked = 0;
+  let travNeeded = 0;
+  let travNone = 0;
+  for (const p of readyForStart) {
+    const ts = travelByHire.get(p.id);
+    if (!ts || !ts.hasTrips) travNone += 1;
+    else if (ts.hasNeeded) travNeeded += 1;
+    else travBooked += 1;
+  }
+  const travelReadiness = { booked: travBooked, needed: travNeeded, none: travNone, total: readyForStart.length };
+
   return {
     startingSoon,
     missingItems,
@@ -272,7 +356,11 @@ function buildDashboard(active: HireWithTasks[], now: number): OnboardingDashboa
     funnel,
     startingSoonList,
     needsAttentionList,
-    missingItemsList
+    missingItemsList,
+    bottlenecks,
+    readyForStart,
+    orientationTimeliness,
+    travelReadiness
   };
 }
 
@@ -314,7 +402,8 @@ export async function getOnboardingWorkspaceData(stage: HireStage = "ACTIVE"): P
 
   let dashboard: OnboardingDashboard | null = null;
   if (stage === "ACTIVE") {
-    dashboard = buildDashboard(hires, now);
+    const travelByHire = await travelStatusByHire(hires.map((h) => h.id));
+    dashboard = buildDashboard(hires, now, travelByHire);
   }
 
   return { counts: { active, postOnboard: post, archived }, rows, dashboard };
@@ -352,7 +441,8 @@ export async function getActiveDashboard(): Promise<OnboardingDashboard> {
     select: hireSelect,
     orderBy: [{ startDate: "asc" }, { name: "asc" }]
   })) as HireWithTasks[];
-  return buildDashboard(hires, Date.now());
+  const travelByHire = await travelStatusByHire(hires.map((h) => h.id));
+  return buildDashboard(hires, Date.now(), travelByHire);
 }
 
 // ---- Grid + Milestones (active hires only) ----
