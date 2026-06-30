@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload } from "lucide-react";
-import { parseHiresText, type HireParseResult } from "@/lib/onboarding/import-hires";
+import { parseHiresText } from "@/lib/onboarding/import-hires";
 
 type ImportResult = {
   created: number;
@@ -13,7 +13,7 @@ type ImportResult = {
   results: { name: string; status: "created" | "updated" | "unchanged"; changed?: string[] }[];
 };
 
-const PREVIEW_COLS: { key: keyof HireParseResult["rows"][number]; label: string }[] = [
+const PREVIEW_COLS: { key: "name" | "position" | "department" | "startDate"; label: string }[] = [
   { key: "name", label: "Name" },
   { key: "position", label: "Position" },
   { key: "department", label: "Dept" },
