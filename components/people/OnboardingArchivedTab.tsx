@@ -35,7 +35,8 @@ export function OnboardingArchivedTab({ rows }: { rows: NewHireRow[] }) {
   function toggleOne(id: string) {
     setSelected((s) => {
       const n = new Set(s);
-      n.has(id) ? n.delete(id) : n.add(id);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
       return n;
     });
   }

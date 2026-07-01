@@ -92,7 +92,6 @@ async function run() {
   let matched = 0;
   let unmatched = 0;
   let empty = 0;
-  let withCandidate = 0;
   const buffer: Record<string, unknown>[] = [];
   let written = 0;
 
@@ -118,7 +117,6 @@ async function run() {
       continue;
     }
     matched++;
-    withCandidate++;
     buffer.push({
       candidateId: cid,
       jazzCommId: row.comm_id || null,
