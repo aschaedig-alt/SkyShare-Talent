@@ -34,7 +34,7 @@ export function ActivityDashboardWorkspace({ activityData }: ActivityDashboardWo
 
   return (
     <div className="space-y-6 px-5 py-5 lg:px-8">
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
           Team Activity
         </p>
@@ -65,7 +65,7 @@ export function ActivityDashboardWorkspace({ activityData }: ActivityDashboardWo
         </div>
       </div>
 
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Activity Breakdown</h2>
         <div className="mt-4 space-y-2">
           {activityTypes.length > 0 ? (
@@ -83,7 +83,7 @@ export function ActivityDashboardWorkspace({ activityData }: ActivityDashboardWo
         </div>
       </section>
 
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Team Contribution</h2>
         <div className="mt-4 space-y-2">
           {Object.keys(activityData.byUser).length > 0 ? (
@@ -106,13 +106,13 @@ export function ActivityDashboardWorkspace({ activityData }: ActivityDashboardWo
         </div>
       </section>
 
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Recent Activity</h2>
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="rounded border border-brand-lea/20 bg-white px-3 py-1 text-sm text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+            className="rounded border border-brand-lea/20 bg-white px-3 py-1 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
           >
             <option value="all">All Activities</option>
             {activityTypes.map((type) => (

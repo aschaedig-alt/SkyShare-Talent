@@ -49,8 +49,10 @@ html {
 body {
   background: var(--skyshare-page);
   color: var(--skyshare-black);
-  font-family: Verdana, Geneva, sans-serif;
+  font-family: var(--font-inter), -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 0.95rem;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 button,
@@ -80,6 +82,19 @@ select {
 
 ::selection {
   background: rgba(234, 170, 0, 0.28);
+}
+
+/* Keyboard-focus ring — one consistent, visible gold indicator for every
+   interactive element (buttons, links, inputs, [tabindex]). Only shows for
+   keyboard navigation (:focus-visible), so mouse clicks stay clean. This was
+   missing app-wide before; it's the baseline for keyboard accessibility. */
+:focus-visible {
+  outline: 2px solid var(--skyshare-gold);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
 .preview-paper {

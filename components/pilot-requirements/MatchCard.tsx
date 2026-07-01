@@ -256,7 +256,7 @@ export function MatchCard({
                     disabled={moving}
                     onChange={(event) => onMoveTier(event.target.value as ReadinessLabel)}
                     aria-label={`Move ${match.candidateName} to another group`}
-                    className="rounded-element border border-brand-lea/20 bg-white px-1 py-0.5 text-[10px] font-medium text-brand-lea outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                    className="rounded-element border border-brand-lea/20 bg-white px-1 py-0.5 text-[10px] font-medium text-brand-lea outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
                   >
                     {READINESS_TIERS.map((tier) => (
                       <option key={tier} value={tier}>
@@ -319,7 +319,7 @@ export function MatchCard({
                 disabled={excluding}
                 onChange={(event) => changeExclusion(event.target.value as ScanExclusionReason | "")}
                 aria-label={`Scan eligibility for ${match.candidateName}`}
-                className="rounded-element border border-brand-lea/20 bg-white px-1.5 py-0.5 text-[11px] font-medium text-brand-lea outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                className="rounded-element border border-brand-lea/20 bg-white px-1.5 py-0.5 text-[11px] font-medium text-brand-lea outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
               >
                 <option value="">In the pool</option>
                 {SCAN_EXCLUSION_REASONS.map((entry) => (

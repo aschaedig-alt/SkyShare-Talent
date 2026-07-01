@@ -129,7 +129,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
 
   return (
     <div className="grid gap-4 xl:grid-cols-[280px_1fr]">
-      <aside className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <aside className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="px-1 pb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey dark:text-slate-400">Positions</div>
         {canEdit ? (
           <p className="px-1 pb-2 text-[11px] leading-snug text-brand-grey dark:text-slate-400">
@@ -155,7 +155,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
                   "min-w-0 flex-1 rounded border p-2.5 text-left transition hover:shadow-glow",
                   profile.key === selected
                     ? "border-brand-gold bg-brand-sweet/18 dark:bg-brand-sweet/25"
-                    : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-[#10243a]"
+                    : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-brand-panel"
                 )}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -199,7 +199,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
       </aside>
 
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded bg-white px-4 py-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded bg-white px-4 py-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="flex items-center gap-2 text-xs text-brand-grey dark:text-slate-400">
             <Lock className="h-3.5 w-3.5" />
             {canEdit ? "Recruiters & admins can edit. " : "Read-only — recruiters and admins can edit. "}
@@ -243,7 +243,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
           </p>
         ) : null}
 
-        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Category weights</h3>
           <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
             How much each sub-score counts toward the overall read. The description under each name is what that score measures.
@@ -274,7 +274,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
           </div>
         </section>
 
-        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Requirements</h3>
           <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
             Mark each as <span className="font-semibold text-brand-lea dark:text-slate-100">hard</span> (a minimum — missing it flags the
@@ -309,7 +309,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
           </div>
         </section>
 
-        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Custom certs &amp; ratings</h3>
@@ -398,7 +398,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
           )}
         </section>
 
-        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Hours logic</h3>
           <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
             Meeting a minimum earns full credit. Higher numbers don&apos;t earn more — except time in type, where more is
@@ -462,7 +462,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
           </div>
         </section>
 
-        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Readiness thresholds</h3>
           <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">Where the overall score lands a candidate. Labels only — never a reject.</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -534,7 +534,7 @@ function StatusToggle({
           onClick={() => onChange(option.key)}
           className={clsx(
             "px-3 py-1 transition hover:shadow-glow",
-            value === option.key ? option.active : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-[#10243a] dark:text-slate-400",
+            value === option.key ? option.active : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-brand-panel dark:text-slate-400",
             disabled && "cursor-not-allowed opacity-60"
           )}
         >

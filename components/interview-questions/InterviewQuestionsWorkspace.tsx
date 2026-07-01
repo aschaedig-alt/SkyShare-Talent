@@ -255,7 +255,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
               setEditingId(null);
               setCreating(true);
             }}
-            className="inline-flex items-center gap-1.5 self-start rounded bg-white px-4 py-2 text-sm font-semibold text-brand-lea shadow-sm transition hover:bg-brand-cloudDancer dark:bg-[#10243a] dark:text-slate-100"
+            className="inline-flex items-center gap-1.5 self-start rounded bg-white px-4 py-2 text-sm font-semibold text-brand-lea shadow-sm transition hover:bg-brand-cloudDancer dark:bg-brand-panel dark:text-slate-100"
           >
             <Plus className="h-4 w-4" /> New question
           </button>
@@ -265,7 +265,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
       <InterviewTabs active="bank" />
 
       {/* Filters */}
-      <section className="flex flex-wrap items-center gap-2 rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="flex flex-wrap items-center gap-2 rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="relative min-w-0 flex-1 sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey dark:text-slate-400" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search questions" className={`${inputCls} pl-9`} />
@@ -304,7 +304,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
       {/* List */}
       <section className="space-y-2">
         {filtered.length === 0 ? (
-          <div className="rounded bg-white px-4 py-16 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <div className="rounded bg-white px-4 py-16 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-cloudDancer/70 dark:bg-white/5">
               <ListChecks className="h-5 w-5 text-brand-grey dark:text-slate-400" />
             </div>
@@ -318,7 +318,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
             editingId === item.id ? (
               <QuestionForm key={item.id} initial={item} onCancel={() => setEditingId(null)} onSaved={afterSave} />
             ) : (
-              <div key={item.id} className={`rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10 ${item.isActive ? "" : "opacity-60"}`}>
+              <div key={item.id} className={`rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10 ${item.isActive ? "" : "opacity-60"}`}>
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-sm font-medium text-brand-black dark:text-slate-100">{item.text}</p>
                   <div className="flex shrink-0 items-center gap-1">

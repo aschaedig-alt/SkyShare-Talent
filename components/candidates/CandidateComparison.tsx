@@ -70,7 +70,7 @@ function FacetFilter({
         className={`inline-flex items-center gap-1.5 rounded border px-3 py-2 text-sm font-semibold transition hover:shadow-glow ${
           selected.size > 0
             ? "border-brand-gold/50 bg-brand-gold/10 text-brand-lea dark:text-slate-100"
-            : "border-brand-lea/15 bg-white text-brand-grey hover:text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400"
+            : "border-brand-lea/15 bg-white text-brand-grey hover:text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-400"
         }`}
       >
         {label}
@@ -79,7 +79,7 @@ function FacetFilter({
         ) : null}
       </button>
       {open ? (
-        <div className="absolute z-20 mt-1 w-56 rounded border border-brand-lea/15 bg-white p-1.5 shadow-lg dark:border-white/10 dark:bg-[#10243a]">
+        <div className="absolute z-20 mt-1 w-56 rounded border border-brand-lea/15 bg-white p-1.5 shadow-lg dark:border-white/10 dark:bg-brand-panel">
           <div className="flex items-center justify-between px-2 py-1">
             <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">{label}</span>
             {selected.size > 0 ? (
@@ -272,21 +272,21 @@ export function CandidateComparison({ data }: { data: CandidateComparisonData })
   return (
     <section className="space-y-3">
       {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-2 rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <div className="flex flex-wrap items-center gap-2 rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="relative min-w-0 flex-1 sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey dark:text-slate-400" />
           <input
             value={nameQuery}
             onChange={(event) => setNameQuery(event.target.value)}
             placeholder="Filter by name or role"
-            className="w-full rounded border border-brand-lea/15 bg-white py-2 pl-9 pr-3 text-sm text-brand-black outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+            className="w-full rounded border border-brand-lea/15 bg-white py-2 pl-9 pr-3 text-sm text-brand-black outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
           />
         </div>
 
         <FacetFilter label="Type rating" options={data.typeRatingOptions} selected={typeRatingFilter} onChange={setTypeRatingFilter} />
         <FacetFilter label="Certificate" options={data.certificateOptions} selected={certFilter} onChange={setCertFilter} />
 
-        <label className="inline-flex items-center gap-1.5 rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">
+        <label className="inline-flex items-center gap-1.5 rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">
           <SlidersHorizontal className="h-3.5 w-3.5" />
           <span className="font-semibold">Min total</span>
           <input
@@ -313,12 +313,12 @@ export function CandidateComparison({ data }: { data: CandidateComparisonData })
             <button
               type="button"
               onClick={() => setColumnsOpen((value) => !value)}
-              className="inline-flex items-center gap-1.5 rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea hover:shadow-glow dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400"
+              className="inline-flex items-center gap-1.5 rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea hover:shadow-glow dark:border-white/10 dark:bg-brand-panel dark:text-slate-400"
             >
               <Columns3 className="h-4 w-4" /> Columns
             </button>
             {columnsOpen ? (
-              <div className="absolute right-0 z-20 mt-1 w-56 rounded border border-brand-lea/15 bg-white p-1.5 shadow-lg dark:border-white/10 dark:bg-[#10243a]">
+              <div className="absolute right-0 z-20 mt-1 w-56 rounded border border-brand-lea/15 bg-white p-1.5 shadow-lg dark:border-white/10 dark:bg-brand-panel">
                 <div className="max-h-72 overflow-y-auto">
                   {[...scalarColumns, ...listColumnToggles].map((column) => {
                     const isOn = visible.has(column.key);
@@ -347,7 +347,7 @@ export function CandidateComparison({ data }: { data: CandidateComparisonData })
           <button
             type="button"
             onClick={exportCsv}
-            className="inline-flex items-center gap-1.5 rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400"
+            className="inline-flex items-center gap-1.5 rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-400"
           >
             <Download className="h-4 w-4" /> CSV
           </button>
@@ -355,7 +355,7 @@ export function CandidateComparison({ data }: { data: CandidateComparisonData })
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="flex items-center justify-between border-b border-brand-lea/10 px-5 py-3 dark:border-white/10">
           <p className="text-xs text-brand-grey dark:text-slate-400">
             <span className="font-semibold text-brand-lea dark:text-slate-100">{rows.length}</span> of {data.rows.length} candidates
@@ -414,7 +414,7 @@ export function CandidateComparison({ data }: { data: CandidateComparisonData })
               <tbody className="divide-y divide-brand-lea/10 dark:divide-white/10">
                 {rows.map((row) => (
                   <tr key={row.id} className="transition hover:bg-brand-sweet/10">
-                    <td className="sticky left-0 z-10 bg-white px-5 py-3 dark:bg-[#10243a]">
+                    <td className="sticky left-0 z-10 bg-white px-5 py-3 dark:bg-brand-panel">
                       <Link href={`/candidates/${row.id}`} className="font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-100">
                         {row.displayName}
                       </Link>

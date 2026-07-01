@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserPlus, X } from "lucide-react";
 
-const FIELD = "w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100";
+const FIELD = "w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100";
 
 export function NewCandidateButton() {
   const router = useRouter();
@@ -56,7 +56,7 @@ export function NewCandidateButton() {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-lea/40 p-4" onClick={() => setOpen(false)}>
-          <div className="w-full max-w-md rounded bg-white p-5 shadow-xl dark:bg-[#10243a]" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded bg-white p-5 shadow-xl dark:bg-brand-panel" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">New candidate</h2>
               <button onClick={() => setOpen(false)} className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close"><X className="h-5 w-5" /></button>

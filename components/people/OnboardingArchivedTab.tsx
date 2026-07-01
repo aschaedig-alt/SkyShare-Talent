@@ -82,12 +82,12 @@ export function OnboardingArchivedTab({ rows }: { rows: NewHireRow[] }) {
   }
 
   if (rows.length === 0) {
-    return <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:text-slate-400 dark:ring-white/10">Nothing archived.</p>;
+    return <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">Nothing archived.</p>;
   }
   return (
     <div className="space-y-3">
       <BulkActionBar count={selected.size} actions={ARCHIVED_BULK_ACTIONS} onApply={applyBulk} onDelete={deleteSelected} onClear={() => setSelected(new Set())} busy={bulkBusy} />
-      <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <table className="min-w-full text-sm">
         <thead>
           <tr className="border-b border-brand-lea/10 text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:border-white/10 dark:text-slate-400">

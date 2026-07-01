@@ -211,7 +211,7 @@ function ClusterCard({ cluster, onMerged }: { cluster: DuplicateCluster; onMerge
   }
 
   return (
-    <section className="rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]">
+    <section className="rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-brand-panel">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
         <div className="flex items-center gap-3">
           <span

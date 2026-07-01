@@ -99,9 +99,9 @@ const drawerLabels: Record<DrawerKey, string> = {
 };
 
 const inputClass =
-  "w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-black outline-none transition placeholder:text-brand-grey/70 focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100";
+  "w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-black outline-none transition placeholder:text-brand-grey/70 focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100";
 const templateInputClass =
-  "w-full rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-xs text-brand-black outline-none transition placeholder:text-[11px] placeholder:text-brand-grey/65 focus:border-brand-eden focus:ring-2 focus:ring-brand-sweet/35 disabled:bg-brand-cloudDancer/50 disabled:text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400";
+  "w-full rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-xs text-brand-black outline-none transition placeholder:text-[11px] placeholder:text-brand-grey/65 focus:border-brand-eden focus:ring-2 focus:ring-brand-sweet/35 disabled:bg-brand-cloudDancer/50 disabled:text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400";
 
 type SandboxTemplateField = {
   id: string;
@@ -181,9 +181,9 @@ function SortableTemplateField({
       style={style}
       className={`rounded border p-2 transition ${
         isDragging
-          ? "border-brand-gold bg-white shadow-lg dark:bg-[#10243a]"
+          ? "border-brand-gold bg-white shadow-lg dark:bg-brand-panel"
           : isEnabled
-            ? "border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]"
+            ? "border-brand-lea/10 bg-white dark:border-white/10 dark:bg-brand-panel"
             : "border-brand-lea/8 bg-brand-cloudDancer/40 dark:border-white/10 dark:bg-white/5"
       }`}
     >
@@ -192,12 +192,12 @@ function SortableTemplateField({
           type="button"
           {...attributes}
           {...listeners}
-          className="mt-5 inline-flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded border border-brand-lea/10 bg-white text-brand-grey hover:border-brand-eden hover:text-brand-eden active:cursor-grabbing dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400"
+          className="mt-5 inline-flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded border border-brand-lea/10 bg-white text-brand-grey hover:border-brand-eden hover:text-brand-eden active:cursor-grabbing dark:border-white/10 dark:bg-brand-panel dark:text-slate-400"
           aria-label={`Drag ${field.label}`}
         >
           <GripVertical className="h-3.5 w-3.5" />
         </button>
-        <label className="mt-5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]">
+        <label className="mt-5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-brand-panel">
           <input type="checkbox" checked={isEnabled} onChange={onToggle} className="h-3.5 w-3.5 accent-brand-lea" />
           <span className="sr-only">Include {field.label}</span>
         </label>
@@ -275,7 +275,7 @@ function DrawerShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]">
+    <div className="overflow-hidden rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-brand-panel">
       <button
         type="button"
         onClick={onToggle}
@@ -724,7 +724,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
   if (!selectedJob) {
     return (
       <div className="p-8">
-        <div className="rounded bg-white p-8 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">No jobs available.</div>
+        <div className="rounded bg-white p-8 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">No jobs available.</div>
       </div>
     );
   }
@@ -1233,7 +1233,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
           <div className="hidden items-center gap-2 xl:flex">
             {["Edit", "Build", "Preview", "Export"].map((step, index) => (
               <div key={step} className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-xs font-bold text-brand-lea dark:bg-[#10243a] dark:text-slate-100">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-xs font-bold text-brand-lea dark:bg-brand-panel dark:text-slate-100">
                   {index + 1}
                 </div>
                 <span className="text-sm font-medium text-white/82">{step}</span>
@@ -1254,7 +1254,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                   type="button"
                   onClick={() => saveSelectedJob()}
                   disabled={isSaving}
-                  className="inline-flex items-center gap-2 rounded bg-white px-3.5 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer disabled:opacity-70 dark:bg-[#10243a] dark:text-slate-100"
+                  className="inline-flex items-center gap-2 rounded bg-white px-3.5 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer disabled:opacity-70 dark:bg-brand-panel dark:text-slate-100"
                 >
                   <Save className="h-4 w-4" />
                   {isSaving ? "Saving..." : "Save Draft"}
@@ -1299,7 +1299,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
         )}
 
         <div className="grid gap-5 xl:grid-cols-[minmax(360px,0.72fr)_minmax(560px,1.28fr)]">
-          <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <div className="border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">1. Edit Job Data</p>
               <h2 className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{selectedJob.title}</h2>
@@ -1326,7 +1326,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                       className={`rounded px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] transition hover:shadow-glow ${
                         active
                           ? "bg-brand-lea text-white shadow-sm"
-                          : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                          : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
                       }`}
                     >
                       {item.label} ({item.count})
@@ -1347,7 +1347,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
               <select
                 value={selectedJob.id}
                 onChange={(event) => setSelectedJobId(event.target.value)}
-                className="mt-3 w-full rounded border border-brand-lea/15 bg-white px-3 py-2.5 text-sm font-semibold text-brand-lea outline-none focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                className="mt-3 w-full rounded border border-brand-lea/15 bg-white px-3 py-2.5 text-sm font-semibold text-brand-lea outline-none focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
               >
                 {filteredJobs.map((job) => (
                   <option key={job.id} value={job.id}>
@@ -1372,12 +1372,12 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                   <SourcePill label={`${selectedBulkJobIds.length} selected`} tone="neutral" />
                 </button>
                 {bulkOpen && (
-                  <div className="border-t border-brand-lea/8 bg-white p-3 dark:border-white/10 dark:bg-[#10243a]">
+                  <div className="border-t border-brand-lea/8 bg-white p-3 dark:border-white/10 dark:bg-brand-panel">
                     <div className="mb-3 flex flex-wrap gap-2">
                       <button
                         type="button"
                         onClick={toggleAllBulkJobs}
-                        className="rounded border border-brand-lea/12 bg-white px-2.5 py-1.5 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                        className="rounded border border-brand-lea/12 bg-white px-2.5 py-1.5 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
                       >
                         {allEligibleSelected ? "Clear visible" : "Select visible"}
                       </button>
@@ -1395,7 +1395,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                       {bulkEligibleJobs.map((job) => (
                         <label
                           key={`${jobListView}-${job.id}`}
-                          className="flex cursor-pointer items-start gap-2 rounded border border-brand-lea/8 bg-white px-2.5 py-2 text-sm hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-[#10243a]"
+                          className="flex cursor-pointer items-start gap-2 rounded border border-brand-lea/8 bg-white px-2.5 py-2 text-sm hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-brand-panel"
                         >
                           <input
                             type="checkbox"
@@ -1448,7 +1448,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
 
                     return (
                       <div className="space-y-3">
-                        <div className="flex flex-wrap items-center justify-between gap-2 rounded border border-brand-lea/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#10243a]">
+                        <div className="flex flex-wrap items-center justify-between gap-2 rounded border border-brand-lea/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-brand-panel">
                           <p className="text-[11px] font-semibold leading-5 text-brand-grey dark:text-slate-400">
                             Drag fields into the order you want. Uncheck fields you do not want in the final template.
                           </p>
@@ -1477,7 +1477,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                   })()}
 
                   {group.key === "offer" && (
-                    <div className="mt-3 rounded border border-brand-lea/10 bg-white p-3 dark:border-white/10 dark:bg-[#10243a]">
+                    <div className="mt-3 rounded border border-brand-lea/10 bg-white p-3 dark:border-white/10 dark:bg-brand-panel">
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <div className="text-xs font-bold uppercase tracking-[0.16em] text-brand-eden">
@@ -1590,7 +1590,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
             </div>
           </section>
 
-          <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <div className="border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -1611,7 +1611,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
             <JobBlockAssembly job={selectedJob} availableBlocks={initialBlocks} onJobUpdated={handleJobUpdated} />
           </div>
         ) : (
-        <section className="mt-5 rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="mt-5 rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="flex w-full items-center gap-3 border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
             <button
               type="button"
@@ -1656,7 +1656,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                 </div>
               ))}
               {publishingBlocks.length > 5 && (
-                <div className="rounded border border-brand-lea/10 bg-white px-3 py-2 text-sm font-bold text-brand-eden dark:border-white/10 dark:bg-[#10243a]">
+                <div className="rounded border border-brand-lea/10 bg-white px-3 py-2 text-sm font-bold text-brand-eden dark:border-white/10 dark:bg-brand-panel">
                   +{publishingBlocks.length - 5} more
                 </div>
               )}
@@ -1670,7 +1670,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                 <input className={`${inputClass} mt-3`} placeholder="Search shared blocks..." />
                 <div className="mt-3 max-h-[520px] space-y-2 overflow-auto pr-1">
                   {availableBlocks.slice(0, 12).map((block) => (
-                    <div key={block.id} className="rounded border border-brand-lea/10 bg-white p-3 dark:border-white/10 dark:bg-[#10243a]">
+                    <div key={block.id} className="rounded border border-brand-lea/10 bg-white p-3 dark:border-white/10 dark:bg-brand-panel">
                       <div className="text-sm font-bold text-brand-lea dark:text-slate-100">{block.name}</div>
                       <p className="mt-1 line-clamp-2 text-xs leading-5 text-brand-grey dark:text-slate-400">{block.description}</p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -1682,7 +1682,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                 </div>
               </div>
 
-              <div className="rounded border border-brand-lea/10 bg-white p-3 dark:border-white/10 dark:bg-[#10243a]">
+              <div className="rounded border border-brand-lea/10 bg-white p-3 dark:border-white/10 dark:bg-brand-panel">
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-eden">Job sections</p>
                 <h3 className="mt-1 text-base font-bold text-brand-lea dark:text-slate-100">Plain-language block controls</h3>
                 <div className="mt-3 max-h-[620px] space-y-2 overflow-auto pr-1">
@@ -1690,7 +1690,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                     const outdated = isInstanceOutdated(instance);
 
                     return (
-                      <div key={instance.id} className="rounded border border-brand-lea/10 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-[#10243a]">
+                      <div key={instance.id} className="rounded border border-brand-lea/10 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-brand-panel">
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <div className="text-sm font-bold text-brand-lea dark:text-slate-100">{getInstanceTitle(instance)}</div>
@@ -1724,7 +1724,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
         </section>
         )}
 
-        <section className="mt-5 rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="mt-5 rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <button
             type="button"
             onClick={() => setArchiveReferenceOpen((current) => !current)}

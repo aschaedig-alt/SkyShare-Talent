@@ -44,7 +44,7 @@ function MetricCard({
       onClick={clickable ? onClick : undefined}
       aria-expanded={clickable ? active : undefined}
       className={clsx(
-        "rounded bg-white p-4 text-left shadow-panel ring-1 ring-brand-lea/10 transition dark:bg-[#10243a] dark:ring-white/10",
+        "rounded bg-white p-4 text-left shadow-panel ring-1 ring-brand-lea/10 transition dark:bg-brand-panel dark:ring-white/10",
         clickable ? "cursor-pointer hover:shadow-glow hover:ring-brand-gold/40" : "cursor-default",
         active && "ring-2 ring-brand-gold/60"
       )}
@@ -67,7 +67,7 @@ const DRILL_STATUS_STYLE: Record<string, string> = {
 
 function DrillPanel({ title, people, onClose }: { title: string; people: DrillPerson[]; onClose: () => void }) {
   return (
-    <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-gold/30 dark:bg-[#10243a] dark:ring-white/10">
+    <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-gold/30 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-brand-lea dark:text-slate-100">{title} · {people.length}</h3>
         <button onClick={onClose} className="text-xs font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400">Close</button>
@@ -217,7 +217,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
       {drillView ? <DrillPanel title={drillView.title} people={drillView.people} onClose={() => setDrill(null)} /> : null}
 
       {/* Ready for their start — quick scan of who's starting soon and how ready */}
-      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Ready for their start?</h2>
         <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">Starting in the next 3 weeks · {dashboard.readyForStart.length}</p>
         {dashboard.readyForStart.length === 0 ? (
@@ -247,7 +247,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
 
       {/* Bottlenecks + orientation timing + travel readiness */}
       <section className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Where it&apos;s jamming</h2>
           <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">Onboarding tasks still to-do across the most active hires</p>
           <div className="mt-3">
@@ -260,7 +260,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
         </div>
 
         <div className="space-y-4">
-          <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Orientation timing</h2>
             <div className="mt-1 flex items-baseline gap-2">
               <span className="text-3xl font-semibold text-brand-lea dark:text-slate-100">{dashboard.orientationTimeliness.pct}%</span>
@@ -281,7 +281,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
             </div>
           </div>
 
-          <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Travel readiness</h2>
             <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">Upcoming starters · {dashboard.travelReadiness.total}</p>
             <SegBar
@@ -301,26 +301,26 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
       </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <h2 className="mb-3 text-base font-semibold text-brand-lea dark:text-slate-100">By status</h2>
           <Donut data={dashboard.byStatus} />
         </div>
-        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <h2 className="mb-3 text-base font-semibold text-brand-lea dark:text-slate-100">By department</h2>
           <HBars data={dashboard.byDepartment} color="#1d6fb8" />
         </div>
-        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <h2 className="mb-3 text-base font-semibold text-brand-lea dark:text-slate-100">Starts by week</h2>
           <VBars data={dashboard.startsByWeek} />
         </div>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <h2 className="mb-3 text-base font-semibold text-brand-lea dark:text-slate-100">Where active hires are in the process</h2>
           <HBars data={dashboard.funnel} color="#2e7d32" />
         </div>
-        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Needs attention</h2>
           <div className="mt-3 divide-y divide-brand-lea/5 overflow-hidden rounded border border-brand-lea/10 dark:divide-white/10 dark:border-white/10">
             {dashboard.alerts.length === 0 ? (
@@ -346,7 +346,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
         </div>
       </section>
 
-      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Upcoming start dates</h2>
         <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {dashboard.upcomingStarts.length === 0 ? (

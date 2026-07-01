@@ -38,7 +38,7 @@ function MetricList({ items }: { items: Array<{ label: string; value: number }> 
 export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
-      <section className="flex items-start justify-between gap-4 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="flex items-start justify-between gap-4 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
             Recruiting insights
@@ -55,7 +55,7 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Pipeline</p>
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Candidates by stage</h2>
           <div className="mt-3">
@@ -63,7 +63,7 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
           </div>
         </section>
 
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Source quality</p>
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Candidates by source</h2>
           <div className="mt-3">
@@ -71,7 +71,7 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
           </div>
         </section>
 
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Role coverage</p>
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Candidates by job</h2>
           <div className="mt-3">
@@ -79,7 +79,7 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
           </div>
         </section>
 
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Readiness</p>
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Documents and requirements</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -104,7 +104,7 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
       </section>
 
       {/* Document currency roll-up across all candidates */}
-      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Document currency</p>
         <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Expiring &amp; expired documents</h2>
 
@@ -162,7 +162,7 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
       </section>
 
       {/* Travel spend — onboarding + candidate fly-out budget roll-up */}
-      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Travel spend</p>
         <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Recruiting &amp; onboarding travel</h2>
         <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">

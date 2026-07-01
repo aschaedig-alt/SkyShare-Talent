@@ -25,7 +25,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 function SessionCard({ s }: { s: SessionListItem }) {
   const soon = new Date(s.date).getTime() - Date.now() <= 7 * 86_400_000 && s.status !== "COMPLETE";
   return (
-    <Link href={`/orientation/${s.id}`} className="block rounded border border-brand-lea/10 bg-white p-4 shadow-panel transition hover:ring-2 hover:ring-brand-gold/30 hover:shadow-glow dark:border-white/10 dark:bg-[#10243a]">
+    <Link href={`/orientation/${s.id}`} className="block rounded border border-brand-lea/10 bg-white p-4 shadow-panel transition hover:ring-2 hover:ring-brand-gold/30 hover:shadow-glow dark:border-white/10 dark:bg-brand-panel">
       <div className="flex items-center justify-between gap-2">
         <span className="text-base font-semibold text-brand-lea dark:text-slate-100">{fmt(s.date)}</span>
         <span className={clsx("rounded px-2 py-0.5 text-[11px] font-semibold", s.status === "COMPLETE" ? "bg-emerald-50 text-emerald-800" : soon ? "bg-brand-gold/15 text-brand-lea" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400")}>
@@ -55,7 +55,7 @@ function MiniMonth({ year, month, markers }: { year: number; month: number; mark
   for (let d = 1; d <= days; d++) cells.push(d);
   const monthName = new Intl.DateTimeFormat("en", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(year, month, 1)));
   return (
-    <div className="rounded border border-brand-lea/10 bg-white p-3 shadow-panel dark:border-white/10 dark:bg-[#10243a]">
+    <div className="rounded border border-brand-lea/10 bg-white p-3 shadow-panel dark:border-white/10 dark:bg-brand-panel">
       <div className="mb-2 text-sm font-semibold text-brand-lea dark:text-slate-100">{monthName}</div>
       <div className="grid grid-cols-7 gap-1 text-center text-[9px] text-brand-grey dark:text-slate-400">
         {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <div key={i}>{d}</div>)}
@@ -83,7 +83,7 @@ function MiniMonth({ year, month, markers }: { year: number; month: number; mark
 
 function CohortCard({ c, onCreate, onAddMissing, busy }: { c: Cohort; onCreate: (c: Cohort) => void; onAddMissing: (c: Cohort) => void; busy: boolean }) {
   return (
-    <div className="rounded border border-brand-lea/10 bg-white p-4 shadow-panel dark:border-white/10 dark:bg-[#10243a]">
+    <div className="rounded border border-brand-lea/10 bg-white p-4 shadow-panel dark:border-white/10 dark:bg-brand-panel">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-base font-semibold text-brand-lea dark:text-slate-100">{fmtDay(c.dateISO)}</span>
         <span className="text-xs text-brand-grey dark:text-slate-400">{c.hires.length} {c.hires.length === 1 ? "hire" : "hires"} · {daysUntil(c.dateISO)}</span>
@@ -221,7 +221,7 @@ export function OrientationOverview({
 
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
-      <section className="flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">People</p>
           <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Orientation</h1>
@@ -244,7 +244,7 @@ export function OrientationOverview({
                 {h.rescheduleCount > 0 ? <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold text-brand-lea dark:text-slate-100">moved {h.rescheduleCount}×</span> : null}
                 <span className="ml-auto">
                   {upcoming.length > 0 ? (
-                    <select value="" onChange={(e) => addToSession(h.id, e.target.value)} disabled={busyHire === h.id} className="rounded border border-brand-lea/15 bg-white px-2 py-1 text-xs text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">
+                    <select value="" onChange={(e) => addToSession(h.id, e.target.value)} disabled={busyHire === h.id} className="rounded border border-brand-lea/15 bg-white px-2 py-1 text-xs text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">
                       <option value="">Add to…</option>
                       {upcoming.map((s) => <option key={s.id} value={s.id}>{fmt(s.date)}</option>)}
                     </select>
@@ -274,7 +274,7 @@ export function OrientationOverview({
           <section>
             <h2 className="mb-2 text-sm font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Upcoming</h2>
             {upcoming.length === 0 ? (
-              <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:text-slate-400 dark:ring-white/10">No upcoming sessions. Create one, or use the Cohorts tab to spin one up from pre-onboarding orientation dates.</p>
+              <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">No upcoming sessions. Create one, or use the Cohorts tab to spin one up from pre-onboarding orientation dates.</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{upcoming.map((s) => <SessionCard key={s.id} s={s} />)}</div>
             )}
@@ -301,7 +301,7 @@ export function OrientationOverview({
           <section>
             <h2 className="mb-2 text-sm font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Cohorts by orientation date</h2>
             {cohorts.length === 0 ? (
-              <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:text-slate-400 dark:ring-white/10">No active hires have an orientation date set yet. Set one on a hire in Pre-onboarding and they&apos;ll group here.</p>
+              <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">No active hires have an orientation date set yet. Set one on a hire in Pre-onboarding and they&apos;ll group here.</p>
             ) : (
               <div className="grid gap-3 lg:grid-cols-2">
                 {cohorts.map((c) => <CohortCard key={c.dateISO} c={c} onCreate={createFromCohort} onAddMissing={addMissing} busy={busy} />)}
@@ -314,7 +314,7 @@ export function OrientationOverview({
       {adding && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => !saving && setAdding(false)} />
-          <div className="relative w-full max-w-md rounded bg-white p-5 shadow-2xl dark:bg-[#10243a]">
+          <div className="relative w-full max-w-md rounded bg-white p-5 shadow-2xl dark:bg-brand-panel">
             <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">New orientation session</h2>
             <div className="mt-4 space-y-3">
               <div className="flex gap-3">

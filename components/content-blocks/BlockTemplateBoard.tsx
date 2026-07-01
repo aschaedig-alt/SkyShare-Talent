@@ -150,7 +150,7 @@ function DraggableBlockCard({
       type="button"
       onClick={() => onSelect(block.id)}
       style={style}
-      className={`w-full rounded border bg-white p-3 text-left shadow-sm transition hover:shadow-glow dark:bg-[#10243a] ${
+      className={`w-full rounded border bg-white p-3 text-left shadow-sm transition hover:shadow-glow dark:bg-brand-panel ${
         selected ? "border-brand-gold ring-2 ring-brand-gold/30" : "border-brand-lea/10 hover:border-brand-eden/40 dark:border-white/10"
       } ${isDragging ? "opacity-70" : ""}`}
     >
@@ -222,7 +222,7 @@ export function BlockTemplateBoard({
 
   return (
     <div className="space-y-5">
-      <div className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <div className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">
@@ -267,7 +267,7 @@ export function BlockTemplateBoard({
         </DndContext>
       </div>
 
-      <div className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <div className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">
@@ -282,7 +282,7 @@ export function BlockTemplateBoard({
         </div>
 
         <div className="overflow-auto rounded border border-brand-lea/10 dark:border-white/10">
-          <table className="min-w-[820px] w-full border-collapse bg-white text-sm dark:bg-[#10243a]">
+          <table className="min-w-[820px] w-full border-collapse bg-white text-sm dark:bg-brand-panel">
             <thead className="bg-brand-cloudDancer/80 text-left text-xs font-bold uppercase tracking-[0.12em] text-brand-eden dark:bg-white/5">
               <tr>
                 <th className="px-3 py-3">Job</th>

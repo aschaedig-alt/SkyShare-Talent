@@ -145,7 +145,7 @@ export function PublicBooking({ slug, host }: Props) {
         </div>
       </div>
 
-      <div className="mt-8 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 sm:p-8 dark:bg-[#10243a] dark:ring-white/10">
+      <div className="mt-8 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 sm:p-8 dark:bg-brand-panel dark:ring-white/10">
         {confirmed ? (
           <ConfirmedCard confirmed={confirmed} tz={tz} hostName={host.name} hostTimezone={host.timezone} email={email} />
         ) : !type ? (
@@ -290,7 +290,7 @@ function SlotPicker({
         <div className="mt-5 max-h-[28rem] space-y-5 overflow-y-auto pr-1">
           {days.map((day) => (
             <div key={day.key}>
-              <h3 className="sticky top-0 bg-white py-1 text-xs font-bold uppercase tracking-[0.12em] text-brand-grey dark:bg-[#10243a] dark:text-slate-400">{day.label}</h3>
+              <h3 className="sticky top-0 bg-white py-1 text-xs font-bold uppercase tracking-[0.12em] text-brand-grey dark:bg-brand-panel dark:text-slate-400">{day.label}</h3>
               <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {day.times.map((t) => (
                   <button

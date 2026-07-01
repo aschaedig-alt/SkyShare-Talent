@@ -111,13 +111,13 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
   }
 
   if (hires.length === 0) {
-    return <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:text-slate-400 dark:ring-white/10">No active hires.</p>;
+    return <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">No active hires.</p>;
   }
 
   return (
     <div className="space-y-3">
       <BulkActionBar count={selected.size} actions={GRID_BULK_ACTIONS} onApply={applyBulk} onDelete={deleteSelected} onClear={() => setSelected(new Set())} busy={bulkBusy} />
-      <div className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <div className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
         <p className="text-sm text-brand-grey dark:text-slate-400">
           Click any cell to cycle <span className="font-semibold text-brand-lea dark:text-slate-100">to-do → done → N/A</span>. Tick a name to select; scroll sideways for more.
@@ -127,7 +127,7 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
         <table className="border-separate border-spacing-0 text-xs">
           <thead>
             <tr>
-              <th className="sticky left-0 z-30 border-b border-r border-brand-lea/10 bg-white px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">
+              <th className="sticky left-0 z-30 border-b border-r border-brand-lea/10 bg-white px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">
                 <label className="flex items-center gap-1.5">
                   <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all hires" className="h-3.5 w-3.5" />
                   Task
@@ -136,7 +136,7 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
               {hires.map((h) => {
                 const pct = h.applicableCount > 0 ? Math.round((h.doneCount / h.applicableCount) * 100) : 0;
                 return (
-                  <th key={h.id} className={clsx("sticky top-0 z-10 border-b border-brand-lea/10 px-3 py-2 align-bottom dark:border-white/10", selected.has(h.id) ? "bg-brand-eden/10 dark:bg-white/10" : "bg-white dark:bg-[#10243a]")} style={{ minWidth: 132 }}>
+                  <th key={h.id} className={clsx("sticky top-0 z-10 border-b border-brand-lea/10 px-3 py-2 align-bottom dark:border-white/10", selected.has(h.id) ? "bg-brand-eden/10 dark:bg-white/10" : "bg-white dark:bg-brand-panel")} style={{ minWidth: 132 }}>
                     <div className="flex justify-center">
                       <input type="checkbox" checked={selected.has(h.id)} onChange={() => toggleOne(h.id)} aria-label={`Select ${h.name}`} className="h-3.5 w-3.5" />
                     </div>
@@ -169,7 +169,7 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
               ["Department", (h: GridHire) => h.department ?? "—"]
             ] as Array<[string, (h: GridHire) => string]>).map(([label, get]) => (
               <tr key={label}>
-                <td className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">{label}</td>
+                <td className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">{label}</td>
                 {hires.map((h) => (
                   <td key={h.id} className="border-b border-brand-lea/5 px-3 py-1.5 text-center text-brand-grey break-words dark:border-white/10 dark:text-slate-400">{get(h)}</td>
                 ))}
@@ -191,7 +191,7 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
                   </tr>
                   {groupTasks.map((def) => (
                     <tr key={def.key}>
-                      <td className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-black dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100">{def.label}</td>
+                      <td className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-black dark:border-white/10 dark:bg-brand-panel dark:text-slate-100">{def.label}</td>
                       {hires.map((h) => {
                         const task = h.tasks.find((t) => t.key === def.key);
                         if (!task) return <td key={h.id} className="border-b border-brand-lea/5 text-center text-brand-grey/50 dark:border-white/10">–</td>;

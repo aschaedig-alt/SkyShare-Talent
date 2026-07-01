@@ -69,7 +69,7 @@ export function ProConPanel({
   }
 
   return (
-    <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex items-center justify-between">
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Pros &amp; cons</p>
         {busy ? <span className="text-[10px] text-brand-grey dark:text-slate-400">Saving…</span> : null}

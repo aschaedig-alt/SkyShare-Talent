@@ -15,7 +15,7 @@ type FinalReviewWorkspaceProps = {
 type ExportMode = "html" | "plain";
 
 const inputClass =
-  "w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-black outline-none transition placeholder:text-brand-grey/70 focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100";
+  "w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-black outline-none transition placeholder:text-brand-grey/70 focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100";
 
 function statusLabel(status: SerializedJobPost["status"]) {
   return status
@@ -65,7 +65,7 @@ export function FinalReviewWorkspace({ jobs }: FinalReviewWorkspaceProps) {
   if (!selectedJob) {
     return (
       <div className="px-6 py-6">
-        <div className="rounded bg-white p-8 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <div className="rounded bg-white p-8 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           No seeded jobs found. Run <code>npm.cmd run db:seed</code> to load starter data.
         </div>
       </div>
@@ -96,7 +96,7 @@ export function FinalReviewWorkspace({ jobs }: FinalReviewWorkspaceProps) {
                 readyToPublish
                   ? "bg-emerald-100 text-emerald-900"
                   : canPublishWithReview
-                    ? "bg-white text-brand-lea dark:bg-[#10243a] dark:text-slate-100"
+                    ? "bg-white text-brand-lea dark:bg-brand-panel dark:text-slate-100"
                     : "bg-brand-red text-white"
               }`}
             >
@@ -109,7 +109,7 @@ export function FinalReviewWorkspace({ jobs }: FinalReviewWorkspaceProps) {
 
       <div className="grid gap-5 px-5 py-5 lg:px-8 xl:grid-cols-[minmax(0,1fr)_420px]">
         <main className="space-y-5">
-          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <div className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_minmax(260px,1.3fr)_auto] md:items-end">
               <div>
                 <label className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
@@ -132,7 +132,7 @@ export function FinalReviewWorkspace({ jobs }: FinalReviewWorkspaceProps) {
                 <select
                   value={selectedJob.id}
                   onChange={(event) => setSelectedJobId(event.target.value)}
-                  className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2.5 text-sm font-semibold text-brand-lea outline-none focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                  className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2.5 text-sm font-semibold text-brand-lea outline-none focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
                 >
                   {filteredJobs.map((job) => (
                     <option key={job.id} value={job.id}>
@@ -147,7 +147,7 @@ export function FinalReviewWorkspace({ jobs }: FinalReviewWorkspaceProps) {
             </div>
           </section>
 
-          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">
@@ -164,7 +164,7 @@ export function FinalReviewWorkspace({ jobs }: FinalReviewWorkspaceProps) {
         </main>
 
         <aside className="space-y-5 xl:sticky xl:top-5 xl:self-start">
-          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <div className="mb-3">
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">
                 Publish readiness
@@ -174,7 +174,7 @@ export function FinalReviewWorkspace({ jobs }: FinalReviewWorkspaceProps) {
             <ReadinessCard job={selectedJob} warnings={warnings} compact />
           </section>
 
-          <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <div className="border-b border-brand-lea/10 p-4 dark:border-white/10">
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">
                 Export
@@ -192,7 +192,7 @@ export function FinalReviewWorkspace({ jobs }: FinalReviewWorkspaceProps) {
                   className={`inline-flex items-center justify-center gap-2 rounded px-3 py-2 text-sm font-bold transition hover:shadow-glow ${
                     exportMode === "html"
                       ? "bg-brand-lea text-white"
-                      : "border border-brand-lea/12 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                      : "border border-brand-lea/12 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
                   }`}
                 >
                   <Code2 className="h-4 w-4" />
@@ -204,7 +204,7 @@ export function FinalReviewWorkspace({ jobs }: FinalReviewWorkspaceProps) {
                   className={`inline-flex items-center justify-center gap-2 rounded px-3 py-2 text-sm font-bold transition hover:shadow-glow ${
                     exportMode === "plain"
                       ? "bg-brand-lea text-white"
-                      : "border border-brand-lea/12 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                      : "border border-brand-lea/12 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
                   }`}
                 >
                   <FileText className="h-4 w-4" />
@@ -224,7 +224,7 @@ export function FinalReviewWorkspace({ jobs }: FinalReviewWorkspaceProps) {
                 <button
                   type="button"
                   onClick={() => copyExport("plain")}
-                  className="inline-flex items-center justify-center gap-2 rounded border border-brand-lea/12 bg-white px-3 py-2 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                  className="inline-flex items-center justify-center gap-2 rounded border border-brand-lea/12 bg-white px-3 py-2 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
                 >
                   <Clipboard className="h-3.5 w-3.5" />
                   {copied === "plain" ? "Copied Text" : "Copy Text"}

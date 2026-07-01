@@ -71,7 +71,7 @@ export function PreOnboardingWorkspace({ tab, counts, dashboard, grid, milestone
 
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
-      <section className="flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">People</p>
           <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Pre-onboarding</h1>
@@ -112,7 +112,7 @@ export function PreOnboardingWorkspace({ tab, counts, dashboard, grid, milestone
       {tab === "dashboard" && dashboard ? <OnboardingDashboardTab dashboard={dashboard} /> : null}
       {tab === "grid" && grid ? (
         <div className="space-y-3">
-          <div className="flex w-fit gap-1 rounded bg-white p-1 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <div className="flex w-fit gap-1 rounded bg-white p-1 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             {(["grid", "milestones"] as const).map((v) => (
               <button
                 key={v}
@@ -135,7 +135,7 @@ export function PreOnboardingWorkspace({ tab, counts, dashboard, grid, milestone
       {adding && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => !saving && setAdding(false)} />
-          <div className="relative w-full max-w-md rounded bg-white p-5 shadow-2xl dark:bg-[#10243a]">
+          <div className="relative w-full max-w-md rounded bg-white p-5 shadow-2xl dark:bg-brand-panel">
             <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Add new hire</h2>
             <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">Creates an active hire with the standard checklist.</p>
             <div className="mt-4 space-y-3">

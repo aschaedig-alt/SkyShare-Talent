@@ -16,7 +16,7 @@ const MEDALS = ["🥇", "🥈", "🥉"];
 
 export function Leaderboard({ title, emoji, entries, unit, emptyText, subtitle }: LeaderboardProps) {
   return (
-    <div className="rounded-card border-[0.5px] border-brand-lea/15 bg-white p-6 dark:border-white/10 dark:bg-[#10243a]">
+    <div className="rounded-card border-[0.5px] border-brand-lea/15 bg-white p-6 dark:border-white/10 dark:bg-brand-panel">
       <div className="mb-4 flex items-baseline justify-between gap-2">
         <h2 className="text-base font-medium text-brand-lea dark:text-slate-100">
           <span className="mr-1.5" aria-hidden="true">

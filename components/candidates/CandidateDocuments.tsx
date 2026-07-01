@@ -87,7 +87,7 @@ function findPilotApp(files: CandidateFileItem[], excludeId?: string) {
 function FilePreview({ file, mode, searchTerm }: { file: CandidateFileItem; mode: "actual" | "fit"; searchTerm?: string }) {
   if (!file.storageKey) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 rounded border border-brand-lea/10 bg-white py-16 text-center dark:border-white/10 dark:bg-[#10243a]">
+      <div className="flex flex-col items-center justify-center gap-2 rounded border border-brand-lea/10 bg-white py-16 text-center dark:border-white/10 dark:bg-brand-panel">
         <FileWarning className="h-8 w-8 text-brand-grey/50" />
         <p className="font-semibold text-brand-lea dark:text-slate-100">File content not stored</p>
         <p className="text-sm text-brand-grey dark:text-slate-400">Metadata only — re-upload to preview.</p>
@@ -107,20 +107,20 @@ function FilePreview({ file, mode, searchTerm }: { file: CandidateFileItem; mode
         key={file.id}
         src={`/api/candidate-files/${file.id}#view=FitH`}
         title={file.displayFilename}
-        className={clsx("h-full w-full rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]", minH)}
+        className={clsx("h-full w-full rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-brand-panel", minH)}
       />
     );
   }
   if (isImage(file)) {
     return (
-      <div className="flex justify-center rounded border border-brand-lea/10 bg-white p-4 dark:border-white/10 dark:bg-[#10243a]">
+      <div className="flex justify-center rounded border border-brand-lea/10 bg-white p-4 dark:border-white/10 dark:bg-brand-panel">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={`/api/candidate-files/${file.id}`} alt={file.displayFilename} className="max-h-[82vh] w-auto rounded" />
       </div>
     );
   }
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded border border-brand-lea/10 bg-white py-16 text-center dark:border-white/10 dark:bg-[#10243a]">
+    <div className="flex flex-col items-center justify-center gap-3 rounded border border-brand-lea/10 bg-white py-16 text-center dark:border-white/10 dark:bg-brand-panel">
       <FileText className="h-8 w-8 text-brand-grey/50" />
       <p className="font-semibold text-brand-lea dark:text-slate-100">Inline preview not available</p>
       <p className="max-w-sm text-sm text-brand-grey dark:text-slate-400">{file.displayFilename} can&apos;t preview in the browser.</p>
@@ -328,7 +328,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
   const effectiveLayout: Layout = trimmedSearch ? "single" : layout;
 
   return (
-    <section className="flex h-full flex-col rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="flex h-full flex-col rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <input ref={fileInputRef} type="file" multiple accept={UPLOAD_ACCEPT} className="sr-only" onChange={(e) => handleUpload(e.currentTarget.files)} />
 
       {/* In-document search */}
@@ -404,7 +404,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 <span className="max-w-[150px] truncate">{file.displayFilename}</span>
-                {isMatch && <span className={clsx("h-1.5 w-1.5 shrink-0 rounded-full", active ? "bg-white dark:bg-[#10243a]" : "bg-brand-gold")} />}
+                {isMatch && <span className={clsx("h-1.5 w-1.5 shrink-0 rounded-full", active ? "bg-white dark:bg-brand-panel" : "bg-brand-gold")} />}
               </button>
             );
           })}
@@ -464,7 +464,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
           ) : (
             <div className="mt-2 space-y-1.5">
               {unassigned.map((f) => (
-                <div key={f.id} className="flex items-center gap-2 rounded border border-brand-lea/10 bg-white px-2.5 py-1.5 dark:border-white/10 dark:bg-[#10243a]">
+                <div key={f.id} className="flex items-center gap-2 rounded border border-brand-lea/10 bg-white px-2.5 py-1.5 dark:border-white/10 dark:bg-brand-panel">
                   <span className="rounded bg-red-100 px-1 py-0.5 text-[9px] font-bold text-red-800">PDF</span>
                   <span className="min-w-0 flex-1 truncate text-sm text-brand-lea dark:text-slate-100">{f.displayFilename}</span>
                   <button
@@ -507,7 +507,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                 <select
                   value={pane.file?.id ?? ""}
                   onChange={(e) => pane.set(e.target.value)}
-                  className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm font-medium text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                  className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm font-medium text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
                 >
                   {files.map((f) => (
                     <option key={f.id} value={f.id}>
@@ -556,7 +556,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                 <select
                   value={activeFile.documentType ?? ""}
                   onChange={(e) => handleSetType(activeFile.id, e.target.value)}
-                  className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-xs font-semibold text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                  className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-xs font-semibold text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
                   title="Document type"
                   aria-label="Document type"
                 >
@@ -572,7 +572,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                       type="date"
                       value={activeFile.expiresAt ? activeFile.expiresAt.slice(0, 10) : ""}
                       onChange={(e) => handleSetExpiry(activeFile.id, e.target.value)}
-                      className="rounded border border-brand-lea/20 bg-white px-1.5 py-1 text-xs text-brand-lea outline-none focus:border-brand-gold dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                      className="rounded border border-brand-lea/20 bg-white px-1.5 py-1 text-xs text-brand-lea outline-none focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
                     />
                   </label>
                 )}

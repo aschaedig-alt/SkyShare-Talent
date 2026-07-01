@@ -125,11 +125,11 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded bg-white shadow-xl max-h-[90vh] overflow-y-auto dark:bg-[#10243a]"
+        className="w-full max-w-lg rounded bg-white shadow-xl max-h-[90vh] overflow-y-auto dark:bg-brand-panel"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 border-b border-brand-lea/10 bg-white px-6 py-4 dark:border-white/10 dark:bg-[#10243a]">
+        <div className="sticky top-0 border-b border-brand-lea/10 bg-white px-6 py-4 dark:border-white/10 dark:bg-brand-panel">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold text-brand-lea dark:text-slate-100">Edit Interview</h2>
@@ -166,7 +166,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
               <select
                 name="status"
                 defaultValue={interview.status}
-                className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
+                className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel"
               >
                 {statusOptions.map((option) => (
                   <option key={option} value={option}>
@@ -209,7 +209,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
               name="jobId"
               defaultValue={interview.job?.id ?? ""}
               onChange={(e) => setSelectedJobId(e.target.value)}
-              className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
+              className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel"
             >
               <option value="">No linked job</option>
               {jobs.map((job) => (
@@ -236,7 +236,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
               <select
                 name="durationMinutes"
                 defaultValue={initialDuration}
-                className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
+                className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel"
               >
                 <option value="30">30 minutes</option>
                 <option value="45">45 minutes</option>

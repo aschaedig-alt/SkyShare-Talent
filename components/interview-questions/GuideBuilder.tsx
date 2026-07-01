@@ -132,7 +132,7 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
       <InterviewTabs active="guide" />
 
       {/* Controls */}
-      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="grid gap-4 md:grid-cols-3">
           <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Department
@@ -199,12 +199,12 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
       {/* Result */}
       {guide ? (
         guide.length === 0 ? (
-          <section className="rounded bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <section className="rounded bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">No matching questions</p>
             <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">Add questions to the bank for this department/values, or widen the filters.</p>
           </section>
         ) : (
-          <section className="space-y-4 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <section className="space-y-4 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             {guide.length < length ? (
               <p className="rounded bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
                 Only {guide.length} matching question{guide.length === 1 ? "" : "s"} available — add more to the bank to reach {length}.
@@ -240,7 +240,7 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
           </section>
         )
       ) : (
-        <section className="rounded bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-cloudDancer/70 dark:bg-white/5">
             <Wand2 className="h-5 w-5 text-brand-grey dark:text-slate-400" />
           </div>

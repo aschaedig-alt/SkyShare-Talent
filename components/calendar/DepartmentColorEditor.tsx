@@ -68,7 +68,7 @@ export function DepartmentColorEditor({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-black/40 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-lg rounded bg-white p-5 shadow-xl dark:bg-[#10243a]"
+        className="w-full max-w-lg rounded bg-white p-5 shadow-xl dark:bg-brand-panel"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"

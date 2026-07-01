@@ -50,7 +50,7 @@ export function ProjectChecklistWorkspace() {
   return (
     <div className="space-y-6">
       {/* Progress Overview */}
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Project Progress</p>
@@ -81,7 +81,7 @@ export function ProjectChecklistWorkspace() {
             section.items.length === 0 ? 0 : Math.round((completedCount / section.items.length) * 100);
 
           return (
-            <section key={section.id} className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+            <section key={section.id} className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
               <button
                 onClick={() => toggleSection(section.id)}
                 className="flex w-full items-center justify-between gap-4 px-5 py-4 transition hover:bg-brand-cloudDancer/10 hover:shadow-glow dark:bg-white/5"
@@ -153,10 +153,10 @@ export function ProjectChecklistWorkspace() {
       {/* Edit hint */}
       <section className="rounded border border-brand-gold/30 bg-brand-gold/10 p-4 text-sm text-brand-grey dark:text-slate-400">
         <span className="font-semibold text-brand-lea dark:text-slate-100">Want to add or change items?</span> Edit{" "}
-        <code className="rounded bg-white px-1 text-xs dark:bg-[#10243a]">lib/roadmap/roadmap.ts</code> — use{" "}
-        <code className="rounded bg-white px-1 text-xs dark:bg-[#10243a]">- [x]</code> for done,{" "}
-        <code className="rounded bg-white px-1 text-xs dark:bg-[#10243a]">- [~]</code> for in progress,{" "}
-        <code className="rounded bg-white px-1 text-xs dark:bg-[#10243a]">- [ ]</code> for to-do. Or just jot items in and ask Claude to
+        <code className="rounded bg-white px-1 text-xs dark:bg-brand-panel">lib/roadmap/roadmap.ts</code> — use{" "}
+        <code className="rounded bg-white px-1 text-xs dark:bg-brand-panel">- [x]</code> for done,{" "}
+        <code className="rounded bg-white px-1 text-xs dark:bg-brand-panel">- [~]</code> for in progress,{" "}
+        <code className="rounded bg-white px-1 text-xs dark:bg-brand-panel">- [ ]</code> for to-do. Or just jot items in and ask Claude to
         tidy it up.
       </section>
     </div>

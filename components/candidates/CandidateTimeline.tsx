@@ -35,7 +35,7 @@ export function CandidateTimeline({ events }: CandidateTimelineProps) {
   const sorted = [...events].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
 
   return (
-    <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Timeline</p>
       {sorted.length === 0 ? (
         <div className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm dark:border-white/10 dark:bg-white/5">
@@ -50,7 +50,7 @@ export function CandidateTimeline({ events }: CandidateTimelineProps) {
             <li key={event.id} className="relative">
               <span
                 className={clsx(
-                  "absolute -left-[1.55rem] top-1 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-[#10243a]",
+                  "absolute -left-[1.55rem] top-1 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-brand-panel",
                   dotClass(event.type)
                 )}
               />

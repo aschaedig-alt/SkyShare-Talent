@@ -100,7 +100,7 @@ export function OnboardingMilestonesTab({ data }: { data: MilestoneData }) {
       {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
 
       {managing && (
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Manage milestones</h2>
           <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">Drag the handle to reorder. Rename inline, remove, or add a milestone. Renaming updates them everywhere; removing a custom milestone deletes its tracking.</p>
           <div className="mt-3 space-y-2">
@@ -160,14 +160,14 @@ export function OnboardingMilestonesTab({ data }: { data: MilestoneData }) {
       )}
 
       {hires.length === 0 ? (
-        <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:text-slate-400 dark:ring-white/10">No active hires.</p>
+        <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">No active hires.</p>
       ) : (
-        <div className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <div className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="overflow-x-auto">
             <table className="border-separate border-spacing-0 text-xs">
               <thead>
                 <tr>
-                  <th className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-2 text-left align-bottom text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">
+                  <th className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-2 text-left align-bottom text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">
                     New hire
                   </th>
                   {milestones.map((m) => (
@@ -187,7 +187,7 @@ export function OnboardingMilestonesTab({ data }: { data: MilestoneData }) {
                   const pct = h.total > 0 ? Math.round((h.done / h.total) * 100) : 0;
                   return (
                     <tr key={h.id} className="hover:bg-brand-cloudDancer/30 dark:bg-white/5">
-                      <td className="sticky left-0 z-10 border-b border-r border-brand-lea/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#10243a]">
+                      <td className="sticky left-0 z-10 border-b border-r border-brand-lea/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-brand-panel">
                         <Link href={`/people/${h.id}`} className="font-medium text-brand-lea hover:underline transition hover:shadow-glow dark:text-slate-100">{h.name}</Link>
                         <div className="text-[10px] text-brand-grey dark:text-slate-400">
                           {h.position ?? "—"}

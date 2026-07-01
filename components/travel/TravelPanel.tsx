@@ -62,7 +62,7 @@ const ITEM_ICON: Record<string, typeof Plane> = {
 
 const labelClass = "text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400";
 const inputClass =
-  "w-full rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-sm text-brand-lea outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100";
+  "w-full rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-sm text-brand-lea outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100";
 
 function toDateInput(iso: string | null) {
   return iso ? iso.slice(0, 10) : "";
@@ -115,7 +115,7 @@ export function TravelPanel({ subjectType, subjectId, initialTrips, loyalty }: P
   }
 
   return (
-    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Plane className="h-4 w-4 text-brand-gold" />
@@ -163,7 +163,7 @@ function NewTripButton({ creating, onCreate }: { creating: boolean; onCreate: (p
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden="true" />
-          <div className="absolute right-0 z-20 mt-1 w-48 rounded border border-brand-lea/15 bg-white py-1 shadow-2xl dark:border-white/10 dark:bg-[#10243a]">
+          <div className="absolute right-0 z-20 mt-1 w-48 rounded border border-brand-lea/15 bg-white py-1 shadow-2xl dark:border-white/10 dark:bg-brand-panel">
             {TRAVEL_PURPOSES.map((p) => (
               <button
                 key={p.value}
@@ -440,7 +440,7 @@ function ConfirmationImport({ trip, onApplied }: { trip: TravelTripView; onAppli
           </div>
 
           {parsed && (
-            <div className="rounded border border-brand-lea/15 bg-white p-2.5 dark:border-white/10 dark:bg-[#10243a]">
+            <div className="rounded border border-brand-lea/15 bg-white p-2.5 dark:border-white/10 dark:bg-brand-panel">
               <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
                 Found {parsed.items.length} {parsed.items.length === 1 ? "item" : "items"} — review &amp; apply
               </p>
@@ -508,7 +508,7 @@ function ItemsTable({
               <button
                 key={t.value}
                 onClick={() => onAdd(t.value)}
-                className="inline-flex items-center gap-1 rounded border border-brand-lea/15 bg-white px-2 py-1 text-[11px] font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400"
+                className="inline-flex items-center gap-1 rounded border border-brand-lea/15 bg-white px-2 py-1 text-[11px] font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-400"
               >
                 <Icon className="h-3.5 w-3.5" />
                 {t.label}
@@ -549,13 +549,13 @@ function ItemRow({
   }
 
   return (
-    <div className="rounded border border-brand-lea/10 bg-white p-2.5 dark:border-white/10 dark:bg-[#10243a]">
+    <div className="rounded border border-brand-lea/10 bg-white p-2.5 dark:border-white/10 dark:bg-brand-panel">
       <div className="flex items-center gap-2">
         <Icon className="h-4 w-4 shrink-0 text-brand-gold" />
         <select
           defaultValue={item.type}
           onChange={(e) => save("type", e.target.value)}
-          className="rounded border border-brand-lea/15 bg-white px-2 py-1 text-xs font-semibold text-brand-lea outline-none dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+          className="rounded border border-brand-lea/15 bg-white px-2 py-1 text-xs font-semibold text-brand-lea outline-none dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
         >
           {TRAVEL_ITEM_TYPES.map((t) => (
             <option key={t.value} value={t.value}>
@@ -657,7 +657,7 @@ function ReceiptsBlock({
         <button
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="inline-flex items-center gap-1 rounded border border-brand-lea/15 bg-white px-2 py-1 text-[11px] font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea disabled:opacity-60 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400"
+          className="inline-flex items-center gap-1 rounded border border-brand-lea/15 bg-white px-2 py-1 text-[11px] font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea disabled:opacity-60 dark:border-white/10 dark:bg-brand-panel dark:text-slate-400"
         >
           <Upload className="h-3.5 w-3.5" />
           {uploading ? "Uploading…" : "Upload"}
@@ -676,7 +676,7 @@ function ReceiptsBlock({
           {receipts.map((r) => (
             <div
               key={r.id}
-              className="flex items-center gap-2 rounded border border-brand-lea/10 bg-white px-2.5 py-1.5 text-sm dark:border-white/10 dark:bg-[#10243a]"
+              className="flex items-center gap-2 rounded border border-brand-lea/10 bg-white px-2.5 py-1.5 text-sm dark:border-white/10 dark:bg-brand-panel"
             >
               <Paperclip className="h-3.5 w-3.5 shrink-0 text-brand-grey dark:text-slate-400" />
               <a

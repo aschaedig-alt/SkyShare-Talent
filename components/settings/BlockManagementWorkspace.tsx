@@ -89,7 +89,7 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
   return (
     <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
       {/* list */}
-      <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="border-b border-brand-lea/10 p-3 dark:border-white/10">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-brand-grey dark:text-slate-400" />
@@ -97,7 +97,7 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search blocks..."
-              className="w-full rounded border border-brand-lea/15 bg-white py-2 pl-9 pr-3 text-sm text-brand-black outline-none focus:border-brand-eden dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+              className="w-full rounded border border-brand-lea/15 bg-white py-2 pl-9 pr-3 text-sm text-brand-black outline-none focus:border-brand-eden dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
             />
           </div>
         </div>
@@ -125,7 +125,7 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
       </section>
 
       {/* management */}
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         {!selected ? (
           <p className="text-sm text-brand-grey dark:text-slate-400">Select a block to manage.</p>
         ) : (
@@ -180,7 +180,7 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
                 value={replacementBlockId}
                 onChange={(e) => setReplacementBlockId(e.target.value)}
                 disabled={!migrateJobs || busy}
-                className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
               >
                 <option value="">Choose replacement block...</option>
                 {replacements.map((b) => (
@@ -205,7 +205,7 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
                 type="button"
                 onClick={() => retire("DELETE")}
                 disabled={busy || deleteLocked || replacementRequired}
-                className="inline-flex items-center gap-2 rounded border border-brand-red/25 bg-white px-3 py-2 text-sm font-bold text-brand-red transition hover:bg-brand-red/8 disabled:opacity-50 dark:bg-[#10243a]"
+                className="inline-flex items-center gap-2 rounded border border-brand-red/25 bg-white px-3 py-2 text-sm font-bold text-brand-red transition hover:bg-brand-red/8 disabled:opacity-50 dark:bg-brand-panel"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete block

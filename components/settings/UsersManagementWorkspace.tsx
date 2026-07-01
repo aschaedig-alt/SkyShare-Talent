@@ -62,7 +62,7 @@ export function UsersManagementWorkspace({ users: initialUsers }: UsersManagemen
         </div>
       )}
 
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
           User Management
         </p>
@@ -70,7 +70,7 @@ export function UsersManagementWorkspace({ users: initialUsers }: UsersManagemen
         <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">Manage user roles and permissions</p>
       </section>
 
-      <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b border-brand-lea/10 bg-brand-cloudDancer/30 dark:border-white/10 dark:bg-white/5">
@@ -101,7 +101,7 @@ export function UsersManagementWorkspace({ users: initialUsers }: UsersManagemen
                         <select
                           value={selectedRole}
                           onChange={(e) => setSelectedRole(e.target.value)}
-                          className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                          className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
                         >
                           <option value="">Select role...</option>
                           {VALID_ROLES.map((role) => (
@@ -149,7 +149,7 @@ export function UsersManagementWorkspace({ users: initialUsers }: UsersManagemen
         )}
       </section>
 
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Role Permissions</h2>
         <div className="mt-4 space-y-4">
           {VALID_ROLES.map((role) => (

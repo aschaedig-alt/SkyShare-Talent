@@ -79,7 +79,7 @@ function DraggableLibraryBlock({ block, isBusy }: { block: SerializedContentBloc
     <div
       ref={setNodeRef}
       style={style}
-      className={`rounded border border-brand-lea/10 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-[#10243a] ${
+      className={`rounded border border-brand-lea/10 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-brand-panel ${
         isDragging ? "opacity-70 ring-2 ring-brand-gold" : ""
       }`}
     >
@@ -185,7 +185,7 @@ function SortableBlockRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`rounded border border-brand-lea/10 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-[#10243a] ${
+      className={`rounded border border-brand-lea/10 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-brand-panel ${
         isDragging ? "opacity-70 ring-2 ring-brand-gold" : ""
       }`}
     >
@@ -298,7 +298,7 @@ function SortableBlockRow({
               <button
                 type="button"
                 onClick={() => setIsEditingCustom(false)}
-                className="rounded p-1 text-brand-grey hover:bg-white dark:text-slate-400 dark:bg-[#10243a]"
+                className="rounded p-1 text-brand-grey hover:bg-white dark:text-slate-400 dark:bg-brand-panel"
                 aria-label="Cancel custom edit"
               >
                 <X className="h-4 w-4" />
@@ -308,7 +308,7 @@ function SortableBlockRow({
           <input
             value={customTitle}
             onChange={(event) => setCustomTitle(event.target.value)}
-            className="mb-2 w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm outline-none focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-[#10243a]"
+            className="mb-2 w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm outline-none focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-brand-panel"
             placeholder="Custom section title"
           />
           <RichTextEditor
@@ -553,7 +553,7 @@ export function JobBlockAssembly({ job, availableBlocks, onJobUpdated }: JobBloc
   }
 
   return (
-    <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -601,10 +601,10 @@ export function JobBlockAssembly({ job, availableBlocks, onJobUpdated }: JobBloc
             <input
               value={blockQuery}
               onChange={(event) => setBlockQuery(event.target.value)}
-              className="mb-3 w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm outline-none focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-[#10243a]"
+              className="mb-3 w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm outline-none focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-brand-panel"
               placeholder="Search blocks..."
             />
-            <div className="mb-3 rounded border border-brand-lea/10 bg-white p-2 dark:border-white/10 dark:bg-[#10243a]">
+            <div className="mb-3 rounded border border-brand-lea/10 bg-white p-2 dark:border-white/10 dark:bg-brand-panel">
               <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-brand-eden">
                 Quick add
               </label>
@@ -612,7 +612,7 @@ export function JobBlockAssembly({ job, availableBlocks, onJobUpdated }: JobBloc
                 <select
                   value={selectedBlockId}
                   onChange={(event) => setSelectedBlockId(event.target.value)}
-                  className="min-w-0 flex-1 rounded border border-brand-lea/15 bg-white px-2 py-2 text-xs text-brand-lea outline-none focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                  className="min-w-0 flex-1 rounded border border-brand-lea/15 bg-white px-2 py-2 text-xs text-brand-lea outline-none focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
                 >
                   <option value="">Choose...</option>
                   {attachableBlocks.map((block) => (
@@ -649,7 +649,7 @@ export function JobBlockAssembly({ job, availableBlocks, onJobUpdated }: JobBloc
                 ) : null
               )}
               {!attachableBlocks.length && (
-                <div className="rounded border border-dashed border-brand-lea/20 bg-white px-3 py-5 text-center text-sm font-semibold text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">
+                <div className="rounded border border-dashed border-brand-lea/20 bg-white px-3 py-5 text-center text-sm font-semibold text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">
                   No more matching blocks to add.
                 </div>
               )}
@@ -696,7 +696,7 @@ export function JobBlockAssembly({ job, availableBlocks, onJobUpdated }: JobBloc
             </div>
           </div>
 
-          <aside className="flex min-h-[900px] flex-col rounded border border-brand-lea/10 bg-white p-3 xl:min-h-0 dark:border-white/10 dark:bg-[#10243a]">
+          <aside className="flex min-h-[900px] flex-col rounded border border-brand-lea/10 bg-white p-3 xl:min-h-0 dark:border-white/10 dark:bg-brand-panel">
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-eden">

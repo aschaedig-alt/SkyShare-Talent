@@ -35,7 +35,7 @@ function formatDate(value: string | null) {
 export function ImportsWorkspace({ data }: ImportsWorkspaceProps) {
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
@@ -54,7 +54,7 @@ export function ImportsWorkspace({ data }: ImportsWorkspaceProps) {
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {statLabels.map(([key, label]) => (
-          <div key={key} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <div key={key} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey dark:text-slate-400">
               {label}
             </div>
@@ -75,7 +75,7 @@ export function ImportsWorkspace({ data }: ImportsWorkspaceProps) {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1fr_380px]">
-        <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">
               Import history
@@ -117,7 +117,7 @@ export function ImportsWorkspace({ data }: ImportsWorkspaceProps) {
           </div>
         </section>
 
-        <aside className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <aside className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">
               Review queue

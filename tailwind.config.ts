@@ -18,7 +18,10 @@ const config: Config = {
           eden: "#466481",
           lea: "#0d2c43",
           grey: "#76787b",
-          black: "#302f31"
+          black: "#302f31",
+          // Dark-mode card/panel surface (single source of truth — was a
+          // hardcoded #10243a literal repeated ~440x across components).
+          panel: "#10243a"
         },
         // Compliments by SkyShare — company value colors (handoff §3).
         // Each value has a DEFAULT (accent bars / bar fills), a `light` tint

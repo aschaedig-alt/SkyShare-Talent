@@ -28,7 +28,7 @@ function fmtDate(iso: string | null) {
 }
 
 const selectClass =
-  "rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-sm text-brand-lea outline-none focus:border-brand-gold dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100";
+  "rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-sm text-brand-lea outline-none focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100";
 
 function NewTripButton({ travelers }: { travelers: TravelTravelerOption[] }) {
   const router = useRouter();
@@ -77,7 +77,7 @@ function NewTripButton({ travelers }: { travelers: TravelTravelerOption[] }) {
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} aria-hidden="true" />
-          <div className="absolute right-0 z-40 mt-1 w-80 rounded border border-brand-lea/15 bg-white p-3 shadow-2xl dark:border-white/10 dark:bg-[#10243a]">
+          <div className="absolute right-0 z-40 mt-1 w-80 rounded border border-brand-lea/15 bg-white p-3 shadow-2xl dark:border-white/10 dark:bg-brand-panel">
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Who is traveling?</p>
 
             <div className="mt-2 flex gap-1">
@@ -93,7 +93,7 @@ function NewTripButton({ travelers }: { travelers: TravelTravelerOption[] }) {
                     "rounded border px-2 py-1 text-[11px] font-semibold transition",
                     typeFilter === val
                       ? "border-brand-lea bg-brand-lea text-white"
-                      : "border-brand-lea/15 bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400"
+                      : "border-brand-lea/15 bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-brand-panel dark:text-slate-400"
                   )}
                 >
                   {label}
@@ -186,7 +186,7 @@ export function TravelHubWorkspace({ data }: { data: TravelHubData }) {
 
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
@@ -214,7 +214,7 @@ export function TravelHubWorkspace({ data }: { data: TravelHubData }) {
         </div>
       </section>
 
-      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2">
           <input

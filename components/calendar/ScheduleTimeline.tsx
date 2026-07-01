@@ -192,7 +192,7 @@ export function ScheduleTimeline({
   const trackWidth = daysInMonth * DAY_WIDTH;
 
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="flex h-full flex-col overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
         <div>
@@ -219,9 +219,9 @@ export function ScheduleTimeline({
       <div className="min-h-0 flex-1 overflow-auto">
         <div style={{ width: RAIL_WIDTH + trackWidth }}>
           {/* Day axis header */}
-          <div className="sticky top-0 z-20 flex border-b border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]">
+          <div className="sticky top-0 z-20 flex border-b border-brand-lea/10 bg-white dark:border-white/10 dark:bg-brand-panel">
             <div
-              className="sticky left-0 z-10 flex items-center border-r border-brand-lea/10 bg-white px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400"
+              className="sticky left-0 z-10 flex items-center border-r border-brand-lea/10 bg-white px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400"
               style={{ width: RAIL_WIDTH }}
             >
               Recruiting team
@@ -268,7 +268,7 @@ export function ScheduleTimeline({
                 <div key={row.member} className="flex border-b border-brand-lea/5 dark:border-white/10">
                   {/* Sticky team rail */}
                   <div
-                    className="sticky left-0 z-10 flex items-center gap-2.5 border-r border-brand-lea/10 bg-white px-4 dark:border-white/10 dark:bg-[#10243a]"
+                    className="sticky left-0 z-10 flex items-center gap-2.5 border-r border-brand-lea/10 bg-white px-4 dark:border-white/10 dark:bg-brand-panel"
                     style={{ width: RAIL_WIDTH }}
                   >
                     <TeamAvatar name={row.member} avatarUrl={avatarByName.get(row.member.trim().toLowerCase())} />

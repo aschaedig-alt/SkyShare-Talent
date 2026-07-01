@@ -21,7 +21,7 @@ type GateFormValue = {
 };
 
 const inputClass =
-  "w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-black outline-none transition placeholder:text-brand-grey/70 focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100";
+  "w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-black outline-none transition placeholder:text-brand-grey/70 focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100";
 
 const selectClass = inputClass;
 
@@ -124,7 +124,7 @@ export function PilotRequirementEditor({ requirement }: PilotRequirementEditorPr
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
@@ -226,7 +226,7 @@ export function PilotRequirementEditor({ requirement }: PilotRequirementEditorPr
         </div>
       </section>
 
-      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">

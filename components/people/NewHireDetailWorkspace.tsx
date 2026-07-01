@@ -121,7 +121,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty }: Pro
         ← Pre-onboarding
       </Link>
 
-      <section className="flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div>
           <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">{hire.name}</h1>
           <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
@@ -160,7 +160,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty }: Pro
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
         {/* Details */}
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Details</h2>
             <button onClick={saveDetails} disabled={savingDetails} className="rounded bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
@@ -193,7 +193,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty }: Pro
         </section>
 
         {/* Checklist */}
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Checklist</h2>
           <div className="mt-3 space-y-5">
             {grouped.map(({ group, items }) => (
@@ -210,7 +210,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty }: Pro
                             onClick={() => setTaskStatus(t.id, s)}
                             className={clsx(
                               "px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow",
-                              t.status === s ? STATUS_BTN[s].on : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-[#10243a] dark:text-slate-400"
+                              t.status === s ? STATUS_BTN[s].on : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-brand-panel dark:text-slate-400"
                             )}
                           >
                             {STATUS_BTN[s].label}
@@ -239,7 +239,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty }: Pro
                               onClick={() => setTaskStatus(t.id, s)}
                               className={clsx(
                                 "px-2.5 py-1 text-xs font-semibold transition",
-                                t.status === s ? STATUS_BTN[s].on : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-[#10243a] dark:text-slate-400"
+                                t.status === s ? STATUS_BTN[s].on : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-brand-panel dark:text-slate-400"
                               )}
                             >
                               {STATUS_BTN[s].label}

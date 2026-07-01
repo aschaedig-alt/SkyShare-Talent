@@ -58,7 +58,7 @@ export function PersonPicker({
               onChange("");
               setQuery("");
             }}
-            className="rounded p-1 text-brand-grey transition hover:bg-white hover:text-brand-lea dark:text-slate-400 dark:bg-[#10243a]"
+            className="rounded p-1 text-brand-grey transition hover:bg-white hover:text-brand-lea dark:text-slate-400 dark:bg-brand-panel"
             aria-label={`Remove ${selected.name}`}
           >
             <X className="h-4 w-4" />
@@ -86,7 +86,7 @@ export function PersonPicker({
           className="w-full rounded-element border-[0.5px] border-brand-lea/20 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-value-innovation focus:ring-2 focus:ring-value-innovation/30 dark:border-white/10"
         />
         {open && matches.length > 0 ? (
-          <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-element border-[0.5px] border-brand-lea/15 bg-white py-1 shadow-panel dark:border-white/10 dark:bg-[#10243a]">
+          <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-element border-[0.5px] border-brand-lea/15 bg-white py-1 shadow-panel dark:border-white/10 dark:bg-brand-panel">
             {matches.map((p) => (
               <li key={p.id}>
                 <button

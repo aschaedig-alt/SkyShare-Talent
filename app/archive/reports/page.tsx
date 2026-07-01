@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded border border-brand-lea/10 bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:border-white/10 dark:bg-[#10243a] dark:ring-white/10">
+    <div className="rounded border border-brand-lea/10 bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:border-white/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="text-2xl font-semibold text-brand-lea dark:text-slate-100">{value}</div>
       <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{label}</div>
     </div>
@@ -16,7 +16,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
 function BarList({ title, rows, accent = "#466481" }: { title: string; rows: CountRow[]; accent?: string }) {
   const max = Math.max(1, ...rows.map((r) => r.count));
   return (
-    <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">{title}</p>
       {rows.length === 0 ? (
         <p className="mt-3 text-sm text-brand-grey dark:text-slate-400">No data.</p>

@@ -35,7 +35,7 @@ export function DocumentChecklist({ files }: { files: FileLike[] }) {
   const coreMissing = CHECKLIST.filter((c) => c.core && !counts.has(c.type)).length;
 
   return (
-    <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex items-center justify-between">
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Document checklist</p>
         <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${coreMissing === 0 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>

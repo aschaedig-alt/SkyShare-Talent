@@ -89,7 +89,7 @@ export function BulkActionBar({ count, actions, onApply, onClear, onDelete, busy
               value={value}
               onChange={(e) => setValue(e.target.value)}
               autoFocus
-              className="rounded border border-brand-lea/20 px-2 py-1 text-sm text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+              className="rounded border border-brand-lea/20 px-2 py-1 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
             />
           ) : (
             <input
@@ -98,7 +98,7 @@ export function BulkActionBar({ count, actions, onApply, onClear, onDelete, busy
               onChange={(e) => setValue(e.target.value)}
               placeholder={openInput.kind === "text" ? openInput.placeholder : ""}
               autoFocus
-              className="rounded border border-brand-lea/20 px-2 py-1 text-sm text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+              className="rounded border border-brand-lea/20 px-2 py-1 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
             />
           )}
           <button onClick={applyInput} disabled={busy} className="rounded bg-brand-lea px-3 py-1 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">

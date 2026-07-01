@@ -149,7 +149,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
     <div className="space-y-4 px-5 py-5 lg:px-8">
       <Link href="/orientation" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400">← Orientation</Link>
 
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Orientation · {fmtShort(session.date)}</h1>
@@ -176,11 +176,11 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
           <div className="mt-3 flex flex-wrap items-end gap-3 rounded border border-brand-lea/15 bg-brand-cloudDancer/40 p-3 dark:border-white/10 dark:bg-white/5">
             <label className="block">
               <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">New date</span>
-              <input type="date" value={resched.date} onChange={(e) => setResched({ ...resched, date: e.target.value })} className="mt-1 block rounded border border-brand-lea/20 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100" />
+              <input type="date" value={resched.date} onChange={(e) => setResched({ ...resched, date: e.target.value })} className="mt-1 block rounded border border-brand-lea/20 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100" />
             </label>
             <label className="block">
               <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Time (MT)</span>
-              <input type="time" value={resched.time} onChange={(e) => setResched({ ...resched, time: e.target.value })} className="mt-1 block rounded border border-brand-lea/20 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100" />
+              <input type="time" value={resched.time} onChange={(e) => setResched({ ...resched, time: e.target.value })} className="mt-1 block rounded border border-brand-lea/20 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100" />
             </label>
             <button onClick={saveReschedule} disabled={savingDate || !resched.date} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
               {savingDate ? "Saving…" : "Save new date"}
@@ -207,7 +207,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
         {/* Prep checklist */}
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Prep checklist</h2>
           <div className="mt-3 space-y-1">
             {prep.map((t) => (
@@ -221,7 +221,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
         </section>
 
         {/* Attendees */}
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Attendees</h2>
           {notice ? (
             <p className="mt-2 rounded border border-brand-gold/30 bg-brand-gold/10 px-3 py-2 text-xs text-brand-lea dark:text-slate-100">{notice}</p>
@@ -253,7 +253,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                       <div className="text-[10px] text-brand-grey dark:text-slate-400">{a.position ?? "—"}</div>
                     </td>
                     <td className="px-1 py-2">
-                      <select value={a.confirmed} onChange={(e) => setConfirm(a, e.target.value as ConfirmStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.confirmed === "CONFIRMED" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : a.confirmed === "TENTATIVE" ? "border-amber-300 bg-amber-50 text-amber-700" : a.confirmed === "DECLINED" ? "border-red-200 bg-red-50 text-red-700" : "border-brand-lea/15 bg-white text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400")}>
+                      <select value={a.confirmed} onChange={(e) => setConfirm(a, e.target.value as ConfirmStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.confirmed === "CONFIRMED" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : a.confirmed === "TENTATIVE" ? "border-amber-300 bg-amber-50 text-amber-700" : a.confirmed === "DECLINED" ? "border-red-200 bg-red-50 text-red-700" : "border-brand-lea/15 bg-white text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400")}>
                         <option value="PENDING">Pending</option>
                         <option value="TENTATIVE">Tentative</option>
                         <option value="CONFIRMED">Confirmed</option>
@@ -277,7 +277,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                         </Link>
                       ) : (
                         <div className="flex items-center gap-1">
-                          <select value={a.travelStatus} onChange={(e) => setTravel(a, e.target.value as TravelStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.travelStatus === "ARRANGED" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : a.travelStatus === "NEEDED" ? "border-brand-gold/40 bg-brand-gold/15 text-brand-lea" : "border-brand-lea/15 bg-white text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400")}>
+                          <select value={a.travelStatus} onChange={(e) => setTravel(a, e.target.value as TravelStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.travelStatus === "ARRANGED" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : a.travelStatus === "NEEDED" ? "border-brand-gold/40 bg-brand-gold/15 text-brand-lea" : "border-brand-lea/15 bg-white text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400")}>
                             <option value="NA">Local</option>
                             <option value="NEEDED">Needed</option>
                             <option value="ARRANGED">Arranged</option>
@@ -296,7 +296,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                         <button
                           onClick={() => moveToNext(a)}
                           title={session.nextSessionId ? "Move to the next scheduled orientation" : "No next orientation yet — moves them to the waiting list"}
-                          className="inline-flex items-center gap-0.5 whitespace-nowrap rounded border border-brand-lea/15 bg-white px-1.5 py-0.5 text-[11px] font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400"
+                          className="inline-flex items-center gap-0.5 whitespace-nowrap rounded border border-brand-lea/15 bg-white px-1.5 py-0.5 text-[11px] font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-400"
                         >
                           Move to next →
                         </button>
@@ -305,7 +305,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                             value=""
                             onChange={(e) => moveAttendee(a.id, e.target.value)}
                             title="Move to a specific orientation"
-                            className="rounded border border-brand-lea/15 bg-white px-1 py-0.5 text-[11px] text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400"
+                            className="rounded border border-brand-lea/15 bg-white px-1 py-0.5 text-[11px] text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400"
                           >
                             <option value="">Move to…</option>
                             {session.otherSessions.map((o) => (
@@ -340,7 +340,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
 
       {/* Email send tracker */}
       {attendees.length > 0 ? (
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Who&apos;s been emailed</h2>
           <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">Check a box when you send that email (via Front) so you can see who has what. Live sending is coming later.</p>
           <div className="mt-3 overflow-x-auto">
@@ -446,7 +446,7 @@ function EmailTemplates({ templates, session }: { templates: EmailTemplateDef[];
   }
 
   return (
-    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Email templates</h2>
         <button onClick={() => setAdding((a) => !a)} className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">{adding ? "Cancel" : "+ Add template"}</button>

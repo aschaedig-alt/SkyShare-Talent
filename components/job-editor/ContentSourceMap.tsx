@@ -39,7 +39,7 @@ export function ContentSourceMap({ job }: ContentSourceMapProps) {
   const hiddenFieldCount = fieldSources.filter((source) => source.isHiddenByBlock).length;
 
   return (
-    <section className="rounded border border-brand-lea/10 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-[#10243a]">
+    <section className="rounded border border-brand-lea/10 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-brand-panel">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-brand-eden">
@@ -69,7 +69,7 @@ export function ContentSourceMap({ job }: ContentSourceMapProps) {
                   <div className="text-xs font-bold uppercase tracking-[0.12em] text-brand-lea dark:text-slate-100">{placement.label}</div>
                   <p className="mt-1 text-[11px] leading-4 text-brand-grey dark:text-slate-400">{placement.description}</p>
                 </div>
-                <span className="rounded bg-white px-2 py-1 text-[10px] font-bold text-brand-eden dark:bg-[#10243a]">
+                <span className="rounded bg-white px-2 py-1 text-[10px] font-bold text-brand-eden dark:bg-brand-panel">
                   {blocks.length}
                 </span>
               </div>
@@ -79,7 +79,7 @@ export function ContentSourceMap({ job }: ContentSourceMapProps) {
                   const outdated = isInstanceOutdated(instance);
 
                   return (
-                    <div key={instance.id} className="rounded border border-brand-lea/8 bg-white px-2 py-2 dark:border-white/10 dark:bg-[#10243a]">
+                    <div key={instance.id} className="rounded border border-brand-lea/8 bg-white px-2 py-2 dark:border-white/10 dark:bg-brand-panel">
                       <div className="text-xs font-bold leading-5 text-brand-lea dark:text-slate-100">{getInstanceTitle(instance)}</div>
                       <div className="mt-1 flex flex-wrap gap-1">
                         <SourceBadge label={getBlockSourceLabel(instance)} tone={instance.mode === "FORKED_CUSTOM" ? "warning" : "block"} />

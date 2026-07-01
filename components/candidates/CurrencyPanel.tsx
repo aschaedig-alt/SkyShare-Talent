@@ -23,7 +23,7 @@ export function CurrencyPanel({ files }: { files: FileLike[] }) {
 
   if (dated.length === 0 && undated.length === 0) {
     return (
-      <div className="flex h-full flex-col rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <div className="flex h-full flex-col rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
           <CalendarClock className="h-3.5 w-3.5" /> Currency
         </p>
@@ -41,7 +41,7 @@ export function CurrencyPanel({ files }: { files: FileLike[] }) {
   const anyAlert = dated.some((d) => d.days <= 30);
 
   return (
-    <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
           <CalendarClock className="h-3.5 w-3.5" /> Currency

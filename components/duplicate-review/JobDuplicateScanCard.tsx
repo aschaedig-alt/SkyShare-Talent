@@ -3,7 +3,7 @@ import { JobMergedHistory } from "@/components/jobs/JobMergedHistory";
 
 export function JobDuplicateScanCard() {
   return (
-    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="mb-3">
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Job duplicate scan</p>
         <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Find and merge duplicate job records</h2>

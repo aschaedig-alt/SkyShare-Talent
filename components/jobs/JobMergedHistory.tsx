@@ -66,7 +66,7 @@ export function JobMergedHistory() {
   }
 
   return (
-    <section className="mt-4 rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]">
+    <section className="mt-4 rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-brand-panel">
       <button
         onClick={toggleOpen}
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-brand-cloudDancer/20 hover:shadow-glow dark:bg-white/5"

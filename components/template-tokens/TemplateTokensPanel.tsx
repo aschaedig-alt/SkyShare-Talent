@@ -12,7 +12,7 @@ function LockedBadge() {
 
 export function TemplateTokensPanel() {
   return (
-    <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -68,7 +68,7 @@ export function TemplateTokensPanel() {
           </div>
           <div className="divide-y divide-brand-lea/8 overflow-hidden rounded border border-brand-lea/10 dark:divide-white/10 dark:border-white/10">
             {typographyTokens.map((token) => (
-              <div key={token.key} className="flex items-center justify-between gap-3 bg-white px-3 py-2.5 dark:bg-[#10243a]">
+              <div key={token.key} className="flex items-center justify-between gap-3 bg-white px-3 py-2.5 dark:bg-brand-panel">
                 <div className="text-sm font-semibold text-brand-lea dark:text-slate-100">{token.label}</div>
                 <div className="text-right text-xs font-semibold text-brand-grey dark:text-slate-400">{token.value}</div>
               </div>

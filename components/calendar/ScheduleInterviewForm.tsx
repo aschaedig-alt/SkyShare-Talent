@@ -115,7 +115,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
   const appliedJobIds = new Set(selectedCandidate?.appliedJobs.map((j) => j.id) ?? []);
 
   return (
-    <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Schedule interview</p>
       <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">New interview</h2>
       <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
@@ -130,7 +130,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
             value={selectedCandidateId}
             onChange={(e) => handleCandidateChange(e.target.value)}
             required
-            className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
+            className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel"
           >
             <option value="">Choose candidate</option>
             {candidates.map((candidate) => (
@@ -153,7 +153,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email"
-                className="w-full rounded border border-brand-lea/20 bg-white px-2 py-1.5 text-sm dark:border-white/10 dark:bg-[#10243a]"
+                className="w-full rounded border border-brand-lea/20 bg-white px-2 py-1.5 text-sm dark:border-white/10 dark:bg-brand-panel"
               />
             </label>
             <label className="flex items-center gap-2 text-xs text-brand-lea dark:text-slate-100">
@@ -162,7 +162,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="Phone"
-                className="w-full rounded border border-brand-lea/20 bg-white px-2 py-1.5 text-sm dark:border-white/10 dark:bg-[#10243a]"
+                className="w-full rounded border border-brand-lea/20 bg-white px-2 py-1.5 text-sm dark:border-white/10 dark:bg-brand-panel"
               />
             </label>
           </div>
@@ -181,7 +181,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
           <select
             value={jobId}
             onChange={(e) => setJobId(e.target.value)}
-            className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
+            className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel"
           >
             <option value="">No linked job</option>
             {selectedCandidate && selectedCandidate.appliedJobs.length > 0 && (
@@ -243,7 +243,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
           </label>
           <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Status
-            <select name="status" className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]">
+            <select name="status" className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel">
               {statusOptions.map((option) => (
                 <option key={option} value={option}>
                   {option}
@@ -267,7 +267,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
           </label>
           <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Duration
-            <select name="durationMinutes" defaultValue="60" className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]">
+            <select name="durationMinutes" defaultValue="60" className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel">
               <option value="30">30 minutes</option>
               <option value="45">45 minutes</option>
               <option value="60">60 minutes</option>
@@ -284,7 +284,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
           </label>
           <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Timezone
-            <select name="timezone" defaultValue={DEFAULT_TIMEZONE} className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]">
+            <select name="timezone" defaultValue={DEFAULT_TIMEZONE} className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel">
               {US_TIMEZONES.map((tz) => (
                 <option key={tz.value} value={tz.value}>
                   {tz.label}

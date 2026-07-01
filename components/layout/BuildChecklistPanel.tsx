@@ -2,7 +2,7 @@ import { completedBuildItems, upcomingBuildItems } from "@/lib/build-checklist";
 
 export function BuildChecklistPanel() {
   return (
-    <aside className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <aside className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
@@ -35,7 +35,7 @@ export function BuildChecklistPanel() {
         </div>
         <div className="mt-2 space-y-2">
           {upcomingBuildItems.map((item, index) => (
-            <div key={item} className="flex gap-2 rounded border border-brand-lea/10 bg-white p-2 dark:border-white/10 dark:bg-[#10243a]">
+            <div key={item} className="flex gap-2 rounded border border-brand-lea/10 bg-white p-2 dark:border-white/10 dark:bg-brand-panel">
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-gold/20 text-[11px] font-bold text-brand-lea dark:text-slate-100">
                 {index + 1}
               </span>

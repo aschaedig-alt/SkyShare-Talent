@@ -53,7 +53,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-brand-cloudDancer px-5 py-8 dark:bg-white/5">
-      <section className="w-full max-w-xl rounded bg-white p-6 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="w-full max-w-xl rounded bg-white p-6 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         {loginLogo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={loginLogo} alt="SkyShare" className="mb-5 h-16 w-auto object-contain" />

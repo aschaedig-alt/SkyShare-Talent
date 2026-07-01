@@ -89,7 +89,7 @@ export function ImportHiresButton() {
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => !importing && close()} />
-          <div className="relative w-full max-w-2xl rounded bg-white p-5 shadow-2xl dark:bg-[#10243a]">
+          <div className="relative w-full max-w-2xl rounded bg-white p-5 shadow-2xl dark:bg-brand-panel">
             <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Import hires from your spreadsheet</h2>
             <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
               Paste or upload your sheet (works whether names run across the top or down the first column). Re-importing the whole
@@ -126,7 +126,7 @@ export function ImportHiresButton() {
                   }}
                   rows={6}
                   placeholder={"Name\tOffer Sent\tStart Date\tPosition\tDepartment\nJane Pilot\t6/1/2026\t6/15/2026\tFirst Officer\tCrew"}
-                  className="mt-2 w-full resize-y rounded border border-brand-lea/20 px-3 py-2 font-mono text-xs text-brand-lea outline-none focus:border-brand-gold dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                  className="mt-2 w-full resize-y rounded border border-brand-lea/20 px-3 py-2 font-mono text-xs text-brand-lea outline-none focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
                 />
 
                 {parsed && (

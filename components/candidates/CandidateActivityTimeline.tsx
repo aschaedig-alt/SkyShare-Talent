@@ -29,7 +29,7 @@ function formatWhen(value: string) {
 export function CandidateActivityTimeline({ items }: { items: ActivityItem[] }) {
   if (items.length === 0) {
     return (
-      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="py-10 text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-cloudDancer/70 dark:bg-white/5">
             <History className="h-5 w-5 text-brand-grey dark:text-slate-400" />
@@ -42,7 +42,7 @@ export function CandidateActivityTimeline({ items }: { items: ActivityItem[] }) 
   }
 
   return (
-    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <ol className="relative space-y-4 border-l border-brand-lea/15 pl-5 dark:border-white/10">
         {items.map((item) => (
           <li key={item.id} className="relative">

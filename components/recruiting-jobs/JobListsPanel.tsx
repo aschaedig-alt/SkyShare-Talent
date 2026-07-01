@@ -19,7 +19,7 @@ function JobCard({ job, selectedId, query }: { job: Job; selectedId: string | nu
       className={`block rounded border p-3 transition hover:shadow-glow ${
         isSelected
           ? "border-brand-gold bg-brand-sweet/18 dark:bg-brand-sweet/25"
-          : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/65 dark:border-white/10 dark:bg-[#10243a]"
+          : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/65 dark:border-white/10 dark:bg-brand-panel"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -68,7 +68,7 @@ function CollapsibleList({
 }) {
   return (
     <section
-      className={`flex min-h-0 flex-col overflow-hidden rounded border border-brand-lea/10 bg-white transition-[flex] dark:border-white/10 dark:bg-[#10243a] ${
+      className={`flex min-h-0 flex-col overflow-hidden rounded border border-brand-lea/10 bg-white transition-[flex] dark:border-white/10 dark:bg-brand-panel ${
         open ? "flex-1" : "flex-none"
       }`}
     >

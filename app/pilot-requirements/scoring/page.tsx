@@ -10,7 +10,7 @@ export default async function ScoringSetupPage() {
 
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <Link
           href="/pilot-requirements"
           className="inline-flex items-center gap-1 text-xs font-semibold text-brand-eden transition hover:text-brand-lea dark:text-slate-100"

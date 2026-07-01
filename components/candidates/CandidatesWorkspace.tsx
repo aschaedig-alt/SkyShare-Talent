@@ -91,7 +91,7 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
   const statsPanel = (
     <section className="grid h-full content-start gap-3 grid-cols-[repeat(auto-fit,minmax(150px,1fr))]">
       {statConfig.map(({ key, label, icon: Icon, accent }) => (
-        <div key={key} className="flex items-center gap-3 rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 transition hover:ring-brand-gold/40 dark:bg-[#10243a] dark:ring-white/10">
+        <div key={key} className="flex items-center gap-3 rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 transition hover:ring-brand-gold/40 dark:bg-brand-panel dark:ring-white/10">
           <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded ${accent}`}>
             <Icon className="h-5 w-5" />
           </span>
@@ -105,7 +105,7 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
   );
 
   const recordsPanel = (
-    <section className="flex h-full flex-col overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="flex h-full flex-col overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex shrink-0 items-center justify-between border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
         <div>
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Candidate records</h2>

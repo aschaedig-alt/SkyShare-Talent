@@ -7,7 +7,7 @@ type ArchivePageProps = {
 };
 
 const inputClass =
-  "w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100";
+  "w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100";
 const labelClass = "block text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400";
 
 function Field({ label, name, value, type = "text", placeholder }: { label: string; name: string; value?: string; type?: string; placeholder?: string }) {
@@ -66,7 +66,7 @@ export default async function ArchivePage({ searchParams }: ArchivePageProps) {
       </section>
 
       {/* Filters — native GET form: submitting puts the filters in the URL */}
-      <form action="/archive" method="get" className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <form action="/archive" method="get" className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div className="sm:col-span-2 lg:col-span-3">
             <Field label="Keyword" name="q" value={filters.q} placeholder="Name, email, phone, job, recruiter, note text…" />
@@ -101,7 +101,7 @@ export default async function ArchivePage({ searchParams }: ArchivePageProps) {
       </form>
 
       {result && (
-        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="flex items-baseline justify-between">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Results</p>
             <span className="text-xs text-brand-grey dark:text-slate-400">

@@ -67,7 +67,7 @@ export function CandidateNotes({ candidateId, initialNotes }: { candidateId: str
   }
 
   return (
-    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       {/* Composer */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <label className="flex-1">

@@ -207,7 +207,7 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
           {selected ? (
             <HostDetail key={selected.id} host={selected} overrides={overrides} busy={busy} run={run} onDeleted={() => setSelectedId(null)} />
           ) : (
-            <div className="rounded bg-white p-8 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:text-slate-400 dark:ring-white/10">
+            <div className="rounded bg-white p-8 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">
               Select or create a team member to manage their availability.
             </div>
           )}
@@ -219,7 +219,7 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
 
 function Card({ title, icon: Icon, children }: { title: string; icon: typeof Clock; children: React.ReactNode }) {
   return (
-    <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.12em] text-brand-grey dark:text-slate-400">
         <Icon className="h-4 w-4 text-brand-gold" /> {title}
       </h2>

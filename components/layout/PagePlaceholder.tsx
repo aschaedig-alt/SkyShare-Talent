@@ -10,7 +10,7 @@ type PagePlaceholderProps = {
 export function PagePlaceholder({ title, eyebrow, description, cards }: PagePlaceholderProps) {
   return (
     <div className="px-5 py-5 lg:px-8">
-      <div className="rounded bg-white p-8 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <div className="rounded bg-white p-8 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="mb-6 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded bg-brand-lea text-white">
             <Sparkles className="h-5 w-5" />

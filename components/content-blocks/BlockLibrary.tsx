@@ -217,7 +217,7 @@ function BlockCoverageBadges({ block, jobs }: { block: SerializedContentBlock; j
 }
 
 const inputClass =
-  "w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-black outline-none transition placeholder:text-brand-grey/70 focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100";
+  "w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-black outline-none transition placeholder:text-brand-grey/70 focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100";
 
 const labelClass = "mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-brand-eden";
 
@@ -697,7 +697,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
               className={`inline-flex items-center gap-2 rounded px-3.5 py-2 text-sm font-bold transition hover:shadow-glow ${
                 active
                   ? "bg-brand-lea text-white shadow-sm"
-                  : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                  : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -741,7 +741,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
         />
       ) : (
       <div className="grid gap-5 xl:grid-cols-[300px_1fr]">
-        <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="border-b border-brand-lea/10 p-4 dark:border-white/10">
             <label className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
               Find reusable content
@@ -766,7 +766,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                   setGroupBy(event.target.value as GroupDim);
                   setActiveFilter(null);
                 }}
-                className="rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-xs font-semibold text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                className="rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-xs font-semibold text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
               >
                 {groupDims.map((dim) => (
                   <option key={dim.value} value={dim.value}>
@@ -778,7 +778,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
               <select
                 value={sortBy}
                 onChange={(event) => setSortBy(event.target.value as SortKey)}
-                className="rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-xs font-semibold text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                className="rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-xs font-semibold text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
               >
                 {sortKeys.map((sort) => (
                   <option key={sort.value} value={sort.value}>
@@ -842,11 +842,11 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
           </div>
         </section>
 
-        <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           {selectedBlock || mode === "create" ? (
             <div className={mode === "create" ? "" : "grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr)_minmax(290px,1fr)]"}>
               <div className="min-w-0">
-              <div className="sticky top-0 z-20 flex items-start justify-between gap-4 border-b border-brand-lea/10 bg-white px-5 py-4 dark:border-white/10 dark:bg-[#10243a]">
+              <div className="sticky top-0 z-20 flex items-start justify-between gap-4 border-b border-brand-lea/10 bg-white px-5 py-4 dark:border-white/10 dark:bg-brand-panel">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">
                     {mode === "create" ? "Create block" : "Edit block"}
@@ -1011,13 +1011,13 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                     Formatting preview
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <span className="rounded bg-white px-2 py-1 text-xs font-bold text-brand-lea dark:bg-[#10243a] dark:text-slate-100">
+                    <span className="rounded bg-white px-2 py-1 text-xs font-bold text-brand-lea dark:bg-brand-panel dark:text-slate-100">
                       {bodyFormats.find((format) => format.value === form.bodyFormat)?.label}
                     </span>
-                    <span className="rounded bg-white px-2 py-1 text-xs font-bold text-brand-lea dark:bg-[#10243a] dark:text-slate-100">
+                    <span className="rounded bg-white px-2 py-1 text-xs font-bold text-brand-lea dark:bg-brand-panel dark:text-slate-100">
                       {textWeights.find((weight) => weight.value === form.textWeight)?.label}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded bg-white px-2 py-1 text-xs font-bold text-brand-lea dark:bg-[#10243a] dark:text-slate-100">
+                    <span className="inline-flex items-center gap-1.5 rounded bg-white px-2 py-1 text-xs font-bold text-brand-lea dark:bg-brand-panel dark:text-slate-100">
                       <span
                         className="h-2.5 w-2.5 rounded-full"
                         style={{ backgroundColor: textColors.find((color) => color.value === form.textColor)?.swatch }}
@@ -1025,7 +1025,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                       {textColors.find((color) => color.value === form.textColor)?.label}
                     </span>
                   </div>
-                  <div className="mt-3 rounded border border-white/70 bg-white px-3 py-3 dark:bg-[#10243a]">
+                  <div className="mt-3 rounded border border-white/70 bg-white px-3 py-3 dark:bg-brand-panel">
                     <BlockBodyPreview
                       value={form.body}
                       bodyFormat={form.bodyFormat}
@@ -1068,7 +1068,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                       ))}
                     </div>
                     {form.adoption === "SELECTED_JOBS" && (
-                      <div className="mt-4 max-h-56 overflow-auto rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]">
+                      <div className="mt-4 max-h-56 overflow-auto rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-brand-panel">
                         {selectedBlock.usedByJobs?.map((job) => (
                           <label
                             key={job.id}
@@ -1085,7 +1085,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                       </div>
                     )}
                     {form.adoption === "ALL_LINKED_JOBS" && Boolean(selectedBlock.usedByJobs?.length) && (
-                      <div className="mt-4 max-h-44 overflow-auto rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-[#10243a]">
+                      <div className="mt-4 max-h-44 overflow-auto rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-brand-panel">
                         <div className="border-b border-brand-lea/8 bg-brand-cloudDancer/55 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-brand-eden dark:border-white/10 dark:bg-white/5">
                           Jobs to review before applying
                         </div>
@@ -1130,7 +1130,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
             {mode !== "create" && selectedBlock ? (
               <aside className="space-y-5 border-t border-brand-lea/10 p-5 xl:border-l xl:border-t-0 dark:border-white/10">
 
-                <div className="rounded border border-brand-lea/10 bg-white p-4 dark:border-white/10 dark:bg-[#10243a]">
+                <div className="rounded border border-brand-lea/10 bg-white p-4 dark:border-white/10 dark:bg-brand-panel">
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
                       <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.16em] text-brand-lea dark:text-slate-100">
@@ -1180,7 +1180,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                           <label
                             key={`${selectedBlock.id}-apply-${job.id}`}
                             className={`flex items-center justify-between gap-3 border-b border-brand-lea/8 px-3 py-2 last:border-b-0 dark:border-white/10 ${
-                              alreadyUsesBlock ? "bg-brand-cloudDancer/45" : "bg-white dark:bg-[#10243a]"
+                              alreadyUsesBlock ? "bg-brand-cloudDancer/45" : "bg-white dark:bg-brand-panel"
                             }`}
                           >
                             <span>

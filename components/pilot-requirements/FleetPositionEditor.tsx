@@ -58,7 +58,7 @@ export function FleetPositionEditor({
   }
 
   return (
-    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Identity</p>
       <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Fleet position &amp; advertised name</h3>
       <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
@@ -74,7 +74,7 @@ export function FleetPositionEditor({
           value={slug}
           disabled={pending}
           onChange={(event) => setSlug(event.target.value)}
-          className="w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+          className="w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
         >
           <option value="">— Auto (match from title) —</option>
           {FLEET_POSITIONS.map((position) => (
@@ -95,7 +95,7 @@ export function FleetPositionEditor({
           disabled={pending}
           onChange={(event) => setAdvertised(event.target.value)}
           placeholder={rawTitle ? `e.g. ${rawTitle}` : "e.g. CE-525 Captain"}
-          className="w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+          className="w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
         />
       </label>
 
@@ -135,7 +135,7 @@ export function FleetPositionEditor({
               }
             }}
             placeholder="Add an aircraft tag (e.g. Citation CJ2)"
-            className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-3 py-1.5 text-sm text-brand-black outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+            className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-3 py-1.5 text-sm text-brand-black outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
           />
           <button
             type="button"
@@ -182,7 +182,7 @@ export function FleetPositionEditor({
             const v = event.target.value;
             if (v) setLinked((current) => (current.includes(v) ? current : [...current, v]));
           }}
-          className="mt-2 w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+          className="mt-2 w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
         >
           <option value="">+ Add a linked position…</option>
           {FLEET_POSITIONS.filter((p) => p.slug !== slug && !linked.includes(p.slug)).map((p) => (

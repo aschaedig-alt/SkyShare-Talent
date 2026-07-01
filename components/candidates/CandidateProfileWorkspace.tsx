@@ -90,7 +90,7 @@ function EmptyState({ title, detail }: { title: string; detail: string }) {
 }
 
 const inputClass =
-  "mt-1 w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100";
+  "mt-1 w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100";
 const labelClass = "text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400";
 
 export function CandidateProfileWorkspace({
@@ -191,7 +191,7 @@ export function CandidateProfileWorkspace({
       {success && <div className="rounded border border-green-500/30 bg-green-50 p-3 text-sm text-green-700">{success}</div>}
 
       {/* Header */}
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <Link href="/candidates" className="text-xs font-semibold text-brand-eden hover:text-brand-lea dark:text-slate-100">
           ← Back to candidates
         </Link>
@@ -256,7 +256,7 @@ export function CandidateProfileWorkspace({
 
       {isEditing ? (
         /* Edit form */
-        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Edit candidate</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div>
@@ -397,7 +397,7 @@ export function CandidateProfileWorkspace({
                   id: "contact",
                   title: "Contact",
                   node: (
-                    <div className="h-full overflow-auto rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+                    <div className="h-full overflow-auto rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
                       <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Contact</p>
                       <div className="mt-3 space-y-2 text-sm">
                         <div>
@@ -416,7 +416,7 @@ export function CandidateProfileWorkspace({
                   id: "record",
                   title: "Record",
                   node: (
-                    <div className="h-full overflow-auto rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+                    <div className="h-full overflow-auto rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
                       <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Record</p>
                       <div className="mt-3 space-y-1.5 text-sm text-brand-grey dark:text-slate-400">
                         <div>Owner: {candidate.owner ?? "Unassigned"}</div>
@@ -433,7 +433,7 @@ export function CandidateProfileWorkspace({
 
           {/* Applications tab */}
           {activeTab === "applications" && (
-            <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+            <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
               <div className="space-y-2">
                 {candidate.applications.length > 0 ? (
                   candidate.applications.map((application) => (
@@ -512,7 +512,7 @@ export function CandidateProfileWorkspace({
 
           {/* Interviews tab */}
           {activeTab === "interviews" && (
-            <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+            <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
               <div className="space-y-2">
                 {candidate.interviews.length > 0 ? (
                   candidate.interviews.map((interview) => (

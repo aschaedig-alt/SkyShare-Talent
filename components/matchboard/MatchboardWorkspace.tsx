@@ -58,7 +58,7 @@ export function MatchboardWorkspace({
 
   return (
     <div className="px-5 py-5 lg:px-8">
-      <section className="mb-4 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="mb-4 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Recruiting</p>
         <h1 className="flex items-center gap-2 text-2xl font-semibold text-brand-lea dark:text-slate-100">
           <Radar className="h-6 w-6 text-brand-gold" /> Matchboard
@@ -93,7 +93,7 @@ export function MatchboardWorkspace({
       </section>
 
       <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className="flex max-h-[78vh] flex-col overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <aside className="flex max-h-[78vh] flex-col overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="shrink-0 border-b border-brand-lea/10 p-3 dark:border-white/10">
             <div className="relative">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey dark:text-slate-400" />
@@ -101,7 +101,7 @@ export function MatchboardWorkspace({
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={mode === "role" ? "Search roles" : "Search candidates"}
-                className="w-full rounded border border-brand-lea/20 bg-white py-2 pl-8 pr-3 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                className="w-full rounded border border-brand-lea/20 bg-white py-2 pl-8 pr-3 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
               />
             </div>
           </div>
@@ -199,7 +199,7 @@ export function MatchboardWorkspace({
 
 function EmptyState({ mode }: { mode: MatchboardMode }) {
   return (
-    <section className="flex h-full min-h-[300px] flex-col items-center justify-center rounded bg-white p-8 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="flex h-full min-h-[300px] flex-col items-center justify-center rounded bg-white p-8 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       {mode === "role" ? <Plane className="h-7 w-7 text-brand-sweet" /> : <User className="h-7 w-7 text-brand-sweet" />}
       <h2 className="mt-3 text-lg font-semibold text-brand-lea dark:text-slate-100">
         {mode === "role" ? "Pick a role" : "Pick a candidate"}
@@ -221,7 +221,7 @@ function CandidateRoles({
   onViewRole: (requirementId: string) => void;
 }) {
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Matching roles</p>

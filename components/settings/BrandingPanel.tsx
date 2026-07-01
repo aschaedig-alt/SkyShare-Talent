@@ -135,7 +135,7 @@ export function BrandingPanel({ initialBranding }: BrandingPanelProps) {
   }
 
   return (
-    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Branding</p>
@@ -197,7 +197,7 @@ export function BrandingPanel({ initialBranding }: BrandingPanelProps) {
                 <input
                   value={logo.name}
                   onChange={(event) => renameLogo(logo.id, event.target.value)}
-                  className="mt-3 w-full rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-sm text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                  className="mt-3 w-full rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
                   placeholder="Logo name"
                 />
                 <button
@@ -220,7 +220,7 @@ export function BrandingPanel({ initialBranding }: BrandingPanelProps) {
           {BRANDING_SLOTS.map((slot) => {
             const assignedUrl = dataUrlFor(branding.assignments[slot.key]);
             return (
-              <div key={slot.key} className="rounded border border-brand-lea/10 bg-white p-3 dark:border-white/10 dark:bg-[#10243a]">
+              <div key={slot.key} className="rounded border border-brand-lea/10 bg-white p-3 dark:border-white/10 dark:bg-brand-panel">
                 <div className="flex items-center gap-3">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded bg-brand-gold/90 p-1.5">
                     {assignedUrl ? (
@@ -237,7 +237,7 @@ export function BrandingPanel({ initialBranding }: BrandingPanelProps) {
                 <select
                   value={branding.assignments[slot.key] ?? ""}
                   onChange={(event) => assignSlot(slot.key, event.target.value)}
-                  className="mt-3 w-full rounded border border-brand-lea/15 bg-white px-2 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                  className="mt-3 w-full rounded border border-brand-lea/15 bg-white px-2 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
                 >
                   <option value="">None</option>
                   {branding.logos.map((logo) => (

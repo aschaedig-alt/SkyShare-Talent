@@ -10,7 +10,7 @@ const tabs: Array<{ id: InterviewView; href: string; label: string; icon: typeof
 
 export function InterviewTabs({ active }: { active: InterviewView }) {
   return (
-    <nav className="flex gap-1 rounded bg-white p-1 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <nav className="flex gap-1 rounded bg-white p-1 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       {tabs.map(({ id, href, label, icon: Icon }) => {
         const isActive = id === active;
         return (

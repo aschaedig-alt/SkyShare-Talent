@@ -88,7 +88,7 @@ export function CandidateTriagePanel({ matches: initialMatches, requirementId, c
   const pool = scan?.count ?? scannedCount;
 
   return (
-    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Candidate fit</p>

@@ -113,7 +113,7 @@ function ScorecardEditor({
         <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">Questions &amp; ratings</span>
         <div className="mt-1.5 space-y-2">
           {items.map((item, idx) => (
-            <div key={idx} className="rounded border border-brand-lea/10 bg-white p-2.5 dark:border-white/10 dark:bg-[#10243a]">
+            <div key={idx} className="rounded border border-brand-lea/10 bg-white p-2.5 dark:border-white/10 dark:bg-brand-panel">
               <div className="flex items-start gap-2">
                 <input value={item.q} onChange={(e) => setText(idx, e.target.value)} className={`${inputCls} flex-1`} />
                 <button type="button" onClick={() => removeItem(idx)} aria-label="Remove" className="mt-1 rounded p-1 text-brand-grey transition hover:text-red-600 dark:text-slate-400">
@@ -244,7 +244,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
 
       {/* Aggregate */}
       <section className="grid gap-3 sm:grid-cols-[auto,1fr]">
-        <div className="flex items-center gap-4 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <div className="flex items-center gap-4 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded bg-brand-lea/5">
             <span className="text-2xl font-semibold leading-none text-brand-lea dark:text-slate-100">{avgText(agg.average)}</span>
             <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">of 4</span>
@@ -258,7 +258,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <div className="flex flex-wrap items-center gap-2 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           {RECOMMENDATIONS.map((r) => {
             const n = agg.recommendations[r.key] ?? 0;
             if (n === 0) return null;
@@ -290,7 +290,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
       {/* Scorecards */}
       <section className="space-y-3">
         {detail.scorecards.length === 0 && !creating ? (
-          <div className="rounded bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <div className="rounded bg-white px-4 py-12 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-cloudDancer/70 dark:bg-white/5">
               <ClipboardCheck className="h-5 w-5 text-brand-grey dark:text-slate-400" />
             </div>
@@ -302,7 +302,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
             editingId === card.id ? (
               <ScorecardEditor key={card.id} detail={detail} initial={card} onCancel={() => setEditingId(null)} onSaved={afterSave} />
             ) : (
-              <div key={card.id} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+              <div key={card.id} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-brand-lea dark:text-slate-100">{card.interviewer}</span>

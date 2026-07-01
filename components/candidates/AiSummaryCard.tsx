@@ -44,7 +44,7 @@ export function AiSummaryCard({ candidateId, summary: initialSummary, isHistoric
   };
 
   return (
-    <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-brand-gold" />

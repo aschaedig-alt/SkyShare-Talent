@@ -43,7 +43,7 @@ function locationLabel(job: { city: string | null; state: string | null }) {
 
 function HeaderPanel({ query }: { query: string }) {
   return (
-    <section className="flex h-full flex-col rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="flex h-full flex-col rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Role operations</p>
       <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Jobs</h1>
       <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
@@ -54,7 +54,7 @@ function HeaderPanel({ query }: { query: string }) {
           name="q"
           defaultValue={query}
           placeholder="Search title, department, aircraft, base, status"
-          className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+          className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
         />
         <button type="submit" className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden">
           Search
@@ -68,7 +68,7 @@ function StatsPanel({ stats }: { stats: RecruitingJobsData["stats"] }) {
   return (
     <section className="grid h-full content-start grid-cols-[repeat(auto-fit,minmax(108px,1fr))] gap-3">
       {statLabels.map(([key, label]) => (
-        <div key={key} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <div key={key} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">{label}</div>
           <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{stats[key]}</div>
           <div className="mt-2 h-1 rounded-full bg-brand-gold/25">
@@ -82,7 +82,7 @@ function StatsPanel({ stats }: { stats: RecruitingJobsData["stats"] }) {
 
 function JobDetailHeader({ job }: { job: RecruitingJobDetail }) {
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-y-auto rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="flex h-full min-h-0 flex-col overflow-y-auto rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex flex-col gap-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Job detail</p>
@@ -121,7 +121,7 @@ function JobDetailHeader({ job }: { job: RecruitingJobDetail }) {
 
 function LinkedRequirements({ job }: { job: RecruitingJobDetail }) {
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Linked requirements</p>
       <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Pilot requirement profiles</h3>
       <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">
@@ -150,7 +150,7 @@ function LinkedRequirements({ job }: { job: RecruitingJobDetail }) {
 
 function LinkedCandidates({ job }: { job: RecruitingJobDetail }) {
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Linked candidates</p>
@@ -189,7 +189,7 @@ function LinkedCandidates({ job }: { job: RecruitingJobDetail }) {
 function SourceRecord({ job }: { job: RecruitingJobDetail }) {
   const sourceText = job.rawMinimumRequirements || job.jobDescriptionText;
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Source record</p>
       <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Imported job text</h3>
       <div className="mt-2 grid gap-2 text-xs text-brand-grey grid-cols-[repeat(auto-fit,minmax(140px,1fr))] dark:text-slate-400">
@@ -210,7 +210,7 @@ function SourceRecord({ job }: { job: RecruitingJobDetail }) {
 
 function NoJobPanel() {
   return (
-    <section className="flex h-full flex-col items-center justify-center rounded bg-white p-8 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="flex h-full flex-col items-center justify-center rounded bg-white p-8 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">No jobs yet</h2>
       <p className="mt-2 text-sm text-brand-grey dark:text-slate-400">Import or seed recruiting jobs to populate this workspace.</p>
     </section>

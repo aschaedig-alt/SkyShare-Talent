@@ -45,7 +45,7 @@ function EvidencePanel({ requirement }: { requirement: PilotRequirementDetail })
   const evidence = requirement.rawMinimumRequirements || requirement.originalJobDescriptionText;
 
   return (
-    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
@@ -81,7 +81,7 @@ function RequirementDetail({
 }) {
   if (!requirement) {
     return (
-      <div className="rounded bg-white p-8 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <div className="rounded bg-white p-8 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="text-lg font-semibold text-brand-lea dark:text-slate-100">No pilot requirements yet</div>
         <p className="mt-2 text-sm text-brand-grey dark:text-slate-400">Seed or import job requirements to populate this workspace.</p>
       </div>
@@ -90,7 +90,7 @@ function RequirementDetail({
 
   return (
     <div className="space-y-4">
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
@@ -151,7 +151,7 @@ function RequirementDetail({
 
       <section className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">
-          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
@@ -199,7 +199,7 @@ function RequirementDetail({
             scannedCount={scannedCount}
           />
 
-          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
               Extraction status
             </p>
@@ -224,7 +224,7 @@ function RequirementDetail({
             )}
           </section>
 
-          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
               Linked source
             </p>
@@ -249,7 +249,7 @@ function RequirementDetail({
 export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWorkspaceProps) {
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
@@ -266,7 +266,7 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
               name="q"
               defaultValue={query}
               placeholder="Search aircraft, seat, base, status, hours"
-              className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+              className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
             />
             <button
               type="submit"
@@ -280,7 +280,7 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {statLabels.map(([key, label]) => (
-          <div key={key} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <div key={key} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey dark:text-slate-400">
               {label}
             </div>
@@ -293,7 +293,7 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[360px_1fr]">
-        <aside className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <aside className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
             <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Profiles</h2>
             <p className="text-xs text-brand-grey dark:text-slate-400">
@@ -319,7 +319,7 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
                       className={`block rounded border p-3 transition hover:shadow-glow ${
                         isSelected
                           ? "border-brand-gold bg-brand-sweet/18 dark:bg-brand-sweet/25"
-                          : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/65 dark:border-white/10 dark:bg-[#10243a]"
+                          : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/65 dark:border-white/10 dark:bg-brand-panel"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">

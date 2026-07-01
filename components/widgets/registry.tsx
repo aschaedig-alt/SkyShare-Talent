@@ -81,7 +81,7 @@ const STATUS_CHIP: Record<Status, string> = {
 
 function Shell({ icon: Icon, title, children }: { icon: LucideIcon; title: string; children: ReactNode }) {
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="mb-2 flex shrink-0 items-center gap-2">
         <Icon className="h-4 w-4 text-brand-eden" />
         <span className="truncate text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey dark:text-slate-400">{title}</span>

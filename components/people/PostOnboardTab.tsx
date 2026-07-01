@@ -104,7 +104,7 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
   }
 
   if (hires.length === 0) {
-    return <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:text-slate-400 dark:ring-white/10">No post-onboard employees yet. Mark an active hire as onboarded and they will appear here.</p>;
+    return <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">No post-onboard employees yet. Mark an active hire as onboarded and they will appear here.</p>;
   }
 
   const heads = hires[0].checkins.map((c) => c.short);
@@ -112,7 +112,7 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
   return (
     <div className="space-y-3">
       <BulkActionBar count={selected.size} actions={POST_ONBOARD_BULK_ACTIONS} onApply={applyBulk} onDelete={deleteSelected} onClear={() => setSelected(new Set())} busy={busy} />
-      <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>

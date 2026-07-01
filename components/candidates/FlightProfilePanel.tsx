@@ -158,7 +158,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
   }
 
   return (
-    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex items-center justify-between gap-2">
         <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
           <Plane className="h-3.5 w-3.5" /> Flight Profile

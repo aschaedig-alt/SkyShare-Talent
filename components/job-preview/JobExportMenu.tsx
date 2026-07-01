@@ -178,7 +178,7 @@ export function JobExportMenu({ job, align = "right", onStatusChange }: JobExpor
 
       {open && (
         <div
-          className={`absolute z-40 mt-2 w-72 overflow-hidden rounded border border-brand-lea/10 bg-white text-brand-lea shadow-xl dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100 ${
+          className={`absolute z-40 mt-2 w-72 overflow-hidden rounded border border-brand-lea/10 bg-white text-brand-lea shadow-xl dark:border-white/10 dark:bg-brand-panel dark:text-slate-100 ${
             align === "right" ? "right-0" : "left-0"
           }`}
         >

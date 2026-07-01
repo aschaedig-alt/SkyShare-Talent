@@ -19,7 +19,7 @@ export function CommandCenterWorkspace({ data }: CommandCenterWorkspaceProps) {
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
       <main className="space-y-4">
-        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
             Recruiting command center
           </p>
@@ -31,7 +31,7 @@ export function CommandCenterWorkspace({ data }: CommandCenterWorkspaceProps) {
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
           {statLabels.map(([key, label, href]) => (
-            <Link key={key} href={href} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 transition hover:ring-brand-sweet hover:shadow-glow dark:bg-[#10243a] dark:ring-white/10">
+            <Link key={key} href={href} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 transition hover:ring-brand-sweet hover:shadow-glow dark:bg-brand-panel dark:ring-white/10">
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey dark:text-slate-400">{label}</div>
               <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{data.stats[key]}</div>
               <div className="mt-2 h-1 rounded-full bg-brand-gold/25">
@@ -42,7 +42,7 @@ export function CommandCenterWorkspace({ data }: CommandCenterWorkspaceProps) {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-3">
-          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Attention</p>
             <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Needs action</h2>
             <div className="mt-3 space-y-2">
@@ -60,7 +60,7 @@ export function CommandCenterWorkspace({ data }: CommandCenterWorkspaceProps) {
             </div>
           </section>
 
-          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Pipeline</p>
             <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Candidate readiness</h2>
             <div className="mt-3 space-y-2">
@@ -75,7 +75,7 @@ export function CommandCenterWorkspace({ data }: CommandCenterWorkspaceProps) {
             </div>
           </section>
 
-          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Recent candidates</p>
             <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Latest records</h2>
             <div className="mt-3 space-y-2">
@@ -91,7 +91,7 @@ export function CommandCenterWorkspace({ data }: CommandCenterWorkspaceProps) {
           </section>
         </section>
 
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Role operations</p>
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Recent jobs</h2>
           <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">

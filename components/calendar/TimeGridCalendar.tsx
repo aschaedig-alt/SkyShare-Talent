@@ -171,7 +171,7 @@ export function TimeGridCalendar({
       : `${WEEKDAYS[days[0].getDay()]}, ${MONTHS[days[0].getMonth()]} ${days[0].getDate()}, ${days[0].getFullYear()}`;
 
   return (
-    <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">{headerLabel}</h2>

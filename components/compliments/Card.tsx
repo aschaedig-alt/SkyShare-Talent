@@ -24,7 +24,7 @@ export function Card({ children, className, padding = "md", as = "div" }: CardPr
   return (
     <Tag
       className={clsx(
-        "rounded-card border-[0.5px] border-brand-lea/15 bg-white dark:border-white/10 dark:bg-[#10243a]",
+        "rounded-card border-[0.5px] border-brand-lea/15 bg-white dark:border-white/10 dark:bg-brand-panel",
         PADDING[padding],
         className
       )}

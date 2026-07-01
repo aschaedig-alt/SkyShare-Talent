@@ -127,7 +127,7 @@ function FieldRow({ label, note, source, children }: FieldRowProps) {
 }
 
 const inputClass =
-  "w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-black outline-none transition placeholder:text-brand-grey/70 focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100";
+  "w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-black outline-none transition placeholder:text-brand-grey/70 focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100";
 
 export function JobDataEditor({
   jobs,
@@ -279,7 +279,7 @@ export function JobDataEditor({
   }
 
   return (
-    <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -331,7 +331,7 @@ export function JobDataEditor({
                 className={`rounded px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] transition hover:shadow-glow ${
                   active
                     ? "bg-brand-lea text-white shadow-sm"
-                    : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+                    : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
                 }`}
               >
                 {item.label} ({jobCounts[item.key as JobListView]})
@@ -354,7 +354,7 @@ export function JobDataEditor({
         <select
           value={selectedJobId}
           onChange={(event) => onSelectJob(event.target.value)}
-          className="mt-3 w-full rounded border border-brand-lea/15 bg-white px-3 py-2.5 text-sm font-semibold text-brand-lea outline-none focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+          className="mt-3 w-full rounded border border-brand-lea/15 bg-white px-3 py-2.5 text-sm font-semibold text-brand-lea outline-none focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
         >
           {selectorJobs.map((job) => (
             <option key={job.id} value={job.id}>
@@ -379,7 +379,7 @@ export function JobDataEditor({
                   : "Archive inactive roles while keeping them available for reference."}
               </p>
             </div>
-            <span className="rounded bg-white px-2 py-1 text-xs font-bold text-brand-lea dark:bg-[#10243a] dark:text-slate-100">
+            <span className="rounded bg-white px-2 py-1 text-xs font-bold text-brand-lea dark:bg-brand-panel dark:text-slate-100">
               {selectedBulkJobIds.length} selected
             </span>
           </div>
@@ -389,7 +389,7 @@ export function JobDataEditor({
               type="button"
               onClick={toggleAllBulkJobs}
               disabled={!bulkEligibleJobs.length || isBulkWorking}
-              className="rounded border border-brand-lea/12 bg-white px-2.5 py-1.5 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer disabled:opacity-60 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"
+              className="rounded border border-brand-lea/12 bg-white px-2.5 py-1.5 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer disabled:opacity-60 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
             >
               {allEligibleSelected ? "Clear visible" : "Select visible"}
             </button>
@@ -420,7 +420,7 @@ export function JobDataEditor({
             {bulkEligibleJobs.map((job) => (
               <label
                 key={`${jobListView}-bulk-${job.id}`}
-                className="flex cursor-pointer items-start gap-2 rounded border border-brand-lea/8 bg-white px-2.5 py-2 text-sm hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-[#10243a]"
+                className="flex cursor-pointer items-start gap-2 rounded border border-brand-lea/8 bg-white px-2.5 py-2 text-sm hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-brand-panel"
               >
                 <input
                   type="checkbox"
@@ -438,14 +438,14 @@ export function JobDataEditor({
               </label>
             ))}
             {!bulkEligibleJobs.length && (
-              <div className="rounded border border-dashed border-brand-lea/15 bg-white px-3 py-4 text-center text-xs font-semibold leading-5 text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">
+              <div className="rounded border border-dashed border-brand-lea/15 bg-white px-3 py-4 text-center text-xs font-semibold leading-5 text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">
                 No matching jobs available for this bulk action.
               </div>
             )}
           </div>
 
           {bulkMessage && (
-            <div className="mt-3 rounded bg-white px-3 py-2 text-xs font-bold text-brand-lea dark:bg-[#10243a] dark:text-slate-100">{bulkMessage}</div>
+            <div className="mt-3 rounded bg-white px-3 py-2 text-xs font-bold text-brand-lea dark:bg-brand-panel dark:text-slate-100">{bulkMessage}</div>
           )}
         </div>
       </div>

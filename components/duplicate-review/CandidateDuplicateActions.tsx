@@ -28,7 +28,7 @@ function CandidateCard({
       onClick={onKeep}
       className={clsx(
         "flex-1 rounded border-2 p-3 text-left transition hover:shadow-glow",
-        keep ? "border-emerald-400 bg-emerald-50/60" : "border-brand-lea/10 bg-white hover:border-brand-lea/30 dark:border-white/10 dark:bg-[#10243a]"
+        keep ? "border-emerald-400 bg-emerald-50/60" : "border-brand-lea/10 bg-white hover:border-brand-lea/30 dark:border-white/10 dark:bg-brand-panel"
       )}
     >
       <div className="flex items-center justify-between gap-2">

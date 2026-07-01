@@ -22,7 +22,7 @@ export function RecognitionCard({ recognition, engagementSlot }: RecognitionCard
   const valueLabel = primary ? primary.name.toLowerCase() : "great work";
 
   return (
-    <article className="relative overflow-hidden rounded-card border-[0.5px] border-brand-lea/15 bg-white p-5 dark:border-white/10 dark:bg-[#10243a]">
+    <article className="relative overflow-hidden rounded-card border-[0.5px] border-brand-lea/15 bg-white p-5 dark:border-white/10 dark:bg-brand-panel">
       <span className={`absolute inset-y-0 left-0 w-1 ${accent}`} aria-hidden="true" />
       <div className="flex gap-3 pl-1">
         <Avatar

@@ -93,7 +93,7 @@ export function InterviewerPicker({
         className={`w-full ${className}`}
       />
       {open && interviewers.length > 0 ? (
-        <div className="absolute z-30 mt-1 max-h-60 w-full overflow-y-auto rounded border border-brand-lea/15 bg-white p-1 shadow-lg dark:border-white/10 dark:bg-[#10243a]">
+        <div className="absolute z-30 mt-1 max-h-60 w-full overflow-y-auto rounded border border-brand-lea/15 bg-white p-1 shadow-lg dark:border-white/10 dark:bg-brand-panel">
           {filtered.length === 0 ? (
             <p className="px-2 py-2 text-xs text-brand-grey dark:text-slate-400">No matches — keep typing to enter a custom name.</p>
           ) : null}

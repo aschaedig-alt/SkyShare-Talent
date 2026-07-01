@@ -132,7 +132,7 @@ function ImportActionCard({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <form onSubmit={handleSubmit} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex min-h-[190px] flex-col justify-between gap-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">{eyebrow}</p>
@@ -145,7 +145,7 @@ function ImportActionCard({
             type="file"
             accept={accept}
             multiple={multiple}
-            className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
+            className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel"
           />
           <button
             type="submit"
@@ -299,7 +299,7 @@ export function ResumeFileUploadImportCard() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <form onSubmit={handleSubmit} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex min-h-[190px] flex-col justify-between gap-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Active upload</p>
@@ -314,7 +314,7 @@ export function ResumeFileUploadImportCard() {
             type="file"
             accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,.gif,.webp,.tif,.tiff,.bmp,.html,.htm,.doc,.docx,.txt,.rtf,.csv,.xls,.xlsx"
             multiple
-            className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
+            className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel"
           />
           <button
             type="submit"
@@ -465,7 +465,7 @@ export function JobPdfImportCard() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+    <form onSubmit={handleSubmit} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex min-h-[190px] flex-col justify-between gap-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Active import</p>
@@ -480,7 +480,7 @@ export function JobPdfImportCard() {
             type="file"
             accept=".pdf,application/pdf"
             multiple
-            className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#10243a]"
+            className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel"
           />
           <button
             type="submit"

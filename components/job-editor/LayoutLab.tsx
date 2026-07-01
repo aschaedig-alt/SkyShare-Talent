@@ -207,7 +207,7 @@ function FieldRows({ rows }: { rows: Array<[string, string | null]> }) {
           {value ? (
             <span className="flex-1 truncate rounded border border-brand-lea/10 bg-brand-cloudDancer/30 px-2 py-1 text-xs text-brand-black/80 dark:text-slate-300 dark:border-white/10 dark:bg-white/5">{value}</span>
           ) : (
-            <span className="h-6 flex-1 rounded border border-dashed border-brand-lea/15 bg-white dark:border-white/10 dark:bg-[#10243a]" />
+            <span className="h-6 flex-1 rounded border border-dashed border-brand-lea/15 bg-white dark:border-white/10 dark:bg-brand-panel" />
           )}
         </div>
       ))}
@@ -452,7 +452,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
           <span className="rounded bg-brand-lea px-2 py-1 text-[11px] font-semibold text-white">Limited HTML</span>
           <span className="rounded border border-brand-lea/15 px-2 py-1 text-[11px] text-brand-lea dark:border-white/10 dark:text-slate-100">Plain Text</span>
         </div>
-        <pre className="max-h-full overflow-auto whitespace-pre-wrap rounded border border-brand-lea/10 bg-white p-2 font-mono text-[9px] leading-4 text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">{(limitedHtml || "Nothing to export.").slice(0, 1200)}</pre>
+        <pre className="max-h-full overflow-auto whitespace-pre-wrap rounded border border-brand-lea/10 bg-white p-2 font-mono text-[9px] leading-4 text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">{(limitedHtml || "Nothing to export.").slice(0, 1200)}</pre>
       </div>
     );
   }
@@ -498,7 +498,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
         return (
           <div className="space-y-1">
             {job?.blockInstances.length ? job.blockInstances.map((inst) => (
-              <div key={inst.id} className="flex items-center justify-between gap-2 rounded border border-brand-lea/10 bg-white px-2 py-1 text-xs dark:border-white/10 dark:bg-[#10243a]">
+              <div key={inst.id} className="flex items-center justify-between gap-2 rounded border border-brand-lea/10 bg-white px-2 py-1 text-xs dark:border-white/10 dark:bg-brand-panel">
                 <span className="truncate font-semibold text-brand-lea dark:text-slate-100">{getInstanceTitle(inst)}</span>
                 <span className="shrink-0 rounded bg-brand-lea/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-eden">{inst.contentBlock?.category ?? "—"}</span>
               </div>
@@ -524,7 +524,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
         return (
           <div className="space-y-1">
             {blocks.slice(0, 10).map((b) => (
-              <div key={b.id} className="flex items-center justify-between gap-2 rounded border border-brand-lea/10 bg-white px-2 py-1 text-xs dark:border-white/10 dark:bg-[#10243a]">
+              <div key={b.id} className="flex items-center justify-between gap-2 rounded border border-brand-lea/10 bg-white px-2 py-1 text-xs dark:border-white/10 dark:bg-brand-panel">
                 <span className="truncate font-semibold text-brand-lea dark:text-slate-100">{b.name}</span>
                 <span className="shrink-0 rounded bg-brand-gold/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-lea dark:text-slate-100">{b.category}</span>
               </div>
@@ -593,7 +593,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
 
   return (
     <div className="px-5 py-5 lg:px-8">
-      <section className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-[#10243a] dark:ring-white/10">
+      <section className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Experimental</p>
           <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Layout Lab</h1>
@@ -616,7 +616,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
       </section>
 
       {/* Controls: presets + density */}
-      <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded border border-brand-lea/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#10243a]">
+      <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded border border-brand-lea/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-brand-panel">
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Presets:</span>
           <button onClick={() => applyPreset("source")} className="rounded border border-brand-lea/20 px-3 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">Source (3 cols)</button>
@@ -665,7 +665,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
             <button
               key={p}
               onClick={() => setPageFilter(p)}
-              className={`inline-flex items-center gap-1.5 rounded border px-3 py-1 text-[11px] font-semibold transition ${active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/15 bg-white text-brand-lea hover:bg-brand-cloudDancer/50 dark:border-white/10 dark:bg-[#10243a] dark:text-slate-100"}`}
+              className={`inline-flex items-center gap-1.5 rounded border px-3 py-1 text-[11px] font-semibold transition ${active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/15 bg-white text-brand-lea hover:bg-brand-cloudDancer/50 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"}`}
             >
               {p !== "All" && <span className={`h-2.5 w-2.5 rounded-full ${PAGE_DOT[p]}`} />}
               {p}
@@ -676,7 +676,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
       </div>
 
       {hiddenWidgets.length > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-2 rounded border border-brand-lea/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#10243a]">
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded border border-brand-lea/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-brand-panel">
           <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Hidden ({hiddenWidgets.length}):</span>
           {hiddenWidgets.map((w) => (
             <button
@@ -693,7 +693,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
       )}
 
       {visibleWidgets.length === 0 && (
-        <div className="rounded border border-dashed border-brand-lea/20 bg-white px-4 py-10 text-center text-sm text-brand-grey dark:border-white/10 dark:bg-[#10243a] dark:text-slate-400">
+        <div className="rounded border border-dashed border-brand-lea/20 bg-white px-4 py-10 text-center text-sm text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">
           No boxes on <span className="font-semibold text-brand-lea dark:text-slate-100">{pageFilter}</span> yet. Use a box&apos;s{" "}
           <ArrowRightLeft className="inline h-3 w-3" /> move menu to assign boxes here.
         </div>
@@ -729,7 +729,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
             const page = pageOf(w);
             const moved = page !== w.source;
             return (
-              <div key={w.id} className={`flex flex-col overflow-hidden rounded border bg-white shadow-panel dark:bg-[#10243a] ${isLocked ? "border-brand-gold ring-2 ring-brand-gold/40" : "border-brand-lea/15 dark:border-white/10"}`}>
+              <div key={w.id} className={`flex flex-col overflow-hidden rounded border bg-white shadow-panel dark:bg-brand-panel ${isLocked ? "border-brand-gold ring-2 ring-brand-gold/40" : "border-brand-lea/15 dark:border-white/10"}`}>
                 <div className={`lab-drag flex shrink-0 items-center justify-between gap-2 px-3 py-1.5 ${isLocked ? "cursor-default" : "cursor-move"} ${PAGE_COLOR[page]}`}>
                   <span className="flex min-w-0 items-center gap-1.5">
                     <span className="truncate text-[11px] font-bold uppercase tracking-wide">{w.title}</span>
@@ -778,7 +778,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setMoveMenu(null)} />
           <div
-            className="fixed z-50 w-56 rounded border border-brand-lea/20 bg-white p-1.5 shadow-xl dark:border-white/10 dark:bg-[#10243a]"
+            className="fixed z-50 w-56 rounded border border-brand-lea/20 bg-white p-1.5 shadow-xl dark:border-white/10 dark:bg-brand-panel"
             style={{ left: Math.min(moveMenu.x, (typeof window !== "undefined" ? window.innerWidth : 1200) - 240), top: moveMenu.y + 6 }}
           >
             <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Move this box to →</div>
