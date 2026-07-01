@@ -17,7 +17,9 @@ const config: Config = {
           sweet: "#a6c9e7",
           eden: "#466481",
           lea: "#0d2c43",
-          grey: "#76787b",
+          // Secondary/metadata text. Darkened from the original #76787b (4.0:1 on
+          // white — just under WCAG AA) to #63666a (~5:1) so small body text passes.
+          grey: "#63666a",
           black: "#302f31",
           // Dark-mode card/panel surface (single source of truth — was a
           // hardcoded #10243a literal repeated ~440x across components).
