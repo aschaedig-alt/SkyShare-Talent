@@ -53,13 +53,13 @@ export function JobDuplicateClusters({ initialClusters = null }: JobDuplicateClu
       </div>
 
       {error && (
-        <div role="alert" className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
+        <div role="alert" className="rounded border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 px-3 py-2 text-sm text-red-900">
           {error}
         </div>
       )}
 
       {clusters && clusters.length === 0 && (
-        <div className="rounded border border-emerald-200 bg-emerald-50 p-4 text-center text-sm text-emerald-900">
+        <div className="rounded border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 p-4 text-center text-sm text-emerald-900">
           <Check className="mx-auto h-6 w-6" />
           <p className="mt-1 font-medium">All jobs look unique — nothing to merge.</p>
         </div>
@@ -216,7 +216,7 @@ function ClusterCard({ cluster, onMerged }: { cluster: DuplicateCluster; onMerge
         <div className="flex items-center gap-3">
           <span
             className={`rounded px-2 py-1 text-[10px] font-bold uppercase ${
-              cluster.matchType === "exact" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
+              cluster.matchType === "exact" ? "bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300" : "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300"
             }`}
           >
             {cluster.matchType === "exact" ? "Exact" : "Similar"}
@@ -247,7 +247,7 @@ function ClusterCard({ cluster, onMerged }: { cluster: DuplicateCluster; onMerge
       </div>
 
       {cluster.matchType === "similar" && (
-        <div className="border-b border-amber-200 bg-amber-50/60 px-4 py-2 text-xs text-amber-800">
+        <div className="border-b border-amber-200 dark:border-amber-500/30 bg-amber-50/60 dark:bg-amber-500/15 px-4 py-2 text-xs text-amber-800 dark:text-amber-300">
           These are <strong>similar</strong> titles, not guaranteed duplicates. Check the boxes only for the jobs that
           are truly the same role.
         </div>
@@ -257,8 +257,8 @@ function ClusterCard({ cluster, onMerged }: { cluster: DuplicateCluster; onMerge
         <div
           className={`mx-4 mt-3 rounded p-3 text-sm ${
             message.type === "success"
-              ? "border border-emerald-300 bg-emerald-50 text-emerald-700"
-              : "border border-red-300 bg-red-50 text-red-700"
+              ? "border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+              : "border border-red-300 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 text-red-700 dark:text-red-300"
           }`}
         >
           {message.text}
@@ -326,7 +326,7 @@ function JobRow({
     .join(" • ");
 
   return (
-    <div className={`rounded ${isPrimary ? "bg-emerald-50" : ""}`}>
+    <div className={`rounded ${isPrimary ? "bg-emerald-50 dark:bg-emerald-500/15" : ""}`}>
       <div className="flex items-center justify-between gap-3 px-2 py-2">
         <div className="flex min-w-0 items-center gap-3">
           {/* Keep radio */}
@@ -359,7 +359,7 @@ function JobRow({
             <div className="flex items-center gap-2 text-sm font-medium text-brand-lea dark:text-slate-100">
               <span className="truncate">{job.title}</span>
               {isPrimary && (
-                <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-700">
+                <span className="rounded bg-emerald-100 dark:bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-300">
                   Keep
                 </span>
               )}

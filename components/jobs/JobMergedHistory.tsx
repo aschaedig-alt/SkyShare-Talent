@@ -86,8 +86,8 @@ export function JobMergedHistory() {
             <div
               className={`mb-3 rounded p-3 text-sm ${
                 message.type === "success"
-                  ? "border border-emerald-300 bg-emerald-50 text-emerald-700"
-                  : "border border-red-300 bg-red-50 text-red-700"
+                  ? "border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                  : "border border-red-300 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 text-red-700 dark:text-red-300"
               }`}
             >
               {message.text}
@@ -101,7 +101,7 @@ export function JobMergedHistory() {
           )}
 
           {error && !loading && (
-            <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">{error}</div>
+            <div className="rounded border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 px-3 py-2 text-sm text-red-900">{error}</div>
           )}
 
           {!loading && !error && items && items.length === 0 && (

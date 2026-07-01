@@ -186,7 +186,7 @@ function BlockCoverageBadges({ block, jobs }: { block: SerializedContentBlock; j
       <span
         className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${
           coverage.isInAllJobs
-            ? "bg-emerald-50 text-emerald-800"
+            ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
             : "bg-brand-cloudDancer text-brand-eden dark:bg-white/5"
         }`}
         title={
@@ -706,7 +706,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
               ? "border-brand-gold/35 bg-brand-gold/12 text-brand-lea dark:text-slate-100"
               : error
                 ? "border-brand-red/25 bg-brand-red/8 text-brand-red"
-                : "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
           }`}
         >
           {isWorking ? (
@@ -1102,7 +1102,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
 
                 {error && <div className="rounded bg-brand-red/10 px-3 py-2 text-sm font-semibold text-brand-red">{error}</div>}
                 {message && (
-                  <div className="flex items-center gap-2 rounded bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
+                  <div className="flex items-center gap-2 rounded bg-emerald-50 dark:bg-emerald-500/15 px-3 py-2 text-sm font-semibold text-emerald-800 dark:text-emerald-300">
                     <CheckCircle2 className="h-4 w-4" />
                     {message}
                   </div>

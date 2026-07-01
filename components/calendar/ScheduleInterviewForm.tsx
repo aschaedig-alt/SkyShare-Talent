@@ -321,7 +321,7 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
             <span
               role={status === "error" ? "alert" : "status"}
               aria-live={status === "error" ? undefined : "polite"}
-              className={status === "error" ? "text-xs font-medium text-red-700" : "text-xs font-medium text-brand-grey dark:text-slate-400"}
+              className={status === "error" ? "text-xs font-medium text-red-700 dark:text-red-300" : "text-xs font-medium text-brand-grey dark:text-slate-400"}
             >
               {message}
             </span>
