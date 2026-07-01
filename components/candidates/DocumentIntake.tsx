@@ -76,16 +76,15 @@ export function DocumentIntake({
     setBusy(false);
   }
 
-  const btnClass =
-    variant === "solid"
-      ? "inline-flex items-center gap-1.5 rounded bg-brand-gold px-4 py-2.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-sweet dark:text-slate-100"
-      : "inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-2.5 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5";
-
   return (
     <>
-      <button onClick={() => setOpen(true)} className={btnClass}>
+      <Button
+        variant={variant === "solid" ? "gold" : "secondary"}
+        size={variant === "solid" ? "md" : "sm"}
+        onClick={() => setOpen(true)}
+      >
         <FilePlus2 className={variant === "solid" ? "h-4 w-4" : "h-3.5 w-3.5"} /> Upload documents
-      </button>
+      </Button>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-lea/40 p-4" onClick={() => { setOpen(false); reset(); }}>

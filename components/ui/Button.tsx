@@ -8,7 +8,7 @@ import { clsx } from "clsx";
 // migrating a button to <Button> is a visual no-op. The gold keyboard focus
 // ring comes from the global :focus-visible rule in globals.css.
 
-export type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
+export type ButtonVariant = "primary" | "secondary" | "danger" | "ghost" | "gold" | "toolbar";
 export type ButtonSize = "sm" | "md";
 
 const BASE =
@@ -19,7 +19,11 @@ const VARIANTS: Record<ButtonVariant, string> = {
   secondary:
     "border border-brand-lea/20 text-brand-lea hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-white/5 dark:text-slate-100",
   danger: "bg-red-600 text-white hover:bg-red-700",
-  ghost: "text-brand-grey hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/10"
+  ghost: "text-brand-grey hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/10",
+  // Accent call-to-action (e.g. "New candidate", "Upload"). Gold fill, navy text.
+  gold: "bg-brand-gold text-brand-lea hover:bg-brand-sweet dark:text-slate-100",
+  // Outlined button that sits on a dark header/toolbar (white on navy).
+  toolbar: "border border-white/20 text-white hover:bg-white/10"
 };
 
 const SIZES: Record<ButtonSize, string> = {

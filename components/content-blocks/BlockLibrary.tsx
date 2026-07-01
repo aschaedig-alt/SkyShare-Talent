@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui";
 import {
   AlertTriangle,
   Blocks,
@@ -660,23 +661,14 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
             </div>
           </div>
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={duplicateBlock}
-              disabled={!selectedBlock || isDuplicating}
-              className="inline-flex items-center gap-2 rounded border border-white/20 px-3.5 py-2 text-sm font-semibold text-white hover:bg-white/10 disabled:opacity-60"
-            >
+            <Button variant="toolbar" onClick={duplicateBlock} disabled={!selectedBlock || isDuplicating}>
               <Copy className="h-4 w-4" />
               {isDuplicating ? "Duplicating..." : "Duplicate"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("create")}
-              className="inline-flex items-center gap-2 rounded bg-brand-gold px-3.5 py-2 text-sm font-bold text-brand-lea hover:bg-brand-gold/90 dark:text-slate-100"
-            >
+            </Button>
+            <Button variant="gold" onClick={() => setMode("create")}>
               <Plus className="h-4 w-4" />
               Create New Block
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui";
 import {
   closestCenter,
   DndContext,
@@ -1260,25 +1261,15 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                   {isSaving ? "Saving..." : "Save Draft"}
                 </button>
                 {selectedJob.status === "RETIRED" ? (
-                  <button
-                    type="button"
-                    onClick={() => updateCurrentJobStatus("ACTIVE")}
-                    disabled={isSaving}
-                    className="inline-flex items-center gap-2 rounded border border-white/20 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-70"
-                  >
+                  <Button variant="toolbar" onClick={() => updateCurrentJobStatus("ACTIVE")} disabled={isSaving}>
                     <RotateCcw className="h-4 w-4" />
                     Restore Role
-                  </button>
+                  </Button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => updateCurrentJobStatus("RETIRED")}
-                    disabled={isSaving}
-                    className="inline-flex items-center gap-2 rounded border border-white/20 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-70"
-                  >
+                  <Button variant="toolbar" onClick={() => updateCurrentJobStatus("RETIRED")} disabled={isSaving}>
                     <Archive className="h-4 w-4" />
                     Archive Role
-                  </button>
+                  </Button>
                 )}
               </>
             )}

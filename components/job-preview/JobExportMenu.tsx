@@ -9,6 +9,7 @@ import {
   buildJobPostHtml
 } from "@/lib/formatting/job-post-code";
 import { escapeHtml } from "@/lib/formatting/rich-text";
+import { Button } from "@/components/ui";
 
 type ExportStatus = "idle" | "working" | "done" | "error";
 
@@ -166,15 +167,11 @@ export function JobExportMenu({ job, align = "right", onStatusChange }: JobExpor
 
   return (
     <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        className="inline-flex items-center gap-2 rounded border border-white/20 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
-      >
+      <Button variant="toolbar" onClick={() => setOpen((current) => !current)}>
         {status.state === "done" ? <CheckCircle2 className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
         {status.state === "idle" ? "Export" : status.message}
         <ChevronDown className="h-4 w-4" />
-      </button>
+      </Button>
 
       {open && (
         <div
