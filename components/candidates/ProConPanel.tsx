@@ -104,7 +104,7 @@ export function ProConPanel({
             placeholder="Add a strength"
             className="min-w-0 flex-1 rounded border border-brand-lea/20 px-2.5 py-1.5 text-sm outline-none transition focus:border-brand-gold dark:border-white/10"
           />
-          <button type="button" onClick={addPro} disabled={!newPro.trim()} className="rounded border border-emerald-200 px-2 py-1.5 text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50">
+          <button type="button" onClick={addPro} disabled={!newPro.trim()} aria-label="Add strength" className="rounded border border-emerald-200 px-2 py-1.5 text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50">
             <Plus className="h-4 w-4" />
           </button>
         </div>
@@ -139,7 +139,7 @@ export function ProConPanel({
             placeholder="Add a concern"
             className="min-w-0 flex-1 rounded border border-brand-lea/20 px-2.5 py-1.5 text-sm outline-none transition focus:border-brand-gold dark:border-white/10"
           />
-          <button type="button" onClick={addCon} disabled={!newCon.trim()} className="rounded border border-amber-200 px-2 py-1.5 text-amber-700 transition hover:bg-amber-50 disabled:opacity-50">
+          <button type="button" onClick={addCon} disabled={!newCon.trim()} aria-label="Add concern" className="rounded border border-amber-200 px-2 py-1.5 text-amber-700 transition hover:bg-amber-50 disabled:opacity-50">
             <Plus className="h-4 w-4" />
           </button>
         </div>

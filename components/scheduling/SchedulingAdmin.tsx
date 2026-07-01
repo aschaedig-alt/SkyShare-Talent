@@ -568,7 +568,7 @@ function WeeklyAvailability({
                     onChange={(e) => update(d, days[d].map((r, j) => (j === i ? { ...r, endMinute: fromHHMM(e.target.value) } : r)))}
                     className="rounded border border-brand-lea/20 px-1 py-0.5 text-xs dark:border-white/10"
                   />
-                  <button onClick={() => update(d, days[d].filter((_, j) => j !== i))} className="text-brand-grey hover:text-red-600 dark:text-slate-400">
+                  <button onClick={() => update(d, days[d].filter((_, j) => j !== i))} aria-label="Remove hours" className="text-brand-grey hover:text-red-600 dark:text-slate-400">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -648,7 +648,7 @@ function BookingTypes({
             >
               {t.isActive ? "Active" : "Off"}
             </button>
-            <button onClick={() => run(async () => void api(`/api/booking-types/${t.id}`, "DELETE"))} className="text-brand-grey hover:text-red-600 dark:text-slate-400">
+            <button onClick={() => run(async () => void api(`/api/booking-types/${t.id}`, "DELETE"))} aria-label="Delete meeting type" className="text-brand-grey hover:text-red-600 dark:text-slate-400">
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
@@ -750,7 +750,7 @@ function Overrides({
                 : ""}
               {o.hostId === null ? <span className="ml-2 text-[11px] text-brand-grey dark:text-slate-400">org-wide</span> : null}
             </span>
-            <button onClick={() => run(async () => void api(`/api/availability-overrides/${o.id}`, "DELETE"))} className="text-brand-grey hover:text-red-600 dark:text-slate-400">
+            <button onClick={() => run(async () => void api(`/api/availability-overrides/${o.id}`, "DELETE"))} aria-label="Delete override" className="text-brand-grey hover:text-red-600 dark:text-slate-400">
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
