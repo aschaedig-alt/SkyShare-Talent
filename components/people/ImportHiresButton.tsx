@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload } from "lucide-react";
 import { parseHiresText } from "@/lib/onboarding/import-hires";
+import { Button, Modal, Textarea } from "@/components/ui";
 
 type ImportResult = {
   created: number;
@@ -77,19 +78,12 @@ export function ImportHiresButton() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
-      >
+      <Button variant="secondary" onClick={() => setOpen(true)}>
         <Upload className="h-4 w-4" />
         Import hires
-      </button>
+      </Button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50" onClick={() => !importing && close()} />
-          <div className="relative w-full max-w-2xl rounded bg-white p-5 shadow-2xl dark:bg-brand-panel">
+      <Modal open={open} onClose={close} busy={importing} maxWidth="max-w-2xl">
             <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Import hires from your spreadsheet</h2>
             <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
               Paste or upload your sheet (works whether names run across the top or down the first column). Re-importing the whole
@@ -100,14 +94,10 @@ export function ImportHiresButton() {
             {!result ? (
               <>
                 <div className="mt-3 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fileRef.current?.click()}
-                    className="inline-flex items-center gap-1.5 rounded border border-brand-lea/15 px-3 py-1.5 text-xs font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
-                  >
+                  <Button variant="secondary" size="sm" onClick={() => fileRef.current?.click()}>
                     <Upload className="h-3.5 w-3.5" />
                     Upload CSV
-                  </button>
+                  </Button>
                   <span className="text-xs text-brand-grey dark:text-slate-400">or paste below</span>
                   <input
                     ref={fileRef}
@@ -118,7 +108,7 @@ export function ImportHiresButton() {
                   />
                 </div>
 
-                <textarea
+                <Textarea
                   value={text}
                   onChange={(e) => {
                     setText(e.target.value);
@@ -126,7 +116,7 @@ export function ImportHiresButton() {
                   }}
                   rows={6}
                   placeholder={"Name\tOffer Sent\tStart Date\tPosition\tDepartment\nJane Pilot\t6/1/2026\t6/15/2026\tFirst Officer\tCrew"}
-                  className="mt-2 w-full resize-y rounded border border-brand-lea/20 px-3 py-2 font-mono text-xs text-brand-lea outline-none focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+                  className="mt-2 font-mono text-xs"
                 />
 
                 {parsed && (
@@ -182,17 +172,12 @@ export function ImportHiresButton() {
                 {error ? <p className="mt-2 text-sm font-medium text-red-700">{error}</p> : null}
 
                 <div className="mt-5 flex justify-end gap-2">
-                  <button type="button" onClick={close} disabled={importing} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
+                  <Button variant="secondary" onClick={close} disabled={importing}>
                     Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={runImport}
-                    disabled={importing || !parsed || parsed.rows.length === 0}
-                    className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-50"
-                  >
+                  </Button>
+                  <Button onClick={runImport} disabled={importing || !parsed || parsed.rows.length === 0}>
                     {importing ? "Importing…" : parsed && parsed.rows.length > 0 ? `Import ${parsed.rows.length}` : "Import"}
-                  </button>
+                  </Button>
                 </div>
               </>
             ) : (
@@ -217,15 +202,11 @@ export function ImportHiresButton() {
                   </div>
                 )}
                 <div className="mt-5 flex justify-end">
-                  <button type="button" onClick={close} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden">
-                    Done
-                  </button>
+                  <Button onClick={close}>Done</Button>
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
+      </Modal>
     </>
   );
 }

@@ -7,6 +7,7 @@ import { clsx } from "clsx";
 import { Archive, CalendarClock, Building2, Trash2 } from "lucide-react";
 import type { Checkin, EmploymentStatus, GridTaskStatus, PostOnboardHire } from "@/lib/data/onboarding";
 import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
+import { EmptyState } from "@/components/ui";
 
 function fmtDate(iso: string | null) {
   return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(iso)) : "—";
@@ -104,7 +105,7 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
   }
 
   if (hires.length === 0) {
-    return <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">No post-onboard employees yet. Mark an active hire as onboarded and they will appear here.</p>;
+    return <EmptyState title="No post-onboard employees yet." description="Mark an active hire as onboarded and they will appear here." />;
   }
 
   const heads = hires[0].checkins.map((c) => c.short);
