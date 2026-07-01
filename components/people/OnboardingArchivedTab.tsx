@@ -88,7 +88,38 @@ export function OnboardingArchivedTab({ rows }: { rows: NewHireRow[] }) {
   return (
     <div className="space-y-3">
       <BulkActionBar count={selected.size} actions={ARCHIVED_BULK_ACTIONS} onApply={applyBulk} onDelete={deleteSelected} onClear={() => setSelected(new Set())} busy={bulkBusy} />
-      <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+
+      {/* Mobile: stacked cards (the table below is desktop-only) */}
+      <div className="space-y-2 sm:hidden">
+        {rows.map((r) => {
+          const state = stateOf(r);
+          return (
+            <div key={r.id} className={clsx("rounded bg-white p-3 shadow-panel ring-1 dark:bg-brand-panel", selected.has(r.id) ? "ring-brand-eden/40" : "ring-brand-lea/10 dark:ring-white/10")}>
+              <div className="flex items-start justify-between gap-2">
+                <label className="flex items-start gap-2">
+                  <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleOne(r.id)} aria-label={`Select ${r.name}`} className="mt-0.5 h-4 w-4" />
+                  <Link href={`/people/${r.id}`} className="font-semibold text-brand-lea hover:underline dark:text-slate-100">{r.name}</Link>
+                </label>
+                <Badge tone={state.tone}>{state.label}</Badge>
+              </div>
+              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-brand-grey dark:text-slate-400">
+                <div><dt className="inline font-semibold">Position:</dt> {r.position ?? "—"}</div>
+                <div><dt className="inline font-semibold">Dept:</dt> {r.department ?? "—"}</div>
+                <div><dt className="inline font-semibold">Start:</dt> {fmtDate(r.startDate)}</div>
+                <div><dt className="inline font-semibold">Terminated:</dt> {fmtDate(r.terminationDate)}</div>
+              </dl>
+              <div className="mt-2">
+                <Button variant="secondary" size="sm" onClick={() => restore(r.id)} disabled={busy === r.id}>
+                  {busy === r.id ? "..." : "Restore to active"}
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 sm:block dark:bg-brand-panel dark:ring-white/10">
       <div className="overflow-x-auto">
       <table className="min-w-full text-sm">
         <thead>
