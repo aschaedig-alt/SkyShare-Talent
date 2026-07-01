@@ -7,6 +7,7 @@ import { clsx } from "clsx";
 import { RotateCcw, Building2, CalendarClock, Trash2 } from "lucide-react";
 import type { NewHireRow } from "@/lib/data/onboarding";
 import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
+import { Button, Badge, EmptyState, type BadgeTone } from "@/components/ui";
 
 const ARCHIVED_BULK_ACTIONS: BulkAction[] = [
   { kind: "patch", key: "restore", label: "Restore to active", icon: RotateCcw, patch: { stage: "ACTIVE" }, tone: "primary" },
@@ -19,10 +20,10 @@ function fmtDate(iso: string | null) {
   return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(iso)) : "—";
 }
 
-function stateOf(r: NewHireRow): { label: string; cls: string } {
-  if (r.employmentStatus === "TERMINATED") return { label: "Terminated", cls: "bg-red-50 text-red-700" };
-  if (r.canceled) return { label: "Canceled", cls: "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400" };
-  return { label: "Archived", cls: "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400" };
+function stateOf(r: NewHireRow): { label: string; tone: BadgeTone } {
+  if (r.employmentStatus === "TERMINATED") return { label: "Terminated", tone: "danger" };
+  if (r.canceled) return { label: "Canceled", tone: "neutral" };
+  return { label: "Archived", tone: "neutral" };
 }
 
 export function OnboardingArchivedTab({ rows }: { rows: NewHireRow[] }) {
@@ -82,7 +83,7 @@ export function OnboardingArchivedTab({ rows }: { rows: NewHireRow[] }) {
   }
 
   if (rows.length === 0) {
-    return <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">Nothing archived.</p>;
+    return <EmptyState title="Nothing archived." />;
   }
   return (
     <div className="space-y-3">
@@ -117,16 +118,12 @@ export function OnboardingArchivedTab({ rows }: { rows: NewHireRow[] }) {
                 <td className="px-4 py-3 text-brand-grey dark:text-slate-400">{fmtDate(r.startDate)}</td>
                 <td className="px-4 py-3 text-brand-grey dark:text-slate-400">{fmtDate(r.terminationDate)}</td>
                 <td className="px-4 py-3">
-                  <span className={clsx("rounded px-2.5 py-0.5 text-xs font-semibold", state.cls)}>{state.label}</span>
+                  <Badge tone={state.tone}>{state.label}</Badge>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button
-                    onClick={() => restore(r.id)}
-                    disabled={busy === r.id}
-                    className="rounded border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-50 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
-                  >
+                  <Button variant="secondary" size="sm" onClick={() => restore(r.id)} disabled={busy === r.id}>
                     {busy === r.id ? "..." : "Restore to active"}
-                  </button>
+                  </Button>
                 </td>
               </tr>
             );

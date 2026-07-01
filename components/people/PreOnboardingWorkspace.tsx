@@ -17,6 +17,7 @@ import { OnboardingMilestonesTab } from "@/components/people/OnboardingMilestone
 import { PostOnboardTab } from "@/components/people/PostOnboardTab";
 import { OnboardingArchivedTab } from "@/components/people/OnboardingArchivedTab";
 import { ImportHiresButton } from "@/components/people/ImportHiresButton";
+import { Button, Modal, Input } from "@/components/ui";
 
 export type PeopleTab = "dashboard" | "grid" | "post" | "archived";
 
@@ -81,13 +82,7 @@ export function PreOnboardingWorkspace({ tab, counts, dashboard, grid, milestone
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <ImportHiresButton />
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden"
-          >
-            + Add new hire
-          </button>
+          <Button onClick={() => setAdding(true)}>+ Add new hire</Button>
         </div>
       </section>
 
@@ -132,63 +127,27 @@ export function PreOnboardingWorkspace({ tab, counts, dashboard, grid, milestone
       {tab === "post" && post ? <PostOnboardTab hires={post} /> : null}
       {tab === "archived" && archived ? <OnboardingArchivedTab rows={archived} /> : null}
 
-      {adding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50" onClick={() => !saving && setAdding(false)} />
-          <div className="relative w-full max-w-md rounded bg-white p-5 shadow-2xl dark:bg-brand-panel">
-            <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Add new hire</h2>
-            <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">Creates an active hire with the standard checklist.</p>
-            <div className="mt-4 space-y-3">
-              <input
-                autoFocus
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Full name *"
-                className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10"
-              />
-              <input
-                value={form.position}
-                onChange={(e) => setForm({ ...form, position: e.target.value })}
-                placeholder="Position"
-                className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10"
-              />
-              <div className="flex gap-3">
-                <input
-                  value={form.department}
-                  onChange={(e) => setForm({ ...form, department: e.target.value })}
-                  placeholder="Department"
-                  className="w-1/2 rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10"
-                />
-                <input
-                  type="date"
-                  value={form.startDate}
-                  onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                  className="w-1/2 rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-grey dark:border-white/10 dark:text-slate-400"
-                />
-              </div>
-              {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
-            </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setAdding(false)}
-                disabled={saving}
-                className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={createHire}
-                disabled={saving}
-                className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60"
-              >
-                {saving ? "Adding..." : "Add hire"}
-              </button>
-            </div>
+      <Modal open={adding} onClose={() => setAdding(false)} busy={saving}>
+        <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Add new hire</h2>
+        <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">Creates an active hire with the standard checklist.</p>
+        <div className="mt-4 space-y-3">
+          <Input autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name *" />
+          <Input value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} placeholder="Position" />
+          <div className="flex gap-3">
+            <Input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} placeholder="Department" className="w-1/2" />
+            <Input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="w-1/2" />
           </div>
+          {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
         </div>
-      )}
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setAdding(false)} disabled={saving}>
+            Cancel
+          </Button>
+          <Button onClick={createHire} disabled={saving}>
+            {saving ? "Adding..." : "Add hire"}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

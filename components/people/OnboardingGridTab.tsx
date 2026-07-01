@@ -8,6 +8,7 @@ import { CircleCheck, Archive, CalendarClock, Building2, Trash2 } from "lucide-r
 import { ONBOARDING_GROUPS, ONBOARDING_TASKS, groupLabel } from "@/lib/onboarding/tasks";
 import type { GridHire, GridTaskStatus, HireStatus } from "@/lib/data/onboarding";
 import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
+import { EmptyState } from "@/components/ui";
 
 const GRID_BULK_ACTIONS: BulkAction[] = [
   { kind: "patch", key: "onboard", label: "Mark onboarded", icon: CircleCheck, patch: { stage: "POST_ONBOARD" }, tone: "primary" },
@@ -111,7 +112,7 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
   }
 
   if (hires.length === 0) {
-    return <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">No active hires.</p>;
+    return <EmptyState title="No active hires." />;
   }
 
   return (
