@@ -6,3 +6,4 @@ export { Badge, type BadgeProps, type BadgeTone } from "./Badge";
 export { EmptyState, type EmptyStateProps } from "./EmptyState";
 export { Input, Textarea } from "./Input";
 export { Modal, type ModalProps } from "./Modal";
+export { Skeleton } from "./Skeleton";
