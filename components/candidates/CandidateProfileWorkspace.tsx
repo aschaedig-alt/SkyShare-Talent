@@ -188,8 +188,8 @@ export function CandidateProfileWorkspace({
 
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
-      {error && <div className="rounded border border-red-500/30 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
-      {success && <div className="rounded border border-green-500/30 bg-green-50 p-3 text-sm text-green-700">{success}</div>}
+      {error && <div className="rounded border border-red-500/30 bg-red-50 dark:bg-red-500/15 p-3 text-sm text-red-700 dark:text-red-300">{error}</div>}
+      {success && <div className="rounded border border-green-500/30 bg-green-50 dark:bg-emerald-500/15 p-3 text-sm text-green-700 dark:text-emerald-300">{success}</div>}
 
       {/* Header */}
       <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
@@ -230,7 +230,7 @@ export function CandidateProfileWorkspace({
             <span
               className={clsx(
                 "rounded px-3 py-1 text-xs font-semibold",
-                statusActive ? "bg-emerald-100 text-emerald-800" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400"
+                statusActive ? "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400"
               )}
             >
               {candidate.status}

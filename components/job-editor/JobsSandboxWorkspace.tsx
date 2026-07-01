@@ -119,7 +119,7 @@ type SandboxTemplateField = {
 function FieldPurposePill({ label, isEnabled }: { label: string; isEnabled: boolean }) {
   const toneClass =
     label === "public post" && isEnabled
-      ? "bg-emerald-50 text-emerald-800"
+      ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
       : isEnabled
         ? "bg-brand-cloudDancer text-brand-eden dark:bg-white/5"
         : "bg-brand-cloudDancer/70 text-brand-grey dark:bg-white/5 dark:text-slate-400";
@@ -247,7 +247,7 @@ function jobIsVisibleForView(job: SerializedJobPost, view: JobListView) {
 
 function SourcePill({ label, tone = "field" }: { label: string; tone?: "field" | "block" | "neutral" | "warning" }) {
   const toneClass = {
-    field: "bg-emerald-50 text-emerald-800",
+    field: "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",
     block: "bg-brand-sweet/40 text-brand-lea dark:text-slate-100",
     neutral: "bg-brand-cloudDancer text-brand-eden dark:bg-white/5",
     warning: "bg-brand-gold/25 text-brand-lea dark:text-slate-100"

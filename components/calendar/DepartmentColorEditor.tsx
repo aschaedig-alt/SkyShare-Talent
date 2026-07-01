@@ -118,7 +118,7 @@ export function DepartmentColorEditor({
             Reset to defaults
           </button>
           <div className="flex items-center gap-3">
-            {error ? <span className="text-xs font-medium text-red-700">{error}</span> : null}
+            {error ? <span className="text-xs font-medium text-red-700 dark:text-red-300">{error}</span> : null}
             <button type="button" onClick={onClose} className="rounded px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400">
               Cancel
             </button>

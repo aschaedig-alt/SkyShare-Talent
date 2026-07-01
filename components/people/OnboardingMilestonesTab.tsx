@@ -97,7 +97,7 @@ export function OnboardingMilestonesTab({ data }: { data: MilestoneData }) {
           {managing ? "Done managing" : "Manage milestones"}
         </button>
       </div>
-      {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
+      {error ? <p className="text-sm font-medium text-red-700 dark:text-red-300">{error}</p> : null}
 
       {managing && (
         <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
@@ -124,7 +124,7 @@ export function OnboardingMilestonesTab({ data }: { data: MilestoneData }) {
                     className="flex-1 rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10"
                   />
                   {m.custom ? (
-                    <span className="rounded bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700">custom</span>
+                    <span className="rounded bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">custom</span>
                   ) : null}
                   <button
                     onClick={() => saveLabel(m.key)}

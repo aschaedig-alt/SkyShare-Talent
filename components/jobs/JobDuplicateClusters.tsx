@@ -53,13 +53,13 @@ export function JobDuplicateClusters({ initialClusters = null }: JobDuplicateClu
       </div>
 
       {error && (
-        <div role="alert" className="rounded border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 px-3 py-2 text-sm text-red-900">
+        <div role="alert" className="rounded border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 px-3 py-2 text-sm text-red-900 dark:text-red-300">
           {error}
         </div>
       )}
 
       {clusters && clusters.length === 0 && (
-        <div className="rounded border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 p-4 text-center text-sm text-emerald-900">
+        <div className="rounded border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 p-4 text-center text-sm text-emerald-900 dark:text-emerald-300">
           <Check className="mx-auto h-6 w-6" />
           <p className="mt-1 font-medium">All jobs look unique — nothing to merge.</p>
         </div>

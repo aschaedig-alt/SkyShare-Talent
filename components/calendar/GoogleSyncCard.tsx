@@ -46,7 +46,7 @@ export function GoogleSyncCard({ sync }: GoogleSyncCardProps) {
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Two-way sync</h2>
         </div>
         {sync.configured ? (
-          <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase text-emerald-700">
+          <span className="inline-flex items-center gap-1 rounded bg-emerald-100 dark:bg-emerald-500/15 px-2 py-1 text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-300">
             <CheckCircle2 className="h-3 w-3" /> Connected
           </span>
         ) : (
@@ -70,7 +70,7 @@ export function GoogleSyncCard({ sync }: GoogleSyncCardProps) {
           </div>
 
           {sync.lastSyncError && (
-            <div className="mt-2 flex items-start gap-1 rounded border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
+            <div className="mt-2 flex items-start gap-1 rounded border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 px-2 py-1.5 text-[11px] text-amber-800 dark:text-amber-300">
               <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
               {sync.lastSyncError}
             </div>
@@ -89,8 +89,8 @@ export function GoogleSyncCard({ sync }: GoogleSyncCardProps) {
             <div
               className={`mt-2 rounded px-2 py-1.5 text-[11px] ${
                 result.type === "success"
-                  ? "border border-emerald-300 bg-emerald-50 text-emerald-700"
-                  : "border border-red-300 bg-red-50 text-red-700"
+                  ? "border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                  : "border border-red-300 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 text-red-700 dark:text-red-300"
               }`}
             >
               {result.text}

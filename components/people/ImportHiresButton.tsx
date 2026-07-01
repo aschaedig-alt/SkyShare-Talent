@@ -169,7 +169,7 @@ export function ImportHiresButton() {
                   </div>
                 )}
 
-                {error ? <p className="mt-2 text-sm font-medium text-red-700">{error}</p> : null}
+                {error ? <p className="mt-2 text-sm font-medium text-red-700 dark:text-red-300">{error}</p> : null}
 
                 <div className="mt-5 flex justify-end gap-2">
                   <Button variant="secondary" onClick={close} disabled={importing}>

@@ -162,7 +162,7 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
         </p>
       </div>
 
-      {error ? <p className="mb-4 rounded border border-red-300 bg-red-50 p-2 text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="mb-4 rounded border border-red-300 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 p-2 text-sm text-red-700 dark:text-red-300">{error}</p> : null}
 
       <div className="grid gap-5 lg:grid-cols-[260px_1fr]">
         {/* Host list */}
@@ -644,7 +644,7 @@ function BookingTypes({
             </select>
             <button
               onClick={() => run(async () => void api(`/api/booking-types/${t.id}`, "PATCH", { isActive: !t.isActive }))}
-              className={clsx("rounded px-2 py-1 text-xs font-semibold transition hover:shadow-glow", t.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}
+              className={clsx("rounded px-2 py-1 text-xs font-semibold transition hover:shadow-glow", t.isActive ? "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-slate-100 text-slate-500")}
             >
               {t.isActive ? "Active" : "Off"}
             </button>
@@ -736,7 +736,7 @@ function Overrides({
             <span
               className={clsx(
                 "rounded px-2 py-0.5 text-[11px] font-semibold",
-                o.kind === "BLOCK" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
+                o.kind === "BLOCK" ? "bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300" : "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300"
               )}
             >
               {o.kind === "BLOCK" ? "Blocked" : "Custom"}

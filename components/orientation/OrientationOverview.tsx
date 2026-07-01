@@ -29,7 +29,7 @@ function SessionCard({ s }: { s: SessionListItem }) {
     <Link href={`/orientation/${s.id}`} className="block rounded border border-brand-lea/10 bg-white p-4 shadow-panel transition hover:ring-2 hover:ring-brand-gold/30 hover:shadow-glow dark:border-white/10 dark:bg-brand-panel">
       <div className="flex items-center justify-between gap-2">
         <span className="text-base font-semibold text-brand-lea dark:text-slate-100">{fmt(s.date)}</span>
-        <span className={clsx("rounded px-2 py-0.5 text-[11px] font-semibold", s.status === "COMPLETE" ? "bg-emerald-50 text-emerald-800" : soon ? "bg-brand-gold/15 text-brand-lea" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400")}>
+        <span className={clsx("rounded px-2 py-0.5 text-[11px] font-semibold", s.status === "COMPLETE" ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : soon ? "bg-brand-gold/15 text-brand-lea" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400")}>
           {s.status === "COMPLETE" ? "Complete" : daysUntil(s.date)}
         </span>
       </div>
@@ -40,7 +40,7 @@ function SessionCard({ s }: { s: SessionListItem }) {
       </div>
       {(s.notConfirmed > 0 || s.travelPending > 0) && s.status !== "COMPLETE" ? (
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {s.notConfirmed > 0 ? <span className="rounded bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">{s.notConfirmed} not confirmed</span> : null}
+          {s.notConfirmed > 0 ? <span className="rounded bg-red-50 dark:bg-red-500/15 px-2 py-0.5 text-[11px] font-semibold text-red-700 dark:text-red-300">{s.notConfirmed} not confirmed</span> : null}
           {s.travelPending > 0 ? <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[11px] font-semibold text-brand-lea dark:text-slate-100">{s.travelPending} travel pending</span> : null}
         </div>
       ) : null}
@@ -91,7 +91,7 @@ function CohortCard({ c, onCreate, onAddMissing, busy }: { c: Cohort; onCreate: 
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {c.hires.map((h) => (
-          <span key={h.id} className={clsx("rounded px-2 py-0.5 text-[11px]", h.isAttendee ? "bg-emerald-50 text-emerald-800" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400")}>
+          <span key={h.id} className={clsx("rounded px-2 py-0.5 text-[11px]", h.isAttendee ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400")}>
             {h.name}
           </span>
         ))}
@@ -232,11 +232,11 @@ export function OrientationOverview({
       </section>
 
       {unscheduled.length > 0 ? (
-        <section className="rounded border border-amber-300 bg-amber-50 p-4">
+        <section className="rounded border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 p-4">
           <div className="text-sm font-semibold text-amber-900">
             {unscheduled.length} {unscheduled.length === 1 ? "hire still needs" : "hires still need"} an orientation
           </div>
-          <p className="mt-0.5 text-xs text-amber-800">Not yet attended and not on any upcoming session — schedule them so none slip through.</p>
+          <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-300">Not yet attended and not on any upcoming session — schedule them so none slip through.</p>
           <div className="mt-3 space-y-1.5">
             {unscheduled.map((h) => (
               <div key={h.id} className="flex flex-wrap items-center gap-2 rounded bg-white/70 px-3 py-2 text-sm">

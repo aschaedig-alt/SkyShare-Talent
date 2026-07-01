@@ -130,7 +130,7 @@ export function SettingsWorkspace({ data, currentRole }: SettingsWorkspaceProps)
                 <span
                   className={
                     item.status === "ready"
-                      ? "rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-800"
+                      ? "rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300"
                       : "rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase text-brand-lea dark:text-slate-100"
                   }
                 >

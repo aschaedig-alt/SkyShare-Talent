@@ -16,16 +16,16 @@ type FeedbackItem = {
 };
 
 const TYPE_META: Record<string, { label: string; icon: typeof Lightbulb; chip: string }> = {
-  IDEA: { label: "Idea", icon: Lightbulb, chip: "bg-blue-100 text-blue-800" },
-  BUG: { label: "Bug", icon: Bug, chip: "bg-red-100 text-red-800" },
-  QUESTION: { label: "Question", icon: HelpCircle, chip: "bg-amber-100 text-amber-800" }
+  IDEA: { label: "Idea", icon: Lightbulb, chip: "bg-blue-100 text-blue-800 dark:bg-sky-500/15 dark:text-sky-300" },
+  BUG: { label: "Bug", icon: Bug, chip: "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300" },
+  QUESTION: { label: "Question", icon: HelpCircle, chip: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300" }
 };
 
 const STATUSES = ["NEW", "REVIEWING", "DONE"];
 const STATUS_CHIP: Record<string, string> = {
   NEW: "bg-brand-gold/20 text-brand-lea dark:text-slate-100",
-  REVIEWING: "bg-blue-100 text-blue-800",
-  DONE: "bg-emerald-100 text-emerald-700"
+  REVIEWING: "bg-blue-100 text-blue-800 dark:bg-sky-500/15 dark:text-sky-300",
+  DONE: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
 };
 
 function formatDate(iso: string) {

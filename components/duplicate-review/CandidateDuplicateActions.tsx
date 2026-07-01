@@ -138,7 +138,7 @@ export function CandidateDuplicateActions({ itemId, primary, secondary }: Candid
         <div
           className={clsx(
             "mt-2 rounded px-3 py-2 text-xs",
-            message.type === "success" ? "border border-emerald-300 bg-emerald-50 text-emerald-700" : "border border-red-300 bg-red-50 text-red-700"
+            message.type === "success" ? "border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "border border-red-300 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 text-red-700 dark:text-red-300"
           )}
         >
           {message.text}
@@ -146,7 +146,7 @@ export function CandidateDuplicateActions({ itemId, primary, secondary }: Candid
       )}
 
       {confirmMerge ? (
-        <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-3">
+        <div className="mt-3 rounded border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 p-3">
           <p className="text-xs text-amber-900">
             Merge <span className="font-semibold">{dropName}</span> into <span className="font-semibold">{keepName}</span>? All of {dropName}&apos;s files, applications, interviews, and notes move to {keepName}, and {dropName} is archived.
           </p>

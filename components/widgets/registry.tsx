@@ -73,9 +73,9 @@ function statusOf(token: string): Status {
   return "neutral";
 }
 const STATUS_CHIP: Record<Status, string> = {
-  ok: "bg-emerald-50 text-emerald-700",
-  warn: "bg-amber-50 text-amber-700",
-  bad: "bg-red-50 text-red-600",
+  ok: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  warn: "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  bad: "bg-red-50 text-red-600 dark:bg-red-500/15",
   neutral: "bg-brand-cloudDancer/70 text-brand-grey dark:bg-white/5 dark:text-slate-400"
 };
 

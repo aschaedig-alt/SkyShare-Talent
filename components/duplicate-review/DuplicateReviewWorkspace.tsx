@@ -74,7 +74,7 @@ export function DuplicateReviewWorkspace({ data }: DuplicateReviewWorkspaceProps
                     <span
                       className={clsx(
                         "rounded px-2 py-1 text-[11px] font-semibold",
-                        item.status === "OPEN" ? "bg-brand-gold/25 text-brand-lea dark:text-slate-100" : "bg-emerald-100 text-emerald-700"
+                        item.status === "OPEN" ? "bg-brand-gold/25 text-brand-lea dark:text-slate-100" : "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
                       )}
                     >
                       {item.status}

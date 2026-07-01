@@ -94,7 +94,7 @@ export function FinalReviewWorkspace({ jobs }: FinalReviewWorkspaceProps) {
             <span
               className={`inline-flex items-center gap-1.5 rounded px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] ${
                 readyToPublish
-                  ? "bg-emerald-100 text-emerald-900"
+                  ? "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-900 dark:text-emerald-300"
                   : canPublishWithReview
                     ? "bg-white text-brand-lea dark:bg-brand-panel dark:text-slate-100"
                     : "bg-brand-red text-white"

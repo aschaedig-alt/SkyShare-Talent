@@ -21,10 +21,10 @@ function Field({ label, name, value, type = "text", placeholder }: { label: stri
 
 function dispositionBadge(disposition: string | null) {
   const map: Record<string, string> = {
-    HIRED: "bg-emerald-100 text-emerald-800",
+    HIRED: "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",
     OFFER: "bg-brand-gold/20 text-brand-eden",
     INTERVIEWED: "bg-brand-sweet/30 text-brand-lea",
-    REJECTED: "bg-red-100 text-red-700",
+    REJECTED: "bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300",
     APPLIED: "bg-brand-cloudDancer text-brand-grey"
   };
   const cls = (disposition && map[disposition]) || "bg-brand-cloudDancer text-brand-grey";

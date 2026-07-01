@@ -83,7 +83,7 @@ export function ProConPanel({
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {pros.length === 0 ? <span className="text-xs text-brand-grey dark:text-slate-400">None yet</span> : null}
           {pros.map((p) => (
-            <span key={p} className="inline-flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-800">
+            <span key={p} className="inline-flex items-center gap-1 rounded border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 px-2.5 py-1 text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">
               {p}
               <button type="button" onClick={() => removePro(p)} aria-label={`Remove ${p}`} className="text-emerald-600/70 transition hover:text-emerald-900">
                 <X className="h-3 w-3" />
@@ -118,7 +118,7 @@ export function ProConPanel({
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {cons.length === 0 ? <span className="text-xs text-brand-grey dark:text-slate-400">None yet</span> : null}
           {cons.map((c) => (
-            <span key={c} className="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800">
+            <span key={c} className="inline-flex items-center gap-1 rounded border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
               {c}
               <button type="button" onClick={() => removeCon(c)} aria-label={`Remove ${c}`} className="text-amber-600/70 transition hover:text-amber-900">
                 <X className="h-3 w-3" />

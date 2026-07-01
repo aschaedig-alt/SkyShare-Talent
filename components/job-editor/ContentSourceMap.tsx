@@ -20,7 +20,7 @@ function formatEnum(value: string) {
 function SourceBadge({ label, tone = "block" }: { label: string; tone?: "block" | "field" | "hidden" | "warning" }) {
   const toneClass = {
     block: "bg-brand-sweet/40 text-brand-lea dark:text-slate-100",
-    field: "bg-emerald-50 text-emerald-800",
+    field: "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",
     hidden: "bg-brand-grey/12 text-brand-grey dark:text-slate-400",
     warning: "bg-brand-gold/22 text-brand-lea dark:text-slate-100"
   }[tone];
@@ -111,7 +111,7 @@ export function ContentSourceMap({ job }: ContentSourceMapProps) {
             <div
               key={source.key}
               className={`rounded border px-2.5 py-2 ${
-                source.isHiddenByBlock ? "border-brand-grey/18 bg-white/70" : "border-emerald-200 bg-emerald-50/65"
+                source.isHiddenByBlock ? "border-brand-grey/18 bg-white/70" : "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/65 dark:bg-emerald-500/15"
               }`}
             >
               <div className="flex items-start justify-between gap-2">

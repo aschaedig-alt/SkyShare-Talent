@@ -34,7 +34,7 @@ function ruleToAccess3(accessLevel: AccessLevel): Access3 {
 }
 
 const access3Styles: Record<Access3, string> = {
-  FULL: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  FULL: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300",
   VIEW: "border-brand-gold/40 bg-brand-gold/15 text-brand-lea dark:text-slate-100",
   HIDDEN: "border-brand-lea/15 bg-brand-cloudDancer text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400"
 };

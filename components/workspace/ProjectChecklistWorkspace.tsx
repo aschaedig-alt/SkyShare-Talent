@@ -10,17 +10,17 @@ const roadmap = parseRoadmap();
 const StatusBadge = ({ status }: { status: ItemStatus }) => {
   if (status === "completed") {
     return (
-      <div className="flex items-center gap-1 rounded bg-emerald-100 px-2 py-1">
-        <Check className="h-3 w-3 text-emerald-700" />
-        <span className="text-xs font-semibold text-emerald-700">Complete</span>
+      <div className="flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 dark:bg-emerald-500/15">
+        <Check className="h-3 w-3 text-emerald-700 dark:text-emerald-300" />
+        <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">Complete</span>
       </div>
     );
   }
   if (status === "in-progress") {
     return (
-      <div className="flex items-center gap-1 rounded bg-amber-100 px-2 py-1">
-        <Clock className="h-3 w-3 text-amber-700" />
-        <span className="text-xs font-semibold text-amber-700">In Progress</span>
+      <div className="flex items-center gap-1 rounded bg-amber-100 px-2 py-1 dark:bg-amber-500/15">
+        <Clock className="h-3 w-3 text-amber-700 dark:text-amber-300" />
+        <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">In Progress</span>
       </div>
     );
   }

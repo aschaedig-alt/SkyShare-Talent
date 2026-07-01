@@ -101,7 +101,7 @@ export function JobMergedHistory() {
           )}
 
           {error && !loading && (
-            <div className="rounded border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 px-3 py-2 text-sm text-red-900">{error}</div>
+            <div className="rounded border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 px-3 py-2 text-sm text-red-900 dark:text-red-300">{error}</div>
           )}
 
           {!loading && !error && items && items.length === 0 && (

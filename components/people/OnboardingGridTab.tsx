@@ -21,11 +21,11 @@ const GRID_BULK_ACTIONS: BulkAction[] = [
 const NEXT: Record<GridTaskStatus, GridTaskStatus> = { TODO: "DONE", DONE: "NA", NA: "TODO" };
 
 const STATUS_STYLE: Record<HireStatus, string> = {
-  Ready: "bg-emerald-50 text-emerald-800",
+  Ready: "bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
   "In progress": "bg-brand-gold/15 text-brand-lea dark:text-slate-100",
-  "Due soon": "bg-amber-50 text-amber-700",
-  Overdue: "bg-red-50 text-red-700",
-  Onboarded: "bg-sky-50 text-sky-800",
+  "Due soon": "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  Overdue: "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+  Onboarded: "bg-sky-50 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300",
   Archived: "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400",
   Canceled: "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400"
 };

@@ -97,7 +97,7 @@ export function PdfViewer({ fileUrl, searchTerm }: PdfViewerProps) {
     // Fallback to the browser's native viewer if PDF.js fails to load.
     return (
       <div className="rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-brand-panel">
-        <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
+        <div className="flex items-center gap-2 border-b border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 px-3 py-1.5 text-xs text-amber-800 dark:text-amber-300">
           <AlertTriangle className="h-3.5 w-3.5" /> Highlight viewer unavailable — showing the standard preview.
         </div>
         <iframe src={`${fileUrl}#zoom=100`} title="PDF preview" className="h-[1000px] w-full rounded-b bg-white dark:bg-brand-panel" />

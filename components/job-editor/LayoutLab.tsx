@@ -517,7 +517,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
         return renderExport();
       case "fr-status":
         return (
-          <div className={`rounded px-2 py-1.5 text-center text-xs font-bold ${readyCount === readiness.length ? "bg-emerald-50 text-emerald-800" : "bg-brand-gold/20 text-brand-lea dark:text-slate-100"}`}>
+          <div className={`rounded px-2 py-1.5 text-center text-xs font-bold ${readyCount === readiness.length ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : "bg-brand-gold/20 text-brand-lea dark:text-slate-100"}`}>
             {readyCount === readiness.length ? "Ready to publish" : `${readiness.length - readyCount} item(s) to review`}
           </div>
         );

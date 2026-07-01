@@ -71,10 +71,10 @@ function highlight(text: string, query: string) {
 function stagePill(stage: string | null) {
   const s = (stage ?? "").toLowerCase();
   if (!stage) return "border-brand-lea/15 bg-brand-cloudDancer/60 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400";
-  if (s.includes("hire") || s.includes("offer")) return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (s.includes("hire") || s.includes("offer")) return "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
   if (s.includes("interview") || s.includes("screen")) return "border-indigo-200 bg-indigo-50 text-indigo-700";
   if (s.includes("reject") || s.includes("declin") || s.includes("withdraw")) return "border-slate-200 bg-slate-100 text-slate-500";
-  if (s.includes("new") || s.includes("appl") || s.includes("lead")) return "border-amber-200 bg-amber-50 text-amber-700";
+  if (s.includes("new") || s.includes("appl") || s.includes("lead")) return "border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300";
   return "border-brand-gold/30 bg-brand-gold/10 text-brand-lea dark:text-slate-100";
 }
 
@@ -185,7 +185,7 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex flex-wrap gap-1.5 text-[11px] font-medium text-brand-grey dark:text-slate-400">
-                        <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-amber-700" title="Files">
+                        <span className="inline-flex items-center gap-1 rounded bg-amber-50 dark:bg-amber-500/15 px-1.5 py-0.5 text-amber-700 dark:text-amber-300" title="Files">
                           <FileText className="h-3 w-3" /> {candidate.fileCount}
                         </span>
                         <span className="inline-flex items-center gap-1 rounded bg-brand-cloudDancer/70 px-1.5 py-0.5 text-brand-lea dark:bg-white/5 dark:text-slate-100" title="Notes">

@@ -137,7 +137,7 @@ export function PreOnboardingWorkspace({ tab, counts, dashboard, grid, milestone
             <Input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} placeholder="Department" className="w-1/2" />
             <Input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="w-1/2" />
           </div>
-          {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
+          {error ? <p className="text-sm font-medium text-red-700 dark:text-red-300">{error}</p> : null}
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setAdding(false)} disabled={saving}>

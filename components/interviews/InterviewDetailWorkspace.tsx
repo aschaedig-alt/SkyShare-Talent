@@ -23,13 +23,13 @@ const inputCls = "w-full rounded border border-brand-lea/20 px-3 py-2 text-sm ou
 function recoTone(key: RecommendationKey): string {
   switch (key) {
     case "STRONG_YES":
-      return "bg-emerald-100 text-emerald-800";
+      return "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300";
     case "YES":
       return "bg-teal-100 text-teal-800";
     case "NO":
-      return "bg-amber-100 text-amber-800";
+      return "bg-amber-100 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300";
     case "STRONG_NO":
-      return "bg-red-100 text-red-800";
+      return "bg-red-100 dark:bg-red-500/15 text-red-800 dark:text-red-300";
   }
 }
 

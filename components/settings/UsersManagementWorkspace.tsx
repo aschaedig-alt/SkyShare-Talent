@@ -54,8 +54,8 @@ export function UsersManagementWorkspace({ users: initialUsers }: UsersManagemen
         <div
           className={`rounded p-3 text-sm ${
             message.type === "success"
-              ? "border border-green-500/30 bg-green-50 text-green-700"
-              : "border border-red-500/30 bg-red-50 text-red-700"
+              ? "border border-green-500/30 bg-green-50 text-green-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+              : "border border-red-500/30 bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300"
           }`}
         >
           {message.text}

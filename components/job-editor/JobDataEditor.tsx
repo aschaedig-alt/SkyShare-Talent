@@ -100,7 +100,7 @@ function FieldSourceBadge({ source }: { source: FieldSourceState }) {
   return (
     <span
       className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] ${
-        source.isHiddenByBlock ? "bg-brand-grey/12 text-brand-grey dark:text-slate-400" : "bg-emerald-50 text-emerald-800"
+        source.isHiddenByBlock ? "bg-brand-grey/12 text-brand-grey dark:text-slate-400" : "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
       }`}
     >
       {source.isHiddenByBlock ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -296,7 +296,7 @@ export function JobDataEditor({
                     ? "bg-brand-gold/20 text-brand-lea dark:text-slate-100"
                     : saveError
                       ? "bg-brand-red/10 text-brand-red"
-                      : "bg-emerald-50 text-emerald-800"
+                      : "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
                 }`}
               >
                 {isSubmitting ? (

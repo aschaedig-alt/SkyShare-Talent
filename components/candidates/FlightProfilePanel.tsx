@@ -248,7 +248,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
       {suggested.length > 0 && (
         <div className="mt-3">
           <div className="mb-1.5 flex items-center justify-between">
-            <span className="flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800">
+            <span className="flex items-center gap-1 rounded bg-amber-100 dark:bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800 dark:text-amber-300">
               <Clock className="h-3 w-3" /> {suggested.length} to review
             </span>
             <button onClick={acceptAll} disabled={busyId === "all"} className="text-[11px] font-semibold text-brand-eden hover:underline disabled:opacity-60">
@@ -257,7 +257,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
           </div>
           <div className="space-y-1.5">
             {suggested.map((m) => (
-              <div key={m.id} className="rounded border border-amber-200 bg-amber-50/60 px-2.5 py-1.5">
+              <div key={m.id} className="rounded border border-amber-200 dark:border-amber-500/30 bg-amber-50/60 dark:bg-amber-500/15 px-2.5 py-1.5">
                 {editingId === m.id ? (
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-1.5">

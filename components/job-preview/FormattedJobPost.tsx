@@ -30,7 +30,7 @@ type FormattedJobPostProps = {
 function SourceBadge({ label, tone = "block" }: { label: string; tone?: "block" | "field" | "warning" }) {
   const toneClass = {
     block: "bg-brand-sweet/40 text-brand-lea dark:text-slate-100",
-    field: "bg-emerald-50 text-emerald-800",
+    field: "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",
     warning: "bg-brand-gold/25 text-brand-lea dark:text-slate-100"
   }[tone];
 

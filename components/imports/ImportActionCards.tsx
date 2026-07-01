@@ -160,12 +160,12 @@ function ImportActionCard({
             </div>
           ) : null}
           {result ? (
-            <div role="status" aria-live="polite" className="rounded border border-emerald-200 bg-emerald-50 p-2 text-xs font-semibold text-emerald-800">
+            <div role="status" aria-live="polite" className="rounded border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 p-2 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
               {result.message} Created {result.created ?? result.files ?? 0}, updated {result.updated ?? 0}, skipped {result.skipped ?? 0}.
             </div>
           ) : null}
           {error ? (
-            <div role="alert" className="rounded border border-red-200 bg-red-50 p-2 text-xs font-semibold text-red-800">
+            <div role="alert" className="rounded border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 p-2 text-xs font-semibold text-red-800 dark:text-red-300">
               {error}
             </div>
           ) : null}
@@ -329,12 +329,12 @@ export function ResumeFileUploadImportCard() {
             </div>
           ) : null}
           {result ? (
-            <div role="status" aria-live="polite" className="rounded border border-emerald-200 bg-emerald-50 p-2 text-xs font-semibold text-emerald-800">
+            <div role="status" aria-live="polite" className="rounded border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 p-2 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
               {result.message} Uploaded {result.files ?? 0}, skipped {result.skipped ?? 0}.
             </div>
           ) : null}
           {error ? (
-            <div role="alert" className="rounded border border-red-200 bg-red-50 p-2 text-xs font-semibold text-red-800">
+            <div role="alert" className="rounded border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 p-2 text-xs font-semibold text-red-800 dark:text-red-300">
               {error}
             </div>
           ) : null}
@@ -495,12 +495,12 @@ export function JobPdfImportCard() {
             </div>
           ) : null}
           {result ? (
-            <div role="status" aria-live="polite" className="rounded border border-emerald-200 bg-emerald-50 p-2 text-xs font-semibold text-emerald-800">
+            <div role="status" aria-live="polite" className="rounded border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 p-2 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
               {result.message} Created {result.created ?? result.files ?? 0}, updated {result.updated ?? 0}, skipped {result.skipped ?? 0}.
             </div>
           ) : null}
           {error ? (
-            <div role="alert" className="rounded border border-red-200 bg-red-50 p-2 text-xs font-semibold text-red-800">
+            <div role="alert" className="rounded border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 p-2 text-xs font-semibold text-red-800 dark:text-red-300">
               {error}
             </div>
           ) : null}

@@ -447,7 +447,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
       </div>
       )}
 
-      {error && <div className="mx-3 mt-3 rounded border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div>}
+      {error && <div className="mx-3 mt-3 rounded border border-red-300 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 px-3 py-2 text-xs text-red-700 dark:text-red-300">{error}</div>}
 
       {/* Link an unassigned (Imports-uploaded) file */}
       {showLink && (
@@ -587,7 +587,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
           </div>
 
           {confirmDeleteId === activeFile.id && (
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 px-4 py-2 text-sm text-red-800 dark:text-red-300">
               <span>Remove “{activeFile.displayFilename}” from this candidate?</span>
               <div className="flex gap-2">
                 <button onClick={() => handleDelete(activeFile.id)} disabled={busy} className="flex items-center gap-1 rounded bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60">

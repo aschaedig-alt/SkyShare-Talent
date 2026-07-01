@@ -17,7 +17,7 @@ export function ReadinessCard({ job, warnings, compact = false }: ReadinessCardP
   return (
     <div
       className={`rounded border px-4 py-3 ${
-        hasWarnings ? "border-brand-gold/45 bg-brand-gold/12" : "border-emerald-200 bg-emerald-50"
+        hasWarnings ? "border-brand-gold/45 bg-brand-gold/12" : "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15"
       }`}
     >
       <div className="flex items-center gap-2">

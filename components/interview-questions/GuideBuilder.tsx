@@ -207,7 +207,7 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
         ) : (
           <section className="space-y-4 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             {guide.length < length ? (
-              <p className="rounded bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+              <p className="rounded bg-amber-50 dark:bg-amber-500/15 px-3 py-2 text-xs font-medium text-amber-800 dark:text-amber-300">
                 Only {guide.length} matching question{guide.length === 1 ? "" : "s"} available — add more to the bank to reach {length}.
               </p>
             ) : null}

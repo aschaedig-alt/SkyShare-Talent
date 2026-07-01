@@ -138,12 +138,12 @@ export function PilotRequirementEditor({ requirement }: PilotRequirementEditorPr
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {message ? (
-              <span className="rounded bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+              <span className="rounded bg-emerald-50 dark:bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
                 {message}
               </span>
             ) : null}
             {error ? (
-              <span className="rounded bg-red-50 px-3 py-1 text-xs font-semibold text-red-800">
+              <span className="rounded bg-red-50 dark:bg-red-500/15 px-3 py-1 text-xs font-semibold text-red-800 dark:text-red-300">
                 {error}
               </span>
             ) : null}

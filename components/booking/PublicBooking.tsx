@@ -389,7 +389,7 @@ function BookingForm(props: {
         </label>
       </div>
 
-      {error ? <p className="mt-3 rounded border border-red-300 bg-red-50 p-2 text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="mt-3 rounded border border-red-300 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 p-2 text-sm text-red-700 dark:text-red-300">{error}</p> : null}
 
       <button
         type="submit"

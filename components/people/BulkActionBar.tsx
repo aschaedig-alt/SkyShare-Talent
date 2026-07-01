@@ -129,7 +129,7 @@ export function BulkActionBar({ count, actions, onApply, onClear, onDelete, busy
                   a.kind === "patch" && a.tone === "primary"
                     ? "bg-brand-lea text-white hover:bg-brand-eden"
                     : (a.kind === "patch" && a.tone === "danger") || a.kind === "delete"
-                      ? "border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                      ? "border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300"
                       : "border border-brand-lea/20 text-brand-lea hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
                 )}
               >

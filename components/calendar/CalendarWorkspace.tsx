@@ -53,9 +53,9 @@ const statLabels: Array<[keyof CalendarData["stats"], string]> = [
 function statusBadgeColor(status: string) {
   switch (status) {
     case "SCHEDULED":
-      return "bg-blue-100 text-blue-800";
+      return "bg-blue-100 dark:bg-sky-500/15 text-blue-800 dark:text-sky-300";
     case "COMPLETED":
-      return "bg-emerald-100 text-emerald-800";
+      return "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300";
     case "CANCELLED":
       return "bg-slate-100 text-slate-500";
     default:

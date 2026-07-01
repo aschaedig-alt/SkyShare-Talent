@@ -138,7 +138,7 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
               <span
                 className={clsx(
                   "inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-bold",
-                  usage > 0 ? "bg-brand-gold/20 text-brand-lea dark:text-slate-100" : "bg-emerald-50 text-emerald-800"
+                  usage > 0 ? "bg-brand-gold/20 text-brand-lea dark:text-slate-100" : "bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300"
                 )}
               >
                 {usage > 0 ? <AlertTriangle className="h-3.5 w-3.5" /> : null}
@@ -218,7 +218,7 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
               </p>
             ) : null}
             {error ? <p className="mt-3 text-sm font-medium text-brand-red">{error}</p> : null}
-            {message ? <p className="mt-3 text-sm font-medium text-emerald-700">{message}</p> : null}
+            {message ? <p className="mt-3 text-sm font-medium text-emerald-700 dark:text-emerald-300">{message}</p> : null}
           </>
         )}
       </section>

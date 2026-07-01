@@ -75,7 +75,7 @@ function CoverageBadge({ block, jobs }: { block: SerializedContentBlock; jobs: S
 
   if (coverage.isInAllJobs) {
     return (
-      <span className="rounded bg-emerald-50 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-emerald-800">
+      <span className="rounded bg-emerald-50 dark:bg-emerald-500/15 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-emerald-800 dark:text-emerald-300">
         All jobs
       </span>
     );

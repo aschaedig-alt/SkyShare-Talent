@@ -99,14 +99,14 @@ export function CandidateDuplicateScanCard() {
         <div
           role="status"
           aria-live="polite"
-          className="mt-3 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
+          className="mt-3 rounded border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 px-3 py-2 text-sm text-emerald-900 dark:text-emerald-300"
         >
           {summary}
         </div>
       ) : null}
 
       {error ? (
-        <div role="alert" className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
+        <div role="alert" className="mt-3 rounded border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 px-3 py-2 text-sm text-red-900 dark:text-red-300">
           {error}
         </div>
       ) : null}

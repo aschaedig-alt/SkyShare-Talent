@@ -144,8 +144,8 @@ export function JobClassificationEditor({ jobId, isPilotRole, pilotSeat, aircraf
         </p>
       )}
 
-      {err ? <p className="mt-2 text-sm font-medium text-red-700">{err}</p> : null}
-      {msg ? <p className="mt-2 text-sm font-medium text-emerald-700">{msg}</p> : null}
+      {err ? <p className="mt-2 text-sm font-medium text-red-700 dark:text-red-300">{err}</p> : null}
+      {msg ? <p className="mt-2 text-sm font-medium text-emerald-700 dark:text-emerald-300">{msg}</p> : null}
     </div>
   );
 }

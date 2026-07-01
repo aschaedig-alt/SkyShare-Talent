@@ -575,7 +575,7 @@ export function JobBlockAssembly({ job, availableBlocks, onJobUpdated }: JobBloc
             : error
               ? "border-brand-red/25 bg-brand-red/8 text-brand-red"
               : message
-                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
                 : "border-brand-lea/10 bg-brand-cloudDancer/55 text-brand-eden dark:border-white/10 dark:bg-white/5"
         }`}
       >

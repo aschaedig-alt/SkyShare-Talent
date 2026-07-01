@@ -38,7 +38,7 @@ export function DocumentChecklist({ files }: { files: FileLike[] }) {
     <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex items-center justify-between">
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Document checklist</p>
-        <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${coreMissing === 0 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+        <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${coreMissing === 0 ? "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300"}`}>
           {present}/{CHECKLIST.length}
         </span>
       </div>

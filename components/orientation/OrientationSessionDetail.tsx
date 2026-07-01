@@ -166,7 +166,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
               {rescheduling ? "Cancel" : "Reschedule"}
             </button>
             {session.status === "COMPLETE" ? (
-              <span className="rounded bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">Complete</span>
+              <span className="rounded bg-emerald-50 dark:bg-emerald-500/15 px-3 py-1 text-sm font-semibold text-emerald-800 dark:text-emerald-300">Complete</span>
             ) : (
               <Button onClick={markComplete} disabled={busy}>Mark complete</Button>
             )}
@@ -248,13 +248,13 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                     <td className="py-2 pr-2">
                       <div className="font-medium text-brand-lea dark:text-slate-100">
                         {a.name}
-                        {a.isPilot ? <span className="ml-1 rounded bg-sky-50 px-1 text-[9px] font-semibold text-sky-700">pilot</span> : null}
+                        {a.isPilot ? <span className="ml-1 rounded bg-sky-50 dark:bg-sky-500/15 px-1 text-[9px] font-semibold text-sky-700 dark:text-sky-300">pilot</span> : null}
                         {a.rescheduleCount > 0 ? <span className="ml-1 rounded bg-brand-gold/15 px-1 text-[9px] font-semibold text-brand-lea dark:text-slate-100" title="Times moved to a later orientation">moved {a.rescheduleCount}×</span> : null}
                       </div>
                       <div className="text-[10px] text-brand-grey dark:text-slate-400">{a.position ?? "—"}</div>
                     </td>
                     <td className="px-1 py-2">
-                      <select value={a.confirmed} onChange={(e) => setConfirm(a, e.target.value as ConfirmStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.confirmed === "CONFIRMED" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : a.confirmed === "TENTATIVE" ? "border-amber-300 bg-amber-50 text-amber-700" : a.confirmed === "DECLINED" ? "border-red-200 bg-red-50 text-red-700" : "border-brand-lea/15 bg-white text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400")}>
+                      <select value={a.confirmed} onChange={(e) => setConfirm(a, e.target.value as ConfirmStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.confirmed === "CONFIRMED" ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : a.confirmed === "TENTATIVE" ? "border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300" : a.confirmed === "DECLINED" ? "border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 text-red-700 dark:text-red-300" : "border-brand-lea/15 bg-white text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400")}>
                         <option value="PENDING">Pending</option>
                         <option value="TENTATIVE">Tentative</option>
                         <option value="CONFIRMED">Confirmed</option>
@@ -269,7 +269,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                           className={clsx(
                             "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-semibold transition hover:shadow-glow",
                             a.travel.status === "BOOKED"
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                              ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
                               : "border-brand-gold/40 bg-brand-gold/15 text-brand-lea"
                           )}
                         >
@@ -278,7 +278,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                         </Link>
                       ) : (
                         <div className="flex items-center gap-1">
-                          <select value={a.travelStatus} onChange={(e) => setTravel(a, e.target.value as TravelStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.travelStatus === "ARRANGED" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : a.travelStatus === "NEEDED" ? "border-brand-gold/40 bg-brand-gold/15 text-brand-lea" : "border-brand-lea/15 bg-white text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400")}>
+                          <select value={a.travelStatus} onChange={(e) => setTravel(a, e.target.value as TravelStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.travelStatus === "ARRANGED" ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : a.travelStatus === "NEEDED" ? "border-brand-gold/40 bg-brand-gold/15 text-brand-lea" : "border-brand-lea/15 bg-white text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400")}>
                             <option value="NA">Local</option>
                             <option value="NEEDED">Needed</option>
                             <option value="ARRANGED">Arranged</option>

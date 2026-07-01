@@ -13,8 +13,8 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 const ALERT_STYLE: Record<string, { row: string; tag: string; label: string }> = {
-  blocked: { row: "bg-red-50", tag: "text-red-700", label: "Overdue" },
-  urgent: { row: "bg-red-50", tag: "text-red-700", label: "Urgent" },
+  blocked: { row: "bg-red-50 dark:bg-red-500/15", tag: "text-red-700 dark:text-red-300", label: "Overdue" },
+  urgent: { row: "bg-red-50 dark:bg-red-500/15", tag: "text-red-700 dark:text-red-300", label: "Urgent" },
   missing: { row: "bg-brand-gold/10", tag: "text-brand-lea dark:text-slate-100", label: "To do" }
 };
 
@@ -59,10 +59,10 @@ function MetricCard({
 }
 
 const DRILL_STATUS_STYLE: Record<string, string> = {
-  Overdue: "bg-red-50 text-red-700",
-  "Due soon": "bg-amber-50 text-amber-700",
+  Overdue: "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+  "Due soon": "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
   "In progress": "bg-brand-gold/15 text-brand-lea dark:text-slate-100",
-  Ready: "bg-emerald-50 text-emerald-800"
+  Ready: "bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300"
 };
 
 function DrillPanel({ title, people, onClose }: { title: string; people: DrillPerson[]; onClose: () => void }) {
