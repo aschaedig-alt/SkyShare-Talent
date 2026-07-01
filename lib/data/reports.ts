@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getDocumentCurrency, type DocumentCurrency } from "@/lib/data/document-currency";
 import { getTravelSpendSummary, type TravelSpendSummary } from "@/lib/data/travel";
+import { getUpgradeAnalytics, type UpgradeAnalytics } from "@/lib/data/employee-journey";
 
 export type ReportsData = {
   pipeline: Array<{ label: string; value: number }>;
@@ -17,10 +18,11 @@ export type ReportsData = {
   };
   documentCurrency: DocumentCurrency;
   travelSpend: TravelSpendSummary;
+  pilotUpgrades: UpgradeAnalytics;
 };
 
 export async function getReportsData(): Promise<ReportsData> {
-  const [pipeline, sourceGroups, jobs, candidatesWithoutFiles, candidatesWithFiles, approvedRequirements, draftRequirements, activeRequirements, documentCurrency, travelSpend] =
+  const [pipeline, sourceGroups, jobs, candidatesWithoutFiles, candidatesWithFiles, approvedRequirements, draftRequirements, activeRequirements, documentCurrency, travelSpend, pilotUpgrades] =
     await Promise.all([
       prisma.candidate.groupBy({ by: ["stage"], _count: { stage: true } }),
       prisma.candidate.groupBy({ by: ["source"], _count: { source: true } }),
@@ -41,7 +43,8 @@ export async function getReportsData(): Promise<ReportsData> {
       prisma.pilotRequirement.count({ where: { reviewStatus: "DRAFT" } }),
       prisma.pilotRequirement.count({ where: { status: "ACTIVE" } }),
       getDocumentCurrency(),
-      getTravelSpendSummary()
+      getTravelSpendSummary(),
+      getUpgradeAnalytics()
     ]);
 
   return {
@@ -58,6 +61,7 @@ export async function getReportsData(): Promise<ReportsData> {
       activeRequirements
     },
     documentCurrency,
-    travelSpend
+    travelSpend,
+    pilotUpgrades
   };
 }

@@ -11,6 +11,15 @@ function fmtDate(iso: string) {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(iso));
 }
 
+// Human span for an average day count (upgrade timing).
+function fmtSpan(days: number | null): string {
+  if (days === null) return "—";
+  if (days < 60) return `${days} days`;
+  const months = days / 30.44;
+  if (months < 18) return `${months.toFixed(months < 3 ? 1 : 0)} mo`;
+  return `${(days / 365).toFixed(1)} yr`;
+}
+
 function MetricList({ items }: { items: Array<{ label: string; value: number }> }) {
   if (items.length === 0) {
     return <p className="text-sm text-brand-grey dark:text-slate-400">No data yet.</p>;
@@ -209,6 +218,49 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
               })}
             </div>
           </div>
+        )}
+      </section>
+
+      {/* Pilot upgrades — First Officer → Captain timing across the fleet */}
+      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Pilot upgrades</p>
+        <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">First Officer → Captain</h2>
+        <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
+          {data.pilotUpgrades.upgraded} of {data.pilotUpgrades.startedAsSIC} pilots who started as a First Officer have upgraded to Captain
+          {" "}· {data.pilotUpgrades.pilotsTracked} pilots tracked. Built from each employee&apos;s role journey.
+        </p>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: "Avg time to upgrade", value: fmtSpan(data.pilotUpgrades.avgDaysToUpgrade), tone: "text-brand-lea dark:text-slate-100" },
+            { label: "Median time", value: fmtSpan(data.pilotUpgrades.medianDaysToUpgrade), tone: "text-brand-lea dark:text-slate-100" },
+            { label: "Upgraded within 1 yr", value: `${data.pilotUpgrades.pctWithin1yr}%`, tone: "text-emerald-600 dark:text-emerald-300" },
+            { label: "Upgraded within 2 yr", value: `${data.pilotUpgrades.pctWithin2yr}%`, tone: "text-emerald-600 dark:text-emerald-300" }
+          ].map((c) => (
+            <div key={c.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
+              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{c.label}</div>
+              <div className={`mt-1 text-xl font-semibold ${c.tone}`}>{c.value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          {[
+            { label: "Upgraded once", value: data.pilotUpgrades.upgradedOnce },
+            { label: "Upgraded 2×+", value: data.pilotUpgrades.upgradedTwicePlus },
+            { label: "Upgraded 3×+", value: data.pilotUpgrades.upgradedThricePlus }
+          ].map((c) => (
+            <div key={c.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
+              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{c.label}</div>
+              <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{c.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {!data.pilotUpgrades.hasData && (
+          <p className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 px-3 py-2 text-xs text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+            No upgrades recorded yet. Record role changes on employee profiles (or import promotion history) and these numbers populate automatically.
+          </p>
         )}
       </section>
     </div>

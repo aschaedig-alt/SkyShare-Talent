@@ -8,8 +8,16 @@ import { ONBOARDING_GROUPS, groupLabel } from "@/lib/onboarding/tasks";
 import type { NewHireDetail, TaskView } from "@/lib/data/onboarding";
 import { TravelPanel } from "@/components/travel/TravelPanel";
 import type { TravelTripView, TravelerLoyalty } from "@/lib/data/travel";
+import { EmployeeJourney } from "@/components/people/EmployeeJourney";
+import type { EmployeeJourney as Journey } from "@/lib/data/employee-journey";
 
-type Props = { hire: NewHireDetail; travelTrips: TravelTripView[]; travelLoyalty: TravelerLoyalty };
+type Props = {
+  hire: NewHireDetail;
+  travelTrips: TravelTripView[];
+  travelLoyalty: TravelerLoyalty;
+  journey: Journey;
+  roleTitleOptions: string[];
+};
 
 function toDateInput(iso: string | null) {
   return iso ? iso.slice(0, 10) : "";
@@ -21,7 +29,7 @@ const STATUS_BTN: Record<TaskView["status"], { label: string; on: string }> = {
   NA: { label: "N/A", on: "bg-brand-grey text-white" }
 };
 
-export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty }: Props) {
+export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journey, roleTitleOptions }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskView[]>(hire.tasks);
   const [details, setDetails] = useState({
@@ -157,6 +165,8 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty }: Pro
       </section>
 
       {status ? <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/50 px-3 py-2 text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">{status}</div> : null}
+
+      <EmployeeJourney hireId={hire.id} journey={journey} roleTitleOptions={roleTitleOptions} />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
         {/* Details */}

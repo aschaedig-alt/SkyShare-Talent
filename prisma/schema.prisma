@@ -239,12 +239,37 @@ model NewHire {
   tasks           OnboardingTask[]
   orientationAttendances OrientationAttendee[]
   travelTrips     TravelTrip[]
+  roleAssignments RoleAssignment[]
 
   recognitionsGiven    Recognition[] @relation("giver")
   recognitionsReceived Recognition[] @relation("recipient")
   redemptions          Redemption[]
 
   @@index([stage])
+}
+
+// One role an employee has held at SkyShare (their journey). A person's current
+// role has endDate = null. transitionType classifies how they got there; an
+// "UPGRADE" is specifically a seat change SIC -> PIC (first officer -> captain),
+// which drives the pilot upgrade analytics. Pilot seats tie to the fleet
+// registry via fleetPositionSlug/seat; non-pilot roles just carry a title.
+model RoleAssignment {
+  id                String    @id @default(cuid())
+  newHireId         String
+  newHire           NewHire   @relation(fields: [newHireId], references: [id], onDelete: Cascade)
+  title             String
+  fleetPositionSlug String?
+  seat              String?   // PIC | SIC | null (non-pilot)
+  aircraft          String?
+  department        String?
+  startDate         DateTime
+  endDate           DateTime? // null = current role
+  transitionType    String    @default("HIRE") // HIRE | PROMOTION | UPGRADE | LATERAL | TRANSFER
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([newHireId])
 }
 
 model OrientationSession {
