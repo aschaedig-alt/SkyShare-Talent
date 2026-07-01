@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, Copy, Check, Link as LinkIcon, Calendar, Clock, Ban, ImageUp } from "lucide-react";
 import { clsx } from "clsx";
+import { Button } from "@/components/ui";
 import { US_TIMEZONES } from "@/lib/calendar/timezones";
 import { DEPARTMENTS } from "@/lib/calendar/departments";
 
@@ -484,7 +485,7 @@ function Settings({
         >
           <Trash2 className="h-4 w-4" /> Delete
         </button>
-        <button
+        <Button
           onClick={() =>
             run(async () => {
               await api(`/api/booking-hosts/${host.id}`, "PATCH", {
@@ -494,10 +495,9 @@ function Settings({
             })
           }
           disabled={busy}
-          className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-lea/90 disabled:opacity-50"
         >
           Save settings
-        </button>
+        </Button>
       </div>
 
       <style jsx>{`
@@ -584,7 +584,7 @@ function WeeklyAvailability({
         ))}
       </div>
       <div className="mt-4 flex justify-end">
-        <button
+        <Button
           onClick={() =>
             run(async () => {
               const rules = days.flatMap((arr, dayOfWeek) =>
@@ -594,10 +594,9 @@ function WeeklyAvailability({
             })
           }
           disabled={busy}
-          className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-lea/90 disabled:opacity-50"
         >
           Save availability
-        </button>
+        </Button>
       </div>
     </Card>
   );

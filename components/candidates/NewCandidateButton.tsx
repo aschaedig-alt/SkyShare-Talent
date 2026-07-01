@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserPlus, X } from "lucide-react";
+import { Button } from "@/components/ui";
 
 const FIELD = "w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100";
 
@@ -76,10 +77,10 @@ export function NewCandidateButton() {
               {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
             </div>
             <div className="mt-5 flex justify-end gap-2">
-              <button onClick={() => setOpen(false)} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">Cancel</button>
-              <button onClick={submit} disabled={saving} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
+              <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button onClick={submit} disabled={saving}>
                 {saving ? "Saving…" : "Create candidate"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

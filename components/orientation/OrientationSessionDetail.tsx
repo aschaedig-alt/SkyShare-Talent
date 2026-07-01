@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clsx } from "clsx";
+import { Button } from "@/components/ui";
 import type { AttendeeView, ConfirmStatus, PrepTaskView, SessionDetail, TravelStatus } from "@/lib/data/orientation";
 import type { EmailTemplateDef } from "@/lib/orientation/defaults";
 import { formatUsd } from "@/lib/travel/constants";
@@ -167,7 +168,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
             {session.status === "COMPLETE" ? (
               <span className="rounded bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">Complete</span>
             ) : (
-              <button onClick={markComplete} disabled={busy} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">Mark complete</button>
+              <Button onClick={markComplete} disabled={busy}>Mark complete</Button>
             )}
           </div>
         </div>
@@ -182,9 +183,9 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
               <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Time (MT)</span>
               <input type="time" value={resched.time} onChange={(e) => setResched({ ...resched, time: e.target.value })} className="mt-1 block rounded border border-brand-lea/20 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100" />
             </label>
-            <button onClick={saveReschedule} disabled={savingDate || !resched.date} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
+            <Button onClick={saveReschedule} disabled={savingDate || !resched.date}>
               {savingDate ? "Saving…" : "Save new date"}
-            </button>
+            </Button>
             <span className="text-xs text-brand-grey dark:text-slate-400">Attendees keep their spots; this only moves the session date/time.</span>
           </div>
         ) : null}

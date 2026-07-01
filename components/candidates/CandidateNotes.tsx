@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Send, Trash2 } from "lucide-react";
+import { Button, Textarea } from "@/components/ui";
 
 type Note = {
   id: string;
@@ -72,22 +73,16 @@ export function CandidateNotes({ candidateId, initialNotes }: { candidateId: str
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <label className="flex-1">
           <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Add a note</span>
-          <textarea
+          <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={2}
             placeholder="Record a note about this candidate…"
-            className="w-full rounded border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10"
           />
         </label>
-        <button
-          type="button"
-          onClick={add}
-          disabled={busy || !draft.trim()}
-          className="inline-flex items-center gap-1.5 rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60"
-        >
+        <Button onClick={add} disabled={busy || !draft.trim()}>
           <Send className="h-4 w-4" /> Add
-        </button>
+        </Button>
       </div>
       {error ? <p className="mt-2 text-xs font-medium text-red-700">{error}</p> : null}
 

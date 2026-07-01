@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clsx } from "clsx";
+import { Button, buttonClasses, Modal } from "@/components/ui";
 import type { Cohort, CalendarDay, SessionListItem, UnscheduledHire } from "@/lib/data/orientation";
 import { formatDateTimeWithZone, mountainWallClockToIso } from "@/lib/calendar/format";
 
@@ -98,19 +99,19 @@ function CohortCard({ c, onCreate, onAddMissing, busy }: { c: Cohort; onCreate: 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {c.sessionId ? (
           <>
-            <Link href={`/orientation/${c.sessionId}`} className="rounded bg-brand-lea px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-eden hover:shadow-glow">Open session</Link>
+            <Link href={`/orientation/${c.sessionId}`} className={buttonClasses({ variant: "primary", size: "sm", className: "hover:shadow-glow" })}>Open session</Link>
             {c.missingHireIds.length > 0 ? (
-              <button onClick={() => onAddMissing(c)} disabled={busy} className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-50 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
+              <Button variant="secondary" size="sm" onClick={() => onAddMissing(c)} disabled={busy}>
                 Add {c.missingHireIds.length} to session
-              </button>
+              </Button>
             ) : (
               <span className="text-xs text-emerald-700">All linked to the session</span>
             )}
           </>
         ) : (
-          <button onClick={() => onCreate(c)} disabled={busy} className="rounded bg-brand-lea px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
+          <Button size="sm" onClick={() => onCreate(c)} disabled={busy}>
             Create session + add all {c.hires.length}
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -227,7 +228,7 @@ export function OrientationOverview({
           <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Orientation</h1>
           <p className="mt-1 max-w-2xl text-sm text-brand-grey dark:text-slate-400">Plan each in-person orientation: attendees, prep checklist with owners, headcounts, and email templates.</p>
         </div>
-        <button onClick={() => setAdding(true)} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden">+ New session</button>
+        <Button onClick={() => setAdding(true)}>+ New session</Button>
       </section>
 
       {unscheduled.length > 0 ? (
@@ -312,9 +313,7 @@ export function OrientationOverview({
       )}
 
       {adding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50" onClick={() => !saving && setAdding(false)} />
-          <div className="relative w-full max-w-md rounded bg-white p-5 shadow-2xl dark:bg-brand-panel">
+        <Modal open={adding} onClose={() => setAdding(false)} busy={saving}>
             <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">New orientation session</h2>
             <div className="mt-4 space-y-3">
               <div className="flex gap-3">
@@ -333,11 +332,10 @@ export function OrientationOverview({
               {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
             </div>
             <div className="mt-5 flex justify-end gap-2">
-              <button onClick={() => setAdding(false)} disabled={saving} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">Cancel</button>
-              <button onClick={create} disabled={saving} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">{saving ? "Creating..." : "Create session"}</button>
+              <Button variant="secondary" onClick={() => setAdding(false)} disabled={saving}>Cancel</Button>
+              <Button onClick={create} disabled={saving}>{saving ? "Creating..." : "Create session"}</Button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

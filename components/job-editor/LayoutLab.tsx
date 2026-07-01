@@ -21,6 +21,7 @@ import {
 import { splitCleanLines } from "@/lib/formatting/text";
 import { RichText, RichTextParagraphs, RichTextMixed } from "@/components/shared/RichText";
 import { FormattedJobPost } from "@/components/job-preview/FormattedJobPost";
+import { Button } from "@/components/ui";
 
 const GridLayout = WidthProvider(RGL);
 const STORAGE_KEY = "skyshare-layout-lab-v2";
@@ -610,8 +611,8 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
           <button onClick={() => setShowGrid((v) => !v)} className={`inline-flex items-center gap-1.5 rounded border px-3 py-2 text-sm font-semibold transition ${showGrid ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-lea hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"}`}>
             <Grid3x3 className="h-4 w-4" /> Grid
           </button>
-          <button onClick={copyLayout} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden">{copied ? "Copied!" : "Copy layout"}</button>
-          <button onClick={reset} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">Reset</button>
+          <Button onClick={copyLayout}>{copied ? "Copied!" : "Copy layout"}</Button>
+          <Button variant="secondary" onClick={reset}>Reset</Button>
         </div>
       </section>
 

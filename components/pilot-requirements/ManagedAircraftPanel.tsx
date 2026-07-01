@@ -11,6 +11,7 @@ import {
   type ManagedVariantInput
 } from "@/app/pilot-requirements/scoring-actions";
 import type { ManagedVariantView } from "@/lib/data/pilot-requirements";
+import { Button } from "@/components/ui";
 
 type Props = {
   requirementId: string;
@@ -106,13 +107,9 @@ export function ManagedAircraftPanel({ requirementId, variants, canEdit }: Props
             {variants.length} {variants.length === 1 ? "aircraft" : "aircraft"}
           </span>
           {canEdit && mode === "none" ? (
-            <button
-              type="button"
-              onClick={openAdd}
-              className="inline-flex items-center gap-1.5 rounded-element bg-brand-lea px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-eden"
-            >
+            <Button size="sm" onClick={openAdd}>
               <Plus className="h-3.5 w-3.5" /> Add aircraft
-            </button>
+            </Button>
           ) : null}
         </div>
       </div>

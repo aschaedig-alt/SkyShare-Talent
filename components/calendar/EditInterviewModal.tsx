@@ -3,6 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Loader, Trash2, ClipboardCheck } from "lucide-react";
+import { Button, buttonClasses } from "@/components/ui";
 import type { CalendarData } from "@/lib/data/calendar";
 import { interviewTypes, INTERVIEW_TYPE_META, DEFAULT_INTERVIEW_TYPE } from "@/lib/calendar/interview-types";
 import { resolveDepartmentKey } from "@/lib/calendar/departments";
@@ -136,10 +137,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
               <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">{interview.candidate.displayName}</p>
             </div>
             <div className="flex items-center gap-3">
-              <Link
-                href={`/interviews/${interview.id}`}
-                className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
-              >
+              <Link href={`/interviews/${interview.id}`} className={buttonClasses({ variant: "secondary", size: "sm" })}>
                 <ClipboardCheck className="h-4 w-4" /> Scorecards
               </Link>
               <button onClick={onClose} className="text-brand-grey hover:text-brand-lea dark:text-slate-400">
@@ -338,14 +336,10 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="flex items-center gap-1 rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-lea/90 disabled:opacity-50"
-              >
+              <Button type="submit" disabled={saving}>
                 {saving && <Loader className="h-4 w-4 animate-spin" />}
                 {saving ? "Saving..." : "Save changes"}
-              </button>
+              </Button>
             </div>
           </div>
         </form>

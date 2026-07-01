@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@/components/ui";
 import type { RecruitingJobDetail, RecruitingJobsData } from "@/lib/data/recruiting-jobs";
 import { JobClassificationEditor } from "@/components/recruiting-jobs/JobClassificationEditor";
 import { JobListsPanel } from "@/components/recruiting-jobs/JobListsPanel";
@@ -56,9 +57,7 @@ function HeaderPanel({ query }: { query: string }) {
           placeholder="Search title, department, aircraft, base, status"
           className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
         />
-        <button type="submit" className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden">
-          Search
-        </button>
+        <Button type="submit">Search</Button>
       </form>
     </section>
   );

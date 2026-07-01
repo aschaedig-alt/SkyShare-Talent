@@ -19,6 +19,7 @@ import {
   FileWarning
 } from "lucide-react";
 import { clsx } from "clsx";
+import { Button } from "@/components/ui";
 import { DOCUMENT_TYPES, detectDocumentType, isExpirableType } from "@/lib/files/document-types";
 
 function effectiveType(file: { documentType: string | null; displayFilename: string }): string {
@@ -487,9 +488,9 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
           <p className="font-semibold text-brand-lea dark:text-slate-100">No documents yet</p>
           <p className="max-w-sm text-sm text-brand-grey dark:text-slate-400">Add a resume, pilot app, or other PDF — it previews right here.</p>
           <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
-            <button onClick={() => fileInputRef.current?.click()} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-eden">
+            <Button onClick={() => fileInputRef.current?.click()}>
               Upload document
-            </button>
+            </Button>
             <button onClick={openLink} className="flex items-center gap-1.5 rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/40 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
               <Link2 className="h-4 w-4" /> Link an uploaded file
             </button>

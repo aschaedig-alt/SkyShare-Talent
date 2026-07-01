@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { Lock, ShieldCheck, RotateCcw, Plus, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui";
 import { saveScoringConfig } from "@/app/pilot-requirements/scoring-actions";
 import type { ScoringSetupData } from "@/lib/data/scoring-setup";
 import {
@@ -180,13 +181,9 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
             <div className="text-[11px] font-semibold text-brand-lea dark:text-slate-100">
               {checked.size} position{checked.size === 1 ? "" : "s"} selected
             </div>
-            <button
-              type="button"
-              onClick={applyToChecked}
-              className="w-full rounded-element bg-brand-lea px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-eden"
-            >
+            <Button size="sm" onClick={applyToChecked} className="w-full">
               Apply these settings
-            </button>
+            </Button>
             <button
               type="button"
               onClick={() => setChecked(new Set())}
@@ -319,8 +316,8 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
               </p>
             </div>
             {canEdit ? (
-              <button
-                type="button"
+              <Button
+                size="sm"
                 onClick={() =>
                   update((draft) => {
                     draft.customCerts = [
@@ -329,10 +326,10 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
                     ];
                   })
                 }
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-element bg-brand-lea px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-eden"
+                className="shrink-0"
               >
                 <Plus className="h-3.5 w-3.5" /> Add cert
-              </button>
+              </Button>
             ) : null}
           </div>
           {cfg.customCerts && cfg.customCerts.length > 0 ? (

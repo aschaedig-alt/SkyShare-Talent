@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Button } from "@/components/ui";
 
 type ScanResult = {
   message?: string;
@@ -75,14 +76,13 @@ export function CandidateDuplicateScanCard() {
             candidate-by-candidate comparison.
           </p>
         </div>
-        <button
-          type="button"
+        <Button
           onClick={runScan}
           disabled={status === "scanning"}
-          className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-lea/90 disabled:cursor-wait disabled:opacity-70"
+          className="shadow-sm disabled:cursor-wait"
         >
           {status === "scanning" ? "Scanning..." : "Scan candidate duplicates"}
-        </button>
+        </Button>
       </div>
 
       {status === "scanning" ? (

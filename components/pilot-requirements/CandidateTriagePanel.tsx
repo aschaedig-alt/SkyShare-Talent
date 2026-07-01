@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { SlidersHorizontal, RefreshCw, Download, X } from "lucide-react";
+import { Button } from "@/components/ui";
 import { scanRequirementMatches, exportMatchContacts, type MatchContactRow } from "@/app/pilot-requirements/scoring-actions";
 import { MatchCard, formatScanTime } from "@/components/pilot-requirements/MatchCard";
 import type { PilotRequirementCandidateMatch } from "@/lib/matching/pilot-requirement-matches";
@@ -111,15 +112,10 @@ export function CandidateTriagePanel({ matches: initialMatches, requirementId, c
           <span className="font-semibold text-brand-lea dark:text-slate-100">{pool.toLocaleString()}</span> active candidates in system
           {scan ? <span> · scanned {formatScanTime(scan.at)}</span> : null}
         </div>
-        <button
-          type="button"
-          onClick={runScan}
-          disabled={scanning || !requirementId}
-          className="inline-flex items-center gap-1.5 rounded-element bg-brand-lea px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60"
-        >
+        <Button size="sm" onClick={runScan} disabled={scanning || !requirementId}>
           <RefreshCw className={`h-3.5 w-3.5 ${scanning ? "animate-spin" : ""}`} />
           {scanning ? "Scanning…" : "Scan candidates"}
-        </button>
+        </Button>
       </div>
       {scanError ? <p className="mt-1.5 text-[11px] text-value-customerFocus-dark">{scanError}</p> : null}
 

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { Button } from "@/components/ui";
 
 type CandidateFileUploadButtonProps = {
   candidateId: string;
@@ -81,14 +82,13 @@ export function CandidateFileUploadButton({ candidateId }: CandidateFileUploadBu
         className="sr-only"
         onChange={(event) => uploadFiles(event.currentTarget.files)}
       />
-      <button
-        type="button"
+      <Button
         onClick={() => inputRef.current?.click()}
         disabled={status === "uploading"}
-        className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-lea/90 disabled:cursor-wait disabled:opacity-70"
+        className="shadow-sm disabled:cursor-wait"
       >
         {status === "uploading" ? "Uploading..." : "Upload file"}
-      </button>
+      </Button>
       {message ? (
         <div
           role={status === "error" ? "alert" : "status"}

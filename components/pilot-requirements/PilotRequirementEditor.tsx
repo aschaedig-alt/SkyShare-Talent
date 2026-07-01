@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { PilotRequirementDetail } from "@/lib/data/pilot-requirements";
+import { Button } from "@/components/ui";
 
 type PilotRequirementEditorProps = {
   requirement: PilotRequirementDetail;
@@ -146,13 +147,9 @@ export function PilotRequirementEditor({ requirement }: PilotRequirementEditorPr
                 {error}
               </span>
             ) : null}
-            <button
-              type="submit"
-              disabled={isPending}
-              className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            <Button type="submit" disabled={isPending} className="disabled:cursor-not-allowed">
               {isPending ? "Saving..." : "Save requirement"}
-            </button>
+            </Button>
           </div>
         </div>
 

@@ -5,6 +5,7 @@ import { PilotRequirementEditor } from "@/components/pilot-requirements/PilotReq
 import { CandidateTriagePanel } from "@/components/pilot-requirements/CandidateTriagePanel";
 import { FleetPositionEditor } from "@/components/pilot-requirements/FleetPositionEditor";
 import { ManagedAircraftPanel } from "@/components/pilot-requirements/ManagedAircraftPanel";
+import { Button } from "@/components/ui";
 
 type PilotRequirementsWorkspaceProps = {
   data: PilotRequirementsData;
@@ -268,12 +269,9 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
               placeholder="Search aircraft, seat, base, status, hours"
               className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
             />
-            <button
-              type="submit"
-              className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden"
-            >
+            <Button type="submit">
               Search
-            </button>
+            </Button>
           </form>
         </div>
       </section>

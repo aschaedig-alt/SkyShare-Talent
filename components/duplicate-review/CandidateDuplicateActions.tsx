@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GitMerge, X, Loader, ArrowRight } from "lucide-react";
 import { clsx } from "clsx";
+import { Button } from "@/components/ui";
 import type { DuplicateCandidateBrief } from "@/lib/data/duplicate-review";
 
 type CandidateDuplicateActionsProps = {
@@ -150,14 +151,10 @@ export function CandidateDuplicateActions({ itemId, primary, secondary }: Candid
             Merge <span className="font-semibold">{dropName}</span> into <span className="font-semibold">{keepName}</span>? All of {dropName}&apos;s files, applications, interviews, and notes move to {keepName}, and {dropName} is archived.
           </p>
           <div className="mt-2 flex gap-2">
-            <button
-              onClick={doMerge}
-              disabled={busy !== null}
-              className="flex items-center gap-1 rounded bg-brand-lea px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-eden disabled:opacity-60"
-            >
+            <Button size="sm" onClick={doMerge} disabled={busy !== null} className="gap-1">
               {busy === "merge" ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <GitMerge className="h-3.5 w-3.5" />}
               Confirm merge
-            </button>
+            </Button>
             <button onClick={() => setConfirmMerge(false)} disabled={busy !== null} className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea dark:border-white/10 dark:text-slate-100">
               Cancel
             </button>

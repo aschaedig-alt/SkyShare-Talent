@@ -7,6 +7,7 @@ import type { InterviewQuestionItem } from "@/lib/data/interview-questions";
 import { COMPANY_VALUES } from "@/lib/compliments/constants";
 import { DEPARTMENTS, DEPARTMENT_LABELS } from "@/lib/calendar/departments";
 import { InterviewTabs } from "@/components/interview-questions/InterviewTabs";
+import { Button } from "@/components/ui";
 
 const CATEGORY_LABELS: Record<string, string> = {
   BEHAVIORAL: "Behavioral",
@@ -158,14 +159,9 @@ function QuestionForm({
         <button type="button" onClick={onCancel} className="rounded px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400">
           Cancel
         </button>
-        <button
-          type="button"
-          onClick={save}
-          disabled={busy || form.text.trim().length < 5}
-          className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60"
-        >
+        <Button onClick={save} disabled={busy || form.text.trim().length < 5}>
           {busy ? "Saving…" : initial ? "Save changes" : "Add question"}
-        </button>
+        </Button>
       </div>
     </div>
   );

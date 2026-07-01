@@ -6,6 +6,7 @@ import type { InterviewQuestionItem } from "@/lib/data/interview-questions";
 import { COMPANY_VALUES } from "@/lib/compliments/constants";
 import { DEPARTMENTS, DEPARTMENT_LABELS } from "@/lib/calendar/departments";
 import { InterviewTabs } from "@/components/interview-questions/InterviewTabs";
+import { Button } from "@/components/ui";
 
 const CATEGORY_LABELS: Record<string, string> = {
   BEHAVIORAL: "Behavioral",
@@ -185,9 +186,9 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
         </div>
 
         <div className="mt-4 flex items-center gap-2">
-          <button onClick={build} className="inline-flex items-center gap-1.5 rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden">
+          <Button onClick={build}>
             <Wand2 className="h-4 w-4" /> {guide ? "Regenerate" : "Generate guide"}
-          </button>
+          </Button>
           {guide && guide.length > 0 ? (
             <button onClick={copyGuide} className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:text-slate-400">
               {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />} {copied ? "Copied" : "Copy"}

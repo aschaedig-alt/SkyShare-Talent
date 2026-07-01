@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { clsx } from "clsx";
 import { FileText, Briefcase, StickyNote, CalendarClock, History, Plane, Clock, Sparkles, Mail } from "lucide-react";
+import { Button } from "@/components/ui";
 import { CandidateDocuments } from "@/components/candidates/CandidateDocuments";
 import { DocumentChecklist } from "@/components/candidates/DocumentChecklist";
 import { CurrencyPanel } from "@/components/candidates/CurrencyPanel";
@@ -305,9 +306,9 @@ export function CandidateProfileWorkspace({
             </div>
           </div>
           <div className="mt-4 flex gap-2">
-            <button onClick={handleSave} disabled={isSaving} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white hover:bg-brand-eden disabled:opacity-50">
+            <Button onClick={handleSave} disabled={isSaving}>
               {isSaving ? "Saving…" : "Save changes"}
-            </button>
+            </Button>
             <button onClick={handleCancel} disabled={isSaving} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
               Cancel
             </button>

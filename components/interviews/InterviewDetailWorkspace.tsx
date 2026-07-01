@@ -15,6 +15,7 @@ import {
   type ScorecardItem
 } from "@/lib/interviews/scorecard";
 import { InterviewerPicker } from "@/components/calendar/InterviewerPicker";
+import { Button } from "@/components/ui";
 import { formatDateTimeWithZone } from "@/lib/calendar/format";
 
 const inputCls = "w-full rounded border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10";
@@ -190,9 +191,9 @@ function ScorecardEditor({
         <button type="button" onClick={onCancel} className="rounded px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400">
           Cancel
         </button>
-        <button type="button" onClick={save} disabled={busy || !interviewer.trim()} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
+        <Button onClick={save} disabled={busy || !interviewer.trim()}>
           {busy ? "Saving…" : initial ? "Save scorecard" : "Add scorecard"}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -274,15 +275,14 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
 
       {/* Add */}
       {!creating ? (
-        <button
+        <Button
           onClick={() => {
             setEditingId(null);
             setCreating(true);
           }}
-          className="inline-flex items-center gap-1.5 rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden"
         >
           <Plus className="h-4 w-4" /> Add scorecard
-        </button>
+        </Button>
       ) : (
         <ScorecardEditor detail={detail} onCancel={() => setCreating(false)} onSaved={afterSave} />
       )}

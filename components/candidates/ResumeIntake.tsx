@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileUp, X, Check, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui";
 
 type IntakeResult = {
   filename: string;
@@ -125,10 +126,10 @@ export function ResumeIntake({
                 )}
                 {error && <p className="mt-3 text-xs font-semibold text-red-600">{error}</p>}
                 <div className="mt-4 flex justify-end gap-2">
-                  <button onClick={() => { setOpen(false); reset(); }} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">Cancel</button>
-                  <button onClick={submit} disabled={busy} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
+                  <Button variant="secondary" onClick={() => { setOpen(false); reset(); }}>Cancel</Button>
+                  <Button onClick={submit} disabled={busy}>
                     {busy ? (progress ? `Processing ${progress.done + 1} of ${progress.total}…` : "Processing…") : `Create ${files.length || ""} candidate${files.length === 1 ? "" : "s"}`.trim()}
-                  </button>
+                  </Button>
                 </div>
               </>
             ) : (
@@ -152,8 +153,8 @@ export function ResumeIntake({
                 </div>
                 <p className="mt-3 text-[11px] text-brand-grey dark:text-slate-400">Names are best-guess from the file — open a profile to fix any that are off.</p>
                 <div className="mt-4 flex justify-end gap-2">
-                  <button onClick={reset} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">Upload more</button>
-                  <button onClick={() => { setOpen(false); reset(); }} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden">Done</button>
+                  <Button variant="secondary" onClick={reset}>Upload more</Button>
+                  <Button onClick={() => { setOpen(false); reset(); }}>Done</Button>
                 </div>
               </>
             )}
