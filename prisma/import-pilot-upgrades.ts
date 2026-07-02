@@ -117,7 +117,7 @@ async function main() {
 
     const code = clean(c[0]);
     const importKey = code ? `upgrade-tracker:${code}` : null;
-    let hire = byName.get(normName(name)) ?? (importKey ? byKey.get(importKey) : undefined);
+    const hire = byName.get(normName(name)) ?? (importKey ? byKey.get(importKey) : undefined);
     let willCreate = false;
     if (!hire) {
       unmatched++;

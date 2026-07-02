@@ -224,18 +224,18 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
       {/* Pilot upgrades — First Officer → Captain timing across the fleet */}
       <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Pilot upgrades</p>
-        <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">First Officer → Captain</h2>
+        <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Role &amp; aircraft progressions</h2>
         <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-          {data.pilotUpgrades.upgraded} of {data.pilotUpgrades.startedAsSIC} pilots who started as a First Officer have upgraded to Captain
-          {" "}· {data.pilotUpgrades.pilotsTracked} pilots tracked. Built from each employee&apos;s role journey.
+          {data.pilotUpgrades.upgraded} of {data.pilotUpgrades.pilotsTracked} pilots have moved to a new role or aircraft
+          {data.pilotUpgrades.captainUpgrades > 0 ? ` · ${data.pilotUpgrades.captainUpgrades} made Captain (First Officer → Captain)` : ""}. Built from each employee&apos;s role journey.
         </p>
 
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { label: "Avg time to upgrade", value: fmtSpan(data.pilotUpgrades.avgDaysToUpgrade), tone: "text-brand-lea dark:text-slate-100" },
+            { label: "Avg time to first move", value: fmtSpan(data.pilotUpgrades.avgDaysToUpgrade), tone: "text-brand-lea dark:text-slate-100" },
             { label: "Median time", value: fmtSpan(data.pilotUpgrades.medianDaysToUpgrade), tone: "text-brand-lea dark:text-slate-100" },
-            { label: "Upgraded within 1 yr", value: `${data.pilotUpgrades.pctWithin1yr}%`, tone: "text-emerald-600 dark:text-emerald-300" },
-            { label: "Upgraded within 2 yr", value: `${data.pilotUpgrades.pctWithin2yr}%`, tone: "text-emerald-600 dark:text-emerald-300" }
+            { label: "Progressed within 1 yr", value: `${data.pilotUpgrades.pctWithin1yr}%`, tone: "text-emerald-600 dark:text-emerald-300" },
+            { label: "Progressed within 2 yr", value: `${data.pilotUpgrades.pctWithin2yr}%`, tone: "text-emerald-600 dark:text-emerald-300" }
           ].map((c) => (
             <div key={c.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
               <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{c.label}</div>
@@ -246,9 +246,9 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
 
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           {[
-            { label: "Upgraded once", value: data.pilotUpgrades.upgradedOnce },
-            { label: "Upgraded 2×+", value: data.pilotUpgrades.upgradedTwicePlus },
-            { label: "Upgraded 3×+", value: data.pilotUpgrades.upgradedThricePlus }
+            { label: "Progressed once", value: data.pilotUpgrades.upgradedOnce },
+            { label: "Progressed 2×+", value: data.pilotUpgrades.upgradedTwicePlus },
+            { label: "Progressed 3×+", value: data.pilotUpgrades.upgradedThricePlus }
           ].map((c) => (
             <div key={c.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
               <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{c.label}</div>
@@ -259,7 +259,7 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
 
         {!data.pilotUpgrades.hasData && (
           <p className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 px-3 py-2 text-xs text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-            No upgrades recorded yet. Record role changes on employee profiles (or import promotion history) and these numbers populate automatically.
+            No progressions recorded yet. Record role changes on employee profiles (or import promotion history) and these numbers populate automatically.
           </p>
         )}
       </section>

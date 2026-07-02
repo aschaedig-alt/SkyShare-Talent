@@ -147,17 +147,17 @@ export async function getEmployeeJourney(hireId: string): Promise<EmployeeJourne
 // ---------------------------------------------------------------------------
 
 export type UpgradeAnalytics = {
-  pilotsTracked: number; // employees with at least one pilot-seat role
-  startedAsSIC: number; // first pilot seat was SIC (eligible to upgrade)
-  upgraded: number; // of startedAsSIC, how many reached PIC
-  avgDaysToUpgrade: number | null;
+  pilotsTracked: number; // employees with a pilot role history (a seat somewhere)
+  upgraded: number; // pilots with >=1 progression (role/airframe/seat move)
+  captainUpgrades: number; // subset: pilots who made an SIC->PIC (First Officer -> Captain) step
+  avgDaysToUpgrade: number | null; // to first progression
   medianDaysToUpgrade: number | null;
-  pctWithin1yr: number; // of startedAsSIC, upgraded within 365 days of hire
+  pctWithin1yr: number; // of pilotsTracked, first progression within 365 days
   pctWithin2yr: number;
-  upgradedOnce: number; // exactly 1 SIC->PIC step
+  upgradedOnce: number; // exactly 1 progression
   upgradedTwicePlus: number;
   upgradedThricePlus: number;
-  hasData: boolean; // any recorded upgrades yet
+  hasData: boolean;
 };
 
 export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
@@ -185,8 +185,8 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
   }
 
   let pilotsTracked = 0;
-  let startedAsSIC = 0;
   let upgraded = 0;
+  let captainUpgrades = 0;
   let within1yr = 0;
   let within2yr = 0;
   let upgradedOnce = 0;
@@ -196,27 +196,20 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
 
   for (const roles of byHire.values()) {
     const ordered = orderRoles(roles);
-    const seats = ordered.map((r) => seatOf(r));
-    if (!seats.some((s) => s === "PIC" || s === "SIC")) continue; // not a pilot
+    if (!ordered.some((r) => seatOf(r) !== null)) continue; // not a pilot
     pilotsTracked++;
 
-    const firstPilotSeat = seats.find((s) => s === "PIC" || s === "SIC");
-    if (firstPilotSeat !== "SIC") continue; // hired straight into PIC — not an upgrade candidate
-    startedAsSIC++;
-
-    const flags = markUpgrades(ordered);
-    const upgradeCount = flags.filter(Boolean).length;
-    if (upgradeCount === 0) continue;
+    // A "progression" = any move to a new role/airframe/seat (every role after the first).
+    const progressions = ordered.length - 1;
+    if (markUpgrades(ordered).some(Boolean)) captainUpgrades++; // SIC -> PIC subset
+    if (progressions < 1) continue;
 
     upgraded++;
-    if (upgradeCount === 1) upgradedOnce++;
-    if (upgradeCount >= 2) upgradedTwicePlus++;
-    if (upgradeCount >= 3) upgradedThricePlus++;
+    if (progressions === 1) upgradedOnce++;
+    if (progressions >= 2) upgradedTwicePlus++;
+    if (progressions >= 3) upgradedThricePlus++;
 
-    const hireStart = ordered[0].startDate.getTime();
-    const firstUpgradeIdx = flags.findIndex(Boolean);
-    const firstUpgradeStart = ordered[firstUpgradeIdx].startDate.getTime();
-    const days = Math.max(0, Math.round((firstUpgradeStart - hireStart) / DAY));
+    const days = Math.max(0, Math.round((ordered[1].startDate.getTime() - ordered[0].startDate.getTime()) / DAY));
     daysToUpgrade.push(days);
     if (days <= 365) within1yr++;
     if (days <= 730) within2yr++;
@@ -229,12 +222,12 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
     const mid = Math.floor(s.length / 2);
     return s.length % 2 ? s[mid] : Math.round((s[mid - 1] + s[mid]) / 2);
   })();
-  const pct = (n: number) => (startedAsSIC ? Math.round((n / startedAsSIC) * 100) : 0);
+  const pct = (n: number) => (pilotsTracked ? Math.round((n / pilotsTracked) * 100) : 0);
 
   return {
     pilotsTracked,
-    startedAsSIC,
     upgraded,
+    captainUpgrades,
     avgDaysToUpgrade: avg,
     medianDaysToUpgrade: median,
     pctWithin1yr: pct(within1yr),
