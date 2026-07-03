@@ -150,7 +150,7 @@ async function main() {
       if (ex?.isHire) continue; // same seat as hire = initial training, not a move
       map.set(k, { title: t.title, seat: t.seat, slug: t.slug, aircraft: t.aircraft, date: t.date, isHire: false });
     }
-    let seq = [...map.values()].sort((a, b) => a.date.getTime() - b.date.getTime());
+    const seq = [...map.values()].sort((a, b) => a.date.getTime() - b.date.getTime());
     if (!seq.length) continue;
     if (!seq.some((r) => r.isHire)) seq[0].isHire = true;
 
