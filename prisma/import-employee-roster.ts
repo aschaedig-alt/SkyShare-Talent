@@ -45,17 +45,21 @@ const clean = (v: unknown) => String(v ?? "").trim();
 type YearRec = { year: number; position: string; department: string; status: string; hire: Date | null; term: Date | null; birthday: Date | null; anniversary: Date | null };
 type Person = { display: string; key: string; years: Map<number, YearRec> };
 
-function loadPeople(): Person[] {
+function loadPeople(): { people: Person[]; snapshotYears: number[] } {
   const wb = XLSX.readFile(FILE);
   const people = new Map<string, Person>();
+  const snapshotYears = new Set<number>();
 
   for (const sheet of wb.SheetNames) {
-    const m = /^(\d{4})\./.exec(sheet);
+    // Year-snapshot tabs: "2024" (bare), "YYYY.12.31", or "2022.09.20 COVID".
+    // Excludes VaxPilots.../Terminated/TimeCards/Contract/Notes.
+    const m = /^(\d{4})(?:$|\.| )/.exec(sheet);
     if (!m) continue;
     const year = Number(m[1]);
     const rows = XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[sheet], { header: 1, defval: "" });
     const hi = rows.findIndex((r) => r.some((c) => /^(name:?|employee name)$/i.test(clean(c))));
     if (hi < 0) continue;
+    snapshotYears.add(year);
     const hdr = rows[hi].map((c) => clean(c).toLowerCase());
     const find = (re: RegExp, avoid?: RegExp) => hdr.findIndex((h) => re.test(h) && (!avoid || !avoid.test(h)));
     const iName = find(/name/);
@@ -84,7 +88,7 @@ function loadPeople(): Person[] {
       });
     }
   }
-  return [...people.values()];
+  return { people: [...people.values()], snapshotYears: [...snapshotYears].sort((a, b) => a - b) };
 }
 
 const jan1 = (y: number) => new Date(Date.UTC(y, 0, 1));
@@ -101,7 +105,7 @@ type Derived = {
   latestPosition: string | null;
 };
 
-function derive(p: Person, latestYear: number): Derived {
+function derive(p: Person, latestYear: number, snapshotYears: number[]): Derived {
   const recs = [...p.years.values()].sort((a, b) => a.year - b.year);
   const yearsPresent = recs.map((r) => r.year);
   const firstYear = yearsPresent[0];
@@ -114,11 +118,14 @@ function derive(p: Person, latestYear: number): Derived {
   const inLatest = p.years.has(latestYear);
   const current = inLatest && !/terminat/i.test(latestStatus);
 
-  // Contiguous runs of present years -> stints (a gap = left & came back).
+  // Runs of present years -> stints. A gap only counts as "left & came back" if a
+  // snapshot year actually exists in the gap and the person is absent from it
+  // (a missing snapshot year — e.g. no 2023 tab — is NOT a departure).
+  const gapIsReal = (a: number, b: number) => snapshotYears.some((sy) => sy > a && sy < b);
   const runs: Array<[number, number]> = [];
   let runStart = firstYear, prev = firstYear;
   for (const y of yearsPresent.slice(1)) {
-    if (y - prev > 1) { runs.push([runStart, prev]); runStart = y; }
+    if (gapIsReal(prev, y)) { runs.push([runStart, prev]); runStart = y; }
     prev = y;
   }
   runs.push([runStart, prev]);
@@ -165,8 +172,8 @@ async function main() {
   const sampleArg = process.argv.find((a, i) => process.argv[i - 1] === "--sample");
   const sample = sampleArg ? normName(sampleArg) : null;
 
-  const people = loadPeople();
-  const latestYear = Math.max(...people.flatMap((p) => [...p.years.keys()]));
+  const { people, snapshotYears } = loadPeople();
+  const latestYear = Math.max(...snapshotYears);
 
   const existing = await prisma.newHire.findMany({ select: { id: true, name: true, importKey: true, terminationDate: true, employmentStatus: true } });
   const byName = new Map(existing.map((h) => [normName(h.name), h]));
@@ -176,7 +183,7 @@ async function main() {
 
   for (const p of people) {
     total++;
-    const d = derive(p, latestYear);
+    const d = derive(p, latestYear, snapshotYears);
     if (d.stints.length > 1) rehires++;
     if (d.roles.length) withRoles++;
 
@@ -205,6 +212,11 @@ async function main() {
 
     if (!commit) continue;
 
+    // Roster "owns" a person if we created them from the MASTER (or they're new);
+    // those we fully (re)build. People from the term-list / pilot import keep their
+    // authoritative recent dates — we only enrich them with a birthday.
+    const rosterOwned = !match || (match.importKey?.startsWith("roster:") ?? false);
+
     await prisma.$transaction(async (tx) => {
       let hireId = match?.id;
       if (!hireId) {
@@ -222,20 +234,31 @@ async function main() {
           }
         });
         hireId = createdHire.id;
+      } else if (rosterOwned) {
+        await tx.newHire.update({
+          where: { id: hireId },
+          data: {
+            startDate: d.start,
+            birthday: d.birthday,
+            department: d.department ?? undefined,
+            position: d.latestPosition ?? undefined,
+            ...(d.current
+              ? { stage: "POST_ONBOARD", employmentStatus: "ACTIVE", terminationDate: null }
+              : { stage: "ARCHIVED", employmentStatus: "TERMINATED", terminationDate: d.end })
+          }
+        });
       } else {
-        // Merge = enrichment only: add the birthday MASTER provides, but keep the
-        // person's authoritative recent start/termination/stage (from the term-list
-        // or pilot import) untouched.
         await tx.newHire.update({ where: { id: hireId }, data: { birthday: d.birthday ?? undefined } });
       }
-      // Replace stints (idempotent).
-      await tx.employmentStint.deleteMany({ where: { newHireId: hireId } });
-      for (const s of d.stints) await tx.employmentStint.create({ data: { newHireId: hireId, startDate: s.start, endDate: s.end, note: s.note } });
-      // Roles: only seed from the roster if the person has no journey yet (don't clobber pilot journeys).
-      const existingRoles = await tx.roleAssignment.count({ where: { newHireId: hireId } });
-      if (existingRoles <= 1 && d.roles.length) {
-        await tx.roleAssignment.deleteMany({ where: { newHireId: hireId } });
-        for (const r of d.roles) await tx.roleAssignment.create({ data: { newHireId: hireId, title: r.title, fleetPositionSlug: r.slug, seat: r.seat, aircraft: r.aircraft, department: null, startDate: r.start, endDate: r.end, transitionType: r.transitionType } });
+
+      if (rosterOwned) {
+        await tx.employmentStint.deleteMany({ where: { newHireId: hireId } });
+        for (const s of d.stints) await tx.employmentStint.create({ data: { newHireId: hireId, startDate: s.start, endDate: s.end, note: s.note } });
+        const existingRoles = await tx.roleAssignment.count({ where: { newHireId: hireId } });
+        if (existingRoles <= 1 && d.roles.length) {
+          await tx.roleAssignment.deleteMany({ where: { newHireId: hireId } });
+          for (const r of d.roles) await tx.roleAssignment.create({ data: { newHireId: hireId, title: r.title, fleetPositionSlug: r.slug, seat: r.seat, aircraft: r.aircraft, department: null, startDate: r.start, endDate: r.end, transitionType: r.transitionType } });
+        }
       }
       committed++;
     });
