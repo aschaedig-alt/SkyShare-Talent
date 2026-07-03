@@ -94,21 +94,27 @@ function parseRole(raw: string): { title: string; seat: "PIC" | "SIC"; slug: str
 }
 
 type Training = { title: string; seat: "PIC" | "SIC"; slug: string | null; aircraft: string | null; date: Date };
+type PersonRec = { trainings: Training[]; startDate: Date | null; hireRole: Training | null; display: string };
 
-function loadTrainings(): Map<string, Training[]> {
+function loadTrainings(): Map<string, PersonRec> {
   const lines = readFileSync(FILE, "utf8").split(/\r?\n/);
-  const byPerson = new Map<string, Training[]>();
+  const byPerson = new Map<string, PersonRec>();
   for (const line of lines.slice(1)) {
     const c = splitLine(line);
     const name = clean(c[0]);
     if (!name || /^archived$/i.test(name)) continue;
+    const key = canonName(name);
+    const display = name.replace(/\(.*?\)/g, "").replace(/\s+/g, " ").trim();
+    const rec = byPerson.get(key) ?? { trainings: [], startDate: null, hireRole: null, display };
     const role = parseRole(c[3]);
     const date = parseDate(c[7]); // Training Start Date
-    if (!role || !date) continue;
-    const key = canonName(name);
-    const list = byPerson.get(key) ?? [];
-    list.push({ ...role, date });
-    byPerson.set(key, list);
+    const start = parseDate(c[4]); // Start Date (hire) — present for external new hires
+    if (start && (!rec.startDate || start < rec.startDate)) {
+      rec.startDate = start;
+      if (role) rec.hireRole = { ...role, date: start };
+    }
+    if (role && date) rec.trainings.push({ ...role, date });
+    byPerson.set(key, rec);
   }
   return byPerson;
 }
@@ -126,35 +132,63 @@ async function main() {
   });
   const byName = new Map(existing.map((h) => [normName(h.name), h]));
 
-  let people = 0, matched = 0, updated = 0, added = 0;
+  type R = { title: string; seat: string | null; slug: string | null; aircraft: string | null; date: Date; isHire: boolean };
+  const roleData = (hireId: string, r: R, end: Date | null, tt: string) => ({ newHireId: hireId, title: r.title, fleetPositionSlug: r.slug, seat: r.seat, aircraft: r.aircraft, department: null, startDate: r.date, endDate: end, transitionType: tt });
+  const chain = (seq: R[]) => {
+    let prevSeat: string | null = null;
+    return seq.map((r, i) => {
+      const end = i < seq.length - 1 ? seq[i + 1].date : null;
+      const tt = i === 0 ? "HIRE" : prevSeat === "SIC" && r.seat === "PIC" ? "UPGRADE" : "PROMOTION";
+      if (r.seat) prevSeat = r.seat;
+      return { r, end, tt };
+    });
+  };
+
+  let people = 0, matched = 0, created = 0, updated = 0, added = 0;
   const unmatched: string[] = [];
   const samples: string[] = [];
 
-  for (const [key, trs] of trainings) {
+  for (const [key, rec] of trainings) {
     people++;
+    const trs = [...rec.trainings].sort((a, b) => a.date.getTime() - b.date.getTime());
     const hire = byName.get(key);
-    if (!hire) { unmatched.push(key); continue; }
-    matched++;
 
-    // Merge every known role by title; training date wins over an inferred date,
-    // but never move the HIRE role's date.
-    type R = { title: string; seat: string | null; slug: string | null; aircraft: string | null; date: Date; isHire: boolean };
+    // Seed the role map with an anchor: existing journey (matched) or the hire
+    // role from the training sheet (new person). Training rows then fill/add,
+    // preferring the training date but never moving the HIRE role.
     const map = new Map<string, R>();
-    for (const r of hire.roleAssignments) {
-      if (!r.startDate) continue;
-      map.set(normTitle(r.title), { title: r.title, seat: r.seat, slug: r.fleetPositionSlug, aircraft: r.aircraft, date: r.startDate, isHire: r.transitionType === "HIRE" });
+    if (hire) {
+      for (const r of hire.roleAssignments) {
+        if (!r.startDate) continue;
+        map.set(normTitle(r.title), { title: r.title, seat: r.seat, slug: r.fleetPositionSlug, aircraft: r.aircraft, date: r.startDate, isHire: r.transitionType === "HIRE" });
+      }
+    } else if (rec.hireRole) {
+      const h = rec.hireRole;
+      map.set(normTitle(h.title), { title: h.title, seat: h.seat, slug: h.slug, aircraft: h.aircraft, date: rec.startDate ?? h.date, isHire: true });
     }
-    for (const t of trs.sort((a, b) => a.date.getTime() - b.date.getTime())) {
+    for (const t of trs) {
       const k = normTitle(t.title);
-      const ex = map.get(k);
-      if (ex?.isHire) continue; // same seat as hire = initial training, not a move
+      if (map.get(k)?.isHire) continue;
       map.set(k, { title: t.title, seat: t.seat, slug: t.slug, aircraft: t.aircraft, date: t.date, isHire: false });
     }
     const seq = [...map.values()].sort((a, b) => a.date.getTime() - b.date.getTime());
-    if (!seq.length) continue;
+    if (!seq.length) { if (!hire) unmatched.push(key); continue; }
     if (!seq.some((r) => r.isHire)) seq[0].isHire = true;
 
-    // Only act if training actually changes the journey (adds a role or a new date).
+    if (!hire) {
+      // New person from the training sheet — create them (needs a start date).
+      if (!rec.startDate) { unmatched.push(key); continue; }
+      created++;
+      if (sample && key === sample) { samples.push(`${rec.display} [CREATE]:`); for (const r of seq) samples.push(`  ${r.title} [${r.isHire ? "HIRE" : r.seat}] ${r.date.toISOString().slice(0, 10)}`); }
+      if (!commit) continue;
+      await prisma.$transaction(async (tx) => {
+        const nh = await tx.newHire.create({ data: { name: rec.display, startDate: seq[0].date, position: seq[seq.length - 1].title, stage: "POST_ONBOARD", employmentStatus: "ACTIVE", importKey: `training:${key}` } });
+        for (const { r, end, tt } of chain(seq)) await tx.roleAssignment.create({ data: roleData(nh.id, r, end, tt) });
+      });
+      continue;
+    }
+
+    matched++;
     const before = hire.roleAssignments.length;
     const changed = seq.length !== before || trs.some((t) => !hire.roleAssignments.some((r) => normTitle(r.title) === normTitle(t.title) && r.startDate && Math.abs(r.startDate.getTime() - t.date.getTime()) < DAY));
     if (seq.length > before) added++;
@@ -166,22 +200,14 @@ async function main() {
     }
 
     if (!commit || !changed) continue;
-
     await prisma.$transaction(async (tx) => {
       await tx.roleAssignment.deleteMany({ where: { newHireId: hire.id } });
-      let prevSeat: string | null = null;
-      for (let i = 0; i < seq.length; i++) {
-        const r = seq[i];
-        const end = i < seq.length - 1 ? seq[i + 1].date : null;
-        const tt = i === 0 ? "HIRE" : prevSeat === "SIC" && r.seat === "PIC" ? "UPGRADE" : "PROMOTION";
-        await tx.roleAssignment.create({ data: { newHireId: hire.id, title: r.title, fleetPositionSlug: r.slug, seat: r.seat, aircraft: r.aircraft, department: null, startDate: r.date, endDate: end, transitionType: tt } });
-        if (r.seat) prevSeat = r.seat;
-      }
+      for (const { r, end, tt } of chain(seq)) await tx.roleAssignment.create({ data: roleData(hire.id, r, end, tt) });
       await tx.newHire.update({ where: { id: hire.id }, data: { position: seq[seq.length - 1].title } });
     });
   }
 
-  console.log(JSON.stringify({ commit, trainingPeople: people, matched, unmatched: unmatched.length, journeysChanged: updated, journeysGainedRoles: added }, null, 2));
+  console.log(JSON.stringify({ commit, trainingPeople: people, matched, created, unmatched: unmatched.length, journeysChanged: updated, journeysGainedRoles: added }, null, 2));
   if (samples.length) console.log("\n" + samples.join("\n"));
   if (!sample && unmatched.length) console.log(`\nUNMATCHED (${unmatched.length}): ${unmatched.slice(0, 40).join(", ")}`);
 }
