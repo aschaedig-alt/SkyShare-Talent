@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { Plane, TrendingUp, MapPin, Award, Trash2, Plus, Sparkles } from "lucide-react";
+import { Plane, TrendingUp, MapPin, Award, Trash2, Plus, Sparkles, Repeat } from "lucide-react";
 import type { EmployeeJourney as Journey, JourneyRole } from "@/lib/data/employee-journey";
 import { Button, Badge, Modal, Input, EmptyState, type BadgeTone } from "@/components/ui";
 
@@ -112,6 +112,14 @@ export function EmployeeJourney({ hireId, journey, roleTitleOptions }: Props) {
                   <TrendingUp className="h-3.5 w-3.5" /> {journey.upgradeCount} upgrade{journey.upgradeCount === 1 ? "" : "s"}
                 </span>
               ) : null}
+            </p>
+          ) : null}
+          {journey.stints.length > 1 ? (
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-brand-grey dark:text-slate-400">
+              <span className="inline-flex items-center gap-1 font-semibold text-brand-eden dark:text-slate-300">
+                <Repeat className="h-3.5 w-3.5" /> Rehired — {journey.stints.length} stints
+              </span>
+              <span>· {journey.stints.map((s) => `${fmtDate(s.start)}–${s.end ? fmtDate(s.end) : "present"}`).join(", ")}</span>
             </p>
           ) : null}
         </div>

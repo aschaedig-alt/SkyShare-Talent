@@ -213,6 +213,8 @@ model NewHire {
   orientationDate DateTime?
   // Last day with SkyShare — set for former employees (employmentStatus TERMINATED).
   terminationDate DateTime?
+  // Date of birth — dates only, used for recognition/"congrats" (no other PII stored).
+  birthday        DateTime?
   // Lifecycle: ACTIVE (being onboarded) -> POST_ONBOARD (maintenance) -> ARCHIVED
   stage            String   @default("ACTIVE")
   onboardedAt      DateTime?
@@ -240,6 +242,7 @@ model NewHire {
   orientationAttendances OrientationAttendee[]
   travelTrips     TravelTrip[]
   roleAssignments RoleAssignment[]
+  employmentStints EmploymentStint[]
 
   recognitionsGiven    Recognition[] @relation("giver")
   recognitionsReceived Recognition[] @relation("recipient")
@@ -268,6 +271,22 @@ model RoleAssignment {
   notes             String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+
+  @@index([newHireId])
+}
+
+// One period of employment (a "stint"). Most people have one; a rehire has two+
+// (they left and came back). endDate null = currently employed in this stint.
+// Tenure sums stint durations; the timeline shows the leave/return gap.
+model EmploymentStint {
+  id         String    @id @default(cuid())
+  newHireId  String
+  newHire    NewHire   @relation(fields: [newHireId], references: [id], onDelete: Cascade)
+  startDate  DateTime
+  endDate    DateTime? // null = current
+  note       String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@index([newHireId])
 }

@@ -27,11 +27,14 @@ export type JourneyRole = {
   isUpgrade: boolean; // this role is an SIC -> PIC step up from the prior role
 };
 
+export type JourneyStint = { start: string | null; end: string | null; note: string | null };
+
 export type EmployeeJourney = {
   roles: JourneyRole[];
   totalTenureDays: number | null;
   roleCount: number;
   upgradeCount: number; // SIC -> PIC steps in this person's history
+  stints: JourneyStint[]; // employment periods; >1 = a rehire (left & came back)
 };
 
 type RawRole = {
@@ -92,21 +95,26 @@ function markUpgrades(ordered: RawRole[]): boolean[] {
 
 export async function getEmployeeJourney(hireId: string): Promise<EmployeeJourney> {
   const now = Date.now();
-  const roles = (await prisma.roleAssignment.findMany({
-    where: { newHireId: hireId },
-    select: {
-      id: true,
-      title: true,
-      fleetPositionSlug: true,
-      seat: true,
-      aircraft: true,
-      department: true,
-      startDate: true,
-      endDate: true,
-      transitionType: true,
-      createdAt: true
-    }
-  })) as RawRole[];
+  const [roles, stintRows] = (await Promise.all([
+    prisma.roleAssignment.findMany({
+      where: { newHireId: hireId },
+      select: {
+        id: true,
+        title: true,
+        fleetPositionSlug: true,
+        seat: true,
+        aircraft: true,
+        department: true,
+        startDate: true,
+        endDate: true,
+        transitionType: true,
+        createdAt: true
+      }
+    }),
+    prisma.employmentStint.findMany({ where: { newHireId: hireId }, orderBy: { startDate: "asc" }, select: { startDate: true, endDate: true, note: true } })
+  ])) as [RawRole[], { startDate: Date; endDate: Date | null; note: string | null }[]];
+
+  const stints: JourneyStint[] = stintRows.map((s) => ({ start: iso(s.startDate), end: iso(s.endDate), note: s.note }));
 
   const ordered = orderRoles(roles);
   const upgradeFlags = markUpgrades(ordered);
@@ -132,13 +140,18 @@ export async function getEmployeeJourney(hireId: string): Promise<EmployeeJourne
   const first = ordered[0];
   const lastEnd = ordered.length ? ordered[ordered.length - 1].endDate : null;
   const tenureEnd = lastEnd ? lastEnd.getTime() : now;
-  const totalTenureDays = first ? Math.max(0, Math.round((tenureEnd - first.startDate.getTime()) / DAY)) : null;
+  const rolesSpan = first ? Math.max(0, Math.round((tenureEnd - first.startDate.getTime()) / DAY)) : null;
+  // Prefer summed stint time (so a rehire's gap isn't counted as tenure).
+  const stintTenure = stintRows.length
+    ? stintRows.reduce((acc, s) => acc + Math.max(0, Math.round(((s.endDate ? s.endDate.getTime() : now) - s.startDate.getTime()) / DAY)), 0)
+    : null;
 
   return {
     roles: journeyRoles,
-    totalTenureDays,
+    totalTenureDays: stintTenure ?? rolesSpan,
     roleCount: journeyRoles.length,
-    upgradeCount: upgradeFlags.filter(Boolean).length
+    upgradeCount: upgradeFlags.filter(Boolean).length,
+    stints
   };
 }
 

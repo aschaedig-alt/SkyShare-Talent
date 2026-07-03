@@ -10,6 +10,7 @@ const protectedPagePrefixes = [
   "/command-center",
   "/compliments",
   "/duplicate-review",
+  "/employees",
   "/imports",
   "/interview-questions",
   "/interviews",

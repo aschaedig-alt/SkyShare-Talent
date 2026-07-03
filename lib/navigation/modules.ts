@@ -129,6 +129,7 @@ export const navigationGroups: readonly NavigationGroup[] = [
         label: "People",
         items: [
           { id: "people", href: "/people", label: "Pre-onboarding", icon: UserPlus },
+          { id: "people", href: "/employees", label: "Employees", icon: Users },
           { id: "people", href: "/orientation", label: "Orientation", icon: CalendarCheck },
           { id: "people", href: "/travel", label: "Travel", icon: Plane },
           { id: "people", href: "/compliments", label: "Compliments", icon: Sparkles }
