@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { Plane, TrendingUp, MapPin, Award, Trash2, Plus, Sparkles, Repeat } from "lucide-react";
+import { Plane, TrendingUp, MapPin, Award, Trash2, Plus, Pencil, Sparkles, Repeat } from "lucide-react";
 import type { EmployeeJourney as Journey, JourneyRole } from "@/lib/data/employee-journey";
 import { Button, Badge, Modal, Input, EmptyState, type BadgeTone } from "@/components/ui";
 
@@ -44,6 +44,12 @@ const TRANSITION_OPTIONS = [
   { value: "TRANSFER", label: "Transfer" }
 ];
 
+// Editing an existing step allows setting the first role explicitly as a Hire.
+const EDIT_TRANSITION_OPTIONS = [{ value: "HIRE", label: "Hired" }, ...TRANSITION_OPTIONS.slice(1)];
+
+// ISO string -> yyyy-mm-dd for a <input type="date">.
+const dateInput = (iso: string | null) => (iso ? iso.slice(0, 10) : "");
+
 function seatLabel(seat: string | null): string | null {
   if (seat === "PIC") return "Captain";
   if (seat === "SIC") return "First Officer";
@@ -57,6 +63,8 @@ export function EmployeeJourney({ hireId, journey, roleTitleOptions }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busyDelete, setBusyDelete] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", startDate: "", transitionType: "", department: "", notes: "" });
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", startDate: "", endDate: "", transitionType: "", department: "" });
 
   const tenure = useMemo(() => duration(journey.totalTenureDays), [journey.totalTenureDays]);
 
@@ -80,6 +88,42 @@ export function EmployeeJourney({ hireId, journey, roleTitleOptions }: Props) {
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not record the role change.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openEdit(role: JourneyRole) {
+    setEditForm({
+      title: role.title,
+      startDate: dateInput(role.startDate),
+      endDate: dateInput(role.endDate),
+      transitionType: role.transitionType,
+      department: role.department ?? ""
+    });
+    setError(null);
+    setEditing(role.id);
+  }
+
+  async function saveEdit() {
+    if (!editForm.title.trim() || !editForm.startDate) {
+      setError("A role and a start date are required.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/new-hires/roles/${editing}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm)
+      });
+      const data = (await res.json().catch(() => null)) as { message?: string } | null;
+      if (!res.ok) throw new Error(data?.message ?? "Could not update the role.");
+      setEditing(null);
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not update the role.");
     } finally {
       setSaving(false);
     }
@@ -145,6 +189,7 @@ export function EmployeeJourney({ hireId, journey, roleTitleOptions }: Props) {
               role={role}
               isLast={i === journey.roles.length - 1}
               busyDelete={busyDelete === role.id}
+              onEdit={() => openEdit(role)}
               onDelete={() => removeRole(role.id)}
             />
           ))}
@@ -202,11 +247,58 @@ export function EmployeeJourney({ hireId, journey, roleTitleOptions }: Props) {
           <Button onClick={addRole} disabled={saving}>{saving ? "Saving…" : "Add to journey"}</Button>
         </div>
       </Modal>
+
+      <Modal open={editing !== null} onClose={() => setEditing(null)} busy={saving}>
+        <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Edit role</h2>
+        <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
+          Correct an approximate date, title, or transition. Leave the end date blank if this is the person&apos;s current role.
+        </p>
+        <div className="mt-4 space-y-3">
+          <label className="block">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Role</span>
+            <Input
+              list="fleet-role-options"
+              autoFocus
+              value={editForm.title}
+              onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+              placeholder="e.g. CJ2 Captain"
+              className="mt-1"
+            />
+          </label>
+          <div className="flex gap-3">
+            <label className="block w-1/2">
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Start date</span>
+              <Input type="date" value={editForm.startDate} onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })} className="mt-1" />
+            </label>
+            <label className="block w-1/2">
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">End date <span className="font-normal normal-case tracking-normal text-brand-grey/70">(blank = current)</span></span>
+              <Input type="date" value={editForm.endDate} onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })} className="mt-1" />
+            </label>
+          </div>
+          <label className="block">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Type</span>
+            <select
+              value={editForm.transitionType}
+              onChange={(e) => setEditForm({ ...editForm, transitionType: e.target.value })}
+              className="mt-1 w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+            >
+              {EDIT_TRANSITION_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </label>
+          {error ? <p className="text-sm font-medium text-red-700 dark:text-red-300">{error}</p> : null}
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setEditing(null)} disabled={saving}>Cancel</Button>
+          <Button onClick={saveEdit} disabled={saving}>{saving ? "Saving…" : "Save changes"}</Button>
+        </div>
+      </Modal>
     </section>
   );
 }
 
-function JourneyStep({ role, isLast, busyDelete, onDelete }: { role: JourneyRole; isLast: boolean; busyDelete: boolean; onDelete: () => void }) {
+function JourneyStep({ role, isLast, busyDelete, onEdit, onDelete }: { role: JourneyRole; isLast: boolean; busyDelete: boolean; onEdit: () => void; onDelete: () => void }) {
   const meta = TRANSITION_META[role.transitionType] ?? TRANSITION_META.PROMOTION;
   const seat = seatLabel(role.seat);
   const upgrade = role.isUpgrade;
@@ -238,14 +330,23 @@ function JourneyStep({ role, isLast, busyDelete, onDelete }: { role: JourneyRole
               {[seat, role.aircraft && role.aircraft !== role.title ? role.aircraft : null, role.department].filter(Boolean).join(" · ") || "—"}
             </p>
           </div>
-          <button
-            onClick={onDelete}
-            disabled={busyDelete}
-            aria-label="Remove role"
-            className="shrink-0 rounded p-1 text-brand-grey/60 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:text-slate-500 dark:hover:bg-red-500/15 dark:hover:text-red-300"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+          <div className="flex shrink-0 items-center gap-0.5">
+            <button
+              onClick={onEdit}
+              aria-label="Edit role"
+              className="rounded p-1 text-brand-grey/60 transition hover:bg-brand-gold/15 hover:text-brand-eden dark:text-slate-500 dark:hover:bg-white/10 dark:hover:text-slate-200"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={onDelete}
+              disabled={busyDelete}
+              aria-label="Remove role"
+              className="rounded p-1 text-brand-grey/60 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:text-slate-500 dark:hover:bg-red-500/15 dark:hover:text-red-300"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-brand-grey dark:text-slate-400">
           <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" /> {fmtDate(role.startDate)} – {role.current ? "Present" : fmtDate(role.endDate)}</span>
