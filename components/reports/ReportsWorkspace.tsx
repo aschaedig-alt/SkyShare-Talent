@@ -1,17 +1,23 @@
+"use client";
+
+import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
+import { clsx } from "clsx";
 import type { ReportsData } from "@/lib/data/reports";
-import { formatUsd, travelPurposeLabel } from "@/lib/travel/constants";
+import type { UpgradePilot } from "@/lib/data/employee-journey";
+import { formatUsd, travelPurposeLabel, travelStatusLabel } from "@/lib/travel/constants";
 
 type ReportsWorkspaceProps = {
   data: ReportsData;
   logoDataUrl?: string | null;
 };
 
-function fmtDate(iso: string) {
+function fmtDate(iso: string | null) {
+  if (!iso) return "—";
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(iso));
 }
 
-// Human span for an average day count (upgrade timing).
+// Human span for a day count (upgrade timing).
 function fmtSpan(days: number | null): string {
   if (days === null) return "—";
   if (days < 60) return `${days} days`;
@@ -20,27 +26,531 @@ function fmtSpan(days: number | null): string {
   return `${(days / 365).toFixed(1)} yr`;
 }
 
-function MetricList({ items }: { items: Array<{ label: string; value: number }> }) {
-  if (items.length === 0) {
-    return <p className="text-sm text-brand-grey dark:text-slate-400">No data yet.</p>;
-  }
+function yearOf(iso: string | null): number | null {
+  if (!iso) return null;
+  const y = new Date(iso).getFullYear();
+  return Number.isFinite(y) ? y : null;
+}
 
-  const max = Math.max(...items.map((item) => item.value), 1);
+// ---------------------------------------------------------------------------
+// "The climb" — cumulative role/aircraft progressions across the fleet over
+// time. One rising area (all progressions) with a Captain-milestone line, so
+// the growth of everyone's advancement reads at a glance.
+// ---------------------------------------------------------------------------
+function ClimbChart({ pilots }: { pilots: UpgradePilot[] }) {
+  const model = useMemo(() => {
+    const perYear = new Map<number, { total: number; captain: number }>();
+    for (const p of pilots) {
+      // Every step after the first is a progression event, dated by its start.
+      for (let i = 1; i < p.steps.length; i++) {
+        const y = yearOf(p.steps[i].date);
+        if (y === null) continue;
+        const bucket = perYear.get(y) ?? { total: 0, captain: 0 };
+        bucket.total += 1;
+        if (p.steps[i].isUpgrade) bucket.captain += 1;
+        perYear.set(y, bucket);
+      }
+    }
+    const years = [...perYear.keys()].sort((a, b) => a - b);
+    if (years.length === 0) return null;
+    const first = years[0];
+    const last = years[years.length - 1];
+    const span: number[] = [];
+    for (let y = first; y <= last; y++) span.push(y);
+
+    let cumT = 0;
+    let cumC = 0;
+    const points = span.map((y) => {
+      const b = perYear.get(y) ?? { total: 0, captain: 0 };
+      cumT += b.total;
+      cumC += b.captain;
+      return { year: y, total: cumT, captain: cumC, yearTotal: b.total, yearCaptain: b.captain };
+    });
+    return { points, maxY: cumT };
+  }, [pilots]);
+
+  if (!model) return null;
+
+  const W = 720;
+  const H = 240;
+  const padL = 40;
+  const padR = 16;
+  const padT = 18;
+  const padB = 30;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const n = model.points.length;
+  const maxY = Math.max(model.maxY, 1);
+
+  const x = (i: number) => padL + (n === 1 ? plotW / 2 : (plotW * i) / (n - 1));
+  const y = (v: number) => padT + plotH * (1 - v / maxY);
+
+  const linePts = model.points.map((p, i) => `${x(i)},${y(p.total)}`);
+  const areaPath = `M ${x(0)},${y(0)} L ${linePts.join(" L ")} L ${x(n - 1)},${y(0)} Z`;
+  const linePath = `M ${linePts.join(" L ")}`;
+  const capPath = `M ${model.points.map((p, i) => `${x(i)},${y(p.captain)}`).join(" L ")}`;
+
+  // A few horizontal gridlines with value labels.
+  const ticks = 3;
+  const gridVals = Array.from({ length: ticks + 1 }, (_, i) => Math.round((maxY * i) / ticks));
+  // Thin year labels if crowded.
+  const labelEvery = n > 9 ? 2 : 1;
 
   return (
-    <div className="space-y-2">
-      {items.map((item, i) => (
-        <div key={`${item.label}-${i}`} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">{item.label}</span>
-            <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">{item.value}</span>
-          </div>
-          <div className="mt-2 h-1 rounded-full bg-brand-gold/20">
-            <div className="h-1 rounded-full bg-brand-sweet" style={{ width: `${Math.max(10, (item.value / max) * 100)}%` }} />
-          </div>
-        </div>
+    <div className="w-full overflow-x-auto">
+      <style>{`
+        @keyframes climb-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+        @keyframes climb-draw { to { stroke-dashoffset: 0; } }
+        .climb-area { animation: climb-rise .7s ease-out both; }
+        .climb-line { stroke-dasharray: 2400; stroke-dashoffset: 2400; animation: climb-draw 1.1s ease-out .1s forwards; }
+        @media (prefers-reduced-motion: reduce) {
+          .climb-area, .climb-line { animation: none; opacity: 1; stroke-dashoffset: 0; }
+        }
+      `}</style>
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full min-w-[520px]" role="img" aria-label="Cumulative pilot progressions over time">
+        <defs>
+          <linearGradient id="climbFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#eaaa00" stopOpacity="0.42" />
+            <stop offset="100%" stopColor="#eaaa00" stopOpacity="0.04" />
+          </linearGradient>
+        </defs>
+
+        {gridVals.map((v) => (
+          <g key={v}>
+            <line x1={padL} y1={y(v)} x2={W - padR} y2={y(v)} stroke="currentColor" className="text-brand-lea/10 dark:text-white/10" strokeWidth={1} />
+            <text x={padL - 8} y={y(v) + 4} textAnchor="end" className="fill-brand-grey text-[11px] dark:fill-slate-400">
+              {v}
+            </text>
+          </g>
+        ))}
+
+        <path d={areaPath} fill="url(#climbFill)" className="climb-area" />
+        <path d={linePath} fill="none" stroke="#0d2c43" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" className="climb-line dark:stroke-white" />
+        <path d={capPath} fill="none" stroke="#eaaa00" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray="5 4" />
+
+        {model.points.map((p, i) => (
+          <g key={p.year}>
+            <circle cx={x(i)} cy={y(p.total)} r={3.5} className="fill-brand-lea dark:fill-white" />
+            <title>{`${p.year}: ${p.total} total progressions (${p.captain} to Captain) · +${p.yearTotal} this year`}</title>
+            {i % labelEvery === 0 && (
+              <text x={x(i)} y={H - 10} textAnchor="middle" className="fill-brand-grey text-[11px] dark:fill-slate-400">
+                {p.year}
+              </text>
+            )}
+          </g>
+        ))}
+
+        {/* Endpoint value callout */}
+        <text x={x(n - 1)} y={y(model.maxY) - 10} textAnchor="end" className="fill-brand-lea text-[13px] font-bold dark:fill-slate-100">
+          {model.maxY} moves
+        </text>
+      </svg>
+
+      <div className="mt-1 flex items-center gap-4 pl-1 text-[11px] font-medium text-brand-grey dark:text-slate-400">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-4 rounded-sm" style={{ background: "linear-gradient(#eaaa00aa,#eaaa0022)" }} /> All progressions
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-0 w-4 border-t-2 border-dashed border-brand-gold" /> Made Captain
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// One step in a pilot's mini journey (aircraft + seat), upgrade steps glow gold.
+function seatChip(seat: string | null, isUpgrade: boolean) {
+  if (isUpgrade) return "border-brand-gold/60 bg-brand-gold/15 text-brand-lea dark:text-brand-gold ring-2 ring-brand-gold/50 shadow-glow";
+  if (seat === "PIC") return "border-brand-gold/30 bg-brand-gold/10 text-brand-lea dark:text-slate-100";
+  if (seat === "SIC") return "border-brand-eden/30 bg-brand-eden/10 text-brand-eden dark:border-white/15 dark:bg-white/5 dark:text-slate-200";
+  return "border-brand-lea/10 bg-brand-cloudDancer/60 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-300";
+}
+
+function PilotJourney({ steps }: { steps: UpgradePilot["steps"] }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {steps.map((s, i) => (
+        <Fragment key={i}>
+          {i > 0 && (
+            <span className={clsx("text-sm leading-none", s.isUpgrade ? "font-bold text-brand-gold" : "text-brand-grey/50")} aria-hidden>
+              {s.isUpgrade ? "↗" : "→"}
+            </span>
+          )}
+          <span className={clsx("inline-flex flex-col rounded border px-2 py-1 transition", seatChip(s.seat, s.isUpgrade))}>
+            <span className="text-xs font-semibold leading-tight">{s.title}</span>
+            <span className="text-[9px] uppercase tracking-wide opacity-70">
+              {i === 0 ? "Hired" : s.isUpgrade ? "Captain" : "Move"} · {fmtDate(s.date)}
+            </span>
+          </span>
+        </Fragment>
       ))}
     </div>
+  );
+}
+
+type Bucket = "advanced" | "once" | "twice" | "thrice" | "captain";
+
+function matchesBucket(p: UpgradePilot, b: Bucket): boolean {
+  switch (b) {
+    case "advanced":
+      return p.progressions >= 1;
+    case "once":
+      return p.progressions === 1;
+    case "twice":
+      return p.progressions >= 2;
+    case "thrice":
+      return p.progressions >= 3;
+    case "captain":
+      return p.madeCaptain;
+  }
+}
+
+function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"] }) {
+  const [bucket, setBucket] = useState<Bucket>("advanced");
+
+  const tiles: { key: Bucket; label: string; value: number; hint?: string }[] = [
+    { key: "advanced", label: "Advanced", value: upgrades.upgraded, hint: "≥ 1 move" },
+    { key: "once", label: "Once", value: upgrades.upgradedOnce, hint: "1 move" },
+    { key: "twice", label: "Twice or more", value: upgrades.upgradedTwicePlus, hint: "≥ 2 moves" },
+    { key: "thrice", label: "3× or more", value: upgrades.upgradedThricePlus, hint: "≥ 3 moves" },
+    { key: "captain", label: "Made Captain", value: upgrades.captainUpgrades, hint: "FO → Captain" }
+  ];
+  const maxTile = Math.max(...tiles.map((t) => t.value), 1);
+
+  const filtered = useMemo(() => upgrades.pilots.filter((p) => matchesBucket(p, bucket)), [upgrades.pilots, bucket]);
+  const activeTile = tiles.find((t) => t.key === bucket);
+
+  return (
+    <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Fleet progression</p>
+          <h2 className="text-xl font-semibold text-brand-lea dark:text-slate-100">How pilots are climbing</h2>
+          <p className="mt-1 max-w-2xl text-sm text-brand-grey dark:text-slate-400">
+            {upgrades.upgraded} of {upgrades.pilotsTracked} tracked pilots have advanced to a new seat or aircraft
+            {upgrades.captainUpgrades > 0 ? `, and ${upgrades.captainUpgrades} have made Captain` : ""}. Click any figure to see exactly who.
+          </p>
+        </div>
+      </div>
+
+      {!upgrades.hasData ? (
+        <p className="mt-4 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 px-3 py-2 text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+          No progressions recorded yet. Record role changes on employee profiles (or import promotion history) and this fills in automatically.
+        </p>
+      ) : (
+        <>
+          {/* Headline timing stats */}
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: "Avg time to first move", value: fmtSpan(upgrades.avgDaysToUpgrade) },
+              { label: "Median time", value: fmtSpan(upgrades.medianDaysToUpgrade) },
+              { label: "Advanced within 1 yr", value: `${upgrades.pctWithin1yr}%` },
+              { label: "Advanced within 2 yr", value: `${upgrades.pctWithin2yr}%` }
+            ].map((c) => (
+              <div key={c.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
+                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{c.label}</div>
+                <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{c.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* The climb graph */}
+          <div className="mt-5 rounded border border-brand-lea/10 bg-gradient-to-b from-brand-cloudDancer/40 to-transparent p-4 dark:border-white/10 dark:from-white/5">
+            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">
+              Cumulative advancements over time
+            </div>
+            <div className="mt-2">
+              <ClimbChart pilots={upgrades.pilots} />
+            </div>
+          </div>
+
+          {/* Clickable buckets */}
+          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+            {tiles.map((t) => {
+              const active = t.key === bucket;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setBucket(t.key)}
+                  aria-pressed={active}
+                  className={clsx(
+                    "group flex flex-col rounded border p-3 text-left transition",
+                    active
+                      ? "border-brand-gold bg-brand-lea text-white shadow-glow dark:bg-brand-lea"
+                      : "border-brand-lea/10 bg-brand-cloudDancer/45 hover:border-brand-gold/50 hover:shadow-glow dark:border-white/10 dark:bg-white/5"
+                  )}
+                >
+                  <span className={clsx("text-2xl font-bold tabular-nums", active ? "text-brand-gold" : "text-brand-lea dark:text-slate-100")}>
+                    {t.value}
+                  </span>
+                  <span className={clsx("text-xs font-semibold", active ? "text-white" : "text-brand-lea dark:text-slate-200")}>{t.label}</span>
+                  <span className={clsx("text-[10px]", active ? "text-white/70" : "text-brand-grey dark:text-slate-400")}>{t.hint}</span>
+                  <span className={clsx("mt-2 h-1 rounded-full", active ? "bg-brand-gold/30" : "bg-brand-gold/20")}>
+                    <span className="block h-1 rounded-full bg-brand-gold" style={{ width: `${Math.max(8, (t.value / maxTile) * 100)}%` }} />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Roster drill-down */}
+          <div className="mt-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">
+                {activeTile?.label} — {filtered.length} {filtered.length === 1 ? "pilot" : "pilots"}
+              </p>
+              <p className="text-[11px] text-brand-grey dark:text-slate-400">newest steps glow gold</p>
+            </div>
+            <div className="mt-2 max-h-[560px] space-y-2 overflow-y-auto pr-1">
+              {filtered.length === 0 ? (
+                <p className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 px-3 py-6 text-center text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+                  No pilots in this group yet.
+                </p>
+              ) : (
+                filtered.map((p) => (
+                  <div key={p.hireId} className="rounded border border-brand-lea/10 bg-white p-3 transition hover:border-brand-gold/40 dark:border-white/10 dark:bg-white/5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Link
+                        href={`/people/${p.hireId}`}
+                        className="font-semibold text-brand-lea transition hover:text-brand-eden hover:drop-shadow-[0_0_6px_rgba(234,170,0,0.5)] dark:text-slate-100"
+                      >
+                        {p.name}
+                      </Link>
+                      <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                        {p.madeCaptain && (
+                          <span className="rounded-full bg-brand-gold/20 px-2 py-0.5 font-bold uppercase tracking-wide text-brand-lea dark:text-brand-gold">
+                            Captain
+                          </span>
+                        )}
+                        <span className="rounded-full bg-brand-eden/10 px-2 py-0.5 font-semibold text-brand-eden dark:bg-white/5 dark:text-slate-300">
+                          {p.progressions} {p.progressions === 1 ? "move" : "moves"}
+                        </span>
+                        <span className="text-brand-grey dark:text-slate-400">{fmtSpan(p.daysToFirst)} to 1st</span>
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <PilotJourney steps={p.steps} />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+const PURPOSE_COLORS: Record<string, string> = {
+  ORIENTATION: "#0d2c43",
+  INDOC: "#466481",
+  TRAINING: "#eaaa00",
+  INTERVIEW: "#6b8fb0",
+  RECRUITING_VISIT: "#b98900",
+  OTHER: "#9aa3ad"
+};
+
+function TravelSpend({ travel }: { travel: ReportsData["travelSpend"] }) {
+  const [openPurpose, setOpenPurpose] = useState<string | null>(travel.byPurpose[0]?.purpose ?? null);
+
+  const hiredPct = travel.totalSpend > 0 ? (travel.hiredSpend / travel.totalSpend) * 100 : 0;
+  const notHiredPct = travel.totalSpend > 0 ? (travel.notHiredSpend / travel.totalSpend) * 100 : 0;
+  const otherPct = Math.max(0, 100 - hiredPct - notHiredPct);
+  const maxPurpose = Math.max(...travel.byPurpose.map((p) => p.spend), 1);
+
+  return (
+    <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Travel spend</p>
+      <h2 className="text-xl font-semibold text-brand-lea dark:text-slate-100">Recruiting &amp; onboarding travel</h2>
+      <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
+        {formatUsd(travel.totalSpend)} across {travel.tripCount} {travel.tripCount === 1 ? "trip" : "trips"} (excludes canceled). Click a purpose to see the trips behind it.
+      </p>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Total spend", value: formatUsd(travel.totalSpend), tone: "text-brand-lea dark:text-slate-100" },
+          { label: "Hired travelers", value: formatUsd(travel.hiredSpend), tone: "text-emerald-600 dark:text-emerald-300" },
+          { label: "Not hired", value: formatUsd(travel.notHiredSpend), tone: "text-amber-600 dark:text-amber-300" },
+          { label: "Cost per hire", value: travel.costPerHire === null ? "—" : formatUsd(travel.costPerHire), tone: "text-brand-lea dark:text-slate-100" }
+        ].map((c) => (
+          <div key={c.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
+            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{c.label}</div>
+            <div className={`mt-1 text-xl font-semibold ${c.tone}`}>{c.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Hired vs not-hired split */}
+      {travel.totalSpend > 0 && (
+        <div className="mt-4">
+          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Where the money goes</div>
+          <div className="mt-2 flex h-3 w-full overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/10">
+            <div className="h-full bg-emerald-500" style={{ width: `${hiredPct}%` }} title={`Hired travelers · ${formatUsd(travel.hiredSpend)}`} />
+            <div className="h-full bg-amber-400" style={{ width: `${notHiredPct}%` }} title={`Not hired · ${formatUsd(travel.notHiredSpend)}`} />
+            {otherPct > 0 && <div className="h-full bg-brand-eden/40" style={{ width: `${otherPct}%` }} title="Unassigned" />}
+          </div>
+          <div className="mt-1.5 flex flex-wrap gap-4 text-[11px] font-medium text-brand-grey dark:text-slate-400">
+            <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-500" /> Hired {Math.round(hiredPct)}%</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-amber-400" /> Not hired {Math.round(notHiredPct)}%</span>
+          </div>
+        </div>
+      )}
+
+      {/* By purpose — click to drill into trips */}
+      {travel.byPurpose.length > 0 && (
+        <div className="mt-4">
+          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">By purpose</div>
+          <div className="mt-2 space-y-1.5">
+            {travel.byPurpose.map((p) => {
+              const open = openPurpose === p.purpose;
+              const tripRows = travel.trips.filter((t) => t.purpose === p.purpose);
+              const color = PURPOSE_COLORS[p.purpose] ?? "#466481";
+              return (
+                <div key={p.purpose} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 dark:border-white/10 dark:bg-white/5">
+                  <button
+                    type="button"
+                    onClick={() => setOpenPurpose(open ? null : p.purpose)}
+                    aria-expanded={open}
+                    className="w-full rounded p-3 text-left transition hover:bg-brand-sweet/10"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="flex items-center gap-2 text-sm font-semibold text-brand-lea dark:text-slate-100">
+                        <span className={clsx("text-brand-grey transition dark:text-slate-400", open && "rotate-90")} aria-hidden>
+                          ▸
+                        </span>
+                        {travelPurposeLabel(p.purpose)}
+                        <span className="font-normal text-brand-grey dark:text-slate-400">· {p.trips} {p.trips === 1 ? "trip" : "trips"}</span>
+                      </span>
+                      <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">{formatUsd(p.spend)}</span>
+                    </div>
+                    <div className="mt-2 h-1.5 rounded-full bg-brand-lea/5 dark:bg-white/10">
+                      <div className="h-1.5 rounded-full" style={{ width: `${Math.max(6, (p.spend / maxPurpose) * 100)}%`, backgroundColor: color }} />
+                    </div>
+                  </button>
+
+                  {open && (
+                    <div className="border-t border-brand-lea/10 px-3 py-2 dark:border-white/10">
+                      {tripRows.length === 0 ? (
+                        <p className="py-2 text-xs text-brand-grey dark:text-slate-400">No trip detail recorded.</p>
+                      ) : (
+                        <ul className="divide-y divide-brand-lea/5 dark:divide-white/5">
+                          {tripRows.map((t) => (
+                            <li key={t.tripId} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2">
+                              <div className="min-w-0">
+                                {t.travelerHref ? (
+                                  <Link
+                                    href={t.travelerHref}
+                                    className="text-sm font-semibold text-brand-lea transition hover:text-brand-eden hover:drop-shadow-[0_0_6px_rgba(234,170,0,0.5)] dark:text-slate-100"
+                                  >
+                                    {t.travelerName}
+                                  </Link>
+                                ) : (
+                                  <span className="text-sm font-semibold text-brand-grey dark:text-slate-400">{t.travelerName}</span>
+                                )}
+                                <span className="ml-2 text-xs text-brand-grey dark:text-slate-400">
+                                  {t.route ?? "route TBD"} · {fmtDate(t.startsAt)}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={clsx(
+                                    "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                                    t.hired ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-amber-400/20 text-amber-700 dark:text-amber-300"
+                                  )}
+                                >
+                                  {travelStatusLabel(t.status)}
+                                </span>
+                                <span className="w-20 text-right text-sm font-semibold tabular-nums text-brand-lea dark:text-slate-100">
+                                  {formatUsd(t.total)}
+                                </span>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      <div className="pt-1 text-right">
+                        <Link href="/travel" className="text-[11px] font-semibold text-brand-eden hover:text-brand-lea dark:text-slate-300">
+                          Open Travel hub →
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {travel.tripCount === 0 && (
+        <p className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 px-3 py-2 text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+          No booked travel yet. Add trips from a candidate or new-hire profile and spend rolls up here.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function DocumentCurrency({ dc }: { dc: ReportsData["documentCurrency"] }) {
+  return (
+    <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Document currency</p>
+      <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Expiring &amp; expired candidate documents</h2>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-4">
+        {[
+          { label: "Expired", value: dc.counts.expired, tone: "text-red-600" },
+          { label: "Due ≤ 30 days", value: dc.counts.due30, tone: "text-amber-600" },
+          { label: "Due ≤ 90 days", value: dc.counts.due90, tone: "text-brand-lea dark:text-slate-100" },
+          { label: "Tracked total", value: dc.counts.total, tone: "text-brand-grey dark:text-slate-400" }
+        ].map((c) => (
+          <div key={c.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
+            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{c.label}</div>
+            <div className={`mt-1 text-xl font-semibold ${c.tone}`}>{c.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {dc.upcoming.length > 0 ? (
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[560px] border-collapse text-left text-sm">
+            <thead className="bg-brand-cloudDancer/60 text-[11px] uppercase tracking-[0.14em] text-brand-grey dark:bg-white/5 dark:text-slate-400">
+              <tr>
+                <th className="px-3 py-2 font-bold">Candidate</th>
+                <th className="px-3 py-2 font-bold">Document</th>
+                <th className="px-3 py-2 font-bold">Expires</th>
+                <th className="px-3 py-2 font-bold">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-brand-lea/10 dark:divide-white/10">
+              {dc.upcoming.map((item, i) => {
+                const tone = item.status === "expired" ? "text-red-600" : item.status === "due30" ? "text-amber-600" : "text-brand-lea dark:text-slate-100";
+                return (
+                  <tr key={i} className="transition hover:bg-brand-sweet/10">
+                    <td className="px-3 py-2">
+                      <Link href={`/candidates/${item.candidateId}`} className="font-semibold text-brand-lea transition hover:text-brand-eden dark:text-slate-100">
+                        {item.candidateName}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2 text-brand-black/80 dark:text-slate-300">{item.documentType ?? item.displayFilename}</td>
+                    <td className="px-3 py-2 text-brand-grey dark:text-slate-400">{fmtDate(item.expiresAt)}</td>
+                    <td className={`px-3 py-2 font-semibold ${tone}`}>
+                      {item.days < 0 ? `expired ${Math.abs(item.days)}d ago` : `${item.days}d left`}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="mt-3 text-sm text-brand-grey dark:text-slate-400">
+          No documents are expired or expiring within 90 days. Set expiry dates on Medical, Passport, and license documents to track currency here.
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -49,12 +559,10 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
     <div className="space-y-4 px-5 py-5 lg:px-8">
       <section className="flex items-start justify-between gap-4 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
-            Recruiting insights
-          </p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Talent analytics</p>
           <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Reports</h1>
           <p className="mt-1 max-w-3xl text-sm text-brand-grey dark:text-slate-400">
-            Early reporting foundation for pipeline, sources, job coverage, document gaps, and pilot readiness.
+            The two views that matter: how pilots are advancing across the fleet, and what recruiting &amp; onboarding travel costs — both clickable, down to the person.
           </p>
         </div>
         {logoDataUrl ? (
@@ -63,206 +571,9 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
         ) : null}
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-2">
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Pipeline</p>
-          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Candidates by stage</h2>
-          <div className="mt-3">
-            <MetricList items={data.pipeline} />
-          </div>
-        </section>
-
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Source quality</p>
-          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Candidates by source</h2>
-          <div className="mt-3">
-            <MetricList items={data.sourceQuality} />
-          </div>
-        </section>
-
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Role coverage</p>
-          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Candidates by job</h2>
-          <div className="mt-3">
-            <MetricList items={data.jobCoverage} />
-          </div>
-        </section>
-
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Readiness</p>
-          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Documents and requirements</h2>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">With files</div>
-              <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{data.documentGaps.candidatesWithFiles}</div>
-            </div>
-            <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Missing files</div>
-              <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{data.documentGaps.candidatesWithoutFiles}</div>
-            </div>
-            <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Active requirements</div>
-              <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{data.readiness.activeRequirements}</div>
-            </div>
-            <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Draft requirements</div>
-              <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{data.readiness.draftRequirements}</div>
-            </div>
-          </div>
-        </section>
-      </section>
-
-      {/* Document currency roll-up across all candidates */}
-      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Document currency</p>
-        <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Expiring &amp; expired documents</h2>
-
-        <div className="mt-3 grid gap-3 sm:grid-cols-4">
-          {[
-            { label: "Expired", value: data.documentCurrency.counts.expired, tone: "text-red-600" },
-            { label: "Due ≤ 30 days", value: data.documentCurrency.counts.due30, tone: "text-amber-600" },
-            { label: "Due ≤ 90 days", value: data.documentCurrency.counts.due90, tone: "text-brand-lea dark:text-slate-100" },
-            { label: "Tracked total", value: data.documentCurrency.counts.total, tone: "text-brand-grey dark:text-slate-400" }
-          ].map((c) => (
-            <div key={c.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{c.label}</div>
-              <div className={`mt-1 text-xl font-semibold ${c.tone}`}>{c.value}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-4">
-          {data.documentCurrency.upcoming.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] border-collapse text-left text-sm">
-                <thead className="bg-brand-cloudDancer/60 text-[11px] uppercase tracking-[0.14em] text-brand-grey dark:bg-white/5 dark:text-slate-400">
-                  <tr>
-                    <th className="px-3 py-2 font-bold">Candidate</th>
-                    <th className="px-3 py-2 font-bold">Document</th>
-                    <th className="px-3 py-2 font-bold">Expires</th>
-                    <th className="px-3 py-2 font-bold">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-brand-lea/10 dark:divide-white/10">
-                  {data.documentCurrency.upcoming.map((item, i) => {
-                    const tone = item.status === "expired" ? "text-red-600" : item.status === "due30" ? "text-amber-600" : "text-brand-lea dark:text-slate-100";
-                    return (
-                      <tr key={i} className="transition hover:bg-brand-sweet/10">
-                        <td className="px-3 py-2">
-                          <Link href={`/candidates/${item.candidateId}`} className="font-semibold text-brand-lea hover:text-brand-eden transition hover:shadow-glow dark:text-slate-100">
-                            {item.candidateName}
-                          </Link>
-                        </td>
-                        <td className="px-3 py-2 text-brand-black/80 dark:text-slate-300">{item.documentType ?? item.displayFilename}</td>
-                        <td className="px-3 py-2 text-brand-grey dark:text-slate-400">{fmtDate(item.expiresAt)}</td>
-                        <td className={`px-3 py-2 font-semibold ${tone}`}>
-                          {item.days < 0 ? `expired ${Math.abs(item.days)}d ago` : `${item.days}d left`}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-sm text-brand-grey dark:text-slate-400">No documents are expired or expiring within 90 days. Set expiry dates on Medical, Passport, and license documents to track currency here.</p>
-          )}
-        </div>
-      </section>
-
-      {/* Travel spend — onboarding + candidate fly-out budget roll-up */}
-      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Travel spend</p>
-        <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Recruiting &amp; onboarding travel</h2>
-        <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-          Booked travel across {data.travelSpend.tripCount} {data.travelSpend.tripCount === 1 ? "trip" : "trips"} (excludes canceled).
-        </p>
-
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "Total spend", value: formatUsd(data.travelSpend.totalSpend), tone: "text-brand-lea dark:text-slate-100" },
-            { label: "Hired travelers", value: formatUsd(data.travelSpend.hiredSpend), tone: "text-emerald-600" },
-            { label: "Not hired", value: formatUsd(data.travelSpend.notHiredSpend), tone: "text-amber-600" },
-            {
-              label: "Cost per hire",
-              value: data.travelSpend.costPerHire === null ? "—" : formatUsd(data.travelSpend.costPerHire),
-              tone: "text-brand-lea dark:text-slate-100"
-            }
-          ].map((c) => (
-            <div key={c.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{c.label}</div>
-              <div className={`mt-1 text-xl font-semibold ${c.tone}`}>{c.value}</div>
-            </div>
-          ))}
-        </div>
-
-        {data.travelSpend.byPurpose.length > 0 && (
-          <div className="mt-4">
-            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">By purpose</div>
-            <div className="mt-2 space-y-2">
-              {data.travelSpend.byPurpose.map((p) => {
-                const max = Math.max(...data.travelSpend.byPurpose.map((x) => x.spend), 1);
-                return (
-                  <div key={p.purpose} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">
-                        {travelPurposeLabel(p.purpose)} <span className="text-brand-grey dark:text-slate-400">· {p.trips} {p.trips === 1 ? "trip" : "trips"}</span>
-                      </span>
-                      <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">{formatUsd(p.spend)}</span>
-                    </div>
-                    <div className="mt-2 h-1 rounded-full bg-brand-gold/20">
-                      <div className="h-1 rounded-full bg-brand-sweet" style={{ width: `${Math.max(8, (p.spend / max) * 100)}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* Pilot upgrades — First Officer → Captain timing across the fleet */}
-      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Pilot upgrades</p>
-        <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Role &amp; aircraft progressions</h2>
-        <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-          {data.pilotUpgrades.upgraded} of {data.pilotUpgrades.pilotsTracked} pilots have moved to a new role or aircraft
-          {data.pilotUpgrades.captainUpgrades > 0 ? ` · ${data.pilotUpgrades.captainUpgrades} made Captain (First Officer → Captain)` : ""}. Built from each employee&apos;s role journey.
-        </p>
-
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "Avg time to first move", value: fmtSpan(data.pilotUpgrades.avgDaysToUpgrade), tone: "text-brand-lea dark:text-slate-100" },
-            { label: "Median time", value: fmtSpan(data.pilotUpgrades.medianDaysToUpgrade), tone: "text-brand-lea dark:text-slate-100" },
-            { label: "Progressed within 1 yr", value: `${data.pilotUpgrades.pctWithin1yr}%`, tone: "text-emerald-600 dark:text-emerald-300" },
-            { label: "Progressed within 2 yr", value: `${data.pilotUpgrades.pctWithin2yr}%`, tone: "text-emerald-600 dark:text-emerald-300" }
-          ].map((c) => (
-            <div key={c.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{c.label}</div>
-              <div className={`mt-1 text-xl font-semibold ${c.tone}`}>{c.value}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          {[
-            { label: "Progressed once", value: data.pilotUpgrades.upgradedOnce },
-            { label: "Progressed 2×+", value: data.pilotUpgrades.upgradedTwicePlus },
-            { label: "Progressed 3×+", value: data.pilotUpgrades.upgradedThricePlus }
-          ].map((c) => (
-            <div key={c.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{c.label}</div>
-              <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{c.value}</div>
-            </div>
-          ))}
-        </div>
-
-        {!data.pilotUpgrades.hasData && (
-          <p className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 px-3 py-2 text-xs text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-            No progressions recorded yet. Record role changes on employee profiles (or import promotion history) and these numbers populate automatically.
-          </p>
-        )}
-      </section>
+      <PilotProgressions upgrades={data.pilotUpgrades} />
+      <TravelSpend travel={data.travelSpend} />
+      <DocumentCurrency dc={data.documentCurrency} />
     </div>
   );
 }

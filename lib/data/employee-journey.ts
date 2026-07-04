@@ -159,6 +159,26 @@ export async function getEmployeeJourney(hireId: string): Promise<EmployeeJourne
 // Fleet-wide pilot upgrade analytics for Reports.
 // ---------------------------------------------------------------------------
 
+export type UpgradePilotStep = {
+  title: string;
+  seat: string | null; // PIC | SIC | null
+  aircraft: string | null;
+  date: string | null;
+  isUpgrade: boolean; // SIC -> PIC step up from the prior role
+  transitionType: string;
+};
+
+export type UpgradePilot = {
+  hireId: string;
+  name: string;
+  progressions: number; // moves after the first role
+  madeCaptain: boolean; // reached PIC via an SIC -> PIC step
+  daysToFirst: number | null; // days from hire to first move
+  startDate: string | null;
+  latestDate: string | null;
+  steps: UpgradePilotStep[]; // full role journey, oldest first
+};
+
 export type UpgradeAnalytics = {
   pilotsTracked: number; // employees with a pilot role history (a seat somewhere)
   upgraded: number; // pilots with >=1 progression (role/airframe/seat move)
@@ -170,25 +190,31 @@ export type UpgradeAnalytics = {
   upgradedOnce: number; // exactly 1 progression
   upgradedTwicePlus: number;
   upgradedThricePlus: number;
+  pilots: UpgradePilot[]; // the progressed pilots (>=1 move), richest first — powers drill-down
   hasData: boolean;
 };
 
 export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
-  const rows = (await prisma.roleAssignment.findMany({
-    select: {
-      id: true,
-      newHireId: true,
-      title: true,
-      fleetPositionSlug: true,
-      seat: true,
-      aircraft: true,
-      department: true,
-      startDate: true,
-      endDate: true,
-      transitionType: true,
-      createdAt: true
-    }
-  })) as (RawRole & { newHireId: string })[];
+  const [rows, names] = (await Promise.all([
+    prisma.roleAssignment.findMany({
+      select: {
+        id: true,
+        newHireId: true,
+        title: true,
+        fleetPositionSlug: true,
+        seat: true,
+        aircraft: true,
+        department: true,
+        startDate: true,
+        endDate: true,
+        transitionType: true,
+        createdAt: true
+      }
+    }),
+    prisma.newHire.findMany({ select: { id: true, name: true } })
+  ])) as [(RawRole & { newHireId: string })[], { id: string; name: string }[]];
+
+  const nameOf = new Map(names.map((n) => [n.id, n.name]));
 
   const byHire = new Map<string, RawRole[]>();
   for (const r of rows) {
@@ -206,15 +232,18 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
   let upgradedTwicePlus = 0;
   let upgradedThricePlus = 0;
   const daysToUpgrade: number[] = [];
+  const pilots: UpgradePilot[] = [];
 
-  for (const roles of byHire.values()) {
+  for (const [hireId, roles] of byHire) {
     const ordered = orderRoles(roles);
     if (!ordered.some((r) => seatOf(r) !== null)) continue; // not a pilot
     pilotsTracked++;
 
     // A "progression" = any move to a new role/airframe/seat (every role after the first).
     const progressions = ordered.length - 1;
-    if (markUpgrades(ordered).some(Boolean)) captainUpgrades++; // SIC -> PIC subset
+    const flags = markUpgrades(ordered);
+    const madeCaptain = flags.some(Boolean);
+    if (madeCaptain) captainUpgrades++; // SIC -> PIC subset
     if (progressions < 1) continue;
 
     upgraded++;
@@ -226,7 +255,33 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
     daysToUpgrade.push(days);
     if (days <= 365) within1yr++;
     if (days <= 730) within2yr++;
+
+    pilots.push({
+      hireId,
+      name: nameOf.get(hireId) ?? "Unknown",
+      progressions,
+      madeCaptain,
+      daysToFirst: days,
+      startDate: iso(ordered[0].startDate),
+      latestDate: iso(ordered[ordered.length - 1].startDate),
+      steps: ordered.map((r, i) => ({
+        title: r.title,
+        seat: seatOf(r),
+        aircraft: r.aircraft,
+        date: iso(r.startDate),
+        isUpgrade: flags[i],
+        transitionType: (r.transitionType as string) ?? "HIRE"
+      }))
+    });
   }
+
+  // Richest journeys first: most moves, Captains ahead of non-Captains, then name.
+  pilots.sort(
+    (a, b) =>
+      b.progressions - a.progressions ||
+      Number(b.madeCaptain) - Number(a.madeCaptain) ||
+      a.name.localeCompare(b.name)
+  );
 
   const avg = daysToUpgrade.length ? Math.round(daysToUpgrade.reduce((a, b) => a + b, 0) / daysToUpgrade.length) : null;
   const median = (() => {
@@ -248,6 +303,7 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
     upgradedOnce,
     upgradedTwicePlus,
     upgradedThricePlus,
+    pilots,
     hasData: upgraded > 0
   };
 }

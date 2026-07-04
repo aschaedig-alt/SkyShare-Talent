@@ -319,6 +319,19 @@ export async function getTravelOverview(): Promise<TravelHubData> {
 
 // ---- Reporting --------------------------------------------------------------
 
+export type TravelSpendTripRow = {
+  tripId: string;
+  travelerName: string;
+  travelerHref: string | null; // /people/[id] or /candidates/[id]
+  travelerType: "newHire" | "candidate" | "unassigned";
+  hired: boolean; // linked to a hire, or a candidate who was ultimately hired
+  purpose: string;
+  route: string | null; // origin → destination
+  status: string;
+  startsAt: string | null;
+  total: number;
+};
+
 export type TravelSpendSummary = {
   totalSpend: number;
   tripCount: number;
@@ -328,6 +341,7 @@ export type TravelSpendSummary = {
   costPerHire: number | null; // hiredSpend / distinct hired travelers
   hiredTravelers: number;
   byPurpose: { purpose: string; spend: number; trips: number }[];
+  trips: TravelSpendTripRow[]; // per-trip detail for drill-down, richest first
 };
 
 // Roll up all booked travel spend for budgets. "Hired" = trip linked to a
@@ -337,9 +351,18 @@ export async function getTravelSpendSummary(): Promise<TravelSpendSummary> {
   const trips = await prisma.travelTrip.findMany({
     where: { status: { not: "CANCELED" } },
     select: {
+      id: true,
       newHireId: true,
       candidateId: true,
       purpose: true,
+      status: true,
+      originAirport: true,
+      destinationAirport: true,
+      requestedArrival: true,
+      orientationDate: true,
+      indocStart: true,
+      newHire: { select: { id: true, name: true } },
+      candidate: { select: { id: true, displayName: true } },
       items: { select: { amount: true } }
     }
   });
@@ -357,6 +380,7 @@ export async function getTravelSpendSummary(): Promise<TravelSpendSummary> {
   let notHiredSpend = 0;
   const hiredTravelerIds = new Set<string>();
   const byPurpose = new Map<string, { spend: number; trips: number }>();
+  const tripRows: TravelSpendTripRow[] = [];
 
   for (const trip of trips) {
     const tripTotal = trip.items.reduce((sum, i) => sum + (i.amount ?? 0), 0);
@@ -367,19 +391,42 @@ export async function getTravelSpendSummary(): Promise<TravelSpendSummary> {
     purpose.trips += 1;
     byPurpose.set(trip.purpose, purpose);
 
+    let hired = false;
     if (trip.newHireId) {
       hiredSpend += tripTotal;
       hiredTravelerIds.add(trip.newHireId);
+      hired = true;
     } else if (trip.candidateId) {
       candidateSpend += tripTotal;
       if (hiredCandidateIds.has(trip.candidateId)) {
         // Candidate fly-out for someone who was ultimately hired.
         hiredTravelerIds.add(`cand:${trip.candidateId}`);
+        hired = true;
       } else {
         notHiredSpend += tripTotal;
       }
     }
+
+    const startDate = trip.requestedArrival ?? trip.orientationDate ?? trip.indocStart ?? null;
+    tripRows.push({
+      tripId: trip.id,
+      travelerName: trip.newHire?.name ?? trip.candidate?.displayName ?? "Unassigned",
+      travelerHref: trip.newHire
+        ? `/people/${trip.newHire.id}`
+        : trip.candidate
+          ? `/candidates/${trip.candidate.id}`
+          : null,
+      travelerType: trip.newHire ? "newHire" : trip.candidate ? "candidate" : "unassigned",
+      hired,
+      purpose: trip.purpose,
+      route: [trip.originAirport, trip.destinationAirport].filter(Boolean).join(" → ") || null,
+      status: trip.status,
+      startsAt: startDate ? startDate.toISOString() : null,
+      total: tripTotal
+    });
   }
+
+  tripRows.sort((a, b) => b.total - a.total);
 
   return {
     totalSpend,
@@ -391,6 +438,7 @@ export async function getTravelSpendSummary(): Promise<TravelSpendSummary> {
     costPerHire: hiredTravelerIds.size > 0 ? (hiredSpend + (candidateSpend - notHiredSpend)) / hiredTravelerIds.size : null,
     byPurpose: [...byPurpose.entries()]
       .map(([purpose, v]) => ({ purpose, spend: v.spend, trips: v.trips }))
-      .sort((a, b) => b.spend - a.spend)
+      .sort((a, b) => b.spend - a.spend),
+    trips: tripRows
   };
 }
