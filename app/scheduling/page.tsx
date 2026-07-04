@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { requireModulePageAccess } from "@/lib/data/module-access";
 import { SchedulingAdmin, type AdminHost, type AdminOverride } from "@/components/scheduling/SchedulingAdmin";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,8 @@ function parseDepartments(json: string | null): string[] {
 }
 
 export default async function SchedulingPage() {
+  await requireModulePageAccess("scheduling");
+
   const hosts = await prisma.bookingHost.findMany({
     orderBy: { name: "asc" },
     include: {

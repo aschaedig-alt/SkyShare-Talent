@@ -16,6 +16,7 @@ import {
   HeartHandshake,
   Import,
   Layers,
+  LayoutDashboard,
   LayoutGrid,
   ListChecks,
   MessageSquare,
@@ -48,11 +49,7 @@ export const moduleIds = [
   "archive",
   "jobs",
   "review",
-  "templates",
   "blocks",
-  "changes",
-  "approvals",
-  "jobs-sandbox",
   "people",
   "settings"
 ] as const;
@@ -90,18 +87,38 @@ export type NavigationGroup = {
 
 export const navigationGroups: readonly NavigationGroup[] = [
   {
+    id: "home",
+    label: "Home",
+    icon: LayoutDashboard,
+    sections: [
+      {
+        id: "home",
+        label: "Home",
+        items: [
+          { id: "command-center", href: "/command-center", label: "Command Center", icon: LayoutDashboard }
+        ]
+      }
+    ]
+  },
+  {
     id: "recruiting",
     label: "Recruiting",
     icon: Users,
     sections: [
       {
-        id: "recruiting",
-        label: "Recruiting",
+        id: "sourcing",
+        label: "Sourcing & Matching",
         items: [
           { id: "candidates", href: "/candidates", label: "Candidates", icon: SearchCheck },
           { id: "recruiting-jobs", href: "/recruiting-jobs", label: "Jobs", icon: BriefcaseBusiness },
           { id: "pilot-requirements", href: "/pilot-requirements", label: "Pilot Requirements", icon: Plane },
-          { id: "matching", href: "/matching", label: "Matchboard", icon: Radar },
+          { id: "matching", href: "/matching", label: "Matchboard", icon: Radar }
+        ]
+      },
+      {
+        id: "interviews",
+        label: "Interviews & Scheduling",
+        items: [
           { id: "calendar", href: "/calendar", label: "Calendar", icon: CalendarDays },
           { id: "scheduling", href: "/scheduling", label: "Scheduling", icon: CalendarClock },
           { id: "interview-questions", href: "/interview-questions", label: "Question Bank", icon: ListChecks }
@@ -112,7 +129,6 @@ export const navigationGroups: readonly NavigationGroup[] = [
         label: "Publishing",
         items: [
           { id: "jobs", href: "/jobs", label: "Job Post Builder", icon: ClipboardList },
-          { id: "jobs", href: "/jobs/layout-lab", label: "Layout Lab", icon: LayoutGrid },
           { id: "review", href: "/review", label: "Final Review", icon: FileCheck2 },
           { id: "blocks", href: "/blocks", label: "Content Blocks", icon: Blocks }
         ]

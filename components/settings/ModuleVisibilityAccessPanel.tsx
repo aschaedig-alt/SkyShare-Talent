@@ -71,6 +71,14 @@ function clonePolicy(policy: ModuleAccessPolicy) {
   return JSON.parse(JSON.stringify(policy)) as ModuleAccessPolicy;
 }
 
+// A few modules power several nav items (People → Pre-onboarding, Employees, Travel…;
+// Settings → all sub-pages). The access table has one row per module, so label that
+// row by the module itself rather than whichever nav item happens to come first.
+const MODULE_ROW_LABEL: Partial<Record<ModuleId, string>> = {
+  settings: "Settings",
+  people: "People"
+};
+
 export function ModuleVisibilityAccessPanel({ policy: initialPolicy }: ModuleVisibilityAccessPanelProps) {
   const router = useRouter();
   const [policy, setPolicy] = useState<ModuleAccessPolicy>(() => clonePolicy(initialPolicy));
@@ -93,7 +101,7 @@ export function ModuleVisibilityAccessPanel({ policy: initialPolicy }: ModuleVis
         .map((item) => ({
           group: section.label === group.label ? group.label : `${group.label} › ${section.label}`,
           id: item.id,
-          label: item.id === "settings" ? "Settings" : item.label
+          label: MODULE_ROW_LABEL[item.id] ?? item.label
         }))
     )
   );
