@@ -704,7 +704,15 @@ function DocumentCurrency({ dc }: { dc: ReportsData["documentCurrency"] }) {
   );
 }
 
+const REPORT_TABS = [
+  { id: "progression", label: "Fleet Progression" },
+  { id: "travel", label: "Travel Spend" },
+  { id: "documents", label: "Document Currency" }
+] as const;
+type ReportTab = (typeof REPORT_TABS)[number]["id"];
+
 export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
+  const [tab, setTab] = useState<ReportTab>("progression");
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
       <section className="flex items-start justify-between gap-4 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
@@ -712,7 +720,7 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Talent analytics</p>
           <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Reports</h1>
           <p className="mt-1 max-w-3xl text-sm text-brand-grey dark:text-slate-400">
-            The two views that matter: how pilots are advancing across the fleet, and what recruiting &amp; onboarding travel costs — both clickable, down to the person.
+            Pick a report below. Everything is clickable, down to the person.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
@@ -730,9 +738,30 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
         </div>
       </section>
 
-      <PilotProgressions upgrades={data.pilotUpgrades} />
-      <TravelSpend travel={data.travelSpend} />
-      <DocumentCurrency dc={data.documentCurrency} />
+      {/* Sub-tabs — one report at a time. The active tab is the only one rendered,
+          so "Export PDF" prints exactly what's on screen. */}
+      <div className="flex flex-wrap gap-1 rounded bg-white p-1 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10 print:hidden">
+        {REPORT_TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            aria-pressed={tab === t.id}
+            className={clsx(
+              "rounded px-4 py-2 text-sm font-semibold transition",
+              tab === t.id
+                ? "bg-brand-lea text-white shadow-sm"
+                : "text-brand-grey hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/5"
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "progression" ? <PilotProgressions upgrades={data.pilotUpgrades} /> : null}
+      {tab === "travel" ? <TravelSpend travel={data.travelSpend} /> : null}
+      {tab === "documents" ? <DocumentCurrency dc={data.documentCurrency} /> : null}
     </div>
   );
 }
