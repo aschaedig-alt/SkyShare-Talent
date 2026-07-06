@@ -3,9 +3,9 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { Plane, TrendingUp, MapPin, Award, Trash2, Plus, Pencil, Sparkles, Repeat } from "lucide-react";
+import { Plane, TrendingUp, Award, Trash2, Plus, Pencil, Sparkles, Repeat, Star } from "lucide-react";
 import type { EmployeeJourney as Journey, JourneyRole } from "@/lib/data/employee-journey";
-import { Button, Badge, Modal, Input, EmptyState, type BadgeTone } from "@/components/ui";
+import { Button, Modal, Input, EmptyState } from "@/components/ui";
 
 type Props = {
   hireId: string;
@@ -28,12 +28,36 @@ function duration(days: number | null): string {
   return mo ? `${yr} yr ${mo} mo` : `${yr} yr`;
 }
 
-const TRANSITION_META: Record<string, { label: string; tone: BadgeTone }> = {
-  HIRE: { label: "Hired", tone: "info" },
-  PROMOTION: { label: "Promotion", tone: "brand" },
-  UPGRADE: { label: "Upgrade", tone: "warning" },
-  LATERAL: { label: "Lateral move", tone: "neutral" },
-  TRANSFER: { label: "Transfer", tone: "neutral" }
+// Full marketing name for the aircraft, shown under the role title (e.g. "Pilatus PC-12").
+const AIRCRAFT_FULL: Record<string, string> = {
+  "PC-12": "Pilatus PC-12",
+  CJ2: "Citation CJ2",
+  M2: "Citation M2",
+  "560XL": "Citation 560XL",
+  "560XLS+": "Citation 560XLS+",
+  G200: "Gulfstream G200",
+  G450: "Gulfstream G450/GV",
+  GV: "Gulfstream GV",
+  "Phenom 300": "Embraer Phenom 300",
+  "Phenom 100": "Embraer Phenom 100",
+  "Legacy 650": "Embraer Legacy 650",
+  "Legacy 600": "Embraer Legacy 600"
+};
+
+function subtitleFor(role: JourneyRole): string {
+  if (role.aircraft && AIRCRAFT_FULL[role.aircraft]) return AIRCRAFT_FULL[role.aircraft];
+  if (role.aircraft && role.aircraft !== role.title) return role.aircraft;
+  if (role.seat === null) return role.department ?? "Management";
+  return "";
+}
+
+// Short uppercase step label shown as an outline pill under each node.
+const STEP_LABEL: Record<string, string> = {
+  HIRE: "Hired",
+  PROMOTION: "Promoted",
+  UPGRADE: "Upgrade",
+  LATERAL: "Lateral",
+  TRANSFER: "Transfer"
 };
 
 const TRANSITION_OPTIONS = [
@@ -49,12 +73,6 @@ const EDIT_TRANSITION_OPTIONS = [{ value: "HIRE", label: "Hired" }, ...TRANSITIO
 
 // ISO string -> yyyy-mm-dd for a <input type="date">.
 const dateInput = (iso: string | null) => (iso ? iso.slice(0, 10) : "");
-
-function seatLabel(seat: string | null): string | null {
-  if (seat === "PIC") return "Captain";
-  if (seat === "SIC") return "First Officer";
-  return null;
-}
 
 export function EmployeeJourney({ hireId, journey, roleTitleOptions }: Props) {
   const router = useRouter();
@@ -142,59 +160,69 @@ export function EmployeeJourney({ hireId, journey, roleTitleOptions }: Props) {
   }
 
   return (
-    <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section className="overflow-hidden rounded shadow-panel ring-1 ring-brand-lea/10 dark:ring-white/10">
+      {/* Navy header band */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-brand-lea px-5 py-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Journey at SkyShare</p>
-          <h2 className="mt-0.5 text-lg font-semibold text-brand-lea dark:text-slate-100">Role journey</h2>
           {journey.roleCount > 0 ? (
-            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-brand-grey dark:text-slate-400">
-              {tenure ? <span><span className="font-semibold text-brand-lea dark:text-slate-100">{tenure}</span> tenure</span> : null}
+            <p className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-white/80">
+              {tenure ? (
+                <span>
+                  <span className="font-semibold text-white">{tenure}</span> tenure
+                </span>
+              ) : null}
               <span>· {journey.roleCount} role{journey.roleCount === 1 ? "" : "s"}</span>
               {journey.upgradeCount > 0 ? (
                 <span className="inline-flex items-center gap-1 font-semibold text-brand-gold">
                   <TrendingUp className="h-3.5 w-3.5" /> {journey.upgradeCount} upgrade{journey.upgradeCount === 1 ? "" : "s"}
                 </span>
               ) : null}
+              {journey.stints.length > 1 ? (
+                <span className="inline-flex items-center gap-1 font-semibold text-white/90">
+                  <Repeat className="h-3.5 w-3.5" /> Rehired · {journey.stints.length} stints
+                </span>
+              ) : null}
             </p>
-          ) : null}
-          {journey.stints.length > 1 ? (
-            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-brand-grey dark:text-slate-400">
-              <span className="inline-flex items-center gap-1 font-semibold text-brand-eden dark:text-slate-300">
-                <Repeat className="h-3.5 w-3.5" /> Rehired — {journey.stints.length} stints
-              </span>
-              <span>· {journey.stints.map((s) => `${fmtDate(s.start)}–${s.end ? fmtDate(s.end) : "present"}`).join(", ")}</span>
-            </p>
-          ) : null}
+          ) : (
+            <p className="mt-1 text-sm text-white/70">No roles recorded yet</p>
+          )}
         </div>
-        <Button variant="secondary" size="sm" onClick={() => setAdding(true)}>
+        <button
+          onClick={() => setAdding(true)}
+          className="inline-flex items-center gap-1.5 rounded bg-white/95 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:bg-white hover:shadow-glow"
+        >
           <Plus className="h-4 w-4" /> Record role change
-        </Button>
+        </button>
       </div>
 
-      {journey.roles.length === 0 ? (
-        <div className="mt-4">
+      {/* Body */}
+      <div className="bg-white p-5 dark:bg-brand-panel">
+        {journey.roles.length === 0 ? (
           <EmptyState
             bare
             icon={<Sparkles className="h-6 w-6" />}
             title="No roles recorded yet"
             description="Record this employee's first role to start their journey."
           />
-        </div>
-      ) : (
-        <ol className="mt-5 space-y-0">
-          {journey.roles.map((role, i) => (
-            <JourneyStep
-              key={role.id}
-              role={role}
-              isLast={i === journey.roles.length - 1}
-              busyDelete={busyDelete === role.id}
-              onEdit={() => openEdit(role)}
-              onDelete={() => removeRole(role.id)}
-            />
-          ))}
-        </ol>
-      )}
+        ) : (
+          <div className="overflow-x-auto pb-1">
+            <ol className="flex min-w-max pt-1">
+              {journey.roles.map((role, i) => (
+                <TimelineNode
+                  key={role.id}
+                  role={role}
+                  index={i}
+                  total={journey.roles.length}
+                  busyDelete={busyDelete === role.id}
+                  onEdit={() => openEdit(role)}
+                  onDelete={() => removeRole(role.id)}
+                />
+              ))}
+            </ol>
+          </div>
+        )}
+      </div>
 
       <Modal open={adding} onClose={() => setAdding(false)} busy={saving}>
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Record a role change</h2>
@@ -298,59 +326,117 @@ export function EmployeeJourney({ hireId, journey, roleTitleOptions }: Props) {
   );
 }
 
-function JourneyStep({ role, isLast, busyDelete, onEdit, onDelete }: { role: JourneyRole; isLast: boolean; busyDelete: boolean; onEdit: () => void; onDelete: () => void }) {
-  const meta = TRANSITION_META[role.transitionType] ?? TRANSITION_META.PROMOTION;
-  const seat = seatLabel(role.seat);
-  const upgrade = role.isUpgrade;
+function dateLine(role: JourneyRole): string {
+  const s = fmtDate(role.startDate);
+  if (role.current) return `${s} – Present`;
+  const e = fmtDate(role.endDate);
+  return s === e ? s : `${s} – ${e}`;
+}
+
+// The colored connector to the RIGHT of a node; darkens toward the current role.
+function segClass(ratio: number): string {
+  if (ratio < 0.34) return "bg-brand-lea/15 dark:bg-white/10";
+  if (ratio < 0.67) return "bg-brand-lea/30 dark:bg-white/20";
+  return "bg-brand-lea/60 dark:bg-white/40";
+}
+
+function StepBadge({ role }: { role: JourneyRole }) {
+  if (role.current) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded border border-emerald-500/50 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/15 dark:text-emerald-300">
+        <Star className="h-3 w-3 fill-current" /> Active
+      </span>
+    );
+  }
+  const type = role.isUpgrade ? "UPGRADE" : role.transitionType;
+  const label = STEP_LABEL[type] ?? STEP_LABEL.PROMOTION;
+  const cls =
+    type === "HIRE"
+      ? "border-brand-lea/35 text-brand-lea dark:border-white/25 dark:text-slate-200"
+      : type === "UPGRADE"
+        ? "border-brand-gold/60 bg-brand-gold/10 text-amber-700 dark:text-brand-gold"
+        : type === "PROMOTION"
+          ? "border-brand-gold/50 text-brand-gold"
+          : "border-brand-grey/30 text-brand-grey dark:border-white/20 dark:text-slate-400";
   return (
-    <li className="relative flex gap-4 pb-6 last:pb-0">
-      {/* Rail: node + connecting line */}
-      <div className="relative flex flex-col items-center">
-        <span
-          className={clsx(
-            "z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-4 ring-white dark:ring-brand-panel",
-            upgrade ? "bg-brand-gold text-brand-lea shadow-glow" : role.current ? "bg-brand-lea text-white" : "bg-brand-cloudDancer text-brand-eden dark:bg-white/10 dark:text-slate-300"
-          )}
-        >
-          {upgrade ? <TrendingUp className="h-4 w-4" /> : role.seat ? <Plane className="h-4 w-4" /> : <Award className="h-4 w-4" />}
-        </span>
-        {!isLast && <span className="absolute top-9 h-[calc(100%-1.25rem)] w-0.5 bg-brand-lea/10 dark:bg-white/10" />}
-      </div>
+    <span className={clsx("inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide", cls)}>
+      {type === "UPGRADE" ? <TrendingUp className="h-3 w-3" /> : null}
+      {label}
+    </span>
+  );
+}
+
+function TimelineNode({
+  role,
+  index,
+  total,
+  busyDelete,
+  onEdit,
+  onDelete
+}: {
+  role: JourneyRole;
+  index: number;
+  total: number;
+  busyDelete: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const last = total - 1;
+  const isCurrent = role.current;
+  const Icon = role.seat === null ? Award : Plane;
+  const subtitle = subtitleFor(role);
+  // Suppress a "0 days" label on same-day placeholder steps (e.g. a hire that was
+  // immediately followed by a promotion).
+  const dur = role.durationDays && role.durationDays > 0 ? duration(role.durationDays) : "";
+
+  return (
+    <li className="group relative flex w-[168px] shrink-0 flex-col items-center px-1">
+      {/* Connector to the next node (behind the node) */}
+      {index < last ? (
+        <span className={clsx("absolute left-1/2 top-[19px] z-0 h-[3px] w-full -translate-y-1/2 rounded-full", segClass(last === 0 ? 1 : (index + 1) / last))} />
+      ) : null}
+
+      {/* Node */}
+      <span
+        className={clsx(
+          "relative z-10 flex h-10 w-10 items-center justify-center rounded-full ring-4 ring-white transition dark:ring-brand-panel",
+          isCurrent
+            ? "bg-brand-lea text-brand-gold shadow-glow"
+            : role.isUpgrade
+              ? "bg-brand-gold/20 text-brand-gold ring-brand-gold/10"
+              : "bg-brand-cloudDancer text-brand-eden dark:bg-white/10 dark:text-slate-300"
+        )}
+      >
+        <Icon className="h-[18px] w-[18px]" />
+      </span>
 
       {/* Card */}
-      <div className={clsx("min-w-0 flex-1 rounded border p-3 transition", role.current ? "border-brand-gold/40 bg-brand-gold/[0.06] dark:bg-brand-gold/10" : "border-brand-lea/10 dark:border-white/10")}>
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-brand-lea dark:text-slate-100">{role.title}</span>
-              <Badge tone={meta.tone}>{meta.label}</Badge>
-              {role.current ? <Badge tone="success">Current</Badge> : null}
-            </div>
-            <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
-              {[seat, role.aircraft && role.aircraft !== role.title ? role.aircraft : null, role.department].filter(Boolean).join(" · ") || "—"}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-0.5">
-            <button
-              onClick={onEdit}
-              aria-label="Edit role"
-              className="rounded p-1 text-brand-grey/60 transition hover:bg-brand-gold/15 hover:text-brand-eden dark:text-slate-500 dark:hover:bg-white/10 dark:hover:text-slate-200"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={onDelete}
-              disabled={busyDelete}
-              aria-label="Remove role"
-              className="rounded p-1 text-brand-grey/60 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:text-slate-500 dark:hover:bg-red-500/15 dark:hover:text-red-300"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
+      <div className="mt-3 flex w-full flex-col items-center px-1 text-center">
+        <p className="text-sm font-semibold leading-tight text-brand-lea dark:text-slate-100">{role.title}</p>
+        {subtitle ? <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">{subtitle}</p> : null}
+        <div className="mt-2">
+          <StepBadge role={role} />
         </div>
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-brand-grey dark:text-slate-400">
-          <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" /> {fmtDate(role.startDate)} – {role.current ? "Present" : fmtDate(role.endDate)}</span>
-          {role.durationDays !== null ? <span className="font-medium text-brand-eden dark:text-slate-300">{duration(role.durationDays)}</span> : null}
+        <p className="mt-2 text-[11px] leading-snug text-brand-grey dark:text-slate-400">{dateLine(role)}</p>
+        {dur ? <p className="text-[11px] font-semibold text-brand-eden dark:text-slate-300">{dur}</p> : null}
+
+        {/* Edit / delete — revealed on hover so the timeline stays clean */}
+        <div className="mt-1.5 flex items-center gap-0.5 opacity-0 transition focus-within:opacity-100 group-hover:opacity-100">
+          <button
+            onClick={onEdit}
+            aria-label="Edit role"
+            className="rounded p-1 text-brand-grey/60 transition hover:bg-brand-gold/15 hover:text-brand-eden dark:text-slate-500 dark:hover:bg-white/10 dark:hover:text-slate-200"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={onDelete}
+            disabled={busyDelete}
+            aria-label="Remove role"
+            className="rounded p-1 text-brand-grey/60 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:text-slate-500 dark:hover:bg-red-500/15 dark:hover:text-red-300"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
     </li>
