@@ -41,13 +41,15 @@ function ClimbChart({ pilots }: { pilots: UpgradePilot[] }) {
   const model = useMemo(() => {
     const perYear = new Map<number, { total: number; captain: number }>();
     for (const p of pilots) {
-      // Every step after the first is a progression event, dated by its start.
+      // Count each upgrade/transition event, dated by its start.
       for (let i = 1; i < p.steps.length; i++) {
+        const k = p.steps[i].kind;
+        if (k !== "upgrade" && k !== "transition") continue;
         const y = yearOf(p.steps[i].date);
         if (y === null) continue;
         const bucket = perYear.get(y) ?? { total: 0, captain: 0 };
         bucket.total += 1;
-        if (p.steps[i].isUpgrade) bucket.captain += 1;
+        if (k === "upgrade") bucket.captain += 1;
         perYear.set(y, bucket);
       }
     }
@@ -142,29 +144,31 @@ function ClimbChart({ pilots }: { pilots: UpgradePilot[] }) {
 
         {/* Endpoint value callout */}
         <text x={x(n - 1)} y={y(model.maxY) - 10} textAnchor="end" className="fill-brand-lea text-[13px] font-bold dark:fill-slate-100">
-          {model.maxY} moves
+          {model.maxY} advancements
         </text>
       </svg>
 
       <div className="mt-1 flex items-center gap-4 pl-1 text-[11px] font-medium text-brand-grey dark:text-slate-400">
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-4 rounded-sm" style={{ background: "linear-gradient(#eaaa00aa,#eaaa0022)" }} /> All progressions
+          <span className="inline-block h-2.5 w-4 rounded-sm" style={{ background: "linear-gradient(#eaaa00aa,#eaaa0022)" }} /> Upgrades + transitions
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-0 w-4 border-t-2 border-dashed border-brand-gold" /> Made Captain
+          <span className="inline-block h-0 w-4 border-t-2 border-dashed border-brand-gold" /> Upgrades (→ Captain)
         </span>
       </div>
     </div>
   );
 }
 
-// One step in a pilot's mini journey (aircraft + seat), upgrade steps glow gold.
-function seatChip(seat: string | null, isUpgrade: boolean) {
-  if (isUpgrade) return "border-brand-gold/60 bg-brand-gold/15 text-brand-lea dark:text-brand-gold ring-2 ring-brand-gold/50 shadow-glow";
-  if (seat === "PIC") return "border-brand-gold/30 bg-brand-gold/10 text-brand-lea dark:text-slate-100";
-  if (seat === "SIC") return "border-brand-eden/30 bg-brand-eden/10 text-brand-eden dark:border-white/15 dark:bg-white/5 dark:text-slate-200";
-  return "border-brand-lea/10 bg-brand-cloudDancer/60 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-300";
-}
+// One step in a pilot's mini journey. Upgrades (FO→Captain) glow gold;
+// transitions (new aircraft) read in navy/eden; hires/laterals stay neutral.
+const STEP_CHIP: Record<string, string> = {
+  upgrade: "border-brand-gold/60 bg-brand-gold/15 text-brand-lea dark:text-brand-gold ring-2 ring-brand-gold/50 shadow-glow",
+  transition: "border-brand-eden/40 bg-brand-eden/10 text-brand-eden dark:border-white/15 dark:bg-white/5 dark:text-slate-200",
+  hire: "border-brand-lea/10 bg-brand-cloudDancer/60 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-300",
+  lateral: "border-brand-lea/10 bg-brand-cloudDancer/60 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+};
+const STEP_LABEL: Record<string, string> = { hire: "Hired", upgrade: "Upgrade", transition: "Transition", lateral: "Move" };
 
 function PilotJourney({ steps }: { steps: UpgradePilot["steps"] }) {
   return (
@@ -172,15 +176,16 @@ function PilotJourney({ steps }: { steps: UpgradePilot["steps"] }) {
       {steps.map((s, i) => (
         <Fragment key={i}>
           {i > 0 && (
-            <span className={clsx("text-sm leading-none", s.isUpgrade ? "font-bold text-brand-gold" : "text-brand-grey/50")} aria-hidden>
-              {s.isUpgrade ? "↗" : "→"}
+            <span
+              className={clsx("text-sm leading-none", s.kind === "upgrade" ? "font-bold text-brand-gold" : s.kind === "transition" ? "font-bold text-brand-eden" : "text-brand-grey/50")}
+              aria-hidden
+            >
+              {s.kind === "upgrade" ? "↗" : "→"}
             </span>
           )}
-          <span className={clsx("inline-flex flex-col rounded border px-2 py-1 transition", seatChip(s.seat, s.isUpgrade))}>
+          <span className={clsx("inline-flex flex-col rounded border px-2 py-1 transition", STEP_CHIP[s.kind])}>
             <span className="text-xs font-semibold leading-tight">{s.title}</span>
-            <span className="text-[9px] uppercase tracking-wide opacity-70">
-              {i === 0 ? "Hired" : s.isUpgrade ? "Captain" : "Move"} · {fmtDate(s.date)}
-            </span>
+            <span className="text-[9px] uppercase tracking-wide opacity-70">{STEP_LABEL[s.kind]} · {fmtDate(s.date)}</span>
           </span>
         </Fragment>
       ))}
@@ -193,43 +198,95 @@ type Bucket = "advanced" | "once" | "twice" | "thrice" | "captain";
 function matchesBucket(p: UpgradePilot, b: Bucket): boolean {
   switch (b) {
     case "advanced":
-      return p.progressions >= 1;
+      return p.moves >= 1;
     case "once":
-      return p.progressions === 1;
+      return p.moves === 1;
     case "twice":
-      return p.progressions >= 2;
+      return p.moves >= 2;
     case "thrice":
-      return p.progressions >= 3;
+      return p.moves >= 3;
     case "captain":
       return p.madeCaptain;
   }
 }
 
 function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"] }) {
+  const [scope, setScope] = useState<"all" | "active">("active");
   const [bucket, setBucket] = useState<Bucket>("advanced");
 
+  // Everything below recomputes from the pilot list for the chosen scope.
+  const s = useMemo(() => {
+    const pool = upgrades.pilots.filter((p) => (scope === "active" ? p.active : true));
+    const advancedPilots = pool.filter((p) => p.moves >= 1);
+    const tracked = pool.length;
+    const avg = (xs: (number | null)[]) => {
+      const v = xs.filter((n): n is number => n !== null);
+      return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null;
+    };
+    const within = (days: number) => advancedPilots.filter((p) => p.daysToFirstMove !== null && p.daysToFirstMove <= days).length;
+    const paths = new Map<string, number>();
+    for (const p of pool)
+      for (let i = 1; i < p.steps.length; i++) {
+        const prev = p.steps[i - 1].aircraft;
+        const cur = p.steps[i].aircraft;
+        if (p.steps[i].kind === "transition" && prev && cur) paths.set(`${prev} → ${cur}`, (paths.get(`${prev} → ${cur}`) ?? 0) + 1);
+      }
+    return {
+      pool,
+      tracked,
+      advanced: advancedPilots.length,
+      pctAdvanced: tracked ? Math.round((advancedPilots.length / tracked) * 100) : 0,
+      upgradesTotal: pool.reduce((a, p) => a + p.upgrades, 0),
+      transitionsTotal: pool.reduce((a, p) => a + p.transitions, 0),
+      madeCaptain: pool.filter((p) => p.madeCaptain).length,
+      once: pool.filter((p) => p.moves === 1).length,
+      twice: pool.filter((p) => p.moves >= 2).length,
+      thrice: pool.filter((p) => p.moves >= 3).length,
+      avgToMove: avg(advancedPilots.map((p) => p.daysToFirstMove)),
+      avgToUpgrade: avg(pool.map((p) => p.daysToFirstUpgrade)),
+      avgToTransition: avg(pool.map((p) => p.daysToFirstTransition)),
+      pct1yr: tracked ? Math.round((within(365) / tracked) * 100) : 0,
+      pct2yr: tracked ? Math.round((within(730) / tracked) * 100) : 0,
+      topPaths: [...paths.entries()].map(([path, count]) => ({ path, count })).sort((a, b) => b.count - a.count).slice(0, 6)
+    };
+  }, [upgrades.pilots, scope]);
+
   const tiles: { key: Bucket; label: string; value: number; hint?: string }[] = [
-    { key: "advanced", label: "Advanced", value: upgrades.upgraded, hint: "≥ 1 move" },
-    { key: "once", label: "Once", value: upgrades.upgradedOnce, hint: "1 move" },
-    { key: "twice", label: "Twice or more", value: upgrades.upgradedTwicePlus, hint: "≥ 2 moves" },
-    { key: "thrice", label: "3× or more", value: upgrades.upgradedThricePlus, hint: "≥ 3 moves" },
-    { key: "captain", label: "Made Captain", value: upgrades.captainUpgrades, hint: "FO → Captain" }
+    { key: "advanced", label: "Advanced", value: s.advanced, hint: "≥ 1 move" },
+    { key: "once", label: "Once", value: s.once, hint: "1 move" },
+    { key: "twice", label: "Twice or more", value: s.twice, hint: "≥ 2 moves" },
+    { key: "thrice", label: "3× or more", value: s.thrice, hint: "≥ 3 moves" },
+    { key: "captain", label: "Made Captain", value: s.madeCaptain, hint: "FO → Captain" }
   ];
   const maxTile = Math.max(...tiles.map((t) => t.value), 1);
 
-  const filtered = useMemo(() => upgrades.pilots.filter((p) => matchesBucket(p, bucket)), [upgrades.pilots, bucket]);
+  const filtered = useMemo(() => s.pool.filter((p) => p.moves >= 1 && matchesBucket(p, bucket)), [s.pool, bucket]);
   const activeTile = tiles.find((t) => t.key === bucket);
 
   return (
     <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Fleet progression</p>
-          <h2 className="text-xl font-semibold text-brand-lea dark:text-slate-100">How pilots are climbing</h2>
+          <h2 className="text-xl font-semibold text-brand-lea dark:text-slate-100">Upgrades &amp; transitions</h2>
           <p className="mt-1 max-w-2xl text-sm text-brand-grey dark:text-slate-400">
-            {upgrades.upgraded} of {upgrades.pilotsTracked} tracked pilots have advanced to a new seat or aircraft
-            {upgrades.captainUpgrades > 0 ? `, and ${upgrades.captainUpgrades} have made Captain` : ""}. Click any figure to see exactly who.
+            {s.advanced} of {s.tracked} {scope === "active" ? "active" : "all"} pilots ({s.pctAdvanced}%) have upgraded or transitioned. An{" "}
+            <span className="font-medium text-brand-eden dark:text-slate-300">upgrade</span> is FO → Captain on the same aircraft; a{" "}
+            <span className="font-medium text-brand-eden dark:text-slate-300">transition</span> is a move to a new aircraft.
           </p>
+        </div>
+        <div className="inline-flex shrink-0 rounded border border-brand-lea/15 p-0.5 text-xs font-semibold dark:border-white/10">
+          {(["active", "all"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setScope(v)}
+              aria-pressed={scope === v}
+              className={clsx("rounded px-3 py-1.5 transition", scope === v ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400")}
+            >
+              {v === "active" ? "Active pilots" : "All pilots"}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -239,13 +296,29 @@ function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"
         </p>
       ) : (
         <>
-          {/* Headline timing stats */}
+          {/* Headline stats */}
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { label: "Avg time to first move", value: fmtSpan(upgrades.avgDaysToUpgrade) },
-              { label: "Median time", value: fmtSpan(upgrades.medianDaysToUpgrade) },
-              { label: "Advanced within 1 yr", value: `${upgrades.pctWithin1yr}%` },
-              { label: "Advanced within 2 yr", value: `${upgrades.pctWithin2yr}%` }
+              { label: "Advanced", value: `${s.pctAdvanced}%`, sub: `${s.advanced} of ${s.tracked} pilots` },
+              { label: "Avg time to advance", value: fmtSpan(s.avgToMove), sub: "hire → first move" },
+              { label: "Upgrades", value: String(s.upgradesTotal), sub: `${s.madeCaptain} made Captain` },
+              { label: "Transitions", value: String(s.transitionsTotal), sub: "aircraft changes" }
+            ].map((c) => (
+              <div key={c.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
+                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{c.label}</div>
+                <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{c.value}</div>
+                <div className="text-[11px] text-brand-grey dark:text-slate-400">{c.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Secondary timing */}
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: "Avg to first upgrade", value: fmtSpan(s.avgToUpgrade) },
+              { label: "Avg to first transition", value: fmtSpan(s.avgToTransition) },
+              { label: "Advanced within 1 yr", value: `${s.pct1yr}%` },
+              { label: "Advanced within 2 yr", value: `${s.pct2yr}%` }
             ].map((c) => (
               <div key={c.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
                 <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{c.label}</div>
@@ -257,10 +330,10 @@ function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"
           {/* The climb graph */}
           <div className="mt-5 rounded border border-brand-lea/10 bg-gradient-to-b from-brand-cloudDancer/40 to-transparent p-4 dark:border-white/10 dark:from-white/5">
             <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">
-              Cumulative advancements over time
+              Cumulative upgrades + transitions over time
             </div>
             <div className="mt-2">
-              <ClimbChart pilots={upgrades.pilots} />
+              <ClimbChart pilots={s.pool} />
             </div>
           </div>
 
@@ -300,7 +373,7 @@ function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"
               <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">
                 {activeTile?.label} — {filtered.length} {filtered.length === 1 ? "pilot" : "pilots"}
               </p>
-              <p className="text-[11px] text-brand-grey dark:text-slate-400">newest steps glow gold</p>
+              <p className="text-[11px] text-brand-grey dark:text-slate-400"><span className="font-semibold text-brand-gold">↗ upgrade</span> · <span className="font-semibold text-brand-eden dark:text-slate-300">→ transition</span></p>
             </div>
             <div className="mt-2 max-h-[560px] space-y-2 overflow-y-auto pr-1">
               {filtered.length === 0 ? (
@@ -323,10 +396,17 @@ function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"
                             Captain
                           </span>
                         )}
-                        <span className="rounded-full bg-brand-eden/10 px-2 py-0.5 font-semibold text-brand-eden dark:bg-white/5 dark:text-slate-300">
-                          {p.progressions} {p.progressions === 1 ? "move" : "moves"}
-                        </span>
-                        <span className="text-brand-grey dark:text-slate-400">{fmtSpan(p.daysToFirst)} to 1st</span>
+                        {p.upgrades > 0 && (
+                          <span className="rounded-full bg-brand-gold/15 px-2 py-0.5 font-semibold text-brand-lea dark:text-brand-gold">
+                            {p.upgrades} upgrade{p.upgrades === 1 ? "" : "s"}
+                          </span>
+                        )}
+                        {p.transitions > 0 && (
+                          <span className="rounded-full bg-brand-eden/10 px-2 py-0.5 font-semibold text-brand-eden dark:bg-white/5 dark:text-slate-300">
+                            {p.transitions} transition{p.transitions === 1 ? "" : "s"}
+                          </span>
+                        )}
+                        <span className="text-brand-grey dark:text-slate-400">{fmtSpan(p.daysToFirstMove)} to 1st</span>
                       </div>
                     </div>
                     <div className="mt-2">
@@ -337,6 +417,21 @@ function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"
               )}
             </div>
           </div>
+
+          {/* Most common transition paths — the popular career moves */}
+          {s.topPaths.length > 0 && (
+            <div className="mt-5">
+              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Most common transitions</div>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {s.topPaths.map((tp) => (
+                  <div key={tp.path} className="flex items-center justify-between rounded border border-brand-lea/10 bg-brand-cloudDancer/45 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5">
+                    <span className="font-medium text-brand-lea dark:text-slate-100">{tp.path}</span>
+                    <span className="font-semibold text-brand-grey dark:text-slate-400">{tp.count}×</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
     </section>

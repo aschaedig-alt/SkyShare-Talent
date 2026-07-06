@@ -159,40 +159,76 @@ export async function getEmployeeJourney(hireId: string): Promise<EmployeeJourne
 // Fleet-wide pilot upgrade analytics for Reports.
 // ---------------------------------------------------------------------------
 
+// A move between two roles is one of:
+//   upgrade    — First Officer -> Captain on the SAME aircraft
+//   transition — a move to a DIFFERENT aircraft (any seat)
+//   lateral    — same aircraft, not an FO->Captain step (e.g. Captain -> Lead Captain)
+export type StepKind = "hire" | "upgrade" | "transition" | "lateral";
+
 export type UpgradePilotStep = {
-  title: string;
+  title: string; // reporting label (CE-525 shown as its airframe, CJ2)
   seat: string | null; // PIC | SIC | null
-  aircraft: string | null;
+  aircraft: string | null; // canonical airframe code (for same-aircraft comparison)
   date: string | null;
-  isUpgrade: boolean; // SIC -> PIC step up from the prior role
-  transitionType: string;
+  kind: StepKind;
 };
 
 export type UpgradePilot = {
   hireId: string;
   name: string;
-  progressions: number; // moves after the first role
-  madeCaptain: boolean; // reached PIC via an SIC -> PIC step
-  daysToFirst: number | null; // days from hire to first move
+  active: boolean; // currently employed (not terminated)
+  upgrades: number; // FO -> Captain, same aircraft
+  transitions: number; // moved to a different aircraft
+  moves: number; // upgrades + transitions
+  laterals: number; // same-aircraft non-upgrade moves (rare)
+  madeCaptain: boolean; // >= 1 upgrade (reached Captain via FO -> Captain)
+  daysToFirstMove: number | null;
+  daysToFirstUpgrade: number | null;
+  daysToFirstTransition: number | null;
   startDate: string | null;
   latestDate: string | null;
   steps: UpgradePilotStep[]; // full role journey, oldest first
 };
 
+// The whole tracked-pilot set (advanced or not); the Reports UI filters
+// (all/active) and aggregates client-side.
 export type UpgradeAnalytics = {
-  pilotsTracked: number; // employees with a pilot role history (a seat somewhere)
-  upgraded: number; // pilots with >=1 progression (role/airframe/seat move)
-  captainUpgrades: number; // subset: pilots who made an SIC->PIC (First Officer -> Captain) step
-  avgDaysToUpgrade: number | null; // to first progression
-  medianDaysToUpgrade: number | null;
-  pctWithin1yr: number; // of pilotsTracked, first progression within 365 days
-  pctWithin2yr: number;
-  upgradedOnce: number; // exactly 1 progression
-  upgradedTwicePlus: number;
-  upgradedThricePlus: number;
-  pilots: UpgradePilot[]; // the progressed pilots (>=1 move), richest first — powers drill-down
+  pilots: UpgradePilot[];
   hasData: boolean;
 };
+
+// Report the CE-525 type rating as its airframe, CJ2.
+function reportTitle(title: string): string {
+  return title.replace(/\bCE-?525\b/gi, "CJ2");
+}
+
+// Canonical airframe code from a title (+ aircraft field) so "same aircraft" can
+// be compared. CE-525 collapses to CJ2; XL shorthand to 560XL.
+function airframeOf(title: string, aircraft: string | null): string | null {
+  const t = `${title} ${aircraft ?? ""}`;
+  const AF: [RegExp, string][] = [
+    [/\bg450\b/i, "G450"],
+    [/\bg200\b/i, "G200"],
+    [/\bgv\b/i, "GV"],
+    [/\blegacy ?650\b/i, "Legacy 650"],
+    [/\blegacy ?600\b/i, "Legacy 600"],
+    [/\bpc-?12\b/i, "PC-12"],
+    [/\bphenom ?300\b/i, "Phenom 300"],
+    [/\bphenom ?100\b/i, "Phenom 100"],
+    [/\b560 ?xls\+?\b|\bxls\+?\b/i, "560XLS+"],
+    [/\b560 ?xl\b|\bxl\b/i, "560XL"],
+    [/\bcj ?2\b|\bce-?525\b/i, "CJ2"],
+    [/\bm2\b/i, "M2"]
+  ];
+  for (const [re, code] of AF) if (re.test(t)) return code;
+  return null;
+}
+
+function classifyStep(prevSeat: string | null, prevAf: string | null, seat: string | null, af: string | null): StepKind {
+  if (prevAf && af && prevAf !== af) return "transition";
+  if (seat === "PIC" && prevSeat === "SIC") return "upgrade";
+  return "lateral";
+}
 
 export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
   const [rows, names] = (await Promise.all([
@@ -211,10 +247,10 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
         createdAt: true
       }
     }),
-    prisma.newHire.findMany({ select: { id: true, name: true } })
-  ])) as [(RawRole & { newHireId: string })[], { id: string; name: string }[]];
+    prisma.newHire.findMany({ select: { id: true, name: true, employmentStatus: true } })
+  ])) as [(RawRole & { newHireId: string })[], { id: string; name: string; employmentStatus: string }[]];
 
-  const nameOf = new Map(names.map((n) => [n.id, n.name]));
+  const infoOf = new Map(names.map((n) => [n.id, n]));
 
   const byHire = new Map<string, RawRole[]>();
   for (const r of rows) {
@@ -223,54 +259,50 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
     byHire.set(r.newHireId, list);
   }
 
-  let pilotsTracked = 0;
-  let upgraded = 0;
-  let captainUpgrades = 0;
-  let within1yr = 0;
-  let within2yr = 0;
-  let upgradedOnce = 0;
-  let upgradedTwicePlus = 0;
-  let upgradedThricePlus = 0;
-  const daysToUpgrade: number[] = [];
   const pilots: UpgradePilot[] = [];
 
   for (const [hireId, roles] of byHire) {
     const ordered = orderRoles(roles);
     if (!ordered.some((r) => seatOf(r) !== null)) continue; // not a pilot
-    pilotsTracked++;
 
-    // A "progression" = any move to a new role/airframe/seat (every role after the first).
-    const progressions = ordered.length - 1;
-    const flags = markUpgrades(ordered);
-    const madeCaptain = flags.some(Boolean);
-    if (madeCaptain) captainUpgrades++; // SIC -> PIC subset
-    if (progressions < 1) continue;
+    const seats = ordered.map((r) => seatOf(r));
+    const frames = ordered.map((r) => airframeOf(r.title, r.aircraft));
+    const kinds: StepKind[] = ordered.map((r, i) =>
+      i === 0 ? "hire" : classifyStep(seats[i - 1], frames[i - 1], seats[i], frames[i])
+    );
 
-    upgraded++;
-    if (progressions === 1) upgradedOnce++;
-    if (progressions >= 2) upgradedTwicePlus++;
-    if (progressions >= 3) upgradedThricePlus++;
+    const hireTime = ordered[0].startDate.getTime();
+    const daysFrom = (i: number) => Math.max(0, Math.round((ordered[i].startDate.getTime() - hireTime) / DAY));
+    const firstIdx = (pred: (k: StepKind) => boolean) => {
+      const i = kinds.findIndex((k, idx) => idx > 0 && pred(k));
+      return i === -1 ? null : daysFrom(i);
+    };
 
-    const days = Math.max(0, Math.round((ordered[1].startDate.getTime() - ordered[0].startDate.getTime()) / DAY));
-    daysToUpgrade.push(days);
-    if (days <= 365) within1yr++;
-    if (days <= 730) within2yr++;
+    const upgrades = kinds.filter((k) => k === "upgrade").length;
+    const transitions = kinds.filter((k) => k === "transition").length;
+    const laterals = kinds.filter((k) => k === "lateral").length;
+    const info = infoOf.get(hireId);
 
     pilots.push({
       hireId,
-      name: nameOf.get(hireId) ?? "Unknown",
-      progressions,
-      madeCaptain,
-      daysToFirst: days,
+      name: info?.name ?? "Unknown",
+      active: info?.employmentStatus !== "TERMINATED",
+      upgrades,
+      transitions,
+      moves: upgrades + transitions,
+      laterals,
+      madeCaptain: upgrades > 0,
+      daysToFirstMove: firstIdx((k) => k === "upgrade" || k === "transition"),
+      daysToFirstUpgrade: firstIdx((k) => k === "upgrade"),
+      daysToFirstTransition: firstIdx((k) => k === "transition"),
       startDate: iso(ordered[0].startDate),
       latestDate: iso(ordered[ordered.length - 1].startDate),
       steps: ordered.map((r, i) => ({
-        title: r.title,
-        seat: seatOf(r),
-        aircraft: r.aircraft,
+        title: reportTitle(r.title),
+        seat: seats[i],
+        aircraft: frames[i],
         date: iso(r.startDate),
-        isUpgrade: flags[i],
-        transitionType: (r.transitionType as string) ?? "HIRE"
+        kind: kinds[i]
       }))
     });
   }
@@ -278,32 +310,10 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
   // Richest journeys first: most moves, Captains ahead of non-Captains, then name.
   pilots.sort(
     (a, b) =>
-      b.progressions - a.progressions ||
+      b.moves - a.moves ||
       Number(b.madeCaptain) - Number(a.madeCaptain) ||
       a.name.localeCompare(b.name)
   );
 
-  const avg = daysToUpgrade.length ? Math.round(daysToUpgrade.reduce((a, b) => a + b, 0) / daysToUpgrade.length) : null;
-  const median = (() => {
-    if (!daysToUpgrade.length) return null;
-    const s = [...daysToUpgrade].sort((a, b) => a - b);
-    const mid = Math.floor(s.length / 2);
-    return s.length % 2 ? s[mid] : Math.round((s[mid - 1] + s[mid]) / 2);
-  })();
-  const pct = (n: number) => (pilotsTracked ? Math.round((n / pilotsTracked) * 100) : 0);
-
-  return {
-    pilotsTracked,
-    upgraded,
-    captainUpgrades,
-    avgDaysToUpgrade: avg,
-    medianDaysToUpgrade: median,
-    pctWithin1yr: pct(within1yr),
-    pctWithin2yr: pct(within2yr),
-    upgradedOnce,
-    upgradedTwicePlus,
-    upgradedThricePlus,
-    pilots,
-    hasData: upgraded > 0
-  };
+  return { pilots, hasData: pilots.some((p) => p.moves > 0) };
 }
