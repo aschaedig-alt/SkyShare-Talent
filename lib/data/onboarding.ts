@@ -151,7 +151,7 @@ function toRow(hire: HireWithTasks, now: number): NewHireRow {
     terminationDate: iso(hire.terminationDate),
     stage: hire.stage as HireStage,
     canceled: hire.canceled,
-    employmentStatus: (hire.employmentStatus === "TERMINATED" ? "TERMINATED" : "ACTIVE") as EmploymentStatus,
+    employmentStatus: (["TERMINATED", "CONTRACT"].includes(hire.employmentStatus) ? hire.employmentStatus : "ACTIVE") as EmploymentStatus,
     travelStatus: hire.travelStatus,
     notes: hire.notes,
     doneCount,
@@ -547,7 +547,7 @@ export async function getActiveMilestoneData(): Promise<MilestoneData> {
 // ---- Post-onboard (maintenance check-ins) ----
 
 export type Checkin = { id: string; key: string; short: string; status: GridTaskStatus; dueSoon: boolean };
-export type EmploymentStatus = "ACTIVE" | "TERMINATED";
+export type EmploymentStatus = "ACTIVE" | "TERMINATED" | "CONTRACT";
 export type PostOnboardHire = {
   id: string;
   name: string;
@@ -608,7 +608,7 @@ export async function getPostOnboardHires(): Promise<PostOnboardHire[]> {
       department: h.department,
       startDate: iso(h.startDate),
       onboardedAt: iso(h.onboardedAt),
-      employmentStatus: (h.employmentStatus === "TERMINATED" ? "TERMINATED" : "ACTIVE") as EmploymentStatus,
+      employmentStatus: (["TERMINATED", "CONTRACT"].includes(h.employmentStatus) ? h.employmentStatus : "ACTIVE") as EmploymentStatus,
       checkins
     };
   });

@@ -6,8 +6,16 @@ import { clsx } from "clsx";
 import { Search, Users } from "lucide-react";
 import type { EmployeeRow, EmployeeCounts } from "@/lib/data/employees";
 import { Badge, EmptyState } from "@/components/ui";
+import type { BadgeTone } from "@/components/ui/Badge";
 
 type Filter = "all" | "current" | "past";
+
+// Current employees are ACTIVE; CONTRACT reads as its own amber "Contract" pill;
+// everyone else (TERMINATED) is a neutral "Past".
+function statusBadge(e: EmployeeRow): { tone: BadgeTone; label: string } {
+  if (e.employmentStatus === "CONTRACT") return { tone: "warning", label: "Contract" };
+  return e.current ? { tone: "success", label: "Current" } : { tone: "neutral", label: "Past" };
+}
 
 function fmtDate(iso: string | null) {
   return iso ? new Intl.DateTimeFormat("en", { month: "short", year: "numeric" }).format(new Date(iso)) : "—";
@@ -86,7 +94,7 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
               <Link key={e.id} href={`/people/${e.id}`} className="block rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 transition hover:shadow-glow dark:bg-brand-panel dark:ring-white/10">
                 <div className="flex items-start justify-between gap-2">
                   <span className="font-semibold text-brand-lea dark:text-slate-100">{e.name}</span>
-                  <Badge tone={e.current ? "success" : "neutral"}>{e.current ? "Current" : "Past"}</Badge>
+                  {(() => { const b = statusBadge(e); return <Badge tone={b.tone}>{b.label}</Badge>; })()}
                 </div>
                 <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{[e.position, e.department].filter(Boolean).join(" · ") || "—"}</div>
                 <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">
@@ -123,7 +131,7 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
                       <td className="px-4 py-2.5 text-brand-grey dark:text-slate-400">{fmtDate(e.startDate)}</td>
                       <td className="px-4 py-2.5 text-brand-grey dark:text-slate-400">{tenure(e.tenureDays)}</td>
                       <td className="px-4 py-2.5 text-brand-grey dark:text-slate-400">{e.roleCount || "—"}{e.stintCount > 1 ? ` · ${e.stintCount} stints` : ""}</td>
-                      <td className="px-4 py-2.5"><Badge tone={e.current ? "success" : "neutral"}>{e.current ? "Current" : "Past"}</Badge></td>
+                      <td className="px-4 py-2.5">{(() => { const b = statusBadge(e); return <Badge tone={b.tone}>{b.label}</Badge>; })()}</td>
                     </tr>
                   ))}
                 </tbody>

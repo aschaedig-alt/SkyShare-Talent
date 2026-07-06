@@ -15,6 +15,7 @@ export type EmployeeRow = {
   startDate: string | null; // first stint / hire
   endDate: string | null; // last departure (past employees)
   current: boolean;
+  employmentStatus: string; // ACTIVE | TERMINATED | CONTRACT
   tenureDays: number | null;
   roleCount: number;
   stintCount: number;
@@ -77,7 +78,8 @@ export async function getEmployees(): Promise<EmployeeRow[]> {
 
   const employees = rows.map((r) => {
     const t = tenureOf(r, now);
-    const current = r.employmentStatus !== "TERMINATED";
+    // Only ACTIVE counts as a current employee — CONTRACT and TERMINATED do not.
+    const current = r.employmentStatus === "ACTIVE";
     return {
       id: r.id,
       name: r.name,
@@ -86,6 +88,7 @@ export async function getEmployees(): Promise<EmployeeRow[]> {
       startDate: iso(t.start ?? r.startDate),
       endDate: current ? null : iso(t.end ?? r.terminationDate),
       current,
+      employmentStatus: r.employmentStatus,
       tenureDays: t.days,
       roleCount: r._count.roleAssignments,
       stintCount: r.employmentStints.length,
@@ -102,9 +105,10 @@ export async function getEmployees(): Promise<EmployeeRow[]> {
 }
 
 export async function getEmployeeCounts(): Promise<EmployeeCounts> {
-  const [total, past] = await Promise.all([
+  const [total, active] = await Promise.all([
     prisma.newHire.count({ where: { stage: { in: ["POST_ONBOARD", "ARCHIVED"] } } }),
-    prisma.newHire.count({ where: { stage: { in: ["POST_ONBOARD", "ARCHIVED"] }, employmentStatus: "TERMINATED" } })
+    prisma.newHire.count({ where: { stage: { in: ["POST_ONBOARD", "ARCHIVED"] }, employmentStatus: "ACTIVE" } })
   ]);
-  return { total, current: total - past, past };
+  // Non-active (CONTRACT + TERMINATED) all fall under "past".
+  return { total, current: active, past: total - active };
 }

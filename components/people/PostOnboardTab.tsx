@@ -150,10 +150,15 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
                     onChange={(e) => setEmployment(h.id, e.target.value as EmploymentStatus)}
                     className={clsx(
                       "rounded border px-2 py-1 text-xs font-semibold outline-none transition",
-                      terminated ? "border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300" : "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300"
+                      terminated
+                        ? "border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300"
+                        : h.employmentStatus === "CONTRACT"
+                          ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300"
+                          : "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300"
                     )}
                   >
                     <option value="ACTIVE">Active</option>
+                    <option value="CONTRACT">Contract</option>
                     <option value="TERMINATED">Terminated</option>
                   </select>
                 </td>

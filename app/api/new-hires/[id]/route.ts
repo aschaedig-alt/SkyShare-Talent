@@ -60,7 +60,8 @@ export async function PATCH(request: Request, context: RouteContext) {
     // Terminating moves an employee to Archived (Past); re-activating returns them
     // to Post-onboard (Current). We also reconcile the role journey so it stays
     // consistent: closing the open role/stint at the last day, or reopening them.
-    const empChange = body.employmentStatus === "TERMINATED" ? "TERMINATED" : body.employmentStatus === "ACTIVE" ? "ACTIVE" : null;
+    const empChange =
+      body.employmentStatus === "TERMINATED" ? "TERMINATED" : body.employmentStatus === "ACTIVE" ? "ACTIVE" : body.employmentStatus === "CONTRACT" ? "CONTRACT" : null;
     let termDate: Date | null = null;
     if (empChange === "TERMINATED") {
       data.employmentStatus = "TERMINATED";
@@ -71,6 +72,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     } else if (empChange === "ACTIVE") {
       data.employmentStatus = "ACTIVE";
       data.stage = "POST_ONBOARD";
+      data.terminationDate = null;
+    } else if (empChange === "CONTRACT") {
+      // Contract worker: no longer an active employee, but not a hard termination —
+      // leave the role journey intact and keep them in the roster (badged "Contract").
+      data.employmentStatus = "CONTRACT";
       data.terminationDate = null;
     }
 

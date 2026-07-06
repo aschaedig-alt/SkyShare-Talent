@@ -103,7 +103,7 @@ export async function getUpcomingCelebrations(windowDays = 45): Promise<Celebrat
   const today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   const hires = await prisma.newHire.findMany({
-    where: { stage: { in: ROSTER_STAGES }, employmentStatus: { not: "TERMINATED" } },
+    where: { stage: { in: ROSTER_STAGES }, employmentStatus: "ACTIVE" },
     select: {
       id: true,
       name: true,

@@ -307,7 +307,8 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
     const transitions = kinds.filter((k) => k === "transition").length;
     const laterals = kinds.filter((k) => k === "lateral").length;
     const info = infoOf.get(hireId);
-    const active = info?.employmentStatus !== "TERMINATED";
+    // Only ACTIVE counts as an active pilot — CONTRACT/TERMINATED are treated as past.
+    const active = info?.employmentStatus === "ACTIVE";
     const last = ordered[ordered.length - 1];
     const endTime = active ? Date.now() : (last.endDate ?? last.startDate).getTime();
     const tenureDays = Math.max(0, Math.round((endTime - hireTime) / DAY));
