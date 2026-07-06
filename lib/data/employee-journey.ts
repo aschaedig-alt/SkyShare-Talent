@@ -178,6 +178,7 @@ export type UpgradePilot = {
   name: string;
   active: boolean; // currently employed (not terminated)
   tenureDays: number; // hire -> now (active) or -> last role end (former)
+  employedYears: number[]; // calendar years the pilot was on staff (for per-year headcount)
   upgrades: number; // FO -> Captain, same aircraft
   transitions: number; // moved to a different aircraft
   moves: number; // upgrades + transitions
@@ -232,7 +233,7 @@ function classifyStep(prevSeat: string | null, prevAf: string | null, seat: stri
 }
 
 export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
-  const [rows, names] = (await Promise.all([
+  const [rows, names, stintRows] = (await Promise.all([
     prisma.roleAssignment.findMany({
       select: {
         id: true,
@@ -248,10 +249,21 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
         createdAt: true
       }
     }),
-    prisma.newHire.findMany({ select: { id: true, name: true, employmentStatus: true } })
-  ])) as [(RawRole & { newHireId: string })[], { id: string; name: string; employmentStatus: string }[]];
+    prisma.newHire.findMany({ select: { id: true, name: true, employmentStatus: true } }),
+    prisma.employmentStint.findMany({ select: { newHireId: true, startDate: true, endDate: true } })
+  ])) as [
+    (RawRole & { newHireId: string })[],
+    { id: string; name: string; employmentStatus: string }[],
+    { newHireId: string; startDate: Date; endDate: Date | null }[]
+  ];
 
   const infoOf = new Map(names.map((n) => [n.id, n]));
+  const stintsByHire = new Map<string, { startDate: Date; endDate: Date | null }[]>();
+  for (const st of stintRows) {
+    const l = stintsByHire.get(st.newHireId) ?? [];
+    l.push(st);
+    stintsByHire.set(st.newHireId, l);
+  }
 
   const byHire = new Map<string, RawRole[]>();
   for (const r of rows) {
@@ -288,11 +300,24 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
     const endTime = active ? Date.now() : (last.endDate ?? last.startDate).getTime();
     const tenureDays = Math.max(0, Math.round((endTime - hireTime) / DAY));
 
+    // Calendar years on staff — from employment stints (so rehire gaps are
+    // excluded), else the single role span.
+    const stints = stintsByHire.get(hireId) ?? [];
+    const intervals: [number, number][] = stints.length
+      ? stints.map((st) => [st.startDate.getTime(), (st.endDate ?? new Date(endTime)).getTime()] as [number, number])
+      : [[hireTime, endTime]];
+    const yset = new Set<number>();
+    for (const [a, b] of intervals) {
+      for (let y = new Date(a).getUTCFullYear(); y <= new Date(b).getUTCFullYear(); y++) yset.add(y);
+    }
+    const employedYears = [...yset].sort((x, y) => x - y);
+
     pilots.push({
       hireId,
       name: info?.name ?? "Unknown",
       active,
       tenureDays,
+      employedYears,
       upgrades,
       transitions,
       moves: upgrades + transitions,

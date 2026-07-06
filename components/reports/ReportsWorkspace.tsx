@@ -28,7 +28,9 @@ function fmtSpan(days: number | null): string {
 
 function yearOf(iso: string | null): number | null {
   if (!iso) return null;
-  const y = new Date(iso).getFullYear();
+  // Dates are stored as UTC midnight; read the year in UTC so it matches the
+  // pilots' employedYears (also UTC) — otherwise a Jan-1 date slips to the prior year.
+  const y = new Date(iso).getUTCFullYear();
   return Number.isFinite(y) ? y : null;
 }
 
@@ -201,15 +203,10 @@ function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"
   const [year, setYear] = useState<number | "all">("all");
   const [bucket, setBucket] = useState<Bucket>("advanced");
 
-  // Years that actually have an upgrade/transition, for the timeframe menu.
+  // Every year we had pilots on staff, so any year's headcount is selectable.
   const years = useMemo(() => {
     const set = new Set<number>();
-    for (const p of upgrades.pilots)
-      for (let i = 1; i < p.steps.length; i++) {
-        if (p.steps[i].kind !== "upgrade" && p.steps[i].kind !== "transition") continue;
-        const y = yearOf(p.steps[i].date);
-        if (y !== null) set.add(y);
-      }
+    for (const p of upgrades.pilots) for (const y of p.employedYears) set.add(y);
     return [...set].sort((a, b) => b - a);
   }, [upgrades.pilots]);
 
@@ -217,7 +214,11 @@ function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"
   // the "time to advance" stats stay career-wide for the filtered pilot group.
   const s = useMemo(() => {
     const inYear = (iso: string | null) => year === "all" || yearOf(iso) === year;
-    const pool = upgrades.pilots.filter((p) => (scope === "active" ? p.active : true) && p.tenureDays >= tenure);
+    // Chart pool = scope + tenure across all years. Denominator pool further
+    // restricts to the selected year's headcount, so a year's % is measured
+    // against that year's pilots, not today's.
+    const poolNoYear = upgrades.pilots.filter((p) => (scope === "active" ? p.active : true) && p.tenureDays >= tenure);
+    const pool = poolNoYear.filter((p) => year === "all" || p.employedYears.includes(year));
     const rows = pool.map((p) => {
       let up = 0;
       let tr = 0;
@@ -246,6 +247,7 @@ function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"
       }
     return {
       pool,
+      poolNoYear,
       rows,
       tracked,
       advanced: advanced.length,
@@ -279,6 +281,9 @@ function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"
   const filtered = s.rows.filter(bucketTest);
   const activeTile = tiles.find((t) => t.key === bucket);
   const tenureLabel = tenure === 365 ? "1+ yr" : tenure === 730 ? "2+ yr" : tenure === 1825 ? "5+ yr" : null;
+  const denomLabel =
+    (year === "all" ? `${scope === "active" ? "active" : "all"} pilots` : `pilots on staff in ${year}${scope === "active" ? " (still here)" : ""}`) +
+    (tenureLabel ? ` with ${tenureLabel} tenure` : "");
 
   return (
     <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
@@ -287,7 +292,7 @@ function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Fleet progression</p>
           <h2 className="text-xl font-semibold text-brand-lea dark:text-slate-100">Upgrades &amp; transitions</h2>
           <p className="mt-1 max-w-2xl text-sm text-brand-grey dark:text-slate-400">
-            {s.advanced} of {s.tracked} {scope === "active" ? "active" : "all"} pilots{tenureLabel ? ` with ${tenureLabel} tenure` : ""} ({s.pctAdvanced}%) upgraded or transitioned{year === "all" ? "" : ` in ${year}`}. An{" "}
+            {s.advanced} of {s.tracked} {denomLabel} ({s.pctAdvanced}%) upgraded or transitioned{year === "all" ? "" : ` in ${year}`}. An{" "}
             <span className="font-medium text-brand-eden dark:text-slate-300">upgrade</span> is FO → Captain on the same aircraft; a{" "}
             <span className="font-medium text-brand-eden dark:text-slate-300">transition</span> is a move to a new aircraft.
           </p>
@@ -374,7 +379,7 @@ function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"
               Cumulative upgrades + transitions over time
             </div>
             <div className="mt-2">
-              <ClimbChart pilots={s.pool} />
+              <ClimbChart pilots={s.poolNoYear} />
             </div>
           </div>
 
