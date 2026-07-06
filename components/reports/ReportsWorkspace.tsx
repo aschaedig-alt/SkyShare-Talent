@@ -342,10 +342,24 @@ function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"
         </p>
       ) : (
         <>
+          {/* Headline — the shareable "since hire" figure */}
+          <div className="mt-4 rounded bg-brand-lea p-4 text-white">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="text-3xl font-bold text-brand-gold">{s.pctAdvanced}%</span>
+              <span className="text-sm font-medium">
+                of {denomLabel} {year === "all" ? "have upgraded or transitioned since being hired" : `upgraded or transitioned in ${year}`}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-white/70">
+              {s.advanced} of {s.tracked} · {s.upgradesTotal} upgrade{s.upgradesTotal === 1 ? "" : "s"} + {s.transitionsTotal} transition{s.transitionsTotal === 1 ? "" : "s"}
+              {year === "all" && s.tracked - s.advanced > 0 ? ` · ${s.tracked - s.advanced} still in their original seat` : ""}
+            </p>
+          </div>
+
           {/* Headline stats */}
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { label: "Advanced", value: `${s.pctAdvanced}%`, sub: `${s.advanced} of ${s.tracked} pilots` },
+              { label: "Pilots", value: String(s.tracked), sub: year === "all" ? "tracked" : `on staff in ${year}` },
               { label: "Avg time to advance", value: fmtSpan(s.avgToMove), sub: "hire → first move" },
               { label: "Upgrades", value: String(s.upgradesTotal), sub: `${s.madeCaptain} made Captain` },
               { label: "Transitions", value: String(s.transitionsTotal), sub: "aircraft changes" }
