@@ -10,6 +10,13 @@ import { TravelPanel } from "@/components/travel/TravelPanel";
 import type { TravelTripView, TravelerLoyalty } from "@/lib/data/travel";
 import { EmployeeJourney } from "@/components/people/EmployeeJourney";
 import type { EmployeeJourney as Journey } from "@/lib/data/employee-journey";
+import { Button, Input, Modal } from "@/components/ui";
+
+function fmtDay(iso: string | null) {
+  // Dates are stored as date-only (UTC midnight); format in UTC so the calendar
+  // day doesn't shift back a day in negative-offset timezones.
+  return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(iso)) : "";
+}
 
 type Props = {
   hire: NewHireDetail;
@@ -48,6 +55,37 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
   const [savingDetails, setSavingDetails] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [busyStage, setBusyStage] = useState(false);
+  const [termOpen, setTermOpen] = useState(false);
+  const [termDate, setTermDate] = useState("");
+  const [busyEmp, setBusyEmp] = useState(false);
+
+  const terminated = hire.employmentStatus === "TERMINATED";
+
+  async function setEmployment(employmentStatus: "ACTIVE" | "TERMINATED", terminationDate?: string) {
+    setBusyEmp(true);
+    setStatus(null);
+    try {
+      const res = await fetch(`/api/new-hires/${hire.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employmentStatus, ...(terminationDate !== undefined ? { terminationDate } : {}) })
+      });
+      if (!res.ok) throw new Error();
+      setTermOpen(false);
+      router.refresh();
+    } catch {
+      setStatus("Could not update employment status.");
+    } finally {
+      setBusyEmp(false);
+    }
+  }
+
+  function openTerminate() {
+    const today = new Date();
+    setTermDate(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`);
+    setStatus(null);
+    setTermOpen(true);
+  }
 
   const applicable = tasks.filter((t) => t.status !== "NA");
   const doneCount = applicable.filter((t) => t.status === "DONE").length;
@@ -136,6 +174,11 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
             {hire.position ?? "Position not set"}
             {hire.department ? ` · ${hire.department}` : ""}
           </p>
+          {terminated ? (
+            <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-brand-grey/15 px-2.5 py-0.5 text-xs font-semibold text-brand-grey dark:bg-white/10 dark:text-slate-300">
+              Former employee{hire.terminationDate ? ` · left ${fmtDay(hire.terminationDate)}` : ""}
+            </span>
+          ) : null}
           <div className="mt-2 flex items-center gap-3">
             <span className="h-2 w-40 overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/5">
               <span className={clsx("block h-full rounded-full", pct === 100 ? "bg-emerald-500" : "bg-brand-gold")} style={{ width: `${pct}%` }} />
@@ -146,25 +189,53 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {hire.stage !== "ACTIVE" && (
-            <button onClick={() => changeStage("ACTIVE")} disabled={busyStage} className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
-              Reactivate
+          {terminated ? (
+            <button onClick={() => setEmployment("ACTIVE")} disabled={busyEmp} className="rounded bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60">
+              {busyEmp ? "Saving…" : "Mark as active"}
             </button>
-          )}
-          {hire.stage === "ACTIVE" && (
-            <button onClick={() => changeStage("POST_ONBOARD")} disabled={busyStage} className="rounded bg-brand-lea px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
-              Mark onboarded
-            </button>
-          )}
-          {hire.stage !== "ARCHIVED" && (
-            <button onClick={() => changeStage("ARCHIVED")} disabled={busyStage} className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 disabled:opacity-60 dark:border-white/10 dark:text-slate-400 dark:bg-white/5">
-              Archive
-            </button>
+          ) : (
+            <>
+              {hire.stage !== "ACTIVE" && (
+                <button onClick={() => changeStage("ACTIVE")} disabled={busyStage} className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
+                  Reactivate
+                </button>
+              )}
+              {hire.stage === "ACTIVE" && (
+                <button onClick={() => changeStage("POST_ONBOARD")} disabled={busyStage} className="rounded bg-brand-lea px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
+                  Mark onboarded
+                </button>
+              )}
+              {hire.stage !== "ARCHIVED" && (
+                <button onClick={() => changeStage("ARCHIVED")} disabled={busyStage} className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 disabled:opacity-60 dark:border-white/10 dark:text-slate-400 dark:bg-white/5">
+                  Archive
+                </button>
+              )}
+              <button onClick={openTerminate} disabled={busyEmp} className="rounded border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-500/40 dark:text-red-300 dark:hover:bg-red-500/10">
+                Mark as former employee
+              </button>
+            </>
           )}
         </div>
       </section>
 
       {status ? <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/50 px-3 py-2 text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">{status}</div> : null}
+
+      <Modal open={termOpen} onClose={() => setTermOpen(false)} busy={busyEmp}>
+        <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Mark as former employee</h2>
+        <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
+          Moves {hire.name} to Past employees. Their current role and employment period are closed on the last day below. You can reverse this anytime with “Mark as active.”
+        </p>
+        <label className="mt-4 block">
+          <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Last day</span>
+          <Input type="date" value={termDate} onChange={(e) => setTermDate(e.target.value)} className="mt-1" />
+        </label>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setTermOpen(false)} disabled={busyEmp}>Cancel</Button>
+          <Button variant="danger" onClick={() => setEmployment("TERMINATED", termDate)} disabled={busyEmp || !termDate}>
+            {busyEmp ? "Saving…" : "Mark as former"}
+          </Button>
+        </div>
+      </Modal>
 
       <EmployeeJourney hireId={hire.id} journey={journey} roleTitleOptions={roleTitleOptions} />
 

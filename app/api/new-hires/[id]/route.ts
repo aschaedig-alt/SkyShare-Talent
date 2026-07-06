@@ -57,13 +57,39 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (typeof body.canceled === "boolean") {
       data.canceled = body.canceled;
     }
-    // Terminating moves an employee to Archived; re-activating returns them to Post-onboard.
-    if (body.employmentStatus === "TERMINATED") {
+    // Terminating moves an employee to Archived (Past); re-activating returns them
+    // to Post-onboard (Current). We also reconcile the role journey so it stays
+    // consistent: closing the open role/stint at the last day, or reopening them.
+    const empChange = body.employmentStatus === "TERMINATED" ? "TERMINATED" : body.employmentStatus === "ACTIVE" ? "ACTIVE" : null;
+    let termDate: Date | null = null;
+    if (empChange === "TERMINATED") {
       data.employmentStatus = "TERMINATED";
       data.stage = "ARCHIVED";
-    } else if (body.employmentStatus === "ACTIVE") {
+      const parsed = parseDate(body.terminationDate);
+      termDate = parsed instanceof Date ? parsed : new Date();
+      data.terminationDate = termDate;
+    } else if (empChange === "ACTIVE") {
       data.employmentStatus = "ACTIVE";
       data.stage = "POST_ONBOARD";
+      data.terminationDate = null;
+    }
+
+    if (empChange) {
+      await prisma.$transaction(async (tx) => {
+        await tx.newHire.update({ where: { id }, data });
+        if (empChange === "TERMINATED" && termDate) {
+          // Close the open role + stint at the last day.
+          await tx.roleAssignment.updateMany({ where: { newHireId: id, endDate: null, startDate: { lte: termDate } }, data: { endDate: termDate } });
+          await tx.employmentStint.updateMany({ where: { newHireId: id, endDate: null, startDate: { lte: termDate } }, data: { endDate: termDate } });
+        } else if (empChange === "ACTIVE") {
+          // Reopen the latest stint + role so they have a current role again.
+          const latestStint = await tx.employmentStint.findFirst({ where: { newHireId: id }, orderBy: { startDate: "desc" }, select: { id: true, endDate: true } });
+          if (latestStint?.endDate) await tx.employmentStint.update({ where: { id: latestStint.id }, data: { endDate: null } });
+          const latestRole = await tx.roleAssignment.findFirst({ where: { newHireId: id }, orderBy: { startDate: "desc" }, select: { id: true, endDate: true } });
+          if (latestRole?.endDate) await tx.roleAssignment.update({ where: { id: latestRole.id }, data: { endDate: null } });
+        }
+      });
+      return NextResponse.json({ ok: true, id });
     }
 
     const updated = await prisma.newHire.update({ where: { id }, data });
