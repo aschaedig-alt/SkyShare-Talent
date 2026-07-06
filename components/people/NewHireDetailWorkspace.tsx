@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { clsx } from "clsx";
+import { Star } from "lucide-react";
 import { ONBOARDING_GROUPS, groupLabel } from "@/lib/onboarding/tasks";
 import type { NewHireDetail, TaskView } from "@/lib/data/onboarding";
 import { TravelPanel } from "@/components/travel/TravelPanel";
@@ -169,7 +170,27 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
 
       <section className="flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div>
-          <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">{hire.name}</h1>
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">{hire.name}</h1>
+            {hire.pdpGraduate ? (
+              <span
+                title="Pilot Development Program graduate — completed the PDP and upgraded to Captain"
+                className="inline-flex items-center gap-1 rounded-full bg-brand-gold/15 px-2 py-0.5 text-xs font-semibold text-brand-lea dark:text-brand-gold"
+              >
+                <Star className="h-3.5 w-3.5 fill-brand-gold text-brand-gold" />
+                PDP
+              </span>
+            ) : null}
+            {hire.tenureYears > 0 ? (
+              <span
+                title={`${hire.tenureYears} year${hire.tenureYears === 1 ? "" : "s"} with SkyShare`}
+                aria-label={`${hire.tenureYears} year${hire.tenureYears === 1 ? "" : "s"} of service`}
+                className="select-none text-xl font-bold leading-none tracking-tight text-brand-gold"
+              >
+                {"*".repeat(hire.tenureYears)}
+              </span>
+            ) : null}
+          </div>
           <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
             {hire.position ?? "Position not set"}
             {hire.department ? ` · ${hire.department}` : ""}

@@ -238,6 +238,10 @@ model NewHire {
   pointsBalance   Int      @default(0)   // redeemable points balance
   avatarInitials  String?                // initials chip; derived from name if absent
 
+  // Pilot Development Program graduate (completed PDP + moved to Captain). Shows a
+  // star on the profile. Set manually — currently a small, hand-picked group.
+  pdpGraduate     Boolean  @default(false)
+
   tasks           OnboardingTask[]
   orientationAttendances OrientationAttendee[]
   travelTrips     TravelTrip[]

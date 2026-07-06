@@ -41,6 +41,8 @@ export type NewHireRow = {
   employmentStatus: EmploymentStatus;
   travelStatus: string | null;
   notes: string | null;
+  pdpGraduate: boolean;
+  tenureYears: number; // completed whole years with the company (anniversary-based)
   doneCount: number;
   applicableCount: number;
   status: HireStatus;
@@ -96,6 +98,8 @@ export type OnboardingWorkspaceData = {
 
 type HireWithTasks = {
   id: string;
+  pdpGraduate: boolean;
+  employmentStints: { startDate: Date | null; endDate: Date | null }[];
   name: string;
   position: string | null;
   department: string | null;
@@ -119,6 +123,19 @@ function iso(d: Date | null): string | null {
   return d ? d.toISOString() : null;
 }
 
+// Completed whole years between an anchor date and a reference date, by the
+// calendar anniversary (not calendar-year count). Read in UTC to match date-only
+// storage. Returns 0 if the anchor is missing or in the future.
+function completedYears(anchor: Date | null, ref: Date): number {
+  if (!anchor) return 0;
+  let years = ref.getUTCFullYear() - anchor.getUTCFullYear();
+  const beforeAnniversary =
+    ref.getUTCMonth() < anchor.getUTCMonth() ||
+    (ref.getUTCMonth() === anchor.getUTCMonth() && ref.getUTCDate() < anchor.getUTCDate());
+  if (beforeAnniversary) years -= 1;
+  return Math.max(0, years);
+}
+
 function deriveStatus(hire: HireWithTasks, doneCount: number, applicableCount: number, now: number): HireStatus {
   if (hire.canceled) return "Canceled";
   if (hire.stage === "ARCHIVED") return "Archived";
@@ -136,6 +153,12 @@ function toRow(hire: HireWithTasks, now: number): NewHireRow {
   const doneCount = applicable.filter((t) => t.status === "DONE").length;
   const applicableCount = applicable.length;
   const nextTask = [...onboardingTasks].sort((a, b) => a.order - b.order).find((t) => t.status === "TODO");
+  // Tenure anchor = earliest stint start (falling back to the hire start date).
+  // Freeze the clock at the termination date for former employees.
+  const stintStarts = hire.employmentStints.map((s) => s.startDate).filter((d): d is Date => !!d);
+  const anchor = [hire.startDate, ...stintStarts].filter((d): d is Date => !!d).sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
+  const endRef = hire.employmentStatus === "TERMINATED" && hire.terminationDate ? hire.terminationDate : new Date(now);
+  const tenureYears = completedYears(anchor, endRef);
   return {
     id: hire.id,
     name: hire.name,
@@ -154,6 +177,8 @@ function toRow(hire: HireWithTasks, now: number): NewHireRow {
     employmentStatus: (["TERMINATED", "CONTRACT"].includes(hire.employmentStatus) ? hire.employmentStatus : "ACTIVE") as EmploymentStatus,
     travelStatus: hire.travelStatus,
     notes: hire.notes,
+    pdpGraduate: hire.pdpGraduate,
+    tenureYears,
     doneCount,
     applicableCount,
     status: deriveStatus(hire, doneCount, applicableCount, now),
@@ -385,6 +410,8 @@ const hireSelect = {
   employmentStatus: true,
   travelStatus: true,
   notes: true,
+  pdpGraduate: true,
+  employmentStints: { select: { startDate: true, endDate: true } },
   tasks: { select: { id: true, key: true, label: true, group: true, order: true, status: true } }
 } as const;
 
