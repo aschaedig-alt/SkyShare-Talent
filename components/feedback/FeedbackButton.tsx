@@ -155,7 +155,7 @@ export function FeedbackButton() {
           onClick={handleClick}
           style={pos ? { left: pos.x, top: pos.y, bottom: "auto", right: "auto" } : undefined}
           className={clsx(
-            "fixed z-40 flex items-center gap-2 rounded bg-brand-lea px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-brand-eden",
+            "fixed z-40 flex items-center gap-2 rounded bg-brand-lea px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-brand-eden print:hidden",
             !pos && "bottom-5 right-5",
             dragging ? "cursor-grabbing select-none" : "cursor-pointer"
           )}

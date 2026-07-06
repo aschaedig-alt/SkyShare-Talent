@@ -3,6 +3,7 @@
 import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
+import { Download } from "lucide-react";
 import type { ReportsData } from "@/lib/data/reports";
 import type { UpgradePilot } from "@/lib/data/employee-journey";
 import { formatUsd, travelPurposeLabel, travelStatusLabel } from "@/lib/travel/constants";
@@ -41,7 +42,7 @@ function yearOf(iso: string | null): number | null {
 // ---------------------------------------------------------------------------
 function ClimbChart({ pilots }: { pilots: UpgradePilot[] }) {
   const model = useMemo(() => {
-    const perYear = new Map<number, { total: number; captain: number }>();
+    const perYear = new Map<number, { up: number; tr: number }>();
     for (const p of pilots) {
       // Count each upgrade/transition event, dated by its start.
       for (let i = 1; i < p.steps.length; i++) {
@@ -49,28 +50,26 @@ function ClimbChart({ pilots }: { pilots: UpgradePilot[] }) {
         if (k !== "upgrade" && k !== "transition") continue;
         const y = yearOf(p.steps[i].date);
         if (y === null) continue;
-        const bucket = perYear.get(y) ?? { total: 0, captain: 0 };
-        bucket.total += 1;
-        if (k === "upgrade") bucket.captain += 1;
-        perYear.set(y, bucket);
+        const b = perYear.get(y) ?? { up: 0, tr: 0 };
+        if (k === "upgrade") b.up += 1;
+        else b.tr += 1;
+        perYear.set(y, b);
       }
     }
     const years = [...perYear.keys()].sort((a, b) => a - b);
     if (years.length === 0) return null;
-    const first = years[0];
-    const last = years[years.length - 1];
     const span: number[] = [];
-    for (let y = first; y <= last; y++) span.push(y);
+    for (let y = years[0]; y <= years[years.length - 1]; y++) span.push(y);
 
-    let cumT = 0;
-    let cumC = 0;
+    let cumU = 0;
+    let cumTr = 0;
     const points = span.map((y) => {
-      const b = perYear.get(y) ?? { total: 0, captain: 0 };
-      cumT += b.total;
-      cumC += b.captain;
-      return { year: y, total: cumT, captain: cumC, yearTotal: b.total, yearCaptain: b.captain };
+      const b = perYear.get(y) ?? { up: 0, tr: 0 };
+      cumU += b.up;
+      cumTr += b.tr;
+      return { year: y, total: cumU + cumTr, up: cumU, tr: cumTr };
     });
-    return { points, maxY: cumT };
+    return { points, maxY: cumU + cumTr };
   }, [pilots]);
 
   if (!model) return null;
@@ -92,7 +91,8 @@ function ClimbChart({ pilots }: { pilots: UpgradePilot[] }) {
   const linePts = model.points.map((p, i) => `${x(i)},${y(p.total)}`);
   const areaPath = `M ${x(0)},${y(0)} L ${linePts.join(" L ")} L ${x(n - 1)},${y(0)} Z`;
   const linePath = `M ${linePts.join(" L ")}`;
-  const capPath = `M ${model.points.map((p, i) => `${x(i)},${y(p.captain)}`).join(" L ")}`;
+  const upPath = `M ${model.points.map((p, i) => `${x(i)},${y(p.up)}`).join(" L ")}`;
+  const trPath = `M ${model.points.map((p, i) => `${x(i)},${y(p.tr)}`).join(" L ")}`;
 
   // A few horizontal gridlines with value labels.
   const ticks = 3;
@@ -130,12 +130,13 @@ function ClimbChart({ pilots }: { pilots: UpgradePilot[] }) {
 
         <path d={areaPath} fill="url(#climbFill)" className="climb-area" />
         <path d={linePath} fill="none" stroke="#0d2c43" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" className="climb-line dark:stroke-white" />
-        <path d={capPath} fill="none" stroke="#eaaa00" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray="5 4" />
+        <path d={trPath} fill="none" stroke="#466481" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray="1.5 4" />
+        <path d={upPath} fill="none" stroke="#eaaa00" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray="6 4" />
 
         {model.points.map((p, i) => (
           <g key={p.year}>
             <circle cx={x(i)} cy={y(p.total)} r={3.5} className="fill-brand-lea dark:fill-white" />
-            <title>{`${p.year}: ${p.total} total progressions (${p.captain} to Captain) · +${p.yearTotal} this year`}</title>
+            <title>{`${p.year}: ${p.total} total (${p.up} upgrades, ${p.tr} transitions)`}</title>
             {i % labelEvery === 0 && (
               <text x={x(i)} y={H - 10} textAnchor="middle" className="fill-brand-grey text-[11px] dark:fill-slate-400">
                 {p.year}
@@ -143,19 +144,18 @@ function ClimbChart({ pilots }: { pilots: UpgradePilot[] }) {
             )}
           </g>
         ))}
-
-        {/* Endpoint value callout */}
-        <text x={x(n - 1)} y={y(model.maxY) - 10} textAnchor="end" className="fill-brand-lea text-[13px] font-bold dark:fill-slate-100">
-          {model.maxY} advancements
-        </text>
       </svg>
 
-      <div className="mt-1 flex items-center gap-4 pl-1 text-[11px] font-medium text-brand-grey dark:text-slate-400">
+      <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 pl-1 text-[11px] font-medium text-brand-grey dark:text-slate-400">
+        <span className="font-bold text-brand-lea dark:text-slate-100">{model.maxY} total</span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-4 rounded-sm" style={{ background: "linear-gradient(#eaaa00aa,#eaaa0022)" }} /> Upgrades + transitions
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-0 w-4 border-t-2 border-dashed border-brand-gold" /> Upgrades (→ Captain)
+          <span className="inline-block h-0 w-4 border-t-2 border-dashed border-brand-gold" /> Upgrades
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-0 w-4 border-t-2 border-dotted border-brand-eden" /> Transitions
         </span>
       </div>
     </div>
@@ -421,7 +421,7 @@ function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"
               </p>
               <p className="text-[11px] text-brand-grey dark:text-slate-400"><span className="font-semibold text-brand-gold">↗ upgrade</span> · <span className="font-semibold text-brand-eden dark:text-slate-300">→ transition</span></p>
             </div>
-            <div className="mt-2 max-h-[560px] space-y-2 overflow-y-auto pr-1">
+            <div className="mt-2 max-h-[560px] space-y-2 overflow-y-auto pr-1 print:max-h-none print:overflow-visible">
               {filtered.length === 0 ? (
                 <p className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 px-3 py-6 text-center text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
                   No pilots in this group yet.
@@ -701,10 +701,19 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
             The two views that matter: how pilots are advancing across the fleet, and what recruiting &amp; onboarding travel costs — both clickable, down to the person.
           </p>
         </div>
-        {logoDataUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={logoDataUrl} alt="Workspace logo" className="h-12 w-auto shrink-0 object-contain" />
-        ) : null}
+        <div className="flex shrink-0 items-center gap-3">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 print:hidden dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/5"
+          >
+            <Download className="h-4 w-4" /> Export PDF
+          </button>
+          {logoDataUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoDataUrl} alt="Workspace logo" className="h-12 w-auto object-contain" />
+          ) : null}
+        </div>
       </section>
 
       <PilotProgressions upgrades={data.pilotUpgrades} />

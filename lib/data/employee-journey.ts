@@ -275,8 +275,20 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
   const pilots: UpgradePilot[] = [];
 
   for (const [hireId, roles] of byHire) {
-    const ordered = orderRoles(roles);
-    if (!ordered.some((r) => seatOf(r) !== null)) continue; // not a pilot
+    const rawOrdered = orderRoles(roles);
+    if (!rawOrdered.some((r) => seatOf(r) !== null)) continue; // not a pilot
+
+    // Collapse consecutive roles that are the same airframe + seat once CE-525 is
+    // relabeled as CJ2 (e.g. a "CE-525 Captain" step followed by "CJ2 Captain" is
+    // one role, not two — keep the earlier).
+    const ordered: RawRole[] = [];
+    for (const r of rawOrdered) {
+      const prev = ordered[ordered.length - 1];
+      const pf = prev ? airframeOf(prev.title, prev.aircraft) : null;
+      const cf = airframeOf(r.title, r.aircraft);
+      if (prev && pf !== null && pf === cf && seatOf(prev) === seatOf(r)) continue;
+      ordered.push(r);
+    }
 
     const seats = ordered.map((r) => seatOf(r));
     const frames = ordered.map((r) => airframeOf(r.title, r.aircraft));

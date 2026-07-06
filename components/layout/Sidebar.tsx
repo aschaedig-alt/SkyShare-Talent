@@ -151,7 +151,7 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="fixed left-3 top-3 z-40 flex h-9 w-9 items-center justify-center rounded bg-brand-lea text-white shadow-lg lg:hidden"
+        className="fixed left-3 top-3 z-40 flex h-9 w-9 items-center justify-center rounded bg-brand-lea text-white shadow-lg lg:hidden print:hidden"
         aria-label="Open menu"
       >
         <Menu className="h-5 w-5" />
@@ -199,7 +199,7 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
       )}
 
       {/* Desktop: icon rail + panel. Locked to full screen height; only the panel/content scroll. */}
-      <div className="sticky top-0 hidden h-screen shrink-0 lg:flex">
+      <div className="sticky top-0 hidden h-screen shrink-0 lg:flex print:hidden">
         {/* Icon rail */}
         <div className="flex w-[70px] flex-col items-center border-r border-white/10 bg-brand-eden py-3">
           <Link

@@ -119,3 +119,24 @@ select {
   pointer-events: none;
   opacity: 0.78;
 }
+
+/* Print / export-to-PDF: drop the app background, force colors so charts and
+   chips render, and avoid slicing cards across page breaks. */
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+  section,
+  .shadow-panel {
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+}
