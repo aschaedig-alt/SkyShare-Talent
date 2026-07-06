@@ -75,6 +75,82 @@ export async function getRecognitionValues() {
   });
 }
 
+// ---- Celebrations (birthdays + work anniversaries) ---------------------------
+
+export type Celebration = {
+  personId: string;
+  name: string;
+  initials: string;
+  position: string | null;
+  department: string | null;
+  type: "birthday" | "anniversary";
+  date: string; // yyyy-mm-dd of the upcoming occurrence
+  daysUntil: number; // 0 = today
+  years: number | null; // anniversary: years of service being reached
+};
+
+export type CelebrationsData = { today: Celebration[]; upcoming: Celebration[]; windowDays: number };
+
+const CELEB_DAY = 24 * 60 * 60 * 1000;
+const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+// Upcoming birthdays and work anniversaries across the recognition roster (current
+// employees only), so operators can turn each one into a "congrats by SkyShare"
+// moment. Dates are stored as dates-only; read via UTC parts to keep the calendar
+// day intact regardless of server timezone.
+export async function getUpcomingCelebrations(windowDays = 45): Promise<CelebrationsData> {
+  const now = new Date();
+  const today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const hires = await prisma.newHire.findMany({
+    where: { stage: { in: ROSTER_STAGES }, employmentStatus: { not: "TERMINATED" } },
+    select: {
+      id: true,
+      name: true,
+      position: true,
+      department: true,
+      avatarInitials: true,
+      birthday: true,
+      startDate: true,
+      employmentStints: { select: { startDate: true }, orderBy: { startDate: "asc" }, take: 1 }
+    }
+  });
+
+  // Next occurrence (this year or next) of a month/day, as a local-midnight date.
+  const nextOccurrence = (month: number, day: number) => {
+    const thisYear = new Date(today0.getFullYear(), month, day);
+    return thisYear.getTime() < today0.getTime() ? new Date(today0.getFullYear() + 1, month, day) : thisYear;
+  };
+
+  const out: Celebration[] = [];
+  for (const h of hires) {
+    const base = {
+      personId: h.id,
+      name: h.name,
+      initials: h.avatarInitials ?? initialsFromName(h.name),
+      position: h.position,
+      department: h.department
+    };
+    if (h.birthday) {
+      const occ = nextOccurrence(h.birthday.getUTCMonth(), h.birthday.getUTCDate());
+      const daysUntil = Math.round((occ.getTime() - today0.getTime()) / CELEB_DAY);
+      if (daysUntil <= windowDays) out.push({ ...base, type: "birthday", date: ymd(occ), daysUntil, years: null });
+    }
+    // Anniversary from the first employment stint (or hire date) — total years since
+    // originally joining, so rehires still celebrate their real service length.
+    const start = h.employmentStints[0]?.startDate ?? h.startDate;
+    if (start) {
+      const occ = nextOccurrence(start.getUTCMonth(), start.getUTCDate());
+      const daysUntil = Math.round((occ.getTime() - today0.getTime()) / CELEB_DAY);
+      const years = occ.getFullYear() - start.getUTCFullYear();
+      if (daysUntil <= windowDays && years >= 1) out.push({ ...base, type: "anniversary", date: ymd(occ), daysUntil, years });
+    }
+  }
+
+  out.sort((a, b) => a.daysUntil - b.daysUntil || a.name.localeCompare(b.name));
+  return { today: out.filter((c) => c.daysUntil === 0), upcoming: out.filter((c) => c.daysUntil > 0), windowDays };
+}
+
 // ---- Dashboard ---------------------------------------------------------------
 
 function startOfMonth(d: Date, monthsBack = 0): Date {

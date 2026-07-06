@@ -21,6 +21,7 @@ type Props = {
   roster: RosterPerson[];
   values: ValueOption[];
   strengthPoints: StrengthPoints;
+  defaultRecipientId?: string | null;
 };
 
 const strengthValues = Object.values(RecognitionStrength) as [string, ...string[]];
@@ -40,7 +41,7 @@ const schema = z
 
 type FormValues = z.infer<typeof schema>;
 
-export function GiveRecognitionForm({ roster, values, strengthPoints }: Props) {
+export function GiveRecognitionForm({ roster, values, strengthPoints, defaultRecipientId = null }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -53,7 +54,7 @@ export function GiveRecognitionForm({ roster, values, strengthPoints }: Props) {
     formState: { errors }
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { giverId: "", recipientId: "", message: "", valueIds: [], strength: RecognitionStrength.GREAT }
+    defaultValues: { giverId: "", recipientId: defaultRecipientId ?? "", message: "", valueIds: [], strength: RecognitionStrength.GREAT }
   });
 
   const giverId = watch("giverId");

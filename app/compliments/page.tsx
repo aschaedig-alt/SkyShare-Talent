@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { clsx } from "clsx";
-import { Heart, Sparkles } from "lucide-react";
-import { getDashboardData } from "@/lib/data/compliments";
+import { Heart, Sparkles, PartyPopper } from "lucide-react";
+import { getDashboardData, getUpcomingCelebrations } from "@/lib/data/compliments";
 import { Card } from "@/components/compliments/Card";
 import { MetricCard } from "@/components/compliments/MetricCard";
 import { Avatar } from "@/components/compliments/Avatar";
@@ -12,9 +12,11 @@ import { valueColorClasses } from "@/lib/compliments/value-colors";
 export const dynamic = "force-dynamic";
 
 export default async function ComplimentsDashboardPage() {
-  const data = await getDashboardData();
+  const [data, celebrations] = await Promise.all([getDashboardData(), getUpcomingCelebrations(14)]);
   const leadingValue = data.valuesInAction[0];
   const maxValueCount = Math.max(1, ...data.valuesInAction.map((v) => v.count));
+  // Only the most timely celebrations belong on the dashboard (today + this week).
+  const soonCelebrations = [...celebrations.today, ...celebrations.upcoming].filter((c) => c.daysUntil <= 7).slice(0, 5);
 
   return (
     <div className="space-y-4">
@@ -73,6 +75,42 @@ export default async function ComplimentsDashboardPage() {
           )}
         </div>
       </Card>
+
+      {/* Upcoming celebrations — turn birthdays & anniversaries into recognitions */}
+      {soonCelebrations.length > 0 && (
+        <Card padding="lg">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-base font-medium text-brand-lea dark:text-slate-100">
+              <PartyPopper className="h-5 w-5 text-brand-gold" />
+              Celebrate this week
+            </h2>
+            <Link href="/compliments/celebrations" className="text-xs font-medium text-brand-eden hover:text-brand-lea dark:text-slate-300">
+              See all →
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {soonCelebrations.map((c) => (
+              <div key={`${c.type}-${c.personId}`} className="flex items-center gap-3">
+                <Avatar name={c.name} initials={c.initials} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-brand-lea dark:text-slate-100">{c.name}</p>
+                  <p className="truncate text-xs text-brand-grey dark:text-slate-400">
+                    {c.type === "birthday" ? "🎂 Birthday" : `🎉 ${c.years}-year anniversary`}
+                    {" · "}
+                    {c.daysUntil === 0 ? "today" : c.daysUntil === 1 ? "tomorrow" : `in ${c.daysUntil} days`}
+                  </p>
+                </div>
+                <Link
+                  href={`/compliments/give?recipient=${c.personId}`}
+                  className="shrink-0 rounded-element bg-brand-lea px-3 py-1.5 text-xs font-medium text-white transition hover:bg-brand-eden"
+                >
+                  Recognize
+                </Link>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Leaderboards */}
       <div className="grid gap-4 lg:grid-cols-2">

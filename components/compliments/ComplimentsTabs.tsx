@@ -6,6 +6,7 @@ import { clsx } from "clsx";
 
 const BASE_TABS = [
   { href: "/compliments", label: "Dashboard", exact: true },
+  { href: "/compliments/celebrations", label: "Celebrations", exact: false },
   { href: "/compliments/give", label: "Give", exact: false },
   { href: "/compliments/feed", label: "Feed", exact: false },
   { href: "/compliments/rewards", label: "Rewards", exact: false },
