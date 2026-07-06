@@ -292,9 +292,18 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
 
     const seats = ordered.map((r) => seatOf(r));
     const frames = ordered.map((r) => airframeOf(r.title, r.aircraft));
-    const kinds: StepKind[] = ordered.map((r, i) =>
-      i === 0 ? "hire" : classifyStep(seats[i - 1], frames[i - 1], seats[i], frames[i])
-    );
+    // Classify each step against the previous *flying* airframe/seat, carrying them
+    // forward across non-flying management roles (null airframe/seat, e.g. Assistant
+    // Chief Pilot). Without this, a management title between two flying roles would
+    // hide the real transition/upgrade that follows it.
+    const kinds: StepKind[] = [];
+    let prevAf: string | null = null;
+    let prevSeat: string | null = null;
+    ordered.forEach((r, i) => {
+      kinds.push(i === 0 ? "hire" : classifyStep(prevSeat, prevAf, seats[i], frames[i]));
+      if (frames[i] !== null) prevAf = frames[i];
+      if (seats[i] !== null) prevSeat = seats[i];
+    });
 
     const hireTime = ordered[0].startDate.getTime();
     const daysFrom = (i: number) => Math.max(0, Math.round((ordered[i].startDate.getTime() - hireTime) / DAY));
