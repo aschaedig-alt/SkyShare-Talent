@@ -177,6 +177,7 @@ export type UpgradePilot = {
   hireId: string;
   name: string;
   active: boolean; // currently employed (not terminated)
+  tenureDays: number; // hire -> now (active) or -> last role end (former)
   upgrades: number; // FO -> Captain, same aircraft
   transitions: number; // moved to a different aircraft
   moves: number; // upgrades + transitions
@@ -282,11 +283,16 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
     const transitions = kinds.filter((k) => k === "transition").length;
     const laterals = kinds.filter((k) => k === "lateral").length;
     const info = infoOf.get(hireId);
+    const active = info?.employmentStatus !== "TERMINATED";
+    const last = ordered[ordered.length - 1];
+    const endTime = active ? Date.now() : (last.endDate ?? last.startDate).getTime();
+    const tenureDays = Math.max(0, Math.round((endTime - hireTime) / DAY));
 
     pilots.push({
       hireId,
       name: info?.name ?? "Unknown",
-      active: info?.employmentStatus !== "TERMINATED",
+      active,
+      tenureDays,
       upgrades,
       transitions,
       moves: upgrades + transitions,

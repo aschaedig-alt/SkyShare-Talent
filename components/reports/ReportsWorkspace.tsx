@@ -195,61 +195,75 @@ function PilotJourney({ steps }: { steps: UpgradePilot["steps"] }) {
 
 type Bucket = "advanced" | "once" | "twice" | "thrice" | "captain";
 
-function matchesBucket(p: UpgradePilot, b: Bucket): boolean {
-  switch (b) {
-    case "advanced":
-      return p.moves >= 1;
-    case "once":
-      return p.moves === 1;
-    case "twice":
-      return p.moves >= 2;
-    case "thrice":
-      return p.moves >= 3;
-    case "captain":
-      return p.madeCaptain;
-  }
-}
-
 function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"] }) {
   const [scope, setScope] = useState<"all" | "active">("active");
+  const [tenure, setTenure] = useState<0 | 365 | 730 | 1825>(0);
+  const [year, setYear] = useState<number | "all">("all");
   const [bucket, setBucket] = useState<Bucket>("advanced");
 
-  // Everything below recomputes from the pilot list for the chosen scope.
+  // Years that actually have an upgrade/transition, for the timeframe menu.
+  const years = useMemo(() => {
+    const set = new Set<number>();
+    for (const p of upgrades.pilots)
+      for (let i = 1; i < p.steps.length; i++) {
+        if (p.steps[i].kind !== "upgrade" && p.steps[i].kind !== "transition") continue;
+        const y = yearOf(p.steps[i].date);
+        if (y !== null) set.add(y);
+      }
+    return [...set].sort((a, b) => b - a);
+  }, [upgrades.pilots]);
+
+  // Recompute for scope + tenure + timeframe. Move counts respect the timeframe;
+  // the "time to advance" stats stay career-wide for the filtered pilot group.
   const s = useMemo(() => {
-    const pool = upgrades.pilots.filter((p) => (scope === "active" ? p.active : true));
-    const advancedPilots = pool.filter((p) => p.moves >= 1);
+    const inYear = (iso: string | null) => year === "all" || yearOf(iso) === year;
+    const pool = upgrades.pilots.filter((p) => (scope === "active" ? p.active : true) && p.tenureDays >= tenure);
+    const rows = pool.map((p) => {
+      let up = 0;
+      let tr = 0;
+      for (let i = 1; i < p.steps.length; i++) {
+        const k = p.steps[i].kind;
+        if ((k === "upgrade" || k === "transition") && inYear(p.steps[i].date)) {
+          if (k === "upgrade") up++;
+          else tr++;
+        }
+      }
+      return { p, up, tr, moves: up + tr };
+    });
+    const advanced = rows.filter((r) => r.moves >= 1);
     const tracked = pool.length;
     const avg = (xs: (number | null)[]) => {
       const v = xs.filter((n): n is number => n !== null);
       return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null;
     };
-    const within = (days: number) => advancedPilots.filter((p) => p.daysToFirstMove !== null && p.daysToFirstMove <= days).length;
+    const within = (days: number) => advanced.filter((r) => r.p.daysToFirstMove !== null && r.p.daysToFirstMove <= days).length;
     const paths = new Map<string, number>();
     for (const p of pool)
       for (let i = 1; i < p.steps.length; i++) {
         const prev = p.steps[i - 1].aircraft;
         const cur = p.steps[i].aircraft;
-        if (p.steps[i].kind === "transition" && prev && cur) paths.set(`${prev} → ${cur}`, (paths.get(`${prev} → ${cur}`) ?? 0) + 1);
+        if (p.steps[i].kind === "transition" && inYear(p.steps[i].date) && prev && cur) paths.set(`${prev} → ${cur}`, (paths.get(`${prev} → ${cur}`) ?? 0) + 1);
       }
     return {
       pool,
+      rows,
       tracked,
-      advanced: advancedPilots.length,
-      pctAdvanced: tracked ? Math.round((advancedPilots.length / tracked) * 100) : 0,
-      upgradesTotal: pool.reduce((a, p) => a + p.upgrades, 0),
-      transitionsTotal: pool.reduce((a, p) => a + p.transitions, 0),
-      madeCaptain: pool.filter((p) => p.madeCaptain).length,
-      once: pool.filter((p) => p.moves === 1).length,
-      twice: pool.filter((p) => p.moves >= 2).length,
-      thrice: pool.filter((p) => p.moves >= 3).length,
-      avgToMove: avg(advancedPilots.map((p) => p.daysToFirstMove)),
+      advanced: advanced.length,
+      pctAdvanced: tracked ? Math.round((advanced.length / tracked) * 100) : 0,
+      upgradesTotal: rows.reduce((a, r) => a + r.up, 0),
+      transitionsTotal: rows.reduce((a, r) => a + r.tr, 0),
+      madeCaptain: rows.filter((r) => r.up >= 1).length,
+      once: rows.filter((r) => r.moves === 1).length,
+      twice: rows.filter((r) => r.moves >= 2).length,
+      thrice: rows.filter((r) => r.moves >= 3).length,
+      avgToMove: avg(advanced.map((r) => r.p.daysToFirstMove)),
       avgToUpgrade: avg(pool.map((p) => p.daysToFirstUpgrade)),
       avgToTransition: avg(pool.map((p) => p.daysToFirstTransition)),
       pct1yr: tracked ? Math.round((within(365) / tracked) * 100) : 0,
       pct2yr: tracked ? Math.round((within(730) / tracked) * 100) : 0,
       topPaths: [...paths.entries()].map(([path, count]) => ({ path, count })).sort((a, b) => b.count - a.count).slice(0, 6)
     };
-  }, [upgrades.pilots, scope]);
+  }, [upgrades.pilots, scope, tenure, year]);
 
   const tiles: { key: Bucket; label: string; value: number; hint?: string }[] = [
     { key: "advanced", label: "Advanced", value: s.advanced, hint: "≥ 1 move" },
@@ -260,8 +274,11 @@ function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"
   ];
   const maxTile = Math.max(...tiles.map((t) => t.value), 1);
 
-  const filtered = useMemo(() => s.pool.filter((p) => p.moves >= 1 && matchesBucket(p, bucket)), [s.pool, bucket]);
+  const bucketTest = (r: { moves: number; up: number }) =>
+    bucket === "once" ? r.moves === 1 : bucket === "twice" ? r.moves >= 2 : bucket === "thrice" ? r.moves >= 3 : bucket === "captain" ? r.up >= 1 : r.moves >= 1;
+  const filtered = s.rows.filter(bucketTest);
   const activeTile = tiles.find((t) => t.key === bucket);
+  const tenureLabel = tenure === 365 ? "1+ yr" : tenure === 730 ? "2+ yr" : tenure === 1825 ? "5+ yr" : null;
 
   return (
     <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
@@ -270,23 +287,47 @@ function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Fleet progression</p>
           <h2 className="text-xl font-semibold text-brand-lea dark:text-slate-100">Upgrades &amp; transitions</h2>
           <p className="mt-1 max-w-2xl text-sm text-brand-grey dark:text-slate-400">
-            {s.advanced} of {s.tracked} {scope === "active" ? "active" : "all"} pilots ({s.pctAdvanced}%) have upgraded or transitioned. An{" "}
+            {s.advanced} of {s.tracked} {scope === "active" ? "active" : "all"} pilots{tenureLabel ? ` with ${tenureLabel} tenure` : ""} ({s.pctAdvanced}%) upgraded or transitioned{year === "all" ? "" : ` in ${year}`}. An{" "}
             <span className="font-medium text-brand-eden dark:text-slate-300">upgrade</span> is FO → Captain on the same aircraft; a{" "}
             <span className="font-medium text-brand-eden dark:text-slate-300">transition</span> is a move to a new aircraft.
           </p>
         </div>
-        <div className="inline-flex shrink-0 rounded border border-brand-lea/15 p-0.5 text-xs font-semibold dark:border-white/10">
-          {(["active", "all"] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setScope(v)}
-              aria-pressed={scope === v}
-              className={clsx("rounded px-3 py-1.5 transition", scope === v ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400")}
-            >
-              {v === "active" ? "Active pilots" : "All pilots"}
-            </button>
-          ))}
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <div className="inline-flex rounded border border-brand-lea/15 p-0.5 text-xs font-semibold dark:border-white/10">
+            {(["active", "all"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setScope(v)}
+                aria-pressed={scope === v}
+                className={clsx("rounded px-3 py-1.5 transition", scope === v ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400")}
+              >
+                {v === "active" ? "Active pilots" : "All pilots"}
+              </button>
+            ))}
+          </div>
+          <select
+            value={tenure}
+            onChange={(e) => setTenure(Number(e.target.value) as 0 | 365 | 730 | 1825)}
+            aria-label="Filter by tenure"
+            className="rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+          >
+            <option value={0}>Any tenure</option>
+            <option value={365}>1+ yr tenure</option>
+            <option value={730}>2+ yr tenure</option>
+            <option value={1825}>5+ yr tenure</option>
+          </select>
+          <select
+            value={year}
+            onChange={(e) => setYear(e.target.value === "all" ? "all" : Number(e.target.value))}
+            aria-label="Filter by year"
+            className="rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+          >
+            <option value="all">All time</option>
+            {years.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -381,7 +422,7 @@ function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"
                   No pilots in this group yet.
                 </p>
               ) : (
-                filtered.map((p) => (
+                filtered.map(({ p, up, tr }) => (
                   <div key={p.hireId} className="rounded border border-brand-lea/10 bg-white p-3 transition hover:border-brand-gold/40 dark:border-white/10 dark:bg-white/5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <Link
@@ -391,19 +432,14 @@ function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"
                         {p.name}
                       </Link>
                       <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                        {p.madeCaptain && (
-                          <span className="rounded-full bg-brand-gold/20 px-2 py-0.5 font-bold uppercase tracking-wide text-brand-lea dark:text-brand-gold">
-                            Captain
+                        {up > 0 && (
+                          <span className="rounded-full bg-brand-gold/20 px-2 py-0.5 font-semibold text-brand-lea dark:text-brand-gold">
+                            {up} upgrade{up === 1 ? "" : "s"}
                           </span>
                         )}
-                        {p.upgrades > 0 && (
-                          <span className="rounded-full bg-brand-gold/15 px-2 py-0.5 font-semibold text-brand-lea dark:text-brand-gold">
-                            {p.upgrades} upgrade{p.upgrades === 1 ? "" : "s"}
-                          </span>
-                        )}
-                        {p.transitions > 0 && (
+                        {tr > 0 && (
                           <span className="rounded-full bg-brand-eden/10 px-2 py-0.5 font-semibold text-brand-eden dark:bg-white/5 dark:text-slate-300">
-                            {p.transitions} transition{p.transitions === 1 ? "" : "s"}
+                            {tr} transition{tr === 1 ? "" : "s"}
                           </span>
                         )}
                         <span className="text-brand-grey dark:text-slate-400">{fmtSpan(p.daysToFirstMove)} to 1st</span>
