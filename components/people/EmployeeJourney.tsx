@@ -14,7 +14,7 @@ type Props = {
 };
 
 function fmtDate(iso: string | null) {
-  return iso ? new Intl.DateTimeFormat("en", { month: "short", year: "numeric" }).format(new Date(iso)) : "—";
+  return iso ? new Intl.DateTimeFormat("en", { month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(iso)) : "—";
 }
 
 // "2 yr 3 mo" / "7 mo" / "24 days"

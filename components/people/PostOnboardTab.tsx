@@ -10,7 +10,7 @@ import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type 
 import { EmptyState } from "@/components/ui";
 
 function fmtDate(iso: string | null) {
-  return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(iso)) : "—";
+  return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(iso)) : "—";
 }
 
 const POST_ONBOARD_BULK_ACTIONS: BulkAction[] = [

@@ -18,7 +18,7 @@ function statusBadge(e: EmployeeRow): { tone: BadgeTone; label: string } {
 }
 
 function fmtDate(iso: string | null) {
-  return iso ? new Intl.DateTimeFormat("en", { month: "short", year: "numeric" }).format(new Date(iso)) : "—";
+  return iso ? new Intl.DateTimeFormat("en", { month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(iso)) : "—";
 }
 
 function tenure(days: number | null) {

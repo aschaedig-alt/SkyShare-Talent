@@ -102,6 +102,7 @@ export function formatDateForDisplay(value?: string | Date | null) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
-    year: "numeric"
+    year: "numeric",
+    timeZone: "UTC" // date-only values are stored at UTC midnight — render the stored day
   }).format(date);
 }

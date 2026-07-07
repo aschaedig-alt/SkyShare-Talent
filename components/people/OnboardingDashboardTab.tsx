@@ -19,7 +19,7 @@ const ALERT_STYLE: Record<string, { row: string; tag: string; label: string }> =
 };
 
 function fmtDate(iso: string) {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(iso));
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(iso));
 }
 
 function MetricCard({

@@ -17,7 +17,7 @@ const ARCHIVED_BULK_ACTIONS: BulkAction[] = [
 ];
 
 function fmtDate(iso: string | null) {
-  return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(iso)) : "—";
+  return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(iso)) : "—";
 }
 
 function stateOf(r: NewHireRow): { label: string; tone: BadgeTone } {

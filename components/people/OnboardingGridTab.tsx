@@ -31,7 +31,7 @@ const STATUS_STYLE: Record<HireStatus, string> = {
 };
 
 function fmtDate(iso: string | null) {
-  return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(iso)) : "—";
+  return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(iso)) : "—";
 }
 
 function Glyph({ status }: { status: GridTaskStatus }) {

@@ -10,7 +10,7 @@ function daysUntil(iso: string) {
 }
 
 function fmt(iso: string) {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(iso));
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(iso));
 }
 
 export function CurrencyPanel({ files }: { files: FileLike[] }) {

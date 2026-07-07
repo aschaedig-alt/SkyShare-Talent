@@ -24,7 +24,7 @@ const STATUS_STYLE: Record<string, string> = {
 
 function fmtDate(iso: string | null) {
   if (!iso) return "—";
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(iso));
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(iso));
 }
 
 const selectClass =
