@@ -198,22 +198,43 @@ const defaultRule: ModuleAccessRule = {
   accessLevel: "FULL_ACCESS"
 };
 
+const viewRule: ModuleAccessRule = {
+  showInSidebar: true,
+  accessLevel: "VIEW_ONLY"
+};
+
 const hiddenRule: ModuleAccessRule = {
   showInSidebar: false,
   accessLevel: "HIDDEN"
 };
+
+// Default access for a module a role has no explicit setting for — i.e. what a
+// NEWLY-added page gets until an admin edits it in the Module Visibility panel:
+//   admin → full · recruiter → view · hiring manager → view · viewer → hidden.
+// (The Settings module stays hard-locked to admins.)
+function roleDefaultRule(moduleId: ModuleId, role: RoleName): ModuleAccessRule {
+  if (moduleId === "settings") {
+    return role === "ADMIN" ? defaultRule : hiddenRule;
+  }
+  switch (role) {
+    case "ADMIN":
+      return defaultRule;
+    case "RECRUITER":
+    case "HIRING_MANAGER":
+      return viewRule;
+    case "VIEWER":
+      return hiddenRule;
+    default:
+      return hiddenRule;
+  }
+}
 
 function accessLevelFrom(value: unknown): AccessLevel | null {
   return accessLevels.includes(value as AccessLevel) ? (value as AccessLevel) : null;
 }
 
 function normalizeRule(moduleId: ModuleId, role: RoleName, value: unknown): ModuleAccessRule {
-  const fallback =
-    moduleId === "settings"
-      ? role === "ADMIN"
-        ? defaultRule
-        : hiddenRule
-      : defaultRule;
+  const fallback = roleDefaultRule(moduleId, role);
 
   if (!value || typeof value !== "object") {
     return fallback;
@@ -239,10 +260,10 @@ export function createDefaultModuleAccessPolicy(): ModuleAccessPolicy {
 
   for (const moduleId of moduleIds) {
     policy[moduleId] = {
-      ADMIN: normalizeRule(moduleId, "ADMIN", defaultRule),
-      RECRUITER: normalizeRule(moduleId, "RECRUITER", defaultRule),
-      HIRING_MANAGER: normalizeRule(moduleId, "HIRING_MANAGER", defaultRule),
-      VIEWER: normalizeRule(moduleId, "VIEWER", defaultRule)
+      ADMIN: roleDefaultRule(moduleId, "ADMIN"),
+      RECRUITER: roleDefaultRule(moduleId, "RECRUITER"),
+      HIRING_MANAGER: roleDefaultRule(moduleId, "HIRING_MANAGER"),
+      VIEWER: roleDefaultRule(moduleId, "VIEWER")
     } as Record<RoleName, ModuleAccessRule>;
   }
 
