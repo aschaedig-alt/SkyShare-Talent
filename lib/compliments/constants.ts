@@ -76,17 +76,46 @@ export const VALUE_COLOR_KEYS = {
 export type ValueColorKey =
   (typeof VALUE_COLOR_KEYS)[keyof typeof VALUE_COLOR_KEYS];
 
-// SkyShare's core values (see the "Core Values" block in the job posts), in
-// display order, each mapped to one of the shared value-color slots. The
-// colorKey is only a palette slot — the name is what's shown on the chip.
+// SkyShare's core values, in display order, each mapped to one of the shared
+// value-color slots and carrying its definition (shown when a value is picked).
+// The colorKey is only a palette slot — the name is what's shown on the chip.
 export const COMPANY_VALUES: {
   name: string;
+  description: string;
   colorKey: ValueColorKey;
   sortOrder: number;
 }[] = [
-  { name: "Safety First", colorKey: "innovation", sortOrder: 0 }, // blue — trust/safety
-  { name: "Team Alignment", colorKey: "teamwork", sortOrder: 1 }, // green
-  { name: "Deliver the Wow", colorKey: "customerFocus", sortOrder: 2 }, // orange — guest delight
-  { name: "Solutions Focused", colorKey: "growthMindset", sortOrder: 3 }, // purple
-  { name: "Own the Outcome", colorKey: "leadership", sortOrder: 4 } // gold — ownership
+  {
+    name: "Fueled by Passion",
+    description:
+      "Approaches work with energy, enthusiasm, and a commitment to excellence. Demonstrates a love for aviation and a drive to deliver exceptional results.",
+    colorKey: "innovation", // blue
+    sortOrder: 0
+  },
+  {
+    name: "Team Alignment",
+    description:
+      "Works collaboratively across departments, aligning goals and actions with the broader team to ensure seamless operations.",
+    colorKey: "teamwork", // green
+    sortOrder: 1
+  },
+  {
+    name: "Deliver the Wow",
+    description:
+      "Creates memorable and high-impact experiences for customers, colleagues, and partners by exceeding expectations.",
+    colorKey: "customerFocus", // orange — guest delight
+    sortOrder: 2
+  },
+  {
+    name: "Solutions Focused",
+    description:
+      "Approaches challenges with a proactive, problem-solving mindset to ensure efficiency and effectiveness.",
+    colorKey: "growthMindset", // purple
+    sortOrder: 3
+  }
 ];
+
+// name -> definition, for the value picker chips / tooltips.
+export const VALUE_DESCRIPTIONS: Record<string, string> = Object.fromEntries(
+  COMPANY_VALUES.map((v) => [v.name, v.description])
+);

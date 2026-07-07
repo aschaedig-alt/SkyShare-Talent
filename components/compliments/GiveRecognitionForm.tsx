@@ -10,7 +10,7 @@ import { Check } from "lucide-react";
 import { Card } from "@/components/compliments/Card";
 import { PersonPicker } from "@/components/compliments/PersonPicker";
 import { createRecognition } from "@/app/compliments/actions";
-import { RecognitionStrength, STRENGTH_STOPS } from "@/lib/compliments/constants";
+import { RecognitionStrength, STRENGTH_STOPS, VALUE_DESCRIPTIONS } from "@/lib/compliments/constants";
 import { valueColorClasses } from "@/lib/compliments/value-colors";
 import type { RosterPerson } from "@/lib/compliments/types";
 
@@ -176,6 +176,8 @@ function ValuePicker({
     onChange(selected.includes(id) ? selected.filter((v) => v !== id) : [...selected, id]);
   }
 
+  const selectedDefinitions = values.filter((v) => selected.includes(v.id) && VALUE_DESCRIPTIONS[v.name]);
+
   return (
     <div>
       <p className="mb-2.5 block text-sm font-medium text-brand-lea dark:text-slate-100">
@@ -191,6 +193,7 @@ function ValuePicker({
               key={v.id}
               onClick={() => toggle(v.id)}
               aria-pressed={isSelected}
+              title={VALUE_DESCRIPTIONS[v.name]}
               className={clsx(
                 "flex items-center justify-between gap-2 rounded-element border px-3 py-2.5 text-sm transition hover:shadow-glow",
                 isSelected
@@ -204,6 +207,18 @@ function ValuePicker({
           );
         })}
       </div>
+
+      {/* Definitions of the picked value(s) — the "little definition that comes with it". */}
+      {selectedDefinitions.length > 0 ? (
+        <div className="mt-2.5 space-y-1.5 rounded-element border-[0.5px] border-brand-lea/15 bg-brand-cloudDancer/30 px-3 py-2.5 dark:border-white/10 dark:bg-white/5">
+          {selectedDefinitions.map((v) => (
+            <p key={v.id} className="text-xs leading-relaxed text-brand-grey dark:text-slate-400">
+              <span className="font-semibold text-brand-lea dark:text-slate-200">{v.name}:</span> {VALUE_DESCRIPTIONS[v.name]}
+            </p>
+          ))}
+        </div>
+      ) : null}
+
       {error ? <p className="mt-1 text-xs text-brand-red">{error}</p> : null}
     </div>
   );

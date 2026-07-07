@@ -153,7 +153,7 @@ const blocks: BlockSeed[] = [
       {
         title: "Core Values",
         body:
-          "Safety First\nTeam Alignment\nDeliver the Wow\nSolutions Focused\nOwn the Outcome"
+          "Fueled by Passion\nTeam Alignment\nDeliver the Wow\nSolutions Focused"
       }
     ]
   },

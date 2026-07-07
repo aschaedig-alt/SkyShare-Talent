@@ -28,7 +28,7 @@ const FALLBACK: ValueColorClasses = {
   avatarBg: "bg-value-integrity-light",
   avatarText: "text-value-integrity-dark",
   barFill: "bg-value-integrity",
-  selected: "border-value-integrity bg-value-integrity-light"
+  selected: "border-value-integrity bg-value-integrity-light dark:bg-value-integrity/20"
 };
 
 export const VALUE_COLOR_CLASSES: Record<ValueColorKey, ValueColorClasses> = {
@@ -38,7 +38,7 @@ export const VALUE_COLOR_CLASSES: Record<ValueColorKey, ValueColorClasses> = {
     avatarBg: "bg-value-teamwork-light",
     avatarText: "text-value-teamwork-dark",
     barFill: "bg-value-teamwork",
-    selected: "border-value-teamwork bg-value-teamwork-light"
+    selected: "border-value-teamwork bg-value-teamwork-light dark:bg-value-teamwork/20"
   },
   innovation: {
     tag: "bg-value-innovation-light text-value-innovation-dark",
@@ -46,7 +46,7 @@ export const VALUE_COLOR_CLASSES: Record<ValueColorKey, ValueColorClasses> = {
     avatarBg: "bg-value-innovation-light",
     avatarText: "text-value-innovation-dark",
     barFill: "bg-value-innovation",
-    selected: "border-value-innovation bg-value-innovation-light"
+    selected: "border-value-innovation bg-value-innovation-light dark:bg-value-innovation/20"
   },
   leadership: {
     tag: "bg-value-leadership-light text-value-leadership-dark",
@@ -54,7 +54,7 @@ export const VALUE_COLOR_CLASSES: Record<ValueColorKey, ValueColorClasses> = {
     avatarBg: "bg-value-leadership-light",
     avatarText: "text-value-leadership-dark",
     barFill: "bg-value-leadership",
-    selected: "border-value-leadership bg-value-leadership-light"
+    selected: "border-value-leadership bg-value-leadership-light dark:bg-value-leadership/20"
   },
   customerFocus: {
     tag: "bg-value-customerFocus-light text-value-customerFocus-dark",
@@ -62,7 +62,7 @@ export const VALUE_COLOR_CLASSES: Record<ValueColorKey, ValueColorClasses> = {
     avatarBg: "bg-value-customerFocus-light",
     avatarText: "text-value-customerFocus-dark",
     barFill: "bg-value-customerFocus",
-    selected: "border-value-customerFocus bg-value-customerFocus-light"
+    selected: "border-value-customerFocus bg-value-customerFocus-light dark:bg-value-customerFocus/20"
   },
   growthMindset: {
     tag: "bg-value-growthMindset-light text-value-growthMindset-dark",
@@ -70,7 +70,7 @@ export const VALUE_COLOR_CLASSES: Record<ValueColorKey, ValueColorClasses> = {
     avatarBg: "bg-value-growthMindset-light",
     avatarText: "text-value-growthMindset-dark",
     barFill: "bg-value-growthMindset",
-    selected: "border-value-growthMindset bg-value-growthMindset-light"
+    selected: "border-value-growthMindset bg-value-growthMindset-light dark:bg-value-growthMindset/20"
   },
   integrity: {
     tag: "bg-value-integrity-light text-value-integrity-dark",
@@ -78,7 +78,7 @@ export const VALUE_COLOR_CLASSES: Record<ValueColorKey, ValueColorClasses> = {
     avatarBg: "bg-value-integrity-light",
     avatarText: "text-value-integrity-dark",
     barFill: "bg-value-integrity",
-    selected: "border-value-integrity bg-value-integrity-light"
+    selected: "border-value-integrity bg-value-integrity-light dark:bg-value-integrity/20"
   }
 };
 
