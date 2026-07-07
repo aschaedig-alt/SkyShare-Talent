@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { clsx } from "clsx";
 import { Search, Users } from "lucide-react";
 import type { EmployeeRow, EmployeeCounts } from "@/lib/data/employees";
@@ -9,6 +9,9 @@ import { Badge, EmptyState } from "@/components/ui";
 import type { BadgeTone } from "@/components/ui/Badge";
 
 type Filter = "all" | "current" | "past";
+
+const FILTER_KEY = "skyshare-employees-filter";
+const isFilter = (v: unknown): v is Filter => v === "all" || v === "current" || v === "past";
 
 // Current employees are ACTIVE; CONTRACT reads as its own amber "Contract" pill;
 // everyone else (TERMINATED) is a neutral "Past".
@@ -34,6 +37,15 @@ function tenure(days: number | null) {
 export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeRow[]; counts: EmployeeCounts }) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+
+  // Remember the Current/Past/All choice across reloads.
+  useEffect(() => {
+    const saved = window.localStorage.getItem(FILTER_KEY);
+    if (isFilter(saved)) setFilter(saved);
+  }, []);
+  useEffect(() => {
+    window.localStorage.setItem(FILTER_KEY, filter);
+  }, [filter]);
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
