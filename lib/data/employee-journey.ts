@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { positionFor } from "@/lib/fleet/positions";
+import { computeTenure } from "@/lib/data/tenure";
 
 // ---------------------------------------------------------------------------
 // Employee journey — the sequence of roles a person has held at SkyShare, plus
@@ -29,12 +30,27 @@ export type JourneyRole = {
 
 export type JourneyStint = { start: string | null; end: string | null; note: string | null };
 
+// Rehire-aware tenure summary for the profile (see lib/data/tenure). Dates are ISO.
+export type JourneyTenure = {
+  originalStart: string | null; // true first day
+  serviceStart: string | null; // effective start after the 3-month rehire rule
+  rehireStart: string | null; // most recent return (when rehired)
+  termDate: string | null; // last departure (when not currently employed)
+  tenureDays: number | null;
+  stintCount: number;
+  rehired: boolean;
+  reset: boolean; // tenure was reset by a > 3-month gap
+  lastRehireBridged: boolean | null; // most recent return: continued (true) vs reset (false)
+  lastGapDays: number | null;
+};
+
 export type EmployeeJourney = {
   roles: JourneyRole[];
   totalTenureDays: number | null;
   roleCount: number;
   upgradeCount: number; // SIC -> PIC steps in this person's history
   stints: JourneyStint[]; // employment periods; >1 = a rehire (left & came back)
+  tenure: JourneyTenure; // rehire-aware start/rehire/term + tenure flag
 };
 
 type RawRole = {
@@ -141,17 +157,30 @@ export async function getEmployeeJourney(hireId: string): Promise<EmployeeJourne
   const lastEnd = ordered.length ? ordered[ordered.length - 1].endDate : null;
   const tenureEnd = lastEnd ? lastEnd.getTime() : now;
   const rolesSpan = first ? Math.max(0, Math.round((tenureEnd - first.startDate.getTime()) / DAY)) : null;
-  // Prefer summed stint time (so a rehire's gap isn't counted as tenure).
-  const stintTenure = stintRows.length
-    ? stintRows.reduce((acc, s) => acc + Math.max(0, Math.round(((s.endDate ? s.endDate.getTime() : now) - s.startDate.getTime()) / DAY)), 0)
-    : null;
+
+  // Rehire-aware tenure: bridge short gaps (<= 3 months), reset for longer.
+  // Fall back to an implicit stint from the first role when none are recorded.
+  const tenureStints = stintRows.length ? stintRows : first ? [{ startDate: first.startDate, endDate: lastEnd }] : [];
+  const t = computeTenure(tenureStints, now);
 
   return {
     roles: journeyRoles,
-    totalTenureDays: stintTenure ?? rolesSpan,
+    totalTenureDays: t.tenureDays ?? rolesSpan,
     roleCount: journeyRoles.length,
     upgradeCount: upgradeFlags.filter(Boolean).length,
-    stints
+    stints,
+    tenure: {
+      originalStart: iso(t.originalStart),
+      serviceStart: iso(t.serviceStart),
+      rehireStart: iso(t.rehireStart),
+      termDate: iso(t.termDate),
+      tenureDays: t.tenureDays,
+      stintCount: t.stintCount,
+      rehired: t.rehired,
+      reset: t.reset,
+      lastRehireBridged: t.lastRehireBridged,
+      lastGapDays: t.lastGapDays
+    }
   };
 }
 

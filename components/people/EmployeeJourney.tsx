@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { Plane, TrendingUp, Award, Trash2, Plus, Pencil, Sparkles, Repeat, Star } from "lucide-react";
+import { Plane, TrendingUp, Award, Trash2, Plus, Pencil, Sparkles, Repeat, Star, Check, RotateCcw } from "lucide-react";
 import type { EmployeeJourney as Journey, JourneyRole } from "@/lib/data/employee-journey";
 import { Button, Modal, Input, EmptyState } from "@/components/ui";
 
@@ -178,15 +178,51 @@ export function EmployeeJourney({ hireId, journey, roleTitleOptions }: Props) {
                   <TrendingUp className="h-3.5 w-3.5" /> {journey.upgradeCount} upgrade{journey.upgradeCount === 1 ? "" : "s"}
                 </span>
               ) : null}
-              {journey.stints.length > 1 ? (
+              {journey.tenure.stintCount > 1 ? (
                 <span className="inline-flex items-center gap-1 font-semibold text-white/90">
-                  <Repeat className="h-3.5 w-3.5" /> Rehired · {journey.stints.length} stints
+                  <Repeat className="h-3.5 w-3.5" /> {journey.tenure.stintCount} stints
                 </span>
               ) : null}
             </p>
           ) : (
             <p className="mt-1 text-sm text-white/70">No roles recorded yet</p>
           )}
+
+          {/* Employment dates + rehire-tenure flag */}
+          {journey.tenure.originalStart ? (
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+              <span className="text-white/70">
+                Started <span className="font-semibold text-white">{fmtDate(journey.tenure.originalStart)}</span>
+              </span>
+              {journey.tenure.rehireStart ? (
+                <span className="text-white/70">
+                  · Rehired <span className="font-semibold text-white">{fmtDate(journey.tenure.rehireStart)}</span>
+                </span>
+              ) : null}
+              {journey.tenure.termDate ? (
+                <span className="text-white/70">
+                  · Left <span className="font-semibold text-white">{fmtDate(journey.tenure.termDate)}</span>
+                </span>
+              ) : null}
+              {journey.tenure.rehired && journey.tenure.lastRehireBridged !== null ? (
+                journey.tenure.lastRehireBridged ? (
+                  <span
+                    title="Returned within 3 months — tenure continues from the original hire date."
+                    className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-200"
+                  >
+                    <Check className="h-3 w-3" /> Tenure continued
+                  </span>
+                ) : (
+                  <span
+                    title={`Returned after more than 3 months${journey.tenure.lastGapDays ? ` (${journey.tenure.lastGapDays} days out)` : ""} — tenure reset; counting from ${fmtDate(journey.tenure.serviceStart)}.`}
+                    className="inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 font-semibold text-amber-200"
+                  >
+                    <RotateCcw className="h-3 w-3" /> Tenure reset · from {fmtDate(journey.tenure.serviceStart)}
+                  </span>
+                )
+              ) : null}
+            </div>
+          ) : null}
         </div>
         <button
           onClick={() => setAdding(true)}
