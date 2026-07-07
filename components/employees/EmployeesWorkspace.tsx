@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { clsx } from "clsx";
-import { Search, Users } from "lucide-react";
+import { Search, Users, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import type { EmployeeRow, EmployeeCounts } from "@/lib/data/employees";
 import { Badge, EmptyState } from "@/components/ui";
 import type { BadgeTone } from "@/components/ui/Badge";
@@ -12,6 +12,35 @@ type Filter = "all" | "current" | "past";
 
 const FILTER_KEY = "skyshare-employees-filter";
 const isFilter = (v: unknown): v is Filter => v === "all" || v === "current" || v === "past";
+
+type SortKey = "name" | "position" | "department" | "startDate" | "tenureDays" | "roleCount" | "status";
+type SortState = { key: SortKey; dir: "asc" | "desc" };
+const SORT_KEY = "skyshare-employees-sort";
+const SORT_KEYS: SortKey[] = ["name", "position", "department", "startDate", "tenureDays", "roleCount", "status"];
+
+// ACTIVE (current) sorts ahead of CONTRACT, then TERMINATED (past).
+function statusRank(e: EmployeeRow): number {
+  return e.employmentStatus === "ACTIVE" ? 0 : e.employmentStatus === "CONTRACT" ? 1 : 2;
+}
+
+function compareBy(a: EmployeeRow, b: EmployeeRow, key: SortKey): number {
+  switch (key) {
+    case "name":
+      return a.name.localeCompare(b.name);
+    case "position":
+      return (a.position ?? "").localeCompare(b.position ?? "");
+    case "department":
+      return (a.department ?? "").localeCompare(b.department ?? "");
+    case "startDate":
+      return (a.startDate ?? "").localeCompare(b.startDate ?? ""); // ISO strings sort chronologically
+    case "tenureDays":
+      return (a.tenureDays ?? 0) - (b.tenureDays ?? 0);
+    case "roleCount":
+      return a.roleCount - b.roleCount;
+    case "status":
+      return statusRank(a) - statusRank(b);
+  }
+}
 
 // Current employees are ACTIVE; CONTRACT reads as its own amber "Contract" pill;
 // everyone else (TERMINATED) is a neutral "Past".
@@ -37,25 +66,50 @@ function tenure(days: number | null) {
 export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeRow[]; counts: EmployeeCounts }) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  // null = the default order from the server (current first, then most recent).
+  const [sort, setSort] = useState<SortState | null>(null);
 
-  // Remember the Current/Past/All choice across reloads.
+  // Remember the Current/Past/All choice and the column sort across reloads.
   useEffect(() => {
-    const saved = window.localStorage.getItem(FILTER_KEY);
-    if (isFilter(saved)) setFilter(saved);
+    const savedFilter = window.localStorage.getItem(FILTER_KEY);
+    if (isFilter(savedFilter)) setFilter(savedFilter);
+    try {
+      const raw = window.localStorage.getItem(SORT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<SortState>;
+        if (SORT_KEYS.includes(parsed.key as SortKey) && (parsed.dir === "asc" || parsed.dir === "desc")) {
+          setSort({ key: parsed.key as SortKey, dir: parsed.dir });
+        }
+      }
+    } catch {
+      /* ignore malformed storage */
+    }
   }, []);
   useEffect(() => {
     window.localStorage.setItem(FILTER_KEY, filter);
   }, [filter]);
+  useEffect(() => {
+    if (sort) window.localStorage.setItem(SORT_KEY, JSON.stringify(sort));
+    else window.localStorage.removeItem(SORT_KEY);
+  }, [sort]);
+
+  // Click a header to cycle: ascending → descending → back to default order.
+  function toggleSort(key: SortKey) {
+    setSort((cur) => (cur?.key === key ? (cur.dir === "asc" ? { key, dir: "desc" } : null) : { key, dir: "asc" }));
+  }
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    return employees.filter((e) => {
+    const filtered = employees.filter((e) => {
       if (filter === "current" && !e.current) return false;
       if (filter === "past" && e.current) return false;
       if (!needle) return true;
       return [e.name, e.position, e.department].filter(Boolean).some((v) => v!.toLowerCase().includes(needle));
     });
-  }, [employees, q, filter]);
+    if (!sort) return filtered;
+    const factor = sort.dir === "asc" ? 1 : -1;
+    return [...filtered].sort((a, b) => factor * compareBy(a, b, sort.key) || a.name.localeCompare(b.name));
+  }, [employees, q, filter, sort]);
 
   const tabs: { key: Filter; label: string; count: number }[] = [
     { key: "all", label: "All", count: counts.total },
@@ -123,13 +177,13 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="border-b border-brand-lea/10 text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:border-white/10 dark:text-slate-400">
-                    <th className="px-4 py-3 text-left">Name</th>
-                    <th className="px-4 py-3 text-left">Current role</th>
-                    <th className="px-4 py-3 text-left">Department</th>
-                    <th className="px-4 py-3 text-left">Started</th>
-                    <th className="px-4 py-3 text-left">Tenure</th>
-                    <th className="px-4 py-3 text-left">Roles</th>
-                    <th className="px-4 py-3 text-left">Status</th>
+                    <SortableTh label="Name" sortKey="name" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Current role" sortKey="position" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Department" sortKey="department" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Started" sortKey="startDate" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Tenure" sortKey="tenureDays" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Roles" sortKey="roleCount" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Status" sortKey="status" sort={sort} onSort={toggleSort} />
                   </tr>
                 </thead>
                 <tbody>
@@ -153,5 +207,35 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
         </>
       )}
     </div>
+  );
+}
+
+function SortableTh({
+  label,
+  sortKey,
+  sort,
+  onSort
+}: {
+  label: string;
+  sortKey: SortKey;
+  sort: SortState | null;
+  onSort: (key: SortKey) => void;
+}) {
+  const active = sort?.key === sortKey;
+  return (
+    <th className="px-4 py-3 text-left" aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className="inline-flex items-center gap-1 font-bold uppercase tracking-[0.14em] transition hover:text-brand-lea dark:hover:text-slate-200"
+      >
+        {label}
+        {active ? (
+          sort.dir === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+        ) : (
+          <ChevronsUpDown className="h-3 w-3 opacity-30" />
+        )}
+      </button>
+    </th>
   );
 }
