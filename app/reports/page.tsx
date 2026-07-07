@@ -6,9 +6,9 @@ import { getWorkspaceBranding, resolveBrandingLogo } from "@/lib/data/branding";
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
-  await requireModulePageAccess("reports");
+  const { role } = await requireModulePageAccess("reports");
   const data = await getReportsData();
   const branding = await getWorkspaceBranding();
 
-  return <ReportsWorkspace data={data} logoDataUrl={resolveBrandingLogo(branding, "reports")} />;
+  return <ReportsWorkspace data={data} logoDataUrl={resolveBrandingLogo(branding, "reports")} canShare={role === "ADMIN"} />;
 }

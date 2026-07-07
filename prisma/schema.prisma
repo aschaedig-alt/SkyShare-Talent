@@ -199,6 +199,18 @@ model WorkspaceSetting {
   @@unique([scope, key])
 }
 
+// A revocable, unguessable public link to a live read-only report (currently the
+// Fleet Progression report). Anyone with the token can view; an admin can revoke.
+model ReportShareLink {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  report    String    @default("fleet-progression")
+  label     String?
+  createdBy String?
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+}
+
 model NewHire {
   id              String   @id @default(cuid())
   name            String

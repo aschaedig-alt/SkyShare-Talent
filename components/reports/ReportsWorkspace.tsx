@@ -7,10 +7,12 @@ import { Download } from "lucide-react";
 import type { ReportsData } from "@/lib/data/reports";
 import type { UpgradePilot } from "@/lib/data/employee-journey";
 import { formatUsd, travelPurposeLabel, travelStatusLabel } from "@/lib/travel/constants";
+import { ReportShareButton } from "@/components/reports/ReportShareButton";
 
 type ReportsWorkspaceProps = {
   data: ReportsData;
   logoDataUrl?: string | null;
+  canShare?: boolean;
 };
 
 function fmtDate(iso: string | null) {
@@ -197,7 +199,7 @@ function PilotJourney({ steps }: { steps: UpgradePilot["steps"] }) {
 
 type Bucket = "advanced" | "once" | "twice" | "thrice" | "captain";
 
-function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"] }) {
+export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"] }) {
   const [scope, setScope] = useState<"all" | "active">("active");
   const [tenure, setTenure] = useState<0 | 365 | 730 | 1825>(0);
   const [year, setYear] = useState<number | "all">("all");
@@ -711,7 +713,7 @@ const REPORT_TABS = [
 ] as const;
 type ReportTab = (typeof REPORT_TABS)[number]["id"];
 
-export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
+export function ReportsWorkspace({ data, logoDataUrl, canShare = false }: ReportsWorkspaceProps) {
   const [tab, setTab] = useState<ReportTab>("progression");
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
@@ -724,6 +726,7 @@ export function ReportsWorkspace({ data, logoDataUrl }: ReportsWorkspaceProps) {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
+          {canShare && tab === "progression" ? <ReportShareButton /> : null}
           <button
             type="button"
             onClick={() => window.print()}
