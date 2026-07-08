@@ -5,10 +5,10 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import { Search, Copy, Check, CreditCard, ExternalLink, AlertTriangle, Clock } from "lucide-react";
 import type { BusinessCardRow } from "@/lib/data/business-cards";
-import { formatCardText, formatCardsBatch, cardOrderState, CARD_STATUSES, CARD_STATUS_LABEL } from "@/lib/business-cards/card";
+import { formatCardText, formatCardsBatch, cardOrderState, CARD_STATUSES, CARD_STATUS_LABEL, type CardStatus } from "@/lib/business-cards/card";
 import { BusinessCardVisual } from "@/components/business-cards/BusinessCardVisual";
 
-type View = "all" | "new" | "toorder";
+type View = "all" | "new" | "needs";
 
 async function copy(text: string): Promise<boolean> {
   try {
@@ -47,7 +47,7 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
     const needle = q.trim().toLowerCase();
     return items.filter((r) => {
       if (view === "new" && !r.onboarding) return false;
-      if (view === "toorder" && !r.orderState.needsAction) return false;
+      if (view === "needs" && r.status !== "NEEDED") return false;
       if (!needle) return true;
       return [r.card.name, r.card.title, r.department].filter(Boolean).some((v) => v!.toLowerCase().includes(needle));
     });
@@ -61,6 +61,7 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
 
   const staffCount = new Set(items.map((c) => c.personId)).size;
   const newHireCount = new Set(items.filter((c) => c.onboarding).map((c) => c.personId)).size;
+  const needsCount = new Set(items.filter((c) => c.status === "NEEDED").map((c) => c.personId)).size;
 
   function toggle(key: string) {
     setSelected((cur) => {
@@ -75,6 +76,21 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
     setItems((prev) => prev.map((r) => (r.personId === personId ? { ...r, status: next, orderState: cardOrderState(r.orientationDate, next, Date.now()) } : r)));
     try {
       await fetch(`/api/new-hires/${personId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ businessCardStatus: next }) });
+    } catch {
+      /* optimistic; a refresh will resync */
+    }
+  }
+
+  // Mark all selected people (deduped) to one status in a single request.
+  async function bulkSetStatus(next: CardStatus) {
+    const ids = [...new Set(selectedRows.map((r) => r.personId))];
+    if (ids.length === 0) return;
+    setItems((prev) => prev.map((r) => (ids.includes(r.personId) ? { ...r, status: next, orderState: cardOrderState(r.orientationDate, next, Date.now()) } : r)));
+    setSelected(new Set());
+    setBulkMsg(`Marked ${ids.length} ${ids.length === 1 ? "person" : "people"} ${CARD_STATUS_LABEL[next].toLowerCase()}.`);
+    setTimeout(() => setBulkMsg(null), 2600);
+    try {
+      await fetch("/api/new-hires/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, patch: { businessCardStatus: next } }) });
     } catch {
       /* optimistic; a refresh will resync */
     }
@@ -100,7 +116,7 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
   const tabs: { key: View; label: string; count: number }[] = [
     { key: "all", label: "All staff", count: staffCount },
     { key: "new", label: "New hires", count: newHireCount },
-    { key: "toorder", label: "To order", count: toOrder.length }
+    { key: "needs", label: "Needs cards", count: needsCount }
   ];
 
   return (
@@ -121,7 +137,7 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
               className={clsx(
                 "rounded px-3 py-1.5 text-sm font-semibold transition",
                 view === t.key ? "bg-brand-lea text-white" : "border border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400",
-                t.key === "toorder" && t.count > 0 && view !== t.key ? "border-amber-400 text-amber-700 dark:text-amber-300" : ""
+                t.key === "needs" && t.count > 0 && view !== t.key ? "border-amber-400 text-amber-700 dark:text-amber-300" : ""
               )}
             >
               {t.label} <span className="opacity-70">· {t.count}</span>
@@ -147,9 +163,9 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
             <h2 className="text-sm font-bold text-amber-800 dark:text-amber-200">
               {toOrder.length} {toOrder.length === 1 ? "card" : "cards"} to order before orientation
             </h2>
-            {view !== "toorder" ? (
-              <button onClick={() => setView("toorder")} className="ml-auto text-xs font-semibold text-amber-800 underline dark:text-amber-200">
-                Show only these
+            {view !== "needs" ? (
+              <button onClick={() => setView("needs")} className="ml-auto text-xs font-semibold text-amber-800 underline dark:text-amber-200">
+                Show needed
               </button>
             ) : null}
           </div>
@@ -172,7 +188,7 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
               </li>
             ))}
           </ul>
-          {toOrder.length > 8 ? <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">+ {toOrder.length - 8} more — see the “To order” tab.</p> : null}
+          {toOrder.length > 8 ? <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">+ {toOrder.length - 8} more — see the “Needs cards” tab.</p> : null}
         </section>
       ) : null}
 
@@ -183,6 +199,22 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
           Select all ({rows.length})
         </label>
         <span className="text-xs text-brand-grey dark:text-slate-400">{selected.size} selected</span>
+
+        {selected.size > 0 ? (
+          <div className="flex flex-wrap items-center gap-1.5 border-l border-brand-lea/10 pl-2 dark:border-white/10">
+            <span className="text-xs font-semibold text-brand-grey dark:text-slate-400">Mark:</span>
+            {(["RECEIVED", "NEEDED", "ORDERED", "NOT_NEEDED"] as CardStatus[]).map((s) => (
+              <button
+                key={s}
+                onClick={() => bulkSetStatus(s)}
+                className="rounded border border-brand-lea/20 px-2 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/5"
+              >
+                {CARD_STATUS_LABEL[s]}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         <button onClick={copySelected} className="ml-auto inline-flex items-center gap-1.5 rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-gold/90 dark:text-slate-100">
           <Copy className="h-3.5 w-3.5" /> {selected.size ? `Copy ${selected.size} for printer` : "Copy all for printer"}
         </button>
@@ -192,7 +224,7 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
       {/* Card gallery */}
       {rows.length === 0 ? (
         <div className="rounded border border-brand-lea/10 bg-white p-8 text-center text-sm text-brand-grey shadow-panel dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">
-          {view === "toorder" ? "Nothing to order right now." : "No matching staff."}
+          {view === "needs" ? "No one is marked as needing a card." : "No matching staff."}
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

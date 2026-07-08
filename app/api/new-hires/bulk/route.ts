@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
+import { isCardStatus } from "@/lib/business-cards/card";
 
 const STAGES = ["ACTIVE", "POST_ONBOARD", "ARCHIVED"] as const;
 
@@ -53,6 +54,9 @@ export async function POST(request: Request) {
     if ("department" in patch) {
       const dept = strOrNull(patch.department);
       if (dept !== undefined) data.department = dept;
+    }
+    if (isCardStatus(patch.businessCardStatus)) {
+      data.businessCardStatus = patch.businessCardStatus;
     }
 
     if (Object.keys(data).length === 0) {
