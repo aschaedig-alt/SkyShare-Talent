@@ -8,12 +8,15 @@ import {
   buildBusinessCard,
   buildVariantCard,
   formatCardText,
+  formatCardHtml,
+  defaultCardTitle,
   cardOrderState,
   CARD_STATUSES,
   CARD_STATUS_LABEL,
   type BusinessCardInput,
   type BusinessCard
 } from "@/lib/business-cards/card";
+import { copyRich } from "@/lib/business-cards/copy";
 import { BusinessCardVisual } from "@/components/business-cards/BusinessCardVisual";
 
 function fmtDay(iso: string | null) {
@@ -71,6 +74,7 @@ export function BusinessCardPanel({
   phone,
   ssEmail,
   status: statusProp,
+  cardTitle: cardTitleProp,
   orientationDate
 }: {
   hireId: string;
@@ -79,12 +83,16 @@ export function BusinessCardPanel({
   phone: string | null;
   ssEmail: string | null;
   status: string;
+  cardTitle: string | null;
   orientationDate: string | null;
 }) {
-  const input: BusinessCardInput = { name, position, phone, ssEmail };
+  const [cardTitle, setCardTitle] = useState<string | null>(cardTitleProp);
+  const input: BusinessCardInput = { name, position, phone, ssEmail, cardTitle };
   const primary = buildBusinessCard(input);
 
   const [status, setStatus] = useState(statusProp);
+  const [titleModal, setTitleModal] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
   const order = cardOrderState(orientationDate, status, Date.now());
 
   const [variants, setVariants] = useState<Variant[]>([]);
@@ -108,12 +116,26 @@ export function BusinessCardPanel({
   }, [hireId]);
 
   async function copyCard(key: string, card: BusinessCard) {
-    try {
-      await navigator.clipboard.writeText(formatCardText(card));
+    if (await copyRich(formatCardText(card), formatCardHtml(card))) {
       setCopiedKey(key);
       setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 1600);
+    }
+  }
+
+  function openTitle() {
+    setTitleDraft(cardTitle ?? "");
+    setTitleModal(true);
+  }
+  async function saveTitle() {
+    const next = titleDraft.trim() || null;
+    const prev = cardTitle;
+    setCardTitle(next);
+    setTitleModal(false);
+    try {
+      const res = await fetch(`/api/new-hires/${hireId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ businessCardTitle: next }) });
+      if (!res.ok) setCardTitle(prev);
     } catch {
-      /* clipboard blocked */
+      setCardTitle(prev);
     }
   }
 
@@ -216,12 +238,28 @@ export function BusinessCardPanel({
       </div>
 
       <div className="mt-3 space-y-3">
-        <CardBlock label={variants.length ? "Primary" : null} card={primary} copied={copiedKey === "primary"} onCopy={() => copyCard("primary", primary)} />
+        <CardBlock label={variants.length ? "Primary" : null} card={primary} copied={copiedKey === "primary"} onCopy={() => copyCard("primary", primary)} onEdit={openTitle} />
         {variants.map((v) => {
           const card = buildVariantCard(input, v);
           return <CardBlock key={v.id} label={v.label} card={card} copied={copiedKey === v.id} onCopy={() => copyCard(v.id, card)} onEdit={() => openEdit(v)} onDelete={() => remove(v.id)} />;
         })}
       </div>
+
+      <Modal open={titleModal} onClose={() => setTitleModal(false)}>
+        <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Card title</h2>
+        <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
+          The title printed on {name}&apos;s card — separate from their profile position, so you can shorten or reword it without ever touching their real role. Pilots default to <strong>Pilot</strong> (they change aircraft); leave blank to use the default.
+        </p>
+        <label className="mt-4 block">
+          <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-brand-grey dark:text-slate-400">Title</span>
+          <Input value={titleDraft} onChange={(e) => setTitleDraft(e.target.value)} placeholder={defaultCardTitle(position) || "e.g. Pilot"} className="mt-1" autoFocus />
+        </label>
+        <p className="mt-1.5 text-xs text-brand-grey dark:text-slate-500">Default: {defaultCardTitle(position) || "—"}</p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setTitleModal(false)}>Cancel</Button>
+          <Button onClick={saveTitle}>Save</Button>
+        </div>
+      </Modal>
 
       <Modal open={modal !== null} onClose={() => setModal(null)} busy={busy}>
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">{modal?.mode === "add" ? "Add a card" : "Edit card"}</h2>

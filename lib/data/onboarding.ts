@@ -42,6 +42,7 @@ export type NewHireRow = {
   employmentStatus: EmploymentStatus;
   travelStatus: string | null;
   businessCardStatus: string;
+  businessCardTitle: string | null;
   notes: string | null;
   pdpGraduate: boolean;
   tenureYears: number; // completed whole years with the company (anniversary-based)
@@ -117,6 +118,7 @@ type HireWithTasks = {
   canceled: boolean;
   employmentStatus: string;
   businessCardStatus: string;
+  businessCardTitle: string | null;
   travelStatus: string | null;
   notes: string | null;
   tasks: { id: string; key: string; label: string; group: string; order: number; status: string }[];
@@ -168,6 +170,7 @@ function toRow(hire: HireWithTasks, now: number): NewHireRow {
     canceled: hire.canceled,
     employmentStatus: (["TERMINATED", "CONTRACT"].includes(hire.employmentStatus) ? hire.employmentStatus : "ACTIVE") as EmploymentStatus,
     businessCardStatus: hire.businessCardStatus,
+    businessCardTitle: hire.businessCardTitle,
     travelStatus: hire.travelStatus,
     notes: hire.notes,
     pdpGraduate: hire.pdpGraduate,
@@ -402,6 +405,7 @@ const hireSelect = {
   canceled: true,
   employmentStatus: true,
   businessCardStatus: true,
+  businessCardTitle: true,
   travelStatus: true,
   notes: true,
   pdpGraduate: true,

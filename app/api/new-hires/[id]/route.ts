@@ -44,6 +44,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (isCardStatus(body.businessCardStatus)) {
       data.businessCardStatus = body.businessCardStatus;
     }
+    if ("businessCardTitle" in body) {
+      const t = typeof body.businessCardTitle === "string" ? body.businessCardTitle.trim() : "";
+      data.businessCardTitle = t.length ? t : null;
+    }
 
     for (const field of ["offerSentDate", "offerSignedDate", "startDate", "orientationDate"]) {
       const d = parseDate(body[field]);

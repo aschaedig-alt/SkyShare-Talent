@@ -31,6 +31,7 @@ export async function getBusinessCards(): Promise<BusinessCardRow[]> {
       stage: true,
       orientationDate: true,
       businessCardStatus: true,
+      businessCardTitle: true,
       businessCardVariants: { orderBy: { sortOrder: "asc" }, select: { id: true, label: true, title: true, skyops: true, mobile: true, email: true, web: true } }
     },
     orderBy: { name: "asc" }
@@ -38,7 +39,7 @@ export async function getBusinessCards(): Promise<BusinessCardRow[]> {
 
   const rows: BusinessCardRow[] = [];
   for (const p of people) {
-    const input = { name: p.name, position: p.position, phone: p.phone, ssEmail: p.ssEmail };
+    const input = { name: p.name, position: p.position, phone: p.phone, ssEmail: p.ssEmail, cardTitle: p.businessCardTitle };
     const orientationDate = iso(p.orientationDate);
     const orderState = cardOrderState(orientationDate, p.businessCardStatus, now);
     const shared = {

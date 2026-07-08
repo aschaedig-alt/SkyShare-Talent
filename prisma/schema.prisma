@@ -239,6 +239,9 @@ model NewHire {
   // Business-card ordering: NEEDED (default) | ORDERED | RECEIVED | NOT_NEEDED.
   // Ordered in bulk ~1-2 weeks before orientation (see lib/business-cards).
   businessCardStatus String @default("NEEDED")
+  // Card-title override for the primary business card. Blank => defaults to
+  // "Pilot" for flight-deck crew, else the profile position (see defaultCardTitle).
+  businessCardTitle  String?
   // Travel loyalty numbers — auto-pulled into new trips (see TravelTrip).
   frequentFlyer   String?
   hotelLoyalty    String?

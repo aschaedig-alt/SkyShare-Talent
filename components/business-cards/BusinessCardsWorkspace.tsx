@@ -5,19 +5,11 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import { Search, Copy, Check, CreditCard, ExternalLink, AlertTriangle, Clock } from "lucide-react";
 import type { BusinessCardRow } from "@/lib/data/business-cards";
-import { formatCardText, formatCardsBatch, cardOrderState, CARD_STATUSES, CARD_STATUS_LABEL, type CardStatus } from "@/lib/business-cards/card";
+import { formatCardText, formatCardsBatch, formatCardHtml, formatCardsHtml, cardOrderState, CARD_STATUSES, CARD_STATUS_LABEL, type CardStatus } from "@/lib/business-cards/card";
+import { copyRich } from "@/lib/business-cards/copy";
 import { BusinessCardVisual } from "@/components/business-cards/BusinessCardVisual";
 
 type View = "all" | "new" | "needs";
-
-async function copy(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 function fmtDay(iso: string | null) {
   return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(iso)) : "";
@@ -100,7 +92,7 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
   const selectedRows = rows.filter((r) => selected.has(r.key));
 
   async function copyOne(row: BusinessCardRow) {
-    if (await copy(formatCardText(row.card))) {
+    if (await copyRich(formatCardText(row.card), formatCardHtml(row.card))) {
       setCopiedId(row.key);
       setTimeout(() => setCopiedId((c) => (c === row.key ? null : c)), 1600);
     }
@@ -108,7 +100,8 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
 
   async function copySelected() {
     const target = selectedRows.length ? selectedRows : rows;
-    const ok = await copy(formatCardsBatch(target.map((r) => r.card)));
+    const cards = target.map((r) => r.card);
+    const ok = await copyRich(formatCardsBatch(cards), formatCardsHtml(cards));
     setBulkMsg(ok ? `Copied ${target.length} card${target.length === 1 ? "" : "s"} — paste into your printer email.` : "Couldn't copy to the clipboard.");
     setTimeout(() => setBulkMsg(null), 2600);
   }

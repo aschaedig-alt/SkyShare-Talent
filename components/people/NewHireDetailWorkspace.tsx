@@ -357,7 +357,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
           </div>
         </section>
 
-        <BusinessCardPanel hireId={hire.id} name={hire.name} position={hire.position} phone={hire.phone} ssEmail={hire.ssEmail} status={hire.businessCardStatus} orientationDate={hire.orientationDate} />
+        <BusinessCardPanel hireId={hire.id} name={hire.name} position={hire.position} phone={hire.phone} ssEmail={hire.ssEmail} status={hire.businessCardStatus} cardTitle={hire.businessCardTitle} orientationDate={hire.orientationDate} />
       </div>
 
       <TravelPanel subjectType="newHire" subjectId={hire.id} initialTrips={travelTrips} loyalty={travelLoyalty} />

@@ -64,6 +64,7 @@ export type BusinessCardInput = {
   position: string | null;
   phone: string | null; // personal cell → the card's "mobile"
   ssEmail: string | null; // @skyshare email
+  cardTitle?: string | null; // per-person card-title override for the primary card
 };
 
 export type BusinessCard = {
@@ -83,6 +84,19 @@ export function isFlightCrew(position: string | null | undefined): boolean {
   return /\b(captain|first officer|\bfo\b|pilot|cabin attendant)\b/i.test(position ?? "");
 }
 
+// Pilots (Captain / First Officer / Pilot) — but NOT cabin attendants — fly
+// different aircraft over time, so their card just says "Pilot" and never needs
+// reordering when they change fleets.
+export function isPilot(position: string | null | undefined): boolean {
+  return /\b(captain|first officer|\bfo\b|pilot)\b/i.test(position ?? "");
+}
+
+// The title a card shows before any manual override: pilots default to "Pilot",
+// everyone else uses their profile position.
+export function defaultCardTitle(position: string | null | undefined): string {
+  return (isPilot(position) ? "Pilot" : (position ?? "").trim()).toUpperCase();
+}
+
 export function buildBusinessCard(input: BusinessCardInput): BusinessCard {
   const crew = isFlightCrew(input.position);
   const mobile = (input.phone ?? "").trim();
@@ -92,7 +106,7 @@ export function buildBusinessCard(input: BusinessCardInput): BusinessCard {
   if (!email) missing.push("email");
   return {
     name: input.name,
-    title: (input.position ?? "").trim().toUpperCase(),
+    title: (input.cardTitle?.trim() || defaultCardTitle(input.position)).toUpperCase(),
     skyops: crew ? SKYOPS_NUMBER : SKYLOVE_NUMBER,
     mobile,
     email,
@@ -115,7 +129,7 @@ export type VariantOverride = {
 // Any blank override falls back to the primary/profile value.
 export function buildVariantCard(input: BusinessCardInput, variant: VariantOverride): BusinessCard {
   const base = buildBusinessCard(input);
-  const title = (variant.title?.trim() || input.position || "").toUpperCase();
+  const title = (variant.title?.trim() || defaultCardTitle(input.position)).toUpperCase();
   const mobile = variant.mobile?.trim() || base.mobile;
   const email = variant.email?.trim() || base.email;
   const missing: string[] = [];
@@ -141,4 +155,34 @@ export function formatCardText(c: BusinessCard): string {
 // Several cards for one order — blank line between each.
 export function formatCardsBatch(cards: BusinessCard[]): string {
   return cards.map(formatCardText).join("\n\n");
+}
+
+// Rich version for pasting into an email — the printer sees the card laid out
+// in SkyShare's colors (red labels, grey title, black values) instead of a
+// wall of plain text. Inline styles only, so it survives Gmail/Outlook.
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+export function formatCardHtml(c: BusinessCard): string {
+  const row = (label: string, value: string) =>
+    `<div style="margin-top:2px;"><span style="color:#ba0c2f;font-weight:bold;">${label}</span> <span style="color:#302f31;">${esc(value || "—")}</span></div>`;
+  return [
+    '<div style="font-family:Arial,Helvetica,sans-serif;line-height:1.45;font-size:13px;">',
+    `<div style="font-size:15px;font-weight:bold;color:#302f31;">${esc(c.name)}</div>`,
+    `<div style="font-size:11px;letter-spacing:0.08em;color:#63666a;text-transform:uppercase;">${esc(c.title)}</div>`,
+    '<div style="margin-top:6px;">',
+    row("skyops", c.skyops),
+    row("mobile", c.mobile),
+    row("email", c.email),
+    row("web", c.web),
+    "</div></div>"
+  ].join("");
+}
+
+// Several cards for one order — each in its own block, spaced apart.
+export function formatCardsHtml(cards: BusinessCard[]): string {
+  return `<div style="font-family:Arial,Helvetica,sans-serif;">${cards
+    .map((c) => `<div style="margin:0 0 18px;">${formatCardHtml(c)}</div>`)
+    .join("")}</div>`;
 }
