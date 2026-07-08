@@ -216,6 +216,10 @@ model NewHire {
   name            String
   position        String?
   department      String?
+  // Home base / work location (SVR, SLC, OGD, DVO, HND, Home-Based, ...).
+  location        String?
+  // Tail number for pilots dedicated to a managed aircraft (e.g. "N366FB").
+  managedAircraft String?
   phone           String?
   ssEmail         String?
   personalEmail   String?

@@ -45,6 +45,8 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     name: hire.name,
     position: hire.position ?? "",
     department: hire.department ?? "",
+    location: hire.location ?? "",
+    managedAircraft: hire.managedAircraft ?? "",
     phone: hire.phone ?? "",
     ssEmail: hire.ssEmail ?? "",
     personalEmail: hire.personalEmail ?? "",
@@ -274,6 +276,8 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
             {field("Name", "name")}
             {field("Position", "position")}
             {field("Department", "department")}
+            {field("Job location", "location")}
+            {(details.department.toLowerCase().includes("managed") || details.managedAircraft) ? field("Managed aircraft (tail #)", "managedAircraft") : null}
             {field("Phone", "phone")}
             {field("SkyShare email", "ssEmail")}
             {field("Personal email", "personalEmail")}

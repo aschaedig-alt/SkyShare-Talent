@@ -11,6 +11,7 @@ export type EmployeeRow = {
   name: string;
   position: string | null;
   department: string | null;
+  location: string | null;
   startDate: string | null; // first stint / hire
   endDate: string | null; // last departure (past employees)
   current: boolean;
@@ -28,6 +29,7 @@ type Row = {
   name: string;
   position: string | null;
   department: string | null;
+  location: string | null;
   startDate: Date | null;
   terminationDate: Date | null;
   birthday: Date | null;
@@ -60,6 +62,7 @@ export async function getEmployees(): Promise<EmployeeRow[]> {
       name: true,
       position: true,
       department: true,
+      location: true,
       startDate: true,
       terminationDate: true,
       birthday: true,
@@ -78,6 +81,7 @@ export async function getEmployees(): Promise<EmployeeRow[]> {
       name: r.name,
       position: r.position,
       department: r.department,
+      location: r.location,
       startDate: iso(t.start ?? r.startDate),
       endDate: current ? null : iso(t.end ?? r.terminationDate),
       current,

@@ -13,10 +13,10 @@ type Filter = "all" | "current" | "past";
 const FILTER_KEY = "skyshare-employees-filter";
 const isFilter = (v: unknown): v is Filter => v === "all" || v === "current" || v === "past";
 
-type SortKey = "name" | "position" | "department" | "startDate" | "tenureDays" | "roleCount" | "status";
+type SortKey = "name" | "position" | "department" | "location" | "startDate" | "tenureDays" | "roleCount" | "status";
 type SortState = { key: SortKey; dir: "asc" | "desc" };
 const SORT_KEY = "skyshare-employees-sort";
-const SORT_KEYS: SortKey[] = ["name", "position", "department", "startDate", "tenureDays", "roleCount", "status"];
+const SORT_KEYS: SortKey[] = ["name", "position", "department", "location", "startDate", "tenureDays", "roleCount", "status"];
 
 // ACTIVE (current) sorts ahead of CONTRACT, then TERMINATED (past).
 function statusRank(e: EmployeeRow): number {
@@ -31,6 +31,8 @@ function compareBy(a: EmployeeRow, b: EmployeeRow, key: SortKey): number {
       return (a.position ?? "").localeCompare(b.position ?? "");
     case "department":
       return (a.department ?? "").localeCompare(b.department ?? "");
+    case "location":
+      return (a.location ?? "").localeCompare(b.location ?? "");
     case "startDate":
       return (a.startDate ?? "").localeCompare(b.startDate ?? ""); // ISO strings sort chronologically
     case "tenureDays":
@@ -104,7 +106,7 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
       if (filter === "current" && !e.current) return false;
       if (filter === "past" && e.current) return false;
       if (!needle) return true;
-      return [e.name, e.position, e.department].filter(Boolean).some((v) => v!.toLowerCase().includes(needle));
+      return [e.name, e.position, e.department, e.location].filter(Boolean).some((v) => v!.toLowerCase().includes(needle));
     });
     if (!sort) return filtered;
     const factor = sort.dir === "asc" ? 1 : -1;
@@ -143,7 +145,7 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search name, role, department"
+              placeholder="Search name, role, department, location"
               className="w-64 rounded border border-brand-lea/20 py-2 pl-8 pr-3 text-sm text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
             />
           </div>
@@ -162,7 +164,7 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
                   <span className="font-semibold text-brand-lea dark:text-slate-100">{e.name}</span>
                   {(() => { const b = statusBadge(e); return <Badge tone={b.tone}>{b.label}</Badge>; })()}
                 </div>
-                <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{[e.position, e.department].filter(Boolean).join(" · ") || "—"}</div>
+                <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{[e.position, e.department, e.location].filter(Boolean).join(" · ") || "—"}</div>
                 <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">
                   {fmtDate(e.startDate)} – {e.current ? "Present" : fmtDate(e.endDate)} · {tenure(e.tenureDays)}
                   {e.roleCount > 1 ? ` · ${e.roleCount} roles` : ""}
@@ -180,6 +182,7 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
                     <SortableTh label="Name" sortKey="name" sort={sort} onSort={toggleSort} />
                     <SortableTh label="Current role" sortKey="position" sort={sort} onSort={toggleSort} />
                     <SortableTh label="Department" sortKey="department" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Location" sortKey="location" sort={sort} onSort={toggleSort} />
                     <SortableTh label="Started" sortKey="startDate" sort={sort} onSort={toggleSort} />
                     <SortableTh label="Tenure" sortKey="tenureDays" sort={sort} onSort={toggleSort} />
                     <SortableTh label="Roles" sortKey="roleCount" sort={sort} onSort={toggleSort} />
@@ -194,6 +197,7 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
                       </td>
                       <td className="px-4 py-2.5 text-brand-grey dark:text-slate-400">{e.position ?? "—"}</td>
                       <td className="px-4 py-2.5 text-brand-grey dark:text-slate-400">{e.department ?? "—"}</td>
+                      <td className="px-4 py-2.5 text-brand-grey dark:text-slate-400">{e.location ?? "—"}</td>
                       <td className="px-4 py-2.5 text-brand-grey dark:text-slate-400">{fmtDate(e.startDate)}</td>
                       <td className="px-4 py-2.5 text-brand-grey dark:text-slate-400">{tenure(e.tenureDays)}</td>
                       <td className="px-4 py-2.5 text-brand-grey dark:text-slate-400">{e.roleCount || "—"}{e.stintCount > 1 ? ` · ${e.stintCount} stints` : ""}</td>

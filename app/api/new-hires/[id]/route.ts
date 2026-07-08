@@ -33,7 +33,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     const body = (await request.json()) as Record<string, unknown>;
     const data: Record<string, unknown> = {};
 
-    for (const field of ["name", "position", "department", "phone", "ssEmail", "personalEmail", "travelStatus", "notes"]) {
+    for (const field of ["name", "position", "department", "location", "managedAircraft", "phone", "ssEmail", "personalEmail", "travelStatus", "notes"]) {
       const v = strOrNull(body[field]);
       if (v !== undefined) data[field] = v;
     }
