@@ -5,7 +5,8 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import { Search, Copy, Check, AlertTriangle, CreditCard, ExternalLink } from "lucide-react";
 import type { BusinessCardRow } from "@/lib/data/business-cards";
-import { formatCardText, formatCardsBatch, type BusinessCard } from "@/lib/business-cards/card";
+import { formatCardText, formatCardsBatch } from "@/lib/business-cards/card";
+import { BusinessCardVisual } from "@/components/business-cards/BusinessCardVisual";
 
 async function copy(text: string): Promise<boolean> {
   try {
@@ -14,24 +15,6 @@ async function copy(text: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-// A brand-styled preview that mirrors the printed card's contact layout.
-function CardPreview({ card }: { card: BusinessCard }) {
-  return (
-    <div className="rounded bg-brand-lea px-4 py-3.5 text-white">
-      <div className="text-base font-semibold leading-tight">{card.name || "—"}</div>
-      <div className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-brand-gold">{card.title || "—"}</div>
-      <div className="mt-3 space-y-0.5 text-[11px] leading-relaxed text-white/85">
-        <div>
-          <span className="text-white/55">skyops</span> {card.skyops} &nbsp;·&nbsp; <span className="text-white/55">mobile</span> {card.mobile || "—"}
-        </div>
-        <div>
-          <span className="text-white/55">email</span> {card.email || "—"} &nbsp;·&nbsp; <span className="text-white/55">web</span> {card.web}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) {
@@ -149,9 +132,9 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
                   isSel ? "ring-2 ring-brand-gold" : "ring-brand-lea/10 dark:ring-white/10"
                 )}
               >
-                <div className="relative">
-                  <CardPreview card={r.card} />
-                  <label className="absolute right-2 top-2 flex h-6 w-6 cursor-pointer items-center justify-center rounded bg-white/95 shadow">
+                <div className="relative bg-brand-cloudDancer/40 p-4 dark:bg-white/5">
+                  <BusinessCardVisual card={r.card} />
+                  <label className="absolute right-2 top-2 flex h-6 w-6 cursor-pointer items-center justify-center rounded bg-white shadow ring-1 ring-black/10">
                     <input type="checkbox" checked={isSel} onChange={() => toggle(r.id)} aria-label={`Select ${r.card.name}`} className="h-4 w-4" />
                   </label>
                 </div>

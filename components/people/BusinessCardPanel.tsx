@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { CreditCard, Copy, Check, AlertTriangle } from "lucide-react";
 import { buildBusinessCard, formatCardText } from "@/lib/business-cards/card";
+import { BusinessCardVisual } from "@/components/business-cards/BusinessCardVisual";
 
 // The person's ready-to-order card, on their profile. Same rules as the batch
 // page — pilots/cabin attendants get the SkyOps line, everyone else SkyLove.
@@ -50,17 +51,8 @@ export function BusinessCardPanel({
         </div>
       </div>
 
-      <div className="mt-3 rounded bg-brand-lea px-4 py-3.5 text-white">
-        <div className="text-base font-semibold leading-tight">{card.name || "—"}</div>
-        <div className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-brand-gold">{card.title || "—"}</div>
-        <div className="mt-3 space-y-0.5 text-[11px] leading-relaxed text-white/85">
-          <div>
-            <span className="text-white/55">skyops</span> {card.skyops} &nbsp;·&nbsp; <span className="text-white/55">mobile</span> {card.mobile || "—"}
-          </div>
-          <div>
-            <span className="text-white/55">email</span> {card.email || "—"} &nbsp;·&nbsp; <span className="text-white/55">web</span> {card.web}
-          </div>
-        </div>
+      <div className="mt-3 rounded bg-brand-cloudDancer/40 p-4 dark:bg-white/5">
+        <BusinessCardVisual card={card} />
       </div>
 
       {card.missing.length ? (
