@@ -120,6 +120,8 @@ function candidateName(candidate: CandidateForScan) {
 export async function scanCandidateDuplicates() {
   const startedAt = performance.now();
   const candidates = await prisma.candidate.findMany({
+    // Exclude candidates that were already merged away — they shouldn't resurface as duplicates.
+    where: { status: { not: "MERGED" } },
     select: {
       id: true,
       displayName: true,
@@ -155,17 +157,18 @@ export async function scanCandidateDuplicates() {
   addPairsFromBucket(pairs, phoneBucket, "exact-normalized-phone-match", "HIGH");
   addPairsFromBucket(pairs, nameBucket, "same-normalized-name-review", "MANUAL");
 
-  const existingOpenItems = await prisma.duplicateReviewItem.findMany({
+  // Dedupe against EVERY prior candidate review item (open, resolved, or dismissed)
+  // so a pair someone already merged or marked "not a duplicate" never comes back.
+  const existingItems = await prisma.duplicateReviewItem.findMany({
     where: {
-      reviewType: "CANDIDATE",
-      status: "OPEN"
+      reviewType: "CANDIDATE"
     },
     select: {
       payloadJson: true
     }
   });
   const existingPairKeys = new Set(
-    existingOpenItems
+    existingItems
       .map((item) => {
         try {
           const payload = item.payloadJson ? JSON.parse(item.payloadJson) : null;

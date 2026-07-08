@@ -64,9 +64,11 @@ function brief(c: CandidateRow | null): DuplicateCandidateBrief {
 
 export async function getDuplicateReviewData(): Promise<DuplicateReviewData> {
   const [items, open, candidate, job, file, resolved] = await Promise.all([
+    // The queue shows OPEN items only — resolved/dismissed pairs drop off.
     prisma.duplicateReviewItem.findMany({
-      take: 50,
-      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      where: { status: "OPEN" },
+      take: 100,
+      orderBy: { createdAt: "desc" },
       include: {
         primaryCandidate: candidateSelect,
         secondaryCandidate: candidateSelect
