@@ -33,6 +33,10 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
     });
   }, [cards, q, newOnly]);
 
+  // Counts are of people, not cards (someone with a secondary card is still one person).
+  const staffCount = new Set(cards.map((c) => c.personId)).size;
+  const newHireCount = new Set(cards.filter((c) => c.onboarding).map((c) => c.personId)).size;
+
   function toggle(id: string) {
     setSelected((cur) => {
       const next = new Set(cur);
@@ -74,13 +78,13 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
             onClick={() => setNewOnly(false)}
             className={clsx("rounded px-3 py-1.5 text-sm font-semibold transition", !newOnly ? "bg-brand-lea text-white" : "border border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400")}
           >
-            All staff <span className="opacity-70">· {cards.length}</span>
+            All staff <span className="opacity-70">· {staffCount}</span>
           </button>
           <button
             onClick={() => setNewOnly(true)}
             className={clsx("rounded px-3 py-1.5 text-sm font-semibold transition", newOnly ? "bg-brand-lea text-white" : "border border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400")}
           >
-            New hires <span className="opacity-70">· {cards.filter((c) => c.onboarding).length}</span>
+            New hires <span className="opacity-70">· {newHireCount}</span>
           </button>
           <div className="relative ml-auto">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey dark:text-slate-500" />
