@@ -10,6 +10,7 @@ import type { NewHireDetail, TaskView } from "@/lib/data/onboarding";
 import { TravelPanel } from "@/components/travel/TravelPanel";
 import type { TravelTripView, TravelerLoyalty } from "@/lib/data/travel";
 import { EmployeeJourney } from "@/components/people/EmployeeJourney";
+import { BusinessCardPanel } from "@/components/people/BusinessCardPanel";
 import type { EmployeeJourney as Journey } from "@/lib/data/employee-journey";
 import { Button, Input, Modal } from "@/components/ui";
 
@@ -259,6 +260,8 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
       </Modal>
 
       <EmployeeJourney hireId={hire.id} journey={journey} roleTitleOptions={roleTitleOptions} />
+
+      <BusinessCardPanel name={hire.name} position={hire.position} phone={hire.phone} ssEmail={hire.ssEmail} />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
         {/* Details */}

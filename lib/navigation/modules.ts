@@ -10,6 +10,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ClipboardList,
+  CreditCard,
   Database,
   FileCheck2,
   FileText,
@@ -148,6 +149,7 @@ export const navigationGroups: readonly NavigationGroup[] = [
           { id: "people", href: "/employees", label: "Employees", icon: Users },
           { id: "people", href: "/orientation", label: "Orientation", icon: CalendarCheck },
           { id: "people", href: "/travel", label: "Travel", icon: Plane },
+          { id: "people", href: "/business-cards", label: "Business cards", icon: CreditCard },
           { id: "people", href: "/compliments", label: "Compliments", icon: Sparkles }
         ]
       }

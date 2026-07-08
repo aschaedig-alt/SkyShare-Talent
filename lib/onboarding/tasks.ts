@@ -34,6 +34,7 @@ export const ONBOARDING_TASKS: OnboardingTaskDef[] = [
   { key: "bg_check_complete", label: "Background check complete", group: "SYSTEMS" },
   { key: "paycom_hire", label: "Hire in Paycom (send invitation, complete New Hire Setup)", group: "SYSTEMS" },
   { key: "groups_drive", label: "Add to groups and drive", group: "SYSTEMS" },
+  { key: "business_card", label: "Order business card", group: "SYSTEMS" },
   { key: "drug_screen", label: "Email docs to ITS for pre-employment drug screen", group: "SYSTEMS" },
 
   { key: "attended_orientation", label: "Attended orientation", group: "ORIENTATION" },

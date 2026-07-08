@@ -4,6 +4,7 @@ import { getToken } from "next-auth/jwt";
 const protectedPagePrefixes = [
   "/approvals",
   "/blocks",
+  "/business-cards",
   "/calendar",
   "/candidates",
   "/changes",
