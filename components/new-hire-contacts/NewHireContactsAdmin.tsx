@@ -30,6 +30,7 @@ export function NewHireContactsAdmin({
 }) {
   const [config, setConfig] = useState<NewHireContactsConfig>(initialConfig);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const newGroupCounter = useRef(0);
 
@@ -95,6 +96,7 @@ export function NewHireContactsAdmin({
   // --- save ---------------------------------------------------------------
   const save = async () => {
     setSaveState("saving");
+    setSyncMsg(null);
     try {
       const res = await fetch("/api/workspace-settings/new-hire-contacts", {
         method: "POST",
@@ -102,8 +104,15 @@ export function NewHireContactsAdmin({
         body: JSON.stringify(config)
       });
       if (!res.ok) throw new Error("save failed");
-      const saved = (await res.json()) as NewHireContactsConfig;
-      setConfig(saved);
+      const data = (await res.json()) as {
+        config: NewHireContactsConfig;
+        synced: { personId: string; name: string; fields: string[] }[];
+      };
+      setConfig(data.config);
+      if (data.synced.length) {
+        const who = data.synced.map((s) => `${s.name} (${s.fields.join(" & ")})`).join(", ");
+        setSyncMsg(`Updated ${data.synced.length} employee profile${data.synced.length === 1 ? "" : "s"}: ${who}`);
+      }
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 2500);
     } catch {
@@ -334,7 +343,12 @@ export function NewHireContactsAdmin({
         })}
       </div>
 
-      <div className="mt-6 flex items-center gap-3">
+      <p className="mt-6 text-xs text-brand-grey dark:text-slate-400">
+        Tip: a phone or email you type here is also saved to that person’s employee profile when you hit Save. Leaving a field
+        blank keeps their profile value; “Don’t share” only hides it here and never changes their profile.
+      </p>
+
+      <div className="mt-2 flex items-center gap-3">
         <Button variant="secondary" size="sm" onClick={addGroup}>
           <Plus className="h-3.5 w-3.5" />
           Add department
@@ -347,6 +361,9 @@ export function NewHireContactsAdmin({
           </Button>
         </div>
       </div>
+      {syncMsg ? (
+        <p className="mt-2 text-right text-xs font-medium text-brand-eden dark:text-brand-gold">{syncMsg}</p>
+      ) : null}
     </div>
   );
 }

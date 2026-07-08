@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiPermission } from "@/lib/auth/route-auth";
-import { getNewHireContactsConfig, saveNewHireContactsConfig } from "@/lib/new-hire-contacts/config.server";
+import { getNewHireContactsConfig, saveNewHireContactsConfig, syncContactOverridesToRecords } from "@/lib/new-hire-contacts/config.server";
 
 // Admin config for the New Hire Contacts curation. Lives under /api/workspace-settings
 // so the existing middleware auth wall covers it; POST additionally requires the
@@ -21,8 +21,11 @@ export async function POST(request: Request) {
 
   try {
     const payload = await request.json();
-    const saved = await saveNewHireContactsConfig(payload);
-    return NextResponse.json(saved);
+    // Push any phone/email edits back onto the employee records first, which also
+    // clears those now-redundant overrides; then persist the cleaned config.
+    const { config, updated } = await syncContactOverridesToRecords(payload);
+    const saved = await saveNewHireContactsConfig(config);
+    return NextResponse.json({ config: saved, synced: updated });
   } catch {
     return NextResponse.json({ message: "Unable to save new hire contacts." }, { status: 500 });
   }
