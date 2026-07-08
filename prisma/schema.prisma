@@ -263,8 +263,31 @@ model NewHire {
   recognitionsGiven    Recognition[] @relation("giver")
   recognitionsReceived Recognition[] @relation("recipient")
   redemptions          Redemption[]
+  businessCardVariants BusinessCardVariant[]
 
   @@index([stage])
+}
+
+// A secondary business card for an employee (e.g. a recruiting card with its own
+// phone/email). The employee's PRIMARY card is derived from their profile; these
+// are extra cards, each overriding whatever differs. Blank fields fall back to
+// the primary/profile value.
+model BusinessCardVariant {
+  id        String   @id @default(cuid())
+  newHireId String
+  label     String // e.g. "Recruiting"
+  title     String?
+  skyops    String?
+  mobile    String?
+  email     String?
+  web       String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  newHire NewHire @relation(fields: [newHireId], references: [id], onDelete: Cascade)
+
+  @@index([newHireId])
 }
 
 // One role an employee has held at SkyShare (their journey). A person's current

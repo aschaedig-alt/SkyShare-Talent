@@ -59,6 +59,37 @@ export function buildBusinessCard(input: BusinessCardInput): BusinessCard {
   };
 }
 
+export type VariantOverride = {
+  label: string;
+  title?: string | null;
+  skyops?: string | null;
+  mobile?: string | null;
+  email?: string | null;
+  web?: string | null;
+};
+
+// A secondary card: start from the person's primary, then apply the overrides.
+// Any blank override falls back to the primary/profile value.
+export function buildVariantCard(input: BusinessCardInput, variant: VariantOverride): BusinessCard {
+  const base = buildBusinessCard(input);
+  const title = (variant.title?.trim() || input.position || "").toUpperCase();
+  const mobile = variant.mobile?.trim() || base.mobile;
+  const email = variant.email?.trim() || base.email;
+  const missing: string[] = [];
+  if (!mobile) missing.push("mobile");
+  if (!email) missing.push("email");
+  return {
+    name: input.name,
+    title,
+    skyops: variant.skyops?.trim() || base.skyops,
+    mobile,
+    email,
+    web: variant.web?.trim() || base.web,
+    isFlightCrew: base.isFlightCrew,
+    missing
+  };
+}
+
 // One card in the printer's format (what you paste into the order email).
 export function formatCardText(c: BusinessCard): string {
   return [c.name, c.title, `skyops ${c.skyops}   mobile ${c.mobile}`, `email ${c.email}   web ${c.web}`].join("\n");

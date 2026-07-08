@@ -42,13 +42,13 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
     });
   }
 
-  const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
-  const selectedRows = rows.filter((r) => selected.has(r.id));
+  const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.key));
+  const selectedRows = rows.filter((r) => selected.has(r.key));
 
   async function copyOne(row: BusinessCardRow) {
     if (await copy(formatCardText(row.card))) {
-      setCopiedId(row.id);
-      setTimeout(() => setCopiedId((c) => (c === row.id ? null : c)), 1600);
+      setCopiedId(row.key);
+      setTimeout(() => setCopiedId((c) => (c === row.key ? null : c)), 1600);
     }
   }
 
@@ -100,7 +100,7 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
           <input
             type="checkbox"
             checked={allSelected}
-            onChange={() => setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.id)))}
+            onChange={() => setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.key)))}
             className="h-4 w-4"
           />
           Select all ({rows.length})
@@ -123,24 +123,25 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {rows.map((r) => {
-            const isSel = selected.has(r.id);
+            const isSel = selected.has(r.key);
             return (
               <div
-                key={r.id}
+                key={r.key}
                 className={clsx(
                   "rounded bg-white p-4 shadow-panel ring-1 transition dark:bg-brand-panel",
                   isSel ? "ring-2 ring-brand-gold" : "ring-brand-lea/10 dark:ring-white/10"
                 )}
               >
                 <div className="mb-2 flex items-center gap-2">
-                  <input type="checkbox" checked={isSel} onChange={() => toggle(r.id)} aria-label={`Select ${r.card.name}`} className="h-4 w-4" />
-                  {r.onboarding ? <span className="rounded-full bg-brand-gold/20 px-2 py-0.5 text-[10px] font-bold uppercase text-brand-lea dark:text-brand-gold">New hire</span> : null}
+                  <input type="checkbox" checked={isSel} onChange={() => toggle(r.key)} aria-label={`Select ${r.card.name}`} className="h-4 w-4" />
+                  {r.label ? <span className="rounded-full bg-brand-lea/10 px-2 py-0.5 text-[10px] font-bold uppercase text-brand-lea dark:bg-white/10 dark:text-slate-200">{r.label}</span> : null}
+                  {r.onboarding && !r.label ? <span className="rounded-full bg-brand-gold/20 px-2 py-0.5 text-[10px] font-bold uppercase text-brand-lea dark:text-brand-gold">New hire</span> : null}
                   <div className="ml-auto flex items-center gap-1">
-                    <Link href={`/people/${r.id}`} title="Open profile" className="rounded p-1.5 text-brand-grey transition hover:bg-brand-gold/15 hover:text-brand-eden dark:text-slate-400 dark:hover:bg-white/10">
+                    <Link href={`/people/${r.personId}`} title="Open profile" className="rounded p-1.5 text-brand-grey transition hover:bg-brand-gold/15 hover:text-brand-eden dark:text-slate-400 dark:hover:bg-white/10">
                       <ExternalLink className="h-4 w-4" />
                     </Link>
                     <button onClick={() => copyOne(r)} title="Copy this card" className="rounded p-1.5 text-brand-grey transition hover:bg-brand-gold/15 hover:text-brand-eden dark:text-slate-400 dark:hover:bg-white/10">
-                      {copiedId === r.id ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                      {copiedId === r.key ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
