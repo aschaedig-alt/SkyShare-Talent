@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
+import { isCardStatus } from "@/lib/business-cards/card";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -38,6 +39,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
     if (body.name !== undefined && (!data.name || String(data.name).trim().length === 0)) {
       return NextResponse.json({ message: "Name cannot be empty." }, { status: 400 });
+    }
+
+    if (isCardStatus(body.businessCardStatus)) {
+      data.businessCardStatus = body.businessCardStatus;
     }
 
     for (const field of ["offerSentDate", "offerSignedDate", "startDate", "orientationDate"]) {

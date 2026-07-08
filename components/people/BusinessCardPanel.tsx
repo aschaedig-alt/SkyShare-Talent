@@ -1,10 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CreditCard, Copy, Check, Plus, Pencil, Trash2 } from "lucide-react";
+import { clsx } from "clsx";
+import { CreditCard, Copy, Check, Plus, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { Modal, Input, Button } from "@/components/ui";
-import { buildBusinessCard, buildVariantCard, formatCardText, type BusinessCardInput, type BusinessCard } from "@/lib/business-cards/card";
+import {
+  buildBusinessCard,
+  buildVariantCard,
+  formatCardText,
+  cardOrderState,
+  CARD_STATUSES,
+  CARD_STATUS_LABEL,
+  type BusinessCardInput,
+  type BusinessCard
+} from "@/lib/business-cards/card";
 import { BusinessCardVisual } from "@/components/business-cards/BusinessCardVisual";
+
+function fmtDay(iso: string | null) {
+  return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(iso)) : "";
+}
 
 type Variant = { id: string; label: string; title: string | null; skyops: string | null; mobile: string | null; email: string | null; web: string | null };
 type Form = { label: string; title: string; mobile: string; email: string; web: string; skyops: string };
@@ -55,16 +69,23 @@ export function BusinessCardPanel({
   name,
   position,
   phone,
-  ssEmail
+  ssEmail,
+  status: statusProp,
+  orientationDate
 }: {
   hireId: string;
   name: string;
   position: string | null;
   phone: string | null;
   ssEmail: string | null;
+  status: string;
+  orientationDate: string | null;
 }) {
   const input: BusinessCardInput = { name, position, phone, ssEmail };
   const primary = buildBusinessCard(input);
+
+  const [status, setStatus] = useState(statusProp);
+  const order = cardOrderState(orientationDate, status, Date.now());
 
   const [variants, setVariants] = useState<Variant[]>([]);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -137,6 +158,17 @@ export function BusinessCardPanel({
     }
   }
 
+  async function saveStatus(next: string) {
+    const prev = status;
+    setStatus(next);
+    try {
+      const res = await fetch(`/api/new-hires/${hireId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ businessCardStatus: next }) });
+      if (!res.ok) setStatus(prev);
+    } catch {
+      setStatus(prev);
+    }
+  }
+
   const field = (label: string, key: keyof Form, placeholder: string) => (
     <label className="block">
       <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-brand-grey dark:text-slate-400">{label}</span>
@@ -153,6 +185,34 @@ export function BusinessCardPanel({
         <button onClick={openAdd} title="Add another card" className="inline-flex items-center gap-1 rounded border border-brand-lea/20 px-2 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/5">
           <Plus className="h-3.5 w-3.5" /> Add
         </button>
+      </div>
+
+      {/* Order status + orientation deadline */}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <select
+          value={status}
+          onChange={(e) => saveStatus(e.target.value)}
+          className={clsx(
+            "rounded border px-2 py-1 text-xs font-semibold outline-none transition",
+            status === "RECEIVED"
+              ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300"
+              : status === "ORDERED"
+                ? "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/15 dark:text-sky-300"
+                : status === "NOT_NEEDED"
+                  ? "border-brand-lea/20 bg-brand-cloudDancer/40 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400"
+                  : "border-brand-gold/50 bg-brand-gold/15 text-brand-lea dark:text-brand-gold"
+          )}
+        >
+          {CARD_STATUSES.map((s) => (
+            <option key={s} value={s}>{CARD_STATUS_LABEL[s]}</option>
+          ))}
+        </select>
+        {status === "NEEDED" && order.orderByISO ? (
+          <span className={clsx("inline-flex items-center gap-1 text-xs font-medium", order.overdue ? "text-red-600 dark:text-red-400" : order.needsAction ? "text-amber-600 dark:text-amber-400" : "text-brand-grey dark:text-slate-400")}>
+            {order.overdue ? <AlertTriangle className="h-3.5 w-3.5" /> : null}
+            {order.overdue ? `Order now — orientation ${fmtDay(orientationDate)}` : `Order by ${fmtDay(order.orderByISO)} for orientation ${fmtDay(orientationDate)}`}
+          </span>
+        ) : null}
       </div>
 
       <div className="mt-3 space-y-3">

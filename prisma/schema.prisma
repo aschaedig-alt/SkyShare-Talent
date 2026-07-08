@@ -236,6 +236,9 @@ model NewHire {
   orientationRescheduleCount Int @default(0)
   canceled         Boolean  @default(false)
   travelStatus    String?
+  // Business-card ordering: NEEDED (default) | ORDERED | RECEIVED | NOT_NEEDED.
+  // Ordered in bulk ~1-2 weeks before orientation (see lib/business-cards).
+  businessCardStatus String @default("NEEDED")
   // Travel loyalty numbers — auto-pulled into new trips (see TravelTrip).
   frequentFlyer   String?
   hotelLoyalty    String?
