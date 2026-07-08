@@ -261,9 +261,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
 
       <EmployeeJourney hireId={hire.id} journey={journey} roleTitleOptions={roleTitleOptions} />
 
-      <BusinessCardPanel name={hire.name} position={hire.position} phone={hire.phone} ssEmail={hire.ssEmail} />
-
-      <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
+      <div className="grid gap-4 lg:grid-cols-[2fr_1fr_1fr]">
         {/* Details */}
         <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="flex items-center justify-between">
@@ -358,6 +356,8 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
             )}
           </div>
         </section>
+
+        <BusinessCardPanel name={hire.name} position={hire.position} phone={hire.phone} ssEmail={hire.ssEmail} />
       </div>
 
       <TravelPanel subjectType="newHire" subjectId={hire.id} initialTrips={travelTrips} loyalty={travelLoyalty} />

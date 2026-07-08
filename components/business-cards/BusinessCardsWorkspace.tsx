@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { Search, Copy, Check, AlertTriangle, CreditCard, ExternalLink } from "lucide-react";
+import { Search, Copy, Check, CreditCard, ExternalLink } from "lucide-react";
 import type { BusinessCardRow } from "@/lib/data/business-cards";
 import { formatCardText, formatCardsBatch } from "@/lib/business-cards/card";
 import { BusinessCardVisual } from "@/components/business-cards/BusinessCardVisual";
@@ -128,23 +128,13 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
               <div
                 key={r.id}
                 className={clsx(
-                  "overflow-hidden rounded shadow-panel ring-1 transition",
+                  "rounded bg-white p-4 shadow-panel ring-1 transition dark:bg-brand-panel",
                   isSel ? "ring-2 ring-brand-gold" : "ring-brand-lea/10 dark:ring-white/10"
                 )}
               >
-                <div className="relative bg-brand-cloudDancer/40 p-4 dark:bg-white/5">
-                  <BusinessCardVisual card={r.card} />
-                  <label className="absolute right-2 top-2 flex h-6 w-6 cursor-pointer items-center justify-center rounded bg-white shadow ring-1 ring-black/10">
-                    <input type="checkbox" checked={isSel} onChange={() => toggle(r.id)} aria-label={`Select ${r.card.name}`} className="h-4 w-4" />
-                  </label>
-                </div>
-                <div className="flex items-center gap-2 bg-white px-3 py-2 dark:bg-brand-panel">
+                <div className="mb-2 flex items-center gap-2">
+                  <input type="checkbox" checked={isSel} onChange={() => toggle(r.id)} aria-label={`Select ${r.card.name}`} className="h-4 w-4" />
                   {r.onboarding ? <span className="rounded-full bg-brand-gold/20 px-2 py-0.5 text-[10px] font-bold uppercase text-brand-lea dark:text-brand-gold">New hire</span> : null}
-                  {r.card.missing.length ? (
-                    <span title={`Missing ${r.card.missing.join(", ")}`} className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
-                      <AlertTriangle className="h-3 w-3" /> No {r.card.missing.join(" / ")}
-                    </span>
-                  ) : null}
                   <div className="ml-auto flex items-center gap-1">
                     <Link href={`/people/${r.id}`} title="Open profile" className="rounded p-1.5 text-brand-grey transition hover:bg-brand-gold/15 hover:text-brand-eden dark:text-slate-400 dark:hover:bg-white/10">
                       <ExternalLink className="h-4 w-4" />
@@ -154,6 +144,7 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
                     </button>
                   </div>
                 </div>
+                <BusinessCardVisual card={r.card} />
               </div>
             );
           })}
