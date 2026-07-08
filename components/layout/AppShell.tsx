@@ -14,7 +14,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   // Public booking pages and shared read-only reports render bare — no sidebar,
   // banner, or feedback button.
   const pathname = (await headers()).get("x-pathname") ?? "";
-  if (pathname.startsWith("/book") || pathname.startsWith("/r/")) {
+  if (pathname.startsWith("/book") || pathname.startsWith("/r/") || pathname.startsWith("/welcome")) {
     return (
       <div className="min-h-screen bg-[var(--skyshare-page)] text-brand-black dark:text-slate-100">{children}</div>
     );

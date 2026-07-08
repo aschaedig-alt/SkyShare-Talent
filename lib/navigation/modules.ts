@@ -10,6 +10,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ClipboardList,
+  Contact,
   CreditCard,
   Database,
   FileCheck2,
@@ -188,7 +189,8 @@ export const navigationGroups: readonly NavigationGroup[] = [
           { id: "settings", href: "/settings/templates", label: "Templates", icon: FileText },
           { id: "settings", href: "/settings/content-blocks", label: "Block management", icon: Blocks },
           { id: "settings", href: "/settings/layout-lab", label: "Layout Lab", icon: LayoutGrid },
-          { id: "settings", href: "/settings/fleet", label: "Fleet positions", icon: Layers }
+          { id: "settings", href: "/settings/fleet", label: "Fleet positions", icon: Layers },
+          { id: "settings", href: "/settings/new-hire-contacts", label: "New hire contacts", icon: Contact }
         ]
       }
     ]
