@@ -214,6 +214,10 @@ model ReportShareLink {
 model NewHire {
   id              String   @id @default(cuid())
   name            String
+  // Preferred/display name (the `name` field) is what shows everywhere. When someone
+  // goes by a different name than their legal one, their full legal name lives here
+  // and is shown only on their profile (e.g. display "Wren Carter" / legal "Lauren Stephani Carter").
+  legalName       String?
   position        String?
   department      String?
   // Home base / work location (SVR, SLC, OGD, DVO, HND, Home-Based, ...).

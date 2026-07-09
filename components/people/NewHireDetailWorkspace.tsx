@@ -43,6 +43,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
   const [tasks, setTasks] = useState<TaskView[]>(hire.tasks);
   const [details, setDetails] = useState({
     name: hire.name,
+    legalName: hire.legalName ?? "",
     position: hire.position ?? "",
     department: hire.department ?? "",
     location: hire.location ?? "",
@@ -56,6 +57,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     orientationDate: toDateInput(hire.orientationDate),
     notes: hire.notes ?? ""
   });
+  const [hasLegalName, setHasLegalName] = useState(Boolean(hire.legalName));
   const [savingDetails, setSavingDetails] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [busyStage, setBusyStage] = useState(false);
@@ -194,6 +196,9 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
               </span>
             ) : null}
           </div>
+          {hire.legalName ? (
+            <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">Legal name: {hire.legalName}</p>
+          ) : null}
           <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
             {hire.position ?? "Position not set"}
             {hire.department ? ` · ${hire.department}` : ""}
@@ -274,6 +279,18 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
           </div>
           <div className="mt-3 space-y-3">
             {field("Name", "name")}
+            <label className="flex items-center gap-1.5 text-xs text-brand-grey dark:text-slate-400">
+              <input
+                type="checkbox"
+                checked={hasLegalName}
+                onChange={(e) => {
+                  setHasLegalName(e.target.checked);
+                  if (!e.target.checked) setDetails((d) => ({ ...d, legalName: "" }));
+                }}
+              />
+              Goes by a different name (add legal name)
+            </label>
+            {hasLegalName ? field("Legal name", "legalName") : null}
             {field("Position", "position")}
             {field("Department", "department")}
             {field("Job location", "location")}

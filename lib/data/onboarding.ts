@@ -27,6 +27,7 @@ export type TaskView = {
 export type NewHireRow = {
   id: string;
   name: string;
+  legalName: string | null;
   position: string | null;
   department: string | null;
   location: string | null;
@@ -106,6 +107,7 @@ type HireWithTasks = {
   pdpGraduate: boolean;
   employmentStints: { startDate: Date | null; endDate: Date | null }[];
   name: string;
+  legalName: string | null;
   position: string | null;
   department: string | null;
   location: string | null;
@@ -160,6 +162,7 @@ function toRow(hire: HireWithTasks, now: number): NewHireRow {
   return {
     id: hire.id,
     name: hire.name,
+    legalName: hire.legalName,
     position: hire.position,
     department: hire.department,
     location: hire.location,
@@ -397,6 +400,7 @@ function buildDashboard(active: HireWithTasks[], now: number, travelByHire: Map<
 const hireSelect = {
   id: true,
   name: true,
+  legalName: true,
   position: true,
   department: true,
   location: true,
