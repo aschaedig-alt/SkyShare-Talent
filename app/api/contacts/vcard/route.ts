@@ -34,11 +34,17 @@ export async function GET(request: Request) {
     contacts.map((c) => ({ fullName: c.fullName, title: c.title, phone: c.phone, email: c.email }))
   );
 
+  // iOS quirk: an INLINE vCard opens Safari's Quick Look preview, which only
+  // ever adds the FIRST contact. Serving multiple contacts as an ATTACHMENT
+  // makes the phone hand the file to the Contacts importer, which then offers
+  // "Add All Contacts". A single contact stays inline for the smooth one-tap
+  // preview. (Android downloads either way and imports all on open.)
+  const disposition = contacts.length > 1 ? "attachment" : "inline";
   return new Response(body, {
     status: 200,
     headers: {
       "Content-Type": "text/vcard; charset=utf-8",
-      "Content-Disposition": `inline; filename="${safeFilename(url.searchParams.get("name"))}"`,
+      "Content-Disposition": `${disposition}; filename="${safeFilename(url.searchParams.get("name"))}"`,
       "Cache-Control": "no-store"
     }
   });

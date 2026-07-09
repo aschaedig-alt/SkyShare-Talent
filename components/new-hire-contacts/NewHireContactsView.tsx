@@ -73,7 +73,8 @@ export function NewHireContactsView({ intro, groups }: { intro: string; groups: 
         Add all {totalContacts} contacts
       </button>
       <p className="mt-2 text-center text-xs text-brand-grey/80 dark:text-slate-500">
-        Or add a department, or tap individual people below.
+        Add a whole department, or tap individual people below. Adding several at once? Your phone saves a
+        contacts file — open it and choose “Add All Contacts.”
       </p>
 
       <div className="mt-8 space-y-8">
