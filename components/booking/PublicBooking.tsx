@@ -48,6 +48,7 @@ export function PublicBooking({ slug, host }: Props) {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [website, setWebsite] = useState(""); // honeypot — stays empty for real users
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState<{ start: string; typeName: string; location: string | null } | null>(null);
@@ -113,7 +114,8 @@ export function PublicBooking({ slug, host }: Props) {
           inviteeEmail: email,
           inviteePhone: phone || null,
           notes: notes || null,
-          timezone: tz
+          timezone: tz,
+          website
         })
       });
       const data = await res.json();
@@ -171,12 +173,14 @@ export function PublicBooking({ slug, host }: Props) {
             email={email}
             phone={phone}
             notes={notes}
+            website={website}
             error={error}
             submitting={submitting}
             setName={setName}
             setEmail={setEmail}
             setPhone={setPhone}
             setNotes={setNotes}
+            setWebsite={setWebsite}
             onBack={() => setSlot(null)}
             onSubmit={submit}
           />
@@ -318,12 +322,14 @@ function BookingForm(props: {
   email: string;
   phone: string;
   notes: string;
+  website: string;
   error: string | null;
   submitting: boolean;
   setName: (v: string) => void;
   setEmail: (v: string) => void;
   setPhone: (v: string) => void;
   setNotes: (v: string) => void;
+  setWebsite: (v: string) => void;
   onBack: () => void;
   onSubmit: () => void;
 }) {
@@ -351,6 +357,19 @@ function BookingForm(props: {
       </div>
 
       <div className="mt-4 grid gap-3">
+        {/* Honeypot: off-screen, hidden from real users; only bots fill it. */}
+        <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden" }}>
+          <label>
+            Website
+            <input
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={props.website}
+              onChange={(e) => props.setWebsite(e.target.value)}
+            />
+          </label>
+        </div>
         <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
           Name
           <input

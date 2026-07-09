@@ -9,7 +9,9 @@ export const publicBookingSchema = z.object({
   inviteePhone: z.string().trim().optional().nullable(),
   notes: z.string().trim().optional().nullable(),
   jobId: z.string().trim().optional().nullable(),
-  timezone: z.string().trim().optional().nullable()
+  timezone: z.string().trim().optional().nullable(),
+  // Honeypot — a hidden field real users never fill. Any value means a bot.
+  website: z.string().optional().nullable()
 });
 
 const buffer = z.coerce.number().int().refine((v) => v === 0 || v === 10, "Buffer must be 0 or 10 minutes.");

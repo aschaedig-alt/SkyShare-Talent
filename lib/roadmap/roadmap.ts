@@ -198,7 +198,7 @@ Public "schedule with me" links so candidates and guests can self-book onto the 
 - [ ] Reschedule / cancel links — self-serve tokenized links for invitees
 - [ ] Round-robin pool — one link that assigns whichever team member is free
 - [ ] General meetings on the in-app calendar — show MEETING-type bookings (no candidate) on the calendar / timeline, not just on Google
-- [ ] Scheduling nav entry + anti-spam — add Scheduling to the sidebar and add basic bot protection (honeypot / rate limit) to the public booking endpoint
+- [x] Scheduling nav entry + anti-spam (Jul 9) — Scheduling was already in the sidebar (Interviews & Scheduling); added basic bot protection to the public booking endpoint: a hidden honeypot field (bots that fill it get a fake "booked" response but nothing is created — verified) plus a per-IP rate limit (8 / 10 min, best-effort per serverless instance). lib/rate-limit.ts
 
 ## Candidate Intake Automation
 Auto-ingest applicants from Paycom into the system, hands-off.

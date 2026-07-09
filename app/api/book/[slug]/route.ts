@@ -6,6 +6,7 @@ import { getHostBySlug, checkSlotStillFree, toPublicHost } from "@/lib/data/book
 import { publicBookingSchema } from "@/lib/validation/booking";
 import { pushBookingToGoogle } from "@/lib/google/booking-sync";
 import { pushInterviewToGoogle } from "@/lib/google/interview-sync";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 /** Public: host details + active booking types. */
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -28,6 +29,15 @@ function normalizePhone(phone: string) {
 export async function POST(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
+  // Basic bot protection: rate-limit submissions per IP (best-effort in serverless).
+  const limit = rateLimit(`book:${clientIp(request)}`, 8, 10 * 60 * 1000);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { message: "Too many requests. Please try again in a few minutes." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+    );
+  }
+
   try {
     const host = await getHostBySlug(slug);
     if (!host || !host.isActive) {
@@ -35,6 +45,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     }
 
     const payload = publicBookingSchema.parse(await request.json());
+
+    // Honeypot: only a bot fills the hidden "website" field. Pretend success so it
+    // moves on, but create nothing.
+    if (payload.website && payload.website.trim().length > 0) {
+      console.warn("Booking honeypot tripped for slug:", slug);
+      return NextResponse.json({ ok: true, message: "You're booked!" });
+    }
     const type = host.bookingTypes.find((t) => t.id === payload.bookingTypeId);
     if (!type) {
       return NextResponse.json({ message: "That meeting type is no longer available." }, { status: 400 });
