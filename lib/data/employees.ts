@@ -9,6 +9,7 @@ import { computeTenure } from "@/lib/data/tenure";
 export type EmployeeRow = {
   id: string;
   name: string;
+  legalName: string | null;
   position: string | null;
   department: string | null;
   location: string | null;
@@ -27,6 +28,7 @@ export type EmployeeCounts = { total: number; current: number; past: number };
 type Row = {
   id: string;
   name: string;
+  legalName: string | null;
   position: string | null;
   department: string | null;
   location: string | null;
@@ -60,6 +62,7 @@ export async function getEmployees(): Promise<EmployeeRow[]> {
     select: {
       id: true,
       name: true,
+      legalName: true,
       position: true,
       department: true,
       location: true,
@@ -79,6 +82,7 @@ export async function getEmployees(): Promise<EmployeeRow[]> {
     return {
       id: r.id,
       name: r.name,
+      legalName: r.legalName,
       position: r.position,
       department: r.department,
       location: r.location,

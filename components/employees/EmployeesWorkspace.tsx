@@ -106,7 +106,7 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
       if (filter === "current" && !e.current) return false;
       if (filter === "past" && e.current) return false;
       if (!needle) return true;
-      return [e.name, e.position, e.department, e.location].filter(Boolean).some((v) => v!.toLowerCase().includes(needle));
+      return [e.name, e.legalName, e.position, e.department, e.location].filter(Boolean).some((v) => v!.toLowerCase().includes(needle));
     });
     if (!sort) return filtered;
     const factor = sort.dir === "asc" ? 1 : -1;
