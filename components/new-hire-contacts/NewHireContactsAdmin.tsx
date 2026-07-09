@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Check, Copy, ExternalLink, Plus, Trash2, UserPlus } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Copy, ExternalLink, Plus, Trash2, UserPlus } from "lucide-react";
 import { Button, Input, Textarea } from "@/components/ui";
 import type { ContactGroup, ContactMember, NewHireContactsConfig, SharedContact } from "@/lib/new-hire-contacts/config";
 import type { ContactCandidate } from "@/lib/data/new-hire-contacts";
@@ -63,6 +63,18 @@ export function NewHireContactsAdmin({
 
   const removeGroup = (index: number) =>
     setConfig((prev) => ({ ...prev, groups: prev.groups.filter((_, i) => i !== index) }));
+
+  // Reorder a department card. The config stores groups as an ordered array and
+  // the public /welcome page renders in that same order, so swapping positions
+  // here is all that's needed — save persists the new order.
+  const moveGroup = (index: number, dir: -1 | 1) =>
+    setConfig((prev) => {
+      const target = index + dir;
+      if (target < 0 || target >= prev.groups.length) return prev;
+      const groups = [...prev.groups];
+      [groups[index], groups[target]] = [groups[target], groups[index]];
+      return { ...prev, groups };
+    });
 
   const addMember = (groupIndex: number, personId: string) => {
     if (!personId) return;
@@ -177,6 +189,28 @@ export function NewHireContactsAdmin({
               className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10"
             >
               <div className="flex items-center gap-2">
+                <div className="flex flex-col">
+                  <button
+                    type="button"
+                    onClick={() => moveGroup(groupIndex, -1)}
+                    disabled={groupIndex === 0}
+                    aria-label={`Move ${group.label} up`}
+                    title="Move up"
+                    className="rounded p-0.5 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea disabled:opacity-30 disabled:hover:bg-transparent dark:text-slate-400 dark:hover:bg-white/10"
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveGroup(groupIndex, 1)}
+                    disabled={groupIndex === config.groups.length - 1}
+                    aria-label={`Move ${group.label} down`}
+                    title="Move down"
+                    className="rounded p-0.5 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea disabled:opacity-30 disabled:hover:bg-transparent dark:text-slate-400 dark:hover:bg-white/10"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                </div>
                 <Input
                   className="max-w-xs font-semibold"
                   value={group.label}
