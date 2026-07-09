@@ -58,7 +58,9 @@ function tenureOf(r: Row, now: number): { days: number | null; start: Date | nul
 export async function getEmployees(): Promise<EmployeeRow[]> {
   const now = Date.now();
   const rows = (await prisma.newHire.findMany({
-    where: { stage: { in: ["POST_ONBOARD", "ARCHIVED"] } },
+    // Exclude canceled offers (accepted then backed out before day one) — they
+    // were never employees, so they don't belong in the Employees directory.
+    where: { stage: { in: ["POST_ONBOARD", "ARCHIVED"] }, canceled: false },
     select: {
       id: true,
       name: true,
@@ -107,8 +109,8 @@ export async function getEmployees(): Promise<EmployeeRow[]> {
 
 export async function getEmployeeCounts(): Promise<EmployeeCounts> {
   const [total, active] = await Promise.all([
-    prisma.newHire.count({ where: { stage: { in: ["POST_ONBOARD", "ARCHIVED"] } } }),
-    prisma.newHire.count({ where: { stage: { in: ["POST_ONBOARD", "ARCHIVED"] }, employmentStatus: "ACTIVE" } })
+    prisma.newHire.count({ where: { stage: { in: ["POST_ONBOARD", "ARCHIVED"] }, canceled: false } }),
+    prisma.newHire.count({ where: { stage: { in: ["POST_ONBOARD", "ARCHIVED"] }, employmentStatus: "ACTIVE", canceled: false } })
   ]);
   // Non-active (CONTRACT + TERMINATED) all fall under "past".
   return { total, current: active, past: total - active };
