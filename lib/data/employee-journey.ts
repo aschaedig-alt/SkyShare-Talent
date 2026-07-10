@@ -73,6 +73,10 @@ function iso(d: Date | null): string | null {
 // Prefer the stored seat; fall back to resolving it from the title/slug so
 // pre-fleet-registry titles still classify.
 function seatOf(r: { seat: string | null; fleetPositionSlug: string | null; title: string }): "PIC" | "SIC" | null {
+  // Ground/support roles never hold a pilot seat — guard against bad imports that
+  // tagged a maintenance/support role with an aircraft or a "*-captain" fleet slug
+  // (e.g. "G450 Maintenance Technician (HND)" carrying slug g450-captain).
+  if (/\b(maintenance|mechanic|technician|amt|avionics|detailer|detailing|line service|inspector|parts|dispatch|coordinator)\b/i.test(r.title)) return null;
   const raw = (r.seat ?? "").toUpperCase();
   if (raw === "PIC" || raw === "SIC") return raw;
   const fp = positionFor(r.fleetPositionSlug, r.title)?.seat;
@@ -206,6 +210,7 @@ export type UpgradePilot = {
   hireId: string;
   name: string;
   active: boolean; // currently employed (not terminated)
+  managed: boolean; // dedicated managed-aircraft pilot (not the SkyShare/fractional pool)
   tenureDays: number; // hire -> now (active) or -> last role end (former)
   employedYears: number[]; // calendar years the pilot was on staff (for per-year headcount)
   upgrades: number; // FO -> Captain, same aircraft
@@ -278,11 +283,11 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
         createdAt: true
       }
     }),
-    prisma.newHire.findMany({ select: { id: true, name: true, employmentStatus: true } }),
+    prisma.newHire.findMany({ select: { id: true, name: true, employmentStatus: true, managedPilot: true } }),
     prisma.employmentStint.findMany({ select: { newHireId: true, startDate: true, endDate: true } })
   ])) as [
     (RawRole & { newHireId: string })[],
-    { id: string; name: string; employmentStatus: string }[],
+    { id: string; name: string; employmentStatus: string; managedPilot: boolean }[],
     { newHireId: string; startDate: Date; endDate: Date | null }[]
   ];
 
@@ -367,6 +372,7 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
       hireId,
       name: info?.name ?? "Unknown",
       active,
+      managed: info?.managedPilot ?? false,
       tenureDays,
       employedYears,
       upgrades,

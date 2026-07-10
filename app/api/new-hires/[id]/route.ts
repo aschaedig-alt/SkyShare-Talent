@@ -48,6 +48,9 @@ export async function PATCH(request: Request, context: RouteContext) {
       const t = typeof body.businessCardTitle === "string" ? body.businessCardTitle.trim() : "";
       data.businessCardTitle = t.length ? t : null;
     }
+    if (typeof body.managedPilot === "boolean") {
+      data.managedPilot = body.managedPilot;
+    }
 
     for (const field of ["offerSentDate", "offerSignedDate", "startDate", "orientationDate"]) {
       const d = parseDate(body[field]);

@@ -224,6 +224,10 @@ model NewHire {
   location        String?
   // Tail number for pilots dedicated to a managed aircraft (e.g. "N366FB").
   managedAircraft String?
+  // Dedicated managed-aircraft pilot (not part of the SkyShare / fractional shared
+  // pool). Excluded by default from fleet-progression / promotion tracking, since a
+  // managed-account pilot isn't on a promote-by-date path. Editable per pilot.
+  managedPilot    Boolean  @default(false)
   phone           String?
   ssEmail         String?
   personalEmail   String?

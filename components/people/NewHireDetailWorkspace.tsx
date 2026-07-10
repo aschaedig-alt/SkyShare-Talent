@@ -58,6 +58,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     notes: hire.notes ?? ""
   });
   const [hasLegalName, setHasLegalName] = useState(Boolean(hire.legalName));
+  const [managedPilot, setManagedPilot] = useState(hire.managedPilot);
   const [savingDetails, setSavingDetails] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [busyStage, setBusyStage] = useState(false);
@@ -134,6 +135,22 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
       setStatus("Could not save details.");
     } finally {
       setSavingDetails(false);
+    }
+  }
+
+  async function saveManagedPilot(next: boolean) {
+    const prev = managedPilot;
+    setManagedPilot(next);
+    try {
+      const res = await fetch(`/api/new-hires/${hire.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ managedPilot: next })
+      });
+      if (!res.ok) setManagedPilot(prev);
+      else router.refresh();
+    } catch {
+      setManagedPilot(prev);
     }
   }
 
@@ -295,6 +312,12 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
             {field("Department", "department")}
             {field("Job location", "location")}
             {(details.department.toLowerCase().includes("managed") || details.managedAircraft) ? field("Managed aircraft (tail #)", "managedAircraft") : null}
+            {/\b(captain|first officer|\bfo\b|\bpic\b|\bsic\b|pilot)\b/i.test(details.position) || managedPilot ? (
+              <label className="flex items-start gap-2 text-xs text-brand-grey dark:text-slate-400">
+                <input type="checkbox" className="mt-0.5" checked={managedPilot} onChange={(e) => saveManagedPilot(e.target.checked)} />
+                <span>Dedicated <strong>managed-aircraft</strong> pilot — excluded from SkyShare / fractional promotion tracking by default</span>
+              </label>
+            ) : null}
             {field("Phone", "phone")}
             {field("SkyShare email", "ssEmail")}
             {field("Personal email", "personalEmail")}

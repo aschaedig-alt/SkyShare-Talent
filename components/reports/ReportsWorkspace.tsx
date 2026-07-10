@@ -245,6 +245,9 @@ type Bucket = "advanced" | "once" | "twice" | "thrice" | "captain" | "stayed";
 
 export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"] }) {
   const [scope, setScope] = useState<"all" | "active">("active");
+  // Default to the SkyShare / fractional shared pool — managed-account pilots
+  // aren't on a promote-by-date path, so they're hidden until you toggle "All fleets".
+  const [poolFilter, setPoolFilter] = useState<"fractional" | "all">("fractional");
   const [tenure, setTenure] = useState<0 | 365 | 730 | 1825>(0);
   const [year, setYear] = useState<number | "all">("all");
   const [bucket, setBucket] = useState<Bucket>("advanced");
@@ -263,7 +266,9 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
     // Chart pool = scope + tenure across all years. Denominator pool further
     // restricts to the selected year's headcount, so a year's % is measured
     // against that year's pilots, not today's.
-    const poolNoYear = upgrades.pilots.filter((p) => (scope === "active" ? p.active : true) && p.tenureDays >= tenure);
+    const poolNoYear = upgrades.pilots.filter(
+      (p) => (scope === "active" ? p.active : true) && (poolFilter === "all" || !p.managed) && p.tenureDays >= tenure
+    );
     const pool = poolNoYear.filter((p) => year === "all" || p.employedYears.includes(year));
     const rows = pool.map((p) => {
       let up = 0;
@@ -313,7 +318,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
       pct2yr: tracked ? Math.round((within(730) / tracked) * 100) : 0,
       topPaths: [...paths.entries()].map(([path, count]) => ({ path, count })).sort((a, b) => b.count - a.count).slice(0, 6)
     };
-  }, [upgrades.pilots, scope, tenure, year]);
+  }, [upgrades.pilots, scope, poolFilter, tenure, year]);
 
   const tiles: { key: Bucket; label: string; value: number; hint?: string }[] = [
     { key: "advanced", label: "Advanced", value: s.advanced, hint: "≥ 1 move" },
@@ -340,9 +345,11 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
   const filtered = s.rows.filter(bucketTest);
   const activeTile = tiles.find((t) => t.key === bucket);
   const tenureLabel = tenure === 365 ? "1+ yr" : tenure === 730 ? "2+ yr" : tenure === 1825 ? "5+ yr" : null;
+  const poolWord = poolFilter === "fractional" ? "fractional " : "";
   const denomLabel =
-    (year === "all" ? `${scope === "active" ? "active" : "all"} pilots` : `pilots on staff in ${year}${scope === "active" ? " (still here)" : ""}`) +
-    (tenureLabel ? ` with ${tenureLabel} tenure` : "");
+    (year === "all"
+      ? `${scope === "active" ? "active " : "all "}${poolWord}pilots`
+      : `${poolWord}pilots on staff in ${year}${scope === "active" ? " (still here)" : ""}`) + (tenureLabel ? ` with ${tenureLabel} tenure` : "");
 
   // Download the current roster (name, position, tenure, START DATE for validating
   // timeframe, moves, and suggested next steps) as CSV.
@@ -391,6 +398,20 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
                 className={clsx("rounded px-3 py-1.5 transition", scope === v ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400")}
               >
                 {v === "active" ? "Active pilots" : "All pilots"}
+              </button>
+            ))}
+          </div>
+          <div className="inline-flex rounded border border-brand-lea/15 p-0.5 text-xs font-semibold dark:border-white/10">
+            {(["fractional", "all"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setPoolFilter(v)}
+                aria-pressed={poolFilter === v}
+                title={v === "fractional" ? "SkyShare / fractional shared pool only" : "Include managed-account pilots"}
+                className={clsx("rounded px-3 py-1.5 transition", poolFilter === v ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400")}
+              >
+                {v === "fractional" ? "Fractional" : "All fleets"}
               </button>
             ))}
           </div>
