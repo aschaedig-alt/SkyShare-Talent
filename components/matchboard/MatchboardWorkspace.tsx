@@ -35,11 +35,16 @@ export function MatchboardWorkspace({
   const router = useRouter();
   const [query, setQuery] = useState("");
 
-  function go(nextMode: MatchboardMode, id?: string) {
+  // URL for a matchboard view — used as a real href so roles/candidates are
+  // ctrl/right-clickable into a new tab (the page reads mode/id from the query).
+  function hrefFor(nextMode: MatchboardMode, id?: string) {
     const params = new URLSearchParams();
     params.set("mode", nextMode);
     if (id) params.set("id", id);
-    router.push(`/matching?${params.toString()}`);
+    return `/matching?${params.toString()}`;
+  }
+  function go(nextMode: MatchboardMode, id?: string) {
+    router.push(hrefFor(nextMode, id));
   }
 
   const filteredRoles = useMemo(() => {
@@ -111,23 +116,16 @@ export function MatchboardWorkspace({
                   const seat = seatTag(role.seat);
                   const active = role.id !== "" && role.id === selectedId;
                   const disabled = role.noProfile;
-                  return (
-                    <button
-                      key={`${role.title}:${role.id}`}
-                      type="button"
-                      disabled={disabled}
-                      onClick={() => {
-                        if (!disabled) go("role", role.id);
-                      }}
-                      className={clsx(
-                        "mb-1.5 block w-full rounded border p-2.5 text-left transition hover:shadow-glow",
-                        disabled
-                          ? "cursor-default border-brand-lea/10 opacity-60 dark:border-white/10"
-                          : active
-                            ? "border-brand-gold bg-brand-sweet/18 dark:bg-brand-sweet/25"
-                            : "border-brand-lea/10 hover:border-brand-sweet hover:bg-brand-cloudDancer/55 dark:border-white/10 dark:bg-white/5"
-                      )}
-                    >
+                  const cardClass = clsx(
+                    "mb-1.5 block w-full rounded border p-2.5 text-left transition hover:shadow-glow",
+                    disabled
+                      ? "cursor-default border-brand-lea/10 opacity-60 dark:border-white/10"
+                      : active
+                        ? "border-brand-gold bg-brand-sweet/18 dark:bg-brand-sweet/25"
+                        : "border-brand-lea/10 hover:border-brand-sweet hover:bg-brand-cloudDancer/55 dark:border-white/10 dark:bg-white/5"
+                  );
+                  const inner = (
+                    <>
                       <div className="flex items-center gap-1.5">
                         <span className="min-w-0 flex-1 truncate text-sm font-semibold text-brand-lea dark:text-slate-100">{role.title}</span>
                         {role.noProfile ? (
@@ -148,16 +146,24 @@ export function MatchboardWorkspace({
                               .filter(Boolean)
                               .join(" · ")}
                       </div>
-                    </button>
+                    </>
+                  );
+                  return disabled ? (
+                    <div key={`${role.title}:${role.id}`} className={cardClass}>
+                      {inner}
+                    </div>
+                  ) : (
+                    <Link key={`${role.title}:${role.id}`} href={hrefFor("role", role.id)} className={cardClass}>
+                      {inner}
+                    </Link>
                   );
                 })
               : filteredCandidates.map((cand) => {
                   const active = cand.id === selectedId;
                   return (
-                    <button
+                    <Link
                       key={cand.id}
-                      type="button"
-                      onClick={() => go("candidate", cand.id)}
+                      href={hrefFor("candidate", cand.id)}
                       className={clsx(
                         "mb-1.5 block w-full rounded border p-2.5 text-left transition hover:shadow-glow",
                         active ? "border-brand-gold bg-brand-sweet/18 dark:bg-brand-sweet/25" : "border-brand-lea/10 hover:border-brand-sweet hover:bg-brand-cloudDancer/55 dark:border-white/10 dark:bg-white/5"
@@ -170,7 +176,7 @@ export function MatchboardWorkspace({
                       <div className="mt-0.5 truncate text-xs text-brand-grey dark:text-slate-400">
                         {[cand.title, cand.totalTime ? `${cand.totalTime.toLocaleString()} hr` : null].filter(Boolean).join(" · ") || "No title"}
                       </div>
-                    </button>
+                    </Link>
                   );
                 })}
             {((mode === "role" && filteredRoles.length === 0) || (mode === "candidate" && filteredCandidates.length === 0)) ? (

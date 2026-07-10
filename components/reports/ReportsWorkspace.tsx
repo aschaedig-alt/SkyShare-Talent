@@ -29,29 +29,47 @@ function fmtSpan(days: number | null): string {
   return `${(days / 365).toFixed(1)} yr`;
 }
 
-// Hand-curated "step up" ladder for SkyShare's fleet: the larger airframes a
-// Captain on a given aircraft would realistically transition up to. Skips same
-// aircraft family (e.g. 560XL -> 560XLS+) and small lateral jets. Empty = top of fleet.
-const STEP_UP: Record<string, string[]> = {
-  "PC-12": ["CJ2", "560XL", "G200"],
-  "Phenom 100": ["CJ2", "560XL"],
-  "Phenom 300": ["560XL", "G200"],
-  M2: ["CJ2", "560XL"],
-  CJ2: ["560XL", "G200"],
-  "560XL": ["G200", "G450"],
-  "560XLS+": ["G200", "G450"],
-  G200: ["G450", "GV"],
-  G450: ["Legacy 650"],
-  GV: [],
-  "Legacy 650": []
-};
+// SkyShare's SHARED pilot-pool career ladder, smallest -> largest. Managed
+// aircraft (Legacy 650, Phenom, M2, 560XLS+, and the dedicated managed G450 in
+// HND) are NOT progression targets — a managed seat isn't a shared-fleet upgrade.
+// G450 and GV share one type rating, so they're the same top rung ("G450/GV").
+const SKYSHARE_LADDER = ["PC-12", "CJ2", "560XL", "G200", "G450/GV"];
+function ladderRank(aircraft: string | null): number {
+  switch (aircraft) {
+    case "PC-12":
+      return 0;
+    case "CJ2":
+      return 1;
+    case "560XL":
+      return 2;
+    case "G200":
+      return 3;
+    case "G450":
+    case "GV":
+      return 4;
+    default:
+      return -1; // off the shared-fleet ladder (managed / other)
+  }
+}
 
-// Realistic next moves for a pilot who hasn't advanced: upgrade to Captain if
-// they're still a First Officer, then transitions up to larger airframes.
+// The pilot's most recent FLYING role — a management title (e.g. Assistant
+// Director of Training) doesn't change which aircraft they fly, so upgrades are
+// still measured from their real seat.
+function lastFlyingStep(p: UpgradePilot): UpgradePilot["steps"][number] | null {
+  for (let i = p.steps.length - 1; i >= 0; i--) if (p.steps[i].aircraft) return p.steps[i];
+  return p.steps[p.steps.length - 1] ?? null;
+}
+
+// Next moves up the SHARED-fleet ladder: upgrade to Captain if still a First
+// Officer, then transitions up to the larger shared aircraft. A pilot already on
+// a MANAGED / off-ladder seat (Phenom, M2, Legacy 650, the HND managed G450) has
+// no shared-pool progression, so nothing is suggested for them.
 function nextSteps(seat: string | null, aircraft: string | null): { label: string; kind: "upgrade" | "transition" }[] {
+  const rank = ladderRank(aircraft);
+  if (rank < 0) return [];
   const out: { label: string; kind: "upgrade" | "transition" }[] = [];
   if (seat === "SIC" && aircraft) out.push({ label: `${aircraft} Captain`, kind: "upgrade" });
-  if (aircraft && STEP_UP[aircraft]) for (const af of STEP_UP[aircraft]) out.push({ label: af, kind: "transition" });
+  for (let r = rank + 1; r < SKYSHARE_LADDER.length; r++) out.push({ label: SKYSHARE_LADDER[r], kind: "transition" });
   return out;
 }
 
@@ -326,6 +344,30 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
     (year === "all" ? `${scope === "active" ? "active" : "all"} pilots` : `pilots on staff in ${year}${scope === "active" ? " (still here)" : ""}`) +
     (tenureLabel ? ` with ${tenureLabel} tenure` : "");
 
+  // Download the current roster (name, position, tenure, START DATE for validating
+  // timeframe, moves, and suggested next steps) as CSV.
+  const downloadRoster = () => {
+    const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+    const header = ["Name", "Current position", "Seat", "Aircraft", "Tenure (yr)", "Start date", "Upgrades", "Transitions", "Possible next steps"];
+    const lines = filtered.map(({ p, up, tr }) => {
+      const cur = lastFlyingStep(p);
+      const steps = nextSteps(cur?.seat ?? null, cur?.aircraft ?? null)
+        .map((sg) => (sg.kind === "upgrade" ? `Upgrade: ${sg.label}` : `To ${sg.label}`))
+        .join("; ");
+      return [p.name, cur?.title ?? "", cur?.seat ?? "", cur?.aircraft ?? "", (p.tenureDays / 365).toFixed(1), p.startDate?.slice(0, 10) ?? "", String(up), String(tr), steps];
+    });
+    const csv = [header, ...lines].map((r) => r.map((c) => esc(String(c))).join(",")).join("\r\n");
+    const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fleet-${bucket}-${scope}${tenureLabel ? `-${tenureLabel.replace(/[^\w]+/g, "")}` : ""}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -470,11 +512,22 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
 
           {/* Roster drill-down */}
           <div className="mt-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">
                 {activeTile?.label} — {filtered.length} {filtered.length === 1 ? "pilot" : "pilots"}
               </p>
-              <p className="text-[11px] text-brand-grey dark:text-slate-400"><span className="font-semibold text-brand-gold">↗ upgrade</span> · <span className="font-semibold text-brand-eden dark:text-slate-300">→ transition</span></p>
+              <div className="flex items-center gap-2">
+                {filtered.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={downloadRoster}
+                    className="inline-flex items-center gap-1 rounded border border-brand-lea/20 px-2 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
+                  >
+                    <Download className="h-3 w-3" /> Download CSV
+                  </button>
+                )}
+                <p className="text-[11px] text-brand-grey dark:text-slate-400"><span className="font-semibold text-brand-gold">↗ upgrade</span> · <span className="font-semibold text-brand-eden dark:text-slate-300">→ transition</span></p>
+              </div>
             </div>
             <div className="mt-2 max-h-[560px] space-y-2 overflow-y-auto pr-1 print:max-h-none print:overflow-visible">
               {filtered.length === 0 ? (
@@ -485,7 +538,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
                 filtered.map(({ p, up, tr }) => {
                   // Stayed-put pilots: show current position, tenure, and where they could go next.
                   if (bucket === "stayed") {
-                    const cur = p.steps[p.steps.length - 1] ?? null;
+                    const cur = lastFlyingStep(p);
                     const suggestions = nextSteps(cur?.seat ?? null, cur?.aircraft ?? null);
                     return (
                       <div key={p.hireId} className="rounded border border-brand-lea/10 bg-white p-3 transition hover:border-brand-gold/40 dark:border-white/10 dark:bg-white/5">
@@ -518,7 +571,11 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
                               </span>
                             ))
                           ) : (
-                            <span className="text-brand-grey/70 dark:text-slate-500">Top of fleet — leadership / check-airman track</span>
+                            <span className="text-brand-grey/70 dark:text-slate-500">
+                              {ladderRank(cur?.aircraft ?? null) < 0
+                                ? "Managed / off-ladder seat — no shared-fleet path"
+                                : "Top of the shared fleet — leadership / check-airman track"}
+                            </span>
                           )}
                         </div>
                       </div>
