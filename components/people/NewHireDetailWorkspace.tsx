@@ -186,8 +186,11 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
 
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
-      <Link href="/people" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400">
-        ← Pre-onboarding
+      <Link
+        href={hire.stage === "ACTIVE" ? "/people" : "/employees"}
+        className="inline-flex items-center gap-1 text-sm font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400"
+      >
+        ← {hire.stage === "ACTIVE" ? "Pre-onboarding" : "Employees"}
       </Link>
 
       <section className="flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">

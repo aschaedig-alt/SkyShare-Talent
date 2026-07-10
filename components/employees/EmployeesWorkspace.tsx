@@ -2,60 +2,42 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { clsx } from "clsx";
-import { Search, Users, ChevronUp, ChevronDown, ChevronsUpDown, GitMerge } from "lucide-react";
+import { Search, Users, ChevronUp, ChevronDown, ChevronsUpDown, GitMerge, SlidersHorizontal, Columns3, X, Check } from "lucide-react";
 import type { EmployeeRow, EmployeeCounts } from "@/lib/data/employees";
+import { EMPLOYEE_COLUMN_KEYS, type EmployeeColumnKey } from "@/lib/employees/columns";
 import { Badge, Button, EmptyState, Modal } from "@/components/ui";
 import type { BadgeTone } from "@/components/ui/Badge";
 
 type Filter = "all" | "current" | "past";
-
 const FILTER_KEY = "skyshare-employees-filter";
 const isFilter = (v: unknown): v is Filter => v === "all" || v === "current" || v === "past";
 
-type SortKey = "name" | "position" | "department" | "location" | "startDate" | "tenureDays" | "roleCount" | "status";
+type SortKey = "name" | "role" | "department" | "location" | "aircraft" | "seat" | "pool" | "started" | "tenure" | "roles" | "status";
 type SortState = { key: SortKey; dir: "asc" | "desc" };
 const SORT_KEY = "skyshare-employees-sort";
-const SORT_KEYS: SortKey[] = ["name", "position", "department", "location", "startDate", "tenureDays", "roleCount", "status"];
+const SORT_KEYS: SortKey[] = ["name", "role", "department", "location", "aircraft", "seat", "pool", "started", "tenure", "roles", "status"];
 
-// ACTIVE (current) sorts ahead of CONTRACT, then TERMINATED (past).
 function statusRank(e: EmployeeRow): number {
   return e.employmentStatus === "ACTIVE" ? 0 : e.employmentStatus === "CONTRACT" ? 1 : 2;
 }
-
-function compareBy(a: EmployeeRow, b: EmployeeRow, key: SortKey): number {
-  switch (key) {
-    case "name":
-      return a.name.localeCompare(b.name);
-    case "position":
-      return (a.position ?? "").localeCompare(b.position ?? "");
-    case "department":
-      return (a.department ?? "").localeCompare(b.department ?? "");
-    case "location":
-      return (a.location ?? "").localeCompare(b.location ?? "");
-    case "startDate":
-      return (a.startDate ?? "").localeCompare(b.startDate ?? ""); // ISO strings sort chronologically
-    case "tenureDays":
-      return (a.tenureDays ?? 0) - (b.tenureDays ?? 0);
-    case "roleCount":
-      return a.roleCount - b.roleCount;
-    case "status":
-      return statusRank(a) - statusRank(b);
-  }
-}
-
-// Current employees are ACTIVE; CONTRACT reads as its own amber "Contract" pill;
-// everyone else (TERMINATED) is a neutral "Past".
 function statusBadge(e: EmployeeRow): { tone: BadgeTone; label: string } {
   if (e.employmentStatus === "CONTRACT") return { tone: "warning", label: "Contract" };
   return e.current ? { tone: "success", label: "Current" } : { tone: "neutral", label: "Past" };
+}
+const isPilot = (e: EmployeeRow) => Boolean(e.aircraft || e.seat);
+function poolLabel(e: EmployeeRow): string {
+  if (!isPilot(e)) return "—";
+  return e.managed ? "Managed" : "Fractional";
 }
 
 function fmtDate(iso: string | null) {
   return iso ? new Intl.DateTimeFormat("en", { month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(iso)) : "—";
 }
-
+function fmtDay(iso: string | null) {
+  return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(iso)) : "—";
+}
 function tenure(days: number | null) {
   if (days === null) return "—";
   if (days < 31) return `${days}d`;
@@ -66,14 +48,55 @@ function tenure(days: number | null) {
   return mo ? `${yr} yr ${mo} mo` : `${yr} yr`;
 }
 
-export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeRow[]; counts: EmployeeCounts }) {
+// The full column catalog. Name is always shown (not here). sortKey omitted = not sortable.
+const COLUMNS: Record<EmployeeColumnKey, { label: string; sortKey?: SortKey; cell: (e: EmployeeRow) => ReactNode }> = {
+  role: { label: "Current role", sortKey: "role", cell: (e) => e.position ?? "—" },
+  department: { label: "Department", sortKey: "department", cell: (e) => e.department ?? "—" },
+  location: { label: "Location", sortKey: "location", cell: (e) => e.location ?? "—" },
+  aircraft: { label: "Aircraft", sortKey: "aircraft", cell: (e) => e.aircraft ?? "—" },
+  seat: { label: "Seat", sortKey: "seat", cell: (e) => e.seat ?? "—" },
+  pool: { label: "Pool", sortKey: "pool", cell: (e) => poolLabel(e) },
+  started: { label: "Started", sortKey: "started", cell: (e) => fmtDate(e.startDate) },
+  tenure: { label: "Tenure", sortKey: "tenure", cell: (e) => tenure(e.tenureDays) },
+  roles: { label: "Roles", sortKey: "roles", cell: (e) => `${e.roleCount || "—"}${e.stintCount > 1 ? ` · ${e.stintCount} stints` : ""}` },
+  status: { label: "Status", sortKey: "status", cell: (e) => { const b = statusBadge(e); return <Badge tone={b.tone}>{b.label}</Badge>; } },
+  phone: { label: "Phone", cell: (e) => e.phone ?? "—" },
+  workEmail: { label: "Work email", cell: (e) => e.workEmail ?? "—" },
+  personalEmail: { label: "Personal email", cell: (e) => e.personalEmail ?? "—" },
+  birthday: { label: "Birthday", cell: (e) => fmtDay(e.birthday) }
+};
+
+function compareBy(a: EmployeeRow, b: EmployeeRow, key: SortKey): number {
+  switch (key) {
+    case "name": return a.name.localeCompare(b.name);
+    case "role": return (a.position ?? "").localeCompare(b.position ?? "");
+    case "department": return (a.department ?? "").localeCompare(b.department ?? "");
+    case "location": return (a.location ?? "").localeCompare(b.location ?? "");
+    case "aircraft": return (a.aircraft ?? "").localeCompare(b.aircraft ?? "");
+    case "seat": return (a.seat ?? "").localeCompare(b.seat ?? "");
+    case "pool": return poolLabel(a).localeCompare(poolLabel(b));
+    case "started": return (a.startDate ?? "").localeCompare(b.startDate ?? "");
+    case "tenure": return (a.tenureDays ?? 0) - (b.tenureDays ?? 0);
+    case "roles": return a.roleCount - b.roleCount;
+    case "status": return statusRank(a) - statusRank(b);
+  }
+}
+
+type Filters = { pool: "all" | "fractional" | "managed"; aircraft: string; department: string; location: string; after: string; before: string };
+const EMPTY_FILTERS: Filters = { pool: "all", aircraft: "", department: "", location: "", after: "", before: "" };
+const distinct = (vals: (string | null)[]) => Array.from(new Set(vals.filter((v): v is string => Boolean(v)))).sort();
+
+export function EmployeesWorkspace({ employees, counts, initialColumns }: { employees: EmployeeRow[]; counts: EmployeeCounts; initialColumns: EmployeeColumnKey[] }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
-  // null = the default order from the server (current first, then most recent).
   const [sort, setSort] = useState<SortState | null>(null);
 
-  // Duplicate-merge: pick two records, choose which survives, merge + delete the other.
+  const [visible, setVisible] = useState<EmployeeColumnKey[]>(initialColumns);
+  const [colsOpen, setColsOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [mergeOpen, setMergeOpen] = useState(false);
   const [primaryId, setPrimaryId] = useState<string | null>(null);
@@ -81,35 +104,63 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
   const [mergeErr, setMergeErr] = useState<string | null>(null);
   const selectedRows = useMemo(() => employees.filter((e) => selected.has(e.id)), [employees, selected]);
 
-  const toggleSelect = (id: string) =>
-    setSelected((s) => {
-      const n = new Set(s);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
+  useEffect(() => {
+    const savedFilter = window.localStorage.getItem(FILTER_KEY);
+    if (isFilter(savedFilter)) setFilter(savedFilter);
+    try {
+      const raw = window.localStorage.getItem(SORT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<SortState>;
+        if (SORT_KEYS.includes(parsed.key as SortKey) && (parsed.dir === "asc" || parsed.dir === "desc")) setSort({ key: parsed.key as SortKey, dir: parsed.dir });
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  useEffect(() => { window.localStorage.setItem(FILTER_KEY, filter); }, [filter]);
+  useEffect(() => {
+    if (sort) window.localStorage.setItem(SORT_KEY, JSON.stringify(sort));
+    else window.localStorage.removeItem(SORT_KEY);
+  }, [sort]);
+
+  function toggleSort(key: SortKey) {
+    setSort((cur) => (cur?.key === key ? (cur.dir === "asc" ? { key, dir: "desc" } : null) : { key, dir: "asc" }));
+  }
+
+  const orderedVisible = useMemo(() => EMPLOYEE_COLUMN_KEYS.filter((k) => visible.includes(k)), [visible]);
+  const aircraftOptions = useMemo(() => distinct(employees.map((e) => e.aircraft)), [employees]);
+  const deptOptions = useMemo(() => distinct(employees.map((e) => e.department)), [employees]);
+  const locOptions = useMemo(() => distinct(employees.map((e) => e.location)), [employees]);
+  const activeFilterCount = (filters.pool !== "all" ? 1 : 0) + (filters.aircraft ? 1 : 0) + (filters.department ? 1 : 0) + (filters.location ? 1 : 0) + (filters.after ? 1 : 0) + (filters.before ? 1 : 0);
+
+  async function saveColumns(next: EmployeeColumnKey[]) {
+    const prev = visible;
+    setVisible(next);
+    try {
+      const res = await fetch("/api/workspace-settings/employee-columns", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ columns: next }) });
+      if (!res.ok) setVisible(prev);
+    } catch {
+      setVisible(prev);
+    }
+  }
+  const toggleColumn = (key: EmployeeColumnKey) => saveColumns(visible.includes(key) ? visible.filter((k) => k !== key) : [...visible, key]);
+  const toggleSelect = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   function openMerge() {
     if (selectedRows.length !== 2) return;
-    // Default to keeping the richer / currently-employed record.
     const rank = (x: EmployeeRow) => (x.current ? 1000 : 0) + x.roleCount * 10 + (x.tenureDays ?? 0) / 1000;
     const [a, b] = selectedRows;
     setPrimaryId(rank(a) >= rank(b) ? a.id : b.id);
     setMergeErr(null);
     setMergeOpen(true);
   }
-
   async function doMerge() {
     const secondaryId = selectedRows.find((e) => e.id !== primaryId)?.id;
     if (!primaryId || !secondaryId) return;
     setMerging(true);
     setMergeErr(null);
     try {
-      const res = await fetch("/api/new-hires/merge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ primaryId, secondaryId })
-      });
+      const res = await fetch("/api/new-hires/merge", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ primaryId, secondaryId }) });
       if (!res.ok) throw new Error(((await res.json().catch(() => null)) as { message?: string } | null)?.message ?? "Merge failed.");
       setMergeOpen(false);
       setSelected(new Set());
@@ -121,53 +172,41 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
     }
   }
 
-  // Remember the Current/Past/All choice and the column sort across reloads.
-  useEffect(() => {
-    const savedFilter = window.localStorage.getItem(FILTER_KEY);
-    if (isFilter(savedFilter)) setFilter(savedFilter);
-    try {
-      const raw = window.localStorage.getItem(SORT_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<SortState>;
-        if (SORT_KEYS.includes(parsed.key as SortKey) && (parsed.dir === "asc" || parsed.dir === "desc")) {
-          setSort({ key: parsed.key as SortKey, dir: parsed.dir });
-        }
-      }
-    } catch {
-      /* ignore malformed storage */
-    }
-  }, []);
-  useEffect(() => {
-    window.localStorage.setItem(FILTER_KEY, filter);
-  }, [filter]);
-  useEffect(() => {
-    if (sort) window.localStorage.setItem(SORT_KEY, JSON.stringify(sort));
-    else window.localStorage.removeItem(SORT_KEY);
-  }, [sort]);
-
-  // Click a header to cycle: ascending → descending → back to default order.
-  function toggleSort(key: SortKey) {
-    setSort((cur) => (cur?.key === key ? (cur.dir === "asc" ? { key, dir: "desc" } : null) : { key, dir: "asc" }));
-  }
-
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const filtered = employees.filter((e) => {
       if (filter === "current" && !e.current) return false;
       if (filter === "past" && e.current) return false;
+      if (filters.pool === "managed" && !e.managed) return false;
+      if (filters.pool === "fractional" && (!isPilot(e) || e.managed)) return false;
+      if (filters.aircraft && e.aircraft !== filters.aircraft) return false;
+      if (filters.department && e.department !== filters.department) return false;
+      if (filters.location && e.location !== filters.location) return false;
+      if (filters.after && (e.startDate ?? "").slice(0, 10) < filters.after) return false;
+      if (filters.before && (e.startDate ?? "9999").slice(0, 10) > filters.before) return false;
       if (!needle) return true;
-      return [e.name, e.legalName, e.position, e.department, e.location].filter(Boolean).some((v) => v!.toLowerCase().includes(needle));
+      return [e.name, e.legalName, e.position, e.department, e.location, e.aircraft].filter(Boolean).some((v) => v!.toLowerCase().includes(needle));
     });
     if (!sort) return filtered;
     const factor = sort.dir === "asc" ? 1 : -1;
     return [...filtered].sort((a, b) => factor * compareBy(a, b, sort.key) || a.name.localeCompare(b.name));
-  }, [employees, q, filter, sort]);
+  }, [employees, q, filter, filters, sort]);
 
   const tabs: { key: Filter; label: string; count: number }[] = [
     { key: "all", label: "All", count: counts.total },
     { key: "current", label: "Current", count: counts.current },
     { key: "past", label: "Past", count: counts.past }
   ];
+
+  const chips: { label: string; clear: () => void }[] = [];
+  if (filters.pool !== "all") chips.push({ label: filters.pool === "managed" ? "Managed pilots" : "Fractional pilots", clear: () => setFilters((f) => ({ ...f, pool: "all" })) });
+  if (filters.aircraft) chips.push({ label: `Aircraft: ${filters.aircraft}`, clear: () => setFilters((f) => ({ ...f, aircraft: "" })) });
+  if (filters.department) chips.push({ label: `Dept: ${filters.department}`, clear: () => setFilters((f) => ({ ...f, department: "" })) });
+  if (filters.location) chips.push({ label: `Location: ${filters.location}`, clear: () => setFilters((f) => ({ ...f, location: "" })) });
+  if (filters.after) chips.push({ label: `Started after ${filters.after}`, clear: () => setFilters((f) => ({ ...f, after: "" })) });
+  if (filters.before) chips.push({ label: `Started before ${filters.before}`, clear: () => setFilters((f) => ({ ...f, before: "" })) });
+
+  const filterSelect = "w-full rounded border border-brand-lea/20 bg-white px-2 py-1.5 text-xs text-brand-lea outline-none focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100";
 
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
@@ -182,24 +221,120 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
             <button
               key={t.key}
               onClick={() => setFilter(t.key)}
-              className={clsx(
-                "rounded px-3 py-1.5 text-sm font-semibold transition hover:shadow-glow",
-                filter === t.key ? "bg-brand-lea text-white" : "border border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
-              )}
+              className={clsx("rounded px-3 py-1.5 text-sm font-semibold transition hover:shadow-glow", filter === t.key ? "bg-brand-lea text-white" : "border border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400")}
             >
               {t.label} <span className="opacity-70">· {t.count}</span>
             </button>
           ))}
-          <div className="relative ml-auto">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey dark:text-slate-500" />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search name, role, department, location"
-              className="w-64 rounded border border-brand-lea/20 py-2 pl-8 pr-3 text-sm text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
-            />
+          <div className="ml-auto flex items-center gap-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey dark:text-slate-500" />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search name, role, aircraft…"
+                className="w-56 rounded border border-brand-lea/20 py-2 pl-8 pr-3 text-sm text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+              />
+            </div>
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => { setFiltersOpen((o) => !o); setColsOpen(false); }}
+                className={clsx("inline-flex items-center gap-1.5 rounded border px-2.5 py-2 text-sm font-semibold transition", activeFilterCount > 0 ? "border-brand-gold/60 bg-brand-gold/15 text-brand-lea dark:text-brand-gold" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400")}
+              >
+                <SlidersHorizontal className="h-4 w-4" /> Filter{activeFilterCount > 0 ? <span className="rounded-full bg-brand-gold px-1.5 text-[10px] font-bold text-brand-black">{activeFilterCount}</span> : null}
+              </button>
+              {filtersOpen ? (
+                <>
+                  <button type="button" aria-hidden className="fixed inset-0 z-10 cursor-default" onClick={() => setFiltersOpen(false)} />
+                  <div className="absolute right-0 z-20 mt-1 w-64 space-y-2.5 rounded border border-brand-lea/15 bg-white p-3 shadow-panel dark:border-white/10 dark:bg-brand-panel">
+                    <div>
+                      <div className="mb-1 text-[11px] font-semibold text-brand-grey dark:text-slate-400">Pilot pool</div>
+                      <select value={filters.pool} onChange={(e) => setFilters((f) => ({ ...f, pool: e.target.value as Filters["pool"] }))} className={filterSelect}>
+                        <option value="all">All</option>
+                        <option value="fractional">Fractional (SkyShare)</option>
+                        <option value="managed">Managed</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-[11px] font-semibold text-brand-grey dark:text-slate-400">Aircraft</div>
+                      <select value={filters.aircraft} onChange={(e) => setFilters((f) => ({ ...f, aircraft: e.target.value }))} className={filterSelect}>
+                        <option value="">Any</option>
+                        {aircraftOptions.map((a) => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-[11px] font-semibold text-brand-grey dark:text-slate-400">Department</div>
+                      <select value={filters.department} onChange={(e) => setFilters((f) => ({ ...f, department: e.target.value }))} className={filterSelect}>
+                        <option value="">Any</option>
+                        {deptOptions.map((d) => <option key={d} value={d}>{d}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-[11px] font-semibold text-brand-grey dark:text-slate-400">Location</div>
+                      <select value={filters.location} onChange={(e) => setFilters((f) => ({ ...f, location: e.target.value }))} className={filterSelect}>
+                        <option value="">Any</option>
+                        {locOptions.map((l) => <option key={l} value={l}>{l}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-[11px] font-semibold text-brand-grey dark:text-slate-400">Started</div>
+                      <div className="flex gap-2">
+                        <input type="date" aria-label="Started after" value={filters.after} onChange={(e) => setFilters((f) => ({ ...f, after: e.target.value }))} className={filterSelect} />
+                        <input type="date" aria-label="Started before" value={filters.before} onChange={(e) => setFilters((f) => ({ ...f, before: e.target.value }))} className={filterSelect} />
+                      </div>
+                    </div>
+                    {activeFilterCount > 0 ? (
+                      <button type="button" onClick={() => setFilters(EMPTY_FILTERS)} className="text-xs font-semibold text-brand-eden hover:underline dark:text-slate-300">Clear all filters</button>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
+            </div>
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => { setColsOpen((o) => !o); setFiltersOpen(false); }}
+                className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-2.5 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
+              >
+                <Columns3 className="h-4 w-4" /> Columns
+              </button>
+              {colsOpen ? (
+                <>
+                  <button type="button" aria-hidden className="fixed inset-0 z-10 cursor-default" onClick={() => setColsOpen(false)} />
+                  <div className="absolute right-0 z-20 mt-1 w-52 rounded border border-brand-lea/15 bg-white p-2 shadow-panel dark:border-white/10 dark:bg-brand-panel">
+                    <div className="px-1.5 pb-1.5 text-[11px] font-semibold text-brand-grey dark:text-slate-400">Shows for everyone</div>
+                    {EMPLOYEE_COLUMN_KEYS.map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => toggleColumn(key)}
+                        className="flex w-full items-center gap-2 rounded px-1.5 py-1.5 text-left text-sm text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:text-slate-200 dark:hover:bg-white/5"
+                      >
+                        <span className={clsx("flex h-4 w-4 items-center justify-center rounded border", visible.includes(key) ? "border-brand-gold bg-brand-gold text-brand-black" : "border-brand-lea/30 dark:border-white/20")}>
+                          {visible.includes(key) ? <Check className="h-3 w-3" /> : null}
+                        </span>
+                        {COLUMNS[key].label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+            </div>
           </div>
         </div>
+
+        {chips.length ? (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            {chips.map((c, i) => (
+              <button key={i} type="button" onClick={c.clear} className="inline-flex items-center gap-1 rounded-full bg-brand-gold/15 px-2.5 py-0.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-gold/25 dark:text-brand-gold">
+                {c.label} <X className="h-3 w-3" />
+              </button>
+            ))}
+          </div>
+        ) : null}
       </section>
 
       {selected.size > 0 ? (
@@ -207,17 +342,10 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
           <span className="font-semibold">{selected.size} selected</span>
           <span className="text-white/70">{selected.size === 2 ? "Same person twice? Merge them into one." : "Select exactly 2 records to merge duplicates."}</span>
           <div className="ml-auto flex items-center gap-2">
-            <button
-              type="button"
-              onClick={openMerge}
-              disabled={selected.size !== 2}
-              className="inline-flex items-center gap-1.5 rounded bg-brand-gold px-3 py-1.5 text-xs font-bold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50"
-            >
+            <button type="button" onClick={openMerge} disabled={selected.size !== 2} className="inline-flex items-center gap-1.5 rounded bg-brand-gold px-3 py-1.5 text-xs font-bold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50">
               <GitMerge className="h-3.5 w-3.5" /> Merge 2 records…
             </button>
-            <button type="button" onClick={() => setSelected(new Set())} className="rounded border border-white/30 px-3 py-1.5 text-xs font-semibold transition hover:bg-white/10">
-              Clear
-            </button>
+            <button type="button" onClick={() => setSelected(new Set())} className="rounded border border-white/30 px-3 py-1.5 text-xs font-semibold transition hover:bg-white/10">Clear</button>
           </div>
         </div>
       ) : null}
@@ -226,7 +354,6 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
         <EmptyState icon={<Users className="h-6 w-6" />} title="No employees match" description="Try a different search or filter." />
       ) : (
         <>
-          {/* Mobile cards */}
           <div className="space-y-2 sm:hidden">
             {rows.map((e) => (
               <div key={e.id} className={clsx("flex items-start gap-2 rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10", selected.has(e.id) && "ring-brand-gold")}>
@@ -237,16 +364,12 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
                     {(() => { const b = statusBadge(e); return <Badge tone={b.tone}>{b.label}</Badge>; })()}
                   </div>
                   <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{[e.position, e.department, e.location].filter(Boolean).join(" · ") || "—"}</div>
-                  <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">
-                    {fmtDate(e.startDate)} – {e.current ? "Present" : fmtDate(e.endDate)} · {tenure(e.tenureDays)}
-                    {e.roleCount > 1 ? ` · ${e.roleCount} roles` : ""}
-                  </div>
+                  <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{fmtDate(e.startDate)} – {e.current ? "Present" : fmtDate(e.endDate)} · {tenure(e.tenureDays)}{e.roleCount > 1 ? ` · ${e.roleCount} roles` : ""}</div>
                 </Link>
               </div>
             ))}
           </div>
 
-          {/* Desktop table */}
           <div className="hidden overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 sm:block dark:bg-brand-panel dark:ring-white/10">
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
@@ -254,13 +377,14 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
                   <tr className="border-b border-brand-lea/10 text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:border-white/10 dark:text-slate-400">
                     <th className="w-8 px-3 py-3" aria-label="Select" />
                     <SortableTh label="Name" sortKey="name" sort={sort} onSort={toggleSort} />
-                    <SortableTh label="Current role" sortKey="position" sort={sort} onSort={toggleSort} />
-                    <SortableTh label="Department" sortKey="department" sort={sort} onSort={toggleSort} />
-                    <SortableTh label="Location" sortKey="location" sort={sort} onSort={toggleSort} />
-                    <SortableTh label="Started" sortKey="startDate" sort={sort} onSort={toggleSort} />
-                    <SortableTh label="Tenure" sortKey="tenureDays" sort={sort} onSort={toggleSort} />
-                    <SortableTh label="Roles" sortKey="roleCount" sort={sort} onSort={toggleSort} />
-                    <SortableTh label="Status" sortKey="status" sort={sort} onSort={toggleSort} />
+                    {orderedVisible.map((key) => {
+                      const col = COLUMNS[key];
+                      return col.sortKey ? (
+                        <SortableTh key={key} label={col.label} sortKey={col.sortKey} sort={sort} onSort={toggleSort} />
+                      ) : (
+                        <th key={key} className="px-4 py-3 text-left font-bold uppercase tracking-[0.14em]">{col.label}</th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody>
@@ -272,13 +396,9 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
                       <td className="px-4 py-2.5">
                         <Link href={`/people/${e.id}`} className="font-semibold text-brand-lea hover:underline transition hover:shadow-glow dark:text-slate-100">{e.name}</Link>
                       </td>
-                      <td className="px-4 py-2.5 text-brand-grey dark:text-slate-400">{e.position ?? "—"}</td>
-                      <td className="px-4 py-2.5 text-brand-grey dark:text-slate-400">{e.department ?? "—"}</td>
-                      <td className="px-4 py-2.5 text-brand-grey dark:text-slate-400">{e.location ?? "—"}</td>
-                      <td className="px-4 py-2.5 text-brand-grey dark:text-slate-400">{fmtDate(e.startDate)}</td>
-                      <td className="px-4 py-2.5 text-brand-grey dark:text-slate-400">{tenure(e.tenureDays)}</td>
-                      <td className="px-4 py-2.5 text-brand-grey dark:text-slate-400">{e.roleCount || "—"}{e.stintCount > 1 ? ` · ${e.stintCount} stints` : ""}</td>
-                      <td className="px-4 py-2.5">{(() => { const b = statusBadge(e); return <Badge tone={b.tone}>{b.label}</Badge>; })()}</td>
+                      {orderedVisible.map((key) => (
+                        <td key={key} className="px-4 py-2.5 text-brand-grey dark:text-slate-400">{COLUMNS[key].cell(e)}</td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
@@ -293,21 +413,14 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
           <GitMerge className="h-5 w-5" /> Merge two records into one
         </h2>
         <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-          Pick which record to <strong>keep</strong>. The other one merges into it — its roles, dates, travel, business cards and
-          recognition all move over — and is then <strong>permanently deleted</strong>. This can&apos;t be undone.
+          Pick which record to <strong>keep</strong>. The other merges into it — its roles, dates, travel, business cards and recognition all move over — and is then <strong>permanently deleted</strong>. This can&apos;t be undone.
         </p>
         <div className="mt-4 space-y-2">
           {selectedRows.map((e) => {
             const keep = primaryId === e.id;
             const b = statusBadge(e);
             return (
-              <label
-                key={e.id}
-                className={clsx(
-                  "flex cursor-pointer items-start gap-3 rounded border p-3 transition",
-                  keep ? "border-brand-gold bg-brand-gold/10" : "border-brand-lea/15 hover:border-brand-lea/30 dark:border-white/10"
-                )}
-              >
+              <label key={e.id} className={clsx("flex cursor-pointer items-start gap-3 rounded border p-3 transition", keep ? "border-brand-gold bg-brand-gold/10" : "border-brand-lea/15 hover:border-brand-lea/30 dark:border-white/10")}>
                 <input type="radio" name="merge-primary" className="mt-1" checked={keep} onChange={() => setPrimaryId(e.id)} />
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
@@ -316,10 +429,7 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
                     <Badge tone={b.tone}>{b.label}</Badge>
                   </div>
                   <div className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">{[e.position, e.department, e.location].filter(Boolean).join(" · ") || "No role on file"}</div>
-                  <div className="text-xs text-brand-grey dark:text-slate-400">
-                    {fmtDate(e.startDate)} – {e.current ? "Present" : fmtDate(e.endDate)} · {e.roleCount} role{e.roleCount === 1 ? "" : "s"}
-                    {e.stintCount > 1 ? ` · ${e.stintCount} stints` : ""}
-                  </div>
+                  <div className="text-xs text-brand-grey dark:text-slate-400">{fmtDate(e.startDate)} – {e.current ? "Present" : fmtDate(e.endDate)} · {e.roleCount} role{e.roleCount === 1 ? "" : "s"}{e.stintCount > 1 ? ` · ${e.stintCount} stints` : ""}</div>
                 </div>
               </label>
             );
@@ -335,31 +445,13 @@ export function EmployeesWorkspace({ employees, counts }: { employees: EmployeeR
   );
 }
 
-function SortableTh({
-  label,
-  sortKey,
-  sort,
-  onSort
-}: {
-  label: string;
-  sortKey: SortKey;
-  sort: SortState | null;
-  onSort: (key: SortKey) => void;
-}) {
+function SortableTh({ label, sortKey, sort, onSort }: { label: string; sortKey: SortKey; sort: SortState | null; onSort: (key: SortKey) => void }) {
   const active = sort?.key === sortKey;
   return (
     <th className="px-4 py-3 text-left" aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
-      <button
-        type="button"
-        onClick={() => onSort(sortKey)}
-        className="inline-flex items-center gap-1 font-bold uppercase tracking-[0.14em] transition hover:text-brand-lea dark:hover:text-slate-200"
-      >
+      <button type="button" onClick={() => onSort(sortKey)} className="inline-flex items-center gap-1 font-bold uppercase tracking-[0.14em] transition hover:text-brand-lea dark:hover:text-slate-200">
         {label}
-        {active ? (
-          sort.dir === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-        ) : (
-          <ChevronsUpDown className="h-3 w-3 opacity-30" />
-        )}
+        {active ? (sort.dir === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />) : <ChevronsUpDown className="h-3 w-3 opacity-30" />}
       </button>
     </th>
   );

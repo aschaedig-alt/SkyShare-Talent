@@ -13,6 +13,12 @@ export type EmployeeRow = {
   position: string | null;
   department: string | null;
   location: string | null;
+  aircraft: string | null; // airframe derived from the title (PC-12, CJ2, G450/GV …), seat-agnostic
+  seat: string | null; // PIC | SIC | null
+  managed: boolean; // dedicated managed-aircraft pilot (vs SkyShare / fractional)
+  phone: string | null;
+  workEmail: string | null;
+  personalEmail: string | null;
   startDate: string | null; // first stint / hire
   endDate: string | null; // last departure (past employees)
   current: boolean;
@@ -32,6 +38,10 @@ type Row = {
   position: string | null;
   department: string | null;
   location: string | null;
+  managedPilot: boolean;
+  phone: string | null;
+  ssEmail: string | null;
+  personalEmail: string | null;
   startDate: Date | null;
   terminationDate: Date | null;
   birthday: Date | null;
@@ -41,6 +51,34 @@ type Row = {
 };
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
+
+// Airframe (seat-agnostic) from a role title, so you can filter "PC-12" and get
+// both captains and first officers. Combined G450 & GV = one type rating.
+const AIRFRAME_PATTERNS: [RegExp, string][] = [
+  [/g450 ?& ?gv|\bg450\b.*\bgv\b|\bgv\b.*\bg450\b/i, "G450/GV"],
+  [/\bg450\b/i, "G450"],
+  [/\bgv\b/i, "GV"],
+  [/\bg200\b/i, "G200"],
+  [/\blegacy ?6[05]0\b/i, "Legacy 650"],
+  [/\bphenom ?300\b/i, "Phenom 300"],
+  [/\bphenom ?100\b/i, "Phenom 100"],
+  [/\b560 ?xls\+?\b|\bxls\+?\b/i, "560XLS+"],
+  [/\b560 ?xl\b|\bxl\b/i, "560XL"],
+  [/\bcj ?2\b|\bce-?525\b/i, "CJ2"],
+  [/\bpc-?12\b/i, "PC-12"],
+  [/\bm2\b/i, "M2"]
+];
+function aircraftOf(position: string | null): string | null {
+  const p = position ?? "";
+  for (const [re, code] of AIRFRAME_PATTERNS) if (re.test(p)) return code;
+  return null;
+}
+function seatOf(position: string | null): string | null {
+  const p = (position ?? "").toLowerCase();
+  if (/first officer|\bfo\b|\bsic\b/.test(p)) return "SIC";
+  if (/captain|\bpic\b|\bpilot\b/.test(p)) return "PIC";
+  return null;
+}
 
 // Rehire-aware tenure (bridge gaps <= 3 months, reset for longer — see
 // lib/data/tenure), else derive one implicit stint from start -> termination.
@@ -68,6 +106,10 @@ export async function getEmployees(): Promise<EmployeeRow[]> {
       position: true,
       department: true,
       location: true,
+      managedPilot: true,
+      phone: true,
+      ssEmail: true,
+      personalEmail: true,
       startDate: true,
       terminationDate: true,
       birthday: true,
@@ -88,6 +130,12 @@ export async function getEmployees(): Promise<EmployeeRow[]> {
       position: r.position,
       department: r.department,
       location: r.location,
+      aircraft: aircraftOf(r.position),
+      seat: seatOf(r.position),
+      managed: r.managedPilot,
+      phone: r.phone,
+      workEmail: r.ssEmail,
+      personalEmail: r.personalEmail,
       startDate: iso(t.start ?? r.startDate),
       endDate: current ? null : iso(t.end ?? r.terminationDate),
       current,
