@@ -29,6 +29,32 @@ function fmtSpan(days: number | null): string {
   return `${(days / 365).toFixed(1)} yr`;
 }
 
+// Hand-curated "step up" ladder for SkyShare's fleet: the larger airframes a
+// Captain on a given aircraft would realistically transition up to. Skips same
+// aircraft family (e.g. 560XL -> 560XLS+) and small lateral jets. Empty = top of fleet.
+const STEP_UP: Record<string, string[]> = {
+  "PC-12": ["CJ2", "560XL", "G200"],
+  "Phenom 100": ["CJ2", "560XL"],
+  "Phenom 300": ["560XL", "G200"],
+  M2: ["CJ2", "560XL"],
+  CJ2: ["560XL", "G200"],
+  "560XL": ["G200", "G450"],
+  "560XLS+": ["G200", "G450"],
+  G200: ["G450", "GV"],
+  G450: ["Legacy 650"],
+  GV: [],
+  "Legacy 650": []
+};
+
+// Realistic next moves for a pilot who hasn't advanced: upgrade to Captain if
+// they're still a First Officer, then transitions up to larger airframes.
+function nextSteps(seat: string | null, aircraft: string | null): { label: string; kind: "upgrade" | "transition" }[] {
+  const out: { label: string; kind: "upgrade" | "transition" }[] = [];
+  if (seat === "SIC" && aircraft) out.push({ label: `${aircraft} Captain`, kind: "upgrade" });
+  if (aircraft && STEP_UP[aircraft]) for (const af of STEP_UP[aircraft]) out.push({ label: af, kind: "transition" });
+  return out;
+}
+
 function yearOf(iso: string | null): number | null {
   if (!iso) return null;
   // Dates are stored as UTC midnight; read the year in UTC so it matches the
@@ -197,7 +223,7 @@ function PilotJourney({ steps }: { steps: UpgradePilot["steps"] }) {
   );
 }
 
-type Bucket = "advanced" | "once" | "twice" | "thrice" | "captain";
+type Bucket = "advanced" | "once" | "twice" | "thrice" | "captain" | "stayed";
 
 export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"] }) {
   const [scope, setScope] = useState<"all" | "active">("active");
@@ -260,6 +286,8 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
       once: rows.filter((r) => r.moves === 1).length,
       twice: rows.filter((r) => r.moves >= 2).length,
       thrice: rows.filter((r) => r.moves >= 3).length,
+      stayed: tracked - advanced.length, // haven't upgraded or transitioned
+
       avgToMove: avg(advanced.map((r) => r.p.daysToFirstMove)),
       avgToUpgrade: avg(pool.map((p) => p.daysToFirstUpgrade)),
       avgToTransition: avg(pool.map((p) => p.daysToFirstTransition)),
@@ -274,12 +302,23 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
     { key: "once", label: "Once", value: s.once, hint: "1 move" },
     { key: "twice", label: "Twice or more", value: s.twice, hint: "≥ 2 moves" },
     { key: "thrice", label: "3× or more", value: s.thrice, hint: "≥ 3 moves" },
-    { key: "captain", label: "Made Captain", value: s.madeCaptain, hint: "FO → Captain" }
+    { key: "captain", label: "Made Captain", value: s.madeCaptain, hint: "FO → Captain" },
+    { key: "stayed", label: "Stayed put", value: s.stayed, hint: "no moves yet" }
   ];
   const maxTile = Math.max(...tiles.map((t) => t.value), 1);
 
   const bucketTest = (r: { moves: number; up: number }) =>
-    bucket === "once" ? r.moves === 1 : bucket === "twice" ? r.moves >= 2 : bucket === "thrice" ? r.moves >= 3 : bucket === "captain" ? r.up >= 1 : r.moves >= 1;
+    bucket === "once"
+      ? r.moves === 1
+      : bucket === "twice"
+        ? r.moves >= 2
+        : bucket === "thrice"
+          ? r.moves >= 3
+          : bucket === "captain"
+            ? r.up >= 1
+            : bucket === "stayed"
+              ? r.moves === 0
+              : r.moves >= 1;
   const filtered = s.rows.filter(bucketTest);
   const activeTile = tiles.find((t) => t.key === bucket);
   const tenureLabel = tenure === 365 ? "1+ yr" : tenure === 730 ? "2+ yr" : tenure === 1825 ? "5+ yr" : null;
@@ -400,7 +439,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
           </div>
 
           {/* Clickable buckets */}
-          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
             {tiles.map((t) => {
               const active = t.key === bucket;
               return (
@@ -443,7 +482,49 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
                   No pilots in this group yet.
                 </p>
               ) : (
-                filtered.map(({ p, up, tr }) => (
+                filtered.map(({ p, up, tr }) => {
+                  // Stayed-put pilots: show current position, tenure, and where they could go next.
+                  if (bucket === "stayed") {
+                    const cur = p.steps[p.steps.length - 1] ?? null;
+                    const suggestions = nextSteps(cur?.seat ?? null, cur?.aircraft ?? null);
+                    return (
+                      <div key={p.hireId} className="rounded border border-brand-lea/10 bg-white p-3 transition hover:border-brand-gold/40 dark:border-white/10 dark:bg-white/5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <Link
+                            href={`/people/${p.hireId}`}
+                            className="font-semibold text-brand-lea transition hover:text-brand-eden hover:drop-shadow-[0_0_6px_rgba(234,170,0,0.5)] dark:text-slate-100"
+                          >
+                            {p.name}
+                          </Link>
+                          <span className="text-[11px] font-medium text-brand-grey dark:text-slate-400">
+                            {cur?.title ?? "—"} · <span className="text-brand-lea dark:text-slate-200">{fmtSpan(p.tenureDays)}</span> tenure
+                          </span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+                          <span className="text-brand-grey dark:text-slate-400">Possible next step:</span>
+                          {suggestions.length ? (
+                            suggestions.map((sug, i) => (
+                              <span
+                                key={i}
+                                className={clsx(
+                                  "rounded-full px-2 py-0.5 font-semibold",
+                                  sug.kind === "upgrade"
+                                    ? "bg-brand-gold/20 text-brand-lea dark:text-brand-gold"
+                                    : "bg-brand-eden/10 text-brand-eden dark:bg-white/5 dark:text-slate-300"
+                                )}
+                              >
+                                {sug.kind === "upgrade" ? "↗ " : "→ "}
+                                {sug.label}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-brand-grey/70 dark:text-slate-500">Top of fleet — leadership / check-airman track</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return (
                   <div key={p.hireId} className="rounded border border-brand-lea/10 bg-white p-3 transition hover:border-brand-gold/40 dark:border-white/10 dark:bg-white/5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <Link
@@ -470,7 +551,8 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
                       <PilotJourney steps={p.steps} />
                     </div>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
