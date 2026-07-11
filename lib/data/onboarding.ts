@@ -33,6 +33,7 @@ export type NewHireRow = {
   location: string | null;
   managedAircraft: string | null;
   managedPilot: boolean;
+  tags: string[];
   phone: string | null;
   ssEmail: string | null;
   personalEmail: string | null;
@@ -114,6 +115,7 @@ type HireWithTasks = {
   location: string | null;
   managedAircraft: string | null;
   managedPilot: boolean;
+  tags: string[];
   phone: string | null;
   ssEmail: string | null;
   personalEmail: string | null;
@@ -170,6 +172,7 @@ function toRow(hire: HireWithTasks, now: number): NewHireRow {
     location: hire.location,
     managedAircraft: hire.managedAircraft,
     managedPilot: hire.managedPilot,
+    tags: hire.tags ?? [],
     phone: hire.phone,
     ssEmail: hire.ssEmail,
     personalEmail: hire.personalEmail,
@@ -409,6 +412,7 @@ const hireSelect = {
   location: true,
   managedAircraft: true,
   managedPilot: true,
+  tags: true,
   phone: true,
   ssEmail: true,
   personalEmail: true,

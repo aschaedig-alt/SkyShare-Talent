@@ -7,6 +7,7 @@ import { clsx } from "clsx";
 import { Search, Users, ChevronUp, ChevronDown, ChevronsUpDown, GitMerge, SlidersHorizontal, Columns3, X, Check } from "lucide-react";
 import type { EmployeeRow, EmployeeCounts } from "@/lib/data/employees";
 import { EMPLOYEE_COLUMN_KEYS, type EmployeeColumnKey } from "@/lib/employees/columns";
+import { EmployeeTags, displayTags } from "@/components/employees/EmployeeTags";
 import { Badge, Button, EmptyState, Modal } from "@/components/ui";
 import type { BadgeTone } from "@/components/ui/Badge";
 
@@ -23,7 +24,9 @@ function statusRank(e: EmployeeRow): number {
   return e.employmentStatus === "ACTIVE" ? 0 : e.employmentStatus === "CONTRACT" ? 1 : 2;
 }
 function statusBadge(e: EmployeeRow): { tone: BadgeTone; label: string } {
-  if (e.employmentStatus === "CONTRACT") return { tone: "warning", label: "Contract" };
+  // Contract is no longer a status badge — it shows as a pill in the Tags column
+  // (derived from employmentStatus). Status is simply Current vs Past, matching
+  // the headcount tabs (Current = ACTIVE; everyone else is Past).
   return e.current ? { tone: "success", label: "Current" } : { tone: "neutral", label: "Past" };
 }
 const isPilot = (e: EmployeeRow) => Boolean(e.aircraft || e.seat);
@@ -52,6 +55,7 @@ function tenure(days: number | null) {
 const COLUMNS: Record<EmployeeColumnKey, { label: string; sortKey?: SortKey; cell: (e: EmployeeRow) => ReactNode }> = {
   role: { label: "Current role", sortKey: "role", cell: (e) => e.position ?? "—" },
   department: { label: "Department", sortKey: "department", cell: (e) => e.department ?? "—" },
+  tags: { label: "Tags", cell: (e) => <EmployeeTags tags={e.tags} employmentStatus={e.employmentStatus} /> },
   location: { label: "Location", sortKey: "location", cell: (e) => e.location ?? "—" },
   aircraft: { label: "Aircraft", sortKey: "aircraft", cell: (e) => e.aircraft ?? "—" },
   seat: { label: "Seat", sortKey: "seat", cell: (e) => e.seat ?? "—" },
@@ -82,8 +86,8 @@ function compareBy(a: EmployeeRow, b: EmployeeRow, key: SortKey): number {
   }
 }
 
-type Filters = { pool: "all" | "fractional" | "managed"; aircraft: string; department: string; location: string; after: string; before: string };
-const EMPTY_FILTERS: Filters = { pool: "all", aircraft: "", department: "", location: "", after: "", before: "" };
+type Filters = { pool: "all" | "fractional" | "managed"; aircraft: string; department: string; tag: string; location: string; after: string; before: string };
+const EMPTY_FILTERS: Filters = { pool: "all", aircraft: "", department: "", tag: "", location: "", after: "", before: "" };
 const distinct = (vals: (string | null)[]) => Array.from(new Set(vals.filter((v): v is string => Boolean(v)))).sort();
 
 export function EmployeesWorkspace({ employees, counts, initialColumns }: { employees: EmployeeRow[]; counts: EmployeeCounts; initialColumns: EmployeeColumnKey[] }) {
@@ -130,8 +134,9 @@ export function EmployeesWorkspace({ employees, counts, initialColumns }: { empl
   const orderedVisible = useMemo(() => EMPLOYEE_COLUMN_KEYS.filter((k) => visible.includes(k)), [visible]);
   const aircraftOptions = useMemo(() => distinct(employees.map((e) => e.aircraft)), [employees]);
   const deptOptions = useMemo(() => distinct(employees.map((e) => e.department)), [employees]);
+  const tagOptions = useMemo(() => distinct(employees.flatMap((e) => displayTags(e.tags, e.employmentStatus))), [employees]);
   const locOptions = useMemo(() => distinct(employees.map((e) => e.location)), [employees]);
-  const activeFilterCount = (filters.pool !== "all" ? 1 : 0) + (filters.aircraft ? 1 : 0) + (filters.department ? 1 : 0) + (filters.location ? 1 : 0) + (filters.after ? 1 : 0) + (filters.before ? 1 : 0);
+  const activeFilterCount = (filters.pool !== "all" ? 1 : 0) + (filters.aircraft ? 1 : 0) + (filters.department ? 1 : 0) + (filters.tag ? 1 : 0) + (filters.location ? 1 : 0) + (filters.after ? 1 : 0) + (filters.before ? 1 : 0);
 
   async function saveColumns(next: EmployeeColumnKey[]) {
     const prev = visible;
@@ -181,6 +186,7 @@ export function EmployeesWorkspace({ employees, counts, initialColumns }: { empl
       if (filters.pool === "fractional" && (!isPilot(e) || e.managed)) return false;
       if (filters.aircraft && e.aircraft !== filters.aircraft) return false;
       if (filters.department && e.department !== filters.department) return false;
+      if (filters.tag && !displayTags(e.tags, e.employmentStatus).includes(filters.tag)) return false;
       if (filters.location && e.location !== filters.location) return false;
       if (filters.after && (e.startDate ?? "").slice(0, 10) < filters.after) return false;
       if (filters.before && (e.startDate ?? "9999").slice(0, 10) > filters.before) return false;
@@ -202,6 +208,7 @@ export function EmployeesWorkspace({ employees, counts, initialColumns }: { empl
   if (filters.pool !== "all") chips.push({ label: filters.pool === "managed" ? "Managed pilots" : "Fractional pilots", clear: () => setFilters((f) => ({ ...f, pool: "all" })) });
   if (filters.aircraft) chips.push({ label: `Aircraft: ${filters.aircraft}`, clear: () => setFilters((f) => ({ ...f, aircraft: "" })) });
   if (filters.department) chips.push({ label: `Dept: ${filters.department}`, clear: () => setFilters((f) => ({ ...f, department: "" })) });
+  if (filters.tag) chips.push({ label: `Tag: ${filters.tag}`, clear: () => setFilters((f) => ({ ...f, tag: "" })) });
   if (filters.location) chips.push({ label: `Location: ${filters.location}`, clear: () => setFilters((f) => ({ ...f, location: "" })) });
   if (filters.after) chips.push({ label: `Started after ${filters.after}`, clear: () => setFilters((f) => ({ ...f, after: "" })) });
   if (filters.before) chips.push({ label: `Started before ${filters.before}`, clear: () => setFilters((f) => ({ ...f, before: "" })) });
@@ -271,6 +278,15 @@ export function EmployeesWorkspace({ employees, counts, initialColumns }: { empl
                         {deptOptions.map((d) => <option key={d} value={d}>{d}</option>)}
                       </select>
                     </div>
+                    {tagOptions.length ? (
+                      <div>
+                        <div className="mb-1 text-[11px] font-semibold text-brand-grey dark:text-slate-400">Tag</div>
+                        <select value={filters.tag} onChange={(e) => setFilters((f) => ({ ...f, tag: e.target.value }))} className={filterSelect}>
+                          <option value="">Any</option>
+                          {tagOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                    ) : null}
                     <div>
                       <div className="mb-1 text-[11px] font-semibold text-brand-grey dark:text-slate-400">Location</div>
                       <select value={filters.location} onChange={(e) => setFilters((f) => ({ ...f, location: e.target.value }))} className={filterSelect}>
@@ -364,6 +380,7 @@ export function EmployeesWorkspace({ employees, counts, initialColumns }: { empl
                     {(() => { const b = statusBadge(e); return <Badge tone={b.tone}>{b.label}</Badge>; })()}
                   </div>
                   <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{[e.position, e.department, e.location].filter(Boolean).join(" · ") || "—"}</div>
+                  {displayTags(e.tags, e.employmentStatus).length ? <div className="mt-1"><EmployeeTags tags={e.tags} employmentStatus={e.employmentStatus} /></div> : null}
                   <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{fmtDate(e.startDate)} – {e.current ? "Present" : fmtDate(e.endDate)} · {tenure(e.tenureDays)}{e.roleCount > 1 ? ` · ${e.roleCount} roles` : ""}</div>
                 </Link>
               </div>

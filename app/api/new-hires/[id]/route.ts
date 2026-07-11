@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { isCardStatus } from "@/lib/business-cards/card";
+import { normalizeTags } from "@/lib/employees/columns";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -50,6 +51,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
     if (typeof body.managedPilot === "boolean") {
       data.managedPilot = body.managedPilot;
+    }
+    if (Array.isArray(body.tags)) {
+      data.tags = normalizeTags(body.tags);
     }
 
     for (const field of ["offerSentDate", "offerSignedDate", "startDate", "orientationDate"]) {

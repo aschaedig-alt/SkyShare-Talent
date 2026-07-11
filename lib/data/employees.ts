@@ -23,6 +23,7 @@ export type EmployeeRow = {
   endDate: string | null; // last departure (past employees)
   current: boolean;
   employmentStatus: string; // ACTIVE | TERMINATED | CONTRACT
+  tags: string[]; // hand-applied labels (Executive, Management, …); Contract is derived from status
   tenureDays: number | null;
   roleCount: number;
   stintCount: number;
@@ -46,6 +47,7 @@ type Row = {
   terminationDate: Date | null;
   birthday: Date | null;
   employmentStatus: string;
+  tags: string[];
   employmentStints: { startDate: Date; endDate: Date | null }[];
   _count: { roleAssignments: number };
 };
@@ -114,6 +116,7 @@ export async function getEmployees(): Promise<EmployeeRow[]> {
       terminationDate: true,
       birthday: true,
       employmentStatus: true,
+      tags: true,
       employmentStints: { select: { startDate: true, endDate: true } },
       _count: { select: { roleAssignments: true } }
     }
@@ -140,6 +143,7 @@ export async function getEmployees(): Promise<EmployeeRow[]> {
       endDate: current ? null : iso(t.end ?? r.terminationDate),
       current,
       employmentStatus: r.employmentStatus,
+      tags: r.tags ?? [],
       tenureDays: t.days,
       roleCount: r._count.roleAssignments,
       stintCount: r.employmentStints.length,

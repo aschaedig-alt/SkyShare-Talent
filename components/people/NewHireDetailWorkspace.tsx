@@ -13,6 +13,8 @@ import { EmployeeJourney } from "@/components/people/EmployeeJourney";
 import { BusinessCardPanel } from "@/components/people/BusinessCardPanel";
 import type { EmployeeJourney as Journey } from "@/lib/data/employee-journey";
 import { Button, Input, Modal } from "@/components/ui";
+import { EMPLOYEE_TAGS } from "@/lib/employees/columns";
+import { tagStyle, TagPill } from "@/components/employees/EmployeeTags";
 
 function fmtDay(iso: string | null) {
   // Dates are stored as date-only (UTC midnight); format in UTC so the calendar
@@ -59,6 +61,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
   });
   const [hasLegalName, setHasLegalName] = useState(Boolean(hire.legalName));
   const [managedPilot, setManagedPilot] = useState(hire.managedPilot);
+  const [tags, setTags] = useState<string[]>(hire.tags ?? []);
   const [savingDetails, setSavingDetails] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [busyStage, setBusyStage] = useState(false);
@@ -153,6 +156,23 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
       setManagedPilot(prev);
     }
   }
+
+  async function saveTags(next: string[]) {
+    const prev = tags;
+    setTags(next);
+    try {
+      const res = await fetch(`/api/new-hires/${hire.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tags: next })
+      });
+      if (!res.ok) setTags(prev);
+      else router.refresh();
+    } catch {
+      setTags(prev);
+    }
+  }
+  const toggleTag = (t: string) => saveTags(tags.includes(t) ? tags.filter((x) => x !== t) : [...tags, t]);
 
   async function changeStage(stage: "ACTIVE" | "POST_ONBOARD" | "ARCHIVED") {
     setBusyStage(true);
@@ -321,6 +341,31 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
                 <span>Dedicated <strong>managed-aircraft</strong> pilot — excluded from SkyShare / fractional promotion tracking by default</span>
               </label>
             ) : null}
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Tags</span>
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                {EMPLOYEE_TAGS.map((t) => {
+                  const on = tags.includes(t);
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => toggleTag(t)}
+                      aria-pressed={on}
+                      className={clsx("rounded border px-2.5 py-1 text-xs font-semibold transition", on ? clsx(tagStyle(t), "border-transparent") : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400")}
+                    >
+                      {t}
+                    </button>
+                  );
+                })}
+                {hire.employmentStatus === "CONTRACT" ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-brand-grey dark:text-slate-500">
+                    <TagPill tag="Contract" /> from status
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-1 text-[11px] text-brand-grey dark:text-slate-500">Shown as pills on the Employees list — independent of department.</p>
+            </div>
             {field("Phone", "phone")}
             {field("SkyShare email", "ssEmail")}
             {field("Personal email", "personalEmail")}
