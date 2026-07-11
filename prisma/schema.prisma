@@ -247,6 +247,12 @@ model NewHire {
   terminationDate DateTime?
   // Date of birth — dates only, used for recognition/"congrats" (no other PII stored).
   birthday        DateTime?
+  // Pilot seniority anchor (from HR). Usually the hire date, but can be kept at
+  // the original hire OR reset to a rehire date depending on the break — so it's
+  // stored explicitly rather than derived. birth/citizenship country from HR too.
+  seniorityDate   DateTime?
+  birthCountry       String?
+  citizenshipCountry String?
   // Lifecycle: ACTIVE (being onboarded) -> POST_ONBOARD (maintenance) -> ARCHIVED
   stage            String   @default("ACTIVE")
   onboardedAt      DateTime?

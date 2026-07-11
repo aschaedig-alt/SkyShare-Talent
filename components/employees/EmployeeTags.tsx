@@ -10,6 +10,8 @@ const TAG_STYLES: Record<string, string> = {
   Management: "bg-sky-50 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300",
   PDP: "bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
   Argus: "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300",
+  "Check Pilot": "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+  ATP: "bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300",
   Contract: "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
 };
 export const tagStyle = (t: string) => TAG_STYLES[t] ?? "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400";

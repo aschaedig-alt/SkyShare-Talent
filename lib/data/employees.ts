@@ -21,6 +21,10 @@ export type EmployeeRow = {
   personalEmail: string | null;
   startDate: string | null; // first stint / hire
   serviceDate: string | null; // pilots: pay-step anchor / aircraft service date
+  seniorityDate: string | null; // HR seniority anchor
+  lastRoleChange: string | null; // most recent role change (null if only ever one role)
+  birthCountry: string | null;
+  citizenship: string | null;
   endDate: string | null; // last departure (past employees)
   current: boolean;
   employmentStatus: string; // ACTIVE | TERMINATED | CONTRACT
@@ -46,11 +50,15 @@ type Row = {
   personalEmail: string | null;
   startDate: Date | null;
   aircraftServiceDate: Date | null;
+  seniorityDate: Date | null;
+  birthCountry: string | null;
+  citizenshipCountry: string | null;
   terminationDate: Date | null;
   birthday: Date | null;
   employmentStatus: string;
   tags: string[];
   employmentStints: { startDate: Date; endDate: Date | null }[];
+  roleAssignments: { startDate: Date }[];
   _count: { roleAssignments: number };
 };
 
@@ -116,11 +124,15 @@ export async function getEmployees(): Promise<EmployeeRow[]> {
       personalEmail: true,
       startDate: true,
       aircraftServiceDate: true,
+      seniorityDate: true,
+      birthCountry: true,
+      citizenshipCountry: true,
       terminationDate: true,
       birthday: true,
       employmentStatus: true,
       tags: true,
       employmentStints: { select: { startDate: true, endDate: true } },
+      roleAssignments: { orderBy: { startDate: "desc" }, take: 1, select: { startDate: true } },
       _count: { select: { roleAssignments: true } }
     }
   })) as Row[];
@@ -144,6 +156,12 @@ export async function getEmployees(): Promise<EmployeeRow[]> {
       personalEmail: r.personalEmail,
       startDate: iso(t.start ?? r.startDate),
       serviceDate: iso(r.aircraftServiceDate),
+      seniorityDate: iso(r.seniorityDate),
+      // "Last position change" = the most recent role's start, but only if they've
+      // held more than one role (otherwise there's been no change since hire).
+      lastRoleChange: r._count.roleAssignments > 1 && r.roleAssignments[0] ? iso(r.roleAssignments[0].startDate) : null,
+      birthCountry: r.birthCountry,
+      citizenship: r.citizenshipCountry,
       endDate: current ? null : iso(t.end ?? r.terminationDate),
       current,
       employmentStatus: r.employmentStatus,

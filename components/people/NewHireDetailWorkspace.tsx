@@ -57,6 +57,9 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     startDate: toDateInput(hire.startDate),
     orientationDate: toDateInput(hire.orientationDate),
     aircraftServiceDate: toDateInput(hire.aircraftServiceDate),
+    seniorityDate: toDateInput(hire.seniorityDate),
+    birthCountry: hire.birthCountry ?? "",
+    citizenshipCountry: hire.citizenshipCountry ?? "",
     notes: hire.notes ?? ""
   });
   const [hasLegalName, setHasLegalName] = useState(Boolean(hire.legalName));
@@ -363,10 +366,15 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
             {field("SkyShare email", "ssEmail")}
             {field("Personal email", "personalEmail")}
             <div className="grid grid-cols-2 gap-3">
+              {field("Birth country", "birthCountry")}
+              {field("Citizenship", "citizenshipCountry")}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               {field("Offer sent", "offerSentDate", "date")}
               {field("Offer signed", "offerSignedDate", "date")}
               {field("Start date", "startDate", "date")}
               {field("Orientation", "orientationDate", "date")}
+              {field("Seniority date", "seniorityDate", "date")}
             </div>
             <label className="block">
               <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Notes</span>

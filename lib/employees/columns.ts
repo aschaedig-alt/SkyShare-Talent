@@ -12,13 +12,17 @@ export const EMPLOYEE_COLUMN_KEYS = [
   "pool",
   "started",
   "serviceDate",
+  "seniority",
+  "lastRoleChange",
   "tenure",
   "roles",
   "status",
   "phone",
   "workEmail",
   "personalEmail",
-  "birthday"
+  "birthday",
+  "birthCountry",
+  "citizenship"
 ] as const;
 export type EmployeeColumnKey = (typeof EMPLOYEE_COLUMN_KEYS)[number];
 
@@ -28,7 +32,7 @@ export const DEFAULT_EMPLOYEE_COLUMNS: EmployeeColumnKey[] = ["role", "departmen
 // Hand-applied person tags (independent of department). Extend this list to add
 // new tags. "Contract" is intentionally NOT here — it's derived from
 // employmentStatus at display time, so it never needs hand-tagging.
-export const EMPLOYEE_TAGS = ["Executive", "Management", "PDP", "Argus"] as const;
+export const EMPLOYEE_TAGS = ["Executive", "Management", "PDP", "Argus", "Check Pilot", "ATP"] as const;
 export type EmployeeTag = (typeof EMPLOYEE_TAGS)[number];
 
 // Keep only recognized, de-duplicated tags — drops junk/typos and anything not in

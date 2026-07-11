@@ -15,10 +15,10 @@ type Filter = "all" | "current" | "past";
 const FILTER_KEY = "skyshare-employees-filter";
 const isFilter = (v: unknown): v is Filter => v === "all" || v === "current" || v === "past";
 
-type SortKey = "name" | "role" | "department" | "tags" | "location" | "aircraft" | "seat" | "pool" | "started" | "serviceDate" | "tenure" | "roles" | "status";
+type SortKey = "name" | "role" | "department" | "tags" | "location" | "aircraft" | "seat" | "pool" | "started" | "serviceDate" | "seniority" | "lastRoleChange" | "tenure" | "roles" | "status";
 type SortState = { key: SortKey; dir: "asc" | "desc" };
 const SORT_KEY = "skyshare-employees-sort";
-const SORT_KEYS: SortKey[] = ["name", "role", "department", "tags", "location", "aircraft", "seat", "pool", "started", "serviceDate", "tenure", "roles", "status"];
+const SORT_KEYS: SortKey[] = ["name", "role", "department", "tags", "location", "aircraft", "seat", "pool", "started", "serviceDate", "seniority", "lastRoleChange", "tenure", "roles", "status"];
 const UNTAGGED = "__untagged__";
 
 function statusRank(e: EmployeeRow): number {
@@ -63,13 +63,17 @@ const COLUMNS: Record<EmployeeColumnKey, { label: string; sortKey?: SortKey; cel
   pool: { label: "Pool", sortKey: "pool", cell: (e) => poolLabel(e) },
   started: { label: "Started", sortKey: "started", cell: (e) => fmtDate(e.startDate) },
   serviceDate: { label: "Service date", sortKey: "serviceDate", cell: (e) => fmtDate(e.serviceDate) },
+  seniority: { label: "Seniority", sortKey: "seniority", cell: (e) => fmtDate(e.seniorityDate) },
+  lastRoleChange: { label: "Last role change", sortKey: "lastRoleChange", cell: (e) => fmtDate(e.lastRoleChange) },
   tenure: { label: "Tenure", sortKey: "tenure", cell: (e) => tenure(e.tenureDays) },
   roles: { label: "Roles", sortKey: "roles", cell: (e) => `${e.roleCount || "—"}${e.stintCount > 1 ? ` · ${e.stintCount} stints` : ""}` },
   status: { label: "Status", sortKey: "status", cell: (e) => { const b = statusBadge(e); return <Badge tone={b.tone}>{b.label}</Badge>; } },
   phone: { label: "Phone", cell: (e) => e.phone ?? "—" },
   workEmail: { label: "Work email", cell: (e) => e.workEmail ?? "—" },
   personalEmail: { label: "Personal email", cell: (e) => e.personalEmail ?? "—" },
-  birthday: { label: "Birthday", cell: (e) => fmtDay(e.birthday) }
+  birthday: { label: "Birthday", cell: (e) => fmtDay(e.birthday) },
+  birthCountry: { label: "Birth country", cell: (e) => e.birthCountry ?? "—" },
+  citizenship: { label: "Citizenship", cell: (e) => e.citizenship ?? "—" }
 };
 
 function compareBy(a: EmployeeRow, b: EmployeeRow, key: SortKey): number {
@@ -84,6 +88,8 @@ function compareBy(a: EmployeeRow, b: EmployeeRow, key: SortKey): number {
     case "pool": return poolLabel(a).localeCompare(poolLabel(b));
     case "started": return (a.startDate ?? "").localeCompare(b.startDate ?? "");
     case "serviceDate": return (a.serviceDate ?? "").localeCompare(b.serviceDate ?? "");
+    case "seniority": return (a.seniorityDate ?? "").localeCompare(b.seniorityDate ?? "");
+    case "lastRoleChange": return (a.lastRoleChange ?? "").localeCompare(b.lastRoleChange ?? "");
     case "tenure": return (a.tenureDays ?? 0) - (b.tenureDays ?? 0);
     case "roles": return a.roleCount - b.roleCount;
     case "status": return statusRank(a) - statusRank(b);

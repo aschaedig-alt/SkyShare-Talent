@@ -34,7 +34,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     const body = (await request.json()) as Record<string, unknown>;
     const data: Record<string, unknown> = {};
 
-    for (const field of ["name", "legalName", "position", "department", "location", "managedAircraft", "phone", "ssEmail", "personalEmail", "travelStatus", "notes"]) {
+    for (const field of ["name", "legalName", "position", "department", "location", "managedAircraft", "phone", "ssEmail", "personalEmail", "birthCountry", "citizenshipCountry", "travelStatus", "notes"]) {
       const v = strOrNull(body[field]);
       if (v !== undefined) data[field] = v;
     }
@@ -56,7 +56,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       data.tags = normalizeTags(body.tags);
     }
 
-    for (const field of ["offerSentDate", "offerSignedDate", "startDate", "orientationDate", "aircraftServiceDate"]) {
+    for (const field of ["offerSentDate", "offerSignedDate", "startDate", "orientationDate", "aircraftServiceDate", "seniorityDate"]) {
       const d = parseDate(body[field]);
       if (d !== undefined) data[field] = d;
     }
