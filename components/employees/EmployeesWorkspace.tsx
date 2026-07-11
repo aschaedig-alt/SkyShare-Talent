@@ -15,10 +15,11 @@ type Filter = "all" | "current" | "past";
 const FILTER_KEY = "skyshare-employees-filter";
 const isFilter = (v: unknown): v is Filter => v === "all" || v === "current" || v === "past";
 
-type SortKey = "name" | "role" | "department" | "location" | "aircraft" | "seat" | "pool" | "started" | "tenure" | "roles" | "status";
+type SortKey = "name" | "role" | "department" | "tags" | "location" | "aircraft" | "seat" | "pool" | "started" | "serviceDate" | "tenure" | "roles" | "status";
 type SortState = { key: SortKey; dir: "asc" | "desc" };
 const SORT_KEY = "skyshare-employees-sort";
-const SORT_KEYS: SortKey[] = ["name", "role", "department", "location", "aircraft", "seat", "pool", "started", "tenure", "roles", "status"];
+const SORT_KEYS: SortKey[] = ["name", "role", "department", "tags", "location", "aircraft", "seat", "pool", "started", "serviceDate", "tenure", "roles", "status"];
+const UNTAGGED = "__untagged__";
 
 function statusRank(e: EmployeeRow): number {
   return e.employmentStatus === "ACTIVE" ? 0 : e.employmentStatus === "CONTRACT" ? 1 : 2;
@@ -55,12 +56,13 @@ function tenure(days: number | null) {
 const COLUMNS: Record<EmployeeColumnKey, { label: string; sortKey?: SortKey; cell: (e: EmployeeRow) => ReactNode }> = {
   role: { label: "Current role", sortKey: "role", cell: (e) => e.position ?? "—" },
   department: { label: "Department", sortKey: "department", cell: (e) => e.department ?? "—" },
-  tags: { label: "Tags", cell: (e) => <EmployeeTags tags={e.tags} employmentStatus={e.employmentStatus} /> },
+  tags: { label: "Tags", sortKey: "tags", cell: (e) => <EmployeeTags tags={e.tags} employmentStatus={e.employmentStatus} /> },
   location: { label: "Location", sortKey: "location", cell: (e) => e.location ?? "—" },
   aircraft: { label: "Aircraft", sortKey: "aircraft", cell: (e) => e.aircraft ?? "—" },
   seat: { label: "Seat", sortKey: "seat", cell: (e) => e.seat ?? "—" },
   pool: { label: "Pool", sortKey: "pool", cell: (e) => poolLabel(e) },
   started: { label: "Started", sortKey: "started", cell: (e) => fmtDate(e.startDate) },
+  serviceDate: { label: "Service date", sortKey: "serviceDate", cell: (e) => fmtDate(e.serviceDate) },
   tenure: { label: "Tenure", sortKey: "tenure", cell: (e) => tenure(e.tenureDays) },
   roles: { label: "Roles", sortKey: "roles", cell: (e) => `${e.roleCount || "—"}${e.stintCount > 1 ? ` · ${e.stintCount} stints` : ""}` },
   status: { label: "Status", sortKey: "status", cell: (e) => { const b = statusBadge(e); return <Badge tone={b.tone}>{b.label}</Badge>; } },
@@ -75,11 +77,13 @@ function compareBy(a: EmployeeRow, b: EmployeeRow, key: SortKey): number {
     case "name": return a.name.localeCompare(b.name);
     case "role": return (a.position ?? "").localeCompare(b.position ?? "");
     case "department": return (a.department ?? "").localeCompare(b.department ?? "");
+    case "tags": return displayTags(a.tags, a.employmentStatus).join(",").localeCompare(displayTags(b.tags, b.employmentStatus).join(","));
     case "location": return (a.location ?? "").localeCompare(b.location ?? "");
     case "aircraft": return (a.aircraft ?? "").localeCompare(b.aircraft ?? "");
     case "seat": return (a.seat ?? "").localeCompare(b.seat ?? "");
     case "pool": return poolLabel(a).localeCompare(poolLabel(b));
     case "started": return (a.startDate ?? "").localeCompare(b.startDate ?? "");
+    case "serviceDate": return (a.serviceDate ?? "").localeCompare(b.serviceDate ?? "");
     case "tenure": return (a.tenureDays ?? 0) - (b.tenureDays ?? 0);
     case "roles": return a.roleCount - b.roleCount;
     case "status": return statusRank(a) - statusRank(b);
@@ -186,7 +190,10 @@ export function EmployeesWorkspace({ employees, counts, initialColumns }: { empl
       if (filters.pool === "fractional" && (!isPilot(e) || e.managed)) return false;
       if (filters.aircraft && e.aircraft !== filters.aircraft) return false;
       if (filters.department && e.department !== filters.department) return false;
-      if (filters.tag && !displayTags(e.tags, e.employmentStatus).includes(filters.tag)) return false;
+      if (filters.tag) {
+        const dt = displayTags(e.tags, e.employmentStatus);
+        if (filters.tag === UNTAGGED ? dt.length > 0 : !dt.includes(filters.tag)) return false;
+      }
       if (filters.location && e.location !== filters.location) return false;
       if (filters.after && (e.startDate ?? "").slice(0, 10) < filters.after) return false;
       if (filters.before && (e.startDate ?? "9999").slice(0, 10) > filters.before) return false;
@@ -208,7 +215,7 @@ export function EmployeesWorkspace({ employees, counts, initialColumns }: { empl
   if (filters.pool !== "all") chips.push({ label: filters.pool === "managed" ? "Managed pilots" : "Fractional pilots", clear: () => setFilters((f) => ({ ...f, pool: "all" })) });
   if (filters.aircraft) chips.push({ label: `Aircraft: ${filters.aircraft}`, clear: () => setFilters((f) => ({ ...f, aircraft: "" })) });
   if (filters.department) chips.push({ label: `Dept: ${filters.department}`, clear: () => setFilters((f) => ({ ...f, department: "" })) });
-  if (filters.tag) chips.push({ label: `Tag: ${filters.tag}`, clear: () => setFilters((f) => ({ ...f, tag: "" })) });
+  if (filters.tag) chips.push({ label: filters.tag === UNTAGGED ? "Untagged" : `Tag: ${filters.tag}`, clear: () => setFilters((f) => ({ ...f, tag: "" })) });
   if (filters.location) chips.push({ label: `Location: ${filters.location}`, clear: () => setFilters((f) => ({ ...f, location: "" })) });
   if (filters.after) chips.push({ label: `Started after ${filters.after}`, clear: () => setFilters((f) => ({ ...f, after: "" })) });
   if (filters.before) chips.push({ label: `Started before ${filters.before}`, clear: () => setFilters((f) => ({ ...f, before: "" })) });
@@ -284,6 +291,7 @@ export function EmployeesWorkspace({ employees, counts, initialColumns }: { empl
                         <select value={filters.tag} onChange={(e) => setFilters((f) => ({ ...f, tag: e.target.value }))} className={filterSelect}>
                           <option value="">Any</option>
                           {tagOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+                          <option value={UNTAGGED}>Untagged</option>
                         </select>
                       </div>
                     ) : null}

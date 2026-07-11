@@ -20,6 +20,7 @@ export type EmployeeRow = {
   workEmail: string | null;
   personalEmail: string | null;
   startDate: string | null; // first stint / hire
+  serviceDate: string | null; // pilots: pay-step anchor / aircraft service date
   endDate: string | null; // last departure (past employees)
   current: boolean;
   employmentStatus: string; // ACTIVE | TERMINATED | CONTRACT
@@ -44,6 +45,7 @@ type Row = {
   ssEmail: string | null;
   personalEmail: string | null;
   startDate: Date | null;
+  aircraftServiceDate: Date | null;
   terminationDate: Date | null;
   birthday: Date | null;
   employmentStatus: string;
@@ -113,6 +115,7 @@ export async function getEmployees(): Promise<EmployeeRow[]> {
       ssEmail: true,
       personalEmail: true,
       startDate: true,
+      aircraftServiceDate: true,
       terminationDate: true,
       birthday: true,
       employmentStatus: true,
@@ -140,6 +143,7 @@ export async function getEmployees(): Promise<EmployeeRow[]> {
       workEmail: r.ssEmail,
       personalEmail: r.personalEmail,
       startDate: iso(t.start ?? r.startDate),
+      serviceDate: iso(r.aircraftServiceDate),
       endDate: current ? null : iso(t.end ?? r.terminationDate),
       current,
       employmentStatus: r.employmentStatus,

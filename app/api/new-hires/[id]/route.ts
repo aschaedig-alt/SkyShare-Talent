@@ -56,7 +56,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       data.tags = normalizeTags(body.tags);
     }
 
-    for (const field of ["offerSentDate", "offerSignedDate", "startDate", "orientationDate"]) {
+    for (const field of ["offerSentDate", "offerSignedDate", "startDate", "orientationDate", "aircraftServiceDate"]) {
       const d = parseDate(body[field]);
       if (d !== undefined) data[field] = d;
     }

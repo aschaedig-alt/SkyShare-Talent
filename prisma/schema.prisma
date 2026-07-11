@@ -238,6 +238,10 @@ model NewHire {
   offerSentDate   DateTime?
   offerSignedDate DateTime?
   startDate       DateTime?
+  // Pilots: the date their current pay step is anchored to — usually their hire
+  // date, but reset when they move to a new airframe. Drives the annual
+  // pay-increase anniversary (PAF reminders are a later, separate feature).
+  aircraftServiceDate DateTime?
   orientationDate DateTime?
   // Last day with SkyShare — set for former employees (employmentStatus TERMINATED).
   terminationDate DateTime?

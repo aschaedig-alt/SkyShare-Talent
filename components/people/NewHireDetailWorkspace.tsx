@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { clsx } from "clsx";
-import { Star } from "lucide-react";
 import { ONBOARDING_GROUPS, groupLabel } from "@/lib/onboarding/tasks";
 import type { NewHireDetail, TaskView } from "@/lib/data/onboarding";
 import { TravelPanel } from "@/components/travel/TravelPanel";
@@ -14,7 +13,7 @@ import { BusinessCardPanel } from "@/components/people/BusinessCardPanel";
 import type { EmployeeJourney as Journey } from "@/lib/data/employee-journey";
 import { Button, Input, Modal } from "@/components/ui";
 import { EMPLOYEE_TAGS } from "@/lib/employees/columns";
-import { tagStyle, TagPill } from "@/components/employees/EmployeeTags";
+import { tagStyle, TagPill, displayTags } from "@/components/employees/EmployeeTags";
 
 function fmtDay(iso: string | null) {
   // Dates are stored as date-only (UTC midnight); format in UTC so the calendar
@@ -57,6 +56,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     offerSignedDate: toDateInput(hire.offerSignedDate),
     startDate: toDateInput(hire.startDate),
     orientationDate: toDateInput(hire.orientationDate),
+    aircraftServiceDate: toDateInput(hire.aircraftServiceDate),
     notes: hire.notes ?? ""
   });
   const [hasLegalName, setHasLegalName] = useState(Boolean(hire.legalName));
@@ -217,15 +217,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
         <div>
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
             <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">{hire.name}</h1>
-            {hire.pdpGraduate ? (
-              <span
-                title="Pilot Development Program graduate — completed the PDP and upgraded to Captain"
-                className="inline-flex items-center gap-1 rounded-full bg-brand-gold/15 px-2 py-0.5 text-xs font-semibold text-brand-lea dark:text-brand-gold"
-              >
-                <Star className="h-3.5 w-3.5 fill-brand-gold text-brand-gold" />
-                PDP
-              </span>
-            ) : null}
+            {displayTags(tags, hire.employmentStatus).map((t) => <TagPill key={t} tag={t} />)}
             {hire.tenureYears > 0 ? (
               <span
                 title={`${hire.tenureYears} year${hire.tenureYears === 1 ? "" : "s"} with SkyShare`}
@@ -341,6 +333,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
                 <span>Dedicated <strong>managed-aircraft</strong> pilot — excluded from SkyShare / fractional promotion tracking by default</span>
               </label>
             ) : null}
+            {(/\b(captain|first officer|\bfo\b|\bpic\b|\bsic\b|pilot)\b/i.test(details.position) || details.aircraftServiceDate) ? field("Aircraft service date", "aircraftServiceDate", "date") : null}
             <div>
               <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Tags</span>
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">

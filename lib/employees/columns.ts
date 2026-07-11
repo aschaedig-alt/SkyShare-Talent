@@ -11,6 +11,7 @@ export const EMPLOYEE_COLUMN_KEYS = [
   "seat",
   "pool",
   "started",
+  "serviceDate",
   "tenure",
   "roles",
   "status",

@@ -41,6 +41,7 @@ export type NewHireRow = {
   offerSignedDate: string | null;
   startDate: string | null;
   orientationDate: string | null;
+  aircraftServiceDate: string | null;
   terminationDate: string | null;
   stage: HireStage;
   canceled: boolean;
@@ -123,6 +124,7 @@ type HireWithTasks = {
   offerSignedDate: Date | null;
   startDate: Date | null;
   orientationDate: Date | null;
+  aircraftServiceDate: Date | null;
   terminationDate: Date | null;
   stage: string;
   canceled: boolean;
@@ -180,6 +182,7 @@ function toRow(hire: HireWithTasks, now: number): NewHireRow {
     offerSignedDate: iso(hire.offerSignedDate),
     startDate: iso(hire.startDate),
     orientationDate: iso(hire.orientationDate),
+    aircraftServiceDate: iso(hire.aircraftServiceDate),
     terminationDate: iso(hire.terminationDate),
     stage: hire.stage as HireStage,
     canceled: hire.canceled,
@@ -420,6 +423,7 @@ const hireSelect = {
   offerSignedDate: true,
   startDate: true,
   orientationDate: true,
+  aircraftServiceDate: true,
   terminationDate: true,
   stage: true,
   canceled: true,
