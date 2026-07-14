@@ -414,6 +414,37 @@
   font: 700 9px/1 var(--fh);
   border-radius: 4px;
 }
+/* open seat: marching-ants dashed border that travels around the square */
+.wrap :global(.seat-open) {
+  position: relative;
+  background: var(--color-bg);
+  color: var(--accent);
+}
+.wrap :global(.seat-open)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  pointer-events: none;
+  background-image: linear-gradient(90deg, var(--accent) 50%, transparent 50%),
+    linear-gradient(90deg, var(--accent) 50%, transparent 50%),
+    linear-gradient(0deg, var(--accent) 50%, transparent 50%),
+    linear-gradient(0deg, var(--accent) 50%, transparent 50%);
+  background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+  background-size: 6px 1.5px, 6px 1.5px, 1.5px 6px, 1.5px 6px;
+  background-position: 0 0, 0 100%, 0 0, 100% 0;
+  animation: seatmarch 0.55s linear infinite;
+}
+@keyframes seatmarch {
+  to {
+    background-position: 6px 0, -6px 100%, 0 -6px, 100% 6px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wrap :global(.seat-open)::before {
+    animation: none;
+  }
+}
 .wrap :global(.shared) {
   font: 500 10px/1.3 var(--fh);
   color: var(--n400);

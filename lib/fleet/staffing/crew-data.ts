@@ -121,16 +121,16 @@ export const CREW_GROUPS: CrewGroup[] = [
   { name: "Citation M2", pool: "Managed", sub: "N785PD · Orchard Elms", pic: { line: ["Jack Matiasevich"] }, sic: null, tags: { "Jack Matiasevich": ["+PC-12"] } },
   { name: "PC-12", pool: "Managed", sub: "N418T · Fish Hawk Air", pic: { line: ["Shad Guffey"] }, sic: null },
   { name: "PC-12", pool: "Managed", sub: "N413UU · UofU", pic: { line: ["Jeff Gerrard", "John Bohman", "Kaytlin Francis"] }, sic: null },
-  { name: "PC-12", pool: "Managed", sub: "N515RP · Fast Flight", pic: { line: ["Ward Holbrook"] }, sic: null },
+  { name: "PC-12", pool: "Managed", sub: "N515RP · Fast Flight", poolFlown: true, pic: null, sic: null },
   { name: "PC-12", pool: "Managed", sub: "N739S · BAG Management", poolFlown: true, pic: null, sic: null },
   {
     name: "PC-12",
     pool: "Managed",
     sub: "N477KR · Orchard Elms",
-    poolFlown: true,
-    poolNote: "Flown by Jack Matiasevich — also the Orchard Elms M2 (dual-qualified). No second pilot hired.",
-    pic: null,
-    sic: null
+    noCount: true,
+    pic: { line: ["Jack Matiasevich"] },
+    sic: null,
+    tags: { "Jack Matiasevich": ["+M2"] }
   }
 ];
 

@@ -105,10 +105,11 @@ export default function CrewOrgChart() {
     return { d, idx, cp, cs, o, tr, status, bBg, bFg, rule };
   });
 
-  const filled = groups.reduce((a, g) => a + g.cp.f + (g.cs ? g.cs.f : 0), 0);
-  const open = groups.reduce((a, g) => a + g.o, 0);
-  const target = groups.reduce((a, g) => a + g.cp.at + (g.cs ? g.cs.at : 0), 0);
-  const hiring = groups.filter((g) => g.o > 0).length;
+  const counted = groups.filter((g) => !g.d.noCount);
+  const filled = counted.reduce((a, g) => a + g.cp.f + (g.cs ? g.cs.f : 0), 0);
+  const open = counted.reduce((a, g) => a + g.o, 0);
+  const target = counted.reduce((a, g) => a + g.cp.at + (g.cs ? g.cs.at : 0), 0);
+  const hiring = counted.filter((g) => g.o > 0).length;
 
   useEffect(() => {
     const equalize = () => {
@@ -316,9 +317,10 @@ export default function CrewOrgChart() {
   };
 
   const Section = ({ title, list, bg, fg }: { title: string; list: G[]; bg: string; fg: string }) => {
-    const f = list.reduce((n, g) => n + g.cp.f + (g.cs ? g.cs.f : 0), 0);
-    const t = list.reduce((n, g) => n + g.cp.at + (g.cs ? g.cs.at : 0), 0);
-    const op = list.reduce((n, g) => n + g.o, 0);
+    const cl = list.filter((g) => !g.d.noCount);
+    const f = cl.reduce((n, g) => n + g.cp.f + (g.cs ? g.cs.f : 0), 0);
+    const t = cl.reduce((n, g) => n + g.cp.at + (g.cs ? g.cs.at : 0), 0);
+    const op = cl.reduce((n, g) => n + g.o, 0);
     return (
       <>
         <div className="divband" style={{ background: bg, color: fg }}>

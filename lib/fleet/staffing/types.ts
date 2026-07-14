@@ -46,6 +46,9 @@ export interface CrewGroup {
   poolFlown?: boolean;
   /** Override text for a poolFlown card (e.g. flown by a specific dual-rated pilot). */
   poolNote?: string;
+  /** Render the card normally but exclude it from the filled/open/target totals
+      (e.g. a tail whose sole pilot is already counted on another aircraft). */
+  noCount?: boolean;
   /** data: URI or /public path to a horizontal aircraft photo. */
   photo?: string;
 }

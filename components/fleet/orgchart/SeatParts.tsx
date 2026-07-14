@@ -15,10 +15,10 @@ export function SeatSquares({ seat, showParked }: { seat?: Seat | null; showPark
     squares.push(<div key={k++} className="seat" style={{ background: "var(--train-bg)", color: "var(--train-fg)" }}>T</div>);
   }
   for (let i = 0; i < o.open; i++) {
-    squares.push(<div key={k++} className="seat" style={{ background: "transparent", color: "var(--accent)", border: "1.5px dashed var(--accent)" }}>+</div>);
+    squares.push(<div key={k++} className="seat seat-open">+</div>);
   }
   for (let i = 0; i < o.openNamed.length; i++) {
-    squares.push(<div key={k++} className="seat" style={{ background: "transparent", color: "var(--accent)", border: "1.5px dashed var(--accent)" }}>+</div>);
+    squares.push(<div key={k++} className="seat seat-open">+</div>);
   }
   for (let i = 0; i < o.cand.length; i++) {
     squares.push(<div key={k++} className="seat" style={{ background: "var(--cand-bg)", color: "var(--cand-fg)", border: "1.5px solid var(--accent)" }}>C</div>);
