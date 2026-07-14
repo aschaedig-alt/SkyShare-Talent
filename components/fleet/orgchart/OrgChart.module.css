@@ -701,6 +701,14 @@
   right: 12px;
   width: 28px;
   height: 28px;
+  /* override the global `button { min-height: 2.25rem }` that was making this oval */
+  min-height: 28px;
+  min-width: 28px;
+  padding: 0;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid rgba(255, 255, 255, 0.3);
   background: transparent;
   color: #fff;
@@ -755,7 +763,7 @@
 .wrap :global(.m-col:nth-child(even)) {
   border-right: none;
 }
-.wrap :global(.m-col .colh) {
+.wrap :global(.colh) {
   font: 800 10px/1 var(--fh);
   letter-spacing: 0.08em;
   text-transform: uppercase;
