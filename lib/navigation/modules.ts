@@ -29,7 +29,8 @@ import {
   SlidersHorizontal,
   Sparkles,
   UserPlus,
-  Users
+  Users,
+  Wrench
 } from "lucide-react";
 
 export const accessLevels = ["HIDDEN", "VIEW_ONLY", "FULL_ACCESS"] as const;
@@ -53,6 +54,7 @@ export const moduleIds = [
   "review",
   "blocks",
   "people",
+  "fleet",
   "settings"
 ] as const;
 
@@ -152,6 +154,21 @@ export const navigationGroups: readonly NavigationGroup[] = [
           { id: "people", href: "/travel", label: "Travel", icon: Plane },
           { id: "people", href: "/business-cards", label: "Business cards", icon: CreditCard },
           { id: "people", href: "/compliments", label: "Compliments", icon: Sparkles }
+        ]
+      }
+    ]
+  },
+  {
+    id: "fleet",
+    label: "Fleet",
+    icon: Plane,
+    sections: [
+      {
+        id: "fleet",
+        label: "Fleet",
+        items: [
+          { id: "fleet", href: "/fleet/crew", label: "Crew Org Chart", icon: Plane },
+          { id: "fleet", href: "/fleet/maintenance", label: "Maintenance Org Chart", icon: Wrench }
         ]
       }
     ]

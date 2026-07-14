@@ -30,6 +30,7 @@ const GRID: Record<ModuleId, [Lvl, Lvl, Lvl]> = {
   review: ["Full", "Hidden", "Hidden"],
   blocks: ["Full", "Hidden", "Hidden"],
   people: ["Full", "View", "Hidden"],
+  fleet: ["Full", "View", "Hidden"],
   settings: ["Hidden", "Hidden", "Hidden"] // admin Full applied by normalize
 };
 
