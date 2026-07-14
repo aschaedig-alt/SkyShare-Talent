@@ -106,7 +106,8 @@ export default function CrewOrgChart() {
   });
 
   const counted = groups.filter((g) => !g.d.noCount);
-  const filled = counted.reduce((a, g) => a + g.cp.f + (g.cs ? g.cs.f : 0), 0);
+  // filled includes in-training (a signed pilot fills the seat, even pre-line)
+  const filled = counted.reduce((a, g) => a + g.cp.f + g.cp.tr + (g.cs ? g.cs.f + g.cs.tr : 0), 0);
   const open = counted.reduce((a, g) => a + g.o, 0);
   const target = counted.reduce((a, g) => a + g.cp.at + (g.cs ? g.cs.at : 0), 0);
   const hiring = counted.filter((g) => g.o > 0).length;
@@ -163,7 +164,6 @@ export default function CrewOrgChart() {
             className="card"
             tabIndex={0}
             role="button"
-            style={{ borderTop: "3px solid var(--n400)" }}
             onClick={() => setOpenIdx(g.idx)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
@@ -172,6 +172,9 @@ export default function CrewOrgChart() {
               }
             }}
           >
+            <div className="statusbar n">
+              <span className="word">Shared</span>
+            </div>
             <div className="ch">
               <div>
                 <div className="nm">{g.d.name}</div>
@@ -179,16 +182,13 @@ export default function CrewOrgChart() {
                   {g.d.sub}
                 </div>
               </div>
-              <span className="badge" style={{ background: "var(--n200)", color: "var(--n600)" }}>
-                SHARED
-              </span>
             </div>
             <div className="bd">
               <div className="shared" style={{ marginTop: 0 }}>
                 {g.d.poolNote || "Crew drawn from the shared fractional pool — no dedicated seat or open req."}
               </div>
             </div>
-            <div className="foot" style={{ background: "var(--n100)", color: "var(--n500)" }}>
+            <div className="foot">
               <span className="kk" style={{ color: "inherit", opacity: 0.85 }}>
                 Open reqs
               </span>
@@ -198,9 +198,8 @@ export default function CrewOrgChart() {
         </div>
       );
     }
-    const totFilled = g.cp.f + (g.cs ? g.cs.f : 0);
+    const totFilled = g.cp.f + g.cp.tr + (g.cs ? g.cs.f + g.cs.tr : 0);
     const totTgt = g.cp.at + (g.cs ? g.cs.at : 0);
-    const parkedN = g.cp.p + (g.cs ? g.cs.p : 0);
     const cabinCount = g.d.cabin ? cntSeat(normSeat(g.d.cabin)) : null;
     const inN = g.cp.tr + (g.cs ? g.cs.tr : 0);
     const outN = g.d.out ? g.d.out.length : 0;
@@ -216,22 +215,14 @@ export default function CrewOrgChart() {
         ) : null}
       </>
     );
-    let noteTxt = "Fully staffed";
-    let noteCls = "n-staff";
-    if (g.o > 0) {
-      noteTxt = `${g.o} open — click for detail`;
-      noteCls = "n-open";
-    } else if (inN > 0) {
-      noteTxt = `${inN} in training`;
-      noteCls = "n-train";
-    }
+    const barCls = g.o > 0 ? "r" : g.tr > 0 ? "y" : "g";
+    const barWord = g.o > 0 ? "Hiring" : g.tr > 0 ? "Training" : "Staffed";
     return (
       <div className="gcol">
         <div
           className="card"
           tabIndex={0}
           role="button"
-          style={{ borderTop: `3px solid ${g.rule}` }}
           onClick={() => setOpenIdx(g.idx)}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
@@ -240,6 +231,9 @@ export default function CrewOrgChart() {
             }
           }}
         >
+          <div className={`statusbar ${barCls}`}>
+            <span className="word">{barWord}</span>
+          </div>
           <div className="ch">
             <div>
               <div className="nm">{g.d.name}</div>
@@ -247,34 +241,34 @@ export default function CrewOrgChart() {
                 {g.d.sub}
               </div>
             </div>
-            <span className="badge" style={{ background: g.bBg, color: g.bFg }}>
-              {g.status}
-            </span>
           </div>
           <div className="meta">
-            <div className="meta-row">
-              <span className="seats-txt">
-                {totFilled} of {totTgt} seats{parkedN ? ` · ${parkedN} parked` : ""}
-              </span>
-              <span className="turn-txt">{turnEl}</span>
-            </div>
-            <div className="flow">
+            <span className="seats-txt">
+              {totFilled} of {totTgt} seats
+            </span>
+            <span className="flow">
               <span className={inN ? "flow-in" : "flow-z"}>↑ {inN} in</span>
               <span className="flow-z">·</span>
               <span className="flow-out">↓ {outN} out</span>
-            </div>
+            </span>
           </div>
           <div className="bd">
             <div className="row">
               <div className="kk">
-                Captains · {g.cp.f}/{g.cp.at}
+                Captains ·{" "}
+                <span className={`cnt${g.cp.o >= 2 ? " alert" : ""}`}>
+                  <b>{g.cp.f + g.cp.tr}</b>/{g.cp.at}
+                </span>
               </div>
               <SeatSquares seat={g.d.pic} showParked={showParked} />
             </div>
             {g.cs ? (
               <div className="row">
                 <div className="kk">
-                  First Officers · {g.cs.f}/{g.cs.at}
+                  First Officers ·{" "}
+                  <span className={`cnt${g.cs.o >= 2 ? " alert" : ""}`}>
+                    <b>{g.cs.f + g.cs.tr}</b>/{g.cs.at}
+                  </span>
                 </div>
                 <SeatSquares seat={g.d.sic} showParked={showParked} />
               </div>
@@ -287,25 +281,22 @@ export default function CrewOrgChart() {
             {g.d.cabin && cabinCount ? (
               <div className="row">
                 <div className="kk">
-                  Cabin · {cabinCount.f}/{cabinCount.at}
+                  Cabin ·{" "}
+                  <span className={`cnt${cabinCount.o >= 2 ? " alert" : ""}`}>
+                    <b>{cabinCount.f + cabinCount.tr}</b>/{cabinCount.at}
+                  </span>
                 </div>
                 <SeatSquares seat={g.d.cabin} showParked={showParked} />
               </div>
             ) : null}
-            <div className={`statusnote ${noteCls}`}>{noteTxt}</div>
+            {showParked ? <div className="turn">{turnEl}</div> : null}
           </div>
-          <div
-            className="foot"
-            style={{
-              background: g.o > 0 ? "var(--open-soft-bg)" : "var(--n100)",
-              color: g.o > 0 ? "var(--open-soft-fg)" : "var(--n500)"
-            }}
-          >
+          <div className="foot">
             <span className="kk" style={{ color: "inherit", opacity: 0.85 }}>
               Open reqs
             </span>
             <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span className="taphint" style={{ color: g.o > 0 ? "var(--open-soft-fg)" : "var(--n400)" }}>
+              <span className="taphint" style={{ color: "var(--n400)" }}>
                 view crew
               </span>
               <span className="n">{g.o}</span>
@@ -318,7 +309,7 @@ export default function CrewOrgChart() {
 
   const Section = ({ title, list, bg, fg }: { title: string; list: G[]; bg: string; fg: string }) => {
     const cl = list.filter((g) => !g.d.noCount);
-    const f = cl.reduce((n, g) => n + g.cp.f + (g.cs ? g.cs.f : 0), 0);
+    const f = cl.reduce((n, g) => n + g.cp.f + g.cp.tr + (g.cs ? g.cs.f + g.cs.tr : 0), 0);
     const t = cl.reduce((n, g) => n + g.cp.at + (g.cs ? g.cs.at : 0), 0);
     const op = cl.reduce((n, g) => n + g.o, 0);
     return (
@@ -359,7 +350,7 @@ export default function CrewOrgChart() {
           <div className="ttl">Crew Org Chart</div>
           <div className="desc">
             Flight Operations by aircraft group — fractional/charter aircraft plus each managed tail.{" "}
-            <b>Click any aircraft to see its pilots.</b> Parked (on-hold) seats are shown but not counted.
+            <b>Click any aircraft to see its pilots.</b> In-training pilots count as filled; turnover &amp; parked seats live under Additional info.
           </div>
           <div className="ctrls">
             <div className="seg">
@@ -372,7 +363,7 @@ export default function CrewOrgChart() {
               </button>
             </div>
             <div className="seg">
-              <span className="lbl">Parked seats</span>
+              <span className="lbl">Additional info</span>
               <button className={parked === "hide" ? "on" : ""} onClick={() => setParked("hide")}>
                 Hide
               </button>

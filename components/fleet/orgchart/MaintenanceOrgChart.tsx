@@ -113,7 +113,7 @@ export default function MaintenanceOrgChart() {
     return { d, idx, t, status, bBg, bFg, rule };
   });
 
-  const filled = groups.reduce((a, g) => a + g.t.f, 0);
+  const filled = groups.reduce((a, g) => a + g.t.f + g.t.tr, 0);
   const open = groups.reduce((a, g) => a + g.t.o, 0);
   const target = groups.reduce((a, g) => a + g.t.at, 0);
   const hiring = groups.filter((g) => g.t.o > 0).length;
@@ -162,68 +162,73 @@ export default function MaintenanceOrgChart() {
     return a;
   };
 
-  const Card = ({ g }: { g: G }) => (
-    <div className="gcol">
-      <div
-        className="card"
-        tabIndex={0}
-        role="button"
-        style={{ borderTop: `3px solid ${g.rule}` }}
-        onClick={() => setOpenIdx(g.idx)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            setOpenIdx(g.idx);
-          }
-        }}
-      >
-        <div className="ch">
-          <div>
-            <div className="nm">{g.d.name}</div>
-            <div className="kk" style={{ marginTop: 6 }}>
-              {g.d.sub}
-            </div>
-          </div>
-          <span className="badge" style={{ background: g.bBg, color: g.bFg }}>
-            {g.status}
-          </span>
-        </div>
-        <div className="bd">
-          {g.d.sections.map((sec, i) => {
-            const c = cntSeat(normSeat(sec));
-            return (
-              <div className="row" key={i}>
-                <div className="kk">
-                  {sec.label} · {c.f}/{c.at}
-                </div>
-                <SeatSquares seat={sec} showParked={false} />
-              </div>
-            );
-          })}
-        </div>
+  const Card = ({ g }: { g: G }) => {
+    const barCls = g.t.o > 0 ? "r" : g.t.tr > 0 ? "y" : "g";
+    const barWord = g.t.o > 0 ? "Hiring" : g.t.tr > 0 ? "Training" : "Staffed";
+    return (
+      <div className="gcol">
         <div
-          className="foot"
-          style={{
-            background: g.t.o > 0 ? "var(--open-soft-bg)" : "var(--n100)",
-            color: g.t.o > 0 ? "var(--open-soft-fg)" : "var(--n500)"
+          className="card"
+          tabIndex={0}
+          role="button"
+          onClick={() => setOpenIdx(g.idx)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setOpenIdx(g.idx);
+            }
           }}
         >
-          <span className="kk" style={{ color: "inherit", opacity: 0.85 }}>
-            Open reqs
-          </span>
-          <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span className="taphint" style={{ color: g.t.o > 0 ? "var(--open-soft-fg)" : "var(--n400)" }}>
-              view team
+          <div className={`statusbar ${barCls}`}>
+            <span className="word">{barWord}</span>
+          </div>
+          <div className="ch">
+            <div>
+              <div className="nm">{g.d.name}</div>
+              <div className="kk" style={{ marginTop: 6 }}>
+                {g.d.sub}
+              </div>
+            </div>
+          </div>
+          <div className="meta">
+            <span className="seats-txt">
+              {g.t.f + g.t.tr} of {g.t.at} staffed
             </span>
-            <span className="n">{g.t.o}</span>
-          </span>
+          </div>
+          <div className="bd">
+            {g.d.sections.map((sec, i) => {
+              const c = cntSeat(normSeat(sec));
+              return (
+                <div className="row" key={i}>
+                  <div className="kk">
+                    {sec.label} ·{" "}
+                    <span className={`cnt${c.o >= 2 ? " alert" : ""}`}>
+                      <b>{c.f + c.tr}</b>/{c.at}
+                    </span>
+                  </div>
+                  <SeatSquares seat={sec} showParked={false} />
+                </div>
+              );
+            })}
+          </div>
+          <div className="foot">
+            <span className="kk" style={{ color: "inherit", opacity: 0.85 }}>
+              Open reqs
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span className="taphint" style={{ color: "var(--n400)" }}>
+                view team
+              </span>
+              <span className="n">{g.t.o}</span>
+            </span>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const Section = ({ title, list, bg, fg }: { title: string; list: G[]; bg: string; fg: string }) => {
-    const f = list.reduce((n, g) => n + g.t.f, 0);
+    const f = list.reduce((n, g) => n + g.t.f + g.t.tr, 0);
     const t = list.reduce((n, g) => n + g.t.at, 0);
     const op = list.reduce((n, g) => n + g.t.o, 0);
     return (

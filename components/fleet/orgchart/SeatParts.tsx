@@ -1,32 +1,21 @@
 import type { ReactNode } from "react";
 import type { Seat } from "@/lib/fleet/staffing/types";
-import { normSeat, cntSeat, initials } from "@/lib/fleet/staffing/compute";
+import { normSeat, initials } from "@/lib/fleet/staffing/compute";
 
-/** The row of colored seat squares shown inside a card. */
+/** The row of colored seat squares shown inside a card. Filled/training/candidate
+ *  seats carry the person's initials; open seats animate marching ants; parked
+ *  seats render inline but only when Additional info is shown. */
 export function SeatSquares({ seat, showParked }: { seat?: Seat | null; showParked: boolean }) {
   const o = normSeat(seat);
-  const c = cntSeat(o);
   const squares: ReactNode[] = [];
   let k = 0;
-  for (let i = 0; i < c.f; i++) {
-    squares.push(<div key={k++} className="seat" style={{ background: "var(--fill-bg)", color: "var(--fill-fg)" }} />);
-  }
-  for (let i = 0; i < c.tr; i++) {
-    squares.push(<div key={k++} className="seat" style={{ background: "var(--train-bg)", color: "var(--train-fg)" }}>T</div>);
-  }
-  for (let i = 0; i < o.open; i++) {
-    squares.push(<div key={k++} className="seat seat-open">+</div>);
-  }
-  for (let i = 0; i < o.openNamed.length; i++) {
-    squares.push(<div key={k++} className="seat seat-open">+</div>);
-  }
-  for (let i = 0; i < o.cand.length; i++) {
-    squares.push(<div key={k++} className="seat" style={{ background: "var(--cand-bg)", color: "var(--cand-fg)", border: "1.5px solid var(--accent)" }}>C</div>);
-  }
+  o.line.forEach((n) => squares.push(<div key={k++} className="seat seat-f"><span>{initials(n)}</span></div>));
+  o.train.forEach((n) => squares.push(<div key={k++} className="seat seat-t"><span>{initials(n)}</span></div>));
+  o.cand.forEach((n) => squares.push(<div key={k++} className="seat seat-c"><span>{initials(n)}</span></div>));
+  for (let i = 0; i < o.open; i++) squares.push(<div key={k++} className="seat seat-open" />);
+  for (let i = 0; i < o.openNamed.length; i++) squares.push(<div key={k++} className="seat seat-open" />);
   if (showParked) {
-    for (let i = 0; i < c.p; i++) {
-      squares.push(<div key={k++} className="seat" style={{ background: "var(--park-bg)", color: "var(--park-fg)", border: "1px dashed var(--park-bd)" }}>P</div>);
-    }
+    for (let i = 0; i < o.parked; i++) squares.push(<div key={k++} className="seat seat-p"><span>P</span></div>);
   }
   return <div className="seats">{squares}</div>;
 }
