@@ -112,7 +112,7 @@ export function ActivityDashboardWorkspace({ activityData }: ActivityDashboardWo
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="rounded border border-brand-lea/20 bg-white px-3 py-1 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+            className="rounded border border-brand-lea/20 bg-white px-3 py-1 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
           >
             <option value="all">All Activities</option>
             {activityTypes.map((type) => (

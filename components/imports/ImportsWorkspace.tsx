@@ -46,7 +46,7 @@ export function ImportsWorkspace({ data }: ImportsWorkspaceProps) {
               Central home for candidate imports, job imports, file uploads, requirement catalog updates, and manual review queues.
             </p>
           </div>
-          <div className="rounded bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden dark:bg-white/5">
+          <div className="rounded bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden dark:bg-white/5 dark:text-[#8fb3d6]">
             Local-first foundation
           </div>
         </div>

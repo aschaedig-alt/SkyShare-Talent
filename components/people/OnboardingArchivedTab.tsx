@@ -138,7 +138,7 @@ export function OnboardingArchivedTab({ rows }: { rows: NewHireRow[] }) {
           {rows.map((r) => {
             const state = stateOf(r);
             return (
-              <tr key={r.id} className={clsx("border-b border-brand-lea/5 hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:bg-white/5", selected.has(r.id) && "bg-brand-eden/10")}>
+              <tr key={r.id} className={clsx("border-b border-brand-lea/5 hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:hover:bg-white/5", selected.has(r.id) && "bg-brand-eden/10")}>
                 <td className="px-3 py-3 text-center">
                   <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleOne(r.id)} aria-label={`Select ${r.name}`} className="h-4 w-4 align-middle" />
                 </td>

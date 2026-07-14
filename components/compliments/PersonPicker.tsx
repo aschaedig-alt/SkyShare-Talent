@@ -58,7 +58,7 @@ export function PersonPicker({
               onChange("");
               setQuery("");
             }}
-            className="rounded p-1 text-brand-grey transition hover:bg-white hover:text-brand-lea dark:text-slate-400 dark:bg-brand-panel"
+            className="rounded p-1 text-brand-grey transition hover:bg-white hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100"
             aria-label={`Remove ${selected.name}`}
           >
             <X className="h-4 w-4" />
@@ -83,7 +83,7 @@ export function PersonPicker({
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           placeholder="Search by name or role..."
-          className="w-full rounded-element border-[0.5px] border-brand-lea/20 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-value-innovation focus:ring-2 focus:ring-value-innovation/30 dark:border-white/10"
+          className="w-full rounded-element border-[0.5px] border-brand-lea/20 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-value-innovation focus:ring-2 focus:ring-value-innovation/30 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500"
         />
         {open && matches.length > 0 ? (
           <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-element border-[0.5px] border-brand-lea/15 bg-white py-1 shadow-panel dark:border-white/10 dark:bg-brand-panel">
@@ -96,7 +96,7 @@ export function PersonPicker({
                     onChange(p.id);
                     setOpen(false);
                   }}
-                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition hover:bg-brand-cloudDancer/50 hover:shadow-glow dark:bg-white/5"
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition hover:bg-brand-cloudDancer/50 hover:shadow-glow dark:hover:bg-white/5"
                 >
                   <Avatar name={p.name} initials={p.initials} size="sm" />
                   <div className="min-w-0">

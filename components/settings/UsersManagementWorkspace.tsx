@@ -83,7 +83,7 @@ export function UsersManagementWorkspace({ users: initialUsers }: UsersManagemen
             </thead>
             <tbody>
               {users.map((user) => (
-                <tr key={user.id} className="border-b border-brand-lea/10 hover:bg-brand-cloudDancer/20 dark:border-white/10 dark:bg-white/5">
+                <tr key={user.id} className="border-b border-brand-lea/10 hover:bg-brand-cloudDancer/20 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10">
                   <td className="px-4 py-3">
                     <div className="font-medium text-brand-lea dark:text-slate-100">{user.name || "Unknown"}</div>
                   </td>
@@ -101,7 +101,7 @@ export function UsersManagementWorkspace({ users: initialUsers }: UsersManagemen
                         <select
                           value={selectedRole}
                           onChange={(e) => setSelectedRole(e.target.value)}
-                          className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+                          className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
                         >
                           <option value="">Select role...</option>
                           {VALID_ROLES.map((role) => (
@@ -113,7 +113,7 @@ export function UsersManagementWorkspace({ users: initialUsers }: UsersManagemen
                         <button
                           onClick={() => handleRoleChange(user.id, selectedRole)}
                           disabled={!selectedRole || saving}
-                          className="rounded bg-brand-gold px-3 py-1 text-xs font-semibold text-brand-black hover:bg-brand-gold/90 disabled:opacity-50 dark:text-slate-100"
+                          className="rounded bg-brand-gold px-3 py-1 text-xs font-semibold text-brand-black hover:bg-brand-gold/90 disabled:opacity-50"
                         >
                           {saving ? "Saving..." : "Save"}
                         </button>

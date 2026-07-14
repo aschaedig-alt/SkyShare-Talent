@@ -127,10 +127,10 @@ function Donut({ data }: { data: ChartDatum[] }) {
             })
           )}
         </g>
-        <text x="60" y="58" textAnchor="middle" className="fill-brand-lea" fontSize="20" fontWeight="600">
+        <text x="60" y="58" textAnchor="middle" className="fill-brand-lea dark:fill-slate-100" fontSize="20" fontWeight="600">
           {total}
         </text>
-        <text x="60" y="74" textAnchor="middle" className="fill-brand-grey" fontSize="10">
+        <text x="60" y="74" textAnchor="middle" className="fill-brand-grey dark:fill-slate-400" fontSize="10">
           active
         </text>
       </svg>
@@ -208,9 +208,9 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
   return (
     <div className="space-y-4">
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Starting in 7 days" value={String(dashboard.startingSoon)} tone="text-sky-700" count={dashboard.startingSoon} active={drill === "starting"} onClick={() => toggle("starting")} />
+        <MetricCard label="Starting in 7 days" value={String(dashboard.startingSoon)} tone="text-sky-700 dark:text-sky-300" count={dashboard.startingSoon} active={drill === "starting"} onClick={() => toggle("starting")} />
         <MetricCard label="Hires with missing items" value={String(dashboard.missingItems)} tone="text-brand-gold" count={dashboard.missingItems} active={drill === "missing"} onClick={() => toggle("missing")} />
-        <MetricCard label="Needs attention" value={String(dashboard.urgent)} tone="text-red-700" count={dashboard.urgent} active={drill === "attention"} onClick={() => toggle("attention")} />
+        <MetricCard label="Needs attention" value={String(dashboard.urgent)} tone="text-red-700 dark:text-red-300" count={dashboard.urgent} active={drill === "attention"} onClick={() => toggle("attention")} />
         <MetricCard label="Avg. completion" value={`${dashboard.avgCompletion}%`} tone="text-brand-lea dark:text-slate-100" />
       </section>
 
@@ -228,7 +228,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
               const pct = p.applicableCount > 0 ? Math.round((p.doneCount / p.applicableCount) * 100) : 0;
               return (
                 <Link key={p.id} href={`/people/${p.id}`} className="flex items-center gap-3 py-2 text-sm transition hover:opacity-90 hover:shadow-glow">
-                  <span className="w-12 shrink-0 font-semibold text-sky-700">{p.startDate ? fmtDate(p.startDate) : "—"}</span>
+                  <span className="w-12 shrink-0 font-semibold text-sky-700 dark:text-sky-300">{p.startDate ? fmtDate(p.startDate) : "—"}</span>
                   <span className="min-w-0 flex-1 truncate">
                     <span className="font-semibold text-brand-lea dark:text-slate-100">{p.name}</span>
                     {p.position ? <span className="text-brand-grey dark:text-slate-400"> · {p.position}</span> : null}
@@ -274,8 +274,8 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
               ]}
             />
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-brand-grey dark:text-slate-400">
-              <span><b className="text-emerald-700">{dashboard.orientationTimeliness.onTime}</b> within a month</span>
-              <span><b className="text-amber-700">{dashboard.orientationTimeliness.outsideMonth}</b> outside a month</span>
+              <span><b className="text-emerald-700 dark:text-emerald-300">{dashboard.orientationTimeliness.onTime}</b> within a month</span>
+              <span><b className="text-amber-700 dark:text-amber-300">{dashboard.orientationTimeliness.outsideMonth}</b> outside a month</span>
               <span><b>{dashboard.orientationTimeliness.unscheduled}</b> no date</span>
               <span>of {dashboard.orientationTimeliness.total} with a start date</span>
             </div>
@@ -292,8 +292,8 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
               ]}
             />
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-brand-grey dark:text-slate-400">
-              <span><b className="text-emerald-700">{dashboard.travelReadiness.booked}</b> booked</span>
-              <span><b className="text-amber-700">{dashboard.travelReadiness.needed}</b> needs booking</span>
+              <span><b className="text-emerald-700 dark:text-emerald-300">{dashboard.travelReadiness.booked}</b> booked</span>
+              <span><b className="text-amber-700 dark:text-amber-300">{dashboard.travelReadiness.needed}</b> needs booking</span>
               <span><b>{dashboard.travelReadiness.none}</b> no travel logged</span>
             </div>
           </div>
@@ -354,7 +354,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
           ) : (
             dashboard.upcomingStarts.map((u) => (
               <Link key={u.id} href={`/people/${u.id}`} className="flex items-center gap-3 text-sm hover:underline transition hover:shadow-glow">
-                <span className="w-14 shrink-0 font-semibold text-sky-700">{fmtDate(u.startDate)}</span>
+                <span className="w-14 shrink-0 font-semibold text-sky-700 dark:text-sky-300">{fmtDate(u.startDate)}</span>
                 <span className="truncate text-brand-black dark:text-slate-100">
                   {u.name}
                   {u.position ? <span className="text-brand-grey dark:text-slate-400"> · {u.position}</span> : null}

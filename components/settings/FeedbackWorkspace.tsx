@@ -91,7 +91,7 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm dark:border-white/10 dark:bg-brand-panel"
+            className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
           >
             <option value="ALL">All</option>
             <option value="IDEA">Ideas</option>
@@ -104,7 +104,7 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm dark:border-white/10 dark:bg-brand-panel"
+            className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
           >
             <option value="ALL">All</option>
             <option value="NEW">New</option>
@@ -153,7 +153,7 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
                     <select
                       value={item.status}
                       onChange={(e) => updateStatus(item.id, e.target.value)}
-                      className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-xs dark:border-white/10 dark:bg-brand-panel"
+                      className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-xs dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
                     >
                       {STATUSES.map((s) => (
                         <option key={s} value={s}>
@@ -163,7 +163,7 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
                     </select>
                     <button
                       onClick={() => remove(item.id)}
-                      className="rounded border border-red-200 p-1.5 text-red-600 transition hover:bg-red-50"
+                      className="rounded border border-red-200 p-1.5 text-red-600 transition hover:bg-red-50 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/15"
                       aria-label="Delete feedback"
                     >
                       <Trash2 className="h-3.5 w-3.5" />

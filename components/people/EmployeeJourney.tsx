@@ -335,7 +335,7 @@ export function EmployeeJourney({ hireId, journey, roleTitleOptions }: Props) {
               <Input type="date" value={editForm.startDate} onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })} className="mt-1" />
             </label>
             <label className="block w-1/2">
-              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">End date <span className="font-normal normal-case tracking-normal text-brand-grey/70">(blank = current)</span></span>
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">End date <span className="font-normal normal-case tracking-normal text-brand-grey/70 dark:text-slate-500">(blank = current)</span></span>
               <Input type="date" value={editForm.endDate} onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })} className="mt-1" />
             </label>
           </div>

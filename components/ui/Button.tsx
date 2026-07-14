@@ -15,13 +15,13 @@ const BASE =
   "inline-flex items-center justify-center gap-1.5 rounded font-semibold transition disabled:opacity-50 disabled:pointer-events-none";
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: "bg-brand-lea text-white hover:bg-brand-eden",
+  primary: "bg-brand-lea text-white hover:bg-brand-eden dark:bg-brand-eden dark:hover:bg-brand-sweet dark:hover:text-brand-lea",
   secondary:
     "border border-brand-lea/20 text-brand-lea hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-white/5 dark:text-slate-100",
   danger: "bg-red-600 text-white hover:bg-red-700",
   ghost: "text-brand-grey hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/10",
   // Accent call-to-action (e.g. "New candidate", "Upload"). Gold fill, navy text.
-  gold: "bg-brand-gold text-brand-lea hover:bg-brand-sweet dark:text-slate-100",
+  gold: "bg-brand-gold text-brand-lea hover:bg-brand-sweet",
   // Outlined button that sits on a dark header/toolbar (white on navy).
   toolbar: "border border-white/20 text-white hover:bg-white/10"
 };

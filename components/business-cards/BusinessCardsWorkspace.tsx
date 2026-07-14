@@ -208,7 +208,7 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
           </div>
         ) : null}
 
-        <button onClick={copySelected} className="ml-auto inline-flex items-center gap-1.5 rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-gold/90 dark:text-slate-100">
+        <button onClick={copySelected} className="ml-auto inline-flex items-center gap-1.5 rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-gold/90">
           <Copy className="h-3.5 w-3.5" /> {selected.size ? `Copy ${selected.size} for printer` : "Copy all for printer"}
         </button>
       </div>

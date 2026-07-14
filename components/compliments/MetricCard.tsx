@@ -26,8 +26,8 @@ export function MetricCard({ label, value, sublabel, trend }: MetricCardProps) {
         <p
           className={clsx(
             "mt-1.5 text-xs",
-            trend.direction === "up" && "text-value-teamwork-dark",
-            trend.direction === "down" && "text-brand-red",
+            trend.direction === "up" && "text-value-teamwork-dark dark:text-value-teamwork-light",
+            trend.direction === "down" && "text-brand-red dark:text-red-300",
             trend.direction === "flat" && "text-brand-grey dark:text-slate-400"
           )}
         >

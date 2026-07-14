@@ -117,7 +117,7 @@ export function ReportShareButton() {
                     onFocus={(e) => e.currentTarget.select()}
                     className="min-w-0 flex-1 truncate bg-transparent text-xs text-brand-lea outline-none dark:text-slate-200"
                   />
-                  <button onClick={() => copy(l)} title="Copy link" className="shrink-0 rounded p-1.5 text-brand-grey transition hover:bg-brand-gold/15 hover:text-brand-eden dark:text-slate-400 dark:hover:bg-white/10">
+                  <button onClick={() => copy(l)} title="Copy link" className="shrink-0 rounded p-1.5 text-brand-grey transition hover:bg-brand-gold/15 hover:text-brand-eden dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-[#8fb3d6]">
                     {copiedId === l.id ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
                   </button>
                   <button onClick={() => revoke(l.id)} title="Revoke link" className="shrink-0 rounded p-1.5 text-brand-grey transition hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-500/15 dark:hover:text-red-300">

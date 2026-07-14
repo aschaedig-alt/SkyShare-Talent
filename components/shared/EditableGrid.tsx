@@ -187,7 +187,7 @@ export function EditableGrid({
                 Drag by the gold handle, resize from the corner, add widgets.{" "}
                 <span className="font-semibold text-brand-lea dark:text-slate-100">Saving sets the layout for everyone.</span>
               </p>
-              {error && <span className="text-xs font-semibold text-red-600">{error}</span>}
+              {error && <span className="text-xs font-semibold text-red-600 dark:text-red-300">{error}</span>}
               <button onClick={() => setAddOpen((v) => !v)} className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
                 <Plus className="h-3.5 w-3.5" /> Add widget
               </button>
@@ -224,7 +224,7 @@ export function EditableGrid({
                     const Icon = w.icon;
                     return (
                       <button key={w.type} onClick={() => addWidget(w.type)} className="inline-flex items-center gap-1.5 rounded border border-brand-lea/15 bg-brand-cloudDancer/40 px-2.5 py-1.5 text-[11px] font-semibold text-brand-lea transition hover:border-brand-gold hover:bg-brand-sweet/20 dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
-                        <Icon className="h-3.5 w-3.5 text-brand-eden" /> {w.name}
+                        <Icon className="h-3.5 w-3.5 text-brand-eden dark:text-[#8fb3d6]" /> {w.name}
                       </button>
                     );
                   })}
@@ -295,7 +295,7 @@ export function EditableGrid({
                       onChange={(e) => updateConfig(configWidget.i, field.key, e.target.value)}
                       placeholder={field.placeholder}
                       rows={4}
-                      className="w-full rounded border border-brand-lea/20 bg-white px-2.5 py-1.5 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+                      className="w-full rounded border border-brand-lea/20 bg-white px-2.5 py-1.5 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
                     />
                   ) : (
                     <input
@@ -303,7 +303,7 @@ export function EditableGrid({
                       value={String(configWidget.config[field.key] ?? "")}
                       onChange={(e) => updateConfig(configWidget.i, field.key, e.target.value)}
                       placeholder={field.placeholder}
-                      className="w-full rounded border border-brand-lea/20 bg-white px-2.5 py-1.5 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+                      className="w-full rounded border border-brand-lea/20 bg-white px-2.5 py-1.5 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
                     />
                   )}
                 </label>

@@ -14,7 +14,7 @@ export function InlineFormatToolbar({ onBold, onColor }: InlineFormatToolbarProp
   return (
     <div className="mb-2 rounded border border-brand-lea/10 bg-white px-2.5 py-2 shadow-sm dark:border-white/10 dark:bg-brand-panel">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex h-8 items-center gap-1.5 rounded bg-brand-cloudDancer px-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-brand-eden dark:bg-white/5">
+        <div className="inline-flex h-8 items-center gap-1.5 rounded bg-brand-cloudDancer px-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-brand-eden dark:bg-white/5 dark:text-[#8fb3d6]">
           <Palette className="h-3.5 w-3.5" />
           Format
         </div>

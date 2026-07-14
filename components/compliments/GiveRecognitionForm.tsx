@@ -113,7 +113,7 @@ export function GiveRecognitionForm({ roster, values, strengthPoints, defaultRec
             id="message"
             {...register("message")}
             placeholder="Share what made this special. Be specific about the impact..."
-            className="min-h-[100px] w-full resize-none rounded-element border-[0.5px] border-brand-lea/20 px-3 py-2.5 text-sm text-brand-black outline-none focus:border-value-innovation focus:ring-2 focus:ring-value-innovation/30 dark:border-white/10 dark:text-slate-100"
+            className="min-h-[100px] w-full resize-none rounded-element border-[0.5px] border-brand-lea/20 px-3 py-2.5 text-sm text-brand-black outline-none focus:border-value-innovation focus:ring-2 focus:ring-value-innovation/30 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500"
           />
           {errors.message ? <p className="mt-1 text-xs text-brand-red">{errors.message.message}</p> : null}
         </div>
@@ -135,7 +135,7 @@ export function GiveRecognitionForm({ roster, values, strengthPoints, defaultRec
         />
 
         {serverError ? (
-          <p className="rounded-element bg-value-customerFocus-light px-3 py-2 text-sm text-value-customerFocus-dark">
+          <p className="rounded-element bg-value-customerFocus-light px-3 py-2 text-sm text-value-customerFocus-dark dark:bg-value-customerFocus/15 dark:text-value-customerFocus-light">
             {serverError}
           </p>
         ) : null}
@@ -144,7 +144,7 @@ export function GiveRecognitionForm({ roster, values, strengthPoints, defaultRec
           <button
             type="button"
             onClick={() => router.push("/compliments")}
-            className="flex-1 rounded-element border-[0.5px] border-brand-lea/20 px-4 py-2.5 text-sm font-medium text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+            className="flex-1 rounded-element border-[0.5px] border-brand-lea/20 px-4 py-2.5 text-sm font-medium text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/5"
           >
             Cancel
           </button>

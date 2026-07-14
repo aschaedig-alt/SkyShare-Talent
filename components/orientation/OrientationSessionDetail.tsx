@@ -216,7 +216,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
             ))}
           </div>
           <div className="mt-3 flex items-center gap-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
-            <input value={newPrep} onChange={(e) => setNewPrep(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addPrep()} placeholder="Add a prep task" className="flex-1 rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10" />
+            <input value={newPrep} onChange={(e) => setNewPrep(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addPrep()} placeholder="Add a prep task" className="flex-1 rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
             <button onClick={addPrep} disabled={busy} className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">Add</button>
           </div>
         </section>
@@ -270,7 +270,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                             "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-semibold transition hover:shadow-glow",
                             a.travel.status === "BOOKED"
                               ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
-                              : "border-brand-gold/40 bg-brand-gold/15 text-brand-lea"
+                              : "border-brand-gold/40 bg-brand-gold/15 text-brand-lea dark:text-slate-100"
                           )}
                         >
                           {a.travel.status === "BOOKED" ? "Booked" : "Needed"}
@@ -278,7 +278,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                         </Link>
                       ) : (
                         <div className="flex items-center gap-1">
-                          <select value={a.travelStatus} onChange={(e) => setTravel(a, e.target.value as TravelStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.travelStatus === "ARRANGED" ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : a.travelStatus === "NEEDED" ? "border-brand-gold/40 bg-brand-gold/15 text-brand-lea" : "border-brand-lea/15 bg-white text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400")}>
+                          <select value={a.travelStatus} onChange={(e) => setTravel(a, e.target.value as TravelStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.travelStatus === "ARRANGED" ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : a.travelStatus === "NEEDED" ? "border-brand-gold/40 bg-brand-gold/15 text-brand-lea dark:text-slate-100" : "border-brand-lea/15 bg-white text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400")}>
                             <option value="NA">Local</option>
                             <option value="NEEDED">Needed</option>
                             <option value="ARRANGED">Arranged</option>
@@ -393,7 +393,7 @@ function PrepRow({ t, onToggle, onRemove }: { t: PrepTaskView; onToggle: (id: st
       <button onClick={() => onToggle(t.id, !t.done)} aria-label={t.done ? "Mark not done" : "Mark done"} className="shrink-0">
         {t.done ? <span className="text-emerald-600"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#d1fae5" /><path d="M5 8.5 L7 10.5 L11 6" fill="none" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span> : <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/40" />}
       </button>
-      <span className={clsx("flex-1 text-[12.5px]", t.done ? "text-brand-grey line-through dark:text-slate-400" : "text-brand-black")}>{t.label}</span>
+      <span className={clsx("flex-1 text-[12.5px]", t.done ? "text-brand-grey line-through dark:text-slate-400" : "text-brand-black dark:text-slate-100")}>{t.label}</span>
       {t.owner ? <span className="rounded bg-brand-cloudDancer/70 px-2 py-0.5 text-[10px] text-brand-grey dark:bg-white/5 dark:text-slate-400">{t.owner}</span> : null}
       {t.dueDaysBefore != null && !t.done ? <span className="text-[10px] text-brand-grey dark:text-slate-400">{t.dueDaysBefore}d before</span> : null}
       <button onClick={() => onRemove(t.id)} className="text-[11px] text-red-600 opacity-0 transition group-hover:opacity-100">×</button>
@@ -456,9 +456,9 @@ function EmailTemplates({ templates, session }: { templates: EmailTemplateDef[];
 
       {adding ? (
         <div className="mt-3 space-y-2 rounded border border-brand-lea/10 p-3 dark:border-white/10">
-          <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Template name" className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10" />
-          <input value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} placeholder="Subject" className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10" />
-          <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} placeholder="Body" rows={4} className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10" />
+          <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Template name" className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
+          <input value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} placeholder="Subject" className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
+          <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} placeholder="Body" rows={4} className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
           <button onClick={add} disabled={busy} className="rounded bg-brand-lea px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">Add template</button>
         </div>
       ) : null}
@@ -490,9 +490,9 @@ function TemplateEditor({ t, onSave, busy }: { t: EmailTemplateDef; onSave: (key
   const dirty = name !== t.name || subject !== t.subject || body !== t.body;
   return (
     <div className="space-y-2 border-t border-brand-lea/10 px-3 py-3 dark:border-white/10">
-      <input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10" />
-      <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10" />
-      <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={6} className="w-full rounded border border-brand-lea/15 px-3 py-2 font-mono text-xs dark:border-white/10" />
+      <input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
+      <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
+      <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={6} className="w-full rounded border border-brand-lea/15 px-3 py-2 font-mono text-xs dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
       <button onClick={() => onSave(t.key, name, subject, body)} disabled={busy || !dirty} className="rounded bg-brand-lea px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-40">Save</button>
     </div>
   );

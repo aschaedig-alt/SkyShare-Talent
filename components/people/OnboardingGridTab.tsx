@@ -201,7 +201,7 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
                             <button
                               type="button"
                               onClick={() => cycle(h.id, task.id, task.status)}
-                              className="inline-flex h-8 w-full items-center justify-center transition hover:bg-brand-cloudDancer/50 hover:shadow-glow dark:bg-white/5"
+                              className="inline-flex h-8 w-full items-center justify-center transition hover:bg-brand-cloudDancer/50 hover:shadow-glow dark:hover:bg-white/5"
                               title="Click to change"
                             >
                               <Glyph status={task.status} />

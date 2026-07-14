@@ -91,7 +91,7 @@ export function OnboardingMilestonesTab({ data }: { data: MilestoneData }) {
           onClick={() => setManaging((m) => !m)}
           className={clsx(
             "rounded border px-3 py-1.5 text-sm font-semibold transition hover:shadow-glow",
-            managing ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-lea hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+            managing ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-lea hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/5"
           )}
         >
           {managing ? "Done managing" : "Manage milestones"}
@@ -121,7 +121,7 @@ export function OnboardingMilestonesTab({ data }: { data: MilestoneData }) {
                     value={drafts[m.key] ?? m.label}
                     onChange={(e) => setDrafts({ ...drafts, [m.key]: e.target.value })}
                     onKeyDown={(e) => e.key === "Enter" && dirty && saveLabel(m.key)}
-                    className="flex-1 rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10"
+                    className="flex-1 rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
                   />
                   {m.custom ? (
                     <span className="rounded bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">custom</span>
@@ -136,7 +136,7 @@ export function OnboardingMilestonesTab({ data }: { data: MilestoneData }) {
                   <button
                     onClick={() => removeMilestone(m.key)}
                     disabled={busy}
-                    className="rounded border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                    className="rounded border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10"
                   >
                     Remove
                   </button>
@@ -150,7 +150,7 @@ export function OnboardingMilestonesTab({ data }: { data: MilestoneData }) {
               onChange={(e) => setNewLabel(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addMilestone()}
               placeholder="New milestone name"
-              className="flex-1 rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10"
+              className="flex-1 rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500"
             />
             <button onClick={addMilestone} disabled={busy} className="rounded bg-brand-lea px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
               + Add milestone
@@ -186,7 +186,7 @@ export function OnboardingMilestonesTab({ data }: { data: MilestoneData }) {
                 {hires.map((h) => {
                   const pct = h.total > 0 ? Math.round((h.done / h.total) * 100) : 0;
                   return (
-                    <tr key={h.id} className="hover:bg-brand-cloudDancer/30 dark:bg-white/5">
+                    <tr key={h.id} className="hover:bg-brand-cloudDancer/30 dark:hover:bg-white/5">
                       <td className="sticky left-0 z-10 border-b border-r border-brand-lea/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-brand-panel">
                         <Link href={`/people/${h.id}`} className="font-medium text-brand-lea hover:underline transition hover:shadow-glow dark:text-slate-100">{h.name}</Link>
                         <div className="text-[10px] text-brand-grey dark:text-slate-400">

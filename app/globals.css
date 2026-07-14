@@ -19,12 +19,31 @@
    flip via dark: variants on components. */
 .dark {
   --skyshare-page: #0b1622;
+  /* Tell the UA to render form controls, native <select> option lists, and
+     default scrollbars in their dark variants so they don't flash light. */
+  color-scheme: dark;
 }
 .dark body {
   color: #e8eef5;
 }
 .dark ::selection {
   background: rgba(234, 170, 0, 0.35);
+}
+/* Dark scrollbars (WebKit/Blink) so overflow areas match the deep-navy page. */
+.dark ::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+.dark ::-webkit-scrollbar-track {
+  background: #0b1622;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border: 3px solid #0b1622;
+  border-radius: 8px;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.26);
 }
 
 * {

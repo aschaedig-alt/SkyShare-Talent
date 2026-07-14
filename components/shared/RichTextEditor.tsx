@@ -233,7 +233,7 @@ export function RichTextEditor({
             className="inline-flex items-center gap-1 rounded border border-brand-lea/15 px-2 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
             title="Start a new bullet line"
           >
-            <span className="text-brand-eden">•</span> Bullet line
+            <span className="text-brand-eden dark:text-[#8fb3d6]">•</span> Bullet line
           </button>
         )}
       </div>
@@ -250,7 +250,7 @@ export function RichTextEditor({
           onKeyUp={saveSelection}
           onMouseUp={saveSelection}
           onFocus={saveSelection}
-          className={`${minHeightClassName} w-full whitespace-pre-wrap rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm leading-6 text-brand-black outline-none transition empty:before:pointer-events-none empty:before:text-brand-grey/70 empty:before:content-[attr(data-placeholder)] focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100`}
+          className={`${minHeightClassName} w-full whitespace-pre-wrap rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm leading-6 text-brand-black outline-none transition empty:before:pointer-events-none empty:before:text-brand-grey/70 empty:before:content-[attr(data-placeholder)] focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:empty:before:text-slate-500`}
           data-placeholder={placeholder}
         />
       </div>

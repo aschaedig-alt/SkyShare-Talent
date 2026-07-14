@@ -6,10 +6,10 @@ import { parseBodySegments, splitCleanParagraphs } from "@/lib/formatting/text";
 const inlineColorClasses: Record<InlineTextColor, string> = {
   BLACK: "text-brand-black dark:text-slate-100",
   LEA: "text-brand-lea dark:text-slate-100",
-  EDEN: "text-brand-eden",
+  EDEN: "text-brand-eden dark:text-[#8fb3d6]",
   GREY: "text-brand-grey dark:text-slate-400",
   GOLD: "text-brand-gold",
-  RED: "text-brand-red",
+  RED: "text-brand-red dark:text-red-300",
   SWEET: "text-brand-sweet",
   CLOUD_DANCER: "text-brand-cloudDancer"
 };

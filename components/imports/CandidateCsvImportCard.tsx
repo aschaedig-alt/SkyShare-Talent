@@ -72,7 +72,7 @@ export function CandidateCsvImportCard() {
             ref={inputRef}
             type="file"
             accept=".csv,text/csv"
-            className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel"
+            className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:file:text-slate-300"
           />
           <button
             type="submit"

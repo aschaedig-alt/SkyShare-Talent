@@ -43,7 +43,7 @@ export function ProgramSettingsForm({ settings }: Props) {
 
   const labelCls = "block text-sm font-medium text-brand-lea dark:text-slate-100";
   const inputCls =
-    "mt-1 w-full rounded-element border-[0.5px] border-brand-lea/20 px-3 py-2 text-sm outline-none focus:border-value-innovation focus:ring-2 focus:ring-value-innovation/30 dark:border-white/10";
+    "mt-1 w-full rounded-element border-[0.5px] border-brand-lea/20 px-3 py-2 text-sm outline-none focus:border-value-innovation focus:ring-2 focus:ring-value-innovation/30 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100";
 
   return (
     <Card padding="lg">
@@ -55,8 +55,8 @@ export function ProgramSettingsForm({ settings }: Props) {
           className={clsx(
             "mb-4 rounded-element px-3 py-2 text-sm",
             notice.kind === "ok"
-              ? "bg-value-teamwork-light text-value-teamwork-dark"
-              : "bg-value-customerFocus-light text-value-customerFocus-dark"
+              ? "bg-value-teamwork-light text-value-teamwork-dark dark:bg-value-teamwork/15 dark:text-value-teamwork-light"
+              : "bg-value-customerFocus-light text-value-customerFocus-dark dark:bg-value-customerFocus/15 dark:text-value-customerFocus-light"
           )}
         >
           {notice.text}

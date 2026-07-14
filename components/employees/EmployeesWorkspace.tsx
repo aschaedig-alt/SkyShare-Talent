@@ -420,7 +420,7 @@ export function EmployeesWorkspace({ employees, counts, initialColumns }: { empl
                 </thead>
                 <tbody>
                   {rows.map((e) => (
-                    <tr key={e.id} className={clsx("border-b border-brand-lea/5 hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:bg-white/5", selected.has(e.id) && "bg-brand-gold/10 dark:bg-brand-gold/10")}>
+                    <tr key={e.id} className={clsx("border-b border-brand-lea/5 hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:hover:bg-white/5", selected.has(e.id) && "bg-brand-gold/10 dark:bg-brand-gold/10")}>
                       <td className="px-3 py-2.5">
                         <input type="checkbox" aria-label={`Select ${e.name}`} checked={selected.has(e.id)} onChange={() => toggleSelect(e.id)} />
                       </td>

@@ -447,13 +447,13 @@ export function SettingsLayoutLab() {
                   const cur = (assign[moveMenu.id] ?? box?.page) === p.id;
                   const isHome = box?.page === p.id;
                   return (
-                    <button key={p.id} onClick={() => reassign(moveMenu.id, p.id)} className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition ${cur ? "bg-brand-cloudDancer/60 font-semibold text-brand-lea dark:bg-white/5 dark:text-slate-100" : "text-brand-black/80 hover:bg-brand-cloudDancer/40 dark:bg-white/5"}`}>
+                    <button key={p.id} onClick={() => reassign(moveMenu.id, p.id)} className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition ${cur ? "bg-brand-cloudDancer/60 font-semibold text-brand-lea dark:bg-white/5 dark:text-slate-100" : "text-brand-black/80 hover:bg-brand-cloudDancer/40 dark:bg-white/5 dark:text-slate-300"}`}>
                       <span className="flex items-center gap-2">
                         <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${domainDot(p.id)}`} />
                         {p.label}
                         {isHome && <span className="text-[9px] uppercase text-brand-grey dark:text-slate-400">(home)</span>}
                       </span>
-                      {cur && <span className="text-brand-eden">✓</span>}
+                      {cur && <span className="text-brand-eden dark:text-[#8fb3d6]">✓</span>}
                     </button>
                   );
                 })}

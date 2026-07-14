@@ -110,8 +110,8 @@ export function RewardCatalogAdmin({ rewards, pointsPerDollar }: Props) {
           className={clsx(
             "mb-3 rounded-element px-3 py-2 text-sm",
             notice.kind === "ok"
-              ? "bg-value-teamwork-light text-value-teamwork-dark"
-              : "bg-value-customerFocus-light text-value-customerFocus-dark"
+              ? "bg-value-teamwork-light text-value-teamwork-dark dark:bg-value-teamwork/15 dark:text-value-teamwork-light"
+              : "bg-value-customerFocus-light text-value-customerFocus-dark dark:bg-value-customerFocus/15 dark:text-value-customerFocus-light"
           )}
         >
           {notice.text}
@@ -179,7 +179,7 @@ export function RewardCatalogAdmin({ rewards, pointsPerDollar }: Props) {
                       className={clsx(
                         "inline-block rounded px-2 py-0.5 text-xs",
                         r.available
-                          ? "bg-value-teamwork-light text-value-teamwork-dark"
+                          ? "bg-value-teamwork-light text-value-teamwork-dark dark:bg-value-teamwork/15 dark:text-value-teamwork-light"
                           : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400"
                       )}
                     >
@@ -191,7 +191,7 @@ export function RewardCatalogAdmin({ rewards, pointsPerDollar }: Props) {
                       <button
                         type="button"
                         onClick={() => startEdit(r)}
-                        className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer hover:text-brand-lea dark:text-slate-400 dark:bg-white/5"
+                        className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100"
                         aria-label={`Edit ${r.name}`}
                       >
                         <Pencil className="h-4 w-4" />
@@ -231,7 +231,7 @@ function EditRow({
   onCancel: () => void;
 }) {
   const inputCls =
-    "w-full rounded-element border-[0.5px] border-brand-lea/20 px-2 py-1 text-sm outline-none focus:border-value-innovation dark:border-white/10";
+    "w-full rounded-element border-[0.5px] border-brand-lea/20 px-2 py-1 text-sm outline-none focus:border-value-innovation dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100";
   return (
     <tr className="border-b border-brand-lea/10 bg-brand-cloudDancer/30 dark:border-white/10 dark:bg-white/5">
       <td className="py-2 pr-2">
@@ -293,7 +293,7 @@ function EditRow({
             type="button"
             onClick={onSave}
             disabled={pending}
-            className="rounded p-1.5 text-value-teamwork-dark transition hover:bg-value-teamwork-light"
+            className="rounded p-1.5 text-value-teamwork-dark transition hover:bg-value-teamwork-light dark:text-value-teamwork-light"
             aria-label="Save"
           >
             <Check className="h-4 w-4" />
@@ -301,7 +301,7 @@ function EditRow({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer dark:text-slate-400 dark:bg-white/5"
+            className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100"
             aria-label="Cancel"
           >
             <X className="h-4 w-4" />

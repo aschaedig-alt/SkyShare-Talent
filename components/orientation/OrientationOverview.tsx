@@ -29,7 +29,7 @@ function SessionCard({ s }: { s: SessionListItem }) {
     <Link href={`/orientation/${s.id}`} className="block rounded border border-brand-lea/10 bg-white p-4 shadow-panel transition hover:ring-2 hover:ring-brand-gold/30 hover:shadow-glow dark:border-white/10 dark:bg-brand-panel">
       <div className="flex items-center justify-between gap-2">
         <span className="text-base font-semibold text-brand-lea dark:text-slate-100">{fmt(s.date)}</span>
-        <span className={clsx("rounded px-2 py-0.5 text-[11px] font-semibold", s.status === "COMPLETE" ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : soon ? "bg-brand-gold/15 text-brand-lea" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400")}>
+        <span className={clsx("rounded px-2 py-0.5 text-[11px] font-semibold", s.status === "COMPLETE" ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : soon ? "bg-brand-gold/15 text-brand-lea dark:text-slate-100" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400")}>
           {s.status === "COMPLETE" ? "Complete" : daysUntil(s.date)}
         </span>
       </div>
@@ -105,7 +105,7 @@ function CohortCard({ c, onCreate, onAddMissing, busy }: { c: Cohort; onCreate: 
                 Add {c.missingHireIds.length} to session
               </Button>
             ) : (
-              <span className="text-xs text-emerald-700">All linked to the session</span>
+              <span className="text-xs text-emerald-700 dark:text-emerald-300">All linked to the session</span>
             )}
           </>
         ) : (
@@ -233,13 +233,13 @@ export function OrientationOverview({
 
       {unscheduled.length > 0 ? (
         <section className="rounded border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 p-4">
-          <div className="text-sm font-semibold text-amber-900">
+          <div className="text-sm font-semibold text-amber-900 dark:text-amber-300">
             {unscheduled.length} {unscheduled.length === 1 ? "hire still needs" : "hires still need"} an orientation
           </div>
           <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-300">Not yet attended and not on any upcoming session — schedule them so none slip through.</p>
           <div className="mt-3 space-y-1.5">
             {unscheduled.map((h) => (
-              <div key={h.id} className="flex flex-wrap items-center gap-2 rounded bg-white/70 px-3 py-2 text-sm">
+              <div key={h.id} className="flex flex-wrap items-center gap-2 rounded bg-white/70 px-3 py-2 text-sm dark:bg-white/5">
                 <Link href={`/people/${h.id}`} className="font-medium text-brand-lea hover:underline transition hover:shadow-glow dark:text-slate-100">{h.name}</Link>
                 <span className="text-xs text-brand-grey dark:text-slate-400">{h.position ?? "—"}</span>
                 {h.rescheduleCount > 0 ? <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold text-brand-lea dark:text-slate-100">moved {h.rescheduleCount}×</span> : null}
@@ -262,7 +262,7 @@ export function OrientationOverview({
       <div className="border-b border-brand-lea/10 dark:border-white/10">
         <nav className="flex gap-6">
           {([["sessions", "Sessions"], ["cohorts", "Cohorts & calendar"]] as const).map(([key, label]) => (
-            <button key={key} onClick={() => setView(key)} className={clsx("border-b-2 px-1 py-3 text-sm font-semibold transition hover:shadow-glow", view === key ? "border-brand-lea text-brand-lea" : "border-transparent text-brand-grey hover:text-brand-lea dark:text-slate-400")}>
+            <button key={key} onClick={() => setView(key)} className={clsx("border-b-2 px-1 py-3 text-sm font-semibold transition hover:shadow-glow", view === key ? "border-brand-lea text-brand-lea dark:border-slate-100 dark:text-slate-100" : "border-transparent text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:hover:text-slate-100")}>
               {label}
               {key === "cohorts" && cohorts.length > 0 ? <span className="ml-1.5 text-brand-grey dark:text-slate-400">· {cohorts.length}</span> : null}
             </button>
@@ -319,17 +319,17 @@ export function OrientationOverview({
               <div className="flex gap-3">
                 <label className="flex-1 text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
                   Date
-                  <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:text-slate-100" />
+                  <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100" />
                 </label>
                 <label className="flex-1 text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
                   Time (MT)
-                  <input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:text-slate-100" />
+                  <input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100" />
                 </label>
               </div>
-              <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Location" className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10" />
-              <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Address" className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10" />
-              <input value={form.meetLink} onChange={(e) => setForm({ ...form, meetLink: e.target.value })} placeholder="Google Meet link" className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10" />
-              {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
+              <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Location" className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
+              <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Address" className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
+              <input value={form.meetLink} onChange={(e) => setForm({ ...form, meetLink: e.target.value })} placeholder="Google Meet link" className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
+              {error ? <p className="text-sm font-medium text-red-700 dark:text-red-300">{error}</p> : null}
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setAdding(false)} disabled={saving}>Cancel</Button>

@@ -62,7 +62,7 @@ const ITEM_ICON: Record<string, typeof Plane> = {
 
 const labelClass = "text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400";
 const inputClass =
-  "w-full rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-sm text-brand-lea outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100";
+  "w-full rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-sm text-brand-lea outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100 dark:placeholder:text-slate-500";
 
 function toDateInput(iso: string | null) {
   return iso ? iso.slice(0, 10) : "";

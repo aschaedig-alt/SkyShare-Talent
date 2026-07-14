@@ -38,7 +38,7 @@ export function FeedEngagement({ recognitionId, initialLikes, commentCount }: Pr
         aria-pressed={liked}
         aria-label={liked ? "Remove like" : "Like this recognition"}
         className={clsx(
-          "flex items-center gap-1.5 rounded-element px-1.5 py-1 transition hover:bg-brand-cloudDancer/60 dark:bg-white/5",
+          "flex items-center gap-1.5 rounded-element px-1.5 py-1 transition hover:bg-brand-cloudDancer/60 dark:hover:bg-white/5",
           liked && "text-value-customerFocus-dark"
         )}
       >

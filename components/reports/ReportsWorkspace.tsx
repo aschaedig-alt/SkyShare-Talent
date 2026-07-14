@@ -225,7 +225,7 @@ function PilotJourney({ steps }: { steps: UpgradePilot["steps"] }) {
         <Fragment key={i}>
           {i > 0 && (
             <span
-              className={clsx("text-sm leading-none", s.kind === "upgrade" ? "font-bold text-brand-gold" : s.kind === "transition" ? "font-bold text-brand-eden" : "text-brand-grey/50")}
+              className={clsx("text-sm leading-none", s.kind === "upgrade" ? "font-bold text-brand-gold" : s.kind === "transition" ? "font-bold text-brand-eden dark:text-[#8fb3d6]" : "text-brand-grey/50")}
               aria-hidden
             >
               {s.kind === "upgrade" ? "↗" : "→"}
@@ -419,7 +419,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
             value={tenure}
             onChange={(e) => setTenure(Number(e.target.value) as 0 | 365 | 730 | 1825)}
             aria-label="Filter by tenure"
-            className="rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+            className="rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
           >
             <option value={0}>Any tenure</option>
             <option value={365}>1+ yr tenure</option>
@@ -430,7 +430,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
             value={year}
             onChange={(e) => setYear(e.target.value === "all" ? "all" : Number(e.target.value))}
             aria-label="Filter by year"
-            className="rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+            className="rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
           >
             <option value="all">All time</option>
             {years.map((y) => (
@@ -566,7 +566,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <Link
                             href={`/people/${p.hireId}`}
-                            className="font-semibold text-brand-lea transition hover:text-brand-eden hover:drop-shadow-[0_0_6px_rgba(234,170,0,0.5)] dark:text-slate-100"
+                            className="font-semibold text-brand-lea transition hover:text-brand-eden hover:drop-shadow-[0_0_6px_rgba(234,170,0,0.5)] dark:text-slate-100 dark:hover:text-[#8fb3d6]"
                           >
                             {p.name}
                           </Link>
@@ -607,7 +607,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <Link
                         href={`/people/${p.hireId}`}
-                        className="font-semibold text-brand-lea transition hover:text-brand-eden hover:drop-shadow-[0_0_6px_rgba(234,170,0,0.5)] dark:text-slate-100"
+                        className="font-semibold text-brand-lea transition hover:text-brand-eden hover:drop-shadow-[0_0_6px_rgba(234,170,0,0.5)] dark:text-slate-100 dark:hover:text-[#8fb3d6]"
                       >
                         {p.name}
                       </Link>
@@ -754,7 +754,7 @@ function TravelSpend({ travel }: { travel: ReportsData["travelSpend"] }) {
                                 {t.travelerHref ? (
                                   <Link
                                     href={t.travelerHref}
-                                    className="text-sm font-semibold text-brand-lea transition hover:text-brand-eden hover:drop-shadow-[0_0_6px_rgba(234,170,0,0.5)] dark:text-slate-100"
+                                    className="text-sm font-semibold text-brand-lea transition hover:text-brand-eden hover:drop-shadow-[0_0_6px_rgba(234,170,0,0.5)] dark:text-slate-100 dark:hover:text-[#8fb3d6]"
                                   >
                                     {t.travelerName}
                                   </Link>
@@ -813,8 +813,8 @@ function DocumentCurrency({ dc }: { dc: ReportsData["documentCurrency"] }) {
 
       <div className="mt-3 grid gap-3 sm:grid-cols-4">
         {[
-          { label: "Expired", value: dc.counts.expired, tone: "text-red-600" },
-          { label: "Due ≤ 30 days", value: dc.counts.due30, tone: "text-amber-600" },
+          { label: "Expired", value: dc.counts.expired, tone: "text-red-600 dark:text-red-300" },
+          { label: "Due ≤ 30 days", value: dc.counts.due30, tone: "text-amber-600 dark:text-amber-300" },
           { label: "Due ≤ 90 days", value: dc.counts.due90, tone: "text-brand-lea dark:text-slate-100" },
           { label: "Tracked total", value: dc.counts.total, tone: "text-brand-grey dark:text-slate-400" }
         ].map((c) => (
@@ -838,11 +838,11 @@ function DocumentCurrency({ dc }: { dc: ReportsData["documentCurrency"] }) {
             </thead>
             <tbody className="divide-y divide-brand-lea/10 dark:divide-white/10">
               {dc.upcoming.map((item, i) => {
-                const tone = item.status === "expired" ? "text-red-600" : item.status === "due30" ? "text-amber-600" : "text-brand-lea dark:text-slate-100";
+                const tone = item.status === "expired" ? "text-red-600 dark:text-red-300" : item.status === "due30" ? "text-amber-600 dark:text-amber-300" : "text-brand-lea dark:text-slate-100";
                 return (
                   <tr key={i} className="transition hover:bg-brand-sweet/10">
                     <td className="px-3 py-2">
-                      <Link href={`/candidates/${item.candidateId}`} className="font-semibold text-brand-lea transition hover:text-brand-eden dark:text-slate-100">
+                      <Link href={`/candidates/${item.candidateId}`} className="font-semibold text-brand-lea transition hover:text-brand-eden dark:text-slate-100 dark:hover:text-[#8fb3d6]">
                         {item.candidateName}
                       </Link>
                     </td>

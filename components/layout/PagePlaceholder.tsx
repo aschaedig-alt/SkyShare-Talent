@@ -16,7 +16,7 @@ export function PagePlaceholder({ title, eyebrow, description, cards }: PagePlac
             <Sparkles className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden dark:text-[#8fb3d6]">
               {eyebrow}
             </p>
             <h1 className="text-3xl font-semibold text-brand-lea dark:text-slate-100">{title}</h1>

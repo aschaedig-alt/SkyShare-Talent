@@ -97,7 +97,7 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search blocks..."
-              className="w-full rounded border border-brand-lea/15 bg-white py-2 pl-9 pr-3 text-sm text-brand-black outline-none focus:border-brand-eden dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+              className="w-full rounded border border-brand-lea/15 bg-white py-2 pl-9 pr-3 text-sm text-brand-black outline-none focus:border-brand-eden dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500"
             />
           </div>
         </div>
@@ -153,7 +153,7 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
                   selected.usedByJobs.map((job) => (
                     <div key={job.id} className="flex items-center justify-between gap-3 px-3 py-2">
                       <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">{job.title}</span>
-                      <span className="rounded bg-brand-cloudDancer px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-eden dark:bg-white/5">
+                      <span className="rounded bg-brand-cloudDancer px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-eden dark:bg-white/5 dark:text-[#8fb3d6]">
                         {formatEnum(job.status)}
                       </span>
                     </div>
@@ -180,7 +180,7 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
                 value={replacementBlockId}
                 onChange={(e) => setReplacementBlockId(e.target.value)}
                 disabled={!migrateJobs || busy}
-                className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+                className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
               >
                 <option value="">Choose replacement block...</option>
                 {replacements.map((b) => (
@@ -205,19 +205,19 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
                 type="button"
                 onClick={() => retire("DELETE")}
                 disabled={busy || deleteLocked || replacementRequired}
-                className="inline-flex items-center gap-2 rounded border border-brand-red/25 bg-white px-3 py-2 text-sm font-bold text-brand-red transition hover:bg-brand-red/8 disabled:opacity-50 dark:bg-brand-panel"
+                className="inline-flex items-center gap-2 rounded border border-brand-red/25 bg-white px-3 py-2 text-sm font-bold text-brand-red transition hover:bg-brand-red/8 disabled:opacity-50 dark:bg-brand-panel dark:text-red-300 dark:border-red-500/30 dark:hover:bg-red-500/15"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete block
               </button>
             </div>
             {deleteLocked ? (
-              <p className="mt-2 text-xs font-semibold text-brand-red">
+              <p className="mt-2 text-xs font-semibold text-brand-red dark:text-red-300">
                 Delete is locked while jobs still use this block. Choose a replacement and update those jobs first, or
                 archive instead.
               </p>
             ) : null}
-            {error ? <p className="mt-3 text-sm font-medium text-brand-red">{error}</p> : null}
+            {error ? <p className="mt-3 text-sm font-medium text-brand-red dark:text-red-300">{error}</p> : null}
             {message ? <p className="mt-3 text-sm font-medium text-emerald-700 dark:text-emerald-300">{message}</p> : null}
           </>
         )}

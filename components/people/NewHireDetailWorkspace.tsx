@@ -201,7 +201,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
           type={type}
           value={details[key]}
           onChange={(e) => setDetails({ ...details, [key]: e.target.value })}
-          className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:text-slate-100"
+          className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
         />
       </label>
     );
@@ -260,7 +260,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
           ) : (
             <>
               {hire.stage !== "ACTIVE" && (
-                <button onClick={() => changeStage("ACTIVE")} disabled={busyStage} className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
+                <button onClick={() => changeStage("ACTIVE")} disabled={busyStage} className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/5">
                   Reactivate
                 </button>
               )}
@@ -270,7 +270,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
                 </button>
               )}
               {hire.stage !== "ARCHIVED" && (
-                <button onClick={() => changeStage("ARCHIVED")} disabled={busyStage} className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 disabled:opacity-60 dark:border-white/10 dark:text-slate-400 dark:bg-white/5">
+                <button onClick={() => changeStage("ARCHIVED")} disabled={busyStage} className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 disabled:opacity-60 dark:border-white/10 dark:text-slate-400 dark:hover:bg-white/5">
                   Archive
                 </button>
               )}
@@ -382,7 +382,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
                 value={details.notes}
                 onChange={(e) => setDetails({ ...details, notes: e.target.value })}
                 rows={3}
-                className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:text-slate-100"
+                className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
               />
             </label>
           </div>
@@ -398,7 +398,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
                 <div className="mt-2 space-y-1.5">
                   {items.map((t) => (
                     <div key={t.id} className="flex items-center justify-between gap-3 rounded border border-brand-lea/10 px-3 py-2 dark:border-white/10">
-                      <span className={clsx("text-sm", t.status === "DONE" ? "text-brand-grey line-through dark:text-slate-400" : "text-brand-black")}>{t.label}</span>
+                      <span className={clsx("text-sm", t.status === "DONE" ? "text-brand-grey line-through dark:text-slate-400" : "text-brand-black dark:text-slate-100")}>{t.label}</span>
                       <div className="flex shrink-0 overflow-hidden rounded border border-brand-lea/15 dark:border-white/10">
                         {(["TODO", "DONE", "NA"] as const).map((s) => (
                           <button
@@ -427,7 +427,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
                     .filter((t) => t.group === "CUSTOM")
                     .map((t) => (
                       <div key={t.id} className="flex items-center justify-between gap-3 rounded border border-brand-lea/10 px-3 py-2 dark:border-white/10">
-                        <span className={clsx("text-sm", t.status === "DONE" ? "text-brand-grey line-through dark:text-slate-400" : "text-brand-black")}>{t.label}</span>
+                        <span className={clsx("text-sm", t.status === "DONE" ? "text-brand-grey line-through dark:text-slate-400" : "text-brand-black dark:text-slate-100")}>{t.label}</span>
                         <div className="flex shrink-0 overflow-hidden rounded border border-brand-lea/15 dark:border-white/10">
                           {(["TODO", "DONE", "NA"] as const).map((s) => (
                             <button

@@ -28,7 +28,7 @@ function fmtDate(iso: string | null) {
 }
 
 const selectClass =
-  "rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-sm text-brand-lea outline-none focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100";
+  "rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-sm text-brand-lea outline-none focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100 dark:placeholder:text-slate-500";
 
 function NewTripButton({ travelers }: { travelers: TravelTravelerOption[] }) {
   const router = useRouter();

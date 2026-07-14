@@ -197,13 +197,13 @@ export function BrandingPanel({ initialBranding }: BrandingPanelProps) {
                 <input
                   value={logo.name}
                   onChange={(event) => renameLogo(logo.id, event.target.value)}
-                  className="mt-3 w-full rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+                  className="mt-3 w-full rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
                   placeholder="Logo name"
                 />
                 <button
                   type="button"
                   onClick={() => deleteLogo(logo.id)}
-                  className="mt-2 text-xs font-semibold text-red-700 transition hover:underline"
+                  className="mt-2 text-xs font-semibold text-red-700 transition hover:underline dark:text-red-300"
                 >
                   Delete
                 </button>
@@ -237,7 +237,7 @@ export function BrandingPanel({ initialBranding }: BrandingPanelProps) {
                 <select
                   value={branding.assignments[slot.key] ?? ""}
                   onChange={(event) => assignSlot(slot.key, event.target.value)}
-                  className="mt-3 w-full rounded border border-brand-lea/15 bg-white px-2 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+                  className="mt-3 w-full rounded border border-brand-lea/15 bg-white px-2 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
                 >
                   <option value="">None</option>
                   {branding.logos.map((logo) => (
