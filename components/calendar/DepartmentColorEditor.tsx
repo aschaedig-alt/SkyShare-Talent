@@ -101,7 +101,7 @@ export function DepartmentColorEditor({
                       title={COLOR_PALETTE[name].label}
                       onClick={() => setSelection((current) => ({ ...current, [dept]: name }))}
                       className={`flex h-7 w-7 items-center justify-center rounded-full ${COLOR_PALETTE[name].swatch} transition hover:shadow-glow ${
-                        active ? "ring-2 ring-brand-lea ring-offset-2" : "hover:scale-110"
+                        active ? "ring-2 ring-brand-lea ring-offset-2 dark:ring-brand-sweet dark:ring-offset-brand-panel" : "hover:scale-110"
                       }`}
                     >
                       {active ? <Check className="h-3.5 w-3.5 text-white" /> : null}

@@ -46,7 +46,7 @@ export function CandidateActivityTimeline({ items }: { items: ActivityItem[] }) 
       <ol className="relative space-y-4 border-l border-brand-lea/15 pl-5 dark:border-white/10">
         {items.map((item) => (
           <li key={item.id} className="relative">
-            <span className="absolute -left-[1.4rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-brand-gold" />
+            <span className="absolute -left-[1.4rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-brand-gold dark:border-brand-panel" />
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded bg-brand-cloudDancer/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-lea dark:bg-white/5 dark:text-slate-100">
                 {TYPE_LABEL[item.activityType] ?? item.activityType}

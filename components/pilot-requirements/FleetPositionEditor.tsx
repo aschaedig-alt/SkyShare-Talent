@@ -116,7 +116,7 @@ export function FleetPositionEditor({
                 onClick={() => removeTag(tag)}
                 disabled={pending}
                 aria-label={`Remove ${tag}`}
-                className="rounded text-brand-grey transition hover:text-value-customerFocus-dark disabled:opacity-60 dark:text-slate-400"
+                className="rounded text-brand-grey transition hover:text-value-customerFocus-dark disabled:opacity-60 dark:text-slate-400 dark:hover:text-red-300"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -168,7 +168,7 @@ export function FleetPositionEditor({
                 onClick={() => setLinked((current) => current.filter((x) => x !== s))}
                 disabled={pending}
                 aria-label={`Remove ${TITLE_BY_SLUG.get(s) ?? s}`}
-                className="rounded text-brand-grey transition hover:text-value-customerFocus-dark disabled:opacity-60 dark:text-slate-400"
+                className="rounded text-brand-grey transition hover:text-value-customerFocus-dark disabled:opacity-60 dark:text-slate-400 dark:hover:text-red-300"
               >
                 <X className="h-3 w-3" />
               </button>

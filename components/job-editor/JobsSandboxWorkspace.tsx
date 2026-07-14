@@ -121,7 +121,7 @@ function FieldPurposePill({ label, isEnabled }: { label: string; isEnabled: bool
     label === "public post" && isEnabled
       ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
       : isEnabled
-        ? "bg-brand-cloudDancer text-brand-eden dark:bg-white/5"
+        ? "bg-brand-cloudDancer text-brand-eden dark:bg-white/5 dark:text-[#8fb3d6]"
         : "bg-brand-cloudDancer/70 text-brand-grey dark:bg-white/5 dark:text-slate-400";
 
   return (
@@ -193,7 +193,7 @@ function SortableTemplateField({
           type="button"
           {...attributes}
           {...listeners}
-          className="mt-5 inline-flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded border border-brand-lea/10 bg-white text-brand-grey hover:border-brand-eden hover:text-brand-eden active:cursor-grabbing dark:border-white/10 dark:bg-brand-panel dark:text-slate-400"
+          className="mt-5 inline-flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded border border-brand-lea/10 bg-white text-brand-grey hover:border-brand-eden hover:text-brand-eden active:cursor-grabbing dark:border-white/10 dark:bg-brand-panel dark:text-slate-400 dark:hover:text-[#8fb3d6]"
           aria-label={`Drag ${field.label}`}
         >
           <GripVertical className="h-3.5 w-3.5" />
@@ -204,14 +204,14 @@ function SortableTemplateField({
         </label>
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-            <span className={`text-[11px] font-bold uppercase tracking-[0.1em] ${isEnabled ? "text-brand-eden" : "text-brand-grey dark:text-slate-400"}`}>
+            <span className={`text-[11px] font-bold uppercase tracking-[0.1em] ${isEnabled ? "text-brand-eden dark:text-[#8fb3d6]" : "text-brand-grey dark:text-slate-400"}`}>
               {field.label}
             </span>
             <FieldPurposePill label={isEnabled ? field.purpose : "disabled"} isEnabled={isEnabled} />
           </div>
           <TemplateFieldControl field={field} isEnabled={isEnabled} />
           {field.helper && (
-            <p className={`mt-1 text-[10px] font-semibold leading-4 ${isEnabled ? "text-brand-grey dark:text-slate-400" : "text-brand-grey/75"}`}>
+            <p className={`mt-1 text-[10px] font-semibold leading-4 ${isEnabled ? "text-brand-grey dark:text-slate-400" : "text-brand-grey/75 dark:text-slate-500"}`}>
               {field.helper}
             </p>
           )}
@@ -249,7 +249,7 @@ function SourcePill({ label, tone = "field" }: { label: string; tone?: "field" |
   const toneClass = {
     field: "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",
     block: "bg-brand-sweet/40 text-brand-lea dark:text-slate-100",
-    neutral: "bg-brand-cloudDancer text-brand-eden dark:bg-white/5",
+    neutral: "bg-brand-cloudDancer text-brand-eden dark:bg-white/5 dark:text-[#8fb3d6]",
     warning: "bg-brand-gold/25 text-brand-lea dark:text-slate-100"
   }[tone];
 
@@ -280,9 +280,9 @@ function DrawerShell({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-brand-cloudDancer/55 dark:bg-white/5"
+        className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-brand-cloudDancer/55 dark:bg-white/5 dark:hover:bg-white/10"
       >
-        {isOpen ? <ChevronDown className="h-4 w-4 text-brand-eden" /> : <ChevronRight className="h-4 w-4 text-brand-eden" />}
+        {isOpen ? <ChevronDown className="h-4 w-4 text-brand-eden dark:text-[#8fb3d6]" /> : <ChevronRight className="h-4 w-4 text-brand-eden dark:text-[#8fb3d6]" />}
         <div className="min-w-0 flex-1">
           <div className="text-sm font-bold text-brand-lea dark:text-slate-100">{title}</div>
           <div className="mt-0.5 text-xs font-semibold leading-5 text-brand-grey dark:text-slate-400">{subtitle}</div>
@@ -1244,7 +1244,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded bg-brand-gold px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-brand-lea dark:text-slate-100">
+            <span className="inline-flex items-center gap-1.5 rounded bg-brand-gold px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-brand-lea">
               <Lock className="h-3.5 w-3.5" />
               Template Locked
             </span>
@@ -1255,7 +1255,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                   type="button"
                   onClick={() => saveSelectedJob()}
                   disabled={isSaving}
-                  className="inline-flex items-center gap-2 rounded bg-white px-3.5 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer disabled:opacity-70 dark:bg-brand-panel dark:text-slate-100"
+                  className="inline-flex items-center gap-2 rounded bg-white px-3.5 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer disabled:opacity-70 dark:bg-brand-panel dark:text-slate-100 dark:hover:bg-white/10"
                 >
                   <Save className="h-4 w-4" />
                   {isSaving ? "Saving..." : "Save Draft"}
@@ -1292,7 +1292,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
         <div className="grid gap-5 xl:grid-cols-[minmax(360px,0.72fr)_minmax(560px,1.28fr)]">
           <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <div className="border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">1. Edit Job Data</p>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden dark:text-[#8fb3d6]">1. Edit Job Data</p>
               <h2 className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{selectedJob.title}</h2>
               <p className="mt-1 text-xs font-semibold text-brand-grey dark:text-slate-400">
                 {statusLabel(selectedJob.status)} - {selectedJob.department ?? "Department pending"} -{" "}
@@ -1317,7 +1317,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                       className={`rounded px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] transition hover:shadow-glow ${
                         active
                           ? "bg-brand-lea text-white shadow-sm"
-                          : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+                          : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-brand-panel dark:text-slate-100 dark:hover:bg-white/10"
                       }`}
                     >
                       {item.label} ({item.count})
@@ -1351,11 +1351,11 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                 <button
                   type="button"
                   onClick={() => setBulkOpen((current) => !current)}
-                  className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-white/55"
+                  className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-white/55 dark:hover:bg-white/10"
                 >
-                  {bulkOpen ? <ChevronDown className="h-4 w-4 text-brand-eden" /> : <ChevronRight className="h-4 w-4 text-brand-eden" />}
+                  {bulkOpen ? <ChevronDown className="h-4 w-4 text-brand-eden dark:text-[#8fb3d6]" /> : <ChevronRight className="h-4 w-4 text-brand-eden dark:text-[#8fb3d6]" />}
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs font-bold uppercase tracking-[0.14em] text-brand-eden">Bulk actions</div>
+                    <div className="text-xs font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">Bulk actions</div>
                     <div className="mt-1 text-xs font-semibold text-brand-grey dark:text-slate-400">
                       Archive inactive roles or restore archived roles.
                     </div>
@@ -1368,7 +1368,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                       <button
                         type="button"
                         onClick={toggleAllBulkJobs}
-                        className="rounded border border-brand-lea/12 bg-white px-2.5 py-1.5 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+                        className="rounded border border-brand-lea/12 bg-white px-2.5 py-1.5 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-brand-panel dark:text-slate-100 dark:hover:bg-white/10"
                       >
                         {allEligibleSelected ? "Clear visible" : "Select visible"}
                       </button>
@@ -1386,7 +1386,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                       {bulkEligibleJobs.map((job) => (
                         <label
                           key={`${jobListView}-${job.id}`}
-                          className="flex cursor-pointer items-start gap-2 rounded border border-brand-lea/8 bg-white px-2.5 py-2 text-sm hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-brand-panel"
+                          className="flex cursor-pointer items-start gap-2 rounded border border-brand-lea/8 bg-white px-2.5 py-2 text-sm hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-brand-panel dark:hover:bg-white/10"
                         >
                           <input
                             type="checkbox"
@@ -1412,7 +1412,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
               <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/35 p-3 dark:border-white/10 dark:bg-white/5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <div className="text-xs font-bold uppercase tracking-[0.16em] text-brand-eden">
+                    <div className="text-xs font-bold uppercase tracking-[0.16em] text-brand-eden dark:text-[#8fb3d6]">
                       Job template field map
                     </div>
                     <p className="mt-1 text-xs font-semibold leading-5 text-brand-grey dark:text-slate-400">
@@ -1471,7 +1471,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                     <div className="mt-3 rounded border border-brand-lea/10 bg-white p-3 dark:border-white/10 dark:bg-brand-panel">
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                         <div>
-                          <div className="text-xs font-bold uppercase tracking-[0.16em] text-brand-eden">
+                          <div className="text-xs font-bold uppercase tracking-[0.16em] text-brand-eden dark:text-[#8fb3d6]">
                             Manual extra fields
                           </div>
                           <p className="mt-1 text-xs font-semibold leading-5 text-brand-grey dark:text-slate-400">
@@ -1525,7 +1525,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                               <button
                                 type="button"
                                 onClick={() => removeExtraField(field.id)}
-                                className="inline-flex h-10 items-center justify-center rounded border border-brand-red/20 px-3 text-brand-red hover:bg-brand-red/10"
+                                className="inline-flex h-10 items-center justify-center rounded border border-brand-red/20 px-3 text-brand-red hover:bg-brand-red/10 dark:text-red-300"
                                 aria-label={`Remove ${field.label || "custom field"}`}
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -1585,7 +1585,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
             <div className="border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">3. Job Posting Preview</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden dark:text-[#8fb3d6]">3. Job Posting Preview</p>
                   <h2 className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">Formatted and ready to publish</h2>
                 </div>
               </div>
@@ -1607,7 +1607,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
             <button
               type="button"
               onClick={() => setSectionsOpen((current) => !current)}
-              className="rounded p-1 text-brand-eden hover:bg-brand-cloudDancer dark:bg-white/5"
+              className="rounded p-1 text-brand-eden hover:bg-brand-cloudDancer dark:bg-white/5 dark:text-[#8fb3d6] dark:hover:bg-white/10"
               aria-label={sectionsOpen ? "Collapse section builder" : "Expand section builder"}
             >
               {sectionsOpen ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
@@ -1617,7 +1617,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
               onClick={() => setSectionsOpen((current) => !current)}
               className="min-w-0 flex-1 text-left"
             >
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">Section Builder</p>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden dark:text-[#8fb3d6]">Section Builder</p>
               <h2 className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{publishingBlocks.length} shared blocks attached</h2>
               <p className="mt-1 text-xs font-semibold text-brand-grey dark:text-slate-400">
                 Collapsed by default. Expand to manage order, sections, custom copies, and source mapping.
@@ -1647,7 +1647,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                 </div>
               ))}
               {publishingBlocks.length > 5 && (
-                <div className="rounded border border-brand-lea/10 bg-white px-3 py-2 text-sm font-bold text-brand-eden dark:border-white/10 dark:bg-brand-panel">
+                <div className="rounded border border-brand-lea/10 bg-white px-3 py-2 text-sm font-bold text-brand-eden dark:border-white/10 dark:bg-brand-panel dark:text-[#8fb3d6]">
                   +{publishingBlocks.length - 5} more
                 </div>
               )}
@@ -1657,7 +1657,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
           {sectionsOpen && (
             <div className="grid gap-4 p-4 xl:grid-cols-[minmax(260px,0.72fr)_minmax(400px,1fr)_minmax(420px,1fr)]">
               <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/50 p-3 dark:border-white/10 dark:bg-white/5">
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-eden">Available blocks</p>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-eden dark:text-[#8fb3d6]">Available blocks</p>
                 <input className={`${inputClass} mt-3`} placeholder="Search shared blocks..." />
                 <div className="mt-3 max-h-[520px] space-y-2 overflow-auto pr-1">
                   {availableBlocks.slice(0, 12).map((block) => (
@@ -1674,7 +1674,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
               </div>
 
               <div className="rounded border border-brand-lea/10 bg-white p-3 dark:border-white/10 dark:bg-brand-panel">
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-eden">Job sections</p>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-eden dark:text-[#8fb3d6]">Job sections</p>
                 <h3 className="mt-1 text-base font-bold text-brand-lea dark:text-slate-100">Plain-language block controls</h3>
                 <div className="mt-3 max-h-[620px] space-y-2 overflow-auto pr-1">
                   {publishingBlocks.map((instance) => {
@@ -1719,11 +1719,11 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
           <button
             type="button"
             onClick={() => setArchiveReferenceOpen((current) => !current)}
-            className="flex w-full items-center gap-3 px-5 py-4 text-left hover:bg-brand-cloudDancer/45 dark:bg-white/5"
+            className="flex w-full items-center gap-3 px-5 py-4 text-left hover:bg-brand-cloudDancer/45 dark:bg-white/5 dark:hover:bg-white/10"
           >
-            {archiveReferenceOpen ? <ChevronDown className="h-5 w-5 text-brand-eden" /> : <ChevronRight className="h-5 w-5 text-brand-eden" />}
+            {archiveReferenceOpen ? <ChevronDown className="h-5 w-5 text-brand-eden dark:text-[#8fb3d6]" /> : <ChevronRight className="h-5 w-5 text-brand-eden dark:text-[#8fb3d6]" />}
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">Archive reference drawer</p>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden dark:text-[#8fb3d6]">Archive reference drawer</p>
               <h2 className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">Archived jobs stay available for lookup</h2>
             </div>
           </button>
@@ -1740,7 +1740,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                       setSelectedJobId(job.id);
                       setJobListView("archived");
                     }}
-                    className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 p-3 text-left hover:bg-brand-sweet/30 transition hover:shadow-glow dark:border-white/10 dark:bg-white/5"
+                    className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 p-3 text-left hover:bg-brand-sweet/30 transition hover:shadow-glow dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
                   >
                     <div className="text-sm font-bold text-brand-lea dark:text-slate-100">{job.title}</div>
                     <div className="mt-1 text-xs font-semibold text-brand-grey dark:text-slate-400">{job.department ?? "Department pending"}</div>

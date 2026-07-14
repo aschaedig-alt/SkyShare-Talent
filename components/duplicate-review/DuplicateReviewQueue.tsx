@@ -138,7 +138,7 @@ export function DuplicateReviewQueue({ items }: { items: Item[] }) {
             <button
               onClick={() => runBulk("merge")}
               disabled={busy || selected.size === 0}
-              className="inline-flex items-center gap-1 rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50 dark:text-slate-100"
+              className="inline-flex items-center gap-1 rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50"
             >
               {busy ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <GitMerge className="h-3.5 w-3.5" />} Merge selected
             </button>
@@ -212,7 +212,7 @@ export function DuplicateReviewQueue({ items }: { items: Item[] }) {
                         <button
                           onClick={() => runSingle(item, "merge")}
                           disabled={busy}
-                          className="ml-auto inline-flex items-center gap-1 rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50 dark:text-slate-100"
+                          className="ml-auto inline-flex items-center gap-1 rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50"
                         >
                           <GitMerge className="h-3.5 w-3.5" /> Merge
                         </button>

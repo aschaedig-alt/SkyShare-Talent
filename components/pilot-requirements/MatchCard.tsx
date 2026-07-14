@@ -100,12 +100,12 @@ function FactorList({ factors }: { factors: ScoredFactor[] }) {
                 <FactorIcon status={factor.status} />
                 <span className="font-medium text-brand-lea dark:text-slate-100">{factor.label}</span>
                 {factor.requirementStatus === "hard" ? (
-                  <span className="rounded bg-brand-lea/8 px-1.5 text-[9px] font-bold uppercase tracking-wide text-brand-eden">
+                  <span className="rounded bg-brand-lea/8 px-1.5 text-[9px] font-bold uppercase tracking-wide text-brand-eden dark:bg-white/10 dark:text-[#8fb3d6]">
                     hard
                   </span>
                 ) : null}
                 <span className="min-w-0 flex-1 truncate text-brand-grey dark:text-slate-400">{factor.detail}</span>
-                <span className="shrink-0 text-[10px] italic text-brand-grey/80">{factor.sourceLabel}</span>
+                <span className="shrink-0 text-[10px] italic text-brand-grey/80 dark:text-slate-400">{factor.sourceLabel}</span>
               </div>
             ))}
           </div>
@@ -240,7 +240,7 @@ export function MatchCard({
                 {match.readiness}
               </span>
               {match.overridden ? (
-                <div className="mt-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-value-leadership-dark">
+                <div className="mt-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-value-leadership-dark dark:text-amber-300">
                   Moved by you
                 </div>
               ) : match.minsTotal > 0 ? (
@@ -335,7 +335,7 @@ export function MatchCard({
                   onChange={(event) => setExNote(event.target.value)}
                   onBlur={() => onExclude("OTHER", exNote)}
                   placeholder="Reason note"
-                  className="min-w-0 flex-1 rounded-element border border-brand-lea/20 px-2 py-0.5 text-[11px] outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10"
+                  className="min-w-0 flex-1 rounded-element border border-brand-lea/20 px-2 py-0.5 text-[11px] outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
                 />
               ) : null}
             </div>
@@ -366,7 +366,7 @@ export function MatchCard({
               <FactorList factors={match.factors} />
 
               {canEdit && requirementId ? (
-                <div className="mt-3 rounded-element bg-white/70 p-2.5 ring-1 ring-brand-lea/10 dark:ring-white/10">
+                <div className="mt-3 rounded-element bg-white/70 p-2.5 ring-1 ring-brand-lea/10 dark:bg-white/5 dark:ring-white/10">
                   <span className="text-[11px] font-medium text-brand-grey dark:text-slate-400">Tag the fit</span>
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {FIT_TAGS.map((tag) => (
@@ -393,7 +393,7 @@ export function MatchCard({
                         onChange={(event) => setReason(event.target.value)}
                         onBlur={saveReason}
                         placeholder="Why? (helps the system learn) — e.g. 'great hours, wrong base'"
-                        className="min-w-0 flex-1 rounded-element border-[0.5px] border-brand-lea/20 px-2 py-1 text-[11px] outline-none focus:border-brand-gold dark:border-white/10"
+                        className="min-w-0 flex-1 rounded-element border-[0.5px] border-brand-lea/20 px-2 py-1 text-[11px] outline-none focus:border-brand-gold dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
                       />
                       <button
                         type="button"

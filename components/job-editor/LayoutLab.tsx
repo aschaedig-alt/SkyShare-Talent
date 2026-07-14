@@ -55,7 +55,7 @@ const ALL_PAGES = [...SOURCE_PAGES, ...TARGET_PAGES];
 const PAGE_COLOR: Record<string, string> = {
   "Job Builder": "bg-brand-lea text-white",
   "Final Review": "bg-emerald-600 text-white",
-  "Content Blocks": "bg-brand-gold text-brand-lea dark:text-slate-100",
+  "Content Blocks": "bg-brand-gold text-brand-lea",
   "Page 1": "bg-indigo-600 text-white",
   "Page 2": "bg-fuchsia-700 text-white"
 };
@@ -488,7 +488,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
       case "jb-aviation":
         return <FieldRows rows={[["Seat code", job?.seatCode ?? null], ["Position", job?.positionCode ?? null], ["Travel %", job?.travelPercentage ?? null], ["Aircraft", null], ["Total time", null], ["Type rating", null]]} />;
       case "jb-summary":
-        return job?.summary ? <p className="text-xs leading-5 text-brand-black/80">{job.summary}</p> : <p className="text-xs italic text-brand-grey dark:text-slate-400">No summary.</p>;
+        return job?.summary ? <p className="text-xs leading-5 text-brand-black/80 dark:text-slate-300">{job.summary}</p> : <p className="text-xs italic text-brand-grey dark:text-slate-400">No summary.</p>;
       case "jb-responsibilities":
         return renderSection("responsibilities");
       case "jb-qualifications":
@@ -501,7 +501,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
             {job?.blockInstances.length ? job.blockInstances.map((inst) => (
               <div key={inst.id} className="flex items-center justify-between gap-2 rounded border border-brand-lea/10 bg-white px-2 py-1 text-xs dark:border-white/10 dark:bg-brand-panel">
                 <span className="truncate font-semibold text-brand-lea dark:text-slate-100">{getInstanceTitle(inst)}</span>
-                <span className="shrink-0 rounded bg-brand-lea/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-eden">{inst.contentBlock?.category ?? "—"}</span>
+                <span className="shrink-0 rounded bg-brand-lea/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-eden dark:bg-white/10 dark:text-[#8fb3d6]">{inst.contentBlock?.category ?? "—"}</span>
               </div>
             )) : <p className="text-xs italic text-brand-grey dark:text-slate-400">No blocks attached.</p>}
           </div>
@@ -608,7 +608,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => setShowGrid((v) => !v)} className={`inline-flex items-center gap-1.5 rounded border px-3 py-2 text-sm font-semibold transition ${showGrid ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-lea hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"}`}>
+          <button onClick={() => setShowGrid((v) => !v)} className={`inline-flex items-center gap-1.5 rounded border px-3 py-2 text-sm font-semibold transition ${showGrid ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-lea hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5 dark:hover:bg-white/10"}`}>
             <Grid3x3 className="h-4 w-4" /> Grid
           </button>
           <Button onClick={copyLayout}>{copied ? "Copied!" : "Copy layout"}</Button>
@@ -620,9 +620,9 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
       <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded border border-brand-lea/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-brand-panel">
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Presets:</span>
-          <button onClick={() => applyPreset("source")} className="rounded border border-brand-lea/20 px-3 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">Source (3 cols)</button>
-          <button onClick={() => applyPreset("one")} className="rounded border border-indigo-300 bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700 transition hover:bg-indigo-100">One-page draft</button>
-          <button onClick={() => applyPreset("two")} className="rounded border border-fuchsia-300 bg-fuchsia-50 px-3 py-1 text-[11px] font-semibold text-fuchsia-700 transition hover:bg-fuchsia-100">Two-page split</button>
+          <button onClick={() => applyPreset("source")} className="rounded border border-brand-lea/20 px-3 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5 dark:hover:bg-white/10">Source (3 cols)</button>
+          <button onClick={() => applyPreset("one")} className="rounded border border-indigo-300 bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-500/30 dark:bg-indigo-500/15 dark:text-indigo-300 dark:hover:bg-indigo-500/25">One-page draft</button>
+          <button onClick={() => applyPreset("two")} className="rounded border border-fuchsia-300 bg-fuchsia-50 px-3 py-1 text-[11px] font-semibold text-fuchsia-700 transition hover:bg-fuchsia-100 dark:border-fuchsia-500/30 dark:bg-fuchsia-500/15 dark:text-fuchsia-300 dark:hover:bg-fuchsia-500/25">Two-page split</button>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Density:</span>
@@ -631,7 +631,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
               <button
                 key={d}
                 onClick={() => changeDensity(d)}
-                className={`px-3 py-1 text-[11px] font-semibold capitalize transition ${density === d ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60 dark:text-slate-100 dark:bg-white/5"}`}
+                className={`px-3 py-1 text-[11px] font-semibold capitalize transition ${density === d ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60 dark:text-slate-100 dark:bg-white/5 dark:hover:bg-white/10"}`}
               >
                 {d}
               </button>
@@ -646,7 +646,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
                 key={o.n}
                 onClick={() => changeCols(o.n)}
                 title={`${o.n} columns`}
-                className={`px-3 py-1 text-[11px] font-semibold transition ${cols === o.n ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60 dark:text-slate-100 dark:bg-white/5"}`}
+                className={`px-3 py-1 text-[11px] font-semibold transition ${cols === o.n ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60 dark:text-slate-100 dark:bg-white/5 dark:hover:bg-white/10"}`}
               >
                 {o.label}
               </button>
@@ -666,7 +666,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
             <button
               key={p}
               onClick={() => setPageFilter(p)}
-              className={`inline-flex items-center gap-1.5 rounded border px-3 py-1 text-[11px] font-semibold transition ${active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/15 bg-white text-brand-lea hover:bg-brand-cloudDancer/50 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"}`}
+              className={`inline-flex items-center gap-1.5 rounded border px-3 py-1 text-[11px] font-semibold transition ${active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/15 bg-white text-brand-lea hover:bg-brand-cloudDancer/50 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100 dark:hover:bg-white/10"}`}
             >
               {p !== "All" && <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${PAGE_DOT[p]}`} />}
               {p}
@@ -684,7 +684,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
               key={w.id}
               type="button"
               onClick={() => toggleHide(w.id)}
-              className="inline-flex items-center gap-1 rounded border border-brand-lea/15 bg-brand-cloudDancer/50 px-2.5 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+              className="inline-flex items-center gap-1 rounded border border-brand-lea/15 bg-brand-cloudDancer/50 px-2.5 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:hover:bg-white/10"
               title="Show again"
             >
               <Eye className="h-3 w-3" /> {w.title}
@@ -790,14 +790,14 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
                 <button
                   key={p}
                   onClick={() => reassign(moveMenu.id, p)}
-                  className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition ${current ? "bg-brand-cloudDancer/60 font-semibold text-brand-lea dark:bg-white/5 dark:text-slate-100" : "text-brand-black/80 hover:bg-brand-cloudDancer/40 dark:bg-white/5"}`}
+                  className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition ${current ? "bg-brand-cloudDancer/60 font-semibold text-brand-lea dark:bg-white/5 dark:text-slate-100" : "text-brand-black/80 hover:bg-brand-cloudDancer/40 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"}`}
                 >
                   <span className="flex items-center gap-2">
                     <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${PAGE_DOT[p]}`} />
                     {p}
                     {isOrigin && <span className="text-[9px] uppercase text-brand-grey dark:text-slate-400">(origin)</span>}
                   </span>
-                  {current && <span className="text-brand-eden">✓</span>}
+                  {current && <span className="text-brand-eden dark:text-[#8fb3d6]">✓</span>}
                 </button>
               );
             })}

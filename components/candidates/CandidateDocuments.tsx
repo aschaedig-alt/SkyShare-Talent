@@ -341,7 +341,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
               value={docSearch}
               onChange={(e) => setDocSearch(e.target.value)}
               placeholder="Search inside this candidate's documents…"
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-slate-100"
             />
             {docSearch && (
               <button onClick={() => setDocSearch("")} className="text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Clear search">
@@ -466,7 +466,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
             <div className="mt-2 space-y-1.5">
               {unassigned.map((f) => (
                 <div key={f.id} className="flex items-center gap-2 rounded border border-brand-lea/10 bg-white px-2.5 py-1.5 dark:border-white/10 dark:bg-brand-panel">
-                  <span className="rounded bg-red-100 px-1 py-0.5 text-[9px] font-bold text-red-800">PDF</span>
+                  <span className="rounded bg-red-100 px-1 py-0.5 text-[9px] font-bold text-red-800 dark:bg-red-500/15 dark:text-red-300">PDF</span>
                   <span className="min-w-0 flex-1 truncate text-sm text-brand-lea dark:text-slate-100">{f.displayFilename}</span>
                   <button
                     onClick={() => linkFile(f.id)}
@@ -532,7 +532,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
         /* Single focus view */
         <>
           <div className="flex flex-wrap items-center gap-2 border-b border-brand-lea/10 px-4 py-2.5 dark:border-white/10">
-            <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-800">
+            <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-800 dark:bg-red-500/15 dark:text-red-300">
               {isPdf(activeFile) ? "PDF" : (activeFile.mimeType?.split("/")[1] ?? "FILE").toUpperCase().slice(0, 4)}
             </span>
             {renamingId === activeFile.id ? (
@@ -545,9 +545,9 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                     if (e.key === "Enter") handleRename(activeFile.id);
                     if (e.key === "Escape") setRenamingId(null);
                   }}
-                  className="min-w-0 flex-1 rounded border border-brand-lea/30 px-2 py-1 text-sm focus:border-brand-gold focus:outline-none dark:border-white/10"
+                  className="min-w-0 flex-1 rounded border border-brand-lea/30 px-2 py-1 text-sm focus:border-brand-gold focus:outline-none dark:border-white/10 dark:text-slate-100"
                 />
-                <button onClick={() => handleRename(activeFile.id)} disabled={busy} className="rounded p-1 text-emerald-700 hover:bg-emerald-50" aria-label="Save name"><Check className="h-4 w-4" /></button>
+                <button onClick={() => handleRename(activeFile.id)} disabled={busy} className="rounded p-1 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/15" aria-label="Save name"><Check className="h-4 w-4" /></button>
                 <button onClick={() => setRenamingId(null)} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/40 dark:text-slate-400 dark:bg-white/5" aria-label="Cancel"><X className="h-4 w-4" /></button>
               </div>
             ) : (
@@ -581,7 +581,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                 {activeFile.storageKey && (
                   <a href={`/api/candidate-files/${activeFile.id}`} download className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/40 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5" aria-label="Download" title="Download"><Download className="h-4 w-4" /></a>
                 )}
-                <button onClick={() => setConfirmDeleteId(activeFile.id)} className="rounded p-1.5 text-red-600 transition hover:bg-red-50" aria-label="Delete" title="Delete"><Trash2 className="h-4 w-4" /></button>
+                <button onClick={() => setConfirmDeleteId(activeFile.id)} className="rounded p-1.5 text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/15" aria-label="Delete" title="Delete"><Trash2 className="h-4 w-4" /></button>
               </>
             )}
           </div>
@@ -593,7 +593,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                 <button onClick={() => handleDelete(activeFile.id)} disabled={busy} className="flex items-center gap-1 rounded bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60">
                   {busy ? <Loader className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />} Delete
                 </button>
-                <button onClick={() => setConfirmDeleteId(null)} className="rounded border border-red-300 px-3 py-1 text-xs font-semibold text-red-700">Cancel</button>
+                <button onClick={() => setConfirmDeleteId(null)} className="rounded border border-red-300 px-3 py-1 text-xs font-semibold text-red-700 dark:border-red-500/30 dark:text-red-300">Cancel</button>
               </div>
             </div>
           )}

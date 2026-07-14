@@ -114,7 +114,7 @@ export function ResumeIntake({
                   multiple
                   accept={ACCEPT}
                   onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-                  className="block w-full text-sm text-brand-grey file:mr-3 file:rounded file:border-0 file:bg-brand-lea file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-eden"
+                  className="block w-full text-sm text-brand-grey dark:text-slate-400 file:mr-3 file:rounded file:border-0 file:bg-brand-lea file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-eden"
                 />
                 {files.length > 0 && (
                   <ul className="mt-3 max-h-40 space-y-1 overflow-y-auto text-xs text-brand-black/80 dark:text-slate-300">
@@ -123,7 +123,7 @@ export function ResumeIntake({
                     ))}
                   </ul>
                 )}
-                {error && <p className="mt-3 text-xs font-semibold text-red-600">{error}</p>}
+                {error && <p className="mt-3 text-xs font-semibold text-red-600 dark:text-red-300">{error}</p>}
                 <div className="mt-4 flex justify-end gap-2">
                   <Button variant="secondary" onClick={() => { setOpen(false); reset(); }}>Cancel</Button>
                   <Button onClick={submit} disabled={busy}>
@@ -136,13 +136,13 @@ export function ResumeIntake({
                 <div className="max-h-72 space-y-1.5 overflow-y-auto">
                   {results.map((r, i) => (
                     <div key={i} className="flex items-start gap-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/5">
-                      {r.error ? <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" /> : <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />}
+                      {r.error ? <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-300" /> : <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />}
                       <div className="min-w-0">
                         {r.error ? (
-                          <div className="text-red-600"><span className="font-semibold">{r.filename}</span> — {r.error}</div>
+                          <div className="text-red-600 dark:text-red-300"><span className="font-semibold">{r.filename}</span> — {r.error}</div>
                         ) : (
                           <>
-                            <div className="font-semibold text-brand-lea">{r.displayName} {r.reused && <span className="font-normal text-brand-grey dark:text-slate-400">(existing)</span>}</div>
+                            <div className="font-semibold text-brand-lea dark:text-slate-100">{r.displayName} {r.reused && <span className="font-normal text-brand-grey dark:text-slate-400">(existing)</span>}</div>
                             <div className="text-brand-grey dark:text-slate-400">{[r.email, r.phone].filter(Boolean).join(" · ") || "no contact found — edit on profile"}{r.linkedToJob ? " · added to job" : ""}</div>
                           </>
                         )}

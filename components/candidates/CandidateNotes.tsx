@@ -84,7 +84,7 @@ export function CandidateNotes({ candidateId, initialNotes }: { candidateId: str
           <Send className="h-4 w-4" /> Add
         </Button>
       </div>
-      {error ? <p className="mt-2 text-xs font-medium text-red-700">{error}</p> : null}
+      {error ? <p className="mt-2 text-xs font-medium text-red-700 dark:text-red-300">{error}</p> : null}
 
       {/* List */}
       <div className="mt-4 space-y-2">

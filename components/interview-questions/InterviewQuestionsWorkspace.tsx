@@ -28,7 +28,7 @@ type FormState = {
   isActive: boolean;
 };
 
-const inputCls = "w-full rounded border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10";
+const inputCls = "w-full rounded border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100";
 
 function toForm(q?: InterviewQuestionItem): FormState {
   return {
@@ -155,7 +155,7 @@ function QuestionForm({
       </div>
 
       <div className="mt-3 flex items-center justify-end gap-3">
-        {error ? <span className="mr-auto text-xs font-medium text-red-700">{error}</span> : null}
+        {error ? <span className="mr-auto text-xs font-medium text-red-700 dark:text-red-300">{error}</span> : null}
         <button type="button" onClick={onCancel} className="rounded px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400">
           Cancel
         </button>
@@ -266,7 +266,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey dark:text-slate-400" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search questions" className={`${inputCls} pl-9`} />
         </div>
-        <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10">
+        <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel dark:text-slate-100">
           <option value="all">All categories</option>
           {CATEGORIES.map((c) => (
             <option key={c} value={c}>
@@ -274,7 +274,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
             </option>
           ))}
         </select>
-        <select value={fVal} onChange={(e) => setFVal(e.target.value)} className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10">
+        <select value={fVal} onChange={(e) => setFVal(e.target.value)} className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel dark:text-slate-100">
           <option value="all">All values</option>
           {COMPANY_VALUES.map((v) => (
             <option key={v.colorKey} value={v.colorKey}>
@@ -282,7 +282,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
             </option>
           ))}
         </select>
-        <select value={fDept} onChange={(e) => setFDept(e.target.value)} className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10">
+        <select value={fDept} onChange={(e) => setFDept(e.target.value)} className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel dark:text-slate-100">
           <option value="all">All departments</option>
           {DEPARTMENTS.map((d) => (
             <option key={d.key} value={d.key}>
@@ -324,7 +324,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
                     <button onClick={() => { setCreating(false); setEditingId(item.id); }} title="Edit" className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5">
                       <Pencil className="h-4 w-4" />
                     </button>
-                    <button onClick={() => remove(item)} disabled={busyId === item.id} title="Delete" className="rounded p-1.5 text-brand-grey transition hover:bg-red-50 hover:text-red-600 dark:text-slate-400">
+                    <button onClick={() => remove(item)} disabled={busyId === item.id} title="Delete" className="rounded p-1.5 text-brand-grey transition hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-500/15 dark:hover:text-red-300">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>

@@ -18,14 +18,14 @@ import { InterviewerPicker } from "@/components/calendar/InterviewerPicker";
 import { Button } from "@/components/ui";
 import { formatDateTimeWithZone } from "@/lib/calendar/format";
 
-const inputCls = "w-full rounded border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10";
+const inputCls = "w-full rounded border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100";
 
 function recoTone(key: RecommendationKey): string {
   switch (key) {
     case "STRONG_YES":
       return "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300";
     case "YES":
-      return "bg-teal-100 text-teal-800";
+      return "bg-teal-100 dark:bg-teal-500/15 text-teal-800 dark:text-teal-300";
     case "NO":
       return "bg-amber-100 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300";
     case "STRONG_NO":
@@ -117,7 +117,7 @@ function ScorecardEditor({
             <div key={idx} className="rounded border border-brand-lea/10 bg-white p-2.5 dark:border-white/10 dark:bg-brand-panel">
               <div className="flex items-start gap-2">
                 <input value={item.q} onChange={(e) => setText(idx, e.target.value)} className={`${inputCls} flex-1`} />
-                <button type="button" onClick={() => removeItem(idx)} aria-label="Remove" className="mt-1 rounded p-1 text-brand-grey transition hover:text-red-600 dark:text-slate-400">
+                <button type="button" onClick={() => removeItem(idx)} aria-label="Remove" className="mt-1 rounded p-1 text-brand-grey transition hover:text-red-600 dark:text-slate-400 dark:hover:text-red-300">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
@@ -187,7 +187,7 @@ function ScorecardEditor({
       </label>
 
       <div className="mt-3 flex items-center justify-end gap-3">
-        {error ? <span className="mr-auto text-xs font-medium text-red-700">{error}</span> : null}
+        {error ? <span className="mr-auto text-xs font-medium text-red-700 dark:text-red-300">{error}</span> : null}
         <button type="button" onClick={onCancel} className="rounded px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400">
           Cancel
         </button>
@@ -317,7 +317,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
                     <button onClick={() => { setCreating(false); setEditingId(card.id); }} title="Edit" className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5">
                       <Pencil className="h-4 w-4" />
                     </button>
-                    <button onClick={() => remove(card)} disabled={busyId === card.id} title="Delete" className="rounded p-1.5 text-brand-grey transition hover:bg-red-50 hover:text-red-600 dark:text-slate-400">
+                    <button onClick={() => remove(card)} disabled={busyId === card.id} title="Delete" className="rounded p-1.5 text-brand-grey transition hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-500/15 dark:hover:text-red-300">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
@@ -327,7 +327,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
                     {card.items.map((it, i) => (
                       <li key={i} className="flex items-start justify-between gap-3 text-sm">
                         <span className="text-brand-black dark:text-slate-100">{it.q}</span>
-                        <span className={`shrink-0 text-xs font-semibold ${it.rating ? "text-brand-lea dark:text-slate-100" : "text-brand-grey/60"}`}>
+                        <span className={`shrink-0 text-xs font-semibold ${it.rating ? "text-brand-lea dark:text-slate-100" : "text-brand-grey/60 dark:text-slate-500"}`}>
                           {it.rating ? RATING_LABEL[it.rating] : "—"}
                         </span>
                       </li>

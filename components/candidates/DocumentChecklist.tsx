@@ -50,19 +50,19 @@ export function DocumentChecklist({ files }: { files: FileLike[] }) {
             <li key={c.type} className="flex items-center gap-2 text-xs">
               <span
                 className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${
-                  has ? "bg-emerald-100 text-emerald-700" : c.core ? "bg-red-100 text-red-600" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400"
+                  has ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" : c.core ? "bg-red-100 text-red-600 dark:bg-red-500/15 dark:text-red-300" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400"
                 }`}
               >
                 {has ? <Check className="h-3 w-3" /> : c.core ? <X className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
               </span>
-              <span className={`flex-1 truncate ${has ? "text-brand-black/80" : c.core ? "text-red-600" : "text-brand-grey dark:text-slate-400"}`}>{c.type}</span>
+              <span className={`flex-1 truncate ${has ? "text-brand-black/80 dark:text-slate-300" : c.core ? "text-red-600 dark:text-red-300" : "text-brand-grey dark:text-slate-400"}`}>{c.type}</span>
               {count > 1 && <span className="shrink-0 rounded bg-brand-lea/10 px-1.5 text-[10px] font-semibold text-brand-grey dark:text-slate-400">{count}</span>}
             </li>
           );
         })}
       </ul>
       {coreMissing > 0 && (
-        <p className="mt-3 text-[11px] text-amber-700">{coreMissing} required document{coreMissing === 1 ? "" : "s"} missing.</p>
+        <p className="mt-3 text-[11px] text-amber-700 dark:text-amber-300">{coreMissing} required document{coreMissing === 1 ? "" : "s"} missing.</p>
       )}
     </div>
   );

@@ -115,7 +115,7 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
     }
   }
 
-  const inputCls = "rounded border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10";
+  const inputCls = "rounded border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100";
 
   return (
     <div className="space-y-5 px-5 py-5 lg:px-8">

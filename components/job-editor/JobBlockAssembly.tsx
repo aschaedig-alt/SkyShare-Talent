@@ -124,7 +124,7 @@ function JobCanvas({ children, isEmpty }: { children: ReactNode; isEmpty: boolea
     >
       {children}
       {isEmpty && (
-        <div className="flex min-h-36 items-center justify-center rounded bg-white/70 px-4 py-8 text-center text-sm font-semibold text-brand-grey dark:text-slate-400">
+        <div className="flex min-h-36 items-center justify-center rounded bg-white/70 px-4 py-8 text-center text-sm font-semibold text-brand-grey dark:bg-white/5 dark:text-slate-400">
           Drag reusable blocks here to build this job post.
         </div>
       )}
@@ -205,7 +205,7 @@ function SortableBlockRow({
             <span className="rounded bg-brand-sweet/35 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-brand-lea dark:text-slate-100">
               {formatEnum(instance.mode)}
             </span>
-            <span className="rounded bg-brand-cloudDancer px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-brand-eden dark:bg-white/5">
+            <span className="rounded bg-brand-cloudDancer px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-brand-eden dark:bg-white/5 dark:text-[#8fb3d6]">
               v{instance.blockVersion?.versionNumber ?? 1}
             </span>
             {outdated && (
@@ -218,7 +218,7 @@ function SortableBlockRow({
             {instance.contentBlock?.name ?? "Custom content"} - {formatEnum(instance.contentBlock?.category ?? "CUSTOM")}
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            <span className="rounded bg-brand-cloudDancer px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-brand-eden dark:bg-white/5">
+            <span className="rounded bg-brand-cloudDancer px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-brand-eden dark:bg-white/5 dark:text-[#8fb3d6]">
               {formatEnum(instance.contentBlock?.placement ?? "OPTIONAL")}
             </span>
           </div>
@@ -227,7 +227,7 @@ function SortableBlockRow({
               type="button"
               onClick={() => onAdoptCurrent(instance.id)}
               disabled={isBusy}
-              className="inline-flex items-center gap-1.5 rounded border border-brand-lea/12 px-2.5 py-1.5 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+              className="inline-flex items-center gap-1.5 rounded border border-brand-lea/12 px-2.5 py-1.5 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5 dark:hover:bg-white/10"
               title="Use the current reusable block version"
             >
               <Link2 className="h-3.5 w-3.5" />
@@ -246,7 +246,7 @@ function SortableBlockRow({
                 )
               }
               disabled={isBusy || !instance.blockVersionId}
-              className="inline-flex items-center gap-1.5 rounded border border-brand-lea/12 px-2.5 py-1.5 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+              className="inline-flex items-center gap-1.5 rounded border border-brand-lea/12 px-2.5 py-1.5 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5 dark:hover:bg-white/10"
               title="Keep this job on this exact block version"
             >
               <Pin className="h-3.5 w-3.5" />
@@ -256,7 +256,7 @@ function SortableBlockRow({
               type="button"
               onClick={forkForJob}
               disabled={isBusy}
-              className="inline-flex items-center gap-1.5 rounded border border-brand-lea/12 px-2.5 py-1.5 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
+              className="inline-flex items-center gap-1.5 rounded border border-brand-lea/12 px-2.5 py-1.5 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5 dark:hover:bg-white/10"
               title="Make a custom copy for this job only"
             >
               <Pencil className="h-3.5 w-3.5" />
@@ -280,7 +280,7 @@ function SortableBlockRow({
             type="button"
             onClick={() => onRemove(instance.id)}
             disabled={isBusy}
-            className="rounded border border-brand-red/20 p-2 text-brand-red hover:bg-brand-red/8 disabled:opacity-60"
+            className="rounded border border-brand-red/20 p-2 text-brand-red hover:bg-brand-red/8 disabled:opacity-60 dark:text-red-300"
             title="Remove block from this job"
           >
             <Trash2 className="h-4 w-4" />
@@ -298,7 +298,7 @@ function SortableBlockRow({
               <button
                 type="button"
                 onClick={() => setIsEditingCustom(false)}
-                className="rounded p-1 text-brand-grey hover:bg-white dark:text-slate-400 dark:bg-brand-panel"
+                className="rounded p-1 text-brand-grey hover:bg-white dark:text-slate-400 dark:bg-brand-panel dark:hover:bg-white/10"
                 aria-label="Cancel custom edit"
               >
                 <X className="h-4 w-4" />
@@ -308,7 +308,7 @@ function SortableBlockRow({
           <input
             value={customTitle}
             onChange={(event) => setCustomTitle(event.target.value)}
-            className="mb-2 w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm outline-none focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-brand-panel"
+            className="mb-2 w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm outline-none focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
             placeholder="Custom section title"
           />
           <RichTextEditor
@@ -557,7 +557,7 @@ export function JobBlockAssembly({ job, availableBlocks, onJobUpdated }: JobBloc
       <div className="border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden dark:text-[#8fb3d6]">
               Job Section Composer
             </p>
             <h2 className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">Reusable sections and custom forks</h2>
@@ -573,10 +573,10 @@ export function JobBlockAssembly({ job, availableBlocks, onJobUpdated }: JobBloc
           isBusy
             ? "border-brand-gold/35 bg-brand-gold/12 text-brand-lea dark:text-slate-100"
             : error
-              ? "border-brand-red/25 bg-brand-red/8 text-brand-red"
+              ? "border-brand-red/25 bg-brand-red/8 text-brand-red dark:text-red-300"
               : message
                 ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
-                : "border-brand-lea/10 bg-brand-cloudDancer/55 text-brand-eden dark:border-white/10 dark:bg-white/5"
+                : "border-brand-lea/10 bg-brand-cloudDancer/55 text-brand-eden dark:border-white/10 dark:bg-white/5 dark:text-[#8fb3d6]"
         }`}
       >
         {isBusy ? (
@@ -593,7 +593,7 @@ export function JobBlockAssembly({ job, availableBlocks, onJobUpdated }: JobBloc
         <div className="grid gap-4 p-4 xl:min-h-[calc(100vh-110px)] xl:grid-cols-[minmax(270px,0.78fr)_minmax(380px,1fr)_minmax(440px,1.1fr)]">
           <aside className="flex min-h-[900px] flex-col rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-3 xl:min-h-0 dark:border-white/10 dark:bg-white/5">
             <div className="mb-3">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-eden">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-eden dark:text-[#8fb3d6]">
                 Drag Block Library
               </p>
               <h3 className="mt-1 text-base font-bold text-brand-lea dark:text-slate-100">Available reusable blocks</h3>
@@ -601,11 +601,11 @@ export function JobBlockAssembly({ job, availableBlocks, onJobUpdated }: JobBloc
             <input
               value={blockQuery}
               onChange={(event) => setBlockQuery(event.target.value)}
-              className="mb-3 w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm outline-none focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-brand-panel"
+              className="mb-3 w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm outline-none focus:border-brand-eden focus:ring-4 focus:ring-brand-sweet/35 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
               placeholder="Search blocks..."
             />
             <div className="mb-3 rounded border border-brand-lea/10 bg-white p-2 dark:border-white/10 dark:bg-brand-panel">
-              <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-brand-eden">
+              <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-brand-eden dark:text-[#8fb3d6]">
                 Quick add
               </label>
               <div className="flex gap-2">
@@ -637,7 +637,7 @@ export function JobBlockAssembly({ job, availableBlocks, onJobUpdated }: JobBloc
               {groupedAttachableBlocks.map((group) =>
                 group.blocks.length ? (
                   <div key={group.placement}>
-                    <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden">
+                    <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">
                       {formatEnum(group.placement)}
                     </div>
                     <div className="space-y-2">
@@ -662,10 +662,10 @@ export function JobBlockAssembly({ job, availableBlocks, onJobUpdated }: JobBloc
             <div>
               <div className="mb-2 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-eden">Job Canvas</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-eden dark:text-[#8fb3d6]">Job Canvas</p>
                   <h3 className="mt-1 text-base font-bold text-brand-lea dark:text-slate-100">Drag to set the posting order</h3>
                 </div>
-                <span className="rounded bg-brand-cloudDancer px-2 py-1 text-xs font-bold text-brand-eden dark:bg-white/5">
+                <span className="rounded bg-brand-cloudDancer px-2 py-1 text-xs font-bold text-brand-eden dark:bg-white/5 dark:text-[#8fb3d6]">
                   {localInstances.length} block{localInstances.length === 1 ? "" : "s"}
                 </span>
               </div>
@@ -699,7 +699,7 @@ export function JobBlockAssembly({ job, availableBlocks, onJobUpdated }: JobBloc
           <aside className="flex min-h-[900px] flex-col rounded border border-brand-lea/10 bg-white p-3 xl:min-h-0 dark:border-white/10 dark:bg-brand-panel">
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-eden">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-eden dark:text-[#8fb3d6]">
                   Live Builder Preview
                 </p>
                 <h3 className="mt-1 text-base font-bold text-brand-lea dark:text-slate-100">Preview after block order changes</h3>

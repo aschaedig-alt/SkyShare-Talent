@@ -95,7 +95,7 @@ export function CandidateFileUploadButton({ candidateId }: CandidateFileUploadBu
           aria-live={status === "error" ? undefined : "polite"}
           className={
             status === "error"
-              ? "max-w-xs text-xs font-medium text-red-700"
+              ? "max-w-xs text-xs font-medium text-red-700 dark:text-red-300"
               : "max-w-xs text-xs font-medium text-brand-grey dark:text-slate-400"
           }
         >

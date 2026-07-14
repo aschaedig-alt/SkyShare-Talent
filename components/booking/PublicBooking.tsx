@@ -376,7 +376,7 @@ function BookingForm(props: {
             value={props.name}
             onChange={(e) => props.setName(e.target.value)}
             required
-            className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
+            className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
           />
         </label>
         <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
@@ -386,7 +386,7 @@ function BookingForm(props: {
             value={props.email}
             onChange={(e) => props.setEmail(e.target.value)}
             required
-            className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
+            className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
           />
         </label>
         <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
@@ -394,7 +394,7 @@ function BookingForm(props: {
           <input
             value={props.phone}
             onChange={(e) => props.setPhone(e.target.value)}
-            className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
+            className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
           />
         </label>
         <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
@@ -403,7 +403,7 @@ function BookingForm(props: {
             value={props.notes}
             onChange={(e) => props.setNotes(e.target.value)}
             rows={3}
-            className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
+            className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
           />
         </label>
       </div>
@@ -439,8 +439,8 @@ function ConfirmedCard({
 
   return (
     <div className="py-4 text-center">
-      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
-        <Check className="h-7 w-7 text-emerald-600" />
+      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/15">
+        <Check className="h-7 w-7 text-emerald-600 dark:text-emerald-300" />
       </span>
       <h2 className="mt-4 text-xl font-semibold text-brand-lea dark:text-slate-100">You&apos;re booked!</h2>
       <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">

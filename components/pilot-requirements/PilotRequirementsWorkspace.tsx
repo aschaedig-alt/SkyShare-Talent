@@ -54,7 +54,7 @@ function EvidencePanel({ requirement }: { requirement: PilotRequirementDetail })
           </p>
           <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Original imported job text</h3>
         </div>
-        <span className="rounded bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden dark:bg-white/5">
+        <span className="rounded bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden dark:bg-white/5 dark:text-[#8fb3d6]">
           Preserved
         </span>
       </div>
@@ -115,7 +115,7 @@ function RequirementDetail({
             </div>
             {requirement.linkedPositions.length > 0 ? (
               <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-                <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-eden">Dual position</span>
+                <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-eden dark:text-[#8fb3d6]">Dual position</span>
                 <span className="text-brand-grey dark:text-slate-400">
                   also covers {requirement.linkedPositions.map((p) => p.title).join(", ")}
                 </span>
@@ -160,7 +160,7 @@ function RequirementDetail({
                 </p>
                 <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Enabled requirement gates</h3>
               </div>
-              <span className="rounded bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden dark:bg-white/5">
+              <span className="rounded bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden dark:bg-white/5 dark:text-[#8fb3d6]">
                 {requirement.activeGateCount} active
               </span>
             </div>
@@ -335,12 +335,12 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
                       </div>
                       <div className="mt-2 flex flex-wrap gap-1">
                         {requirement.aircraftTypes.slice(0, 2).map((aircraft) => (
-                          <span key={aircraft} className="rounded bg-brand-sweet/25 px-2 py-0.5 text-[10px] font-semibold text-brand-eden">
+                          <span key={aircraft} className="rounded bg-brand-sweet/25 px-2 py-0.5 text-[10px] font-semibold text-brand-eden dark:text-[#8fb3d6]">
                             {aircraft}
                           </span>
                         ))}
                         {requirement.base ? (
-                          <span className="rounded bg-brand-sweet/25 px-2 py-0.5 text-[10px] font-semibold text-brand-eden">
+                          <span className="rounded bg-brand-sweet/25 px-2 py-0.5 text-[10px] font-semibold text-brand-eden dark:text-[#8fb3d6]">
                             {requirement.base}
                           </span>
                         ) : null}

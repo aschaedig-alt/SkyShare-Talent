@@ -119,7 +119,7 @@ function DroppableLane({
           <h3 className="text-sm font-bold uppercase tracking-[0.16em] text-brand-lea dark:text-slate-100">{placement.label}</h3>
           <p className="mt-1 text-xs leading-5 text-brand-grey dark:text-slate-400">{placement.description}</p>
         </div>
-        <Lock className="h-4 w-4 shrink-0 text-brand-eden" />
+        <Lock className="h-4 w-4 shrink-0 text-brand-eden dark:text-[#8fb3d6]" />
       </div>
       <div className="space-y-2">{children}</div>
     </section>
@@ -175,7 +175,7 @@ function DraggableBlockCard({
             <span className="rounded bg-brand-lea px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white">
               {formatEnum(block.category)}
             </span>
-            <span className="inline-flex items-center gap-1 rounded bg-brand-cloudDancer px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-brand-eden dark:bg-white/5">
+            <span className="inline-flex items-center gap-1 rounded bg-brand-cloudDancer px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-brand-eden dark:bg-white/5 dark:text-[#8fb3d6]">
               <Users className="h-3 w-3" />
               {block.usageCount ?? 0}
             </span>
@@ -225,7 +225,7 @@ export function BlockTemplateBoard({
       <div className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden dark:text-[#8fb3d6]">
               Template Board
             </p>
             <h2 className="mt-1 text-2xl font-semibold text-brand-lea dark:text-slate-100">Organize reusable blocks by purpose</h2>
@@ -256,7 +256,7 @@ export function BlockTemplateBoard({
                     />
                   ))}
                   {!laneBlocks.length && (
-                    <div className="rounded border border-dashed border-brand-lea/18 bg-white/65 px-3 py-5 text-center text-xs font-semibold text-brand-grey dark:border-white/10 dark:text-slate-400">
+                    <div className="rounded border border-dashed border-brand-lea/18 bg-white/65 px-3 py-5 text-center text-xs font-semibold text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
                       Drop blocks here
                     </div>
                   )}
@@ -270,12 +270,12 @@ export function BlockTemplateBoard({
       <div className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden dark:text-[#8fb3d6]">
               Job Coverage Matrix
             </p>
             <h2 className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">See which jobs have which block types</h2>
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded bg-brand-cloudDancer px-2.5 py-1.5 text-xs font-bold text-brand-eden dark:bg-white/5">
+          <span className="inline-flex items-center gap-1.5 rounded bg-brand-cloudDancer px-2.5 py-1.5 text-xs font-bold text-brand-eden dark:bg-white/5 dark:text-[#8fb3d6]">
             <AlertTriangle className="h-3.5 w-3.5" />
             Required lane highlights missing jobs
           </span>
@@ -283,7 +283,7 @@ export function BlockTemplateBoard({
 
         <div className="overflow-auto rounded border border-brand-lea/10 dark:border-white/10">
           <table className="min-w-[820px] w-full border-collapse bg-white text-sm dark:bg-brand-panel">
-            <thead className="bg-brand-cloudDancer/80 text-left text-xs font-bold uppercase tracking-[0.12em] text-brand-eden dark:bg-white/5">
+            <thead className="bg-brand-cloudDancer/80 text-left text-xs font-bold uppercase tracking-[0.12em] text-brand-eden dark:bg-white/5 dark:text-[#8fb3d6]">
               <tr>
                 <th className="px-3 py-3">Job</th>
                 <th className="px-3 py-3">Department</th>
@@ -315,7 +315,7 @@ export function BlockTemplateBoard({
                           <span
                             className={`inline-flex min-w-20 justify-center rounded px-2 py-1 text-xs font-bold uppercase tracking-[0.08em] ${
                               missingRequired
-                                ? "bg-brand-red/10 text-brand-red"
+                                ? "bg-brand-red/10 text-brand-red dark:bg-red-500/15 dark:text-red-300"
                                 : count
                                   ? "bg-brand-sweet/45 text-brand-lea dark:text-slate-100"
                                   : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400"

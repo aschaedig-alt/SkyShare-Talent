@@ -229,7 +229,7 @@ function ClusterCard({ cluster, onMerged }: { cluster: DuplicateCluster; onMerge
           <button
             onClick={handleDismissCluster}
             disabled={busy}
-            className="flex items-center gap-2 rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/30 hover:text-brand-lea disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-400 dark:bg-white/5"
+            className="flex items-center gap-2 rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/30 hover:text-brand-lea disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-400 dark:bg-white/5 dark:hover:bg-white/10 dark:hover:text-slate-100"
             title="These are all different jobs — stop showing this group"
           >
             {dismissing && <Loader className="h-4 w-4 animate-spin" />}
@@ -385,7 +385,7 @@ function JobRow({
             <button
               onClick={onDismiss}
               disabled={disabled}
-              className="rounded border border-brand-lea/15 px-2 py-1 font-semibold text-brand-grey transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:border-white/10 dark:text-slate-400"
+              className="rounded border border-brand-lea/15 px-2 py-1 font-semibold text-brand-grey transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:border-white/10 dark:text-slate-400 dark:hover:border-red-500/30 dark:hover:bg-red-500/15 dark:hover:text-red-300"
               title="This job is not a duplicate of the others — remove it from this cluster"
             >
               Not a dup

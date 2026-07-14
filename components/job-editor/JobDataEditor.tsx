@@ -113,7 +113,7 @@ function FieldRow({ label, note, source, children }: FieldRowProps) {
   return (
     <div className="border-b border-brand-lea/8 px-4 py-3 last:border-b-0 dark:border-white/10">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <label className="text-xs font-bold uppercase tracking-[0.12em] text-brand-eden">{label}</label>
+        <label className="text-xs font-bold uppercase tracking-[0.12em] text-brand-eden dark:text-[#8fb3d6]">{label}</label>
         <div className="flex flex-wrap justify-end gap-1.5">
           {source && <FieldSourceBadge source={source} />}
           <EditableStatus />
@@ -283,7 +283,7 @@ export function JobDataEditor({
       <div className="border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand-eden dark:text-[#8fb3d6]">
               1. Edit Job Data
             </p>
             <h2 className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">All fields are editable</h2>
@@ -295,7 +295,7 @@ export function JobDataEditor({
                   isSubmitting
                     ? "bg-brand-gold/20 text-brand-lea dark:text-slate-100"
                     : saveError
-                      ? "bg-brand-red/10 text-brand-red"
+                      ? "bg-brand-red/10 text-brand-red dark:text-red-300"
                       : "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
                 }`}
               >
@@ -331,7 +331,7 @@ export function JobDataEditor({
                 className={`rounded px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] transition hover:shadow-glow ${
                   active
                     ? "bg-brand-lea text-white shadow-sm"
-                    : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+                    : "border border-brand-lea/10 bg-white text-brand-lea hover:bg-brand-cloudDancer dark:border-white/10 dark:bg-brand-panel dark:text-slate-100 dark:hover:bg-white/10"
                 }`}
               >
                 {item.label} ({jobCounts[item.key as JobListView]})
@@ -370,7 +370,7 @@ export function JobDataEditor({
         <div className="mt-4 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div className="text-xs font-bold uppercase tracking-[0.14em] text-brand-eden">
+              <div className="text-xs font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">
                 Bulk status actions
               </div>
               <p className="mt-1 text-xs font-semibold leading-5 text-brand-grey dark:text-slate-400">
@@ -389,7 +389,7 @@ export function JobDataEditor({
               type="button"
               onClick={toggleAllBulkJobs}
               disabled={!bulkEligibleJobs.length || isBulkWorking}
-              className="rounded border border-brand-lea/12 bg-white px-2.5 py-1.5 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer disabled:opacity-60 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+              className="rounded border border-brand-lea/12 bg-white px-2.5 py-1.5 text-xs font-bold text-brand-lea hover:bg-brand-cloudDancer disabled:opacity-60 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100 dark:hover:bg-white/10"
             >
               {allEligibleSelected ? "Clear visible" : "Select visible"}
             </button>
@@ -420,7 +420,7 @@ export function JobDataEditor({
             {bulkEligibleJobs.map((job) => (
               <label
                 key={`${jobListView}-bulk-${job.id}`}
-                className="flex cursor-pointer items-start gap-2 rounded border border-brand-lea/8 bg-white px-2.5 py-2 text-sm hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-brand-panel"
+                className="flex cursor-pointer items-start gap-2 rounded border border-brand-lea/8 bg-white px-2.5 py-2 text-sm hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-brand-panel dark:hover:bg-white/10"
               >
                 <input
                   type="checkbox"
@@ -451,7 +451,7 @@ export function JobDataEditor({
       </div>
 
       <form id="job-data-form" onSubmit={handleSubmit(submit)}>
-        <div className="grid grid-cols-[118px_minmax(0,1fr)_88px] border-b border-brand-lea/10 bg-brand-cloudDancer/70 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:border-white/10 dark:bg-white/5">
+        <div className="grid grid-cols-[118px_minmax(0,1fr)_88px] border-b border-brand-lea/10 bg-brand-cloudDancer/70 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:border-white/10 dark:bg-white/5 dark:text-[#8fb3d6]">
           <div>Field</div>
           <div>Your Input</div>
           <div className="text-right">Status</div>
@@ -459,7 +459,7 @@ export function JobDataEditor({
 
         <FieldRow label="Job Title">
           <input {...register("title")} className={inputClass} />
-          {errors.title && <p className="mt-1 text-xs font-semibold text-brand-red">{errors.title.message}</p>}
+          {errors.title && <p className="mt-1 text-xs font-semibold text-brand-red dark:text-red-300">{errors.title.message}</p>}
         </FieldRow>
         <FieldRow label="Department">
           <input {...register("department")} className={inputClass} />
@@ -467,7 +467,7 @@ export function JobDataEditor({
         <FieldRow label="Location" source={fieldSources.location}>
           <input {...register("location")} className={inputClass} />
           {errors.location && (
-            <p className="mt-1 text-xs font-semibold text-brand-red">{errors.location.message}</p>
+            <p className="mt-1 text-xs font-semibold text-brand-red dark:text-red-300">{errors.location.message}</p>
           )}
         </FieldRow>
         <FieldRow label="Reports To">
@@ -527,7 +527,7 @@ export function JobDataEditor({
         <FieldRow label="Job Type">
           <input {...register("positionType")} className={inputClass} />
           {errors.positionType && (
-            <p className="mt-1 text-xs font-semibold text-brand-red">{errors.positionType.message}</p>
+            <p className="mt-1 text-xs font-semibold text-brand-red dark:text-red-300">{errors.positionType.message}</p>
           )}
         </FieldRow>
         <FieldRow label="Posting Status">
@@ -581,7 +581,7 @@ export function JobDataEditor({
           </p>
           <div
             className={`text-sm font-semibold ${
-              saveError ? "text-brand-red" : isSubmitting ? "text-brand-lea dark:text-slate-100" : "text-brand-eden"
+              saveError ? "text-brand-red dark:text-red-300" : isSubmitting ? "text-brand-lea dark:text-slate-100" : "text-brand-eden dark:text-[#8fb3d6]"
             }`}
           >
             {isSubmitting ? "Saving..." : saveError ?? saveMessage}

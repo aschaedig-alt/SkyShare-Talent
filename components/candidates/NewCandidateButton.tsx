@@ -71,7 +71,7 @@ export function NewCandidateButton() {
                 <input className={FIELD} placeholder="Stage" value={form.stage} onChange={(e) => set("stage", e.target.value)} />
                 <input className={FIELD} placeholder="Tags (comma-separated)" value={form.tags} onChange={(e) => set("tags", e.target.value)} />
               </div>
-              {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
+              {error && <p className="text-xs font-semibold text-red-600 dark:text-red-300">{error}</p>}
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>

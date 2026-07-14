@@ -42,7 +42,7 @@ export function ContentSourceMap({ job }: ContentSourceMapProps) {
     <section className="rounded border border-brand-lea/10 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-brand-panel">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-brand-eden">
+          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-brand-eden dark:text-[#8fb3d6]">
             <MapPinned className="h-4 w-4" />
             Content Source Map
           </p>
@@ -69,7 +69,7 @@ export function ContentSourceMap({ job }: ContentSourceMapProps) {
                   <div className="text-xs font-bold uppercase tracking-[0.12em] text-brand-lea dark:text-slate-100">{placement.label}</div>
                   <p className="mt-1 text-[11px] leading-4 text-brand-grey dark:text-slate-400">{placement.description}</p>
                 </div>
-                <span className="rounded bg-white px-2 py-1 text-[10px] font-bold text-brand-eden dark:bg-brand-panel">
+                <span className="rounded bg-white px-2 py-1 text-[10px] font-bold text-brand-eden dark:bg-brand-panel dark:text-[#8fb3d6]">
                   {blocks.length}
                 </span>
               </div>
@@ -91,7 +91,7 @@ export function ContentSourceMap({ job }: ContentSourceMapProps) {
                 })}
 
                 {!blocks.length && (
-                  <div className="rounded border border-dashed border-brand-lea/15 bg-white/70 px-2 py-3 text-center text-xs font-semibold leading-5 text-brand-grey dark:border-white/10 dark:text-slate-400">
+                  <div className="rounded border border-dashed border-brand-lea/15 bg-white/70 px-2 py-3 text-center text-xs font-semibold leading-5 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
                     No attached blocks in this lane.
                   </div>
                 )}
@@ -102,7 +102,7 @@ export function ContentSourceMap({ job }: ContentSourceMapProps) {
       </div>
 
       <div className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/35 p-2 dark:border-white/10 dark:bg-white/5">
-        <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-brand-eden">
+        <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">
           <Layers3 className="h-4 w-4" />
           Field Fallbacks
         </div>
@@ -111,7 +111,7 @@ export function ContentSourceMap({ job }: ContentSourceMapProps) {
             <div
               key={source.key}
               className={`rounded border px-2.5 py-2 ${
-                source.isHiddenByBlock ? "border-brand-grey/18 bg-white/70" : "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/65 dark:bg-emerald-500/15"
+                source.isHiddenByBlock ? "border-brand-grey/18 bg-white/70 dark:border-white/10 dark:bg-white/5" : "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/65 dark:bg-emerald-500/15"
               }`}
             >
               <div className="flex items-start justify-between gap-2">
@@ -122,7 +122,7 @@ export function ContentSourceMap({ job }: ContentSourceMapProps) {
                 {source.isHiddenByBlock ? (
                   <EyeOff className="h-4 w-4 shrink-0 text-brand-grey dark:text-slate-400" />
                 ) : (
-                  <Eye className="h-4 w-4 shrink-0 text-emerald-700" />
+                  <Eye className="h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" />
                 )}
               </div>
               <div className="mt-2">

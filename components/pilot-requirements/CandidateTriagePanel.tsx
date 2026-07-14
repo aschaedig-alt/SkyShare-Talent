@@ -100,7 +100,7 @@ export function CandidateTriagePanel({ matches: initialMatches, requirementId, c
         </div>
         <Link
           href="/pilot-requirements/scoring"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-element border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-eden transition hover:border-brand-sweet hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-white/5"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-element border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-eden transition hover:border-brand-sweet hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-white/5 dark:text-[#8fb3d6]"
         >
           <SlidersHorizontal className="h-3.5 w-3.5" /> Scoring setup
         </Link>
@@ -117,7 +117,7 @@ export function CandidateTriagePanel({ matches: initialMatches, requirementId, c
           {scanning ? "Scanning…" : "Scan candidates"}
         </Button>
       </div>
-      {scanError ? <p className="mt-1.5 text-[11px] text-value-customerFocus-dark">{scanError}</p> : null}
+      {scanError ? <p className="mt-1.5 text-[11px] text-value-customerFocus-dark dark:text-red-300">{scanError}</p> : null}
 
       {canEdit && matches.length > 0 ? (
         <div className="mt-3 flex flex-wrap items-center gap-2">

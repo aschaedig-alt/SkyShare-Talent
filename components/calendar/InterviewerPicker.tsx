@@ -15,7 +15,7 @@ export function InterviewerPicker({
   defaultValue = "",
   interviewers,
   activeDepartmentKey = null,
-  className = "rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10",
+  className = "rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100",
   onValueChange
 }: {
   name?: string;

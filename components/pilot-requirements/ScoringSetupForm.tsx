@@ -232,8 +232,8 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
             className={clsx(
               "rounded-element px-3 py-2 text-sm",
               notice.kind === "ok"
-                ? "bg-value-teamwork-light text-value-teamwork-dark"
-                : "bg-value-customerFocus-light text-value-customerFocus-dark"
+                ? "bg-value-teamwork-light text-value-teamwork-dark dark:bg-emerald-500/15 dark:text-emerald-300"
+                : "bg-value-customerFocus-light text-value-customerFocus-dark dark:bg-red-500/15 dark:text-red-300"
             )}
           >
             {notice.text}
@@ -365,7 +365,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
                             draft.customCerts = (draft.customCerts ?? []).filter((c) => c.id !== cert.id);
                           })
                         }
-                        className="rounded-element border border-brand-lea/15 p-1.5 text-value-customerFocus-dark transition hover:bg-value-customerFocus-light dark:border-white/10"
+                        className="rounded-element border border-brand-lea/15 p-1.5 text-value-customerFocus-dark transition hover:bg-value-customerFocus-light dark:border-white/10 dark:text-red-300 dark:hover:bg-red-500/15"
                         aria-label="Remove cert"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -497,7 +497,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
           </div>
         </section>
 
-        <div className="flex items-center gap-2 rounded-element bg-value-innovation-light px-4 py-3 text-sm text-value-innovation-dark">
+        <div className="flex items-center gap-2 rounded-element bg-value-innovation-light px-4 py-3 text-sm text-value-innovation-dark dark:bg-sky-500/15 dark:text-sky-300">
           <ShieldCheck className="h-4 w-4 shrink-0" />
           Excluded from scoring by policy: age, name, gender, and location. These can never be added as factors.
         </div>
@@ -517,7 +517,7 @@ function StatusToggle({
 }) {
   const options: Array<{ key: ReqStatus; label: string; active: string }> = [
     { key: "hard", label: "Hard", active: "bg-brand-lea text-white" },
-    { key: "soft", label: "Soft", active: "bg-brand-sweet text-brand-lea dark:text-slate-100" },
+    { key: "soft", label: "Soft", active: "bg-brand-sweet text-brand-lea dark:bg-brand-eden dark:text-slate-100" },
     { key: "bonus", label: "Bonus", active: "bg-value-leadership-light text-value-leadership-dark" },
     { key: "none", label: "None", active: "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400" }
   ];

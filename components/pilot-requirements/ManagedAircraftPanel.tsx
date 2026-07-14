@@ -103,7 +103,7 @@ export function ManagedAircraftPanel({ requirementId, variants, canEdit }: Props
           </h3>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden dark:bg-white/5">
+          <span className="rounded bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden dark:bg-white/5 dark:text-[#8fb3d6]">
             {variants.length} {variants.length === 1 ? "aircraft" : "aircraft"}
           </span>
           {canEdit && mode === "none" ? (
@@ -120,7 +120,7 @@ export function ManagedAircraftPanel({ requirementId, variants, canEdit }: Props
       </p>
 
       {error ? (
-        <p className="mt-3 rounded-element bg-value-customerFocus-light px-3 py-2 text-sm text-value-customerFocus-dark">
+        <p className="mt-3 rounded-element bg-value-customerFocus-light px-3 py-2 text-sm text-value-customerFocus-dark dark:bg-red-500/15 dark:text-red-300">
           {error}
         </p>
       ) : null}
@@ -172,7 +172,7 @@ export function ManagedAircraftPanel({ requirementId, variants, canEdit }: Props
                       type="button"
                       onClick={() => remove(v.id)}
                       disabled={pending}
-                      className="rounded-element border border-brand-lea/15 p-1.5 text-value-customerFocus-dark transition hover:bg-value-customerFocus-light disabled:opacity-50 dark:border-white/10"
+                      className="rounded-element border border-brand-lea/15 p-1.5 text-value-customerFocus-dark transition hover:bg-value-customerFocus-light disabled:opacity-50 dark:border-white/10 dark:text-red-300 dark:hover:bg-red-500/15"
                       aria-label={`Remove ${v.tailNumber}`}
                     >
                       <Trash2 className="h-3.5 w-3.5" />

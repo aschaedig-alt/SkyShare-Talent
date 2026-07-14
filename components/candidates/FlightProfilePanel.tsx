@@ -191,7 +191,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
           placeholder="—"
           className="ml-auto w-16 rounded border border-brand-lea/20 px-1.5 py-0.5 text-right text-sm text-brand-lea focus:border-brand-gold focus:outline-none dark:border-white/10 dark:text-slate-100"
         />
-        <button onClick={saveRecency} disabled={savingRecency} className="rounded p-0.5 text-emerald-700 disabled:opacity-50" aria-label="Save recent hours">
+        <button onClick={saveRecency} disabled={savingRecency} className="rounded p-0.5 text-emerald-700 dark:text-emerald-400 disabled:opacity-50" aria-label="Save recent hours">
           {savingRecency ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
         </button>
       </div>
@@ -227,9 +227,9 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
                         if (e.key === "Enter") saveEdit(m, false);
                         if (e.key === "Escape") setEditingId(null);
                       }}
-                      className="min-w-0 flex-1 rounded border border-brand-lea/30 px-1.5 py-0.5 text-sm focus:border-brand-gold focus:outline-none dark:border-white/10"
+                      className="min-w-0 flex-1 rounded border border-brand-lea/30 px-1.5 py-0.5 text-sm focus:border-brand-gold focus:outline-none dark:border-white/10 dark:text-slate-100"
                     />
-                    <button onClick={() => saveEdit(m, false)} disabled={busyId === m.id} className="rounded p-0.5 text-emerald-700" aria-label="Save"><Check className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => saveEdit(m, false)} disabled={busyId === m.id} className="rounded p-0.5 text-emerald-700 dark:text-emerald-400" aria-label="Save"><Check className="h-3.5 w-3.5" /></button>
                     <button onClick={() => setEditingId(null)} className="rounded p-0.5 text-brand-grey dark:text-slate-400" aria-label="Cancel"><X className="h-3.5 w-3.5" /></button>
                   </div>
                 </div>
@@ -276,7 +276,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
                           if (e.key === "Enter") saveEdit(m, true);
                           if (e.key === "Escape") setEditingId(null);
                         }}
-                        className="min-w-0 flex-1 rounded border border-brand-lea/30 px-1.5 py-0.5 text-sm focus:border-brand-gold focus:outline-none dark:border-white/10"
+                        className="min-w-0 flex-1 rounded border border-brand-lea/30 px-1.5 py-0.5 text-sm focus:border-brand-gold focus:outline-none dark:border-white/10 dark:text-slate-100"
                       />
                     </div>
                     <div className="flex items-center justify-end gap-1">
@@ -300,7 +300,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
                     <button onClick={() => startEdit(m)} disabled={busyId === m.id} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/50 dark:text-slate-400 dark:bg-white/5" aria-label="Edit before accepting" title="Edit">
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
-                    <button onClick={() => act(m.id, "accept")} disabled={busyId === m.id} className="rounded p-1 text-emerald-700 hover:bg-emerald-100" aria-label="Accept">
+                    <button onClick={() => act(m.id, "accept")} disabled={busyId === m.id} className="rounded p-1 text-emerald-700 hover:bg-emerald-100 dark:text-emerald-400 dark:hover:bg-emerald-500/15" aria-label="Accept">
                       {busyId === m.id ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                     </button>
                     <button onClick={() => act(m.id, "dismiss")} disabled={busyId === m.id} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/50 dark:text-slate-400 dark:bg-white/5" aria-label="Dismiss">
@@ -309,7 +309,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
                   </div>
                 )}
                 {editingId !== m.id && m.sourceSnippet && (
-                  <div className="mt-0.5 truncate text-[10px] italic text-brand-grey/80" title={m.sourceSnippet}>“{m.sourceSnippet}”</div>
+                  <div className="mt-0.5 truncate text-[10px] italic text-brand-grey/80 dark:text-slate-500" title={m.sourceSnippet}>“{m.sourceSnippet}”</div>
                 )}
               </div>
             ))}
@@ -344,7 +344,7 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
                 if (e.key === "Enter") addField();
                 if (e.key === "Escape") setAdding(false);
               }}
-              className="w-full rounded border border-brand-lea/30 px-2 py-1 text-sm focus:border-brand-gold focus:outline-none dark:border-white/10"
+              className="w-full rounded border border-brand-lea/30 px-2 py-1 text-sm focus:border-brand-gold focus:outline-none dark:border-white/10 dark:text-slate-100"
             />
             <div className="flex items-center justify-end gap-1">
               <button onClick={addField} disabled={busyId === "add" || !addLabel.trim() || !addValue.trim()} className="flex items-center gap-1 rounded bg-brand-lea px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-brand-eden disabled:opacity-50">

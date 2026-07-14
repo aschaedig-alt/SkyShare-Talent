@@ -50,7 +50,7 @@ export function GoogleSyncCard({ sync }: GoogleSyncCardProps) {
             <CheckCircle2 className="h-3 w-3" /> Connected
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase text-slate-500">
+          <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase text-slate-500 dark:bg-slate-500/15 dark:text-slate-300">
             <CircleSlash className="h-3 w-3" /> Not configured
           </span>
         )}

@@ -156,7 +156,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
                 name="title"
                 required
                 defaultValue={interview.title}
-                className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
+                className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]"
               />
             </label>
             <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
@@ -164,7 +164,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
               <select
                 name="status"
                 defaultValue={interview.status}
-                className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel"
+                className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel dark:text-slate-100 dark:[color-scheme:dark]"
               >
                 {statusOptions.map((option) => (
                   <option key={option} value={option}>
@@ -189,7 +189,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
                     onClick={() => setInterviewType(type)}
                     className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow ${
                       active
-                        ? `${meta.chip} ring-2 ring-offset-1 ring-brand-lea/30 dark:ring-white/10`
+                        ? `${meta.chip} ring-2 ring-offset-1 ring-brand-lea/30 dark:ring-white/10 dark:ring-offset-brand-panel`
                         : "bg-brand-cloudDancer/50 text-brand-grey hover:bg-brand-cloudDancer dark:bg-white/5 dark:text-slate-400"
                     }`}
                   >
@@ -207,7 +207,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
               name="jobId"
               defaultValue={interview.job?.id ?? ""}
               onChange={(e) => setSelectedJobId(e.target.value)}
-              className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel"
+              className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel dark:text-slate-100 dark:[color-scheme:dark]"
             >
               <option value="">No linked job</option>
               {jobs.map((job) => (
@@ -226,7 +226,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
                 required
                 type="datetime-local"
                 defaultValue={toDateTimeLocal(interview.startDateTime)}
-                className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
+                className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]"
               />
             </label>
             <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
@@ -234,7 +234,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
               <select
                 name="durationMinutes"
                 defaultValue={initialDuration}
-                className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel"
+                className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel dark:text-slate-100 dark:[color-scheme:dark]"
               >
                 <option value="30">30 minutes</option>
                 <option value="45">45 minutes</option>
@@ -251,7 +251,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
               defaultValue={interview.interviewer ?? ""}
               interviewers={interviewers}
               activeDepartmentKey={activeDepartmentKey}
-              className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
+              className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]"
             />
           </label>
 
@@ -260,7 +260,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
             <input
               name="location"
               defaultValue={interview.location ?? ""}
-              className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
+              className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]"
             />
           </label>
 
@@ -269,7 +269,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
             <input
               name="meetingUrl"
               defaultValue={interview.meetingUrl ?? ""}
-              className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
+              className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]"
             />
           </label>
 
@@ -279,7 +279,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
               name="notes"
               rows={3}
               defaultValue={interview.notes ?? ""}
-              className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10"
+              className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]"
             />
           </label>
 
@@ -321,7 +321,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
               <button
                 type="button"
                 onClick={() => setConfirmDelete(true)}
-                className="flex items-center gap-1 rounded border border-red-300 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+                className="flex items-center gap-1 rounded border border-red-300 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete

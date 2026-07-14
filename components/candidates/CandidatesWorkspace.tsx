@@ -41,10 +41,10 @@ type StatConfig = {
 
 const statConfig: StatConfig[] = [
   { key: "total", label: "Total candidates", icon: Users, accent: "bg-brand-lea/10 text-brand-lea dark:text-slate-100" },
-  { key: "active", label: "Active", icon: UserCheck, accent: "bg-emerald-100 text-emerald-700" },
-  { key: "withFiles", label: "With files", icon: FileText, accent: "bg-amber-100 text-amber-700" },
-  { key: "withApplications", label: "With applications", icon: Send, accent: "bg-indigo-100 text-indigo-700" },
-  { key: "scheduledInterviews", label: "Scheduled interviews", icon: CalendarClock, accent: "bg-fuchsia-100 text-fuchsia-700" }
+  { key: "active", label: "Active", icon: UserCheck, accent: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" },
+  { key: "withFiles", label: "With files", icon: FileText, accent: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" },
+  { key: "withApplications", label: "With applications", icon: Send, accent: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300" },
+  { key: "scheduledInterviews", label: "Scheduled interviews", icon: CalendarClock, accent: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-500/15 dark:text-fuchsia-300" }
 ];
 
 function formatDate(value: string) {
@@ -72,8 +72,8 @@ function stagePill(stage: string | null) {
   const s = (stage ?? "").toLowerCase();
   if (!stage) return "border-brand-lea/15 bg-brand-cloudDancer/60 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400";
   if (s.includes("hire") || s.includes("offer")) return "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
-  if (s.includes("interview") || s.includes("screen")) return "border-indigo-200 bg-indigo-50 text-indigo-700";
-  if (s.includes("reject") || s.includes("declin") || s.includes("withdraw")) return "border-slate-200 bg-slate-100 text-slate-500";
+  if (s.includes("interview") || s.includes("screen")) return "border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300";
+  if (s.includes("reject") || s.includes("declin") || s.includes("withdraw")) return "border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400";
   if (s.includes("new") || s.includes("appl") || s.includes("lead")) return "border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300";
   return "border-brand-gold/30 bg-brand-gold/10 text-brand-lea dark:text-slate-100";
 }
@@ -191,7 +191,7 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
                         <span className="inline-flex items-center gap-1 rounded bg-brand-cloudDancer/70 px-1.5 py-0.5 text-brand-lea dark:bg-white/5 dark:text-slate-100" title="Notes">
                           <StickyNote className="h-3 w-3" /> {candidate.noteCount}
                         </span>
-                        <span className="inline-flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 text-indigo-700" title="Applications">
+                        <span className="inline-flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300" title="Applications">
                           <Send className="h-3 w-3" /> {candidate.applicationCount}
                         </span>
                       </div>
@@ -237,12 +237,12 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
             </div>
             <form className="flex w-full gap-2">
               <div className="relative min-w-0 flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey dark:text-slate-400" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey" />
                 <input
                   name="q"
                   defaultValue={query}
                   placeholder="Search name, role, tag, or text inside resumes & pilot apps"
-                  className="w-full rounded border border-white/20 bg-white/95 py-2.5 pl-9 pr-3 text-sm text-brand-black shadow-sm outline-none transition focus:ring-2 focus:ring-brand-gold/50 dark:text-slate-100"
+                  className="w-full rounded border border-white/20 bg-white/95 py-2.5 pl-9 pr-3 text-sm text-brand-black shadow-sm outline-none transition focus:ring-2 focus:ring-brand-gold/50"
                 />
               </div>
               <button type="submit" className="rounded border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20">

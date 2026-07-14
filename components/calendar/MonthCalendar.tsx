@@ -29,7 +29,7 @@ const MONTHS = [
 
 function chipClasses(interview: Interview, colorMode: ColorMode, departmentColors: Record<DeptKey, ColorMeta>) {
   if (interview.status === "CANCELLED") {
-    return "bg-slate-300 text-slate-600 hover:bg-slate-400 line-through";
+    return "bg-slate-300 text-slate-600 hover:bg-slate-400 line-through dark:bg-slate-600/40 dark:text-slate-300 dark:hover:bg-slate-600/60";
   }
   const meta =
     colorMode === "department"
@@ -202,7 +202,7 @@ export function MonthCalendar({
                 {dayInterviews.length > 3 && (
                   <button
                     onClick={() => setPopoverDay(isPopoverOpen ? null : cell.key)}
-                    className="px-1 text-[10px] font-semibold text-brand-eden hover:underline"
+                    className="px-1 text-[10px] font-semibold text-brand-eden hover:underline dark:text-[#8fb3d6]"
                   >
                     +{dayInterviews.length - 3} more
                   </button>
@@ -242,7 +242,7 @@ export function MonthCalendar({
       {/* Color legend + drag hint */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey dark:border-white/10 dark:text-slate-400">
         <CalendarLegend mode={colorMode} departmentColors={departmentColors} />
-        <span className="hidden italic text-brand-grey/70 sm:inline">Drag an interview to another day to reschedule</span>
+        <span className="hidden italic text-brand-grey/70 sm:inline dark:text-slate-500">Drag an interview to another day to reschedule</span>
       </div>
     </section>
   );

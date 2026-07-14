@@ -155,11 +155,11 @@ export function PilotRequirementEditor({ requirement }: PilotRequirementEditorPr
 
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <label className="space-y-1 xl:col-span-2">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden">Requirement name</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">Requirement name</span>
             <input className={inputClass} value={title} onChange={(event) => setTitle(event.target.value)} />
           </label>
           <label className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden">Status</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">Status</span>
             <select className={selectClass} value={status} onChange={(event) => setStatus(event.target.value)}>
               {["ACTIVE", "INACTIVE", "HISTORICAL", "RETIRED", "EVERGREEN", "ARCHIVED"].map((option) => (
                 <option key={option} value={option}>
@@ -169,7 +169,7 @@ export function PilotRequirementEditor({ requirement }: PilotRequirementEditorPr
             </select>
           </label>
           <label className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden">Review status</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">Review status</span>
             <select className={selectClass} value={reviewStatus} onChange={(event) => setReviewStatus(event.target.value)}>
               {["DRAFT", "NEEDS_REVIEW", "READY_FOR_REVIEW", "APPROVED"].map((option) => (
                 <option key={option} value={option}>
@@ -179,14 +179,14 @@ export function PilotRequirementEditor({ requirement }: PilotRequirementEditorPr
             </select>
           </label>
           <label className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden">Operator</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">Operator</span>
             <select className={selectClass} value={operatorType} onChange={(event) => setOperatorType(event.target.value)}>
               <option value="Managed">Managed</option>
               <option value="SkyShare">SkyShare</option>
             </select>
           </label>
           <label className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden">Seat</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">Seat</span>
             <select className={selectClass} value={pilotSeat} onChange={(event) => setPilotSeat(event.target.value)}>
               {["PIC", "SIC", "Lead PIC", "Chief Pilot", "Assistant Chief Pilot", "Mixed"].map((option) => (
                 <option key={option} value={option}>
@@ -196,23 +196,23 @@ export function PilotRequirementEditor({ requirement }: PilotRequirementEditorPr
             </select>
           </label>
           <label className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden">Base city</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">Base city</span>
             <input className={inputClass} value={baseCity} onChange={(event) => setBaseCity(event.target.value)} />
           </label>
           <label className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden">Base state</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">Base state</span>
             <input className={inputClass} value={baseState} onChange={(event) => setBaseState(event.target.value)} />
           </label>
           <label className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden">Base airport</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">Base airport</span>
             <input className={inputClass} value={baseAirport} onChange={(event) => setBaseAirport(event.target.value)} />
           </label>
           <label className="space-y-1 xl:col-span-2">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden">Pay scale</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">Pay scale</span>
             <input className={inputClass} value={payScaleRaw} onChange={(event) => setPayScaleRaw(event.target.value)} />
           </label>
           <label className="space-y-1 xl:col-span-2">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden">Change note</span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">Change note</span>
             <input
               className={inputClass}
               value={manualOverrideNotes}
@@ -231,7 +231,7 @@ export function PilotRequirementEditor({ requirement }: PilotRequirementEditorPr
             </p>
             <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Turn requirements on/off and adjust hours</h3>
           </div>
-          <span className="rounded bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden dark:bg-white/5">
+          <span className="rounded bg-brand-cloudDancer px-3 py-1 text-xs font-semibold text-brand-eden dark:bg-white/5 dark:text-[#8fb3d6]">
             {gates.filter((gate) => gate.enabled).length} enabled
           </span>
         </div>

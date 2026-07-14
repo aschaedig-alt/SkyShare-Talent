@@ -51,7 +51,7 @@ export type AdminOverride = {
 };
 
 const DOW = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const inp = "w-full rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10";
+const inp = "w-full rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]";
 
 function toHHMM(min: number) {
   const h = Math.floor(min / 60);
@@ -194,7 +194,7 @@ export function SchedulingAdmin({ hosts, overrides }: { hosts: AdminHost[]; over
                 disabled={busy}
                 title={`Remove ${h.name}`}
                 aria-label={`Remove ${h.name}`}
-                className="flex shrink-0 items-center rounded p-1.5 text-brand-grey/70 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                className="flex shrink-0 items-center rounded p-1.5 text-brand-grey/70 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:text-slate-400 dark:hover:bg-red-500/10"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -441,7 +441,7 @@ function Settings({
         </Field>
         <Field label="Active">
           <label className="flex items-center gap-2 py-2 text-sm text-brand-lea dark:text-slate-100">
-            <input type="checkbox" checked={form.isActive} onChange={(e) => set("isActive", e.target.checked)} /> Accepting bookings
+            <input type="checkbox" checked={form.isActive} onChange={(e) => set("isActive", e.target.checked)} className="dark:[color-scheme:dark]" /> Accepting bookings
           </label>
         </Field>
       </div>
@@ -481,7 +481,7 @@ function Settings({
             })
           }
           disabled={busy}
-          className="flex items-center gap-1 rounded border border-red-300 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+          className="flex items-center gap-1 rounded border border-red-300 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10"
         >
           <Trash2 className="h-4 w-4" /> Delete
         </button>
@@ -559,14 +559,14 @@ function WeeklyAvailability({
                     type="time"
                     value={toHHMM(range.startMinute)}
                     onChange={(e) => update(d, days[d].map((r, j) => (j === i ? { ...r, startMinute: fromHHMM(e.target.value) } : r)))}
-                    className="rounded border border-brand-lea/20 px-1 py-0.5 text-xs dark:border-white/10"
+                    className="rounded border border-brand-lea/20 px-1 py-0.5 text-xs dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]"
                   />
                   <span className="text-xs text-brand-grey dark:text-slate-400">–</span>
                   <input
                     type="time"
                     value={toHHMM(range.endMinute)}
                     onChange={(e) => update(d, days[d].map((r, j) => (j === i ? { ...r, endMinute: fromHHMM(e.target.value) } : r)))}
-                    className="rounded border border-brand-lea/20 px-1 py-0.5 text-xs dark:border-white/10"
+                    className="rounded border border-brand-lea/20 px-1 py-0.5 text-xs dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]"
                   />
                   <button onClick={() => update(d, days[d].filter((_, j) => j !== i))} aria-label="Remove hours" className="text-brand-grey hover:text-red-600 dark:text-slate-400">
                     <Trash2 className="h-3.5 w-3.5" />
@@ -624,7 +624,7 @@ function BookingTypes({
             <select
               value={t.durationMinutes}
               onChange={(e) => run(async () => void api(`/api/booking-types/${t.id}`, "PATCH", { durationMinutes: Number(e.target.value) }))}
-              className="rounded border border-brand-lea/20 px-2 py-1 text-xs dark:border-white/10"
+              className="rounded border border-brand-lea/20 px-2 py-1 text-xs dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]"
             >
               <option value={30}>30 min</option>
               <option value={45}>45 min</option>
@@ -637,14 +637,14 @@ function BookingTypes({
                   void api(`/api/booking-types/${t.id}`, "PATCH", { bufferMinutes: e.target.value === "" ? 0 : Number(e.target.value) })
                 )
               }
-              className="rounded border border-brand-lea/20 px-2 py-1 text-xs dark:border-white/10"
+              className="rounded border border-brand-lea/20 px-2 py-1 text-xs dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]"
             >
               <option value="">No buffer</option>
               <option value={10}>10 min buffer</option>
             </select>
             <button
               onClick={() => run(async () => void api(`/api/booking-types/${t.id}`, "PATCH", { isActive: !t.isActive }))}
-              className={clsx("rounded px-2 py-1 text-xs font-semibold transition hover:shadow-glow", t.isActive ? "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-slate-100 text-slate-500")}
+              className={clsx("rounded px-2 py-1 text-xs font-semibold transition hover:shadow-glow", t.isActive ? "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-slate-500/15 dark:text-slate-300")}
             >
               {t.isActive ? "Active" : "Off"}
             </button>
@@ -662,16 +662,16 @@ function BookingTypes({
           placeholder="Name (e.g. Candidate screen)"
           value={draft.name}
           onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-          className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10"
+          className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]"
         />
-        <select value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10">
+        <select value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]">
           <option value="INTERVIEW">Interview (creates a candidate)</option>
           <option value="MEETING">Meeting (any guest)</option>
         </select>
         <select
           value={draft.durationMinutes}
           onChange={(e) => setDraft({ ...draft, durationMinutes: Number(e.target.value) })}
-          className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10"
+          className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]"
         >
           <option value={30}>30 minutes</option>
           <option value={45}>45 minutes</option>
@@ -681,7 +681,7 @@ function BookingTypes({
           placeholder="Location (e.g. Video — Zoom)"
           value={draft.location}
           onChange={(e) => setDraft({ ...draft, location: e.target.value })}
-          className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10"
+          className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]"
         />
         <button
           onClick={() =>
@@ -760,35 +760,35 @@ function Overrides({
 
       <div className="mt-3 grid gap-2 rounded bg-brand-cloudDancer/30 p-3 sm:grid-cols-2 dark:bg-white/5">
         <Field label="Applies to">
-          <select value={draft.scope} onChange={(e) => setDraft({ ...draft, scope: e.target.value as "host" | "org" })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10">
+          <select value={draft.scope} onChange={(e) => setDraft({ ...draft, scope: e.target.value as "host" | "org" })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]">
             <option value="host">{host.name} only</option>
             <option value="org">Everyone (holiday)</option>
           </select>
         </Field>
         <Field label="Type">
-          <select value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value as "BLOCK" | "CUSTOM" })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10">
+          <select value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value as "BLOCK" | "CUSTOM" })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]">
             <option value="BLOCK">Block (unavailable)</option>
             <option value="CUSTOM">Custom hours</option>
           </select>
         </Field>
         <Field label="Start date">
-          <input type="date" value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10" />
+          <input type="date" value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]" />
         </Field>
         <Field label="End date">
-          <input type="date" value={draft.endDate} onChange={(e) => setDraft({ ...draft, endDate: e.target.value })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10" />
+          <input type="date" value={draft.endDate} onChange={(e) => setDraft({ ...draft, endDate: e.target.value })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]" />
         </Field>
         {draft.kind === "CUSTOM" ? (
           <>
             <Field label="From">
-              <input type="time" value={toHHMM(draft.startMinute)} onChange={(e) => setDraft({ ...draft, startMinute: fromHHMM(e.target.value) })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10" />
+              <input type="time" value={toHHMM(draft.startMinute)} onChange={(e) => setDraft({ ...draft, startMinute: fromHHMM(e.target.value) })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]" />
             </Field>
             <Field label="To">
-              <input type="time" value={toHHMM(draft.endMinute)} onChange={(e) => setDraft({ ...draft, endMinute: fromHHMM(e.target.value) })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10" />
+              <input type="time" value={toHHMM(draft.endMinute)} onChange={(e) => setDraft({ ...draft, endMinute: fromHHMM(e.target.value) })} className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]" />
             </Field>
           </>
         ) : null}
         <Field label="Label (optional)">
-          <input value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} placeholder="Vacation, Holiday…" className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10" />
+          <input value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} placeholder="Vacation, Holiday…" className="rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]" />
         </Field>
         <button
           onClick={() =>

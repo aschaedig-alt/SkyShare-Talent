@@ -66,7 +66,7 @@ function TeamAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string | nu
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={avatarUrl} alt={name} className="h-8 w-8 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-brand-lea/15 dark:ring-white/10" />;
   }
-  const color = isUnassigned ? "bg-slate-300 text-slate-600" : `${AVATAR_COLORS[hashString(name) % AVATAR_COLORS.length]} text-white`;
+  const color = isUnassigned ? "bg-slate-300 text-slate-600 dark:bg-slate-600 dark:text-slate-300" : `${AVATAR_COLORS[hashString(name) % AVATAR_COLORS.length]} text-white`;
   return (
     <span className={clsx("flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold shadow-sm", color)}>
       {isUnassigned ? "—" : initials(name)}
@@ -76,7 +76,7 @@ function TeamAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string | nu
 
 function barClasses(interview: Interview, colorMode: ColorMode, departmentColors: Record<DeptKey, ColorMeta>) {
   if (interview.status === "CANCELLED") {
-    return "bg-slate-300 text-slate-600 line-through";
+    return "bg-slate-300 text-slate-600 line-through dark:bg-slate-600/40 dark:text-slate-300";
   }
   const meta =
     colorMode === "department"
@@ -237,7 +237,7 @@ export function ScheduleTimeline({
                     className={clsx(
                       "flex flex-col items-center justify-center border-r border-brand-lea/5 py-1.5 dark:border-white/10",
                       isWeekend && "bg-brand-cloudDancer/30 dark:bg-white/5",
-                      isToday && "bg-brand-lea/5"
+                      isToday && "bg-brand-lea/5 dark:bg-white/[0.06]"
                     )}
                     style={{ width: DAY_WIDTH }}
                   >
@@ -299,7 +299,7 @@ export function ScheduleTimeline({
                             className={clsx(
                               "border-r border-brand-lea/5 dark:border-white/10",
                               isWeekend && "bg-brand-cloudDancer/20 dark:bg-white/5",
-                              day === todayDay && "bg-brand-lea/[0.04]",
+                              day === todayDay && "bg-brand-lea/[0.04] dark:bg-white/[0.05]",
                               dragOverDay === day && "bg-brand-gold/20 ring-2 ring-inset ring-brand-gold"
                             )}
                             style={{ width: DAY_WIDTH }}
@@ -347,7 +347,7 @@ export function ScheduleTimeline({
       {/* Legend + hint */}
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey dark:border-white/10 dark:text-slate-400">
         <CalendarLegend mode={colorMode} departmentColors={departmentColors} />
-        <span className="hidden italic text-brand-grey/70 sm:inline">Drag a bar to another day to reschedule</span>
+        <span className="hidden italic text-brand-grey/70 sm:inline dark:text-slate-500">Drag a bar to another day to reschedule</span>
       </div>
     </section>
   );

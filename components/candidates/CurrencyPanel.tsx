@@ -56,7 +56,7 @@ export function CurrencyPanel({ files }: { files: FileLike[] }) {
       {dated.length > 0 && (
         <ul className="mt-3 space-y-1.5">
           {dated.map((d, i) => {
-            const tone = d.days < 0 ? "text-red-600" : d.days <= 30 ? "text-amber-600" : "text-emerald-600";
+            const tone = d.days < 0 ? "text-red-600 dark:text-red-300" : d.days <= 30 ? "text-amber-600 dark:text-amber-300" : "text-emerald-600 dark:text-emerald-300";
             const dot = d.days < 0 ? "bg-red-500" : d.days <= 30 ? "bg-amber-500" : "bg-emerald-500";
             return (
               <li key={i} className="flex items-center gap-2 text-xs">
