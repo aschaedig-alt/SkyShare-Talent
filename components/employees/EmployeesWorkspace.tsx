@@ -263,7 +263,7 @@ export function EmployeesWorkspace({ employees, counts, initialColumns }: { empl
                 onClick={() => { setFiltersOpen((o) => !o); setColsOpen(false); }}
                 className={clsx("inline-flex items-center gap-1.5 rounded border px-2.5 py-2 text-sm font-semibold transition", activeFilterCount > 0 ? "border-brand-gold/60 bg-brand-gold/15 text-brand-lea dark:text-brand-gold" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400")}
               >
-                <SlidersHorizontal className="h-4 w-4" /> Filter{activeFilterCount > 0 ? <span className="rounded-full bg-brand-gold px-1.5 text-[10px] font-bold text-brand-black">{activeFilterCount}</span> : null}
+                <SlidersHorizontal className="h-4 w-4" /> Filter{activeFilterCount > 0 ? <span className="rounded shrink-0 bg-brand-gold px-1.5 text-[10px] font-bold text-brand-black">{activeFilterCount}</span> : null}
               </button>
               {filtersOpen ? (
                 <>
@@ -359,7 +359,7 @@ export function EmployeesWorkspace({ employees, counts, initialColumns }: { empl
         {chips.length ? (
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
             {chips.map((c, i) => (
-              <button key={i} type="button" onClick={c.clear} className="inline-flex items-center gap-1 rounded-full bg-brand-gold/15 px-2.5 py-0.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-gold/25 dark:text-brand-gold">
+              <button key={i} type="button" onClick={c.clear} className="inline-flex items-center gap-1 rounded bg-brand-gold/15 px-2.5 py-0.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-gold/25 dark:text-brand-gold">
                 {c.label} <X className="h-3 w-3" />
               </button>
             ))}
@@ -456,7 +456,7 @@ export function EmployeesWorkspace({ employees, counts, initialColumns }: { empl
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-brand-lea dark:text-slate-100">{e.name}</span>
-                    {keep ? <span className="rounded-full bg-brand-gold/25 px-2 py-0.5 text-[10px] font-bold uppercase text-brand-lea dark:text-brand-gold">Keep</span> : <span className="text-[10px] font-semibold uppercase text-brand-grey dark:text-slate-500">merges in</span>}
+                    {keep ? <span className="rounded bg-brand-gold/25 px-2 py-0.5 text-[10px] font-bold uppercase text-brand-lea dark:text-brand-gold">Keep</span> : <span className="text-[10px] font-semibold uppercase text-brand-grey dark:text-slate-500">merges in</span>}
                     <Badge tone={b.tone}>{b.label}</Badge>
                   </div>
                   <div className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">{[e.position, e.department, e.location].filter(Boolean).join(" · ") || "No role on file"}</div>

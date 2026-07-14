@@ -70,7 +70,7 @@ function MiniMonth({ year, month, markers }: { year: number; month: number; mark
               {m ? (
                 <span className="flex items-center gap-0.5">
                   {m.hireCount > 0 ? <span className="text-[8px] font-bold text-brand-lea dark:text-slate-100">{m.hireCount}</span> : null}
-                  {m.sessionId ? <span className="h-1 w-1 rounded-full bg-emerald-500" /> : null}
+                  {m.sessionId ? <span className="h-1 w-1 shrink-0 rounded-full bg-emerald-500" /> : null}
                 </span>
               ) : null}
             </div>
@@ -293,7 +293,7 @@ export function OrientationOverview({
             <div className="mb-2 flex items-center gap-3">
               <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Calendar</h2>
               <span className="flex items-center gap-1 text-[11px] text-brand-grey dark:text-slate-400"><span className="inline-block h-2 w-2 rounded bg-brand-gold/40" /> orientation date</span>
-              <span className="flex items-center gap-1 text-[11px] text-brand-grey dark:text-slate-400"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> session</span>
+              <span className="flex items-center gap-1 text-[11px] text-brand-grey dark:text-slate-400"><span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" /> session</span>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {months.map(([y, m]) => <MiniMonth key={`${y}-${m}`} year={y} month={m} markers={markerMap} />)}

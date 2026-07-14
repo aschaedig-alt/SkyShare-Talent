@@ -668,7 +668,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
               onClick={() => setPageFilter(p)}
               className={`inline-flex items-center gap-1.5 rounded border px-3 py-1 text-[11px] font-semibold transition ${active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/15 bg-white text-brand-lea hover:bg-brand-cloudDancer/50 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"}`}
             >
-              {p !== "All" && <span className={`h-2.5 w-2.5 rounded-full ${PAGE_DOT[p]}`} />}
+              {p !== "All" && <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${PAGE_DOT[p]}`} />}
               {p}
               <span className={`rounded px-1.5 text-[10px] ${active ? "bg-white/25" : "bg-brand-lea/10 text-brand-grey dark:text-slate-400"}`}>{count}</span>
             </button>
@@ -793,7 +793,7 @@ export function LayoutLab({ job, blocks, limitedHtml }: Props) {
                   className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition ${current ? "bg-brand-cloudDancer/60 font-semibold text-brand-lea dark:bg-white/5 dark:text-slate-100" : "text-brand-black/80 hover:bg-brand-cloudDancer/40 dark:bg-white/5"}`}
                 >
                   <span className="flex items-center gap-2">
-                    <span className={`h-2.5 w-2.5 rounded-full ${PAGE_DOT[p]}`} />
+                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${PAGE_DOT[p]}`} />
                     {p}
                     {isOrigin && <span className="text-[9px] uppercase text-brand-grey dark:text-slate-400">(origin)</span>}
                   </span>

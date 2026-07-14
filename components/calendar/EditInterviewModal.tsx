@@ -193,7 +193,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
                         : "bg-brand-cloudDancer/50 text-brand-grey hover:bg-brand-cloudDancer dark:bg-white/5 dark:text-slate-400"
                     }`}
                   >
-                    <span className={`h-2 w-2 rounded-full ${active ? "bg-white/80" : meta.dot}`} />
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${active ? "bg-white/80" : meta.dot}`} />
                     {meta.label}
                   </button>
                 );

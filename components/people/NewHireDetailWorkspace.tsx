@@ -239,7 +239,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
             {hire.department ? ` · ${hire.department}` : ""}
           </p>
           {terminated ? (
-            <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-brand-grey/15 px-2.5 py-0.5 text-xs font-semibold text-brand-grey dark:bg-white/10 dark:text-slate-300">
+            <span className="mt-2 inline-flex items-center gap-1.5 rounded bg-brand-grey/15 px-2.5 py-0.5 text-xs font-semibold text-brand-grey dark:bg-white/10 dark:text-slate-300">
               Former employee{hire.terminationDate ? ` · left ${fmtDay(hire.terminationDate)}` : ""}
             </span>
           ) : null}

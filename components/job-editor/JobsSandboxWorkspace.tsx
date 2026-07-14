@@ -1234,7 +1234,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
           <div className="hidden items-center gap-2 xl:flex">
             {["Edit", "Build", "Preview", "Export"].map((step, index) => (
               <div key={step} className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-xs font-bold text-brand-lea dark:bg-brand-panel dark:text-slate-100">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-brand-lea dark:bg-brand-panel dark:text-slate-100">
                   {index + 1}
                 </div>
                 <span className="text-sm font-medium text-white/82">{step}</span>

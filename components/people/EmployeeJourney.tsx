@@ -208,14 +208,14 @@ export function EmployeeJourney({ hireId, journey, roleTitleOptions }: Props) {
                 journey.tenure.lastRehireBridged ? (
                   <span
                     title="Returned within 3 months — tenure continues from the original hire date."
-                    className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-200"
+                    className="inline-flex items-center gap-1 rounded border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-200"
                   >
                     <Check className="h-3 w-3" /> Tenure continued
                   </span>
                 ) : (
                   <span
                     title={`Returned after more than 3 months${journey.tenure.lastGapDays ? ` (${journey.tenure.lastGapDays} days out)` : ""} — tenure reset; counting from ${fmtDate(journey.tenure.serviceStart)}.`}
-                    className="inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 font-semibold text-amber-200"
+                    className="inline-flex items-center gap-1 rounded border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 font-semibold text-amber-200"
                   >
                     <RotateCcw className="h-3 w-3" /> Tenure reset · from {fmtDate(journey.tenure.serviceStart)}
                   </span>

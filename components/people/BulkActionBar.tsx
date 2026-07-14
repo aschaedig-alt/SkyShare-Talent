@@ -77,7 +77,7 @@ export function BulkActionBar({ count, actions, onApply, onClear, onDelete, busy
   return (
     <div className="sticky top-0 z-40 mb-3 flex flex-wrap items-center gap-2 rounded border border-brand-eden/30 bg-brand-eden/10 px-3 py-2 dark:border-white/15 dark:bg-white/10">
       <span className="flex items-center gap-1.5 text-sm font-semibold text-brand-lea dark:text-slate-100">
-        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-lea px-1.5 text-[11px] font-bold text-white">{count}</span>
+        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded bg-brand-lea px-1.5 text-[11px] font-bold text-white">{count}</span>
         selected
       </span>
 

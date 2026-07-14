@@ -581,7 +581,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
                               <span
                                 key={i}
                                 className={clsx(
-                                  "rounded-full px-2 py-0.5 font-semibold",
+                                  "rounded px-2 py-0.5 font-semibold",
                                   sug.kind === "upgrade"
                                     ? "bg-brand-gold/20 text-brand-lea dark:text-brand-gold"
                                     : "bg-brand-eden/10 text-brand-eden dark:bg-white/5 dark:text-slate-300"
@@ -613,12 +613,12 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
                       </Link>
                       <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                         {up > 0 && (
-                          <span className="rounded-full bg-brand-gold/20 px-2 py-0.5 font-semibold text-brand-lea dark:text-brand-gold">
+                          <span className="rounded bg-brand-gold/20 px-2 py-0.5 font-semibold text-brand-lea dark:text-brand-gold">
                             {up} upgrade{up === 1 ? "" : "s"}
                           </span>
                         )}
                         {tr > 0 && (
-                          <span className="rounded-full bg-brand-eden/10 px-2 py-0.5 font-semibold text-brand-eden dark:bg-white/5 dark:text-slate-300">
+                          <span className="rounded bg-brand-eden/10 px-2 py-0.5 font-semibold text-brand-eden dark:bg-white/5 dark:text-slate-300">
                             {tr} transition{tr === 1 ? "" : "s"}
                           </span>
                         )}
@@ -768,7 +768,7 @@ function TravelSpend({ travel }: { travel: ReportsData["travelSpend"] }) {
                               <div className="flex items-center gap-2">
                                 <span
                                   className={clsx(
-                                    "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                                    "rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
                                     t.hired ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-amber-400/20 text-amber-700 dark:text-amber-300"
                                   )}
                                 >

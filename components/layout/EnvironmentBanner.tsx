@@ -24,7 +24,7 @@ export function EnvironmentBanner() {
     <div className="border-b border-brand-lea/10 bg-white/90 px-5 py-2 text-xs text-brand-grey lg:px-8 print:hidden dark:border-white/10 dark:bg-brand-panel/90 dark:text-slate-400">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-brand-gold" />
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-brand-gold" />
           <span className="font-semibold text-brand-lea dark:text-slate-100">{label}</span>
           <span className="hidden text-brand-grey sm:inline dark:text-slate-400">- {detail}</span>
         </div>

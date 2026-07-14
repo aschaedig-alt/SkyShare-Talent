@@ -45,7 +45,7 @@ function CardBlock({
   return (
     <div className="border-t border-brand-lea/10 pt-3 first:border-t-0 first:pt-0 dark:border-white/10">
       <div className="mb-2 flex items-center gap-1.5">
-        {label ? <span className="rounded-full bg-brand-lea/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-lea dark:bg-white/10 dark:text-slate-200">{label}</span> : null}
+        {label ? <span className="rounded bg-brand-lea/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-lea dark:bg-white/10 dark:text-slate-200">{label}</span> : null}
         <div className="ml-auto flex items-center gap-0.5">
           {onEdit ? (
             <button onClick={onEdit} title="Edit card" className="rounded p-1 text-brand-grey/70 transition hover:bg-brand-gold/15 hover:text-brand-eden dark:text-slate-500 dark:hover:bg-white/10">

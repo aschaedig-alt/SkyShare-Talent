@@ -1011,7 +1011,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                     </span>
                     <span className="inline-flex items-center gap-1.5 rounded bg-white px-2 py-1 text-xs font-bold text-brand-lea dark:bg-brand-panel dark:text-slate-100">
                       <span
-                        className="h-2.5 w-2.5 rounded-full"
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
                         style={{ backgroundColor: textColors.find((color) => color.value === form.textColor)?.swatch }}
                       />
                       {textColors.find((color) => color.value === form.textColor)?.label}

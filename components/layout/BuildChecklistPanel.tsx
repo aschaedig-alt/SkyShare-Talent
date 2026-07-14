@@ -22,7 +22,7 @@ export function BuildChecklistPanel() {
         <div className="mt-2 space-y-2">
           {completedBuildItems.map((item) => (
             <div key={item} className="flex gap-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-2 dark:border-white/10 dark:bg-white/5">
-              <span className="mt-0.5 h-3 w-3 rounded-full bg-emerald-500" />
+              <span className="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-emerald-500" />
               <span className="text-xs font-semibold leading-5 text-brand-lea dark:text-slate-100">{item}</span>
             </div>
           ))}
