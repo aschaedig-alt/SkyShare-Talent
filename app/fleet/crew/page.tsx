@@ -1,13 +1,17 @@
 import { requireModulePageAccess } from "@/lib/data/module-access";
+import { hasPermission } from "@/lib/auth/roles";
+import { getCrewRoster } from "@/lib/fleet/staffing/roster.server";
 import CrewOrgChart from "@/components/fleet/orgchart/CrewOrgChart";
 
 export const dynamic = "force-dynamic";
 
 export default async function CrewOrgChartPage() {
-  await requireModulePageAccess("fleet");
+  const { role } = await requireModulePageAccess("fleet");
+  const [groups] = await Promise.all([getCrewRoster()]);
+  const canEdit = hasPermission(role, "settings:admin");
   return (
     <div className="p-4 md:p-6">
-      <CrewOrgChart />
+      <CrewOrgChart initialGroups={groups} canEdit={canEdit} />
     </div>
   );
 }

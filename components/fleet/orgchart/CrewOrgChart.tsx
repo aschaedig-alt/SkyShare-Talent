@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import type { CrewGroup, Seat } from "@/lib/fleet/staffing/types";
@@ -11,6 +11,45 @@ import styles from "./OrgChart.module.css";
 
 type SortKey = "Fleet size" | "Open seats";
 type ParkedKey = "hide" | "show";
+
+// --- edit-mode roster mutation (pure, operate on a cloned draft) ------------
+type SeatKey = "pic" | "sic" | "cabin";
+type FillBucket = "line" | "train" | "cand";
+type MovePick = { gIdx: number; seatKey: SeatKey; bucket: FillBucket; name: string };
+
+const SEAT_LABEL: Record<SeatKey, string> = { pic: "Captain", sic: "First Officer", cabin: "Cabin" };
+
+function ensureSeat(g: CrewGroup, key: SeatKey): Seat {
+  let s = g[key];
+  if (!s) {
+    s = {};
+    g[key] = s;
+  }
+  return s;
+}
+
+function pull(seat: Seat, bucket: FillBucket, name: string) {
+  const arr = seat[bucket];
+  if (!Array.isArray(arr)) return;
+  const i = arr.indexOf(name);
+  if (i >= 0) arr.splice(i, 1);
+  if (arr.length === 0) delete seat[bucket];
+}
+
+function push(seat: Seat, bucket: FillBucket, name: string) {
+  const arr = seat[bucket] ?? (seat[bucket] = []);
+  if (!arr.includes(name)) arr.push(name);
+}
+
+/** After a removal, collapse an empty FO/Cabin seat back to "no seat" so the
+    card shows the correct empty state; PIC stays as a 0-count seat. */
+function tidySeat(g: CrewGroup, key: SeatKey) {
+  const s = g[key];
+  if (s && Object.keys(s).length === 0) {
+    if (key === "sic") g.sic = null;
+    else if (key === "cabin") delete g.cabin;
+  }
+}
 
 function ColBody({
   seat,
@@ -33,6 +72,158 @@ function ColBody({
   if (showParked) for (let i = 0; i < o.parked; i++) rows.push(<SlotRow key={`p${i}`} label="On hold (parked)" cls="p" rp="Not counted" />);
   if (rows.length === 0) return <div className="m-empty">No crew listed.</div>;
   return <>{rows}</>;
+}
+
+/** Move-target options: every non-pool aircraft/seat except the source seat. */
+function moveOptions(allGroups: CrewGroup[], exclude: { gIdx: number; seatKey: SeatKey }) {
+  const opts: { value: string; label: string }[] = [];
+  allGroups.forEach((g, i) => {
+    if (g.poolFlown) return;
+    (["pic", "sic", "cabin"] as SeatKey[]).forEach((sk) => {
+      if (sk === "cabin" && !g.cabin) return; // can't retarget cabin on a no-cabin aircraft
+      if (i === exclude.gIdx && sk === exclude.seatKey) return;
+      opts.push({ value: `${i}|${sk}`, label: `${g.name} — ${SEAT_LABEL[sk]}` });
+    });
+  });
+  return opts;
+}
+
+/** One editable seat column in the edit-mode modal. Module-scoped so its
+    "add name" input keeps focus across the parent's re-renders. */
+function EditCol({
+  group,
+  gIdx,
+  seatKey,
+  label,
+  allGroups,
+  movePick,
+  onAdd,
+  onRemove,
+  onAdjustOpen,
+  onToggleTrain,
+  onSetMove,
+  onMove
+}: {
+  group: CrewGroup;
+  gIdx: number;
+  seatKey: SeatKey;
+  label: string;
+  allGroups: CrewGroup[];
+  movePick: MovePick | null;
+  onAdd: (name: string) => void;
+  onRemove: (bucket: FillBucket, name: string) => void;
+  onAdjustOpen: (delta: number) => void;
+  onToggleTrain: (name: string, toTrain: boolean) => void;
+  onSetMove: (p: MovePick | null) => void;
+  onMove: (from: MovePick, toIdx: number, toSeat: SeatKey) => void;
+}) {
+  const [draftName, setDraftName] = useState("");
+  const o = normSeat(group[seatKey]);
+  const filled = o.line.length + o.train.length;
+  const total = filled + o.open + o.openNamed.length + o.cand.length;
+
+  const row = (name: string, bucket: FillBucket, tone: string, tag?: string) => {
+    const isMoving =
+      !!movePick && movePick.gIdx === gIdx && movePick.seatKey === seatKey && movePick.bucket === bucket && movePick.name === name;
+    return (
+      <div className="ec-row" key={`${bucket}-${name}`}>
+        <div className="ec-line">
+          <span className={`ec-dot ${tone}`} />
+          <span className="ec-nm">{name}</span>
+          {tag ? <span className="ec-tag">{tag}</span> : null}
+          <span className="ec-act">
+            {bucket === "line" ? (
+              <button type="button" onClick={() => onToggleTrain(name, true)} title="Mark as in training">
+                →trng
+              </button>
+            ) : null}
+            {bucket === "train" ? (
+              <button type="button" onClick={() => onToggleTrain(name, false)} title="Mark as on the line">
+                →line
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => onSetMove(isMoving ? null : { gIdx, seatKey, bucket, name })}
+              title="Move to another aircraft"
+            >
+              move
+            </button>
+            <button type="button" className="del" onClick={() => onRemove(bucket, name)} title="Remove">
+              ✕
+            </button>
+          </span>
+        </div>
+        {isMoving ? (
+          <div className="ec-move">
+            <select
+              defaultValue=""
+              onChange={(e) => {
+                const v = e.target.value;
+                if (!v) return;
+                const [ti, ts] = v.split("|");
+                onMove({ gIdx, seatKey, bucket, name }, Number(ti), ts as SeatKey);
+              }}
+            >
+              <option value="" disabled>
+                Move to…
+              </option>
+              {moveOptions(allGroups, { gIdx, seatKey }).map((op) => (
+                <option key={op.value} value={op.value}>
+                  {op.label}
+                </option>
+              ))}
+            </select>
+            <button type="button" onClick={() => onSetMove(null)}>
+              cancel
+            </button>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
+  return (
+    <div className="m-col ec">
+      <div className="colh">
+        <span>{label}</span>
+        <span>
+          {filled}/{total}
+        </span>
+      </div>
+      {o.line.map((n) => row(n, "line", "g"))}
+      {o.train.map((n) => row(n, "train", "t", "training"))}
+      {o.cand.map((n) => row(n, "cand", "r", "tentative"))}
+      {o.openNamed.map((l, i) => (
+        <div className="ec-named" key={`on${i}`}>
+          {l} · <span>named opening</span>
+        </div>
+      ))}
+      <div className="ec-open">
+        <span>Open seats</span>
+        <button type="button" onClick={() => onAdjustOpen(-1)} disabled={o.open === 0} aria-label="Remove an open seat">
+          −
+        </button>
+        <b>{o.open}</b>
+        <button type="button" onClick={() => onAdjustOpen(1)} aria-label="Add an open seat">
+          +
+        </button>
+      </div>
+      <form
+        className="ec-add"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onAdd(draftName);
+          setDraftName("");
+        }}
+      >
+        <input value={draftName} onChange={(e) => setDraftName(e.target.value)} placeholder="Add name…" />
+        <button type="submit" disabled={!draftName.trim()}>
+          Add
+        </button>
+      </form>
+    </div>
+  );
 }
 
 function Transitions({ d }: { d: CrewGroup }) {
@@ -73,14 +264,104 @@ function Transitions({ d }: { d: CrewGroup }) {
   );
 }
 
-export default function CrewOrgChart() {
+export default function CrewOrgChart({
+  initialGroups,
+  canEdit = false
+}: {
+  initialGroups?: CrewGroup[];
+  canEdit?: boolean;
+} = {}) {
   const [sort, setSort] = useState<SortKey>("Fleet size");
   const [parked, setParked] = useState<ParkedKey>("hide");
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const showParked = parked === "show";
 
-  const groups = CREW_GROUPS.map((d, idx) => {
+  const [groupsData, setGroupsData] = useState<CrewGroup[]>(() => initialGroups ?? CREW_GROUPS);
+  const [savedGroups, setSavedGroups] = useState<CrewGroup[]>(() => initialGroups ?? CREW_GROUPS);
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveErr, setSaveErr] = useState<string | null>(null);
+  const [movePick, setMovePick] = useState<MovePick | null>(null);
+
+  const dirty = useMemo(() => JSON.stringify(groupsData) !== JSON.stringify(savedGroups), [groupsData, savedGroups]);
+
+  const applyEdit = (fn: (draft: CrewGroup[]) => void) =>
+    setGroupsData((prev) => {
+      const d = structuredClone(prev);
+      fn(d);
+      return d;
+    });
+
+  const addPilot = (gIdx: number, seatKey: SeatKey, name: string) => {
+    const clean = name.trim();
+    if (!clean) return;
+    applyEdit((d) => push(ensureSeat(d[gIdx], seatKey), "line", clean));
+  };
+  const removePerson = (gIdx: number, seatKey: SeatKey, bucket: FillBucket, name: string) =>
+    applyEdit((d) => {
+      const s = d[gIdx][seatKey];
+      if (s) {
+        pull(s, bucket, name);
+        tidySeat(d[gIdx], seatKey);
+      }
+    });
+  const adjustOpen = (gIdx: number, seatKey: SeatKey, delta: number) =>
+    applyEdit((d) => {
+      const s = ensureSeat(d[gIdx], seatKey);
+      const next = Math.max(0, (s.open ?? 0) + delta);
+      if (next === 0) delete s.open;
+      else s.open = next;
+      tidySeat(d[gIdx], seatKey);
+    });
+  const toggleTrain = (gIdx: number, seatKey: SeatKey, name: string, toTrain: boolean) =>
+    applyEdit((d) => {
+      const s = ensureSeat(d[gIdx], seatKey);
+      pull(s, toTrain ? "line" : "train", name);
+      push(s, toTrain ? "train" : "line", name);
+    });
+  const doMove = (from: MovePick, toIdx: number, toSeat: SeatKey) => {
+    applyEdit((d) => {
+      const src = d[from.gIdx][from.seatKey];
+      if (src) {
+        pull(src, from.bucket, from.name);
+        tidySeat(d[from.gIdx], from.seatKey);
+      }
+      push(ensureSeat(d[toIdx], toSeat), "line", from.name);
+    });
+    setMovePick(null);
+  };
+
+  const postRoster = async (body: unknown) => {
+    setSaving(true);
+    setSaveErr(null);
+    try {
+      const res = await fetch("/api/workspace-settings/fleet-crew-roster", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const data = (await res.json()) as { groups: CrewGroup[] };
+      setGroupsData(data.groups);
+      setSavedGroups(data.groups);
+    } catch {
+      setSaveErr("Couldn't save — check your connection or that you're signed in as an admin.");
+    } finally {
+      setSaving(false);
+    }
+  };
+  const save = () => postRoster({ groups: groupsData });
+  const discard = () => {
+    setGroupsData(savedGroups);
+    setMovePick(null);
+  };
+  const resetSeed = () => {
+    if (typeof window !== "undefined" && !window.confirm("Reset the crew chart to the original source data? This discards all saved manual edits.")) return;
+    postRoster({ reset: true });
+  };
+
+  const groups = groupsData.map((d, idx) => {
     const p = normSeat(d.pic);
     const s = d.sic ? normSeat(d.sic) : null;
     const cp = cntSeat(p);
@@ -139,7 +420,7 @@ export default function CrewOrgChart() {
       window.removeEventListener("resize", onResize);
       clearTimeout(t);
     };
-  }, [sort, parked]);
+  }, [sort, parked, groupsData, editMode]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -333,7 +614,7 @@ export default function CrewOrgChart() {
   const ssG = groups.filter((g) => g.d.pool === "SkyShare");
   const mgG = groups.filter((g) => g.d.pool === "Managed");
 
-  const active = openIdx != null ? CREW_GROUPS[openIdx] : null;
+  const active = openIdx != null ? groupsData[openIdx] : null;
   const ap = active ? normSeat(active.pic) : null;
   const as = active && active.sic ? normSeat(active.sic) : null;
   const acp = ap ? cntSeat(ap) : null;
@@ -372,6 +653,20 @@ export default function CrewOrgChart() {
                 Show
               </button>
             </div>
+            {canEdit ? (
+              <div className="seg">
+                <span className="lbl">Roster</span>
+                <button
+                  className={editMode ? "on" : ""}
+                  onClick={() => {
+                    setEditMode((v) => !v);
+                    setMovePick(null);
+                  }}
+                >
+                  {editMode ? "Editing" : "Edit"}
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="right">
@@ -384,6 +679,31 @@ export default function CrewOrgChart() {
           </div>
         </div>
       </div>
+
+      {editMode ? (
+        <div className="editbar">
+          <div className="eb-msg">
+            <b>Editing roster.</b> Click any aircraft to add or remove pilots, move them between aircraft, and open or close seats.
+            {dirty ? (
+              <span className="eb-dirty"> · unsaved changes</span>
+            ) : (
+              <span className="eb-clean"> · all changes saved</span>
+            )}
+            {saveErr ? <span className="eb-err"> · {saveErr}</span> : null}
+          </div>
+          <div className="eb-act">
+            <button type="button" className="ghost" onClick={resetSeed} disabled={saving}>
+              Reset to source
+            </button>
+            <button type="button" className="ghost" onClick={discard} disabled={saving || !dirty}>
+              Discard
+            </button>
+            <button type="button" className="primary" onClick={save} disabled={saving || !dirty}>
+              {saving ? "Saving…" : "Save changes"}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="toptree">
         <div className="mgmt">
@@ -502,56 +822,112 @@ export default function CrewOrgChart() {
                 {as && acs ? ` · ${acs.f}/${acs.at} first officers` : ""}
               </div>
             </div>
-            <div className="m-cols">
-              <div className="m-col">
-                <div className="colh">
-                  <span>Captains</span>
-                  <span>
-                    {acp.f}/{acp.at}
-                  </span>
+            {editMode ? (
+              <>
+                <div className="m-cols">
+                  <EditCol
+                    group={active}
+                    gIdx={openIdx as number}
+                    seatKey="pic"
+                    label="Captains"
+                    allGroups={groupsData}
+                    movePick={movePick}
+                    onAdd={(name) => addPilot(openIdx as number, "pic", name)}
+                    onRemove={(bucket, name) => removePerson(openIdx as number, "pic", bucket, name)}
+                    onAdjustOpen={(delta) => adjustOpen(openIdx as number, "pic", delta)}
+                    onToggleTrain={(name, toTrain) => toggleTrain(openIdx as number, "pic", name, toTrain)}
+                    onSetMove={setMovePick}
+                    onMove={doMove}
+                  />
+                  <EditCol
+                    group={active}
+                    gIdx={openIdx as number}
+                    seatKey="sic"
+                    label="First Officers"
+                    allGroups={groupsData}
+                    movePick={movePick}
+                    onAdd={(name) => addPilot(openIdx as number, "sic", name)}
+                    onRemove={(bucket, name) => removePerson(openIdx as number, "sic", bucket, name)}
+                    onAdjustOpen={(delta) => adjustOpen(openIdx as number, "sic", delta)}
+                    onToggleTrain={(name, toTrain) => toggleTrain(openIdx as number, "sic", name, toTrain)}
+                    onSetMove={setMovePick}
+                    onMove={doMove}
+                  />
+                  {active.cabin ? (
+                    <EditCol
+                      group={active}
+                      gIdx={openIdx as number}
+                      seatKey="cabin"
+                      label="Cabin"
+                      allGroups={groupsData}
+                      movePick={movePick}
+                      onAdd={(name) => addPilot(openIdx as number, "cabin", name)}
+                      onRemove={(bucket, name) => removePerson(openIdx as number, "cabin", bucket, name)}
+                      onAdjustOpen={(delta) => adjustOpen(openIdx as number, "cabin", delta)}
+                      onToggleTrain={(name, toTrain) => toggleTrain(openIdx as number, "cabin", name, toTrain)}
+                      onSetMove={setMovePick}
+                      onMove={doMove}
+                    />
+                  ) : null}
                 </div>
-                <ColBody seat={active.pic} leadName={active.lead} showParked={showParked} tags={active.tags} />
-              </div>
-              <div className="m-col">
-                <div className="colh">
-                  <span>First Officers</span>
-                  <span>{as && acs ? `${acs.f}/${acs.at}` : "—"}</span>
+                <div className="m-edithint">
+                  Changes are local until you press <b>Save changes</b> in the edit bar. First-officer and cabin seats disappear when emptied; re-add a name to bring them back.
                 </div>
-                <ColBody seat={active.sic} showParked={showParked} tags={active.tags} />
-              </div>
-              {acab && acabc ? (
-                <div className="m-cab">
-                  <div className="colh">
-                    <span>Cabin</span>
-                    <span>
-                      {acabc.f}/{acabc.at}
-                    </span>
+              </>
+            ) : (
+              <>
+                <div className="m-cols">
+                  <div className="m-col">
+                    <div className="colh">
+                      <span>Captains</span>
+                      <span>
+                        {acp.f}/{acp.at}
+                      </span>
+                    </div>
+                    <ColBody seat={active.pic} leadName={active.lead} showParked={showParked} tags={active.tags} />
                   </div>
-                  {acab.line.map((n, i) => (
-                    <PersonRow key={`cl${i}`} name={n} cls="g" rp="On board" />
-                  ))}
-                  {acab.openNamed.map((l, i) => (
-                    <SlotRow key={`co${i}`} label={l} cls="o" rp="To fill" />
-                  ))}
+                  <div className="m-col">
+                    <div className="colh">
+                      <span>First Officers</span>
+                      <span>{as && acs ? `${acs.f}/${acs.at}` : "—"}</span>
+                    </div>
+                    <ColBody seat={active.sic} showParked={showParked} tags={active.tags} />
+                  </div>
+                  {acab && acabc ? (
+                    <div className="m-cab">
+                      <div className="colh">
+                        <span>Cabin</span>
+                        <span>
+                          {acabc.f}/{acabc.at}
+                        </span>
+                      </div>
+                      {acab.line.map((n, i) => (
+                        <PersonRow key={`cl${i}`} name={n} cls="g" rp="On board" />
+                      ))}
+                      {acab.openNamed.map((l, i) => (
+                        <SlotRow key={`co${i}`} label={l} cls="o" rp="To fill" />
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
-            </div>
-            <Transitions d={active} />
-            <div className="m-photo">
-              {active.photo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={active.photo} alt={`${active.name} photo`} />
-              ) : (
-                <div className="ph">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="5" width="18" height="14" rx="1.5" />
-                    <circle cx="8.5" cy="10" r="1.6" />
-                    <path d="M4 17 l4.5-4.5 3 3 4-5 4.5 6" />
-                  </svg>
-                  <span>Aircraft photo</span>
+                <Transitions d={active} />
+                <div className="m-photo">
+                  {active.photo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={active.photo} alt={`${active.name} photo`} />
+                  ) : (
+                    <div className="ph">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="5" width="18" height="14" rx="1.5" />
+                        <circle cx="8.5" cy="10" r="1.6" />
+                        <path d="M4 17 l4.5-4.5 3 3 4-5 4.5 6" />
+                      </svg>
+                      <span>Aircraft photo</span>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </>
+            )}
           </>
         ) : null}
       </div>

@@ -279,7 +279,7 @@ Captured from the Jul 14 braindump — not yet scoped.
 - [x] Fleet > Managed Aircraft: move the N477KR card to show before N515RP and N739S — and model N477KR as Jack's dedicated aircraft AND as backup coverage flown by the SkyShare pool pilots
 - [x] Org chart: fix the colors (too much red and a lot of dark blue) to match the site palette better — gold header rule, navy KPI numbers, gold eyebrows, lighter cool-blue division band
 - [x] Org chart: make sure the MX crew is also accurate — counting/render logic verified consistent with the crew rules (training=filled, 2+ open alert); name-level data re-diff still needs the source cleanup CSV (not in repo)
-- [ ] Org chart: add the ability to edit the chart by openings and move pilots around — needs a persistence layer (roster is static curated TS today); scope pending
+- [x] Org chart: add the ability to edit the chart by openings and move pilots around — admin "Edit roster" mode on the crew chart (add/remove pilots, move between aircraft, open/close seats); persists to a WorkspaceSetting override (scope fleet/crew-roster) over the crew-data.ts seed, with reset-to-source
 - [ ] Org chart: when a pilot is moved on the chart, reflect that move on their employee-journey profile — depends on the edit feature above + coordinating with the employee-journey work
 - [ ] Employee recognition: add the info and start building (still waiting on final approval, but can begin now)
 - [ ] Help section: training guides for every page anyone might need to access
