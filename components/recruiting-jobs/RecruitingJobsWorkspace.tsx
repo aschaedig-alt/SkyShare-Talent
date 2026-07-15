@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
 import type { RecruitingJobDetail, RecruitingJobsData } from "@/lib/data/recruiting-jobs";
@@ -219,9 +219,20 @@ function NoJobPanel() {
   );
 }
 
+// Placeholder so the three detail panels are ALWAYS present (stable panel set) —
+// shown only in the edge case where nothing is selected.
+function EmptyDetail({ title }: { title: string }) {
+  return (
+    <section className="flex h-full flex-col items-center justify-center rounded bg-white p-6 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">{title}</p>
+      <p className="mt-2 text-sm text-brand-grey dark:text-slate-400">Select a job to see its details.</p>
+    </section>
+  );
+}
+
 export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLayout = null, savedWidgets = null, widgetData }: RecruitingJobsWorkspaceProps) {
-  const pilotJobs = data.jobs.filter((job) => job.isPilotRole);
-  const supportJobs = data.jobs.filter((job) => !job.isPilotRole);
+  const pilotJobs = useMemo(() => data.jobs.filter((j) => j.isPilotRole), [data.jobs]);
+  const supportJobs = useMemo(() => data.jobs.filter((j) => !j.isPilotRole), [data.jobs]);
   const [selectedId, setSelectedId] = useState<string | null>(data.selectedJob?.id ?? null);
   const job = selectedId ? data.details[selectedId] ?? null : null;
 
@@ -235,28 +246,27 @@ export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLay
     window.history.replaceState(null, "", url.toString());
   }, [selectedId, query]);
 
-  const panels: EditablePanel[] = [
-    { id: "rjobs-header", title: "Role operations", node: <HeaderPanel query={query} /> },
-    { id: "rjobs-stats", title: "Job statistics", node: <StatsPanel stats={data.stats} /> },
-    {
-      id: "rjobs-jobs-list",
-      title: "Pilot & support jobs",
-      node: <JobListsPanel pilotJobs={pilotJobs} supportJobs={supportJobs} selectedId={selectedId} onSelect={setSelectedId} />
-    },
-    {
-      id: "rjobs-detail-header",
-      title: "Job detail",
-      node: job ? <JobDetailHeader job={job} /> : <NoJobPanel />
-    }
-  ];
-
-  if (job) {
-    panels.push(
-      { id: "rjobs-linked-cands", title: "Linked candidates", node: <LinkedCandidates job={job} /> },
-      { id: "rjobs-linked-reqs", title: "Linked requirements", node: <LinkedRequirements job={job} /> },
-      { id: "rjobs-source", title: "Source record", node: <SourceRecord job={job} /> }
-    );
-  }
+  // ALWAYS the same 7 panels (detail panels show a placeholder when nothing is
+  // selected) AND a stable array reference via useMemo. EditableGrid re-runs its
+  // layout init whenever the panels reference or the set of panel ids changes; a
+  // changing set (conditional detail panels) or a fresh reference every render
+  // made the grid collapse the panels on top of each other.
+  const panels: EditablePanel[] = useMemo(
+    () => [
+      { id: "rjobs-header", title: "Role operations", node: <HeaderPanel query={query} /> },
+      { id: "rjobs-stats", title: "Job statistics", node: <StatsPanel stats={data.stats} /> },
+      {
+        id: "rjobs-jobs-list",
+        title: "Pilot & support jobs",
+        node: <JobListsPanel pilotJobs={pilotJobs} supportJobs={supportJobs} selectedId={selectedId} onSelect={setSelectedId} />
+      },
+      { id: "rjobs-detail-header", title: "Job detail", node: job ? <JobDetailHeader job={job} /> : <NoJobPanel /> },
+      { id: "rjobs-linked-cands", title: "Linked candidates", node: job ? <LinkedCandidates job={job} /> : <EmptyDetail title="Linked candidates" /> },
+      { id: "rjobs-linked-reqs", title: "Linked requirements", node: job ? <LinkedRequirements job={job} /> : <EmptyDetail title="Linked requirements" /> },
+      { id: "rjobs-source", title: "Source record", node: job ? <SourceRecord job={job} /> : <EmptyDetail title="Source record" /> }
+    ],
+    [job, selectedId, query, pilotJobs, supportJobs, data.stats]
+  );
 
   return (
     <div className="px-5 py-5 lg:px-8">
