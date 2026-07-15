@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { positionFor } from "@/lib/fleet/positions";
 import { computeTenure } from "@/lib/data/tenure";
+import { ensureInitialRole } from "@/lib/data/ensure-initial-role";
 
 // ---------------------------------------------------------------------------
 // Employee journey — the sequence of roles a person has held at SkyShare, plus
@@ -115,6 +116,9 @@ function markUpgrades(ordered: RawRole[]): boolean[] {
 
 export async function getEmployeeJourney(hireId: string): Promise<EmployeeJourney> {
   const now = Date.now();
+  // Backfill: an existing hire with a position + start date but no recorded role
+  // gets their initial "HIRE" entry the first time their journey is viewed.
+  await ensureInitialRole(hireId);
   const [roles, stintRows] = (await Promise.all([
     prisma.roleAssignment.findMany({
       where: { newHireId: hireId },

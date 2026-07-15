@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { defaultTaskCreateData } from "@/lib/data/onboarding";
 import { ensureCustomMilestoneTasks } from "@/lib/data/onboarding-milestones";
+import { ensureInitialRole } from "@/lib/data/ensure-initial-role";
 
 function parseDate(value: unknown): Date | null {
   if (value === null || value === undefined || value === "") return null;
@@ -48,6 +49,8 @@ export async function POST(request: Request) {
     });
 
     await ensureCustomMilestoneTasks(hire.id);
+    // Seed the first role-journey entry from position + start date (if both set).
+    await ensureInitialRole(hire.id);
 
     return NextResponse.json({ ok: true, id: hire.id });
   } catch (error) {

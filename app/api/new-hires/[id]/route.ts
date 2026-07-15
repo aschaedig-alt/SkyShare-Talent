@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { isCardStatus } from "@/lib/business-cards/card";
 import { normalizeTags } from "@/lib/employees/columns";
+import { ensureInitialRole } from "@/lib/data/ensure-initial-role";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -115,6 +116,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const updated = await prisma.newHire.update({ where: { id }, data });
+    // If this update just supplied a position + start date, seed the first
+    // role-journey entry (no-op if they already have one).
+    await ensureInitialRole(updated.id);
     return NextResponse.json({ ok: true, id: updated.id });
   } catch (error) {
     console.error("New hire update error:", error);
