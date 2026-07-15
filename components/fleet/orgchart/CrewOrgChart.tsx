@@ -116,10 +116,12 @@ function EditCol({
   onAdjustOpen: (delta: number) => void;
   onToggleTrain: (name: string, toTrain: boolean) => void;
   onSetMove: (p: MovePick | null) => void;
-  onMove: (from: MovePick, toIdx: number, toSeat: SeatKey) => void;
+  onMove: (from: MovePick, toIdx: number, toSeat: SeatKey, bucket: FillBucket) => void;
 }) {
   const [draftName, setDraftName] = useState("");
   const [draftBucket, setDraftBucket] = useState<FillBucket>("line");
+  const [moveDest, setMoveDest] = useState("");
+  const [moveStatus, setMoveStatus] = useState<FillBucket>("line");
   const o = normSeat(group[seatKey]);
   const filled = o.line.length + o.train.length;
   const total = filled + o.open + o.openNamed.length + o.cand.length + o.candInt.length;
@@ -146,7 +148,15 @@ function EditCol({
             ) : null}
             <button
               type="button"
-              onClick={() => onSetMove(isMoving ? null : { gIdx, seatKey, bucket, name })}
+              onClick={() => {
+                if (isMoving) {
+                  onSetMove(null);
+                } else {
+                  setMoveDest("");
+                  setMoveStatus("line");
+                  onSetMove({ gIdx, seatKey, bucket, name });
+                }
+              }}
               title="Move to another aircraft"
             >
               move
@@ -158,15 +168,7 @@ function EditCol({
         </div>
         {isMoving ? (
           <div className="ec-move">
-            <select
-              defaultValue=""
-              onChange={(e) => {
-                const v = e.target.value;
-                if (!v) return;
-                const [ti, ts] = v.split("|");
-                onMove({ gIdx, seatKey, bucket, name }, Number(ti), ts as SeatKey);
-              }}
-            >
+            <select value={moveDest} onChange={(e) => setMoveDest(e.target.value)} aria-label="Move destination">
               <option value="" disabled>
                 Move to…
               </option>
@@ -176,6 +178,22 @@ function EditCol({
                 </option>
               ))}
             </select>
+            <select value={moveStatus} onChange={(e) => setMoveStatus(e.target.value as FillBucket)} aria-label="Arrival status">
+              <option value="line">On line</option>
+              <option value="train">In training</option>
+              <option value="cand">Tentative · external</option>
+              <option value="candInt">Tentative · internal</option>
+            </select>
+            <button
+              type="button"
+              disabled={!moveDest}
+              onClick={() => {
+                const [ti, ts] = moveDest.split("|");
+                onMove({ gIdx, seatKey, bucket, name }, Number(ti), ts as SeatKey, moveStatus);
+              }}
+            >
+              Move
+            </button>
             <button type="button" onClick={() => onSetMove(null)}>
               cancel
             </button>
@@ -238,9 +256,11 @@ function EditCol({
 
 function Transitions({ d }: { d: CrewGroup }) {
   const inn: { name: string; note: string }[] = [];
-  [d.pic, d.sic].forEach((seat) => {
+  [d.pic, d.sic, d.cabin].forEach((seat) => {
     if (!seat) return;
     (seat.train || []).forEach((n) => inn.push({ name: n, note: CREW_TRAINING[n] || "arriving · in training" }));
+    (seat.cand || []).forEach((n) => inn.push({ name: n, note: "tentative · external" }));
+    (seat.candInt || []).forEach((n) => inn.push({ name: n, note: "tentative · internal" }));
   });
   const out = (d.out || []).map((x) => ({
     name: x.name,
@@ -343,17 +363,43 @@ export default function CrewOrgChart({
       pull(s, toTrain ? "line" : "train", name);
       push(s, toTrain ? "train" : "line", name);
     });
-  const doMove = (from: MovePick, toIdx: number, toSeat: SeatKey) => {
+  const doMove = (from: MovePick, toIdx: number, toSeat: SeatKey, bucket: FillBucket) => {
     applyEdit((d) => {
-      const src = d[from.gIdx][from.seatKey];
+      const srcGroup = d[from.gIdx];
+      const src = srcGroup[from.seatKey];
       if (src) {
         pull(src, from.bucket, from.name);
-        tidySeat(d[from.gIdx], from.seatKey);
+        // Vacating the source reopens that seat (a backfill req).
+        src.open = (src.open ?? 0) + 1;
       }
-      push(ensureSeat(d[toIdx], toSeat), "line", from.name);
+      const destGroup = d[toIdx];
+      const tentative = bucket === "cand" || bucket === "candInt";
+      // A tentative transfer is "in progress": record it as transitioning-out on
+      // the source so the pilot shows leaving the old aircraft.
+      if (tentative) {
+        const destLabel = `${destGroup.name} · ${SEAT_LABEL[toSeat]}`;
+        srcGroup.out = [...(srcGroup.out ?? []), { name: from.name, to: destLabel, reason: "tentative move" }];
+      }
+      tidySeat(srcGroup, from.seatKey);
+      const t = ensureSeat(destGroup, toSeat);
+      push(t, bucket, from.name);
+      // Arriving into the seat consumes one open req if any exist.
+      if ((t.open ?? 0) > 0) {
+        const n = (t.open ?? 0) - 1;
+        if (n === 0) delete t.open;
+        else t.open = n;
+      }
     });
     setMovePick(null);
   };
+  const removeOut = (gIdx: number, index: number) =>
+    applyEdit((d) => {
+      const g = d[gIdx];
+      if (g.out) {
+        g.out = g.out.filter((_, i) => i !== index);
+        if (!g.out.length) delete g.out;
+      }
+    });
 
   const postRoster = async (body: unknown) => {
     setSaving(true);
@@ -517,7 +563,12 @@ export default function CrewOrgChart({
     const totFilled = g.cp.f + g.cp.tr + (g.cs ? g.cs.f + g.cs.tr : 0);
     const totTgt = g.cp.at + (g.cs ? g.cs.at : 0);
     const cabinCount = g.d.cabin ? cntSeat(normSeat(g.d.cabin)) : null;
-    const inN = g.cp.tr + (g.cs ? g.cs.tr : 0);
+    // arrivals = in-training + tentative (external + internal) across the seats
+    const arrivals = (seat?: Seat | null) => {
+      const s = normSeat(seat);
+      return s.train.length + s.cand.length + s.candInt.length;
+    };
+    const inN = arrivals(g.d.pic) + arrivals(g.d.sic) + arrivals(g.d.cabin);
     const outN = g.d.out ? g.d.out.length : 0;
     const tn = turnoverFor(g.d);
     const turnEl = (
@@ -909,8 +960,22 @@ export default function CrewOrgChart({
                     />
                   ) : null}
                 </div>
+                {active.out && active.out.length ? (
+                  <div className="ec-out">
+                    <div className="ec-out-h">Transitioning out</div>
+                    {active.out.map((o, i) => (
+                      <div className="ec-out-row" key={`${o.name}-${i}`}>
+                        <span className="ec-out-nm">{o.name}</span>
+                        <span className="ec-out-note">{o.to ? `to ${o.to}` : ""}{o.reason ? `${o.to ? " · " : ""}${o.reason}` : ""}</span>
+                        <button type="button" className="del" onClick={() => removeOut(openIdx as number, i)} title="Remove departure">
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
                 <div className="m-edithint">
-                  Changes are local until you press <b>Save changes</b> in the edit bar. Adding a person fills an open seat; removing one reopens it. Tentative — external (red) is an outside candidate; internal (blue) is a SkyShare employee moving in.
+                  Changes are local until you press <b>Save changes</b> in the edit bar. Adding a person fills an open seat; removing one reopens it. <b>Move</b> lets you pick where and how (on-line / training / tentative); a tentative move reopens the old seat and shows the pilot transitioning out here. Tentative — external (red) is an outside candidate; internal (blue) is a SkyShare employee moving in.
                 </div>
               </>
             ) : (
