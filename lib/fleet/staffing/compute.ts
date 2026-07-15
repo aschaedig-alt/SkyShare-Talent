@@ -4,6 +4,7 @@ export interface NormSeat {
   line: string[];
   train: string[];
   cand: string[];
+  candInt: string[];
   open: number;
   openNamed: string[];
   parked: number;
@@ -28,6 +29,7 @@ export function normSeat(o?: Seat | null): NormSeat {
     line: s.line || [],
     train: s.train || [],
     cand: s.cand || [],
+    candInt: s.candInt || [],
     open: s.open || 0,
     openNamed: s.openNamed || [],
     parked: s.parked || 0
@@ -35,13 +37,15 @@ export function normSeat(o?: Seat | null): NormSeat {
 }
 
 export function cntSeat(o: NormSeat): SeatCount {
-  const open = o.open + o.openNamed.length + o.cand.length;
+  // Tentative candidates (external `cand` + internal `candInt`) count as pending/
+  // open until confirmed — same as a bare open req, just named.
+  const open = o.open + o.openNamed.length + o.cand.length + o.candInt.length;
   return {
     f: o.line.length,
     tr: o.train.length,
     o: open,
     p: o.parked,
-    at: o.line.length + o.train.length + o.open + o.openNamed.length + o.cand.length
+    at: o.line.length + o.train.length + o.open + o.openNamed.length + o.cand.length + o.candInt.length
   };
 }
 

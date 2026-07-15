@@ -14,7 +14,7 @@ type ParkedKey = "hide" | "show";
 
 // --- edit-mode roster mutation (pure, operate on a cloned draft) ------------
 type SeatKey = "pic" | "sic" | "cabin";
-type FillBucket = "line" | "train" | "cand";
+type FillBucket = "line" | "train" | "cand" | "candInt";
 type MovePick = { gIdx: number; seatKey: SeatKey; bucket: FillBucket; name: string };
 
 const SEAT_LABEL: Record<SeatKey, string> = { pic: "Captain", sic: "First Officer", cabin: "Cabin" };
@@ -67,7 +67,8 @@ function ColBody({
   const rows: ReactNode[] = [];
   o.line.forEach((n, i) => rows.push(<PersonRow key={`l${i}`} name={n} cls="g" rp="On line" lead={n === leadName} tags={tags?.[n]} />));
   o.train.forEach((n, i) => rows.push(<PersonRow key={`t${i}`} name={n} cls="t" rp="In training" tags={tags?.[n]} />));
-  o.cand.forEach((n, i) => rows.push(<PersonRow key={`c${i}`} name={n} cls="r" rp="Tentative" tags={tags?.[n]} />));
+  o.cand.forEach((n, i) => rows.push(<PersonRow key={`c${i}`} name={n} cls="r" rp="Tentative · external" tags={tags?.[n]} />));
+  o.candInt.forEach((n, i) => rows.push(<PersonRow key={`ci${i}`} name={n} cls="i" rp="Tentative · internal" tags={tags?.[n]} />));
   for (let i = 0; i < o.open; i++) rows.push(<SlotRow key={`o${i}`} label="Open seat" cls="o" rp="Sourcing" />);
   if (showParked) for (let i = 0; i < o.parked; i++) rows.push(<SlotRow key={`p${i}`} label="On hold (parked)" cls="p" rp="Not counted" />);
   if (rows.length === 0) return <div className="m-empty">No crew listed.</div>;
@@ -121,7 +122,7 @@ function EditCol({
   const [draftBucket, setDraftBucket] = useState<FillBucket>("line");
   const o = normSeat(group[seatKey]);
   const filled = o.line.length + o.train.length;
-  const total = filled + o.open + o.openNamed.length + o.cand.length;
+  const total = filled + o.open + o.openNamed.length + o.cand.length + o.candInt.length;
 
   const row = (name: string, bucket: FillBucket, tone: string, tag?: string) => {
     const isMoving =
@@ -195,6 +196,7 @@ function EditCol({
       {o.line.map((n) => row(n, "line", "g"))}
       {o.train.map((n) => row(n, "train", "t", "training"))}
       {o.cand.map((n) => row(n, "cand", "r", "tentative"))}
+      {o.candInt.map((n) => row(n, "candInt", "i", "internal"))}
       {o.openNamed.map((l, i) => (
         <div className="ec-named" key={`on${i}`}>
           {l} · <span>named opening</span>
@@ -222,7 +224,8 @@ function EditCol({
         <select value={draftBucket} onChange={(e) => setDraftBucket(e.target.value as FillBucket)} aria-label="How to add this person">
           <option value="line">On line</option>
           <option value="train">In training</option>
-          <option value="cand">Tentative candidate</option>
+          <option value="cand">Tentative · external</option>
+          <option value="candInt">Tentative · internal</option>
         </select>
         <button type="submit" disabled={!draftName.trim()}>
           Add
@@ -321,6 +324,8 @@ export default function CrewOrgChart({
       const s = d[gIdx][seatKey];
       if (s) {
         pull(s, bucket, name);
+        // Removing a person reopens the seat (symmetric with add auto-filling one).
+        s.open = (s.open ?? 0) + 1;
         tidySeat(d[gIdx], seatKey);
       }
     });
@@ -806,7 +811,11 @@ export default function CrewOrgChart({
         </span>
         <span className="it">
           <span className="sw" style={{ background: "var(--cand-bg)", border: "1.5px solid var(--accent)" }} />
-          Tentative candidate
+          Tentative · external
+        </span>
+        <span className="it">
+          <span className="sw" style={{ background: "var(--int-bg)", border: "1.5px solid var(--int-bd)" }} />
+          Tentative · internal
         </span>
         <span className="it">
           <span className="sw" style={{ background: "var(--park-bg)", border: "1px dashed var(--park-bd)" }} />
@@ -901,7 +910,7 @@ export default function CrewOrgChart({
                   ) : null}
                 </div>
                 <div className="m-edithint">
-                  Changes are local until you press <b>Save changes</b> in the edit bar. First-officer and cabin seats disappear when emptied; re-add a name to bring them back.
+                  Changes are local until you press <b>Save changes</b> in the edit bar. Adding a person fills an open seat; removing one reopens it. Tentative — external (red) is an outside candidate; internal (blue) is a SkyShare employee moving in.
                 </div>
               </>
             ) : (

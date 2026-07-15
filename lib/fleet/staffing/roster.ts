@@ -43,12 +43,14 @@ function normalizeSeat(value: unknown): Seat | null {
   const line = strArr(raw.line);
   const train = strArr(raw.train);
   const cand = strArr(raw.cand);
+  const candInt = strArr(raw.candInt);
   const openNamed = strArr(raw.openNamed);
   const open = nonNegInt(raw.open);
   const parked = nonNegInt(raw.parked);
   if (line.length) seat.line = line;
   if (train.length) seat.train = train;
   if (cand.length) seat.cand = cand;
+  if (candInt.length) seat.candInt = candInt;
   if (openNamed.length) seat.openNamed = openNamed;
   if (open) seat.open = open;
   if (parked) seat.parked = parked;

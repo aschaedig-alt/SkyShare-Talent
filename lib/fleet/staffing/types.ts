@@ -14,8 +14,11 @@ export interface Seat {
   line?: string[];
   /** People in training for this seat. */
   train?: string[];
-  /** Named tentative candidates working toward an open seat. */
+  /** Named tentative candidates working toward an open seat (external). */
   cand?: string[];
+  /** Named tentative INTERNAL candidates — SkyShare employees tentatively moving
+      into this seat. Counted like `cand` (pending), shown in light blue. */
+  candInt?: string[];
   /** Count of unfilled reqs with no name attached. */
   open?: number;
   /** Unfilled reqs that carry a label (e.g. "Ogden Team Lead"). */

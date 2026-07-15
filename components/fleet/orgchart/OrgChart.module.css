@@ -26,6 +26,9 @@
   --train-fg: #86620f;
   --cand-bg: #f6d9de;
   --cand-fg: #b23b50;
+  --int-bg: #d6e6f6;
+  --int-fg: #1e5694;
+  --int-bd: #5b8fc0;
   --park-bg: #e3e8ef;
   --park-fg: #6a7688;
   --park-bd: #a7b5c8;
@@ -74,6 +77,9 @@
   --train-fg: #f2d488;
   --cand-bg: rgba(224, 113, 137, 0.26);
   --cand-fg: #f2b3c0;
+  --int-bg: rgba(91, 143, 192, 0.3);
+  --int-fg: #a9cdea;
+  --int-bd: #6fa3d0;
   --park-bg: rgba(120, 135, 155, 0.22);
   --park-fg: #9fb0c4;
   --park-bd: #5f7488;
@@ -543,6 +549,14 @@
 .wrap :global(.seat.seat-c span) {
   opacity: 0.8;
 }
+.wrap :global(.seat.seat-i) {
+  background: var(--int-bg);
+  color: var(--int-fg);
+  border: 1.5px solid var(--int-bd);
+}
+.wrap :global(.seat.seat-i span) {
+  opacity: 0.8;
+}
 .wrap :global(.seat.seat-p) {
   background: var(--park-bg);
   color: var(--park-fg);
@@ -802,6 +816,9 @@
 .wrap :global(.prow.r) {
   background: var(--cand-bg);
 }
+.wrap :global(.prow.i) {
+  background: var(--int-bg);
+}
 .wrap :global(.prow.o) {
   background: transparent;
   border: 1px dashed var(--accent);
@@ -829,6 +846,9 @@
 }
 .wrap :global(.prow.r .av) {
   background: var(--accent);
+}
+.wrap :global(.prow.i .av) {
+  background: var(--int-fg);
 }
 .wrap :global(.prow.o .av) {
   background: transparent;
@@ -865,6 +885,9 @@
 }
 .wrap :global(.prow.r .rp) {
   color: var(--accent);
+}
+.wrap :global(.prow.i .rp) {
+  color: var(--int-fg);
 }
 .wrap :global(.prow.o .rp) {
   color: var(--accent);
@@ -1144,6 +1167,10 @@
 .wrap :global(.ec-dot.r) {
   background: var(--cand-bg);
   border: 1px solid var(--accent);
+}
+.wrap :global(.ec-dot.i) {
+  background: var(--int-bg);
+  border: 1px solid var(--int-bd);
 }
 .wrap :global(.ec-nm) {
   font: 600 12.5px/1.3 var(--fh);
