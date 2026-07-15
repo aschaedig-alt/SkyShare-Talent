@@ -1,6 +1,9 @@
-import { Fragment } from "react";
-import Link from "next/link";
+"use client";
+
+import { Fragment, useEffect, useState } from "react";
+import { RefreshCw } from "lucide-react";
 import type { PilotRequirementsData, PilotRequirementDetail } from "@/lib/data/pilot-requirements";
+import { scanRequirementMatches } from "@/app/pilot-requirements/scoring-actions";
 import { PilotRequirementEditor } from "@/components/pilot-requirements/PilotRequirementEditor";
 import { CandidateTriagePanel } from "@/components/pilot-requirements/CandidateTriagePanel";
 import { FleetPositionEditor } from "@/components/pilot-requirements/FleetPositionEditor";
@@ -72,11 +75,13 @@ function EvidencePanel({ requirement }: { requirement: PilotRequirementDetail })
 function RequirementDetail({
   requirement,
   candidateMatches,
+  matchesLoading,
   canEditScoring,
   scannedCount
 }: {
   requirement: PilotRequirementDetail | null;
   candidateMatches: PilotRequirementsData["candidateMatches"];
+  matchesLoading: boolean;
   canEditScoring: boolean;
   scannedCount: number;
 }) {
@@ -192,13 +197,22 @@ function RequirementDetail({
         </div>
 
         <aside className="space-y-4">
-          <CandidateTriagePanel
-            key={requirement.id}
-            matches={candidateMatches}
-            requirementId={requirement.id}
-            canEdit={canEditScoring}
-            scannedCount={scannedCount}
-          />
+          {matchesLoading ? (
+            <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Candidate fit</p>
+              <div className="mt-3 flex items-center gap-2 text-sm text-brand-grey dark:text-slate-400">
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" /> Scanning candidates…
+              </div>
+            </section>
+          ) : (
+            <CandidateTriagePanel
+              key={requirement.id}
+              matches={candidateMatches}
+              requirementId={requirement.id}
+              canEdit={canEditScoring}
+              scannedCount={scannedCount}
+            />
+          )}
 
           <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
@@ -248,6 +262,64 @@ function RequirementDetail({
 }
 
 export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWorkspaceProps) {
+  const initialId = data.selectedRequirement?.id ?? null;
+  const [selectedId, setSelectedId] = useState<string | null>(initialId);
+  const [matches, setMatches] = useState(data.candidateMatches);
+  const [matchesLoading, setMatchesLoading] = useState(false);
+  const [scannedCount, setScannedCount] = useState(data.scannedCount);
+  const selected = selectedId ? data.details[selectedId] ?? null : null;
+
+  // Instant selection: the review renders from data.details (already loaded).
+  function select(id: string) {
+    if (id === selectedId) return;
+    setSelectedId(id);
+    if (id === initialId) {
+      setMatches(data.candidateMatches);
+      setScannedCount(data.scannedCount);
+      setMatchesLoading(false);
+    } else {
+      setMatches([]);
+      setMatchesLoading(true);
+    }
+  }
+
+  // The heavy candidate-fit list loads after the review is already on screen.
+  useEffect(() => {
+    if (!selectedId || selectedId === initialId) return;
+    let cancelled = false;
+    setMatchesLoading(true);
+    scanRequirementMatches(selectedId)
+      .then((res) => {
+        if (cancelled) return;
+        setMatchesLoading(false);
+        if (res.ok) {
+          setMatches(res.data.matches);
+          setScannedCount(res.data.scannedCount);
+        } else {
+          setMatches([]);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMatchesLoading(false);
+          setMatches([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId, initialId, data.candidateMatches, data.scannedCount]);
+
+  // Keep ?id= in the URL (without navigating) so a refresh keeps the selection.
+  useEffect(() => {
+    if (!selectedId || typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("id", selectedId);
+    if (query) url.searchParams.set("q", query);
+    else url.searchParams.delete("q");
+    window.history.replaceState(null, "", url.toString());
+  }, [selectedId, query]);
+
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
       <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
@@ -302,7 +374,7 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
             {data.requirements.length > 0 ? (
               <div className="space-y-2">
                 {data.requirements.map((requirement, index) => {
-                  const isSelected = requirement.id === data.selectedRequirement?.id;
+                  const isSelected = requirement.id === selectedId;
                   const group = operatorGroupLabel(requirement.operatorType);
                   const showHeader = index === 0 || group !== operatorGroupLabel(data.requirements[index - 1].operatorType);
                   return (
@@ -312,9 +384,10 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
                         {group}
                       </div>
                     ) : null}
-                    <Link
-                      href={`/pilot-requirements?id=${requirement.id}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
-                      className={`block rounded border p-3 transition hover:shadow-glow ${
+                    <button
+                      type="button"
+                      onClick={() => select(requirement.id)}
+                      className={`block w-full text-left rounded border p-3 transition hover:shadow-glow ${
                         isSelected
                           ? "border-brand-gold bg-brand-sweet/18 dark:bg-brand-sweet/25"
                           : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/65 dark:border-white/10 dark:bg-brand-panel"
@@ -355,7 +428,7 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
                           ))}
                         </div>
                       ) : null}
-                    </Link>
+                    </button>
                     </Fragment>
                   );
                 })}
@@ -370,11 +443,12 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
         </aside>
 
         <RequirementDetail
-          key={data.selectedRequirement?.id ?? "none"}
-          requirement={data.selectedRequirement}
-          candidateMatches={data.candidateMatches}
+          key={selectedId ?? "none"}
+          requirement={selected}
+          candidateMatches={matches}
+          matchesLoading={matchesLoading}
           canEditScoring={data.canEditScoring}
-          scannedCount={data.scannedCount}
+          scannedCount={scannedCount}
         />
       </section>
     </div>

@@ -95,6 +95,9 @@ export type PilotRequirementDetail = PilotRequirementListItem & {
 
 export type PilotRequirementsData = {
   requirements: PilotRequirementListItem[];
+  /** Full review detail for EVERY requirement, keyed by id, so the client can
+   * switch the selected profile instantly with no server round-trip. */
+  details: Record<string, PilotRequirementDetail>;
   selectedRequirement: PilotRequirementDetail | null;
   candidateMatches: PilotRequirementCandidateMatch[];
   canEditScoring: boolean;
@@ -291,40 +294,44 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
     rows[0] ??
     null;
 
-  const selectedListItem = selectedRow ? toListItem(selectedRow) : null;
-  const selectedGates = selectedRow?.gates.map(serializeGate) ?? [];
-  const selectedRequirement: PilotRequirementDetail | null =
-    selectedRow && selectedListItem
-      ? {
-          ...selectedListItem,
-          version: selectedRow.requirementVersion,
-          payScaleRaw: selectedRow.payScaleRaw,
-          managedVariants: selectedRow.managedVariants.map((variant) => ({
-            id: variant.id,
-            tailNumber: variant.tailNumber,
-            name: variant.name,
-            baseCity: variant.baseCity,
-            baseState: variant.baseState,
-            baseAirport: variant.baseAirport,
-            payScaleRaw: variant.payScaleRaw,
-            scheduleSummary: variant.scheduleSummary,
-            notes: variant.notes,
-            status: variant.status
-          })),
-          linkedPositions: parseStringArray(selectedRow.linkedFleetPositionSlugs).map((s) => ({
-            slug: s,
-            title: fleetPositionBySlug(s)?.title ?? s
-          })),
-          sourceJobTitle: selectedRow.sourceJobRecord?.title ?? null,
-          sourceJobStatus: selectedRow.sourceJobRecord?.status ?? null,
-          rawMinimumRequirements: selectedRow.rawMinimumRequirements,
-          originalJobDescriptionText: selectedRow.originalJobDescriptionText,
-          extractionConfidence: selectedRow.extractionConfidence,
-          extractionWarnings: parseStringArray(selectedRow.extractionWarningsJson),
-          gatesByCategory: groupGates(selectedGates),
-          editableGatesByCategory: groupAllGates(selectedGates)
-        }
-      : null;
+  // Build the full review detail for EVERY requirement up front — the rows are
+  // already loaded, so this adds no DB work — and hand it all to the client so
+  // switching the selected profile is instant (no navigation / re-fetch).
+  const details: Record<string, PilotRequirementDetail> = {};
+  for (const row of rows) {
+    const listItem = toListItem(row);
+    const gates = row.gates.map(serializeGate);
+    details[row.id] = {
+      ...listItem,
+      version: row.requirementVersion,
+      payScaleRaw: row.payScaleRaw,
+      managedVariants: row.managedVariants.map((variant) => ({
+        id: variant.id,
+        tailNumber: variant.tailNumber,
+        name: variant.name,
+        baseCity: variant.baseCity,
+        baseState: variant.baseState,
+        baseAirport: variant.baseAirport,
+        payScaleRaw: variant.payScaleRaw,
+        scheduleSummary: variant.scheduleSummary,
+        notes: variant.notes,
+        status: variant.status
+      })),
+      linkedPositions: parseStringArray(row.linkedFleetPositionSlugs).map((s) => ({
+        slug: s,
+        title: fleetPositionBySlug(s)?.title ?? s
+      })),
+      sourceJobTitle: row.sourceJobRecord?.title ?? null,
+      sourceJobStatus: row.sourceJobRecord?.status ?? null,
+      rawMinimumRequirements: row.rawMinimumRequirements,
+      originalJobDescriptionText: row.originalJobDescriptionText,
+      extractionConfidence: row.extractionConfidence,
+      extractionWarnings: parseStringArray(row.extractionWarningsJson),
+      gatesByCategory: groupGates(gates),
+      editableGatesByCategory: groupAllGates(gates)
+    };
+  }
+  const selectedRequirement: PilotRequirementDetail | null = selectedRow ? details[selectedRow.id] : null;
 
   const selectedAircraftTypes = selectedRow ? parseStringArray(selectedRow.aircraftTypesJson) : [];
   const [scoringConfig, requirementFeedback] = selectedRow
@@ -365,6 +372,7 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
 
   return {
     requirements,
+    details,
     selectedRequirement,
     candidateMatches,
     canEditScoring: await canEditScoring(),
