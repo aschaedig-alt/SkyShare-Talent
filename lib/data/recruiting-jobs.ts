@@ -43,9 +43,6 @@ export type RecruitingJobDetail = RecruitingJobListItem & {
 
 export type RecruitingJobsData = {
   jobs: RecruitingJobListItem[];
-  /** Full detail for EVERY job, keyed by id, so the client can switch the
-   * selected job instantly with no server round-trip. */
-  details: Record<string, RecruitingJobDetail>;
   selectedJob: RecruitingJobDetail | null;
   stats: {
     total: number;
@@ -161,37 +158,34 @@ export async function getRecruitingJobsData(query = "", selectedId?: string): Pr
     rows.find((job) => jobs.some((listItem) => listItem.id === job.id)) ??
     rows[0] ??
     null;
-  // Build the full detail for EVERY job up front (rows are already loaded, so no
-  // extra queries) and hand it all to the client for instant selection.
-  const details: Record<string, RecruitingJobDetail> = {};
-  for (const row of rows) {
-    details[row.id] = {
-      ...toListItem(row),
-      recruiter: row.recruiter,
-      jobReqId: row.jobReqId,
-      sourceFilename: row.sourceFilename,
-      paySummary: row.paySummary,
-      rawPayScale: row.rawPayScale,
-      rawMinimumRequirements: row.rawMinimumRequirements,
-      jobDescriptionText: row.jobDescriptionText,
-      linkedRequirements: row.pilotRequirements.map((requirement) => ({
-        ...requirement,
-        title: canonicalTitle(requirement.title)
-      })),
-      linkedCandidates: row.applications.map((application) => ({
-        id: application.candidate.id,
-        displayName: application.candidate.displayName,
-        currentTitle: application.candidate.currentTitle,
-        stage: application.stage,
-        status: application.status
-      }))
-    };
-  }
+  const selectedListItem = selectedRow ? toListItem(selectedRow) : null;
 
   return {
     jobs,
-    details,
-    selectedJob: selectedRow ? details[selectedRow.id] : null,
+    selectedJob:
+      selectedRow && selectedListItem
+        ? {
+            ...selectedListItem,
+            recruiter: selectedRow.recruiter,
+            jobReqId: selectedRow.jobReqId,
+            sourceFilename: selectedRow.sourceFilename,
+            paySummary: selectedRow.paySummary,
+            rawPayScale: selectedRow.rawPayScale,
+            rawMinimumRequirements: selectedRow.rawMinimumRequirements,
+            jobDescriptionText: selectedRow.jobDescriptionText,
+            linkedRequirements: selectedRow.pilotRequirements.map((requirement) => ({
+              ...requirement,
+              title: canonicalTitle(requirement.title)
+            })),
+            linkedCandidates: selectedRow.applications.map((application) => ({
+              id: application.candidate.id,
+              displayName: application.candidate.displayName,
+              currentTitle: application.candidate.currentTitle,
+              stage: application.stage,
+              status: application.status
+            }))
+          }
+        : null,
     stats: {
       total,
       open,

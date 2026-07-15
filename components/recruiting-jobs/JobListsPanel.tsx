@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ChevronDown, Plane, Wrench } from "lucide-react";
 import type { RecruitingJobsData } from "@/lib/data/recruiting-jobs";
 
@@ -10,13 +11,12 @@ function locationLabel(job: { city: string | null; state: string | null }) {
   return [job.city, job.state].filter(Boolean).join(", ") || "No base";
 }
 
-function JobCard({ job, selectedId, onSelect }: { job: Job; selectedId: string | null; onSelect: (id: string) => void }) {
+function JobCard({ job, selectedId, query }: { job: Job; selectedId: string | null; query: string }) {
   const isSelected = job.id === selectedId;
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(job.id)}
-      className={`block w-full text-left rounded border p-3 transition hover:shadow-glow ${
+    <Link
+      href={`/recruiting-jobs?id=${job.id}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
+      className={`block rounded border p-3 transition hover:shadow-glow ${
         isSelected
           ? "border-brand-gold bg-brand-sweet/18 dark:bg-brand-sweet/25"
           : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/65 dark:border-white/10 dark:bg-brand-panel"
@@ -43,7 +43,7 @@ function JobCard({ job, selectedId, onSelect }: { job: Job; selectedId: string |
           <div className="text-sm font-semibold text-brand-lea dark:text-slate-100">{job.requirementCount}</div>
         </div>
       </div>
-    </button>
+    </Link>
   );
 }
 
@@ -52,7 +52,7 @@ function CollapsibleList({
   Icon,
   jobs,
   selectedId,
-  onSelect,
+  query,
   emptyText,
   open,
   onToggle
@@ -61,7 +61,7 @@ function CollapsibleList({
   Icon: typeof Plane;
   jobs: Job[];
   selectedId: string | null;
-  onSelect: (id: string) => void;
+  query: string;
   emptyText: string;
   open: boolean;
   onToggle: () => void;
@@ -92,7 +92,7 @@ function CollapsibleList({
           {jobs.length > 0 ? (
             <div className="space-y-2">
               {jobs.map((job) => (
-                <JobCard key={job.id} job={job} selectedId={selectedId} onSelect={onSelect} />
+                <JobCard key={job.id} job={job} selectedId={selectedId} query={query} />
               ))}
             </div>
           ) : (
@@ -108,12 +108,12 @@ export function JobListsPanel({
   pilotJobs,
   supportJobs,
   selectedId,
-  onSelect
+  query
 }: {
   pilotJobs: Job[];
   supportJobs: Job[];
   selectedId: string | null;
-  onSelect: (id: string) => void;
+  query: string;
 }) {
   const [openPilot, setOpenPilot] = useState(true);
   const [openSupport, setOpenSupport] = useState(true);
@@ -136,7 +136,7 @@ export function JobListsPanel({
         Icon={Plane}
         jobs={pilotJobs}
         selectedId={selectedId}
-        onSelect={onSelect}
+        query={query}
         emptyText="No pilot jobs match the current search."
         open={openPilot}
         onToggle={() => toggle("pilot")}
@@ -146,7 +146,7 @@ export function JobListsPanel({
         Icon={Wrench}
         jobs={supportJobs}
         selectedId={selectedId}
-        onSelect={onSelect}
+        query={query}
         emptyText="No support jobs match the current search."
         open={openSupport}
         onToggle={() => toggle("support")}
