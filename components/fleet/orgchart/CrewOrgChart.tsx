@@ -110,7 +110,7 @@ function EditCol({
   label: string;
   allGroups: CrewGroup[];
   movePick: MovePick | null;
-  onAdd: (name: string) => void;
+  onAdd: (name: string, bucket: FillBucket) => void;
   onRemove: (bucket: FillBucket, name: string) => void;
   onAdjustOpen: (delta: number) => void;
   onToggleTrain: (name: string, toTrain: boolean) => void;
@@ -118,6 +118,7 @@ function EditCol({
   onMove: (from: MovePick, toIdx: number, toSeat: SeatKey) => void;
 }) {
   const [draftName, setDraftName] = useState("");
+  const [draftBucket, setDraftBucket] = useState<FillBucket>("line");
   const o = normSeat(group[seatKey]);
   const filled = o.line.length + o.train.length;
   const total = filled + o.open + o.openNamed.length + o.cand.length;
@@ -213,15 +214,21 @@ function EditCol({
         className="ec-add"
         onSubmit={(e) => {
           e.preventDefault();
-          onAdd(draftName);
+          onAdd(draftName, draftBucket);
           setDraftName("");
         }}
       >
         <input value={draftName} onChange={(e) => setDraftName(e.target.value)} placeholder="Add name…" />
+        <select value={draftBucket} onChange={(e) => setDraftBucket(e.target.value as FillBucket)} aria-label="How to add this person">
+          <option value="line">On line</option>
+          <option value="train">In training</option>
+          <option value="cand">Tentative candidate</option>
+        </select>
         <button type="submit" disabled={!draftName.trim()}>
           Add
         </button>
       </form>
+      <div className="ec-addhint">Adding a person fills one open seat (if any).</div>
     </div>
   );
 }
@@ -293,10 +300,21 @@ export default function CrewOrgChart({
       return d;
     });
 
-  const addPilot = (gIdx: number, seatKey: SeatKey, name: string) => {
+  const addPerson = (gIdx: number, seatKey: SeatKey, bucket: FillBucket, name: string) => {
     const clean = name.trim();
     if (!clean) return;
-    applyEdit((d) => push(ensureSeat(d[gIdx], seatKey), "line", clean));
+    applyEdit((d) => {
+      const s = ensureSeat(d[gIdx], seatKey);
+      push(s, bucket, clean);
+      // Filling a seat consumes one open req if any exist (a named on-line /
+      // in-training / tentative person takes the place of an anonymous opening).
+      // If there are no open reqs, the seat count grows instead.
+      if ((s.open ?? 0) > 0) {
+        const next = (s.open ?? 0) - 1;
+        if (next === 0) delete s.open;
+        else s.open = next;
+      }
+    });
   };
   const removePerson = (gIdx: number, seatKey: SeatKey, bucket: FillBucket, name: string) =>
     applyEdit((d) => {
@@ -844,7 +862,7 @@ export default function CrewOrgChart({
                     label="Captains"
                     allGroups={groupsData}
                     movePick={movePick}
-                    onAdd={(name) => addPilot(openIdx as number, "pic", name)}
+                    onAdd={(name, bucket) => addPerson(openIdx as number, "pic", bucket, name)}
                     onRemove={(bucket, name) => removePerson(openIdx as number, "pic", bucket, name)}
                     onAdjustOpen={(delta) => adjustOpen(openIdx as number, "pic", delta)}
                     onToggleTrain={(name, toTrain) => toggleTrain(openIdx as number, "pic", name, toTrain)}
@@ -858,7 +876,7 @@ export default function CrewOrgChart({
                     label="First Officers"
                     allGroups={groupsData}
                     movePick={movePick}
-                    onAdd={(name) => addPilot(openIdx as number, "sic", name)}
+                    onAdd={(name, bucket) => addPerson(openIdx as number, "sic", bucket, name)}
                     onRemove={(bucket, name) => removePerson(openIdx as number, "sic", bucket, name)}
                     onAdjustOpen={(delta) => adjustOpen(openIdx as number, "sic", delta)}
                     onToggleTrain={(name, toTrain) => toggleTrain(openIdx as number, "sic", name, toTrain)}
@@ -873,7 +891,7 @@ export default function CrewOrgChart({
                       label="Cabin"
                       allGroups={groupsData}
                       movePick={movePick}
-                      onAdd={(name) => addPilot(openIdx as number, "cabin", name)}
+                      onAdd={(name, bucket) => addPerson(openIdx as number, "cabin", bucket, name)}
                       onRemove={(bucket, name) => removePerson(openIdx as number, "cabin", bucket, name)}
                       onAdjustOpen={(delta) => adjustOpen(openIdx as number, "cabin", delta)}
                       onToggleTrain={(name, toTrain) => toggleTrain(openIdx as number, "cabin", name, toTrain)}
