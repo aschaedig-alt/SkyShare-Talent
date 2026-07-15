@@ -352,13 +352,16 @@ export default function CrewOrgChart({
     }
   };
   const save = () => postRoster({ groups: groupsData });
-  const discard = () => {
-    setGroupsData(savedGroups);
-    setMovePick(null);
-  };
   const resetSeed = () => {
     if (typeof window !== "undefined" && !window.confirm("Reset the crew chart to the original source data? This discards all saved manual edits.")) return;
     postRoster({ reset: true });
+  };
+  // Leave edit mode, dropping any unsaved local changes (a plain "cancel").
+  const exitEdit = () => {
+    setGroupsData(savedGroups);
+    setMovePick(null);
+    setSaveErr(null);
+    setEditMode(false);
   };
 
   const groups = groupsData.map((d, idx) => {
@@ -409,6 +412,14 @@ export default function CrewOrgChart({
       if (mx > 0) cards.forEach((c) => (c.style.minHeight = `${Math.round(mx)}px`));
     };
     const raf = requestAnimationFrame(() => requestAnimationFrame(equalize));
+    // Re-equalize after the Archivo web font finishes loading — it reflows the
+    // card text and changes their natural heights AFTER the first measure, which
+    // otherwise leaves the cards locked to mismatched fallback-font heights.
+    // The extra delayed passes catch any other late layout settle.
+    const timers = [setTimeout(equalize, 250), setTimeout(equalize, 700)];
+    if (typeof document !== "undefined" && document.fonts?.ready) {
+      document.fonts.ready.then(equalize).catch(() => {});
+    }
     let t: ReturnType<typeof setTimeout>;
     const onResize = () => {
       clearTimeout(t);
@@ -417,6 +428,7 @@ export default function CrewOrgChart({
     window.addEventListener("resize", onResize);
     return () => {
       cancelAnimationFrame(raf);
+      timers.forEach(clearTimeout);
       window.removeEventListener("resize", onResize);
       clearTimeout(t);
     };
@@ -659,8 +671,8 @@ export default function CrewOrgChart({
                 <button
                   className={editMode ? "on" : ""}
                   onClick={() => {
-                    setEditMode((v) => !v);
-                    setMovePick(null);
+                    if (editMode) exitEdit();
+                    else setEditMode(true);
                   }}
                 >
                   {editMode ? "Editing" : "Edit"}
@@ -683,7 +695,7 @@ export default function CrewOrgChart({
       {editMode ? (
         <div className="editbar">
           <div className="eb-msg">
-            <b>Editing roster.</b> Click any aircraft to add or remove pilots, move them between aircraft, and open or close seats.
+            <b>Editing roster.</b> Click any aircraft to add or remove pilots, move them between aircraft, and open or close seats. Use <b>{dirty ? "Cancel" : "Done"}</b> to leave without changing anyone.
             {dirty ? (
               <span className="eb-dirty"> · unsaved changes</span>
             ) : (
@@ -695,8 +707,8 @@ export default function CrewOrgChart({
             <button type="button" className="ghost" onClick={resetSeed} disabled={saving}>
               Reset to source
             </button>
-            <button type="button" className="ghost" onClick={discard} disabled={saving || !dirty}>
-              Discard
+            <button type="button" className="ghost" onClick={exitEdit} disabled={saving}>
+              {dirty ? "Cancel" : "Done"}
             </button>
             <button type="button" className="primary" onClick={save} disabled={saving || !dirty}>
               {saving ? "Saving…" : "Save changes"}
