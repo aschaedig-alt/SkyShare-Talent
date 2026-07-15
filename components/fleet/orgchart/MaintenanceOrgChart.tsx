@@ -1,15 +1,136 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import type { MxGroup, MxSection } from "@/lib/fleet/staffing/types";
+import type { MxGroup, MxSection, Seat } from "@/lib/fleet/staffing/types";
 import { normSeat, cntSeat } from "@/lib/fleet/staffing/compute";
-import { MX_GROUPS, MX_DIRECTOR, MX_TURNOVER } from "@/lib/fleet/staffing/maintenance-data";
+import { MX_DIRECTOR, MX_TURNOVER } from "@/lib/fleet/staffing/maintenance-data";
 import { SeatSquares, PersonRow, SlotRow } from "./SeatParts";
 import styles from "./OrgChart.module.css";
 
 type SortKey = "Team size" | "Open seats";
+
+// --- edit-mode helpers (a maintenance section is a Seat + label) ------------
+type FillBucket = "line" | "train" | "cand" | "candInt";
+const MX_STATUS: { value: FillBucket; label: string }[] = [
+  { value: "line", label: "On staff" },
+  { value: "train", label: "In training" },
+  { value: "cand", label: "Candidate" },
+  { value: "candInt", label: "Candidate · internal" }
+];
+const MX_DOT: Record<FillBucket, string> = { line: "g", train: "t", cand: "r", candInt: "i" };
+
+function pull(seat: Seat, bucket: FillBucket, name: string) {
+  const arr = seat[bucket];
+  if (!Array.isArray(arr)) return;
+  const i = arr.indexOf(name);
+  if (i >= 0) arr.splice(i, 1);
+  if (arr.length === 0) delete seat[bucket];
+}
+
+function push(seat: Seat, bucket: FillBucket, name: string) {
+  const arr = seat[bucket] ?? (seat[bucket] = []);
+  if (!arr.includes(name)) arr.push(name);
+}
+
+/** One editable maintenance section in the edit-mode modal. Module-scoped so the
+    "add name" input keeps focus across the parent's re-renders. */
+function MxEditSection({
+  sec,
+  onAdd,
+  onRemove,
+  onSetStatus,
+  onAdjustOpen
+}: {
+  sec: MxSection;
+  onAdd: (name: string, bucket: FillBucket) => void;
+  onRemove: (bucket: FillBucket, name: string) => void;
+  onSetStatus: (from: FillBucket, to: FillBucket, name: string) => void;
+  onAdjustOpen: (delta: number) => void;
+}) {
+  const [draftName, setDraftName] = useState("");
+  const [draftBucket, setDraftBucket] = useState<FillBucket>("cand");
+  const o = normSeat(sec);
+  const filled = o.line.length + o.train.length;
+  const total = filled + o.open + o.openNamed.length + o.cand.length + o.candInt.length;
+  const rows: { name: string; bucket: FillBucket }[] = [
+    ...o.line.map((n) => ({ name: n, bucket: "line" as FillBucket })),
+    ...o.train.map((n) => ({ name: n, bucket: "train" as FillBucket })),
+    ...o.cand.map((n) => ({ name: n, bucket: "cand" as FillBucket })),
+    ...o.candInt.map((n) => ({ name: n, bucket: "candInt" as FillBucket }))
+  ];
+  return (
+    <div className="m-col ec">
+      <div className="colh">
+        <span>{sec.label}</span>
+        <span>
+          {filled}/{total}
+        </span>
+      </div>
+      {rows.map((r) => (
+        <div className="ec-row" key={`${r.bucket}-${r.name}`}>
+          <div className="ec-line">
+            <span className={`ec-dot ${MX_DOT[r.bucket]}`} />
+            <span className="ec-nm">{r.name}</span>
+            <span className="ec-act">
+              <select
+                className="ec-status"
+                value={r.bucket}
+                onChange={(e) => onSetStatus(r.bucket, e.target.value as FillBucket, r.name)}
+                aria-label={`Status for ${r.name}`}
+              >
+                {MX_STATUS.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+              <button type="button" className="del" onClick={() => onRemove(r.bucket, r.name)} title="Remove">
+                ✕
+              </button>
+            </span>
+          </div>
+        </div>
+      ))}
+      {o.openNamed.map((l, i) => (
+        <div className="ec-named" key={`on${i}`}>
+          {l} · <span>named opening</span>
+        </div>
+      ))}
+      <div className="ec-open">
+        <span>Open positions</span>
+        <button type="button" onClick={() => onAdjustOpen(-1)} disabled={o.open === 0} aria-label="Remove an open position">
+          −
+        </button>
+        <b>{o.open}</b>
+        <button type="button" onClick={() => onAdjustOpen(1)} aria-label="Add an open position">
+          +
+        </button>
+      </div>
+      <form
+        className="ec-add"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onAdd(draftName, draftBucket);
+          setDraftName("");
+        }}
+      >
+        <input value={draftName} onChange={(e) => setDraftName(e.target.value)} placeholder="Add name…" />
+        <select value={draftBucket} onChange={(e) => setDraftBucket(e.target.value as FillBucket)} aria-label="How to add this person">
+          {MX_STATUS.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+        <button type="submit" disabled={!draftName.trim()}>
+          Add
+        </button>
+      </form>
+    </div>
+  );
+}
 
 function groupTotals(d: MxGroup) {
   let f = 0;
@@ -35,6 +156,7 @@ function SectionCol({ sec }: { sec: MxSection }) {
   o.line.forEach((n, i) => rows.push(<PersonRow key={`l${i}`} name={n} cls="g" rp="On staff" />));
   o.train.forEach((n, i) => rows.push(<PersonRow key={`t${i}`} name={n} cls="t" rp="In training" />));
   o.cand.forEach((n, i) => rows.push(<PersonRow key={`c${i}`} name={n} cls="r" rp="Candidate" />));
+  o.candInt.forEach((n, i) => rows.push(<PersonRow key={`ci${i}`} name={n} cls="i" rp="Candidate · internal" />));
   o.openNamed.forEach((lbl, i) => rows.push(<SlotRow key={`on${i}`} label={lbl} cls="o" rp="To fill" />));
   for (let i = 0; i < o.open; i++) rows.push(<SlotRow key={`o${i}`} label="Open position" cls="o" rp="Sourcing" />);
   return (
@@ -88,12 +210,101 @@ function Pipeline({ d }: { d: MxGroup }) {
   );
 }
 
-export default function MaintenanceOrgChart() {
+export default function MaintenanceOrgChart({
+  initialGroups,
+  canEdit = false
+}: {
+  initialGroups?: MxGroup[];
+  canEdit?: boolean;
+} = {}) {
   const [sort, setSort] = useState<SortKey>("Team size");
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  const groups = MX_GROUPS.map((d, idx) => {
+  const [mxData, setMxData] = useState<MxGroup[]>(() => initialGroups ?? []);
+  const [savedGroups, setSavedGroups] = useState<MxGroup[]>(() => initialGroups ?? []);
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveErr, setSaveErr] = useState<string | null>(null);
+
+  const dirty = useMemo(() => JSON.stringify(mxData) !== JSON.stringify(savedGroups), [mxData, savedGroups]);
+
+  const applyEdit = (fn: (draft: MxGroup[]) => void) =>
+    setMxData((prev) => {
+      const d = structuredClone(prev);
+      fn(d);
+      return d;
+    });
+  const sectionOf = (d: MxGroup[], gIdx: number, sIdx: number) => d[gIdx].sections[sIdx];
+  const addPerson = (gIdx: number, sIdx: number, bucket: FillBucket, name: string) => {
+    const clean = name.trim();
+    if (!clean) return;
+    applyEdit((d) => {
+      const s = sectionOf(d, gIdx, sIdx);
+      push(s, bucket, clean);
+      if ((s.open ?? 0) > 0) {
+        const n = (s.open ?? 0) - 1;
+        if (n === 0) delete s.open;
+        else s.open = n;
+      }
+    });
+  };
+  const removePerson = (gIdx: number, sIdx: number, bucket: FillBucket, name: string) =>
+    applyEdit((d) => {
+      const s = sectionOf(d, gIdx, sIdx);
+      pull(s, bucket, name);
+      // removing a person reopens the position (a backfill req)
+      s.open = (s.open ?? 0) + 1;
+    });
+  const setStatus = (gIdx: number, sIdx: number, from: FillBucket, to: FillBucket, name: string) => {
+    if (from === to) return;
+    // a pure status change (e.g. Candidate → In training): move between buckets,
+    // don't touch the open count (the person already occupied the slot).
+    applyEdit((d) => {
+      const s = sectionOf(d, gIdx, sIdx);
+      pull(s, from, name);
+      push(s, to, name);
+    });
+  };
+  const adjustOpen = (gIdx: number, sIdx: number, delta: number) =>
+    applyEdit((d) => {
+      const s = sectionOf(d, gIdx, sIdx);
+      const n = Math.max(0, (s.open ?? 0) + delta);
+      if (n === 0) delete s.open;
+      else s.open = n;
+    });
+
+  const postRoster = async (body: unknown) => {
+    setSaving(true);
+    setSaveErr(null);
+    try {
+      const res = await fetch("/api/workspace-settings/fleet-mx-roster", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const data = (await res.json()) as { groups: MxGroup[] };
+      setMxData(data.groups);
+      setSavedGroups(data.groups);
+    } catch {
+      setSaveErr("Couldn't save — check your connection or that you're signed in as an admin.");
+    } finally {
+      setSaving(false);
+    }
+  };
+  const save = () => postRoster({ groups: mxData });
+  const resetSeed = () => {
+    if (typeof window !== "undefined" && !window.confirm("Reset the maintenance chart to the original source data? This discards all saved manual edits.")) return;
+    postRoster({ reset: true });
+  };
+  const exitEdit = () => {
+    setMxData(savedGroups);
+    setSaveErr(null);
+    setEditMode(false);
+  };
+
+  const groups = mxData.map((d, idx) => {
     const t = groupTotals(d);
     let status = "STAFFED";
     let bBg = "var(--fill-soft)";
@@ -139,13 +350,18 @@ export default function MaintenanceOrgChart() {
       clearTimeout(t);
       t = setTimeout(equalize, 120);
     };
+    const timers = [setTimeout(equalize, 250), setTimeout(equalize, 700)];
+    if (typeof document !== "undefined" && document.fonts?.ready) {
+      document.fonts.ready.then(equalize).catch(() => {});
+    }
     window.addEventListener("resize", onResize);
     return () => {
       cancelAnimationFrame(raf);
+      timers.forEach(clearTimeout);
       window.removeEventListener("resize", onResize);
       clearTimeout(t);
     };
-  }, [sort]);
+  }, [sort, mxData, editMode]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -251,7 +467,7 @@ export default function MaintenanceOrgChart() {
   const lineG = groups.filter((g) => g.d.pool === "Line");
   const admG = groups.filter((g) => g.d.pool === "Admin");
 
-  const active = openIdx != null ? MX_GROUPS[openIdx] : null;
+  const active = openIdx != null ? mxData[openIdx] : null;
   const at = active ? groupTotals(active) : null;
 
   return (
@@ -276,6 +492,14 @@ export default function MaintenanceOrgChart() {
                 Open seats
               </button>
             </div>
+            {canEdit ? (
+              <div className="seg">
+                <span className="lbl">Roster</span>
+                <button className={editMode ? "on" : ""} onClick={() => (editMode ? exitEdit() : setEditMode(true))}>
+                  {editMode ? "Editing" : "Edit"}
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="right">
@@ -288,6 +512,27 @@ export default function MaintenanceOrgChart() {
           </div>
         </div>
       </div>
+
+      {editMode ? (
+        <div className="editbar">
+          <div className="eb-msg">
+            <b>Editing roster.</b> Click any group to change a person&apos;s status, add or remove people, and open or close positions. Use <b>{dirty ? "Cancel" : "Done"}</b> to leave without changing anyone.
+            {dirty ? <span className="eb-dirty"> · unsaved changes</span> : <span className="eb-clean"> · all changes saved</span>}
+            {saveErr ? <span className="eb-err"> · {saveErr}</span> : null}
+          </div>
+          <div className="eb-act">
+            <button type="button" className="ghost" onClick={resetSeed} disabled={saving}>
+              Reset to source
+            </button>
+            <button type="button" className="ghost" onClick={exitEdit} disabled={saving}>
+              {dirty ? "Cancel" : "Done"}
+            </button>
+            <button type="button" className="primary" onClick={save} disabled={saving || !dirty}>
+              {saving ? "Saving…" : "Save changes"}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="toptree">
         <div className="mgmt">
@@ -344,7 +589,11 @@ export default function MaintenanceOrgChart() {
         </span>
         <span className="it">
           <span className="sw" style={{ background: "var(--cand-bg)", border: "1.5px solid var(--accent)" }} />
-          Candidate · hiring
+          Candidate · external
+        </span>
+        <span className="it">
+          <span className="sw" style={{ background: "var(--int-bg)", border: "1.5px solid var(--int-bd)" }} />
+          Candidate · internal
         </span>
         <span className="it">
           <span className="sw" style={{ background: "var(--train-bg)" }} />
@@ -373,12 +622,34 @@ export default function MaintenanceOrgChart() {
                 {active.sub} · {at.f}/{at.at} staffed · reports to {active.mgr}
               </div>
             </div>
-            <div className="m-cols">
-              {active.sections.map((sec, i) => (
-                <SectionCol key={i} sec={sec} />
-              ))}
-            </div>
-            <Pipeline d={active} />
+            {editMode ? (
+              <>
+                <div className="m-cols">
+                  {active.sections.map((sec, i) => (
+                    <MxEditSection
+                      key={i}
+                      sec={sec}
+                      onAdd={(name, bucket) => addPerson(openIdx as number, i, bucket, name)}
+                      onRemove={(bucket, name) => removePerson(openIdx as number, i, bucket, name)}
+                      onSetStatus={(from, to, name) => setStatus(openIdx as number, i, from, to, name)}
+                      onAdjustOpen={(delta) => adjustOpen(openIdx as number, i, delta)}
+                    />
+                  ))}
+                </div>
+                <div className="m-edithint">
+                  Changes are local until you press <b>Save changes</b> in the edit bar. Use each person&apos;s status dropdown to change them (e.g. <b>Candidate → In training</b>). Adding a person fills an open position; removing one reopens it. Candidate = red (external), Candidate · internal = blue.
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="m-cols">
+                  {active.sections.map((sec, i) => (
+                    <SectionCol key={i} sec={sec} />
+                  ))}
+                </div>
+                <Pipeline d={active} />
+              </>
+            )}
           </>
         ) : null}
       </div>

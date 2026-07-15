@@ -1198,6 +1198,15 @@
   color: var(--accent);
   border-color: var(--accent-lt);
 }
+.wrap :global(.ec-act select.ec-status) {
+  font: 600 10.5px/1 var(--fh);
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--n300);
+  background: var(--color-bg);
+  color: var(--ink);
+  min-height: 0;
+}
 .wrap :global(.ec-move) {
   display: flex;
   flex-wrap: wrap;
