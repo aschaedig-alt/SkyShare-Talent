@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { Search, Plane, User, Radar, ExternalLink, AlertTriangle } from "lucide-react";
+import { Search, Plane, User, Radar, ExternalLink, AlertTriangle, RefreshCw } from "lucide-react";
+import { loadMatchboardDetail } from "@/app/matching/matchboard-actions";
 import { JobScreeningPanel } from "@/components/recruiting-jobs/JobScreeningPanel";
 import { RoleMatchCard } from "@/components/matchboard/RoleMatchCard";
 import type { MatchboardSubjects, CandidateRoleMatches } from "@/lib/matching/matchboard";
@@ -21,10 +21,10 @@ function seatTag(seat: string | null) {
 
 export function MatchboardWorkspace({
   subjects,
-  mode,
-  selectedId,
-  roleData,
-  candidateData
+  mode: modeProp,
+  selectedId: selectedIdProp,
+  roleData: roleDataProp,
+  candidateData: candidateDataProp
 }: {
   subjects: MatchboardSubjects;
   mode: MatchboardMode;
@@ -32,20 +32,52 @@ export function MatchboardWorkspace({
   roleData: JobScreeningData | null;
   candidateData: CandidateRoleMatches | null;
 }) {
-  const router = useRouter();
   const [query, setQuery] = useState("");
+  const [mode, setMode] = useState<MatchboardMode>(modeProp);
+  const [selectedId, setSelectedId] = useState<string | null>(selectedIdProp);
+  const [roleData, setRoleData] = useState<JobScreeningData | null>(roleDataProp);
+  const [candidateData, setCandidateData] = useState<CandidateRoleMatches | null>(candidateDataProp);
+  const [loading, setLoading] = useState(false);
+  const reqRef = useRef(0);
 
-  // URL for a matchboard view — used as a real href so roles/candidates are
-  // ctrl/right-clickable into a new tab (the page reads mode/id from the query).
-  function hrefFor(nextMode: MatchboardMode, id?: string) {
-    const params = new URLSearchParams();
-    params.set("mode", nextMode);
-    if (id) params.set("id", id);
-    return `/matching?${params.toString()}`;
+  // Client-side selection: highlight instantly, then load the (heavy) screening
+  // without a full page navigation. The initial selection's data comes from the
+  // server render (props); every click after loads via the read-only action.
+  function select(nextMode: MatchboardMode, id?: string | null) {
+    setMode(nextMode);
+    setSelectedId(id ?? null);
+    if (!id) {
+      setRoleData(null);
+      setCandidateData(null);
+      setLoading(false);
+      return;
+    }
+    const req = ++reqRef.current;
+    setRoleData(null);
+    setCandidateData(null);
+    setLoading(true);
+    loadMatchboardDetail(nextMode, id)
+      .then((res) => {
+        if (req !== reqRef.current) return;
+        setLoading(false);
+        setRoleData(res.roleData);
+        setCandidateData(res.candidateData);
+      })
+      .catch(() => {
+        if (req === reqRef.current) setLoading(false);
+      });
   }
-  function go(nextMode: MatchboardMode, id?: string) {
-    router.push(hrefFor(nextMode, id));
-  }
+  const go = select;
+
+  // Keep mode/id in the URL (no navigation) so refresh + new-tab still work.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("mode", mode);
+    if (selectedId) url.searchParams.set("id", selectedId);
+    else url.searchParams.delete("id");
+    window.history.replaceState(null, "", url.toString());
+  }, [mode, selectedId]);
 
   const filteredRoles = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -153,17 +185,18 @@ export function MatchboardWorkspace({
                       {inner}
                     </div>
                   ) : (
-                    <Link key={`${role.title}:${role.id}`} href={hrefFor("role", role.id)} className={cardClass}>
+                    <button type="button" key={`${role.title}:${role.id}`} onClick={() => select("role", role.id)} className={cardClass}>
                       {inner}
-                    </Link>
+                    </button>
                   );
                 })
               : filteredCandidates.map((cand) => {
                   const active = cand.id === selectedId;
                   return (
-                    <Link
+                    <button
+                      type="button"
                       key={cand.id}
-                      href={hrefFor("candidate", cand.id)}
+                      onClick={() => select("candidate", cand.id)}
                       className={clsx(
                         "mb-1.5 block w-full rounded border p-2.5 text-left transition hover:shadow-glow",
                         active ? "border-brand-gold bg-brand-sweet/18 dark:bg-brand-sweet/25" : "border-brand-lea/10 hover:border-brand-sweet hover:bg-brand-cloudDancer/55 dark:border-white/10 dark:bg-white/5"
@@ -176,7 +209,7 @@ export function MatchboardWorkspace({
                       <div className="mt-0.5 truncate text-xs text-brand-grey dark:text-slate-400">
                         {[cand.title, cand.totalTime ? `${cand.totalTime.toLocaleString()} hr` : null].filter(Boolean).join(" · ") || "No title"}
                       </div>
-                    </Link>
+                    </button>
                   );
                 })}
             {((mode === "role" && filteredRoles.length === 0) || (mode === "candidate" && filteredCandidates.length === 0)) ? (
@@ -186,7 +219,12 @@ export function MatchboardWorkspace({
         </aside>
 
         <div className="min-w-0">
-          {mode === "role" ? (
+          {selectedId && loading ? (
+            <section className="flex h-full min-h-[300px] flex-col items-center justify-center rounded bg-white p-8 text-center shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+              <RefreshCw className="h-6 w-6 animate-spin text-brand-sweet" />
+              <p className="mt-3 text-sm text-brand-grey dark:text-slate-400">Scoring {mode === "role" ? "candidates" : "roles"}…</p>
+            </section>
+          ) : mode === "role" ? (
             selectedId && roleData ? (
               <JobScreeningPanel data={roleData} onViewCandidate={(candidateId) => go("candidate", candidateId)} />
             ) : (
