@@ -42,7 +42,7 @@ function SectionCol({ sec }: { sec: MxSection }) {
       <div className="colh">
         <span>{sec.label}</span>
         <span>
-          {c.f}/{c.at}
+          {c.f + c.tr}/{c.at}
         </span>
       </div>
       {rows}
@@ -258,7 +258,7 @@ export default function MaintenanceOrgChart() {
     <div className={styles.wrap} ref={wrapRef}>
       <div className="hd">
         <div>
-          <div className="kk" style={{ color: "var(--accent)" }}>
+          <div className="kk" style={{ color: "var(--gold)" }}>
             SkyShare · Maintenance
           </div>
           <div className="ttl">Maintenance Org Chart</div>
@@ -279,7 +279,7 @@ export default function MaintenanceOrgChart() {
           </div>
         </div>
         <div className="right">
-          <div className="kk" style={{ color: "var(--accent)" }}>
+          <div className="kk" style={{ color: "var(--gold)" }}>
             Open positions
           </div>
           <div className="big">{open}</div>
@@ -330,7 +330,7 @@ export default function MaintenanceOrgChart() {
         <div className="vline" />
       </div>
 
-      <Section title="Maintenance" list={lineG} bg="var(--eden)" fg="#fff" />
+      <Section title="Maintenance" list={lineG} bg="var(--band-fractional-bg)" fg="var(--band-fractional-fg)" />
       <div className="secgap" />
       <Section title="Administrative" list={admG} bg="var(--band-managed-bg)" fg="var(--band-managed-fg)" />
 
@@ -354,7 +354,7 @@ export default function MaintenanceOrgChart() {
           <span className="sw" style={{ background: "transparent", border: "1.5px dashed var(--accent)" }} />
           Open req
         </span>
-        <Link className="grow" href="/fleet/crew" style={{ color: "var(--accent)", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
+        <Link className="grow" href="/fleet/crew" style={{ color: "var(--ink)", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
           Crew org chart →
         </Link>
       </div>

@@ -270,4 +270,27 @@ Make the whole app feel like one professionally designed product.
 - [x] Dark mode v1 — opt-in (Jun 19) — class-based dark theme behind a sidebar toggle (persists to localStorage, with a no-flash script); page background flips to #0b1622, white cards to #10243a, body text to slate-100; dark: variants swept across the app incl. the newer Managed-aircraft panel and scoring-setup UI. Light mode is unaffected (dark: variants are inert in light)
 - [x] Dark mode wired + polished (Jun 19) — fixed the real issue: the toggle component existed but was never rendered, so dark mode wasn't reachable; added it to the sidebar rail + mobile drawer. Also found dark: utilities were compiling class-based correctly in production (a stale local .next cache had made them look media-only). QA pass on key pages: strengthened the selected-state fill in dark (sweet tint), fixed the environment banner that stayed white, confirmed value chips read fine. Cards/text convert cleanly; contrast scan came back clean
 - [x] Site-wide code & visual audit + cleanup (Jun 20) — parallel read-only audits across the whole codebase, then fixed everything safe: dark-mode class conflicts from the sweep (transparent panels, washed-out tabs, invisible body text — 61 files), the viewport-breakpoints-inside-resizable-panels bug on several pages (auto-fit grids), real text-overflow clipping (min-w-0), corner-radius source drift normalized to the 4px system (zero visual change), and dead-code trim to 0 lint warnings (removed unused imports/vars + a dead BlockLibrary retire feature, consolidated parseStringArray ×12 into one util). Types + production build verified clean
+
+## Backlog (added Jul 14)
+Captured from the Jul 14 braindump — not yet scoped.
+- [ ] Arrivals and departures list
+- [ ] Kevin's rolling turnover doc
+- [ ] Review the training end dates in the Recruiting Status Tracking tab to update pilots' Aircraft Service Date — plus add an info box that explains what the Aircraft Service Date is
+- [x] Fleet > Managed Aircraft: move the N477KR card to show before N515RP and N739S — and model N477KR as Jack's dedicated aircraft AND as backup coverage flown by the SkyShare pool pilots
+- [x] Org chart: fix the colors (too much red and a lot of dark blue) to match the site palette better — gold header rule, navy KPI numbers, gold eyebrows, lighter cool-blue division band
+- [x] Org chart: make sure the MX crew is also accurate — counting/render logic verified consistent with the crew rules (training=filled, 2+ open alert); name-level data re-diff still needs the source cleanup CSV (not in repo)
+- [ ] Org chart: add the ability to edit the chart by openings and move pilots around — needs a persistence layer (roster is static curated TS today); scope pending
+- [ ] Org chart: when a pilot is moved on the chart, reflect that move on their employee-journey profile — depends on the edit feature above + coordinating with the employee-journey work
+- [ ] Employee recognition: add the info and start building (still waiting on final approval, but can begin now)
+- [ ] Help section: training guides for every page anyone might need to access
+- [ ] Bug: with the left sidebar minimized, hovering the Recruiting tab renders the flyout BEHIND the candidate page (z-index) so you cannot see all of the dropdown items
+
+## Q3 Rocks (added Jul 14)
+Already in place, but each must be finished before the end of Q3 to count as complete.
+- [ ] Pre-Onboarding tracking
+- [ ] Orientation scheduling and tracking
+- [ ] Travel for Orientation / Indoc
+- [ ] Business card process
+- [ ] Historical interview history
+- [ ] Pilot recruiting status tracking
 `;

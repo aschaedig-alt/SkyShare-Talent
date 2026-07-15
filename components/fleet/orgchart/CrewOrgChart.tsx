@@ -289,6 +289,7 @@ export default function CrewOrgChart() {
                 <SeatSquares seat={g.d.cabin} showParked={showParked} />
               </div>
             ) : null}
+            {g.d.note ? <div className="cardnote">{g.d.note}</div> : null}
             {showParked ? <div className="turn">{turnEl}</div> : null}
           </div>
           <div className="foot">
@@ -344,7 +345,7 @@ export default function CrewOrgChart() {
     <div className={styles.wrap} ref={wrapRef}>
       <div className="hd">
         <div>
-          <div className="kk" style={{ color: "var(--accent)" }}>
+          <div className="kk" style={{ color: "var(--gold)" }}>
             SkyShare · Flight Operations
           </div>
           <div className="ttl">Crew Org Chart</div>
@@ -374,7 +375,7 @@ export default function CrewOrgChart() {
           </div>
         </div>
         <div className="right">
-          <div className="kk" style={{ color: "var(--accent)" }}>
+          <div className="kk" style={{ color: "var(--gold)" }}>
             Open reqs
           </div>
           <div className="big">{open}</div>
@@ -433,7 +434,7 @@ export default function CrewOrgChart() {
         <div className="vline" />
       </div>
 
-      <Section title="Fractional / Charter Aircraft" list={ssG} bg="var(--eden)" fg="#fff" />
+      <Section title="Fractional / Charter Aircraft" list={ssG} bg="var(--band-fractional-bg)" fg="var(--band-fractional-fg)" />
       <div className="secgap" />
       <Section title="Managed / Dedicated Aircraft" list={mgG} bg="var(--band-managed-bg)" fg="var(--band-managed-fg)" />
 
@@ -465,7 +466,7 @@ export default function CrewOrgChart() {
           <span className="ptag" style={{ marginLeft: 0 }}>+TYPE</span>
           Dual-qualified
         </span>
-        <Link className="grow" href="/fleet/maintenance" style={{ color: "var(--accent)", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
+        <Link className="grow" href="/fleet/maintenance" style={{ color: "var(--ink)", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
           Maintenance org chart →
         </Link>
       </div>

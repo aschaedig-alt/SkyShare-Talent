@@ -31,6 +31,8 @@
   --park-bd: #a7b5c8;
   --band-managed-bg: #f3e09a;
   --band-managed-fg: #3a2a05;
+  --band-fractional-bg: #cfe0ee;
+  --band-fractional-fg: #1c3853;
   --bar-green: #cfe9db;
   --bar-yellow: #f7e7b0;
   --bar-red: #f8dbe1;
@@ -77,6 +79,8 @@
   --park-bd: #5f7488;
   --band-managed-bg: #6a5a1f;
   --band-managed-fg: #f6e8bd;
+  --band-fractional-bg: #29455f;
+  --band-fractional-fg: #d6e4f1;
   --bar-green: #2f6a4d;
   --bar-yellow: #6a5a1f;
   --bar-red: #6a2a37;
@@ -94,7 +98,7 @@
 
 /* header */
 .wrap :global(.hd) {
-  border-top: 4px solid var(--accent);
+  border-top: 4px solid var(--gold);
   padding-top: 18px;
   display: flex;
   align-items: flex-end;
@@ -114,7 +118,7 @@
   max-width: 74ch;
 }
 .wrap :global(.hd .desc b) {
-  color: var(--accent);
+  color: var(--ink);
   font-weight: 700;
 }
 .wrap :global(.hd .right) {
@@ -124,7 +128,7 @@
 .wrap :global(.hd .right .big) {
   font: 800 40px/1 var(--fh);
   margin-top: 6px;
-  color: var(--accent);
+  color: var(--ink);
 }
 .wrap :global(.ctrls) {
   display: flex;
@@ -446,6 +450,13 @@
 .wrap :global(.turn b) {
   color: var(--ink);
   font-weight: 800;
+}
+/* small muted note under the seat rows (e.g. backup-coverage detail) */
+.wrap :global(.cardnote) {
+  font: 500 10px/1.45 var(--fh);
+  color: var(--n500);
+  font-style: italic;
+  margin-top: 2px;
 }
 .wrap :global(.seats-txt) {
   color: var(--ink);

@@ -49,6 +49,8 @@ export interface CrewGroup {
   /** Render the card normally but exclude it from the filled/open/target totals
       (e.g. a tail whose sole pilot is already counted on another aircraft). */
   noCount?: boolean;
+  /** Small muted note shown under the seat rows (e.g. backup-coverage detail). */
+  note?: string;
   /** data: URI or /public path to a horizontal aircraft photo. */
   photo?: string;
 }

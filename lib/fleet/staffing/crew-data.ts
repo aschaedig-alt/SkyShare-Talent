@@ -121,8 +121,6 @@ export const CREW_GROUPS: CrewGroup[] = [
   { name: "Citation M2", pool: "Managed", sub: "N785PD · Orchard Elms", pic: { line: ["Jack Matiasevich"] }, sic: null, tags: { "Jack Matiasevich": ["+PC-12"] } },
   { name: "PC-12", pool: "Managed", sub: "N418T · Fish Hawk Air", pic: { line: ["Shad Guffey"] }, sic: null },
   { name: "PC-12", pool: "Managed", sub: "N413UU · UofU", pic: { line: ["Jeff Gerrard", "John Bohman", "Kaytlin Francis"] }, sic: null },
-  { name: "PC-12", pool: "Managed", sub: "N515RP · Fast Flight", poolFlown: true, pic: null, sic: null },
-  { name: "PC-12", pool: "Managed", sub: "N739S · BAG Management", poolFlown: true, pic: null, sic: null },
   {
     name: "PC-12",
     pool: "Managed",
@@ -130,8 +128,11 @@ export const CREW_GROUPS: CrewGroup[] = [
     noCount: true,
     pic: { line: ["Jack Matiasevich"] },
     sic: null,
-    tags: { "Jack Matiasevich": ["+M2"] }
-  }
+    tags: { "Jack Matiasevich": ["+M2"] },
+    note: "Dedicated to Jack Matiasevich (also the Orchard Elms M2) · backup coverage by the SkyShare pool"
+  },
+  { name: "PC-12", pool: "Managed", sub: "N515RP · Fast Flight", poolFlown: true, pic: null, sic: null },
+  { name: "PC-12", pool: "Managed", sub: "N739S · BAG Management", poolFlown: true, pic: null, sic: null }
 ];
 
 // Time-to-fill (avg days from req opened → start) from the Hiring Metrics
