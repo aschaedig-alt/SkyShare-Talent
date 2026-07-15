@@ -26,7 +26,7 @@ const placements: PlacementDefinition[] = [
     key: "REQUIRED",
     label: "Required",
     description: "Core sections every job should include.",
-    tone: "border-brand-red/25 bg-brand-red/6"
+    tone: "border-brand-red/25 dark:border-red-500/30 bg-brand-red/6 dark:bg-red-500/10"
   },
   {
     key: "DEPARTMENT_SPECIFIC",

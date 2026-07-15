@@ -113,7 +113,7 @@ export function JobClassificationEditor({ jobId, isPilotRole, pilotSeat, aircraf
               {aircraft.map((a) => (
                 <span key={a} className="inline-flex items-center gap-1 rounded border border-brand-sweet/60 bg-brand-sweet/18 px-2.5 py-1 text-[11px] font-semibold text-brand-lea dark:text-slate-100">
                   {a}
-                  <button type="button" onClick={() => setAircraft(aircraft.filter((x) => x !== a))} className="text-brand-grey hover:text-red-600 dark:text-slate-400" aria-label={`Remove ${a}`}>
+                  <button type="button" onClick={() => setAircraft(aircraft.filter((x) => x !== a))} className="text-brand-grey hover:text-red-600 dark:hover:text-red-300 dark:text-slate-400" aria-label={`Remove ${a}`}>
                     ×
                   </button>
                 </span>

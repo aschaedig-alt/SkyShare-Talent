@@ -228,7 +228,7 @@ const blockColorClasses: Record<BlockTextColor, string> = {
   EDEN: "text-brand-eden",
   GREY: "text-brand-grey dark:text-slate-400",
   GOLD: "text-brand-gold",
-  RED: "text-brand-red",
+  RED: "text-brand-red dark:text-red-400",
   SWEET: "text-brand-sweet",
   CLOUD_DANCER: "text-brand-cloudDancer"
 };

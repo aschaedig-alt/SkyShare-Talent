@@ -314,7 +314,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                             ))}
                           </select>
                         ) : null}
-                        <button onClick={() => removeAttendee(a.id)} className="text-[11px] text-red-600 hover:underline">remove</button>
+                        <button onClick={() => removeAttendee(a.id)} className="text-[11px] text-red-600 dark:text-red-400 hover:underline">remove</button>
                       </div>
                     </td>
                   </tr>
@@ -396,7 +396,7 @@ function PrepRow({ t, onToggle, onRemove }: { t: PrepTaskView; onToggle: (id: st
       <span className={clsx("flex-1 text-[12.5px]", t.done ? "text-brand-grey line-through dark:text-slate-400" : "text-brand-black dark:text-slate-100")}>{t.label}</span>
       {t.owner ? <span className="rounded bg-brand-cloudDancer/70 px-2 py-0.5 text-[10px] text-brand-grey dark:bg-white/5 dark:text-slate-400">{t.owner}</span> : null}
       {t.dueDaysBefore != null && !t.done ? <span className="text-[10px] text-brand-grey dark:text-slate-400">{t.dueDaysBefore}d before</span> : null}
-      <button onClick={() => onRemove(t.id)} className="text-[11px] text-red-600 opacity-0 transition group-hover:opacity-100">×</button>
+      <button onClick={() => onRemove(t.id)} className="text-[11px] text-red-600 dark:text-red-400 opacity-0 transition group-hover:opacity-100">×</button>
     </div>
   );
 }
@@ -472,7 +472,7 @@ function EmailTemplates({ templates, session }: { templates: EmailTemplateDef[];
               </button>
               <div className="flex items-center gap-2">
                 <button onClick={() => copy(t)} className="text-xs font-semibold text-brand-lea hover:underline dark:text-slate-100">{copied === t.key ? "Copied!" : "Copy"}</button>
-                <button onClick={() => remove(t.key)} className="text-xs text-red-600 hover:underline">Remove</button>
+                <button onClick={() => remove(t.key)} className="text-xs text-red-600 dark:text-red-400 hover:underline">Remove</button>
               </div>
             </div>
             {openKey === t.key ? <TemplateEditor t={t} onSave={save} busy={busy} /> : null}

@@ -111,7 +111,7 @@ export function PersonPicker({
           </ul>
         ) : null}
       </div>
-      {error ? <p className="mt-1 text-xs text-brand-red">{error}</p> : null}
+      {error ? <p className="mt-1 text-xs text-brand-red dark:text-red-400">{error}</p> : null}
     </div>
   );
 }

@@ -238,7 +238,7 @@ export function FeedbackButton() {
                 <span className="truncate">Auto-attached: this page &amp; your account</span>
               </p>
 
-              {error && <p className="mt-2 text-xs font-medium text-red-600">{error}</p>}
+              {error && <p className="mt-2 text-xs font-medium text-red-600 dark:text-red-400">{error}</p>}
 
               <button
                 onClick={submit}

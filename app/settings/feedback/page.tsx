@@ -39,7 +39,7 @@ export default async function FeedbackPage() {
     return (
       <div className="space-y-4 px-5 py-5 lg:px-8">
         <section className="rounded border border-red-300 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 p-5">
-          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-red-600">Error</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-red-600 dark:text-red-400">Error</p>
           <h1 className="text-2xl font-semibold text-red-700 dark:text-red-300">Failed to load feedback</h1>
           <p className="mt-2 text-sm text-red-600">{error instanceof Error ? error.message : "Unknown error"}</p>
         </section>

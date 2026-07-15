@@ -157,7 +157,7 @@ function NewTripButton({ travelers }: { travelers: TravelTravelerOption[] }) {
               </>
             )}
 
-            {error && <p className="mt-2 text-xs font-medium text-red-600">{error}</p>}
+            {error && <p className="mt-2 text-xs font-medium text-red-600 dark:text-red-400">{error}</p>}
           </div>
         </>
       )}

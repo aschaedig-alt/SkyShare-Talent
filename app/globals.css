@@ -19,6 +19,11 @@
    flip via dark: variants on components. */
 .dark {
   --skyshare-page: #0b1622;
+  /* Deep crimson (#ba0c2f) is near-invisible on the dark navy page, so the
+     brand-red token lightens to a legible rose in dark for any CSS that reads
+     var(--skyshare-red). (Tailwind `brand-red` utilities are handled per-use
+     with dark: variants; solid red fills with white text keep their hue.) */
+  --skyshare-red: #f87171;
   /* Tell the UA to render form controls, native <select> option lists, and
      default scrollbars in their dark variants so they don't flash light. */
   color-scheme: dark;

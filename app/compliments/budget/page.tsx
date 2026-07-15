@@ -83,7 +83,7 @@ export default async function BudgetPage() {
               style={{ width: `${Math.min(100, b.budgetUsedPct)}%` }}
             />
           </div>
-          <p className={clsx("mt-2 text-xs", overBudget ? "text-brand-red" : "text-brand-grey dark:text-slate-400")}>
+          <p className={clsx("mt-2 text-xs", overBudget ? "text-brand-red dark:text-red-400" : "text-brand-grey dark:text-slate-400")}>
             {overBudget
               ? `${b.budgetUsedPct}% of budget — over by ${usd2.format(b.thisMonthSpendUsd - b.monthlyBudgetUsd)}`
               : `${b.budgetUsedPct}% of budget used · ${usd2.format(b.budgetRemainingUsd)} remaining`}

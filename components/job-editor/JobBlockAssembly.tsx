@@ -280,7 +280,7 @@ function SortableBlockRow({
             type="button"
             onClick={() => onRemove(instance.id)}
             disabled={isBusy}
-            className="rounded border border-brand-red/20 p-2 text-brand-red hover:bg-brand-red/8 disabled:opacity-60 dark:text-red-300"
+            className="rounded border border-brand-red/20 p-2 text-brand-red hover:bg-brand-red/8 disabled:opacity-60 dark:border-red-500/30 dark:text-red-300"
             title="Remove block from this job"
           >
             <Trash2 className="h-4 w-4" />
@@ -573,7 +573,7 @@ export function JobBlockAssembly({ job, availableBlocks, onJobUpdated }: JobBloc
           isBusy
             ? "border-brand-gold/35 bg-brand-gold/12 text-brand-lea dark:text-slate-100"
             : error
-              ? "border-brand-red/25 bg-brand-red/8 text-brand-red dark:text-red-300"
+              ? "border-brand-red/25 bg-brand-red/8 text-brand-red dark:border-red-500/30 dark:text-red-300"
               : message
                 ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
                 : "border-brand-lea/10 bg-brand-cloudDancer/55 text-brand-eden dark:border-white/10 dark:bg-white/5 dark:text-[#8fb3d6]"

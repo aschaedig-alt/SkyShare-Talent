@@ -115,7 +115,7 @@ export function GiveRecognitionForm({ roster, values, strengthPoints, defaultRec
             placeholder="Share what made this special. Be specific about the impact..."
             className="min-h-[100px] w-full resize-none rounded-element border-[0.5px] border-brand-lea/20 px-3 py-2.5 text-sm text-brand-black outline-none focus:border-value-innovation focus:ring-2 focus:ring-value-innovation/30 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500"
           />
-          {errors.message ? <p className="mt-1 text-xs text-brand-red">{errors.message.message}</p> : null}
+          {errors.message ? <p className="mt-1 text-xs text-brand-red dark:text-red-400">{errors.message.message}</p> : null}
         </div>
 
         <Controller
@@ -219,7 +219,7 @@ function ValuePicker({
         </div>
       ) : null}
 
-      {error ? <p className="mt-1 text-xs text-brand-red">{error}</p> : null}
+      {error ? <p className="mt-1 text-xs text-brand-red dark:text-red-400">{error}</p> : null}
     </div>
   );
 }

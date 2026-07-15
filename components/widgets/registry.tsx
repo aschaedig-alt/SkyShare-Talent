@@ -75,7 +75,7 @@ function statusOf(token: string): Status {
 const STATUS_CHIP: Record<Status, string> = {
   ok: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
   warn: "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
-  bad: "bg-red-50 text-red-600 dark:bg-red-500/15",
+  bad: "bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-300",
   neutral: "bg-brand-cloudDancer/70 text-brand-grey dark:bg-white/5 dark:text-slate-400"
 };
 
@@ -168,7 +168,7 @@ export const WIDGETS: WidgetDef[] = [
             const bad = statusOf(it.b) === "bad";
             return (
               <span key={i} className="flex items-center gap-1.5">
-                <span className={bad ? "text-red-600" : "text-emerald-600"}>{bad ? "✗" : "✓"}</span> {it.a}
+                <span className={bad ? "text-red-600 dark:text-red-400" : "text-emerald-600"}>{bad ? "✗" : "✓"}</span> {it.a}
               </span>
             );
           })}
@@ -192,7 +192,7 @@ export const WIDGETS: WidgetDef[] = [
         <div className="flex flex-col gap-1.5 text-xs">
           {parseLines(c.items).map((it, i) => {
             const days = num(it.b);
-            const tone = days <= 14 ? "text-amber-600" : days <= 0 ? "text-red-600" : "text-emerald-600";
+            const tone = days <= 14 ? "text-amber-600" : days <= 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600";
             return (
               <div key={i} className="flex justify-between">
                 <span className="text-brand-grey dark:text-slate-400">{it.a}</span>
@@ -218,7 +218,7 @@ export const WIDGETS: WidgetDef[] = [
     ],
     render: (c) => {
       const score = Math.max(0, Math.min(100, num(c.score)));
-      const tone = score >= 80 ? "text-emerald-600" : score >= 60 ? "text-amber-600" : "text-red-600";
+      const tone = score >= 80 ? "text-emerald-600" : score >= 60 ? "text-amber-600" : "text-red-600 dark:text-red-400";
       return (
         <Shell icon={Trophy} title={str(c.label, "Readiness")}>
           <div className="flex items-baseline gap-1.5">
@@ -257,13 +257,13 @@ export const WIDGETS: WidgetDef[] = [
       return (
         <Shell icon={ShieldAlert} title="Document currency">
           <div className="mb-2 grid grid-cols-3 gap-1.5 text-center">
-            <div className="rounded bg-red-50 py-1"><div className="text-base font-semibold text-red-600">{dc.counts.expired}</div><div className="text-[9px] uppercase text-brand-grey dark:text-slate-400">expired</div></div>
+            <div className="rounded bg-red-50 dark:bg-red-500/10 py-1"><div className="text-base font-semibold text-red-600 dark:text-red-400">{dc.counts.expired}</div><div className="text-[9px] uppercase text-brand-grey dark:text-slate-400">expired</div></div>
             <div className="rounded bg-amber-50 py-1"><div className="text-base font-semibold text-amber-600">{dc.counts.due30}</div><div className="text-[9px] uppercase text-brand-grey dark:text-slate-400">≤30d</div></div>
             <div className="rounded bg-brand-cloudDancer/60 py-1 dark:bg-white/5"><div className="text-base font-semibold text-brand-lea">{dc.counts.due90}</div><div className="text-[9px] uppercase text-brand-grey dark:text-slate-400">≤90d</div></div>
           </div>
           <div className="space-y-1">
             {dc.upcoming.slice(0, 6).map((it, i) => {
-              const tone = it.days < 0 ? "text-red-600" : it.days <= 30 ? "text-amber-600" : "text-brand-grey dark:text-slate-400";
+              const tone = it.days < 0 ? "text-red-600 dark:text-red-400" : it.days <= 30 ? "text-amber-600" : "text-brand-grey dark:text-slate-400";
               return (
                 <div key={i} className="flex items-center justify-between gap-2 text-[11px]">
                   <span className="truncate text-brand-black/80 dark:text-slate-300">{it.candidateName} · {it.documentType ?? "Doc"}</span>
@@ -378,7 +378,7 @@ export const WIDGETS: WidgetDef[] = [
             const bad = statusOf(it.b) === "bad";
             return (
               <span key={i} className="flex items-center gap-1">
-                <span className={bad ? "text-red-600" : "text-emerald-600"}>{bad ? "✗" : "✓"}</span> {it.a}
+                <span className={bad ? "text-red-600 dark:text-red-400" : "text-emerald-600"}>{bad ? "✗" : "✓"}</span> {it.a}
               </span>
             );
           })}

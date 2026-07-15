@@ -219,7 +219,7 @@ export function NewHireContactsAdmin({
                 <button
                   type="button"
                   onClick={() => removeGroup(groupIndex)}
-                  className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-brand-grey hover:text-red-600 dark:text-slate-400"
+                  className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-brand-grey hover:text-red-600 dark:hover:text-red-300 dark:text-slate-400"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   Remove
@@ -237,7 +237,7 @@ export function NewHireContactsAdmin({
                       <button
                         type="button"
                         onClick={() => setShared(groupIndex, null)}
-                        className="text-xs font-semibold text-brand-grey hover:text-red-600 dark:text-slate-400"
+                        className="text-xs font-semibold text-brand-grey hover:text-red-600 dark:hover:text-red-300 dark:text-slate-400"
                       >
                         Remove
                       </button>
@@ -295,7 +295,7 @@ export function NewHireContactsAdmin({
                         <button
                           type="button"
                           onClick={() => removeMember(groupIndex, memberIndex)}
-                          className="text-xs font-semibold text-brand-grey hover:text-red-600 dark:text-slate-400"
+                          className="text-xs font-semibold text-brand-grey hover:text-red-600 dark:hover:text-red-300 dark:text-slate-400"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -389,7 +389,7 @@ export function NewHireContactsAdmin({
         </Button>
         <div className="ml-auto flex items-center gap-3">
           {saveState === "saved" ? <span className="text-xs font-semibold text-emerald-600">Saved</span> : null}
-          {saveState === "error" ? <span className="text-xs font-semibold text-red-600">Couldn’t save — try again</span> : null}
+          {saveState === "error" ? <span className="text-xs font-semibold text-red-600 dark:text-red-400">Couldn’t save — try again</span> : null}
           <Button onClick={save} disabled={saveState === "saving"}>
             {saveState === "saving" ? "Saving…" : "Save changes"}
           </Button>

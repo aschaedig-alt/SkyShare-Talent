@@ -129,7 +129,7 @@ export function TravelPanel({ subjectType, subjectId, initialTrips, loyalty }: P
         <NewTripButton creating={creating} onCreate={handleCreate} />
       </div>
 
-      {error && <p className="mt-2 text-xs font-medium text-red-600">{error}</p>}
+      {error && <p className="mt-2 text-xs font-medium text-red-600 dark:text-red-400">{error}</p>}
 
       <LoyaltyCard subjectKey={subjectKey} subjectId={subjectId} loyalty={loyalty} />
 
@@ -305,7 +305,7 @@ function TripCard({
           onBlur={() => setConfirmDelete(false)}
           className={clsx(
             "shrink-0 rounded p-1.5 text-xs font-semibold transition",
-            confirmDelete ? "bg-red-600 text-white" : "text-brand-grey hover:bg-red-50 hover:text-red-600 dark:text-slate-400"
+            confirmDelete ? "bg-red-600 text-white" : "text-brand-grey hover:bg-red-50 hover:text-red-600 dark:hover:text-red-300 dark:text-slate-400 dark:hover:bg-red-500/10"
           )}
           title={confirmDelete ? "Click again to delete this trip" : "Delete trip"}
         >
@@ -436,7 +436,7 @@ function ConfirmationImport({ trip, onApplied }: { trip: TravelTripView; onAppli
               <ClipboardPaste className="h-4 w-4" />
               {parsing ? "Reading…" : "Extract"}
             </button>
-            {error && <span className="text-xs font-medium text-red-600">{error}</span>}
+            {error && <span className="text-xs font-medium text-red-600 dark:text-red-400">{error}</span>}
           </div>
 
           {parsed && (
@@ -571,7 +571,7 @@ function ItemRow({
         />
         <button
           onClick={handleRemove}
-          className="shrink-0 rounded p-1.5 text-brand-grey transition hover:bg-red-50 hover:text-red-600 dark:text-slate-400"
+          className="shrink-0 rounded p-1.5 text-brand-grey transition hover:bg-red-50 hover:text-red-600 dark:hover:text-red-300 dark:text-slate-400 dark:hover:bg-red-500/10"
           title="Remove item"
         >
           <Trash2 className="h-3.5 w-3.5" />
@@ -670,7 +670,7 @@ function ReceiptsBlock({
           onChange={(e) => handleFiles(e.target.files)}
         />
       </div>
-      {error && <p className="mt-1 text-xs font-medium text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-xs font-medium text-red-600 dark:text-red-400">{error}</p>}
       {receipts.length > 0 && (
         <div className="mt-2 space-y-1">
           {receipts.map((r) => (
@@ -690,7 +690,7 @@ function ReceiptsBlock({
               {r.amount !== null && <span className="shrink-0 text-xs text-brand-grey dark:text-slate-400">{formatUsd(r.amount)}</span>}
               <button
                 onClick={() => handleDelete(r.id)}
-                className="shrink-0 rounded p-1 text-brand-grey transition hover:bg-red-50 hover:text-red-600 dark:text-slate-400"
+                className="shrink-0 rounded p-1 text-brand-grey transition hover:bg-red-50 hover:text-red-600 dark:hover:text-red-300 dark:text-slate-400 dark:hover:bg-red-500/10"
                 title="Delete receipt"
               >
                 <Trash2 className="h-3.5 w-3.5" />
