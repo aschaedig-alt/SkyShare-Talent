@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
 import type { RecruitingJobDetail, RecruitingJobsData } from "@/lib/data/recruiting-jobs";
@@ -219,8 +222,18 @@ function NoJobPanel() {
 export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLayout = null, savedWidgets = null, widgetData }: RecruitingJobsWorkspaceProps) {
   const pilotJobs = data.jobs.filter((job) => job.isPilotRole);
   const supportJobs = data.jobs.filter((job) => !job.isPilotRole);
-  const selectedId = data.selectedJob?.id ?? null;
-  const job = data.selectedJob;
+  const [selectedId, setSelectedId] = useState<string | null>(data.selectedJob?.id ?? null);
+  const job = selectedId ? data.details[selectedId] ?? null : null;
+
+  // Keep ?id= in the URL (no navigation) so a refresh keeps the selection.
+  useEffect(() => {
+    if (!selectedId || typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("id", selectedId);
+    if (query) url.searchParams.set("q", query);
+    else url.searchParams.delete("q");
+    window.history.replaceState(null, "", url.toString());
+  }, [selectedId, query]);
 
   const panels: EditablePanel[] = [
     { id: "rjobs-header", title: "Role operations", node: <HeaderPanel query={query} /> },
@@ -228,7 +241,7 @@ export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLay
     {
       id: "rjobs-jobs-list",
       title: "Pilot & support jobs",
-      node: <JobListsPanel pilotJobs={pilotJobs} supportJobs={supportJobs} selectedId={selectedId} query={query} />
+      node: <JobListsPanel pilotJobs={pilotJobs} supportJobs={supportJobs} selectedId={selectedId} onSelect={setSelectedId} />
     },
     {
       id: "rjobs-detail-header",
