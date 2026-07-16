@@ -465,6 +465,22 @@ export async function getCandidateComparisonData(): Promise<CandidateComparisonD
   };
 }
 
+/**
+ * Strip the "FILLED - " pipeline artifact off a candidate's current title.
+ *
+ * It arrived on 29 candidates via a June 2026 CSV import and means the REQ was
+ * filled — it says nothing about the person. Carried onto a NewHire it becomes a
+ * lie ("FILLED - Citation 560XLS+ Captain" stamped on someone just starting) and
+ * pollutes an otherwise clean position vocabulary: 0 of 448 existing hires carry
+ * it. Only ever cleaned for display/prefill — the stored currentTitle is left
+ * alone, since it is the imported source value.
+ */
+function cleanTitle(title: string | null): string | null {
+  if (!title) return null;
+  const cleaned = title.replace(/^\s*FILLED\s*-\s*/i, "").trim();
+  return cleaned || null;
+}
+
 function formatLocation(city: string | null, state: string | null) {
   return [city, state].filter(Boolean).join(", ") || null;
 }
@@ -681,7 +697,7 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
     hireStage: existingHire?.stage ?? null,
     isHired: hired || Boolean(signedOfferApp),
     offerSigned: Boolean(signedOfferApp),
-    suggestedPosition: sourceApp?.job?.title ?? candidate.currentTitle ?? null,
+    suggestedPosition: sourceApp?.job?.title ?? cleanTitle(candidate.currentTitle),
     suggestedDepartment: sourceApp?.job?.department ?? null,
     suggestedStartDate: signedOfferApp?.offerStartDate?.toISOString() ?? null,
     matchingHire

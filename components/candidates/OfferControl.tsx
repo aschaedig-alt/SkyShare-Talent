@@ -37,21 +37,34 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
   const [error, setError] = useState<string | null>(null);
   const [reason, setReason] = useState(application.offerDeclineReason ?? "");
   const [askReason, setAskReason] = useState(false);
+  // Start date is asked for at the moment of signing, the one time it is actually
+  // known. recordOfferStatus and the API have always accepted it; nothing ever
+  // sent it, which is why "prefill the start date from the signed offer" on the
+  // move-to-onboarding panel could never fire.
+  const [startDate, setStartDate] = useState(application.offerStartDate?.slice(0, 10) ?? "");
+  const [askStart, setAskStart] = useState(false);
 
   const status = application.offerStatus ?? "NONE";
 
-  async function set(next: string, declineReason?: string) {
+  async function set(next: string, opts?: { reason?: string; startDate?: string }) {
     setBusy(true);
     setError(null);
     try {
       const res = await fetch(`/api/offers/${application.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: next, reason: declineReason ?? null })
+        body: JSON.stringify({
+          status: next,
+          reason: opts?.reason ?? null,
+          // Only send a date when there is one — omitted means "leave it alone",
+          // so re-saving a signed offer cannot wipe a date already recorded.
+          ...(opts?.startDate ? { startDate: opts.startDate } : {})
+        })
       });
       const data = (await res.json().catch(() => ({}))) as { message?: string };
       if (!res.ok) throw new Error(data.message || "Could not update the offer.");
       setAskReason(false);
+      setAskStart(false);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not update the offer.");
@@ -92,6 +105,9 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
             onChange={(e) => {
               const next = e.target.value;
               if (next === "DECLINED") setAskReason(true);
+              // Signing is the handoff to onboarding, and the start date is the
+              // one thing onboarding needs that only the offer knows.
+              else if (next === "SIGNED") setAskStart(true);
               else void set(next);
             }}
             className="rounded border border-brand-lea/15 bg-white px-2 py-1 text-[11px] font-semibold text-brand-lea outline-none disabled:opacity-50 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
@@ -108,10 +124,51 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
       {dates.length > 0 && (
         <p className="mt-1 text-[11px] text-brand-grey dark:text-slate-400">{dates.join(" · ")}</p>
       )}
+
+      {/* Already signed but nobody recorded when they start — the offer is the
+          only place that knows, and onboarding is blind without it. */}
+      {canEdit && status === "SIGNED" && !application.offerStartDate && !askStart && (
+        <button
+          onClick={() => setAskStart(true)}
+          className="mt-1 rounded text-[11px] font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-brand-sweet"
+        >
+          Add their start date
+        </button>
+      )}
       {application.offerDeclineReason && status === "DECLINED" ? (
         <p className="mt-0.5 text-[11px] text-brand-grey dark:text-slate-400">Reason: {application.offerDeclineReason}</p>
       ) : null}
       {error && <p className="mt-1 text-[11px] text-red-600 dark:text-red-300">{error}</p>}
+
+      {askStart && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <label className="text-[11px] font-semibold text-brand-grey dark:text-slate-400">
+            Start date on the offer
+          </label>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="rounded border border-brand-lea/20 px-2 py-1 text-xs outline-none focus:border-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+          />
+          <button
+            onClick={() => void set("SIGNED", { startDate })}
+            disabled={busy}
+            className="rounded bg-brand-lea px-3 py-1 text-xs font-semibold text-white transition hover:bg-brand-eden disabled:opacity-50"
+          >
+            Save
+          </button>
+          {/* Signing is the fact; the date is a nicety. Never block recording the
+              signature because nobody knows the start date yet. */}
+          <button
+            onClick={() => void set("SIGNED")}
+            disabled={busy}
+            className="rounded px-2 py-1 text-xs font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/40 disabled:opacity-50 dark:text-slate-400"
+          >
+            {status === "SIGNED" ? "Cancel" : "Not known yet"}
+          </button>
+        </div>
+      )}
 
       {askReason && (
         <div className="mt-2 flex flex-wrap gap-2">
@@ -122,7 +179,7 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
             className="flex-1 rounded border border-brand-lea/20 px-2 py-1 text-xs outline-none focus:border-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
           />
           <button
-            onClick={() => void set("DECLINED", reason)}
+            onClick={() => void set("DECLINED", { reason })}
             disabled={busy}
             className="rounded bg-brand-lea px-3 py-1 text-xs font-semibold text-white transition hover:bg-brand-eden disabled:opacity-50"
           >

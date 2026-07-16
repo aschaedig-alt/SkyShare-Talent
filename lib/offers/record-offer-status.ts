@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity/logger";
-import { isOfferStatus, offerStatusLabel, type OfferSource, type OfferStatus } from "@/lib/offers/constants";
+import { isOfferStatus, offerStatusLabel, offerStatusWord, type OfferSource, type OfferStatus } from "@/lib/offers/constants";
 
 /**
  * THE one place an offer's state changes.
@@ -47,6 +47,7 @@ export async function recordOfferStatus(applicationId: string, t: OfferTransitio
       id: true,
       candidateId: true,
       offerStatus: true,
+      offerStartDate: true,
       candidate: { select: { displayName: true } },
       job: { select: { title: true } }
     }
@@ -56,7 +57,27 @@ export async function recordOfferStatus(applicationId: string, t: OfferTransitio
   // Idempotent. A Paycom notification re-confirming an offer we already know
   // about must not re-fire the downstream work (or double-create a new hire).
   if (app.offerStatus === t.status) {
-    return { ok: true, changed: false, message: `Offer is already ${offerStatusLabel(t.status).toLowerCase()}.` };
+    // ...but a start date arriving after the fact is NEW information, not a
+    // repeat — someone signed weeks ago and only now knows when they start.
+    // Record it on its own, without re-firing any of the downstream work below.
+    const incoming = t.startDate === undefined ? undefined : (t.startDate?.getTime() ?? null);
+    const existing = app.offerStartDate?.getTime() ?? null;
+    if (incoming !== undefined && incoming !== existing) {
+      await prisma.candidateApplication.update({
+        where: { id: applicationId },
+        data: { offerStartDate: t.startDate }
+      });
+      return {
+        ok: true,
+        changed: true,
+        message: t.startDate ? "Start date recorded." : "Start date cleared."
+      };
+    }
+    return {
+      ok: true,
+      changed: false,
+      message: t.status === "NONE" ? "There is no offer on this application." : `This offer is already ${offerStatusWord(t.status)}.`
+    };
   }
 
   const when = t.at ?? new Date();

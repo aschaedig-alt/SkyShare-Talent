@@ -24,6 +24,13 @@ export type OfferSource = (typeof OFFER_SOURCES)[number];
 export const offerStatusLabel = (v: string | null | undefined) =>
   OFFER_STATUSES.find((o) => o.value === v)?.label ?? v ?? "";
 
+/**
+ * Just the state word — "signed", "sent" — for use mid-sentence, where the full
+ * label would stutter ("Offer is already offer signed").
+ */
+export const offerStatusWord = (v: string | null | undefined) =>
+  offerStatusLabel(v).replace(/^offer\s+/i, "").toLowerCase();
+
 export function isOfferStatus(v: unknown): v is OfferStatus {
   return typeof v === "string" && OFFER_STATUSES.some((s) => s.value === v);
 }
