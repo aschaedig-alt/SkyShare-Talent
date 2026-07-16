@@ -69,7 +69,10 @@ export function DuplicateReviewQueue({ items }: { items: Item[] }) {
     });
   }
 
-  async function resolveOne(item: Item, action: "merge" | "dismiss"): Promise<boolean> {
+  // Returns the server's reason on failure. The API always sends one (e.g. "That
+  // candidate is already merged.") — throwing it away is why a failed merge used
+  // to be unexplainable.
+  async function resolveOne(item: Item, action: "merge" | "dismiss"): Promise<{ ok: boolean; message?: string }> {
     const body =
       action === "merge"
         ? { itemId: item.id, action, keepId: keepIdFor(item), dropId: dropIdFor(item) }
@@ -80,18 +83,23 @@ export function DuplicateReviewQueue({ items }: { items: Item[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
       });
-      const data = await res.json().catch(() => null);
-      return res.ok && data?.success !== false;
-    } catch {
-      return false;
+      const data = (await res.json().catch(() => null)) as { success?: boolean; message?: string } | null;
+      if (res.ok && data?.success !== false) return { ok: true };
+      return { ok: false, message: data?.message ?? `Request failed (${res.status}).` };
+    } catch (e) {
+      return { ok: false, message: e instanceof Error ? e.message : "Network error." };
     }
   }
 
   async function runSingle(item: Item, action: "merge" | "dismiss") {
     setBusy(true);
     setMessage(null);
-    const ok = await resolveOne(item, action);
-    setMessage(ok ? null : { type: "error", text: "That action couldn't be completed." });
+    const res = await resolveOne(item, action);
+    setMessage(
+      res.ok
+        ? null
+        : { type: "error", text: `Could not ${action} ${item.primary?.displayName ?? "this pair"}: ${res.message}` }
+    );
     setBusy(false);
     router.refresh();
   }
@@ -106,14 +114,25 @@ export function DuplicateReviewQueue({ items }: { items: Item[] }) {
     setBusy(true);
     setMessage(null);
     let ok = 0;
-    let fail = 0;
+    // Keep WHY each one failed, not just how many — a bare "N failed" is
+    // unactionable, which was the whole complaint.
+    const failures: string[] = [];
     for (const item of targets) {
-      if (await resolveOne(item, action)) ok += 1;
-      else fail += 1;
+      const res = await resolveOne(item, action);
+      if (res.ok) ok += 1;
+      else failures.push(`${item.primary?.displayName ?? "Pair"}: ${res.message}`);
     }
     setSelected(new Set());
     setBusy(false);
-    setMessage({ type: fail ? "error" : "success", text: `${action === "merge" ? "Merged" : "Dismissed"} ${ok} pair${ok === 1 ? "" : "s"}${fail ? ` · ${fail} failed` : ""}.` });
+    const verbDone = action === "merge" ? "Merged" : "Dismissed";
+    setMessage(
+      failures.length
+        ? {
+            type: "error",
+            text: `${verbDone} ${ok} pair${ok === 1 ? "" : "s"} · ${failures.length} failed —\n${failures.join("\n")}`
+          }
+        : { type: "success", text: `${verbDone} ${ok} pair${ok === 1 ? "" : "s"}.` }
+    );
     router.refresh();
   }
 
@@ -156,7 +175,8 @@ export function DuplicateReviewQueue({ items }: { items: Item[] }) {
       {message ? (
         <div
           className={clsx(
-            "rounded px-3 py-2 text-xs",
+            // whitespace-pre-line so a bulk run can list each failure on its own line.
+            "whitespace-pre-line rounded px-3 py-2 text-xs",
             message.type === "success"
               ? "border border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300"
               : "border border-red-300 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300"

@@ -10,6 +10,8 @@ type ScanResult = {
   candidatePairsFound?: number;
   newReviewItems?: number;
   existingReviewItems?: number;
+  /** Open pairs closed because a side had already been merged away. */
+  staleResolved?: number;
   durationMs?: number;
   bucketCounts?: {
     email: number;
@@ -23,12 +25,17 @@ function formatResult(result: ScanResult | null) {
     return null;
   }
 
-  return [
+  const parts = [
     `${result.scannedCandidates ?? 0} candidates scanned`,
     `${result.candidatePairsFound ?? 0} possible pairs`,
-    `${result.newReviewItems ?? 0} new review items`,
-    `${result.durationMs ?? 0}ms`
-  ].join(" - ");
+    `${result.newReviewItems ?? 0} new review items`
+  ];
+  // Only mention the cleanup when it actually did something.
+  if (result.staleResolved) {
+    parts.push(`${result.staleResolved} stale pair${result.staleResolved === 1 ? "" : "s"} closed (already merged)`);
+  }
+  parts.push(`${result.durationMs ?? 0}ms`);
+  return parts.join(" - ");
 }
 
 export function CandidateDuplicateScanCard() {

@@ -200,11 +200,43 @@ export async function scanCandidateDuplicates() {
     });
   }
 
+  // Self-heal stale pairs. An OPEN pair whose keep or drop candidate has already
+  // been merged away (or deleted) can never succeed — mergeCandidates rejects it
+  // outright — so leaving it in the queue just hands someone a button that always
+  // fails. These are left behind by the standalone merge scripts, which (unlike
+  // mergeCandidates) don't resolve the review items they invalidate. Resolve them
+  // so the queue only offers pairs that can actually be actioned.
+  const openItems = await prisma.duplicateReviewItem.findMany({
+    where: { reviewType: "CANDIDATE", status: "OPEN" },
+    select: {
+      id: true,
+      primaryCandidate: { select: { status: true } },
+      secondaryCandidate: { select: { status: true } }
+    }
+  });
+  const staleIds = openItems
+    .filter(
+      (i) =>
+        !i.primaryCandidate ||
+        !i.secondaryCandidate ||
+        i.primaryCandidate.status === "MERGED" ||
+        i.secondaryCandidate.status === "MERGED"
+    )
+    .map((i) => i.id);
+  if (staleIds.length > 0) {
+    await prisma.duplicateReviewItem.updateMany({
+      where: { id: { in: staleIds } },
+      data: { status: "RESOLVED", resolvedAt: new Date() }
+    });
+  }
+
   return {
     scannedCandidates: candidates.length,
     candidatePairsFound: pairs.size,
     newReviewItems: newPairs.length,
     existingReviewItems: existingPairKeys.size,
+    /** Open pairs that could never merge (a side was already merged/deleted). */
+    staleResolved: staleIds.length,
     durationMs: Math.round(performance.now() - startedAt),
     bucketCounts: {
       email: emailBucket.size,
