@@ -10,10 +10,14 @@
  * WorkspaceSetting — see department-colors.server.ts). Tailwind classes must be
  * present as literals here so the compiler emits them.
  *
- * Interviews don't store a department directly — it is derived from the linked
- * job's free-form `Job.department` via resolveDepartmentKey(). That mapping is
- * the editable bridge between whatever strings live on jobs today and this
- * fixed structure; adjust the regexes below as the real department names settle.
+ * Interviews don't store a department directly — it is derived from a free-form
+ * `Job.department` string via resolveDepartmentKey(). That mapping is the
+ * editable bridge between whatever strings live on jobs today and this fixed
+ * structure; adjust the regexes below as the real department names settle.
+ *
+ * Which job that string comes from is interviewDepartmentRaw() — see the note
+ * there, because the obvious answer (the interview's own linked job) is wrong
+ * for essentially every interview we actually have.
  */
 
 export type DeptKey = "crew" | "maintenance" | "fbo" | "support" | "unassigned";
@@ -150,6 +154,37 @@ export function buildDepartmentColors(overrides?: DepartmentColorOverrides | nul
 
 /** The default color map (no overrides) — used as a fallback when a prop is omitted. */
 export const DEFAULT_DEPARTMENT_COLOR_META = buildDepartmentColors(null);
+
+/**
+ * Pick the raw department string that best describes an interview.
+ *
+ * `Interview.jobId` is nullable and in practice is ALWAYS null: interviews are
+ * created from the scheduling form and the Google sync without a job link. As of
+ * Jul 2026 all 200 interviews the calendar loads have no linked job, so reading
+ * `interview.job.department` alone resolved every single event to "Unassigned" —
+ * which made the department filter look broken (pick any department, get an empty
+ * calendar) and flattened the color-coding to one gray.
+ *
+ * So fall back to the departments of the candidate's job-linked applications,
+ * which is what a recruiter means by "what department is this interview for".
+ * That recovers 199/200. `applicationDepartments` must be passed
+ * most-relevant-first; the first non-empty one wins. About 9 candidates have
+ * applications spanning several departments, so this is genuinely ambiguous for
+ * them — the ordering makes it at least deterministic and stable.
+ *
+ * The real fix is to populate Interview.jobId at scheduling time; then the first
+ * branch here wins and the fallback quietly stops mattering.
+ */
+export function interviewDepartmentRaw(
+  jobDepartment: string | null | undefined,
+  applicationDepartments: Array<string | null | undefined> = []
+): string | null {
+  if (jobDepartment && jobDepartment.trim()) return jobDepartment;
+  for (const candidate of applicationDepartments) {
+    if (candidate && candidate.trim()) return candidate;
+  }
+  return null;
+}
 
 /**
  * Map a free-form Job.department string onto the canonical department + sub-group.

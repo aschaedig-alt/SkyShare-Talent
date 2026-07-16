@@ -75,7 +75,7 @@ export function PreOnboardingWorkspace({ tab, counts, dashboard, grid, milestone
       <section className="flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">People</p>
-          <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Pre-onboarding</h1>
+          <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">New hires</h1>
           <p className="mt-1 max-w-2xl text-sm text-brand-grey dark:text-slate-400">
             Track every new hire from offer to orientation. Fully onboarded hires move to post-onboard, then archive.
           </p>

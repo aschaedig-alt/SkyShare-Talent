@@ -155,6 +155,37 @@ export const navigationGroups: readonly NavigationGroup[] = [
       }
     ]
   },
+  // The three buckets follow one question anyone can answer without training:
+  // have they signed? have they started?
+  //   Recruiting  — people we MIGHT hire      (haven't signed)
+  //   Onboarding  — people who are JOINING    (signed, not started)
+  //   People      — people who WORK HERE      (started)
+  // The offer is the last step of Recruiting, and signing is the handoff into
+  // Onboarding. Splitting these two groups is what removes the old fog, where
+  // "People" held both someone who starts in six weeks and someone who has
+  // worked here for six years.
+  //
+  // Both groups intentionally keep the "people" module id, so access is
+  // unchanged by this reorg — it is a navigation change, not a permissions one.
+  {
+    id: "onboarding",
+    label: "Onboarding",
+    icon: UserPlus,
+    sections: [
+      {
+        id: "onboarding",
+        label: "Onboarding",
+        items: [
+          // Route stays /people: renaming it would break saved page layouts,
+          // which are keyed by page id. The label is what people read.
+          { id: "people", href: "/people", label: "New hires", icon: UserPlus },
+          { id: "people", href: "/orientation", label: "Orientation", icon: CalendarCheck },
+          { id: "people", href: "/travel", label: "Travel", icon: Plane },
+          { id: "people", href: "/business-cards", label: "Business cards", icon: CreditCard }
+        ]
+      }
+    ]
+  },
   {
     id: "people",
     label: "People",
@@ -164,11 +195,7 @@ export const navigationGroups: readonly NavigationGroup[] = [
         id: "people",
         label: "People",
         items: [
-          { id: "people", href: "/people", label: "Pre-onboarding", icon: UserPlus },
           { id: "people", href: "/employees", label: "Employees", icon: Users },
-          { id: "people", href: "/orientation", label: "Orientation", icon: CalendarCheck },
-          { id: "people", href: "/travel", label: "Travel", icon: Plane },
-          { id: "people", href: "/business-cards", label: "Business cards", icon: CreditCard },
           { id: "people", href: "/compliments", label: "Compliments", icon: Sparkles }
         ]
       }

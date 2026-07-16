@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { resolveDepartmentKey, type DeptKey } from "@/lib/calendar/departments";
+import { resolveDepartmentKey, interviewDepartmentRaw, type DeptKey } from "@/lib/calendar/departments";
 import {
   scorecardAverage,
   interviewAverage,
@@ -54,14 +54,32 @@ export async function getInterviewDetail(id: string): Promise<InterviewDetail | 
   const interview = await prisma.interview.findUnique({
     where: { id },
     include: {
-      candidate: { select: { id: true, displayName: true, currentTitle: true } },
+      candidate: {
+        select: {
+          id: true,
+          displayName: true,
+          currentTitle: true,
+          // Fallback source for the department — the interview's own job link is
+          // almost always null. See interviewDepartmentRaw().
+          applications: {
+            where: { jobId: { not: null } },
+            orderBy: { appliedAt: "desc" },
+            select: { job: { select: { department: true } } }
+          }
+        }
+      },
       job: { select: { id: true, title: true, department: true } },
       scorecards: { orderBy: { createdAt: "asc" } }
     }
   });
   if (!interview) return null;
 
-  const resolved = resolveDepartmentKey(interview.job?.department ?? null).deptKey;
+  const resolved = resolveDepartmentKey(
+    interviewDepartmentRaw(
+      interview.job?.department,
+      interview.candidate.applications.map((application) => application.job?.department)
+    )
+  ).deptKey;
   const departmentKey = resolved === "unassigned" ? null : resolved;
 
   const scorecards: ScorecardView[] = interview.scorecards.map((card) => {

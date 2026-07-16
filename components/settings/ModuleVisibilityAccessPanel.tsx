@@ -71,7 +71,8 @@ function clonePolicy(policy: ModuleAccessPolicy) {
   return JSON.parse(JSON.stringify(policy)) as ModuleAccessPolicy;
 }
 
-// A few modules power several nav items (People → Pre-onboarding, Employees, Travel…;
+// A few modules power several nav items (the "people" module covers both the
+// Onboarding group — New hires, Orientation, Travel, Business cards — and People;
 // Settings → all sub-pages). The access table has one row per module, so label that
 // row by the module itself rather than whichever nav item happens to come first.
 const MODULE_ROW_LABEL: Partial<Record<ModuleId, string>> = {

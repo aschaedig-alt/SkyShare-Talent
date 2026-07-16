@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { isGoogleCalendarConfigured } from "@/lib/google/calendar";
 import { parseStringArray } from "@/lib/json";
+import { interviewDepartmentRaw } from "@/lib/calendar/departments";
 
 export type CalendarCandidate = {
   id: string;
@@ -50,6 +51,14 @@ export type CalendarData = {
     notes: string | null;
     googleEventId: string | null;
     syncStatus: string | null;
+    /**
+     * Raw department string for this interview — the linked job's department when
+     * there is one, otherwise derived from the candidate's applications. This is
+     * what the department filter and the department color-coding read; do NOT go
+     * back to `job.department`, which is null for every interview in practice.
+     * See interviewDepartmentRaw() in lib/calendar/departments.ts.
+     */
+    department: string | null;
     candidate: {
       id: string;
       displayName: string;
@@ -72,6 +81,27 @@ function addDays(date: Date, days: number) {
   return next;
 }
 
+type DepartmentSourceApplication = {
+  origin: string;
+  appliedAt: Date | null;
+  job: { department: string | null } | null;
+};
+
+/**
+ * Order a candidate's applications by how well each one describes the interview
+ * we're about to label: live (Paycom) pipeline applications before archived Jazz
+ * ones, then most recently applied first, undated last. Only matters for the
+ * handful of candidates who have applied across more than one department.
+ */
+function byDepartmentRelevance(a: DepartmentSourceApplication, b: DepartmentSourceApplication) {
+  const liveA = a.origin === "JAZZ" ? 1 : 0;
+  const liveB = b.origin === "JAZZ" ? 1 : 0;
+  if (liveA !== liveB) return liveA - liveB;
+  const timeA = a.appliedAt?.getTime() ?? -Infinity;
+  const timeB = b.appliedAt?.getTime() ?? -Infinity;
+  return timeB - timeA;
+}
+
 
 export async function getCalendarData(): Promise<CalendarData> {
   const now = new Date();
@@ -88,7 +118,19 @@ export async function getCalendarData(): Promise<CalendarData> {
             displayName: true,
             currentTitle: true,
             primaryEmail: true,
-            primaryPhone: true
+            primaryPhone: true,
+            // Only used to derive the interview's department when the interview
+            // itself has no linked job (which is the norm — see
+            // interviewDepartmentRaw). Ordering matters: the first application
+            // with a department wins.
+            applications: {
+              where: { jobId: { not: null } },
+              select: {
+                origin: true,
+                appliedAt: true,
+                job: { select: { department: true } }
+              }
+            }
           }
         },
         job: {
@@ -184,6 +226,12 @@ export async function getCalendarData(): Promise<CalendarData> {
     interviews: interviews.map((interview) => ({
       id: interview.id,
       title: interview.title,
+      department: interviewDepartmentRaw(
+        interview.job?.department,
+        [...interview.candidate.applications]
+          .sort(byDepartmentRelevance)
+          .map((application) => application.job?.department)
+      ),
       interviewType: interview.interviewType,
       startDateTime: interview.startDateTime.toISOString(),
       endDateTime: interview.endDateTime?.toISOString() ?? null,

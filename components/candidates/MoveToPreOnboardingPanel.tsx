@@ -219,7 +219,7 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
                     window.confirm(
                       `Create a pre-onboarding record for "${candidate.displayName}"?` +
                         (prefill ? `\n\nPosition: ${prefill}` : "") +
-                        `\n\nThis adds them to People → Pre-onboarding with the default onboarding checklist.`
+                        `\n\nThis adds them to Onboarding → New hires with the default onboarding checklist.`
                     )
                   ) {
                     void createHire();

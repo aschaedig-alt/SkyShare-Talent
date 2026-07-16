@@ -132,18 +132,44 @@ export function CalendarWorkspace({
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
   const [prefilledDate, setPrefilledDate] = useState<Date | null>(null);
 
-  // Whether any interview has no resolvable department, so we only offer the
-  // Unassigned filter option when it would actually match something.
-  const hasUnassigned = useMemo(
-    () => data.interviews.some((interview) => resolveDepartmentKey(interview.job?.department ?? null).deptKey === "unassigned"),
-    [data.interviews]
-  );
+  // Build the filter options from the interviews actually on the calendar rather
+  // than from the full DEPARTMENTS taxonomy. The taxonomy is a deliberate superset
+  // (it fixes the colors and the sub-group structure), but plenty of it matches no
+  // real data — nothing currently resolves to Crew/Cabin, FBO/SVR, FBO/DVO or
+  // Support/SkyOps. Listing those would reproduce the exact complaint this filter
+  // is meant to fix: pick a department, get an empty calendar. Counts are shown so
+  // it is obvious what each option will yield before you pick it.
+  const departmentOptions = useMemo(() => {
+    const deptCounts = new Map<DeptKey, number>();
+    const subCounts = new Map<string, number>();
+
+    for (const interview of data.interviews) {
+      const { deptKey, subKey } = resolveDepartmentKey(interview.department);
+      deptCounts.set(deptKey, (deptCounts.get(deptKey) ?? 0) + 1);
+      if (subKey) {
+        const composite = `${deptKey}:${subKey}`;
+        subCounts.set(composite, (subCounts.get(composite) ?? 0) + 1);
+      }
+    }
+
+    const departments = DEPARTMENTS.map((dept) => {
+      const count = deptCounts.get(dept.key) ?? 0;
+      const subs = dept.subs
+        .map((sub) => ({ ...sub, count: subCounts.get(`${dept.key}:${sub.key}`) ?? 0 }))
+        .filter((sub) => sub.count > 0);
+      // A lone sub-group covering the whole department is just the department
+      // again under another name — don't offer the drill-down in that case.
+      return { ...dept, count, subs: subs.length === 1 && subs[0].count === count ? [] : subs };
+    }).filter((dept) => dept.count > 0);
+
+    return { departments, unassignedCount: deptCounts.get("unassigned") ?? 0 };
+  }, [data.interviews]);
 
   // Filter values: "all" | "dept:<key>" | "sub:<dept>:<sub>" | "unassigned".
   const filteredInterviews = useMemo(() => {
     if (department === "all") return data.interviews;
     return data.interviews.filter((interview) => {
-      const { deptKey, subKey } = resolveDepartmentKey(interview.job?.department ?? null);
+      const { deptKey, subKey } = resolveDepartmentKey(interview.department);
       if (department === "unassigned") return deptKey === "unassigned";
       if (department.startsWith("dept:")) return deptKey === department.slice(5);
       if (department.startsWith("sub:")) {
@@ -221,24 +247,28 @@ export function CalendarWorkspace({
               onChange={(event) => setDepartment(event.target.value)}
               className="max-w-[12rem] cursor-pointer rounded bg-transparent py-1 pr-1 text-sm font-semibold text-brand-lea outline-none focus:ring-2 focus:ring-brand-gold/40 dark:text-slate-100"
             >
-              <option value="all">All departments</option>
-              {DEPARTMENTS.map((dept) =>
+              <option value="all">All departments ({data.interviews.length})</option>
+              {departmentOptions.departments.map((dept) =>
                 dept.subs.length === 0 ? (
                   <option key={dept.key} value={`dept:${dept.key}`}>
-                    {dept.label}
+                    {dept.label} ({dept.count})
                   </option>
                 ) : (
                   <optgroup key={dept.key} label={dept.label}>
-                    <option value={`dept:${dept.key}`}>{dept.label} — all</option>
+                    <option value={`dept:${dept.key}`}>
+                      {dept.label} — all ({dept.count})
+                    </option>
                     {dept.subs.map((sub) => (
                       <option key={sub.key} value={`sub:${dept.key}:${sub.key}`}>
-                        {sub.label}
+                        {sub.label} ({sub.count})
                       </option>
                     ))}
                   </optgroup>
                 )
               )}
-              {hasUnassigned && <option value="unassigned">Unassigned</option>}
+              {departmentOptions.unassignedCount > 0 && (
+                <option value="unassigned">Unassigned ({departmentOptions.unassignedCount})</option>
+              )}
             </select>
           </label>
 

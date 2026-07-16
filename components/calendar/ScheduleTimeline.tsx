@@ -80,7 +80,7 @@ function barClasses(interview: Interview, colorMode: ColorMode, departmentColors
   }
   const meta =
     colorMode === "department"
-      ? departmentColors[resolveDepartmentKey(interview.job?.department ?? null).deptKey]
+      ? departmentColors[resolveDepartmentKey(interview.department).deptKey]
       : interviewTypeMeta(interview.interviewType);
   const completed = interview.status === "COMPLETED" ? "opacity-60" : "";
   return `${meta.chip} ${completed}`;

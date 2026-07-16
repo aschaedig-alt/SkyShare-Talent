@@ -56,10 +56,10 @@ const HOSTS: HostSeed[] = [
     name: "Marcus Hill",
     slug: "marcus-hill",
     role: "HIRING_MANAGER",
-    title: "Chief Pilot / Hiring Manager",
+    title: "Chief Pilot / Hiring Team",
     bufferMinutes: 10,
     types: [
-      { name: "Hiring manager interview", kind: "INTERVIEW", durationMinutes: 45, location: "Video — Zoom" },
+      { name: "Hiring team interview", kind: "INTERVIEW", durationMinutes: 45, location: "Video — Zoom" },
       { name: "Team meeting", kind: "MEETING", durationMinutes: 30, location: "Video — Zoom" }
     ]
   },
@@ -70,7 +70,7 @@ const HOSTS: HostSeed[] = [
     title: "Director of Operations",
     bufferMinutes: 10,
     types: [
-      { name: "Hiring manager interview", kind: "INTERVIEW", durationMinutes: 60, location: "Video — Zoom" },
+      { name: "Hiring team interview", kind: "INTERVIEW", durationMinutes: 60, location: "Video — Zoom" },
       { name: "Intro meeting", kind: "MEETING", durationMinutes: 30, location: "Video — Zoom" }
     ]
   },
