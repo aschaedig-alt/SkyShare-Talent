@@ -7,12 +7,13 @@ import { PrismaClient } from "../prisma/generated/client/client";
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
 
 async function main() {
+  const ALL = process.argv.includes("--all");
   const from = new Date("2026-07-01T00:00:00Z");
   const to = new Date("2026-08-01T00:00:00Z");
 
   const total = await prisma.feedback.count();
   const rows = await prisma.feedback.findMany({
-    where: { createdAt: { gte: from, lt: to } },
+    where: ALL ? {} : { createdAt: { gte: from, lt: to } },
     orderBy: { createdAt: "asc" },
     select: { id: true, type: true, status: true, message: true, page: true, userName: true, userEmail: true, createdAt: true }
   });

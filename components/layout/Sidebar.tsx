@@ -198,8 +198,12 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
         </div>
       )}
 
-      {/* Desktop: icon rail + panel. Locked to full screen height; only the panel/content scroll. */}
-      <div className="sticky top-0 hidden h-screen shrink-0 lg:flex print:hidden">
+      {/* Desktop: icon rail + panel. Locked to full screen height; only the panel/content scroll.
+          z-30 is load-bearing: position:sticky ALWAYS creates a stacking context, so the collapsed
+          rail's hover flyout (z-50 below) is trapped inside this element's context. Without a
+          z-index here that context sits at the default level and, being before <main> in DOM order,
+          the page content paints over the flyout. Kept under the mobile drawer + modals (z-50). */}
+      <div className="sticky top-0 z-30 hidden h-screen shrink-0 lg:flex print:hidden">
         {/* Icon rail */}
         <div className="flex w-[70px] flex-col items-center border-r border-white/10 bg-brand-eden py-3">
           <Link

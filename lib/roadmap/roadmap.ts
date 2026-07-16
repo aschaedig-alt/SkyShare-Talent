@@ -299,7 +299,7 @@ Captured from the Jul 14 braindump — not yet scoped.
 - [ ] Org chart: when a pilot is moved on the chart, reflect that move on their employee-journey profile — depends on the edit feature above + coordinating with the employee-journey work
 - [ ] Employee recognition: add the info and start building (still waiting on final approval, but can begin now)
 - [ ] Help section: training guides for every page anyone might need to access
-- [ ] Bug: with the left sidebar minimized, hovering the Recruiting tab renders the flyout BEHIND the candidate page (z-index) so you cannot see all of the dropdown items
+- [x] Bug: with the left sidebar minimized, hovering the Recruiting tab renders the flyout BEHIND the candidate page (z-index) so you cannot see all of the dropdown items (fixed Jul 16, reported by Hannah) — the flyout already asked for z-50 and it made no difference, because position:sticky ALWAYS creates a stacking context: the sidebar shell is sticky, so the flyout's z-50 only ranked it against its own siblings inside that shell. The shell itself had no z-index, so it sat at the default level and, being before the main content in the markup, anything painted in the page won over it — on the Candidates page that was the loading skeleton. Fixed by giving the sticky shell z-30 so the whole sidebar (flyout included) sits above the page content, still below the mobile drawer and modals at z-50. Raising the flyout's own z-index, the obvious first guess, could never have worked.
 
 ## Q3 Rocks (added Jul 14)
 Already in place, but each must be finished before the end of Q3 to count as complete.
