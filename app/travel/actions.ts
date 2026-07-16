@@ -8,6 +8,7 @@ import { hasPermission, isRoleName } from "@/lib/auth/roles";
 import {
   isTravelItemType,
   isTravelPurpose,
+  isTravelReimbursement,
   isTravelStatus
 } from "@/lib/travel/constants";
 import { parseTravelConfirmation, type ParsedTravel } from "@/lib/extraction/travel-confirmation";
@@ -67,6 +68,8 @@ const itemView = (i: {
   endsAt: Date | null;
   amount: number | null;
   currency: string;
+  selfBooked: boolean;
+  reimbursement: string;
 }): TravelItemView => ({
   id: i.id,
   type: i.type,
@@ -76,7 +79,9 @@ const itemView = (i: {
   startsAt: i.startsAt ? i.startsAt.toISOString() : null,
   endsAt: i.endsAt ? i.endsAt.toISOString() : null,
   amount: i.amount,
-  currency: i.currency
+  currency: i.currency,
+  selfBooked: i.selfBooked,
+  reimbursement: i.reimbursement
 });
 
 export async function createTrip(input: {
@@ -176,6 +181,13 @@ export async function updateTrip(tripId: string, patch: Record<string, unknown>)
   for (const key of TRIP_DATE_FIELDS) {
     if (key in patch) data[key] = parseDate(patch[key]);
   }
+  // Guest names travelling with the traveller. Trimmed, de-duped, capped.
+  if ("guests" in patch && Array.isArray(patch.guests)) {
+    const names = patch.guests
+      .map((g) => (typeof g === "string" ? g.trim() : ""))
+      .filter((g) => g.length > 0 && g.length <= 120);
+    data.guests = [...new Set(names)].slice(0, 20);
+  }
 
   if (Object.keys(data).length === 0) {
     const trip = await getTravelTripView(tripId);
@@ -215,6 +227,14 @@ export async function updateItem(itemId: string, patch: Record<string, unknown>)
   if ("endsAt" in patch) data.endsAt = parseDate(patch.endsAt);
   if ("amount" in patch) data.amount = parseAmount(patch.amount);
   if ("currency" in patch && cleanString(patch.currency)) data.currency = cleanString(patch.currency);
+  if ("selfBooked" in patch && typeof patch.selfBooked === "boolean") {
+    data.selfBooked = patch.selfBooked;
+    // Un-ticking self-booked means we booked it, so there is nothing to pay back.
+    if (!patch.selfBooked) data.reimbursement = "NOT_NEEDED";
+  }
+  if ("reimbursement" in patch && isTravelReimbursement(patch.reimbursement)) {
+    data.reimbursement = patch.reimbursement;
+  }
 
   const item = await prisma.travelItem.update({ where: { id: itemId }, data });
   return { ok: true, item: itemView(item) };

@@ -15,12 +15,15 @@ import {
   Upload,
   Paperclip,
   Sparkles,
-  ClipboardPaste
+  ClipboardPaste,
+  X,
+  Users
 } from "lucide-react";
 import {
   TRAVEL_PURPOSES,
   TRAVEL_STATUSES,
   TRAVEL_ITEM_TYPES,
+  TRAVEL_REIMBURSEMENTS,
   travelPurposeLabel,
   travelItemTypeLabel,
   formatUsd
@@ -324,10 +327,82 @@ function TripCard({
             onRemove={removeItem}
           />
           <ReceiptsBlock tripId={trip.id} receipts={trip.receipts} onChange={setReceipts} />
+          <GuestsBlock trip={trip} onChange={onChange} />
           <TextAreaField label="Special requests / notes" defaultValue={trip.specialRequests} onSave={(v) => saveField("specialRequests", v)} />
           <TextAreaField label="Internal notes" defaultValue={trip.notes} onSave={(v) => saveField("notes", v)} />
         </div>
       )}
+    </div>
+  );
+}
+
+// Anyone travelling with the traveller (spouse, child, ...). Names only — that is
+// all a booking or a cost split needs, and it keeps guest PII out of the system.
+function GuestsBlock({ trip, onChange }: { trip: TravelTripView; onChange: (t: TravelTripView) => void }) {
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function commit(next: string[]) {
+    setBusy(true);
+    const res = await updateTrip(trip.id, { guests: next });
+    if (res.ok && res.trip) onChange(res.trip);
+    setBusy(false);
+  }
+
+  async function add() {
+    const name = draft.trim();
+    if (!name) return;
+    setDraft("");
+    await commit([...trip.guests, name]);
+  }
+
+  return (
+    <div>
+      <p className={labelClass}>
+        <Users className="mr-1 inline h-3 w-3" />
+        Guests travelling with them
+      </p>
+      {trip.guests.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {trip.guests.map((g) => (
+            <span
+              key={g}
+              className="flex items-center gap-1 rounded border border-brand-sweet/60 bg-brand-sweet/18 px-2 py-1 text-[11px] font-semibold text-brand-lea dark:text-slate-100"
+            >
+              {g}
+              <button
+                onClick={() => void commit(trip.guests.filter((x) => x !== g))}
+                disabled={busy}
+                title={`Remove ${g}`}
+                className="text-brand-grey transition hover:text-red-600 disabled:opacity-50 dark:text-slate-400 dark:hover:text-red-300"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="mt-2 flex gap-2">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              void add();
+            }
+          }}
+          placeholder="Guest name"
+          className={clsx(inputClass, "flex-1")}
+        />
+        <button
+          onClick={() => void add()}
+          disabled={busy || !draft.trim()}
+          className="shrink-0 rounded border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-eden transition hover:bg-brand-cloudDancer/40 disabled:opacity-50 dark:border-white/10 dark:text-slate-200"
+        >
+          Add guest
+        </button>
+      </div>
     </div>
   );
 }
@@ -543,6 +618,11 @@ function ItemRow({
     const res = await updateItem(item.id, { [field]: value });
     if (res.ok && res.item) onPatch(res.item);
   }
+  // Non-string patches (the self-booked toggle) go through here.
+  async function saveRaw(patch: Record<string, unknown>) {
+    const res = await updateItem(item.id, patch);
+    if (res.ok && res.item) onPatch(res.item);
+  }
   async function handleRemove() {
     const res = await deleteItem(item.id);
     if (res.ok) onRemove(item.id);
@@ -608,6 +688,41 @@ function ItemRow({
           className={inputClass}
           title="Starts"
         />
+      </div>
+
+      {/* Who booked it, and whether we owe the traveller for it. Reimbursement
+          only applies to things they paid for themselves, so it stays hidden
+          until "Traveler booked this" is ticked. */}
+      <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-brand-lea/10 pt-2 dark:border-white/10">
+        <label className="flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-brand-lea dark:text-slate-100">
+          <input
+            type="checkbox"
+            checked={item.selfBooked}
+            onChange={(e) => void saveRaw({ selfBooked: e.target.checked })}
+            className="h-3.5 w-3.5 rounded border-brand-lea/30 text-brand-gold focus:ring-brand-gold"
+          />
+          Traveler booked this
+        </label>
+
+        {item.selfBooked && (
+          <select
+            value={item.reimbursement}
+            onChange={(e) => void saveRaw({ reimbursement: e.target.value })}
+            className="rounded border border-brand-lea/15 bg-white px-2 py-1 text-[11px] font-semibold text-brand-lea outline-none dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+          >
+            {TRAVEL_REIMBURSEMENTS.map((r) => (
+              <option key={r.value} value={r.value}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {item.selfBooked && item.reimbursement === "NEEDED" && item.amount ? (
+          <span className="rounded bg-brand-gold/20 px-1.5 py-0.5 text-[11px] font-semibold text-brand-lea dark:text-slate-100">
+            Owe {formatUsd(item.amount)}
+          </span>
+        ) : null}
       </div>
     </div>
   );

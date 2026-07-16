@@ -462,6 +462,10 @@ model TravelTrip {
   additionalTransport String?
   specialRequests     String?
 
+  // Anyone travelling with the traveller (spouse, child, ...), by name, so
+  // bookings and costs account for them. Names only — no other guest PII.
+  guests      String[]
+
   notes       String?
   bookedBy    String?
   createdAt   DateTime  @default(now())
@@ -490,6 +494,12 @@ model TravelItem {
   endsAt       DateTime?
   amount       Float?
   currency     String    @default("USD")
+  // The traveller booked this one themselves (rather than us booking it for
+  // them) — which is what usually creates a reimbursement.
+  selfBooked   Boolean   @default(false)
+  // NOT_NEEDED | NEEDED | REIMBURSED. Tracked per item so spend reporting stays
+  // honest about what we paid directly vs. what we owe the traveller back.
+  reimbursement String   @default("NOT_NEEDED")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 

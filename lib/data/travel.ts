@@ -12,6 +12,10 @@ export type TravelItemView = {
   endsAt: string | null;
   amount: number | null;
   currency: string;
+  /** The traveller booked this themselves rather than us booking it. */
+  selfBooked: boolean;
+  /** NOT_NEEDED | NEEDED | REIMBURSED — only meaningful when selfBooked. */
+  reimbursement: string;
 };
 
 export type TravelReceiptView = {
@@ -43,6 +47,8 @@ export type TravelTripView = {
   preferences: string | null;
   additionalTransport: string | null;
   specialRequests: string | null;
+  /** Names of anyone travelling with the traveller. */
+  guests: string[];
   notes: string | null;
   bookedBy: string | null;
   createdAt: string;
@@ -51,6 +57,8 @@ export type TravelTripView = {
   receipts: TravelReceiptView[];
   /** Sum of item amounts. */
   total: number;
+  /** Sum of self-booked items still owed back to the traveller. */
+  reimbursementOwed: number;
 };
 
 type TripWithRelations = {
@@ -73,6 +81,7 @@ type TripWithRelations = {
   preferences: string | null;
   additionalTransport: string | null;
   specialRequests: string | null;
+  guests: string[];
   notes: string | null;
   bookedBy: string | null;
   createdAt: Date;
@@ -87,6 +96,8 @@ type TripWithRelations = {
     endsAt: Date | null;
     amount: number | null;
     currency: string;
+    selfBooked: boolean;
+    reimbursement: string;
   }[];
   receipts: {
     id: string;
@@ -126,6 +137,7 @@ export function toTravelTripView(t: TripWithRelations): TravelTripView {
     preferences: t.preferences,
     additionalTransport: t.additionalTransport,
     specialRequests: t.specialRequests,
+    guests: t.guests ?? [],
     notes: t.notes,
     bookedBy: t.bookedBy,
     createdAt: t.createdAt.toISOString(),
@@ -139,7 +151,9 @@ export function toTravelTripView(t: TripWithRelations): TravelTripView {
       startsAt: iso(i.startsAt),
       endsAt: iso(i.endsAt),
       amount: i.amount,
-      currency: i.currency
+      currency: i.currency,
+      selfBooked: i.selfBooked,
+      reimbursement: i.reimbursement
     })),
     receipts: t.receipts.map((r) => ({
       id: r.id,
@@ -149,7 +163,12 @@ export function toTravelTripView(t: TripWithRelations): TravelTripView {
       amount: r.amount,
       uploadedAt: r.uploadedAt.toISOString()
     })),
-    total: t.items.reduce((sum, i) => sum + (i.amount ?? 0), 0)
+    total: t.items.reduce((sum, i) => sum + (i.amount ?? 0), 0),
+    // What the traveller paid out of pocket and we still owe back.
+    reimbursementOwed: t.items.reduce(
+      (sum, i) => sum + (i.selfBooked && i.reimbursement === "NEEDED" ? (i.amount ?? 0) : 0),
+      0
+    )
   };
 }
 
