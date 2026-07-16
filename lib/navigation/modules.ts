@@ -14,6 +14,7 @@ import {
   CreditCard,
   Database,
   FileCheck2,
+  FileSignature,
   FileText,
   HeartHandshake,
   Import,
@@ -119,7 +120,11 @@ export const navigationGroups: readonly NavigationGroup[] = [
           { id: "candidates", href: "/candidates", label: "Candidates", icon: SearchCheck },
           { id: "recruiting-jobs", href: "/recruiting-jobs", label: "Jobs", icon: BriefcaseBusiness },
           { id: "pilot-requirements", href: "/pilot-requirements", label: "Pilot Requirements", icon: Plane },
-          { id: "matching", href: "/matching", label: "Matchboard", icon: Radar }
+          { id: "matching", href: "/matching", label: "Matchboard", icon: Radar },
+          // An offer is the last step of recruiting, so it lives here rather than
+          // under People. Rides on the candidates module's access (it is a view of
+          // candidate applications, not a separate thing to permission).
+          { id: "candidates", href: "/offers", label: "Offers", icon: FileSignature }
         ]
       },
       {
