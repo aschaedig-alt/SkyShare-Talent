@@ -24,7 +24,9 @@ export type Permission =
   | "imports:write"
   | "duplicates:write"
   | "settings:admin"
-  | "publishing:write";
+  | "publishing:write"
+  | "events:read"
+  | "events:write";
 
 export const rolePermissions: Record<RoleName, Permission[]> = {
   ADMIN: [
@@ -41,7 +43,9 @@ export const rolePermissions: Record<RoleName, Permission[]> = {
     "imports:write",
     "duplicates:write",
     "settings:admin",
-    "publishing:write"
+    "publishing:write",
+    "events:read",
+    "events:write"
   ],
   RECRUITER: [
     "candidates:read",
@@ -53,21 +57,25 @@ export const rolePermissions: Record<RoleName, Permission[]> = {
     "calendar:read",
     "calendar:write",
     "imports:write",
-    "duplicates:write"
+    "duplicates:write",
+    "events:read",
+    "events:write"
   ],
   HIRING_MANAGER: [
     "candidates:read",
     "files:read",
     "jobs:read",
     "requirements:read",
-    "calendar:read"
+    "calendar:read",
+    "events:read"
   ],
   VIEWER: [
     "candidates:read",
     "files:read",
     "jobs:read",
     "requirements:read",
-    "calendar:read"
+    "calendar:read",
+    "events:read"
   ]
 };
 

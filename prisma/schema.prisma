@@ -296,6 +296,8 @@ model NewHire {
   recognitionsReceived Recognition[] @relation("recipient")
   redemptions          Redemption[]
   businessCardVariants BusinessCardVariant[]
+  eventAttendances     EventAttendee[]
+  eventsOwned          Event[]
 
   @@index([stage])
 }
@@ -1452,4 +1454,125 @@ model CandidateQuestionnaireAnswer {
 
   @@index([candidateId])
   @@index([applicationId])
+}
+
+// ---------------------------------------------------------------------------
+// Events & Outreach — career fairs, school visits, conferences: who is going,
+// what we bring, what still needs doing, and when to reorder the swag.
+// ---------------------------------------------------------------------------
+
+model Event {
+  id        String    @id @default(cuid())
+  name      String
+  // CAREER_FAIR | SCHOOL | CONFERENCE | COMMUNITY | AIRSHOW | OTHER
+  type      String    @default("CAREER_FAIR")
+  // PLANNED | CONFIRMED | COMPLETE | CANCELED
+  status    String    @default("PLANNED")
+  startsAt  DateTime
+  endsAt    DateTime?
+  venue     String?
+  city      String?
+  state     String?
+  website   String?
+  // Who owns the event internally. Optional so an event can be logged before
+  // an owner is picked; SetNull keeps the event if the employee record goes.
+  ownerId   String?
+  budget    Float?
+  currency  String    @default("USD")
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  owner     NewHire?        @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  attendees EventAttendee[]
+  supplies  EventSupply[]
+  tasks     EventTask[]
+
+  @@index([status])
+  @@index([startsAt])
+  @@index([ownerId])
+}
+
+model EventAttendee {
+  id        String   @id @default(cuid())
+  eventId   String
+  newHireId String
+  // PENDING | CONFIRMED | DECLINED
+  status    String   @default("PENDING")
+  // Free text — e.g. "Booth lead", "Pilot on the stand".
+  role      String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  newHire NewHire @relation(fields: [newHireId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, newHireId])
+  @@index([eventId])
+  @@index([newHireId])
+}
+
+// The stock room. On-hand counts are maintained by hand; "committed" (allocated
+// to upcoming events) is derived from EventSupply, never stored.
+model SupplyItem {
+  id               String   @id @default(cuid())
+  name             String
+  // SWAG | PRINT | BOOTH | APPAREL | OTHER
+  category         String   @default("SWAG")
+  // What one unit is — "each", "box of 50", "case".
+  unit             String   @default("each")
+  onHand           Int      @default(0)
+  // Reorder when the projected count (on hand minus committed) drops to or
+  // below this. 0 means "only tell me when it is gone".
+  reorderThreshold Int      @default(0)
+  vendor           String?
+  reorderUrl       String?
+  unitCost         Float?
+  currency         String   @default("USD")
+  notes            String?
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  eventSupplies EventSupply[]
+
+  @@index([category])
+  @@index([active])
+}
+
+// One line of "what we are bringing" to an event. supplyItemId is optional so a
+// one-off thing (a borrowed banner) can be listed without stocking it.
+model EventSupply {
+  id           String   @id @default(cuid())
+  eventId      String
+  supplyItemId String?
+  label        String
+  quantity     Int      @default(1)
+  packed       Boolean  @default(false)
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  event      Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  supplyItem SupplyItem? @relation(fields: [supplyItemId], references: [id], onDelete: SetNull)
+
+  @@index([eventId])
+  @@index([supplyItemId])
+}
+
+// "What we need" — the per-event to-do list (order the banner, ship the box).
+model EventTask {
+  id        String    @id @default(cuid())
+  eventId   String
+  label     String
+  owner     String?
+  dueAt     DateTime?
+  done      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
 }

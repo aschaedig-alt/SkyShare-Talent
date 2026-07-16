@@ -76,7 +76,8 @@ function clonePolicy(policy: ModuleAccessPolicy) {
 // row by the module itself rather than whichever nav item happens to come first.
 const MODULE_ROW_LABEL: Partial<Record<ModuleId, string>> = {
   settings: "Settings",
-  people: "People"
+  people: "People",
+  events: "Events & Outreach"
 };
 
 export function ModuleVisibilityAccessPanel({ policy: initialPolicy }: ModuleVisibilityAccessPanelProps) {

@@ -18,6 +18,8 @@ import {
   HeartHandshake,
   Import,
   Layers,
+  Megaphone,
+  Package,
   LayoutDashboard,
   LayoutGrid,
   ListChecks,
@@ -43,6 +45,7 @@ export const moduleIds = [
   "recruiting-jobs",
   "pilot-requirements",
   "matching",
+  "events",
   "calendar",
   "scheduling",
   "interview-questions",
@@ -117,6 +120,14 @@ export const navigationGroups: readonly NavigationGroup[] = [
           { id: "recruiting-jobs", href: "/recruiting-jobs", label: "Jobs", icon: BriefcaseBusiness },
           { id: "pilot-requirements", href: "/pilot-requirements", label: "Pilot Requirements", icon: Plane },
           { id: "matching", href: "/matching", label: "Matchboard", icon: Radar }
+        ]
+      },
+      {
+        id: "events",
+        label: "Events & Outreach",
+        items: [
+          { id: "events", href: "/events", label: "Events", icon: Megaphone },
+          { id: "events", href: "/events/supplies", label: "Supplies", icon: Package }
         ]
       },
       {

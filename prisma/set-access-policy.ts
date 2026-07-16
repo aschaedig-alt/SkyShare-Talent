@@ -19,6 +19,7 @@ const GRID: Record<ModuleId, [Lvl, Lvl, Lvl]> = {
   "recruiting-jobs": ["Full", "View", "Hidden"],
   "pilot-requirements": ["Full", "View", "Hidden"],
   matching: ["Full", "View", "Hidden"],
+  events: ["Full", "View", "Hidden"],
   calendar: ["Full", "Full", "Hidden"],
   scheduling: ["Full", "Full", "Hidden"],
   "interview-questions": ["Full", "Full", "Hidden"],
