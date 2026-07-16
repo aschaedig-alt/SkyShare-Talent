@@ -216,6 +216,102 @@ export async function getCandidateLoyalty(candidateId: string): Promise<Traveler
   return candidate ?? EMPTY_LOYALTY;
 }
 
+// ---- Traveller detail (for confirming who you picked, without leaving /travel) ----
+
+export type TravelerDetail = {
+  id: string;
+  type: "newHire" | "candidate";
+  name: string;
+  /** Link to their full record — for when you do want to leave the page. */
+  href: string;
+  title: string | null;
+  department: string | null;
+  location: string | null;
+  email: string | null;
+  phone: string | null;
+  loyalty: TravelerLoyalty;
+  trips: TravelTripView[];
+};
+
+/**
+ * Everything the travel page needs to show "this is who you picked" inline:
+ * identity, how to reach them, their loyalty numbers, and their existing trips.
+ */
+export async function getTravelerDetail(
+  type: "newHire" | "candidate",
+  id: string
+): Promise<TravelerDetail | null> {
+  if (type === "newHire") {
+    const hire = await prisma.newHire.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        position: true,
+        department: true,
+        location: true,
+        phone: true,
+        ssEmail: true,
+        personalEmail: true,
+        frequentFlyer: true,
+        hotelLoyalty: true,
+        rentalLoyalty: true
+      }
+    });
+    if (!hire) return null;
+    return {
+      id: hire.id,
+      type: "newHire",
+      name: hire.name,
+      href: `/people/${hire.id}`,
+      title: hire.position,
+      department: hire.department,
+      location: hire.location,
+      // A hire may not have a SkyShare address yet, so fall back to personal.
+      email: hire.ssEmail ?? hire.personalEmail,
+      phone: hire.phone,
+      loyalty: {
+        frequentFlyer: hire.frequentFlyer,
+        hotelLoyalty: hire.hotelLoyalty,
+        rentalLoyalty: hire.rentalLoyalty
+      },
+      trips: await getTravelTripsForNewHire(hire.id)
+    };
+  }
+
+  const candidate = await prisma.candidate.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      displayName: true,
+      currentTitle: true,
+      primaryEmail: true,
+      primaryPhone: true,
+      frequentFlyer: true,
+      hotelLoyalty: true,
+      rentalLoyalty: true
+    }
+  });
+  if (!candidate) return null;
+  return {
+    id: candidate.id,
+    type: "candidate",
+    name: candidate.displayName,
+    href: `/candidates/${candidate.id}`,
+    title: candidate.currentTitle,
+    department: null,
+    location: null,
+    email: candidate.primaryEmail,
+    phone: candidate.primaryPhone,
+    loyalty: {
+      frequentFlyer: candidate.frequentFlyer,
+      hotelLoyalty: candidate.hotelLoyalty,
+      rentalLoyalty: candidate.rentalLoyalty
+    },
+    trips: await getTravelTripsForCandidate(candidate.id)
+  };
+}
+
 export async function getTravelTripView(tripId: string): Promise<TravelTripView | null> {
   const trip = await prisma.travelTrip.findUnique({ where: { id: tripId }, include: tripInclude });
   return trip ? toTravelTripView(trip as TripWithRelations) : null;
@@ -225,6 +321,8 @@ export async function getTravelTripView(tripId: string): Promise<TravelTripView 
 
 export type TravelHubRow = {
   tripId: string;
+  /** NewHire.id or Candidate.id — lets the hub open them inline. */
+  travelerId: string;
   travelerName: string;
   travelerType: "newHire" | "candidate";
   travelerHref: string;
@@ -278,6 +376,7 @@ export async function getTravelOverview(): Promise<TravelHubData> {
     const startDate = t.requestedArrival ?? t.orientationDate ?? t.indocStart ?? null;
     return {
       tripId: t.id,
+      travelerId: (isHire ? t.newHire?.id : t.candidate?.id) ?? "",
       travelerName: t.newHire?.name ?? t.candidate?.displayName ?? "Unknown",
       travelerType: isHire ? "newHire" : "candidate",
       travelerHref: isHire ? `/people/${t.newHire!.id}` : `/candidates/${t.candidate?.id ?? ""}`,

@@ -111,8 +111,35 @@ function findAmount(text: string): number | null {
   return valid.length ? Math.max(...valid) : null;
 }
 
+const MONTHS: Record<string, number> = {
+  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+};
+
 // First confidently-parseable date (optionally with a time) → ISO.
 function findDate(text: string): string | null {
+  // Airlines write the date compactly — "Thu 16Jul2026" is what Delta and
+  // FlightBridge actually send. Date cannot parse that and none of the patterns
+  // below match it, so every real flight we imported landed with startsAt null
+  // and its date stranded in the detail text. Tried first: on a flight line it
+  // is the date, and the generic patterns can misread the surrounding tokens.
+  //
+  // A 4-digit year is required, so a bare "16Jul" can never look like a date.
+  // Deliberately no time: a trailing number on these lines ("| 859") is as
+  // often the flight number as a departure time, so we only claim the day.
+  const compact = text.match(/\b(\d{1,2})[\s-]?([A-Za-z]{3})[a-z]*[\s-]?(\d{4})\b/);
+  if (compact) {
+    const month = MONTHS[compact[2].toLowerCase()];
+    const day = Number(compact[1]);
+    if (month !== undefined) {
+      // UTC-anchored so the day survives however the reader's clock is set.
+      const d = new Date(Date.UTC(Number(compact[3]), month, day));
+      if (!Number.isNaN(d.getTime()) && d.getUTCMonth() === month && d.getUTCDate() === day) {
+        return d.toISOString();
+      }
+    }
+  }
+
   // e.g. "Feb 23, 2026 2:30 PM" or "02/23/2026" or "2026-02-23"
   const patterns = [
     /\b([A-Z][a-z]{2,8}\s+\d{1,2},?\s+\d{4}(?:\s+\d{1,2}:\d{2}\s*(?:AM|PM)?)?)/,

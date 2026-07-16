@@ -16,9 +16,11 @@ import {
   getTravelTripView,
   getNewHireLoyalty,
   getCandidateLoyalty,
+  getTravelerDetail,
   toTravelTripView,
   type TravelItemView,
   type TravelTripView,
+  type TravelerDetail,
   type TravelerLoyalty
 } from "@/lib/data/travel";
 
@@ -83,6 +85,23 @@ const itemView = (i: {
   selfBooked: i.selfBooked,
   reimbursement: i.reimbursement
 });
+
+// Pull a traveller's details onto the travel page so whoever is booking can
+// confirm they picked the right person (and see their existing trips) without
+// bouncing to the candidate/hire record. Read-only.
+export async function loadTravelerDetail(input: {
+  type: "newHire" | "candidate";
+  id: string;
+}): Promise<{ ok: boolean; error?: string; traveler?: TravelerDetail }> {
+  if (!(await canEditTravel())) return { ok: false, error: "You do not have permission to view travel." };
+
+  const id = cleanString(input.id);
+  if (!id) return { ok: false, error: "Missing traveler." };
+  if (input.type !== "newHire" && input.type !== "candidate") return { ok: false, error: "Unknown traveler type." };
+
+  const traveler = await getTravelerDetail(input.type, id);
+  return traveler ? { ok: true, traveler } : { ok: false, error: "That person could not be found." };
+}
 
 export async function createTrip(input: {
   newHireId?: string | null;

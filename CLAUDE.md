@@ -100,10 +100,16 @@ storage-backed feature works in prod just because it worked locally.
   (not plain node) and import from `prisma/generated/client/client`.
 - **`npm run build` can OOM** after compiling. Use
   `NODE_OPTIONS=--max-old-space-size=8192 npm run build`.
-- **The Browser pane cannot read this app's rendered content** — the streamed DOM is
-  not visible to `innerText` and screenshots time out on PDF pages. Verify **over
-  HTTP** instead (request the page and grep the HTML), or read the accessibility
-  tree via `read_page`.
+- **The Browser pane cannot read this app's rendered content.** Worse than it sounds,
+  and re-confirmed on `/travel` 2026-07-16: `body.innerText` returns ~136 chars,
+  `main` holds ~74, `read_page`'s accessibility tree shows **only the sidebar**, and
+  **screenshots time out everywhere** (not just PDF pages). `body.textContent` looks
+  huge but is mostly `<script>` payload — it will blow your context, not inform you.
+  The one thing that does work is a **targeted `querySelector`** returning counts or
+  short strings (`querySelectorAll('button')` correctly found the page's rows).
+  So: verify **over HTTP** (request the page and grep the HTML) — that catches render
+  failures and error boundaries. **Client-side interaction is effectively unverifiable
+  here**; say so plainly rather than implying a click path was tested.
 - **EditableGrid** (`components/shared/EditableGrid.tsx`) re-runs its layout init
   whenever the SET of panel ids changes or the `panels` array identity churns —
   which collapses/overlaps the layout. Always render a **stable panel set** (show

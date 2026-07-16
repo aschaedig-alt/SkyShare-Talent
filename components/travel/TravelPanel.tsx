@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
 import {
   Plane,
@@ -40,12 +40,21 @@ import {
   extractTravelConfirmation
 } from "@/app/travel/actions";
 import type { ParsedTravel } from "@/lib/extraction/travel-confirmation";
+import { TravelGaps, TravelGapBadge } from "@/components/travel/TravelGaps";
 
 type Props = {
   subjectType: "newHire" | "candidate";
   subjectId: string;
   initialTrips: TravelTripView[];
   loyalty?: TravelerLoyalty;
+  /**
+   * Fired whenever the trips in this panel change. The travel hub uses it to
+   * keep the traveller's calendar in step with edits made right next to it.
+   * Optional — the candidate/hire pages don't pass it and behave as before.
+   */
+  onTripsChange?: (trips: TravelTripView[]) => void;
+  /** Hide the panel's own heading when the surrounding page already has one. */
+  hideHeading?: boolean;
 };
 
 const STATUS_STYLE: Record<string, string> = {
@@ -86,12 +95,31 @@ function tripWithRecomputedTotal(trip: TravelTripView, items: TravelItemView[]):
   return { ...trip, items, total: items.reduce((sum, i) => sum + (i.amount ?? 0), 0) };
 }
 
-export function TravelPanel({ subjectType, subjectId, initialTrips, loyalty }: Props) {
+export function TravelPanel({
+  subjectType,
+  subjectId,
+  initialTrips,
+  loyalty,
+  onTripsChange,
+  hideHeading = false
+}: Props) {
   const [trips, setTrips] = useState<TravelTripView[]>(initialTrips);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const grandTotal = useMemo(() => trips.reduce((sum, t) => sum + t.total, 0), [trips]);
+
+  // Report upwards without re-seeding from initialTrips, so this panel stays the
+  // owner of its own state and there is no render loop with the parent. The
+  // callback is held in a ref so a fresh inline function from the parent on each
+  // render cannot re-fire this.
+  const notify = useRef(onTripsChange);
+  useEffect(() => {
+    notify.current = onTripsChange;
+  });
+  useEffect(() => {
+    notify.current?.(trips);
+  }, [trips]);
 
   const subjectKey = subjectType === "newHire" ? "newHireId" : "candidateId";
 
@@ -118,11 +146,19 @@ export function TravelPanel({ subjectType, subjectId, initialTrips, loyalty }: P
   }
 
   return (
-    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+    <section
+      className={clsx(
+        !hideHeading && "rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10"
+      )}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Plane className="h-4 w-4 text-brand-gold" />
-          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Travel &amp; logistics</h2>
+          {!hideHeading && (
+            <>
+              <Plane className="h-4 w-4 text-brand-gold" />
+              <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Travel &amp; logistics</h2>
+            </>
+          )}
           {trips.length > 0 && (
             <span className="rounded bg-brand-cloudDancer/70 px-2 py-0.5 text-[11px] font-bold text-brand-grey dark:bg-white/5 dark:text-slate-400">
               {trips.length} {trips.length === 1 ? "trip" : "trips"} · {formatUsd(grandTotal)}
@@ -283,6 +319,7 @@ function TripCard({
             <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">{travelPurposeLabel(trip.purpose)}</span>
             {route && <span className="text-sm text-brand-grey dark:text-slate-400">· {route}</span>}
             {dateSummary && <span className="text-xs text-brand-grey dark:text-slate-400">· {dateSummary}</span>}
+            <TravelGapBadge trip={trip} />
           </div>
           <div className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
             {trip.items.length} {trip.items.length === 1 ? "item" : "items"} · {formatUsd(trip.total)}
@@ -318,6 +355,8 @@ function TripCard({
 
       {expanded && (
         <div className="space-y-4 border-t border-brand-lea/10 px-3 py-3 dark:border-white/10">
+          {/* What this trip still looks like it is missing — derived, not stored. */}
+          <TravelGaps trip={trip} />
           <RequestDetails trip={trip} onSave={saveField} />
           <ConfirmationImport trip={trip} onApplied={onChange} />
           <ItemsTable
