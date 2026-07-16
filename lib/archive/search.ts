@@ -11,6 +11,7 @@ export type HistoricalSearchFilters = {
   applicationNumber?: string;
   from?: string;
   to?: string;
+  page?: number;
 };
 
 export type HistoricalSearchRow = {
@@ -29,12 +30,14 @@ export type HistoricalSearchRow = {
 export type HistoricalSearchResult = {
   rows: HistoricalSearchRow[];
   total: number;
-  truncated: boolean;
+  page: number;
+  pageCount: number;
+  pageSize: number;
 };
 
 export const DISPOSITIONS = ["APPLIED", "INTERVIEWED", "OFFER", "REJECTED", "HIRED"] as const;
 
-const RESULT_LIMIT = 100;
+export const PAGE_SIZE = 100;
 
 function ci(value: string) {
   return { contains: value, mode: "insensitive" as const };
@@ -92,21 +95,24 @@ export async function searchHistorical(filters: HistoricalSearchFilters): Promis
 
   const where = { AND: and };
 
-  const [total, candidates] = await Promise.all([
-    prisma.candidate.count({ where }),
-    prisma.candidate.findMany({
-      where,
-      take: RESULT_LIMIT,
-      orderBy: [{ displayName: "asc" }],
-      include: {
-        applications: {
-          orderBy: { appliedAt: "desc" },
-          include: { job: { select: { title: true, recruiter: true } } }
-        },
-        _count: { select: { interviews: true } }
-      }
-    })
-  ]);
+  const total = await prisma.candidate.count({ where });
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  // Clamp so a hand-typed or stale ?page= never lands on an empty table.
+  const page = Math.min(Math.max(1, Math.floor(filters.page ?? 1)), pageCount);
+
+  const candidates = await prisma.candidate.findMany({
+    where,
+    skip: (page - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
+    orderBy: [{ displayName: "asc" }, { id: "asc" }],
+    include: {
+      applications: {
+        orderBy: { appliedAt: "desc" },
+        include: { job: { select: { title: true, recruiter: true } } }
+      },
+      _count: { select: { interviews: true } }
+    }
+  });
 
   const rows: HistoricalSearchRow[] = candidates.map((c) => {
     const latest = c.applications[0] ?? null;
@@ -128,5 +134,5 @@ export async function searchHistorical(filters: HistoricalSearchFilters): Promis
     };
   });
 
-  return { rows, total, truncated: total > RESULT_LIMIT };
+  return { rows, total, page, pageCount, pageSize: PAGE_SIZE };
 }

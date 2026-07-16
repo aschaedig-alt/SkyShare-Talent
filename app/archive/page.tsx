@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireModulePageAccess } from "@/lib/data/module-access";
-import { searchHistorical, DISPOSITIONS, type HistoricalSearchFilters } from "@/lib/archive/search";
+import { searchHistorical, DISPOSITIONS, type HistoricalSearchFilters, type HistoricalSearchResult } from "@/lib/archive/search";
 
 type ArchivePageProps = {
   searchParams?: Promise<Record<string, string | undefined>>;
@@ -31,9 +31,48 @@ function dispositionBadge(disposition: string | null) {
   return <span className={`rounded px-2 py-0.5 text-[11px] font-semibold ${cls}`}>{disposition ?? "—"}</span>;
 }
 
+function pageHref(params: Record<string, string | undefined>, page: number) {
+  const next = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (key !== "page" && value && value.trim()) next.set(key, value);
+  }
+  if (page > 1) next.set("page", String(page));
+  const qs = next.toString();
+  return qs ? `/archive?${qs}` : "/archive";
+}
+
+function Pager({ result, params }: { result: HistoricalSearchResult; params: Record<string, string | undefined> }) {
+  if (result.pageCount <= 1) return null;
+  const linkClass =
+    "rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:text-slate-100";
+  const disabledClass = "rounded border border-brand-lea/10 px-3 py-1.5 text-xs font-semibold text-brand-grey/50 dark:border-white/5 dark:text-slate-500";
+  return (
+    <div className="mt-4 flex items-center justify-between gap-3 border-t border-brand-lea/10 pt-3 dark:border-white/10">
+      {result.page > 1 ? (
+        <Link href={pageHref(params, result.page - 1)} className={linkClass}>
+          ← Previous
+        </Link>
+      ) : (
+        <span className={disabledClass}>← Previous</span>
+      )}
+      <span className="text-xs text-brand-grey dark:text-slate-400">
+        Page {result.page} of {result.pageCount}
+      </span>
+      {result.page < result.pageCount ? (
+        <Link href={pageHref(params, result.page + 1)} className={linkClass}>
+          Next →
+        </Link>
+      ) : (
+        <span className={disabledClass}>Next →</span>
+      )}
+    </div>
+  );
+}
+
 export default async function ArchivePage({ searchParams }: ArchivePageProps) {
   await requireModulePageAccess("archive");
   const params = (await searchParams) ?? {};
+  const parsedPage = Number.parseInt(params.page ?? "1", 10);
   const filters: HistoricalSearchFilters = {
     q: params.q,
     recruiter: params.recruiter,
@@ -43,10 +82,13 @@ export default async function ArchivePage({ searchParams }: ArchivePageProps) {
     candidateNumber: params.candidateNumber,
     applicationNumber: params.applicationNumber,
     from: params.from,
-    to: params.to
+    to: params.to,
+    page: Number.isFinite(parsedPage) ? parsedPage : 1
   };
-  const hasFilters = Object.values(filters).some((v) => v && v.trim().length > 0);
-  const result = hasFilters ? await searchHistorical(filters) : null;
+  const hasFilters = Object.entries(filters).some(([key, v]) => key !== "page" && typeof v === "string" && v.trim().length > 0);
+  const result = await searchHistorical(filters);
+  const firstRow = (result.page - 1) * result.pageSize + 1;
+  const lastRow = firstRow + result.rows.length - 1;
 
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
@@ -100,54 +142,56 @@ export default async function ArchivePage({ searchParams }: ArchivePageProps) {
         </div>
       </form>
 
-      {result && (
-        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-          <div className="flex items-baseline justify-between">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Results</p>
-            <span className="text-xs text-brand-grey dark:text-slate-400">
-              {result.total} found{result.truncated ? ` · showing first ${result.rows.length}` : ""}
-            </span>
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+        <div className="flex items-baseline justify-between">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
+            {hasFilters ? "Results" : "All historical candidates"}
+          </p>
+          <span className="text-xs text-brand-grey dark:text-slate-400">
+            {result.total} found
+            {result.rows.length > 0 && result.total > result.rows.length ? ` · showing ${firstRow}–${lastRow}` : ""}
+          </span>
+        </div>
+        {result.rows.length === 0 ? (
+          <div className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm dark:border-white/10 dark:bg-white/5">
+            <div className="font-semibold text-brand-lea dark:text-slate-100">No historical records match</div>
+            <p className="mt-1 text-brand-grey dark:text-slate-400">Try fewer or broader filters.</p>
           </div>
-          {result.rows.length === 0 ? (
-            <div className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm dark:border-white/10 dark:bg-white/5">
-              <div className="font-semibold text-brand-lea dark:text-slate-100">No historical records match</div>
-              <p className="mt-1 text-brand-grey dark:text-slate-400">Try fewer or broader filters.</p>
-            </div>
-          ) : (
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-brand-lea/15 text-left text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:border-white/10 dark:text-slate-400">
-                    <th className="py-2 pr-3">Candidate</th>
-                    <th className="px-3">Top role</th>
-                    <th className="px-3">Latest status</th>
-                    <th className="px-3 text-center">Apps</th>
-                    <th className="px-3 text-center">Interviews</th>
-                    <th className="px-3">Recruiter</th>
+        ) : (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-brand-lea/15 text-left text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:border-white/10 dark:text-slate-400">
+                  <th className="py-2 pr-3">Candidate</th>
+                  <th className="px-3">Top role</th>
+                  <th className="px-3">Latest status</th>
+                  <th className="px-3 text-center">Apps</th>
+                  <th className="px-3 text-center">Interviews</th>
+                  <th className="px-3">Recruiter</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.rows.map((row) => (
+                  <tr key={row.id} className="border-b border-brand-lea/8 last:border-0 dark:border-white/5">
+                    <td className="py-2.5 pr-3">
+                      <Link href={`/candidates/${row.id}`} className="font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-100">
+                        {row.displayName}
+                      </Link>
+                      <div className="text-xs text-brand-grey dark:text-slate-400">{row.primaryEmail ?? "No email"}</div>
+                    </td>
+                    <td className="px-3 text-brand-lea dark:text-slate-200">{row.topJobTitle ?? "—"}</td>
+                    <td className="px-3">{dispositionBadge(row.latestDisposition)}</td>
+                    <td className="px-3 text-center text-brand-grey dark:text-slate-400">{row.applicationCount}</td>
+                    <td className="px-3 text-center text-brand-grey dark:text-slate-400">{row.interviewCount}</td>
+                    <td className="px-3 text-brand-grey dark:text-slate-400">{row.recruiters[0] ?? "—"}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {result.rows.map((row) => (
-                    <tr key={row.id} className="border-b border-brand-lea/8 last:border-0 dark:border-white/5">
-                      <td className="py-2.5 pr-3">
-                        <Link href={`/candidates/${row.id}`} className="font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-100">
-                          {row.displayName}
-                        </Link>
-                        <div className="text-xs text-brand-grey dark:text-slate-400">{row.primaryEmail ?? "No email"}</div>
-                      </td>
-                      <td className="px-3 text-brand-lea dark:text-slate-200">{row.topJobTitle ?? "—"}</td>
-                      <td className="px-3">{dispositionBadge(row.latestDisposition)}</td>
-                      <td className="px-3 text-center text-brand-grey dark:text-slate-400">{row.applicationCount}</td>
-                      <td className="px-3 text-center text-brand-grey dark:text-slate-400">{row.interviewCount}</td>
-                      <td className="px-3 text-brand-grey dark:text-slate-400">{row.recruiters[0] ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      )}
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <Pager result={result} params={params} />
+      </section>
     </div>
   );
 }
