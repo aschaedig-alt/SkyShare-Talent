@@ -4,6 +4,7 @@ import { requireApiPermission } from "@/lib/auth/route-auth";
 import { defaultTaskCreateData } from "@/lib/data/onboarding";
 import { ensureCustomMilestoneTasks } from "@/lib/data/onboarding-milestones";
 import { ensureInitialRole } from "@/lib/data/ensure-initial-role";
+import { parseOfferSteps } from "@/lib/offers/steps";
 
 function parseDate(value: unknown): Date | null {
   if (value === null || value === undefined || value === "") return null;
@@ -15,6 +16,37 @@ function strOrNull(value: unknown): string | null {
   if (value === null || value === undefined) return null;
   const t = String(value).trim();
   return t.length ? t : null;
+}
+
+/**
+ * What this candidate's offer already knows: the ticked steps and the dates.
+ * The SIGNED offer wins — that is the one they are actually joining on. Failing
+ * that, take the offer that got furthest, so a sent-but-unsigned offer still
+ * carries its work across rather than starting from nothing.
+ */
+async function loadOfferSteps(candidateId: string) {
+  const apps = await prisma.candidateApplication.findMany({
+    where: { candidateId },
+    select: {
+      offerStatus: true,
+      offerStepsJson: true,
+      offerSentAt: true,
+      offerSignedAt: true,
+      offerStartDate: true
+    }
+  });
+  if (apps.length === 0) return undefined;
+
+  const rank: Record<string, number> = { SIGNED: 4, SENT: 3, PLANNED: 2, DECLINED: 1, NONE: 0 };
+  const best = [...apps].sort((a, b) => (rank[b.offerStatus] ?? 0) - (rank[a.offerStatus] ?? 0))[0];
+  if (!best || (rank[best.offerStatus] ?? 0) === 0) return undefined;
+
+  return {
+    steps: parseOfferSteps(best.offerStepsJson),
+    sentAt: best.offerSentAt,
+    signedAt: best.offerSignedAt,
+    startDate: best.offerStartDate
+  };
 }
 
 export async function POST(request: Request) {
@@ -30,6 +62,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Name is required." }, { status: 400 });
     }
 
+    const candidateId = strOrNull(body.candidateId);
+
+    // Two hires for one candidate is the duplicate this whole flow exists to
+    // prevent — the panel's "different person, create separate" escape and a
+    // stale tab replayed both reach here around the branch that would have
+    // linked instead.
+    if (candidateId) {
+      const already = await prisma.newHire.findFirst({
+        where: { candidateId },
+        select: { id: true, name: true }
+      });
+      if (already) {
+        return NextResponse.json(
+          { message: `${already.name} is already in onboarding from this candidate.`, id: already.id },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Carry across what was already ticked while they were still a candidate, so
+    // the Offer group lands complete instead of asking for the same six ticks
+    // twice. The offer they SIGNED wins; otherwise the furthest one along.
+    const offer = candidateId ? await loadOfferSteps(candidateId) : undefined;
+
     const hire = await prisma.newHire.create({
       data: {
         name,
@@ -38,13 +94,14 @@ export async function POST(request: Request) {
         phone: strOrNull(body.phone),
         ssEmail: strOrNull(body.ssEmail),
         personalEmail: strOrNull(body.personalEmail),
-        offerSentDate: parseDate(body.offerSentDate),
-        offerSignedDate: parseDate(body.offerSignedDate),
-        startDate: parseDate(body.startDate),
+        // Fall back to the dates the offer already knows, so they are not retyped.
+        offerSentDate: parseDate(body.offerSentDate) ?? offer?.sentAt ?? null,
+        offerSignedDate: parseDate(body.offerSignedDate) ?? offer?.signedAt ?? null,
+        startDate: parseDate(body.startDate) ?? offer?.startDate ?? null,
         orientationDate: parseDate(body.orientationDate),
         stage: "ACTIVE",
-        candidateId: strOrNull(body.candidateId),
-        tasks: { create: defaultTaskCreateData() }
+        candidateId,
+        tasks: { create: defaultTaskCreateData(offer?.steps) }
       }
     });
 

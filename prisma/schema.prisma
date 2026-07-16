@@ -948,6 +948,14 @@ model CandidateApplication {
   // hand-ticked offer from one confirmed by an inbound Paycom notification, and
   // reconcile them if they disagree.
   offerSource          String?
+  // The individual offer steps, ticked before this person is a new hire — the
+  // same six keys the onboarding checklist uses (verbal_offer … candidate_signed),
+  // as { key: ISO-timestamp }. They live here rather than on NewHire because
+  // making an offer is the last act of RECRUITING: needing a NewHire row first is
+  // exactly what produced 448 records disconnected from their candidate.
+  // offerStatus is DERIVED from these (see lib/offers/steps.ts) — these are the
+  // source of truth, and they carry over as completed tasks on the move in.
+  offerStepsJson       String?
 
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt

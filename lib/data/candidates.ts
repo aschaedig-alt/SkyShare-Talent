@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { METRIC_DEFS, type MetricKind } from "@/lib/extraction/pilot-metrics";
 import { parseStringArray } from "@/lib/json";
 import { normalizeEmail, normalizeName } from "@/lib/candidates/normalize";
+import { parseOfferSteps } from "@/lib/offers/steps";
 
 export type CandidateListItem = {
   id: string;
@@ -149,6 +150,8 @@ export type CandidateProfileData = {
     offerDeclineReason: string | null;
     offerStartDate: string | null;
     offerSource: string | null;
+    /** Ticked offer steps: key → when. offerStatus is derived from these. */
+    offerSteps: Record<string, string>;
     job: {
       id: string;
       title: string;
@@ -783,6 +786,7 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
       offerDeclineReason: application.offerDeclineReason,
       offerStartDate: application.offerStartDate?.toISOString() ?? null,
       offerSource: application.offerSource,
+      offerSteps: parseOfferSteps(application.offerStepsJson),
       job: application.job
         ? {
             id: application.job.id,

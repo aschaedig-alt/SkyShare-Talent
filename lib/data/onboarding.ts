@@ -8,6 +8,7 @@ import {
 } from "@/lib/onboarding/tasks";
 import { getMilestoneCatalog } from "@/lib/data/onboarding-milestones";
 import { computeTenure } from "@/lib/data/tenure";
+import { isOfferStepKey, offerStepCompletedAt, type OfferSteps } from "@/lib/offers/steps";
 
 const DAY = 86_400_000;
 
@@ -487,8 +488,28 @@ export async function getNewHireDetail(id: string): Promise<NewHireDetail | null
 }
 
 // Builds the default task set for a brand-new (manually added) hire.
-export function defaultTaskCreateData(): Array<Pick<OnboardingTaskDef, "label" | "group"> & { key: string; order: number; status: string }> {
-  return ONBOARDING_TASKS.map((t, i) => ({ key: t.key, label: t.label, group: t.group, order: i, status: "TODO" }));
+//
+// offerSteps carries over what was already ticked on the candidate's offer while
+// they were still a candidate (lib/offers/steps.ts uses these same six keys), so
+// the Offer group arrives already complete instead of asking someone to tick the
+// same six boxes a second time. Passing nothing gives the old all-TODO behaviour,
+// which is what the CSV importer and a hire with no offer both want.
+export function defaultTaskCreateData(
+  offerSteps?: OfferSteps
+): Array<
+  Pick<OnboardingTaskDef, "label" | "group"> & { key: string; order: number; status: string; completedAt?: Date }
+> {
+  return ONBOARDING_TASKS.map((t, i) => {
+    const doneAt = offerSteps && isOfferStepKey(t.key) ? offerStepCompletedAt(offerSteps, t.key) : null;
+    return {
+      key: t.key,
+      label: t.label,
+      group: t.group,
+      order: i,
+      status: doneAt ? "DONE" : "TODO",
+      ...(doneAt ? { completedAt: doneAt } : {})
+    };
+  });
 }
 
 export async function getOnboardingCounts() {

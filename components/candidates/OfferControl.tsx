@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileSignature } from "lucide-react";
+import { FileSignature, Check } from "lucide-react";
 import { clsx } from "clsx";
 import { OFFER_STATUSES, offerStatusLabel } from "@/lib/offers/constants";
+import { OFFER_STEPS } from "@/lib/offers/steps";
 import type { CandidateProfileData } from "@/lib/data/candidates";
 
 type Application = CandidateProfileData["applications"][number];
@@ -43,8 +44,43 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
   // move-to-onboarding panel could never fire.
   const [startDate, setStartDate] = useState(application.offerStartDate?.slice(0, 10) ?? "");
   const [askStart, setAskStart] = useState(false);
+  // Optimistic step state so ticking feels instant; the server is the truth and
+  // router.refresh() reconciles.
+  const [steps, setSteps] = useState<Record<string, string>>(application.offerSteps ?? {});
+  const [showSteps, setShowSteps] = useState(false);
 
   const status = application.offerStatus ?? "NONE";
+  const doneCount = OFFER_STEPS.filter((s) => steps[s.key]).length;
+  // Once an offer is in flight the steps are the story, so show them. Before that
+  // they stay tucked away — most applications will never become an offer.
+  const stepsOpen = showSteps || (status !== "NONE" && status !== "DECLINED");
+
+  async function toggleStep(key: string, done: boolean) {
+    // Optimistic: tick it now, put it back if the server disagrees.
+    const previous = steps;
+    const next = { ...steps };
+    if (done) next[key] = new Date().toISOString();
+    else delete next[key];
+    setSteps(next);
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/offers/${application.id}/steps`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, done })
+      });
+      const data = (await res.json().catch(() => ({}))) as { message?: string; steps?: Record<string, string> };
+      if (!res.ok) throw new Error(data.message || "Could not update that step.");
+      if (data.steps) setSteps(data.steps);
+      router.refresh();
+    } catch (e) {
+      setSteps(previous);
+      setError(e instanceof Error ? e.message : "Could not update that step.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function set(next: string, opts?: { reason?: string; startDate?: string }) {
     setBusy(true);
@@ -98,6 +134,12 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
           </span>
         ) : null}
 
+        {status !== "NONE" && (
+          <span className="text-[11px] text-brand-grey dark:text-slate-400">
+            {doneCount} of {OFFER_STEPS.length} steps
+          </span>
+        )}
+
         {canEdit && (
           <select
             value={status}
@@ -119,7 +161,61 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
             ))}
           </select>
         )}
+
+        {/* Before an offer exists, the steps are the way in — you should be able
+            to start working an offer for someone you only MIGHT hire, without
+            first creating a new-hire record. */}
+        {canEdit && !stepsOpen && (
+          <button
+            onClick={() => setShowSteps(true)}
+            className="rounded text-[11px] font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-brand-sweet"
+          >
+            Start an offer
+          </button>
+        )}
       </div>
+
+      {stepsOpen && (
+        <ol className="mt-2 space-y-1">
+          {OFFER_STEPS.map((step) => {
+            const at = steps[step.key];
+            const done = Boolean(at);
+            return (
+              <li key={step.key}>
+                <button
+                  onClick={() => void toggleStep(step.key, !done)}
+                  disabled={!canEdit || busy}
+                  className={clsx(
+                    "flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-[11px] transition",
+                    canEdit && "hover:bg-brand-cloudDancer/40 dark:hover:bg-white/5",
+                    !canEdit && "cursor-default",
+                    done ? "text-brand-lea dark:text-slate-100" : "text-brand-grey dark:text-slate-400"
+                  )}
+                >
+                  <span
+                    className={clsx(
+                      "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border",
+                      done ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/30 dark:border-white/20"
+                    )}
+                  >
+                    {done && <Check className="h-2.5 w-2.5" />}
+                  </span>
+                  <span className={clsx("flex-1", done && "font-semibold")}>{step.label}</span>
+                  {done && <span className="shrink-0 text-[10px] text-brand-grey dark:text-slate-500">{fmtDate(at)}</span>}
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+
+      {/* Ticking the last step IS the handoff — say so, rather than making
+          someone know that signed means "now go and do the next thing". */}
+      {stepsOpen && status === "SIGNED" && (
+        <p className="mt-1.5 rounded bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300">
+          Signed — they are ready to move into onboarding.
+        </p>
+      )}
 
       {dates.length > 0 && (
         <p className="mt-1 text-[11px] text-brand-grey dark:text-slate-400">{dates.join(" · ")}</p>
