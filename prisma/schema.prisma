@@ -538,6 +538,16 @@ model Feedback {
   // errors. Makes "where is this feedback / what was on screen" answerable without
   // a screenshot — a cut-off button is usually a viewport problem.
   contextJson String?
+  // An optional screenshot the reporter attached — the fastest way to answer
+  // "what did you actually SEE", which the auto-captured context above can only
+  // approximate. Stored as a private blob through the normal file-storage
+  // adapter (S3 in production) and served ONLY through an admin-gated route:
+  // a screenshot of this app routinely contains candidate PII, so it is treated
+  // like a candidate document and never gets a public URL.
+  imageKey       String?
+  imageName      String?
+  imageMime      String?
+  imageSizeBytes Int?
   status      String   @default("NEW")
   userId      String?
   userEmail   String?

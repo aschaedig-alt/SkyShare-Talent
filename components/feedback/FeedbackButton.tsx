@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { MessageSquare, X, Lightbulb, Bug, HelpCircle, Check, Loader } from "lucide-react";
+import { MessageSquare, X, Lightbulb, Bug, HelpCircle, Check, Loader, ImagePlus, Trash2 } from "lucide-react";
 import { clsx } from "clsx";
 
 type FeedbackType = "IDEA" | "BUG" | "QUESTION";
@@ -48,6 +48,28 @@ function collectContext(): FeedbackContext | null {
   };
 }
 
+// Screenshot attachment. Kept in step with the server: same types, same 10 MB cap
+// (lib/files/feedback-file-storage.ts), so a bad file is caught here with a clear
+// message instead of costing a round-trip. SVG is excluded on both sides — it is a
+// script-carrying document, not a picture.
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+function imageProblem(file: File): string | null {
+  if (!IMAGE_TYPES.includes(file.type.toLowerCase())) return "Attach a PNG, JPG, GIF or WEBP image.";
+  if (file.size > MAX_IMAGE_BYTES) return "That image is larger than the 10 MB limit.";
+  return null;
+}
+
+// A pasted screenshot arrives as an unnamed blob ("image.png" at best), so give it
+// a name that says where it came from — the admin reading this later gets the page
+// in the filename without having to cross-reference anything.
+function pastedImageName(pathname: string, type: string): string {
+  const extension = type.split("/")[1]?.replace("jpeg", "jpg") ?? "png";
+  const slug = pathname.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "page";
+  return `screenshot-${slug}.${extension}`;
+}
+
 // Where the user has dragged the button to, if anywhere. null = default corner.
 type Position = { x: number; y: number };
 const POSITION_KEY = "feedback-button-position";
@@ -77,6 +99,11 @@ export function FeedbackButton() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Optional screenshot + its local preview URL.
+  const [image, setImage] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Draggable position (shift-click + drag). Persisted so it stays out of the way.
   const [pos, setPos] = useState<Position | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -94,6 +121,39 @@ export function FeedbackButton() {
       window.removeEventListener("unhandledrejection", onRejection);
     };
   }, []);
+
+  // Object URL for the thumbnail, revoked on change/unmount so we don't leak it.
+  useEffect(() => {
+    if (!image) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(image);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [image]);
+
+  // Paste a screenshot straight in (Win+Shift+S then Ctrl+V). This is the whole
+  // point: the moment someone can screenshot the problem, making them save a file
+  // and find it in a dialog is what stops them bothering. Only while the panel is
+  // open, so we never swallow a paste meant for the page underneath.
+  useEffect(() => {
+    if (!open || done) return;
+    const onPaste = (e: ClipboardEvent) => {
+      const file = [...(e.clipboardData?.files ?? [])][0];
+      if (!file || !file.type.startsWith("image/")) return; // a normal text paste
+      e.preventDefault();
+      const problem = imageProblem(file);
+      if (problem) {
+        setError(problem);
+        return;
+      }
+      setError(null);
+      setImage(new File([file], pastedImageName(pathname, file.type), { type: file.type }));
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [open, done, pathname]);
 
   useEffect(() => {
     try {
@@ -158,6 +218,19 @@ export function FeedbackButton() {
     setMessage("");
     setDone(false);
     setError(null);
+    setImage(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function chooseImage(file: File | undefined) {
+    if (!file) return;
+    const problem = imageProblem(file);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    setError(null);
+    setImage(file);
   }
 
   function close() {
@@ -174,11 +247,25 @@ export function FeedbackButton() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, message: message.trim(), page: pathname, context: collectContext() })
-      });
+      // Only reach for multipart when there is actually a file: the JSON path is
+      // the common case and stays exactly as it was.
+      let res: Response;
+      if (image) {
+        const form = new FormData();
+        form.set("type", type);
+        form.set("message", message.trim());
+        form.set("page", pathname);
+        form.set("context", JSON.stringify(collectContext()));
+        form.set("image", image, image.name);
+        // No Content-Type header — the browser must set the multipart boundary.
+        res = await fetch("/api/feedback", { method: "POST", body: form });
+      } else {
+        res = await fetch("/api/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type, message: message.trim(), page: pathname, context: collectContext() })
+        });
+      }
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         throw new Error(data?.message ?? "Unable to send feedback.");
@@ -280,6 +367,43 @@ export function FeedbackButton() {
                 }
                 className="w-full resize-none rounded border border-brand-lea/20 px-3 py-2 text-sm focus:border-brand-lea focus:outline-none dark:border-white/10"
               />
+
+              {/* Screenshot: pasted or picked. */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={IMAGE_TYPES.join(",")}
+                className="hidden"
+                onChange={(e) => chooseImage(e.target.files?.[0])}
+              />
+
+              {image && preview ? (
+                <div className="mt-2 flex items-center gap-2 rounded border border-brand-lea/15 bg-brand-cloudDancer/30 p-2 dark:border-white/10 dark:bg-white/5">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- local object URL, not a remote asset */}
+                  <img src={preview} alt="" className="h-12 w-12 rounded object-cover" />
+                  <span className="min-w-0 flex-1 truncate text-[11px] text-brand-grey dark:text-slate-400">
+                    {image.name}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setImage(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    className="rounded p-1 text-brand-grey transition hover:text-red-600 dark:text-slate-400"
+                    aria-label="Remove image"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded border border-dashed border-brand-lea/25 px-2 py-2 text-[11px] font-medium text-brand-grey transition hover:border-brand-lea hover:shadow-glow dark:border-white/15 dark:text-slate-400"
+                >
+                  <ImagePlus className="h-3.5 w-3.5" />
+                  Add a screenshot — or just paste one
+                </button>
+              )}
 
               <p className="mt-2 flex items-center gap-1 text-[11px] text-brand-grey dark:text-slate-400">
                 <span className="truncate">Auto-attached: this exact page, your screen size, browser &amp; account</span>

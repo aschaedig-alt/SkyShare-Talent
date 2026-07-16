@@ -19,6 +19,10 @@ export default async function FeedbackPage() {
       message: f.message,
       page: f.page,
       contextJson: f.contextJson,
+      // Only whether an image exists and what it is called — the bytes are served
+      // separately through the admin-gated /api/feedback/[id]/image route.
+      imageKey: f.imageKey,
+      imageName: f.imageName,
       status: f.status,
       userEmail: f.userEmail,
       userName: f.userName,

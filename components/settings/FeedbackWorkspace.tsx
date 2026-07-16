@@ -10,6 +10,8 @@ type FeedbackItem = {
   message: string;
   page: string | null;
   contextJson: string | null;
+  imageKey: string | null;
+  imageName: string | null;
   status: string;
   userEmail: string | null;
   userName: string | null;
@@ -199,6 +201,26 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
                 </div>
 
                 <p className="mt-2 whitespace-pre-wrap text-sm text-brand-black/85 dark:text-slate-300">{item.message}</p>
+
+                {/* The screenshot, if one was attached. Served through an
+                    admin-gated route (never a public URL) because these routinely
+                    contain candidate PII. Click opens it full size. */}
+                {item.imageKey && (
+                  <a
+                    href={`/api/feedback/${item.id}/image`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 block w-fit rounded border border-brand-lea/15 p-1 transition hover:shadow-glow dark:border-white/10"
+                    title={item.imageName ?? "Open the full screenshot"}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- authenticated same-origin route, not an optimizable asset */}
+                    <img
+                      src={`/api/feedback/${item.id}/image`}
+                      alt={item.imageName ?? "Screenshot attached to this feedback"}
+                      className="max-h-48 rounded object-contain"
+                    />
+                  </a>
+                )}
 
                 {/* Auto-captured context — the full URL (with its query string),
                     the screen it happened on, and anything that blew up. */}
