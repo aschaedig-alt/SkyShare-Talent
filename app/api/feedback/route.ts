@@ -12,9 +12,22 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { type?: string; message?: string; page?: string };
+    const body = (await request.json()) as {
+      type?: string;
+      message?: string;
+      page?: string;
+      context?: Record<string, unknown> | null;
+    };
     const message = (body.message ?? "").trim();
     const type = VALID_TYPES.includes(body.type ?? "") ? body.type! : "IDEA";
+
+    // Browser-supplied context (full URL, viewport, browser, theme, recent errors).
+    // Stored as-is but size-capped; never trusted for anything but display.
+    let contextJson: string | null = null;
+    if (body.context && typeof body.context === "object") {
+      const serialized = JSON.stringify(body.context);
+      contextJson = serialized.length <= 4000 ? serialized : serialized.slice(0, 4000);
+    }
 
     if (message.length < 2) {
       return NextResponse.json({ message: "Please enter a bit more detail." }, { status: 400 });
@@ -28,6 +41,7 @@ export async function POST(request: Request) {
         type,
         message,
         page: body.page?.slice(0, 300) ?? null,
+        contextJson,
         userId: auth.user.id,
         userEmail: auth.user.email,
         userName: auth.user.name ?? null

@@ -9,11 +9,67 @@ type FeedbackItem = {
   type: string;
   message: string;
   page: string | null;
+  contextJson: string | null;
   status: string;
   userEmail: string | null;
   userName: string | null;
   createdAt: string;
 };
+
+// Auto-captured at submit time (see components/feedback/FeedbackButton.tsx).
+type FeedbackContext = {
+  url?: string;
+  viewport?: string;
+  screen?: string;
+  dpr?: number;
+  theme?: string;
+  userAgent?: string;
+  errors?: string[];
+};
+
+function parseContext(raw: string | null): FeedbackContext | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as FeedbackContext;
+  } catch {
+    return null;
+  }
+}
+
+// Boil a user-agent string down to something scannable.
+function browserLabel(ua?: string): string | null {
+  if (!ua) return null;
+  const browser = /Edg\//.test(ua)
+    ? "Edge"
+    : /Chrome\//.test(ua)
+      ? "Chrome"
+      : /Firefox\//.test(ua)
+        ? "Firefox"
+        : /Safari\//.test(ua)
+          ? "Safari"
+          : null;
+  const os = /Windows/.test(ua)
+    ? "Windows"
+    : /Mac OS X/.test(ua)
+      ? "macOS"
+      : /Android/.test(ua)
+        ? "Android"
+        : /iPhone|iPad/.test(ua)
+          ? "iOS"
+          : null;
+  return [browser, os].filter(Boolean).join(" · ") || null;
+}
+
+// Show path + query (the query is the part the old pathname-only capture lost).
+function shortUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    const s = u.pathname + u.search;
+    return s.length > 64 ? `${s.slice(0, 64)}…` : s;
+  } catch {
+    return url.slice(0, 64);
+  }
+}
 
 const TYPE_META: Record<string, { label: string; icon: typeof Lightbulb; chip: string }> = {
   IDEA: { label: "Idea", icon: Lightbulb, chip: "bg-blue-100 text-blue-800 dark:bg-sky-500/15 dark:text-sky-300" },
@@ -143,6 +199,44 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
                 </div>
 
                 <p className="mt-2 whitespace-pre-wrap text-sm text-brand-black/85 dark:text-slate-300">{item.message}</p>
+
+                {/* Auto-captured context — the full URL (with its query string),
+                    the screen it happened on, and anything that blew up. */}
+                {(() => {
+                  const ctx = parseContext(item.contextJson);
+                  if (!ctx) return null;
+                  const chips = [
+                    ctx.viewport ? `${ctx.viewport}${ctx.dpr && ctx.dpr !== 1 ? ` @${ctx.dpr}x` : ""}` : null,
+                    ctx.theme ? `${ctx.theme} mode` : null,
+                    browserLabel(ctx.userAgent)
+                  ].filter((c): c is string => Boolean(c));
+                  return (
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-brand-grey dark:text-slate-400">
+                      {ctx.url && (
+                        <a
+                          href={ctx.url}
+                          title={ctx.url}
+                          className="rounded bg-brand-cloudDancer/60 px-1.5 py-0.5 font-semibold text-brand-eden hover:underline dark:bg-white/5 dark:text-slate-300"
+                        >
+                          {shortUrl(ctx.url)}
+                        </a>
+                      )}
+                      {chips.map((c) => (
+                        <span key={c} className="rounded bg-brand-cloudDancer/60 px-1.5 py-0.5 dark:bg-white/5">
+                          {c}
+                        </span>
+                      ))}
+                      {ctx.errors?.length ? (
+                        <span
+                          title={ctx.errors.join("\n\n")}
+                          className="rounded bg-red-100 px-1.5 py-0.5 font-semibold text-red-800 dark:bg-red-500/15 dark:text-red-300"
+                        >
+                          {ctx.errors.length} runtime error{ctx.errors.length === 1 ? "" : "s"}
+                        </span>
+                      ) : null}
+                    </div>
+                  );
+                })()}
 
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
                   <div className="text-xs text-brand-grey dark:text-slate-400">

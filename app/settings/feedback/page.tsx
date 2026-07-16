@@ -18,6 +18,7 @@ export default async function FeedbackPage() {
       type: f.type,
       message: f.message,
       page: f.page,
+      contextJson: f.contextJson,
       status: f.status,
       userEmail: f.userEmail,
       userName: f.userName,

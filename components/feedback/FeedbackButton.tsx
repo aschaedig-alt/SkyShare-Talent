@@ -13,6 +13,41 @@ const TYPES: Array<{ value: FeedbackType; label: string; icon: typeof Lightbulb 
   { value: "QUESTION", label: "Question", icon: HelpCircle }
 ];
 
+// Context auto-captured with every submission. The pathname alone is not enough to
+// act on a report: it drops the query string (so ?id= / ?tab= — i.e. WHICH record
+// you were looking at — is lost), and it says nothing about screen size, which is
+// usually the whole story behind "this button is cut off".
+type FeedbackContext = {
+  url: string;
+  viewport: string;
+  screen: string;
+  dpr: number;
+  theme: "light" | "dark";
+  userAgent: string;
+  errors?: string[];
+};
+
+// Recent runtime errors, captured passively via event listeners (no console
+// monkey-patching) so a bug report can carry what actually blew up. Newest last.
+const recentErrors: string[] = [];
+function rememberError(msg: string) {
+  recentErrors.push(msg.slice(0, 300));
+  if (recentErrors.length > 5) recentErrors.shift();
+}
+
+function collectContext(): FeedbackContext | null {
+  if (typeof window === "undefined") return null;
+  return {
+    url: window.location.href,
+    viewport: `${window.innerWidth}x${window.innerHeight}`,
+    screen: `${window.screen?.width ?? 0}x${window.screen?.height ?? 0}`,
+    dpr: window.devicePixelRatio ?? 1,
+    theme: document.documentElement.classList.contains("dark") ? "dark" : "light",
+    userAgent: navigator.userAgent,
+    errors: recentErrors.length ? [...recentErrors] : undefined
+  };
+}
+
 // Where the user has dragged the button to, if anywhere. null = default corner.
 type Position = { x: number; y: number };
 const POSITION_KEY = "feedback-button-position";
@@ -47,6 +82,18 @@ export function FeedbackButton() {
   const [dragging, setDragging] = useState(false);
   // Set true at the end of a drag so the trailing click doesn't open the panel.
   const suppressClickRef = useRef(false);
+
+  // Passively remember runtime errors so a bug report can carry them.
+  useEffect(() => {
+    const onError = (e: ErrorEvent) => rememberError(`${e.message} (${e.filename ?? "?"}:${e.lineno ?? 0})`);
+    const onRejection = (e: PromiseRejectionEvent) => rememberError(`Unhandled rejection: ${String(e.reason)}`);
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -130,7 +177,7 @@ export function FeedbackButton() {
       const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, message: message.trim(), page: pathname })
+        body: JSON.stringify({ type, message: message.trim(), page: pathname, context: collectContext() })
       });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
@@ -235,7 +282,7 @@ export function FeedbackButton() {
               />
 
               <p className="mt-2 flex items-center gap-1 text-[11px] text-brand-grey dark:text-slate-400">
-                <span className="truncate">Auto-attached: this page &amp; your account</span>
+                <span className="truncate">Auto-attached: this exact page, your screen size, browser &amp; account</span>
               </p>
 
               {error && <p className="mt-2 text-xs font-medium text-red-600 dark:text-red-400">{error}</p>}

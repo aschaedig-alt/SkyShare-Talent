@@ -520,7 +520,14 @@ model Feedback {
   id          String   @id @default(cuid())
   type        String   @default("IDEA")
   message     String
+  // Pathname only (kept for existing rows + quick display). The full URL with its
+  // query string lives in contextJson.url — pathname alone loses ?id= / ?tab=.
   page        String?
+  // Auto-captured browser context at submit time: full URL (incl. query), viewport
+  // size, device pixel ratio, browser/OS, light-vs-dark theme, and recent console
+  // errors. Makes "where is this feedback / what was on screen" answerable without
+  // a screenshot — a cut-off button is usually a viewport problem.
+  contextJson String?
   status      String   @default("NEW")
   userId      String?
   userEmail   String?
