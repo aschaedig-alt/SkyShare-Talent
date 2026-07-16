@@ -3,6 +3,7 @@ import { METRIC_DEFS, type MetricKind } from "@/lib/extraction/pilot-metrics";
 import { parseStringArray } from "@/lib/json";
 import { normalizeEmail, normalizeName } from "@/lib/candidates/normalize";
 import { parseOfferSteps } from "@/lib/offers/steps";
+import { suggestCompanyEmail } from "@/lib/people/company-email";
 
 export type CandidateListItem = {
   id: string;
@@ -76,6 +77,10 @@ export type CandidateProfileData = {
     suggestedDepartment: string | null;
     /** Start date named on the signed offer, to prefill the new hire. */
     suggestedStartDate: string | null;
+    /** Company address by the convention: first initial + last name. Feeds business cards. */
+    suggestedEmail: string | null;
+    /** Someone already holds that address — the convention collides for real pairs. */
+    emailTakenBy: string | null;
     // An existing hand-typed hire with the same name that isn't linked to anyone.
     // Offer to LINK to it rather than creating a duplicate record.
     matchingHire: {
@@ -695,6 +700,10 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
   // over the older free-text "hired" status when deciding what to prefill.
   const signedOfferApp = candidate.applications.find((a) => a.offerStatus === "SIGNED");
   const sourceApp = signedOfferApp ?? hiredApp;
+  // The company address follows a fixed convention and feeds the business cards,
+  // so derive it rather than making someone type it — but check it is free first:
+  // the convention genuinely collides (Kevin vs Kieran Sherman both -> ksherman@).
+  const emailSuggestion = await suggestCompanyEmail(candidate.displayName);
   const preOnboarding = {
     hireId: existingHire?.id ?? null,
     hireStage: existingHire?.stage ?? null,
@@ -703,6 +712,8 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
     suggestedPosition: sourceApp?.job?.title ?? cleanTitle(candidate.currentTitle),
     suggestedDepartment: sourceApp?.job?.department ?? null,
     suggestedStartDate: signedOfferApp?.offerStartDate?.toISOString() ?? null,
+    suggestedEmail: emailSuggestion.email,
+    emailTakenBy: emailSuggestion.takenBy,
     matchingHire
   };
 

@@ -5,6 +5,7 @@ import { defaultTaskCreateData } from "@/lib/data/onboarding";
 import { ensureCustomMilestoneTasks } from "@/lib/data/onboarding-milestones";
 import { ensureInitialRole } from "@/lib/data/ensure-initial-role";
 import { parseOfferSteps } from "@/lib/offers/steps";
+import { suggestCompanyEmail } from "@/lib/people/company-email";
 
 function parseDate(value: unknown): Date | null {
   if (value === null || value === undefined || value === "") return null;
@@ -86,13 +87,25 @@ export async function POST(request: Request) {
     // twice. The offer they SIGNED wins; otherwise the furthest one along.
     const offer = candidateId ? await loadOfferSteps(candidateId) : undefined;
 
+    // The company address follows a fixed convention (first initial + last name)
+    // and feeds the business cards, so fill it in by default here rather than
+    // only in the UI — every path that creates a hire should get it. But the
+    // convention collides for real pairs on the roster (Kevin vs Kieran Sherman
+    // both derive to ksherman@), so only take it when it is actually free: two
+    // people sharing a mailbox is worse than a blank field someone fills in.
+    let ssEmail = strOrNull(body.ssEmail);
+    if (!ssEmail) {
+      const suggestion = await suggestCompanyEmail(name);
+      if (suggestion.email && !suggestion.takenBy) ssEmail = suggestion.email;
+    }
+
     const hire = await prisma.newHire.create({
       data: {
         name,
         position: strOrNull(body.position),
         department: strOrNull(body.department),
         phone: strOrNull(body.phone),
-        ssEmail: strOrNull(body.ssEmail),
+        ssEmail,
         personalEmail: strOrNull(body.personalEmail),
         // Fall back to the dates the offer already knows, so they are not retyped.
         offerSentDate: parseDate(body.offerSentDate) ?? offer?.sentAt ?? null,

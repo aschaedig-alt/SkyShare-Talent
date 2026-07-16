@@ -35,7 +35,22 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
   const [error, setError] = useState<string | null>(null);
   const { preOnboarding: pre } = candidate;
 
+  // The move form. Everything the hire needs is gathered HERE, at the one moment
+  // someone is actually thinking about this person — rather than assumed and left
+  // null. A hire with no start date is filtered out of nearly every panel on the
+  // New hires dashboard, so "assume it" meant "lose them".
+  const [form, setForm] = useState(false);
+  const [position, setPosition] = useState(pre.suggestedPosition ?? "");
+  const [department, setDepartment] = useState(pre.suggestedDepartment ?? "");
+  const [startDate, setStartDate] = useState(pre.suggestedStartDate?.slice(0, 10) ?? "");
+  const [ssEmail, setSsEmail] = useState(pre.suggestedEmail ?? "");
+  // Only warn while they still hold the colliding address — editing clears it.
+  const emailClash = pre.emailTakenBy && ssEmail.trim().toLowerCase() === (pre.suggestedEmail ?? "").toLowerCase();
+
   const prefill = [pre.suggestedPosition, pre.suggestedDepartment].filter(Boolean).join(" · ");
+  const missing = [!position.trim() && "position", !department.trim() && "department", !startDate && "start date"]
+    .filter(Boolean)
+    .join(", ");
 
   const createHire = async () => {
     setBusy("create");
@@ -46,13 +61,16 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: candidate.displayName,
-          position: pre.suggestedPosition,
-          department: pre.suggestedDepartment,
+          position: position.trim() || null,
+          department: department.trim() || null,
           phone: candidate.primaryPhone,
           personalEmail: candidate.primaryEmail,
+          // The company address follows a fixed convention and feeds the business
+          // cards, so it is filled in by default rather than typed.
+          ssEmail: ssEmail.trim() || null,
           // Carried from the signed offer when it named one, so the start date
           // is not re-typed (and cannot drift from what was offered).
-          startDate: pre.suggestedStartDate,
+          startDate: startDate || null,
           candidateId: candidate.id
         })
       });
@@ -64,6 +82,62 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
       setBusy(null);
     }
   };
+
+  const field = (label: string, value: string, onChange: (v: string) => void, type = "text", placeholder?: string) => (
+    <label className="block">
+      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{label}</span>
+      <input
+        type={type}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-0.5 w-full rounded border border-brand-lea/20 px-2 py-1 text-xs outline-none focus:border-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+      />
+    </label>
+  );
+
+  const moveForm = (
+    <div className="mt-3 rounded border border-brand-lea/15 bg-white p-3 dark:border-white/10 dark:bg-brand-panel">
+      <div className="grid gap-2 sm:grid-cols-2">
+        {field("Position", position, setPosition, "text", "e.g. Gulfstream G200 First Officer")}
+        {field("Department", department, setDepartment, "text", "e.g. Pilot")}
+        {field("Start date", startDate, setStartDate, "date")}
+        {field("Company email", ssEmail, setSsEmail, "text")}
+      </div>
+
+      {emailClash && (
+        <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+          {pre.emailTakenBy} already has {pre.suggestedEmail} — give this person a different address.
+        </p>
+      )}
+      {!startDate && (
+        <p className="mt-2 text-[11px] text-brand-grey dark:text-slate-400">
+          Without a start date they will not show on the New hires dashboard — no “starting soon”, no reminders.
+        </p>
+      )}
+      {missing && (
+        <p className="mt-1 text-[11px] text-brand-grey dark:text-slate-400">Still blank: {missing}. You can fill it in later.</p>
+      )}
+      {error && <p className="mt-2 text-xs text-red-600 dark:text-red-300">{error}</p>}
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => void createHire()}
+          disabled={busy !== null}
+          className="rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50 dark:text-slate-100"
+        >
+          {busy === "create" ? "Moving…" : "Move to onboarding"}
+        </button>
+        <button
+          onClick={() => setForm(false)}
+          disabled={busy !== null}
+          className="rounded px-2 py-1.5 text-xs font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/40 disabled:opacity-50 dark:text-slate-400"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
 
   const linkHire = async (hireId: string) => {
     setBusy("link");
@@ -147,15 +221,7 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
                     {busy === "link" ? "Linking…" : "Link to that record"}
                   </button>
                   <button
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          `"${m.name}" already exists in onboarding. Only create a separate record if this is a DIFFERENT person with the same name.\n\nCreate a second record anyway?`
-                        )
-                      ) {
-                        void createHire();
-                      }
-                    }}
+                    onClick={() => setForm(true)}
                     disabled={busy !== null}
                     className="rounded px-3 py-1.5 text-xs font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/40 disabled:opacity-50 dark:text-slate-400 dark:hover:bg-white/5"
                   >
@@ -164,6 +230,15 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
                 </>
               )}
             </div>
+
+            {form && (
+              <>
+                <p className="mt-3 rounded bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+                  Only do this if this is a DIFFERENT person who happens to share the name {m.name}.
+                </p>
+                {moveForm}
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -211,20 +286,10 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
           </p>
           {error && <p className="mt-2 text-xs text-red-600 dark:text-red-300">{error}</p>}
 
-          {canEdit && (
+          {canEdit && !form && (
             <div className="mt-3">
               <button
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      `Create a pre-onboarding record for "${candidate.displayName}"?` +
-                        (prefill ? `\n\nPosition: ${prefill}` : "") +
-                        `\n\nThis adds them to Onboarding → New hires with the default onboarding checklist.`
-                    )
-                  ) {
-                    void createHire();
-                  }
-                }}
+                onClick={() => setForm(true)}
                 disabled={busy !== null}
                 className={
                   hired
@@ -232,10 +297,11 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
                     : "rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-eden transition hover:bg-brand-cloudDancer/40 disabled:opacity-50 dark:border-white/10 dark:text-slate-200"
                 }
               >
-                {busy === "create" ? "Moving…" : "Move to pre-onboarding"}
+                Move to onboarding
               </button>
             </div>
           )}
+          {canEdit && form && moveForm}
         </div>
       </div>
     </section>
