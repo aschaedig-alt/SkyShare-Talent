@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { METRIC_DEFS, type MetricKind } from "@/lib/extraction/pilot-metrics";
 import { parseStringArray } from "@/lib/json";
-import { normalizeEmail } from "@/lib/candidates/normalize";
+import { normalizeEmail, normalizeName } from "@/lib/candidates/normalize";
 
 export type CandidateListItem = {
   id: string;
@@ -49,6 +49,38 @@ export type CandidateProfileData = {
   cons: string[];
   createdAt: string;
   updatedAt: string;
+  // Cross-link to a separate historical (Jazz) profile that appears to be the
+  // same person. Populated only on non-Jazz profiles; drives the merge panel.
+  linkedHistorical: {
+    reviewItemId: string;
+    candidateId: string;
+    displayName: string;
+    jazzCandidateNumber: string | null;
+    confidence: string;
+    reason: string;
+    applicationCount: number;
+    interviewCount: number;
+    fileCount: number;
+  } | null;
+  // Drives the "move to pre-onboarding" action. hireId is set once this candidate
+  // has been moved (NewHire.candidateId), so the panel links instead of re-creating.
+  preOnboarding: {
+    hireId: string | null;
+    hireStage: string | null;
+    isHired: boolean;
+    suggestedPosition: string | null;
+    suggestedDepartment: string | null;
+    // An existing hand-typed hire with the same name that isn't linked to anyone.
+    // Offer to LINK to it rather than creating a duplicate record.
+    matchingHire: {
+      id: string;
+      name: string;
+      stage: string;
+      position: string | null;
+      department: string | null;
+      startDate: string | null;
+    } | null;
+  };
   contacts: Array<{
     id: string;
     type: string;
@@ -543,8 +575,101 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
     include: { user: { select: { name: true, email: true } } }
   });
 
+  // New candidate ↔ historical (Jazz) cross-link, surfaced on the new profile so
+  // the recruiter can view the archived record or merge it in. Only shown on
+  // non-Jazz profiles; backed by the existing duplicate-review + merge machinery.
+  const historicalLinkSelect = {
+    id: true,
+    displayName: true,
+    origin: true,
+    status: true,
+    jazzCandidateNumber: true,
+    _count: { select: { applications: true, interviews: true, files: true } }
+  } as const;
+  let linkedHistorical: CandidateProfileData["linkedHistorical"] = null;
+  if (candidate.origin !== "JAZZ" && candidate.status !== "MERGED") {
+    const reviewItems = await prisma.duplicateReviewItem.findMany({
+      where: {
+        reviewType: "CANDIDATE",
+        status: "OPEN",
+        OR: [{ primaryCandidateId: candidate.id }, { secondaryCandidateId: candidate.id }]
+      },
+      include: {
+        primaryCandidate: { select: historicalLinkSelect },
+        secondaryCandidate: { select: historicalLinkSelect }
+      }
+    });
+    // Prefer HIGH-confidence pairs; only surface a Jazz-origin counterpart.
+    const ranked = reviewItems.sort(
+      (a, b) => (a.confidence === "HIGH" ? -1 : 1) - (b.confidence === "HIGH" ? -1 : 1)
+    );
+    for (const item of ranked) {
+      const other = item.primaryCandidateId === candidate.id ? item.secondaryCandidate : item.primaryCandidate;
+      if (other && other.origin === "JAZZ" && other.status !== "MERGED") {
+        linkedHistorical = {
+          reviewItemId: item.id,
+          candidateId: other.id,
+          displayName: other.displayName,
+          jazzCandidateNumber: other.jazzCandidateNumber,
+          confidence: item.confidence,
+          reason: item.reason,
+          applicationCount: other._count.applications,
+          interviewCount: other._count.interviews,
+          fileCount: other._count.files
+        };
+        break;
+      }
+    }
+  }
+
+  // Pre-onboarding link: has this candidate already been moved to a NewHire, and
+  // what should we prefill if not? Position/department come from the job they were
+  // hired into, falling back to their current title.
+  const hiredApp = candidate.applications.find(
+    (a) => (a.status ?? "").toLowerCase().includes("hired") && !(a.status ?? "").toLowerCase().includes("elsewhere")
+  );
+  const existingHire = await prisma.newHire.findFirst({
+    where: { candidateId: candidate.id },
+    select: { id: true, stage: true }
+  });
+  // Not linked yet? Look for an existing hand-typed hire with the same name.
+  // None of the legacy hires carry a candidateId, so without this we'd happily
+  // create a duplicate for anyone already typed into pre-onboarding.
+  let matchingHire: CandidateProfileData["preOnboarding"]["matchingHire"] = null;
+  if (!existingHire && candidate.status !== "ARCHIVED" && candidate.status !== "MERGED") {
+    const target = normalizeName(candidate.displayName);
+    if (target) {
+      const unlinked = await prisma.newHire.findMany({
+        where: { candidateId: null },
+        select: { id: true, name: true, stage: true, position: true, department: true, startDate: true }
+      });
+      const hit = unlinked.find((h) => normalizeName(h.name) === target);
+      if (hit) {
+        matchingHire = {
+          id: hit.id,
+          name: hit.name,
+          stage: hit.stage,
+          position: hit.position,
+          department: hit.department,
+          startDate: hit.startDate ? hit.startDate.toISOString() : null
+        };
+      }
+    }
+  }
+
+  const preOnboarding = {
+    hireId: existingHire?.id ?? null,
+    hireStage: existingHire?.stage ?? null,
+    isHired: hired,
+    suggestedPosition: hiredApp?.job?.title ?? candidate.currentTitle ?? null,
+    suggestedDepartment: hiredApp?.job?.department ?? null,
+    matchingHire
+  };
+
   return {
     id: candidate.id,
+    linkedHistorical,
+    preOnboarding,
     displayName: candidate.displayName,
     firstName: candidate.firstName,
     lastName: candidate.lastName,

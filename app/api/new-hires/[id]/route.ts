@@ -35,7 +35,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     const body = (await request.json()) as Record<string, unknown>;
     const data: Record<string, unknown> = {};
 
-    for (const field of ["name", "legalName", "position", "department", "location", "managedAircraft", "phone", "ssEmail", "personalEmail", "birthCountry", "citizenshipCountry", "travelStatus", "notes"]) {
+    // candidateId links this hire back to its Candidate record (set when moving a
+    // candidate into pre-onboarding, or linking to an already-typed hire).
+    for (const field of ["name", "legalName", "position", "department", "location", "managedAircraft", "phone", "ssEmail", "personalEmail", "birthCountry", "citizenshipCountry", "travelStatus", "notes", "candidateId"]) {
       const v = strOrNull(body[field]);
       if (v !== undefined) data[field] = v;
     }

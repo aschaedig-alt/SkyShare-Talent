@@ -12,6 +12,8 @@ import { ProConPanel } from "@/components/candidates/ProConPanel";
 import { CandidateNotes } from "@/components/candidates/CandidateNotes";
 import { CandidateActivityTimeline } from "@/components/candidates/CandidateActivityTimeline";
 import { HistoricalMatchPanel } from "@/components/candidates/HistoricalMatchPanel";
+import { LinkedHistoricalPanel } from "@/components/candidates/LinkedHistoricalPanel";
+import { MoveToPreOnboardingPanel } from "@/components/candidates/MoveToPreOnboardingPanel";
 import { CandidateTimeline } from "@/components/candidates/CandidateTimeline";
 import { AiSummaryCard } from "@/components/candidates/AiSummaryCard";
 import { CandidateCommunications } from "@/components/candidates/CandidateCommunications";
@@ -254,6 +256,18 @@ export function CandidateProfileWorkspace({
           onViewTimeline={() => setActiveTab("timeline")}
         />
       )}
+
+      {/* New candidate ↔ separate historical (Jazz) profile — view / merge / dismiss */}
+      {!isEditing && candidate.linkedHistorical && (
+        <LinkedHistoricalPanel keepId={candidate.id} link={candidate.linkedHistorical} canEdit={canEdit} />
+      )}
+
+      {/* Move to pre-onboarding — link once moved; otherwise only on live candidates */}
+      {!isEditing &&
+        (candidate.preOnboarding.hireId ||
+          (candidate.status !== "ARCHIVED" && candidate.status !== "MERGED")) && (
+          <MoveToPreOnboardingPanel candidate={candidate} canEdit={canEdit} />
+        )}
 
       {isEditing ? (
         /* Edit form */
