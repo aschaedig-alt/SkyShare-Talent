@@ -50,6 +50,9 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
           department: pre.suggestedDepartment,
           phone: candidate.primaryPhone,
           personalEmail: candidate.primaryEmail,
+          // Carried from the signed offer when it named one, so the start date
+          // is not re-typed (and cannot drift from what was offered).
+          startDate: pre.suggestedStartDate,
           candidateId: candidate.id
         })
       });
@@ -190,7 +193,9 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
         <div className="min-w-0 flex-1">
           {hired ? (
             <>
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Hired — ready to onboard</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
+                {pre.offerSigned ? "Offer signed — ready to onboard" : "Hired — ready to onboard"}
+              </p>
               <p className="mt-1 text-sm text-brand-lea dark:text-slate-100">
                 Move {candidate.displayName} into pre-onboarding to start their onboarding checklist.
               </p>
@@ -199,7 +204,10 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
             <p className="text-sm text-brand-lea dark:text-slate-100">Move this candidate into pre-onboarding.</p>
           )}
           <p className="mt-0.5 text-[11px] text-brand-grey dark:text-slate-400">
-            {prefill ? `Will prefill: ${prefill}. ` : ""}Their candidate record, resume, and interview history stay linked.
+            {prefill ? `Will prefill: ${prefill}` : ""}
+            {pre.suggestedStartDate ? `${prefill ? ", " : "Will prefill: "}starts ${fmtDate(pre.suggestedStartDate)}` : ""}
+            {prefill || pre.suggestedStartDate ? ". " : ""}
+            Their candidate record, resume, and interview history stay linked.
           </p>
           {error && <p className="mt-2 text-xs text-red-600 dark:text-red-300">{error}</p>}
 

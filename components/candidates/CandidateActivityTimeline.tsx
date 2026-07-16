@@ -15,6 +15,7 @@ const TYPE_LABEL: Record<string, string> = {
   CANDIDATE_NOTE_CREATED: "Note added",
   CANDIDATE_NOTE_DELETED: "Note removed",
   DUPLICATE_RESOLVED: "Duplicate resolved",
+  OFFER_STATUS_CHANGED: "Offer updated",
   INTERVIEW_SCHEDULED: "Interview scheduled",
   INTERVIEW_UPDATED: "Interview updated",
   INTERVIEW_CANCELED: "Interview canceled"

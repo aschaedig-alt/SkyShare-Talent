@@ -574,6 +574,10 @@ model Candidate {
   // ones as ordinary candidates, and keeps imports fully separable/reversible.
   origin               String                 @default("PAYCOM")
   jazzCandidateNumber  String?
+  // Paycom's own person id (e.g. 320080). Paycom's notification emails carry it,
+  // and it is the only stable, exact key we get — matching those emails on name
+  // alone is what produces duplicate people. Set it and the match is certain.
+  paycomPersonId       String?
   historicalSourceId   String?
   tagsJson             String?
   foldersJson          String?
@@ -699,7 +703,12 @@ model CandidateFile {
 model Job {
   id                    String                 @id @default(cuid())
   sourceJobId           String?
+  // Jazz-era requisition code (AMA.1, LSM.1, CJ2PIC.2...). NOT the Paycom one.
   jobReqId              String?
+  // Paycom's requisition number (e.g. 3296), as quoted in Paycom's notification
+  // emails. Kept separate from jobReqId because they are different schemes and
+  // the Jazz codes will never match a Paycom number.
+  paycomReqId           String?
   recruiter             String?
   title                 String
   normalizedTitle       String?
@@ -902,6 +911,34 @@ model CandidateApplication {
   rejectionReason      String?
   decidedAt            DateTime?
   historicalSourceId   String?
+
+  // ---- Offer -------------------------------------------------------------
+  // An offer is made for a specific job, so it lives on the application rather
+  // than as a parallel record. NONE | PLANNED | SENT | SIGNED | DECLINED —
+  // deliberately mutually exclusive (no VERBAL: an offer can be sent AND agreed
+  // verbally at the same time, so as a state it would fight SENT; record that as
+  // a note or a date instead).
+  //
+  // NO PAY AMOUNT LIVES HERE, ON PURPOSE. Paycom owns compensation; this tracks
+  // the workflow only.
+  //
+  // Never set these directly — go through recordOfferStatus() in lib/offers, so
+  // that every transition is stamped, audited, and fires the same downstream
+  // work no matter who triggered it (a person ticking a box today; a Paycom
+  // "Offer Accepted" email arriving via Front later).
+  offerStatus          String             @default("NONE")
+  offerSentAt          DateTime?
+  offerSignedAt        DateTime?
+  offerDeclinedAt      DateTime?
+  offerDeclineReason   String?
+  // The start date named on the offer, when there is one. Prefills the new
+  // hire's start date on the move into onboarding.
+  offerStartDate       DateTime?
+  // Who/what last moved the offer: MANUAL | FRONT | PAYCOM. Lets us tell a
+  // hand-ticked offer from one confirmed by an inbound Paycom notification, and
+  // reconcile them if they disagree.
+  offerSource          String?
+
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
 

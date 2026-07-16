@@ -67,9 +67,14 @@ export type CandidateProfileData = {
   preOnboarding: {
     hireId: string | null;
     hireStage: string | null;
+    /** They are in: an offer is SIGNED (or an application says hired). */
     isHired: boolean;
+    /** True specifically because an offer was signed — the real handoff moment. */
+    offerSigned: boolean;
     suggestedPosition: string | null;
     suggestedDepartment: string | null;
+    /** Start date named on the signed offer, to prefill the new hire. */
+    suggestedStartDate: string | null;
     // An existing hand-typed hire with the same name that isn't linked to anyone.
     // Offer to LINK to it rather than creating a duplicate record.
     matchingHire: {
@@ -134,6 +139,16 @@ export type CandidateProfileData = {
     stage: string | null;
     source: string | null;
     appliedAt: string | null;
+    // Offer lives on the application because an offer is always for a job.
+    // NONE | PLANNED | SENT | SIGNED | DECLINED. Never written directly — see
+    // lib/offers/record-offer-status.ts.
+    offerStatus: string;
+    offerSentAt: string | null;
+    offerSignedAt: string | null;
+    offerDeclinedAt: string | null;
+    offerDeclineReason: string | null;
+    offerStartDate: string | null;
+    offerSource: string | null;
     job: {
       id: string;
       title: string;
@@ -657,12 +672,18 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
     }
   }
 
+  // A signed offer is the real handoff from recruiting to onboarding, so it wins
+  // over the older free-text "hired" status when deciding what to prefill.
+  const signedOfferApp = candidate.applications.find((a) => a.offerStatus === "SIGNED");
+  const sourceApp = signedOfferApp ?? hiredApp;
   const preOnboarding = {
     hireId: existingHire?.id ?? null,
     hireStage: existingHire?.stage ?? null,
-    isHired: hired,
-    suggestedPosition: hiredApp?.job?.title ?? candidate.currentTitle ?? null,
-    suggestedDepartment: hiredApp?.job?.department ?? null,
+    isHired: hired || Boolean(signedOfferApp),
+    offerSigned: Boolean(signedOfferApp),
+    suggestedPosition: sourceApp?.job?.title ?? candidate.currentTitle ?? null,
+    suggestedDepartment: sourceApp?.job?.department ?? null,
+    suggestedStartDate: signedOfferApp?.offerStartDate?.toISOString() ?? null,
     matchingHire
   };
 
@@ -739,6 +760,13 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
       stage: application.stage,
       source: application.source,
       appliedAt: application.appliedAt?.toISOString() ?? null,
+      offerStatus: application.offerStatus,
+      offerSentAt: application.offerSentAt?.toISOString() ?? null,
+      offerSignedAt: application.offerSignedAt?.toISOString() ?? null,
+      offerDeclinedAt: application.offerDeclinedAt?.toISOString() ?? null,
+      offerDeclineReason: application.offerDeclineReason,
+      offerStartDate: application.offerStartDate?.toISOString() ?? null,
+      offerSource: application.offerSource,
       job: application.job
         ? {
             id: application.job.id,

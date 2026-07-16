@@ -14,6 +14,7 @@ import { CandidateActivityTimeline } from "@/components/candidates/CandidateActi
 import { HistoricalMatchPanel } from "@/components/candidates/HistoricalMatchPanel";
 import { LinkedHistoricalPanel } from "@/components/candidates/LinkedHistoricalPanel";
 import { MoveToPreOnboardingPanel } from "@/components/candidates/MoveToPreOnboardingPanel";
+import { OfferControl } from "@/components/candidates/OfferControl";
 import { CandidateTimeline } from "@/components/candidates/CandidateTimeline";
 import { AiSummaryCard } from "@/components/candidates/AiSummaryCard";
 import { CandidateCommunications } from "@/components/candidates/CandidateCommunications";
@@ -472,6 +473,10 @@ export function CandidateProfileWorkspace({
                           </Link>
                         ) : null}
                       </div>
+
+                      {/* An offer is always for a specific job, so it belongs on
+                          the application rather than the person. */}
+                      <OfferControl application={application} canEdit={canEdit} />
                       {application.questionnaire.length > 0 && (
                         <div className="mt-2">
                           <button
