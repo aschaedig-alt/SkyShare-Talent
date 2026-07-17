@@ -28,6 +28,7 @@ export function NewJobButton() {
   const [state, setState] = useState("");
   const [status, setStatus] = useState("OPEN");
   const [jobReqId, setJobReqId] = useState("");
+  const [paycomReqId, setPaycomReqId] = useState("");
 
   function reset() {
     setTitle("");
@@ -36,6 +37,7 @@ export function NewJobButton() {
     setState("");
     setStatus("OPEN");
     setJobReqId("");
+    setPaycomReqId("");
     setError(null);
     setClash(null);
   }
@@ -48,10 +50,10 @@ export function NewJobButton() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/jobs", {
+      const res = await fetch("/api/recruiting-jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, department, city, state, status, jobReqId, force })
+        body: JSON.stringify({ title, department, city, state, status, jobReqId, paycomReqId, force })
       });
       const data = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
@@ -110,7 +112,11 @@ export function NewJobButton() {
         {field("Department", department, setDepartment, "e.g. Maintenance")}
         {field("City", city, setCity, "e.g. Salt Lake City")}
         {field("State", state, setState, "e.g. UT")}
-        {field("Requisition ID", jobReqId, setJobReqId, "optional")}
+        {field("Requisition ID", jobReqId, setJobReqId, "optional — our own code")}
+        {/* Paycom numbers its requisitions differently (3296), and its emails quote
+            THAT number — a Jazz code will never match one. Kept separate for
+            exactly that reason, so the inbound automation has a real key. */}
+        {field("Paycom requisition", paycomReqId, setPaycomReqId, "optional — e.g. 3296")}
         <label className="block">
           <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Status</span>
           <select

@@ -20,11 +20,31 @@ export async function PATCH(request: Request, context: RouteContext) {
       isPilotRole?: boolean;
       pilotSeat?: string | null;
       aircraftTypes?: string[];
+      paycomReqId?: string | null;
     };
 
     const job = await prisma.job.findUnique({ where: { id } });
     if (!job) {
       return NextResponse.json({ message: "Job not found." }, { status: 404 });
+    }
+
+    // Paycom's requisition number (3296) is plain metadata, not classification, so
+    // it is handled on its own and returns early. Everything below this point
+    // treats the call as a classification change and would set isPilotRole = true
+    // as a side effect — which would quietly turn a maintenance job into a pilot
+    // one just for recording a req number. Kept separate from jobReqId because
+    // that holds the Jazz codes (AMA.1) and will never match a Paycom number.
+    if (body.paycomReqId !== undefined) {
+      const trimmed = (body.paycomReqId ?? "").trim();
+      if (trimmed && !/^\d{1,20}$/.test(trimmed)) {
+        return NextResponse.json({ message: "A Paycom requisition is digits only, e.g. 3296." }, { status: 400 });
+      }
+      await prisma.job.update({ where: { id }, data: { paycomReqId: trimmed || null } });
+      const alsoClassifying =
+        body.isPilotRole !== undefined || body.pilotSeat !== undefined || body.aircraftTypes !== undefined;
+      if (!alsoClassifying) {
+        return NextResponse.json({ ok: true, paycomReqId: trimmed || null });
+      }
     }
 
     // --- Support: clear pilot fields and remove the linked pilot requirement(s) ---

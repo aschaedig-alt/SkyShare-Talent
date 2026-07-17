@@ -59,6 +59,7 @@ type CandidateEditForm = {
   stage: string | null;
   source: string | null;
   owner: string | null;
+  paycomPersonId: string | null;
 };
 
 function formatDate(value: string | null) {
@@ -123,7 +124,8 @@ export function CandidateProfileWorkspace({
     status: initialCandidate.status,
     stage: initialCandidate.stage,
     source: initialCandidate.source,
-    owner: initialCandidate.owner
+    owner: initialCandidate.owner,
+    paycomPersonId: initialCandidate.paycomPersonId
   }));
 
   // Sync local state when server data refreshes (e.g. after a document add/delete)
@@ -169,7 +171,8 @@ export function CandidateProfileWorkspace({
       status: candidate.status,
       stage: candidate.stage,
       source: candidate.source,
-      owner: candidate.owner
+      owner: candidate.owner,
+      paycomPersonId: candidate.paycomPersonId
     });
     setIsEditing(false);
     setError(null);
@@ -318,6 +321,23 @@ export function CandidateProfileWorkspace({
             <div>
               <label className={labelClass}>Source</label>
               <input value={formData.source ?? ""} onChange={(e) => setFormData({ ...formData, source: e.target.value || null })} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Paycom ID</label>
+              <input
+                value={formData.paycomPersonId ?? ""}
+                inputMode="numeric"
+                placeholder="e.g. 320080"
+                onChange={(e) => setFormData({ ...formData, paycomPersonId: e.target.value || null })}
+                className={inputClass}
+              />
+              {/* Paycom quotes this in its Offer Accepted emails and it is the only
+                  EXACT key we get for a person — matching on name is what made the
+                  duplicates. Nothing can read it yet; it is stored now so the
+                  inbound Paycom automation has something real to match on later. */}
+              <p className="mt-1 text-[11px] text-brand-grey dark:text-slate-400">
+                From Paycom. Lets us match their Paycom emails to this person exactly.
+              </p>
             </div>
           </div>
           <div className="mt-4 flex gap-2">

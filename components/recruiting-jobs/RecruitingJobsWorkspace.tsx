@@ -9,6 +9,7 @@ import { JobListsPanel } from "@/components/recruiting-jobs/JobListsPanel";
 import { EditableGrid, type EditablePanel, type GridItem } from "@/components/shared/EditableGrid";
 import { AddCandidateToJob } from "@/components/recruiting-jobs/AddCandidateToJob";
 import { NewJobButton } from "@/components/recruiting-jobs/NewJobButton";
+import { PaycomReqField } from "@/components/recruiting-jobs/PaycomReqField";
 import { ResumeIntake } from "@/components/candidates/ResumeIntake";
 import { DocumentIntake } from "@/components/candidates/DocumentIntake";
 import type { WidgetInstance } from "@/lib/data/page-layout";
@@ -84,7 +85,7 @@ function StatsPanel({ stats }: { stats: RecruitingJobsData["stats"] }) {
   );
 }
 
-function JobDetailHeader({ job }: { job: RecruitingJobDetail }) {
+function JobDetailHeader({ job, canEdit }: { job: RecruitingJobDetail; canEdit?: boolean }) {
   return (
     <section className="flex h-full min-h-0 flex-col overflow-y-auto rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex flex-col gap-4">
@@ -101,6 +102,7 @@ function JobDetailHeader({ job }: { job: RecruitingJobDetail }) {
             pilotSeat={job.pilotSeat}
             aircraftTypes={job.aircraftTypes}
           />
+          <PaycomReqField key={`paycom-${job.id}`} jobId={job.id} paycomReqId={job.paycomReqId} canEdit={canEdit} />
         </div>
         <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(128px,1fr))] gap-2 text-sm">
           <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-3 dark:border-white/10 dark:bg-white/5">
@@ -262,7 +264,7 @@ export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLay
         title: "Pilot & support jobs",
         node: <JobListsPanel pilotJobs={pilotJobs} supportJobs={supportJobs} selectedId={selectedId} onSelect={setSelectedId} />
       },
-      { id: "rjobs-detail-header", title: "Job detail", node: job ? <JobDetailHeader job={job} /> : <NoJobPanel /> },
+      { id: "rjobs-detail-header", title: "Job detail", node: job ? <JobDetailHeader job={job} canEdit={canEdit} /> : <NoJobPanel /> },
       { id: "rjobs-linked-cands", title: "Linked candidates", node: job ? <LinkedCandidates job={job} /> : <EmptyDetail title="Linked candidates" /> },
       { id: "rjobs-linked-reqs", title: "Linked requirements", node: job ? <LinkedRequirements job={job} /> : <EmptyDetail title="Linked requirements" /> },
       { id: "rjobs-source", title: "Source record", node: job ? <SourceRecord job={job} /> : <EmptyDetail title="Source record" /> }

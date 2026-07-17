@@ -43,6 +43,8 @@ export type CandidateProfileData = {
   stage: string | null;
   owner: string | null;
   source: string | null;
+  /** Paycom's person id (e.g. 320080) — the only exact key their emails give us. */
+  paycomPersonId: string | null;
   primaryEmail: string | null;
   primaryPhone: string | null;
   tags: string[];
@@ -729,6 +731,7 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
     stage: candidate.stage,
     owner: candidate.owner,
     source: candidate.source,
+    paycomPersonId: candidate.paycomPersonId,
     primaryEmail: candidate.primaryEmail,
     primaryPhone: candidate.primaryPhone,
     tags: mergeTags(parseStringArray(candidate.tagsJson), candidate.candidateTags.map((ct) => ct.tag.label)),

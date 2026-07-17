@@ -41,9 +41,10 @@ const normalizeTitle = (value: string) => value.toLowerCase().replace(/\s+/g, " 
  * imported one everywhere downstream — matcher, filters, requirements.
  */
 export async function POST(request: Request) {
-  const auth = await requireApiPermission("candidates:write");
+  // jobs:write, matching the sibling PATCH — this is a job, not a candidate.
+  const auth = await requireApiPermission("jobs:write");
   if (!auth.ok) {
-    return (auth as { ok: false; response: Response }).response;
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
   try {

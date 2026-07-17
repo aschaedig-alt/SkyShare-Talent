@@ -79,6 +79,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     updateData.owner = body.owner.trim() || null;
   }
 
+  // Paycom's person id (e.g. 320080). Paycom's "Offer Accepted" emails quote it,
+  // and it is the only EXACT key we get for a person — matching on name is what
+  // created duplicate people. So it has to be storable before any inbound Paycom
+  // automation can be trusted. Digits only, since that is what Paycom issues.
+  if (typeof body.paycomPersonId === "string") {
+    const trimmed = body.paycomPersonId.trim();
+    if (trimmed && !/^\d{1,20}$/.test(trimmed)) {
+      return NextResponse.json({ message: "A Paycom ID is digits only, e.g. 320080." }, { status: 400 });
+    }
+    updateData.paycomPersonId = trimmed || null;
+  }
+
   // Pros & cons — structured strengths/concerns tags (recruiter observations).
   // NOTE: a future compliance audit (CA FEHA, NYC Local Law 144) may require
   // disclaimers/access gating; see roadmap "Scoring transparency & compliance".

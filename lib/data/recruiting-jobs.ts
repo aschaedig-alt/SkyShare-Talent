@@ -20,6 +20,8 @@ export type RecruitingJobListItem = {
 export type RecruitingJobDetail = RecruitingJobListItem & {
   recruiter: string | null;
   jobReqId: string | null;
+  /** Paycom's requisition number (3296). Their emails quote it; Jazz codes never match. */
+  paycomReqId: string | null;
   sourceFilename: string | null;
   paySummary: string | null;
   rawPayScale: string | null;
@@ -169,6 +171,7 @@ export async function getRecruitingJobsData(query = "", selectedId?: string): Pr
       ...toListItem(row),
       recruiter: row.recruiter,
       jobReqId: row.jobReqId,
+      paycomReqId: row.paycomReqId,
       sourceFilename: row.sourceFilename,
       paySummary: row.paySummary,
       rawPayScale: row.rawPayScale,
