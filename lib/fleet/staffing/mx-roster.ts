@@ -66,6 +66,7 @@ function normalizeSection(value: unknown): MxSection | null {
   const train = strArr(raw.train);
   const cand = strArr(raw.cand);
   const candInt = strArr(raw.candInt);
+  const offered = strArr(raw.offered);
   const openNamed = strArr(raw.openNamed);
   const open = nonNegInt(raw.open);
   const parked = nonNegInt(raw.parked);
@@ -73,6 +74,7 @@ function normalizeSection(value: unknown): MxSection | null {
   if (train.length) sec.train = train;
   if (cand.length) sec.cand = cand;
   if (candInt.length) sec.candInt = candInt;
+  if (offered.length) sec.offered = offered;
   if (openNamed.length) sec.openNamed = openNamed;
   if (open) sec.open = open;
   if (parked) sec.parked = parked;

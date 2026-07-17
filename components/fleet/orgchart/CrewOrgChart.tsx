@@ -15,7 +15,7 @@ type ParkedKey = "hide" | "show";
 
 // --- edit-mode roster mutation (pure, operate on a cloned draft) ------------
 type SeatKey = "pic" | "sic" | "cabin";
-type FillBucket = "line" | "train" | "cand" | "candInt";
+type FillBucket = "line" | "train" | "cand" | "candInt" | "offered";
 type MovePick = { gIdx: number; seatKey: SeatKey; bucket: FillBucket; name: string };
 
 const SEAT_LABEL: Record<SeatKey, string> = { pic: "Captain", sic: "First Officer", cabin: "Cabin" };
@@ -71,6 +71,7 @@ function ColBody({
   const rows: ReactNode[] = [];
   o.line.forEach((n, i) => rows.push(<PersonRow key={`l${i}`} name={n} cls="g" rp="On line" lead={n === leadName} tags={tags?.[n]} href={href(n)} />));
   o.train.forEach((n, i) => rows.push(<PersonRow key={`t${i}`} name={n} cls="t" rp="In training" tags={tags?.[n]} href={href(n)} />));
+  o.offered.forEach((n, i) => rows.push(<PersonRow key={`of${i}`} name={n} cls="of" rp="Offered" tags={tags?.[n]} href={href(n)} />));
   o.cand.forEach((n, i) => rows.push(<PersonRow key={`c${i}`} name={n} cls="r" rp="Tentative · external" tags={tags?.[n]} href={href(n)} />));
   o.candInt.forEach((n, i) => rows.push(<PersonRow key={`ci${i}`} name={n} cls="i" rp="Tentative · internal" tags={tags?.[n]} href={href(n)} />));
   for (let i = 0; i < o.open; i++) rows.push(<SlotRow key={`o${i}`} label="Open seat" cls="o" rp="Sourcing" />);
@@ -136,7 +137,7 @@ function EditCol({
   const [linkFor, setLinkFor] = useState<string | null>(null);
   const o = normSeat(group[seatKey]);
   const filled = o.line.length + o.train.length;
-  const total = filled + o.open + o.openNamed.length + o.cand.length + o.candInt.length;
+  const total = filled + o.open + o.openNamed.length + o.cand.length + o.candInt.length + o.offered.length;
 
   const row = (name: string, bucket: FillBucket, tone: string, tag?: string) => {
     const isMoving =
@@ -144,7 +145,7 @@ function EditCol({
     const linkedId = links[name];
     const isLinking = linkFor === name;
     return (
-      <div className="ec-row" key={`${bucket}-${name}`}>
+      <div className={`ec-row ${bucket === "offered" ? "of" : ""}`} key={`${bucket}-${name}`}>
         <div className="ec-line">
           <span className={`ec-dot ${tone}`} />
           <span className="ec-nm">
@@ -228,6 +229,7 @@ function EditCol({
             <select value={moveStatus} onChange={(e) => setMoveStatus(e.target.value as FillBucket)} aria-label="Arrival status">
               <option value="line">On line</option>
               <option value="train">In training</option>
+              <option value="offered">Offered</option>
               <option value="cand">Tentative · external</option>
               <option value="candInt">Tentative · internal</option>
             </select>
@@ -260,6 +262,7 @@ function EditCol({
       </div>
       {o.line.map((n) => row(n, "line", "g"))}
       {o.train.map((n) => row(n, "train", "t", "training"))}
+      {o.offered.map((n) => row(n, "offered", "of", "offered"))}
       {o.cand.map((n) => row(n, "cand", "r", "tentative"))}
       {o.candInt.map((n) => row(n, "candInt", "i", "internal"))}
       {o.openNamed.map((l, i) => (
@@ -289,6 +292,7 @@ function EditCol({
         <select value={draftBucket} onChange={(e) => setDraftBucket(e.target.value as FillBucket)} aria-label="How to add this person">
           <option value="line">On line</option>
           <option value="train">In training</option>
+          <option value="offered">Offered</option>
           <option value="cand">Tentative · external</option>
           <option value="candInt">Tentative · internal</option>
         </select>
@@ -306,6 +310,7 @@ function Transitions({ d }: { d: CrewGroup }) {
   [d.pic, d.sic, d.cabin].forEach((seat) => {
     if (!seat) return;
     (seat.train || []).forEach((n) => inn.push({ name: n, note: CREW_TRAINING[n] || "arriving · in training" }));
+    (seat.offered || []).forEach((n) => inn.push({ name: n, note: "offered" }));
     (seat.cand || []).forEach((n) => inn.push({ name: n, note: "tentative · external" }));
     (seat.candInt || []).forEach((n) => inn.push({ name: n, note: "tentative · internal" }));
   });
@@ -436,7 +441,9 @@ export default function CrewOrgChart({
         src.open = (src.open ?? 0) + 1;
       }
       const destGroup = d[toIdx];
-      const tentative = bucket === "cand" || bucket === "candInt";
+      // cand/candInt/offered are all "in progress" arrivals — not yet on the line —
+      // so the move is tentative and the old seat reopens.
+      const tentative = bucket === "cand" || bucket === "candInt" || bucket === "offered";
       // A tentative transfer is "in progress": record it as transitioning-out on
       // the source so the pilot shows leaving the old aircraft.
       if (tentative) {
@@ -630,10 +637,10 @@ export default function CrewOrgChart({
     const totFilled = g.cp.f + g.cp.tr + (g.cs ? g.cs.f + g.cs.tr : 0);
     const totTgt = g.cp.at + (g.cs ? g.cs.at : 0);
     const cabinCount = g.d.cabin ? cntSeat(normSeat(g.d.cabin)) : null;
-    // arrivals = in-training + tentative (external + internal) across the seats
+    // arrivals = in-training + offered + tentative (external + internal) across the seats
     const arrivals = (seat?: Seat | null) => {
       const s = normSeat(seat);
-      return s.train.length + s.cand.length + s.candInt.length;
+      return s.train.length + s.offered.length + s.cand.length + s.candInt.length;
     };
     const inN = arrivals(g.d.pic) + arrivals(g.d.sic) + arrivals(g.d.cabin);
     const outN = g.d.out ? g.d.out.length : 0;

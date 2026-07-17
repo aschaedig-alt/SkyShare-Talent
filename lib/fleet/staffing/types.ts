@@ -19,6 +19,10 @@ export interface Seat {
   /** Named tentative INTERNAL candidates — SkyShare employees tentatively moving
       into this seat. Counted like `cand` (pending), shown in light blue. */
   candInt?: string[];
+  /** Candidates we have actually extended an OFFER to — further along than a
+      tentative candidate, but not yet on staff. Counted like `cand` (pending,
+      open until they start), shown in gold with a hover glow. */
+  offered?: string[];
   /** Count of unfilled reqs with no name attached. */
   open?: number;
   /** Unfilled reqs that carry a label (e.g. "Ogden Team Lead"). */

@@ -12,6 +12,7 @@ export function SeatSquares({ seat, showParked }: { seat?: Seat | null; showPark
   let k = 0;
   o.line.forEach((n) => squares.push(<div key={k++} className="seat seat-f"><span>{initials(n)}</span></div>));
   o.train.forEach((n) => squares.push(<div key={k++} className="seat seat-t"><span>{initials(n)}</span></div>));
+  o.offered.forEach((n) => squares.push(<div key={k++} className="seat seat-of"><span>{initials(n)}</span></div>));
   o.cand.forEach((n) => squares.push(<div key={k++} className="seat seat-c"><span>{initials(n)}</span></div>));
   o.candInt.forEach((n) => squares.push(<div key={k++} className="seat seat-i"><span>{initials(n)}</span></div>));
   for (let i = 0; i < o.open; i++) squares.push(<div key={k++} className="seat seat-open" />);

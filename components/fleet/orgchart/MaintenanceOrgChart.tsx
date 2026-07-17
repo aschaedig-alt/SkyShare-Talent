@@ -13,14 +13,15 @@ import styles from "./OrgChart.module.css";
 type SortKey = "Team size" | "Open seats";
 
 // --- edit-mode helpers (a maintenance section is a Seat + label) ------------
-type FillBucket = "line" | "train" | "cand" | "candInt";
+type FillBucket = "line" | "train" | "cand" | "candInt" | "offered";
 const MX_STATUS: { value: FillBucket; label: string }[] = [
   { value: "line", label: "On staff" },
   { value: "train", label: "In training" },
   { value: "cand", label: "Candidate" },
-  { value: "candInt", label: "Candidate · internal" }
+  { value: "candInt", label: "Candidate · internal" },
+  { value: "offered", label: "Offered" }
 ];
-const MX_DOT: Record<FillBucket, string> = { line: "g", train: "t", cand: "r", candInt: "i" };
+const MX_DOT: Record<FillBucket, string> = { line: "g", train: "t", cand: "r", candInt: "i", offered: "of" };
 
 function pull(seat: Seat, bucket: FillBucket, name: string) {
   const arr = seat[bucket];
@@ -71,10 +72,11 @@ function MxEditSection({
   const [moveArrive, setMoveArrive] = useState<FillBucket>("cand");
   const o = normSeat(sec);
   const filled = o.line.length + o.train.length;
-  const total = filled + o.open + o.openNamed.length + o.cand.length + o.candInt.length;
+  const total = filled + o.open + o.openNamed.length + o.cand.length + o.candInt.length + o.offered.length;
   const rows: { name: string; bucket: FillBucket }[] = [
     ...o.line.map((n) => ({ name: n, bucket: "line" as FillBucket })),
     ...o.train.map((n) => ({ name: n, bucket: "train" as FillBucket })),
+    ...o.offered.map((n) => ({ name: n, bucket: "offered" as FillBucket })),
     ...o.cand.map((n) => ({ name: n, bucket: "cand" as FillBucket })),
     ...o.candInt.map((n) => ({ name: n, bucket: "candInt" as FillBucket }))
   ];
@@ -91,7 +93,7 @@ function MxEditSection({
         const isMove = action?.name === r.name && action.kind === "move";
         const isLink = action?.name === r.name && action.kind === "link";
         return (
-          <div className="ec-row" key={`${r.bucket}-${r.name}`}>
+          <div className={`ec-row ${r.bucket === "offered" ? "of" : ""}`} key={`${r.bucket}-${r.name}`}>
             <div className="ec-line">
               <span className={`ec-dot ${MX_DOT[r.bucket]}`} />
               <span className="ec-nm">
@@ -269,6 +271,7 @@ function SectionCol({ sec, links = {} }: { sec: MxSection; links?: Record<string
   const rows: ReactNode[] = [];
   o.line.forEach((n, i) => rows.push(<PersonRow key={`l${i}`} name={n} cls="g" rp="On staff" href={href(n)} />));
   o.train.forEach((n, i) => rows.push(<PersonRow key={`t${i}`} name={n} cls="t" rp="In training" href={href(n)} />));
+  o.offered.forEach((n, i) => rows.push(<PersonRow key={`of${i}`} name={n} cls="of" rp="Offered" href={href(n)} />));
   o.cand.forEach((n, i) => rows.push(<PersonRow key={`c${i}`} name={n} cls="r" rp="Candidate" href={href(n)} />));
   o.candInt.forEach((n, i) => rows.push(<PersonRow key={`ci${i}`} name={n} cls="i" rp="Candidate · internal" href={href(n)} />));
   o.openNamed.forEach((lbl, i) => rows.push(<SlotRow key={`on${i}`} label={lbl} cls="o" rp="To fill" />));
@@ -291,6 +294,7 @@ function Pipeline({ d }: { d: MxGroup }) {
   const open: { name: string; note: string }[] = [];
   d.sections.forEach((sec) => {
     const shift = sec.label.split("·")[0].trim();
+    (sec.offered || []).forEach((n) => inn.push({ name: n, note: `${shift} · offered` }));
     (sec.cand || []).forEach((n) => inn.push({ name: n, note: `${shift} · candidate` }));
     (sec.train || []).forEach((n) => inn.push({ name: n, note: `${shift} · in training` }));
     (sec.openNamed || []).forEach((lbl) => open.push({ name: lbl, note: "to fill" }));

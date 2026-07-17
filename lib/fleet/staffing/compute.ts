@@ -5,6 +5,7 @@ export interface NormSeat {
   train: string[];
   cand: string[];
   candInt: string[];
+  offered: string[];
   open: number;
   openNamed: string[];
   parked: number;
@@ -30,6 +31,7 @@ export function normSeat(o?: Seat | null): NormSeat {
     train: s.train || [],
     cand: s.cand || [],
     candInt: s.candInt || [],
+    offered: s.offered || [],
     open: s.open || 0,
     openNamed: s.openNamed || [],
     parked: s.parked || 0
@@ -37,15 +39,17 @@ export function normSeat(o?: Seat | null): NormSeat {
 }
 
 export function cntSeat(o: NormSeat): SeatCount {
-  // Tentative candidates (external `cand` + internal `candInt`) count as pending/
-  // open until confirmed — same as a bare open req, just named.
-  const open = o.open + o.openNamed.length + o.cand.length + o.candInt.length;
+  // Tentative candidates (external `cand` + internal `candInt`) AND offered
+  // candidates count as pending/open until they start — same as a bare open req,
+  // just named. Offered is further along than tentative but still not on staff.
+  const pending = o.cand.length + o.candInt.length + o.offered.length;
+  const open = o.open + o.openNamed.length + pending;
   return {
     f: o.line.length,
     tr: o.train.length,
     o: open,
     p: o.parked,
-    at: o.line.length + o.train.length + o.open + o.openNamed.length + o.cand.length + o.candInt.length
+    at: o.line.length + o.train.length + o.open + o.openNamed.length + pending
   };
 }
 
