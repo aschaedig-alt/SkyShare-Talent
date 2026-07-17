@@ -370,6 +370,21 @@ export default function CrewOrgChart({
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [movePick, setMovePick] = useState<MovePick | null>(null);
+  // When a person LINKED to an employee is moved, we offer to record the matching
+  // role change on their journey. Null unless that offer is open.
+  const [rolePrompt, setRolePrompt] = useState<{
+    name: string;
+    hireId: string;
+    currentTitle: string | null;
+    seat: "PIC" | "SIC" | null;
+    aircraft: string;
+  } | null>(null);
+  const [roleTitle, setRoleTitle] = useState("");
+  const [roleDate, setRoleDate] = useState("");
+  const [roleType, setRoleType] = useState("TRANSFER");
+  const [roleBusy, setRoleBusy] = useState(false);
+  const [roleErr, setRoleErr] = useState<string | null>(null);
+  const [roleDone, setRoleDone] = useState<string | null>(null);
 
   const dirty = useMemo(
     () => JSON.stringify(groupsData) !== JSON.stringify(savedGroups) || JSON.stringify(links) !== JSON.stringify(savedLinks),
@@ -461,6 +476,73 @@ export default function CrewOrgChart({
       }
     });
     setMovePick(null);
+    // If this pilot is linked to an employee, offer to record the move as a role
+    // change on their journey. The chart move and the journey are separate records,
+    // so this keeps them in sync — with a confirmation, never automatically.
+    void offerRoleChange(from.name, toIdx, toSeat);
+  };
+
+  // Look up whether the moved person is a linked employee; if so, open the offer.
+  const offerRoleChange = async (name: string, toIdx: number, toSeat: SeatKey) => {
+    const candidateId = links[name];
+    if (!candidateId) return;
+    try {
+      const res = await fetch(`/api/candidates/${candidateId}/employee`);
+      const data = (await res.json().catch(() => ({}))) as {
+        employee?: { hireId: string; name: string; currentTitle: string | null } | null;
+      };
+      if (!data.employee) return;
+      const aircraft = groupsData[toIdx]?.name ?? "";
+      const seatWord = toSeat === "pic" ? "Captain" : toSeat === "sic" ? "First Officer" : "Cabin Attendant";
+      setRoleTitle(`${aircraft} ${seatWord}`.trim());
+      setRoleDate("");
+      setRoleType("TRANSFER");
+      setRoleErr(null);
+      setRolePrompt({
+        name,
+        hireId: data.employee.hireId,
+        currentTitle: data.employee.currentTitle,
+        seat: toSeat === "pic" ? "PIC" : toSeat === "sic" ? "SIC" : null,
+        aircraft
+      });
+    } catch {
+      /* the chart move still stands; we just don't offer the role change */
+    }
+  };
+
+  const recordRoleChange = async () => {
+    if (!rolePrompt) return;
+    if (!roleTitle.trim()) {
+      setRoleErr("Give the new role a title.");
+      return;
+    }
+    if (!roleDate) {
+      setRoleErr("Pick the date this takes effect.");
+      return;
+    }
+    setRoleBusy(true);
+    setRoleErr(null);
+    try {
+      const res = await fetch(`/api/new-hires/${rolePrompt.hireId}/roles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: roleTitle.trim(),
+          startDate: roleDate,
+          transitionType: roleType,
+          seat: rolePrompt.seat,
+          aircraft: rolePrompt.aircraft
+        })
+      });
+      const data = (await res.json().catch(() => ({}))) as { message?: string };
+      if (!res.ok) throw new Error(data.message ?? "Could not record the role change.");
+      setRoleDone(`Recorded ${rolePrompt.name}: now ${roleTitle.trim()}.`);
+      setRolePrompt(null);
+    } catch (e) {
+      setRoleErr(e instanceof Error ? e.message : "Could not record the role change.");
+    } finally {
+      setRoleBusy(false);
+    }
   };
   const removeOut = (gIdx: number, index: number) =>
     applyEdit((d) => {
@@ -1084,6 +1166,82 @@ export default function CrewOrgChart({
           </>
         ) : null}
       </div>
+
+      {roleDone && (
+        <div style={{ position: "fixed", left: "50%", bottom: 20, transform: "translateX(-50%)", zIndex: 80, background: "var(--navy, #0d2c43)", color: "#fff", padding: "10px 16px", borderRadius: 6, fontSize: 13, boxShadow: "0 8px 24px rgba(0,0,0,.25)", display: "flex", gap: 12, alignItems: "center" }}>
+          <span>{roleDone}</span>
+          <button onClick={() => setRoleDone(null)} style={{ color: "#fff", opacity: 0.8, background: "none", border: "none", cursor: "pointer", fontSize: 13 }}>
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {rolePrompt && (
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 78, background: "rgba(13,44,67,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          onClick={() => setRolePrompt(null)}
+        >
+          <div
+            style={{ width: "100%", maxWidth: 380, background: "var(--card, #fff)", color: "var(--ink, #1a2b3c)", borderRadius: 8, padding: 20, boxShadow: "0 12px 40px rgba(0,0,0,.3)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 15, fontWeight: 700 }}>Record this move on {rolePrompt.name}&apos;s journey?</div>
+            <div style={{ fontSize: 12.5, opacity: 0.8, marginTop: 4 }}>
+              {rolePrompt.name} is linked to an employee — this adds a role change to their journey. The chart move alone does not.
+            </div>
+            <div style={{ fontSize: 13, margin: "10px 0", fontWeight: 600 }}>
+              {rolePrompt.currentTitle ?? "Current role"} → {roleTitle || "…"}
+            </div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.7 }}>New role title</label>
+            <input
+              value={roleTitle}
+              onChange={(e) => setRoleTitle(e.target.value)}
+              style={{ width: "100%", marginTop: 3, marginBottom: 8, padding: "6px 8px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)", fontSize: 13 }}
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <label style={{ flex: 1 }}>
+                <span style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.7 }}>Effective date</span>
+                <input
+                  type="date"
+                  value={roleDate}
+                  onChange={(e) => setRoleDate(e.target.value)}
+                  style={{ width: "100%", marginTop: 3, padding: "6px 8px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)", fontSize: 13 }}
+                />
+              </label>
+              <label style={{ flex: 1 }}>
+                <span style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.7 }}>Transition</span>
+                <select
+                  value={roleType}
+                  onChange={(e) => setRoleType(e.target.value)}
+                  style={{ width: "100%", marginTop: 3, padding: "6px 8px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)", fontSize: 13 }}
+                >
+                  <option value="TRANSFER">Transfer</option>
+                  <option value="LATERAL">Lateral move</option>
+                  <option value="PROMOTION">Promotion</option>
+                  <option value="UPGRADE">Upgrade (→ Captain)</option>
+                </select>
+              </label>
+            </div>
+            {roleErr && <div style={{ color: "#c0392b", fontSize: 12, marginTop: 8 }}>{roleErr}</div>}
+            <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+              <button
+                onClick={() => void recordRoleChange()}
+                disabled={roleBusy}
+                style={{ background: "var(--navy, #0d2c43)", color: "#fff", border: "none", borderRadius: 4, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: roleBusy ? 0.6 : 1 }}
+              >
+                {roleBusy ? "Recording…" : "Record role change"}
+              </button>
+              <button
+                onClick={() => setRolePrompt(null)}
+                disabled={roleBusy}
+                style={{ background: "none", border: "none", color: "var(--ink, #1a2b3c)", opacity: 0.7, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
