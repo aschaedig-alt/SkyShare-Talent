@@ -20,18 +20,29 @@ function JobCard({ job, selectedId, onSelect }: { job: Job; selectedId: string |
         isSelected
           ? "border-brand-gold bg-brand-sweet/18 dark:bg-brand-sweet/25"
           : "border-brand-lea/10 bg-white hover:border-brand-sweet hover:bg-brand-cloudDancer/65 dark:border-white/10 dark:bg-brand-panel"
-      }`}
+      } ${job.isActive ? "" : "opacity-60"}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="break-words text-sm font-semibold text-brand-lea dark:text-slate-100">{job.title}</div>
           <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">
-            {[job.department, job.status, locationLabel(job)].filter(Boolean).join(" - ")}
+            {[job.department, locationLabel(job)].filter(Boolean).join(" - ")}
           </div>
         </div>
-        <span className="shrink-0 rounded border border-brand-sweet/50 bg-brand-sweet/20 px-2 py-0.5 text-[10px] font-bold text-brand-lea dark:text-slate-100">
-          {job.isPilotRole ? "Pilot" : "Support"}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span
+            className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+              job.isActive
+                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300"
+                : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400"
+            }`}
+          >
+            {job.isActive ? "Active" : "Inactive"}
+          </span>
+          <span className="rounded border border-brand-sweet/50 bg-brand-sweet/20 px-2 py-0.5 text-[10px] font-bold text-brand-lea dark:text-slate-100">
+            {job.isPilotRole ? "Pilot" : "Support"}
+          </span>
+        </div>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
         <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/60 p-2 dark:border-white/10 dark:bg-white/5">
@@ -117,6 +128,13 @@ export function JobListsPanel({
 }) {
   const [openPilot, setOpenPilot] = useState(true);
   const [openSupport, setOpenSupport] = useState(true);
+  // Off by default so nothing vanishes unexpectedly; on when you want to focus
+  // only on the roles you are actively hiring for.
+  const [hideInactive, setHideInactive] = useState(false);
+
+  const filteredPilot = hideInactive ? pilotJobs.filter((j) => j.isActive) : pilotJobs;
+  const filteredSupport = hideInactive ? supportJobs.filter((j) => j.isActive) : supportJobs;
+  const inactiveCount = pilotJobs.filter((j) => !j.isActive).length + supportJobs.filter((j) => !j.isActive).length;
 
   // Never let both collapse — keep at least one open so the panel isn't empty.
   function toggle(which: "pilot" | "support") {
@@ -131,10 +149,21 @@ export function JobListsPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
+      {inactiveCount > 0 && (
+        <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs text-brand-grey dark:text-slate-400">
+          <input
+            type="checkbox"
+            checked={hideInactive}
+            onChange={(e) => setHideInactive(e.target.checked)}
+            className="h-3.5 w-3.5 rounded border-brand-lea/30 accent-brand-lea"
+          />
+          Hide inactive ({inactiveCount})
+        </label>
+      )}
       <CollapsibleList
         title="Pilot jobs"
         Icon={Plane}
-        jobs={pilotJobs}
+        jobs={filteredPilot}
         selectedId={selectedId}
         onSelect={onSelect}
         emptyText="No pilot jobs match the current search."
@@ -144,7 +173,7 @@ export function JobListsPanel({
       <CollapsibleList
         title="Support jobs"
         Icon={Wrench}
-        jobs={supportJobs}
+        jobs={filteredSupport}
         selectedId={selectedId}
         onSelect={onSelect}
         emptyText="No support jobs match the current search."

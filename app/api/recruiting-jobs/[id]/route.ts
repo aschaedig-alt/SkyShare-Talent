@@ -21,11 +21,29 @@ export async function PATCH(request: Request, context: RouteContext) {
       pilotSeat?: string | null;
       aircraftTypes?: string[];
       paycomReqId?: string | null;
+      status?: string;
     };
 
     const job = await prisma.job.findUnique({ where: { id } });
     if (!job) {
       return NextResponse.json({ message: "Job not found." }, { status: 404 });
+    }
+
+    // Active/inactive is just the status. Handled on its own and returns early for
+    // the same reason as paycomReqId below: the rest of this endpoint is
+    // classification and sets isPilotRole = true, so routing a status change
+    // through it would flip a support job to pilot as a side effect.
+    if (body.status !== undefined) {
+      const STATUSES = ["OPEN", "FILLED", "RETIRED"];
+      if (!STATUSES.includes(body.status)) {
+        return NextResponse.json({ message: "Unknown job status." }, { status: 400 });
+      }
+      await prisma.job.update({ where: { id }, data: { status: body.status } });
+      const alsoClassifying =
+        body.isPilotRole !== undefined || body.pilotSeat !== undefined || body.aircraftTypes !== undefined;
+      if (!alsoClassifying && body.paycomReqId === undefined) {
+        return NextResponse.json({ ok: true, status: body.status });
+      }
     }
 
     // Paycom's requisition number (3296) is plain metadata, not classification, so

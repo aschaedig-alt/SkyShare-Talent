@@ -10,6 +10,7 @@ import { EditableGrid, type EditablePanel, type GridItem } from "@/components/sh
 import { AddCandidateToJob } from "@/components/recruiting-jobs/AddCandidateToJob";
 import { NewJobButton } from "@/components/recruiting-jobs/NewJobButton";
 import { PaycomReqField } from "@/components/recruiting-jobs/PaycomReqField";
+import { JobActiveToggle } from "@/components/recruiting-jobs/JobActiveToggle";
 import { ResumeIntake } from "@/components/candidates/ResumeIntake";
 import { DocumentIntake } from "@/components/candidates/DocumentIntake";
 import type { WidgetInstance } from "@/lib/data/page-layout";
@@ -93,8 +94,9 @@ function JobDetailHeader({ job, canEdit }: { job: RecruitingJobDetail; canEdit?:
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Job detail</p>
           <h2 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">{job.title}</h2>
           <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-            {[job.department, job.status, locationLabel(job)].filter(Boolean).join(" - ")}
+            {[job.department, locationLabel(job)].filter(Boolean).join(" - ")}
           </p>
+          <JobActiveToggle key={`active-${job.id}`} jobId={job.id} status={job.status} canEdit={canEdit} />
           <JobClassificationEditor
             key={job.id}
             jobId={job.id}

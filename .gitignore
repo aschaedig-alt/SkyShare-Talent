@@ -12,3 +12,6 @@ storage/
 .vercel
 
 .env*
+
+# Local run-state from one-off maintenance scripts (undo records, review files)
+scripts/_*_output/

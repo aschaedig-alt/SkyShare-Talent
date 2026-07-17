@@ -7,6 +7,8 @@ export type RecruitingJobListItem = {
   title: string;
   department: string | null;
   status: string;
+  /** Active = OPEN (hiring). Inactive = anything else (RETIRED/FILLED). Drives active-first sort + the toggle. */
+  isActive: boolean;
   city: string | null;
   state: string | null;
   pilotSeat: string | null;
@@ -84,6 +86,7 @@ function toListItem(job: {
     title: canonicalTitle(job.title),
     department: job.department,
     status: job.status,
+    isActive: job.status === "OPEN",
     city: job.city,
     state: job.state,
     pilotSeat: job.pilotSeat,
@@ -157,6 +160,9 @@ export async function getRecruitingJobsData(query = "", selectedId?: string): Pr
   ]);
 
   const listItems = rows.map(toListItem);
+  // Active (OPEN) jobs first. Stable sort, so the DB's isPilotRole/department/title
+  // order is preserved within the active and inactive groups (Node's sort is stable).
+  listItems.sort((a, b) => (a.isActive === b.isActive ? 0 : a.isActive ? -1 : 1));
   const jobs = listItems.filter((job) => matchesSearch(job, query));
   const selectedRow =
     rows.find((job) => job.id === selectedId) ??
