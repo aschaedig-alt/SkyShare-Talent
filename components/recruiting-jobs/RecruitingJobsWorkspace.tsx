@@ -8,6 +8,7 @@ import { JobClassificationEditor } from "@/components/recruiting-jobs/JobClassif
 import { JobListsPanel } from "@/components/recruiting-jobs/JobListsPanel";
 import { EditableGrid, type EditablePanel, type GridItem } from "@/components/shared/EditableGrid";
 import { AddCandidateToJob } from "@/components/recruiting-jobs/AddCandidateToJob";
+import { NewJobButton } from "@/components/recruiting-jobs/NewJobButton";
 import { ResumeIntake } from "@/components/candidates/ResumeIntake";
 import { DocumentIntake } from "@/components/candidates/DocumentIntake";
 import type { WidgetInstance } from "@/lib/data/page-layout";
@@ -45,13 +46,13 @@ function locationLabel(job: { city: string | null; state: string | null }) {
   return [job.city, job.state].filter(Boolean).join(", ") || "No base";
 }
 
-function HeaderPanel({ query }: { query: string }) {
+function HeaderPanel({ query, canEdit }: { query: string; canEdit?: boolean }) {
   return (
     <section className="flex h-full flex-col rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Role operations</p>
       <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Jobs</h1>
       <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-        Imported role records, linked pilot requirements, and candidate coverage. Publishing workflows remain in Job Builder.
+        Role records, linked pilot requirements, and candidate coverage. Publishing workflows remain in Job Builder.
       </p>
       <form className="mt-3 flex w-full gap-2">
         <input
@@ -62,6 +63,7 @@ function HeaderPanel({ query }: { query: string }) {
         />
         <Button type="submit">Search</Button>
       </form>
+      {canEdit && <NewJobButton />}
     </section>
   );
 }
@@ -253,7 +255,7 @@ export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLay
   // made the grid collapse the panels on top of each other.
   const panels: EditablePanel[] = useMemo(
     () => [
-      { id: "rjobs-header", title: "Role operations", node: <HeaderPanel query={query} /> },
+      { id: "rjobs-header", title: "Role operations", node: <HeaderPanel query={query} canEdit={canEdit} /> },
       { id: "rjobs-stats", title: "Job statistics", node: <StatsPanel stats={data.stats} /> },
       {
         id: "rjobs-jobs-list",
@@ -265,7 +267,7 @@ export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLay
       { id: "rjobs-linked-reqs", title: "Linked requirements", node: job ? <LinkedRequirements job={job} /> : <EmptyDetail title="Linked requirements" /> },
       { id: "rjobs-source", title: "Source record", node: job ? <SourceRecord job={job} /> : <EmptyDetail title="Source record" /> }
     ],
-    [job, selectedId, query, pilotJobs, supportJobs, data.stats]
+    [job, selectedId, query, pilotJobs, supportJobs, data.stats, canEdit]
   );
 
   return (
