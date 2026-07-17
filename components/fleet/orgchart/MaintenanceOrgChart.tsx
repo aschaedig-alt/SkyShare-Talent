@@ -34,6 +34,94 @@ function push(seat: Seat, bucket: FillBucket, name: string) {
   if (!arr.includes(name)) arr.push(name);
 }
 
+type MoveDest = { gIdx: number; sIdx: number; label: string };
+type MxCandidate = { id: string; displayName: string; currentTitle: string | null; stage: string | null };
+
+const linkBtnStyle: React.CSSProperties = {
+  fontSize: 10,
+  fontWeight: 700,
+  padding: "1px 6px",
+  borderRadius: 4,
+  border: "1px solid var(--line, #cdd7e2)",
+  background: "transparent",
+  cursor: "pointer",
+  whiteSpace: "nowrap"
+};
+
+/** Search for a candidate to point a chart name at. Module-scoped so its search
+    box keeps focus while typing. Pre-seeded with the chart name, though it often
+    will not match (chart "Augustin" vs profile "Auggie") — so a last-name search
+    is the reliable move. */
+function LinkPicker({
+  initialQuery,
+  onPick,
+  onCancel
+}: {
+  initialQuery: string;
+  onPick: (candidateId: string, displayName: string) => void;
+  onCancel: () => void;
+}) {
+  const [q, setQ] = useState(initialQuery);
+  const [results, setResults] = useState<MxCandidate[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    const t = setTimeout(async () => {
+      if (q.trim().length < 2) {
+        setResults([]);
+        return;
+      }
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/candidates?q=${encodeURIComponent(q.trim())}`);
+        const data = (await res.json()) as { candidates?: MxCandidate[] };
+        if (alive) setResults(data.candidates ?? []);
+      } catch {
+        if (alive) setResults([]);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    }, 250);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [q]);
+
+  return (
+    <div style={{ marginTop: 4, padding: 6, border: "1px solid var(--line, #cdd7e2)", borderRadius: 6, background: "var(--card, #fff)" }}>
+      <input
+        autoFocus
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Search candidates by name…"
+        style={{ width: "100%", fontSize: 12, padding: "3px 6px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)" }}
+      />
+      <div style={{ maxHeight: 160, overflowY: "auto", marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
+        {loading ? <div style={{ fontSize: 11, opacity: 0.6, padding: 4 }}>Searching…</div> : null}
+        {!loading && q.trim().length >= 2 && results.length === 0 ? (
+          <div style={{ fontSize: 11, opacity: 0.6, padding: 4 }}>No matches — try a last name.</div>
+        ) : null}
+        {results.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => onPick(c.id, c.displayName)}
+            style={{ textAlign: "left", fontSize: 12, padding: "3px 6px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)", background: "transparent", cursor: "pointer" }}
+          >
+            <b>{c.displayName}</b>
+            {c.currentTitle ? <span style={{ opacity: 0.7 }}> · {c.currentTitle}</span> : null}
+          </button>
+        ))}
+      </div>
+      <button type="button" onClick={onCancel} style={{ ...linkBtnStyle, marginTop: 4 }}>
+        Cancel
+      </button>
+    </div>
+  );
+}
+
 /** One editable maintenance section in the edit-mode modal. Module-scoped so the
     "add name" input keeps focus across the parent's re-renders. */
 function MxEditSection({
@@ -41,16 +129,31 @@ function MxEditSection({
   onAdd,
   onRemove,
   onSetStatus,
-  onAdjustOpen
+  onAdjustOpen,
+  moveDests,
+  onMove,
+  links,
+  onLink,
+  onUnlink
 }: {
   sec: MxSection;
   onAdd: (name: string, bucket: FillBucket) => void;
   onRemove: (bucket: FillBucket, name: string) => void;
   onSetStatus: (from: FillBucket, to: FillBucket, name: string) => void;
   onAdjustOpen: (delta: number) => void;
+  /** Every other section this person could move to. */
+  moveDests: MoveDest[];
+  onMove: (bucket: FillBucket, name: string, dest: { gIdx: number; sIdx: number }, arrive: FillBucket) => void;
+  links: Record<string, string>;
+  onLink: (name: string, candidateId: string) => void;
+  onUnlink: (name: string) => void;
 }) {
   const [draftName, setDraftName] = useState("");
   const [draftBucket, setDraftBucket] = useState<FillBucket>("cand");
+  // Which person has an action panel open, and which one.
+  const [action, setAction] = useState<{ name: string; kind: "move" | "link" } | null>(null);
+  const [moveDest, setMoveDest] = useState("");
+  const [moveArrive, setMoveArrive] = useState<FillBucket>("cand");
   const o = normSeat(sec);
   const filled = o.line.length + o.train.length;
   const total = filled + o.open + o.openNamed.length + o.cand.length + o.candInt.length;
@@ -68,31 +171,126 @@ function MxEditSection({
           {filled}/{total}
         </span>
       </div>
-      {rows.map((r) => (
-        <div className="ec-row" key={`${r.bucket}-${r.name}`}>
-          <div className="ec-line">
-            <span className={`ec-dot ${MX_DOT[r.bucket]}`} />
-            <span className="ec-nm">{r.name}</span>
-            <span className="ec-act">
-              <select
-                className="ec-status"
-                value={r.bucket}
-                onChange={(e) => onSetStatus(r.bucket, e.target.value as FillBucket, r.name)}
-                aria-label={`Status for ${r.name}`}
-              >
-                {MX_STATUS.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-              <button type="button" className="del" onClick={() => onRemove(r.bucket, r.name)} title="Remove">
-                ✕
-              </button>
-            </span>
+      {rows.map((r) => {
+        const linkedId = links[r.name];
+        const isMove = action?.name === r.name && action.kind === "move";
+        const isLink = action?.name === r.name && action.kind === "link";
+        return (
+          <div className="ec-row" key={`${r.bucket}-${r.name}`}>
+            <div className="ec-line">
+              <span className={`ec-dot ${MX_DOT[r.bucket]}`} />
+              <span className="ec-nm">
+                {linkedId ? (
+                  <Link href={`/candidates/${linkedId}`} style={{ color: "inherit", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                    {r.name}
+                  </Link>
+                ) : (
+                  r.name
+                )}
+              </span>
+              <span className="ec-act">
+                <select
+                  className="ec-status"
+                  value={r.bucket}
+                  onChange={(e) => onSetStatus(r.bucket, e.target.value as FillBucket, r.name)}
+                  aria-label={`Status for ${r.name}`}
+                >
+                  {MX_STATUS.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+                {moveDests.length > 0 && (
+                  <button
+                    type="button"
+                    style={linkBtnStyle}
+                    title="Move to another location"
+                    onClick={() => {
+                      setMoveDest("");
+                      setMoveArrive(r.bucket);
+                      setAction(isMove ? null : { name: r.name, kind: "move" });
+                    }}
+                  >
+                    move
+                  </button>
+                )}
+                <button
+                  type="button"
+                  style={{ ...linkBtnStyle, borderColor: linkedId ? "var(--green, #2e7d32)" : undefined, color: linkedId ? "var(--green, #2e7d32)" : undefined }}
+                  title={linkedId ? "Linked to a candidate profile" : "Link to a candidate profile"}
+                  onClick={() => setAction(isLink ? null : { name: r.name, kind: "link" })}
+                >
+                  {linkedId ? "linked" : "link"}
+                </button>
+                <button type="button" className="del" onClick={() => onRemove(r.bucket, r.name)} title="Remove">
+                  ✕
+                </button>
+              </span>
+            </div>
+
+            {isMove && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4, alignItems: "center" }}>
+                <select
+                  value={moveDest}
+                  onChange={(e) => setMoveDest(e.target.value)}
+                  aria-label={`Move ${r.name} to`}
+                  style={{ fontSize: 11, padding: "2px 4px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)" }}
+                >
+                  <option value="">Move to…</option>
+                  {moveDests.map((d) => (
+                    <option key={`${d.gIdx}|${d.sIdx}`} value={`${d.gIdx}|${d.sIdx}`}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={moveArrive}
+                  onChange={(e) => setMoveArrive(e.target.value as FillBucket)}
+                  aria-label="Arrival status"
+                  style={{ fontSize: 11, padding: "2px 4px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)" }}
+                >
+                  {MX_STATUS.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  style={linkBtnStyle}
+                  disabled={!moveDest}
+                  onClick={() => {
+                    const [gi, si] = moveDest.split("|");
+                    onMove(r.bucket, r.name, { gIdx: Number(gi), sIdx: Number(si) }, moveArrive);
+                    setAction(null);
+                  }}
+                >
+                  Move
+                </button>
+              </div>
+            )}
+
+            {isLink && (
+              <div style={{ marginTop: 4 }}>
+                {linkedId && (
+                  <button type="button" style={{ ...linkBtnStyle, marginBottom: 4 }} onClick={() => { onUnlink(r.name); setAction(null); }}>
+                    Unlink from current candidate
+                  </button>
+                )}
+                <LinkPicker
+                  initialQuery={r.name}
+                  onPick={(candidateId) => {
+                    onLink(r.name, candidateId);
+                    setAction(null);
+                  }}
+                  onCancel={() => setAction(null)}
+                />
+              </div>
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
       {o.openNamed.map((l, i) => (
         <div className="ec-named" key={`on${i}`}>
           {l} · <span>named opening</span>
@@ -149,14 +347,15 @@ function groupTotals(d: MxGroup) {
   return { f, tr, o, at, p };
 }
 
-function SectionCol({ sec }: { sec: MxSection }) {
+function SectionCol({ sec, links = {} }: { sec: MxSection; links?: Record<string, string> }) {
   const o = normSeat(sec);
   const c = cntSeat(o);
+  const href = (n: string) => (links[n] ? `/candidates/${links[n]}` : undefined);
   const rows: ReactNode[] = [];
-  o.line.forEach((n, i) => rows.push(<PersonRow key={`l${i}`} name={n} cls="g" rp="On staff" />));
-  o.train.forEach((n, i) => rows.push(<PersonRow key={`t${i}`} name={n} cls="t" rp="In training" />));
-  o.cand.forEach((n, i) => rows.push(<PersonRow key={`c${i}`} name={n} cls="r" rp="Candidate" />));
-  o.candInt.forEach((n, i) => rows.push(<PersonRow key={`ci${i}`} name={n} cls="i" rp="Candidate · internal" />));
+  o.line.forEach((n, i) => rows.push(<PersonRow key={`l${i}`} name={n} cls="g" rp="On staff" href={href(n)} />));
+  o.train.forEach((n, i) => rows.push(<PersonRow key={`t${i}`} name={n} cls="t" rp="In training" href={href(n)} />));
+  o.cand.forEach((n, i) => rows.push(<PersonRow key={`c${i}`} name={n} cls="r" rp="Candidate" href={href(n)} />));
+  o.candInt.forEach((n, i) => rows.push(<PersonRow key={`ci${i}`} name={n} cls="i" rp="Candidate · internal" href={href(n)} />));
   o.openNamed.forEach((lbl, i) => rows.push(<SlotRow key={`on${i}`} label={lbl} cls="o" rp="To fill" />));
   for (let i = 0; i < o.open; i++) rows.push(<SlotRow key={`o${i}`} label="Open position" cls="o" rp="Sourcing" />);
   return (
@@ -212,9 +411,11 @@ function Pipeline({ d }: { d: MxGroup }) {
 
 export default function MaintenanceOrgChart({
   initialGroups,
+  initialLinks,
   canEdit = false
 }: {
   initialGroups?: MxGroup[];
+  initialLinks?: Record<string, string>;
   canEdit?: boolean;
 } = {}) {
   const [sort, setSort] = useState<SortKey>("Team size");
@@ -223,11 +424,17 @@ export default function MaintenanceOrgChart({
 
   const [mxData, setMxData] = useState<MxGroup[]>(() => initialGroups ?? []);
   const [savedGroups, setSavedGroups] = useState<MxGroup[]>(() => initialGroups ?? []);
+  // name -> candidateId, edited alongside the roster and saved with it.
+  const [links, setLinks] = useState<Record<string, string>>(() => initialLinks ?? {});
+  const [savedLinks, setSavedLinks] = useState<Record<string, string>>(() => initialLinks ?? {});
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState<string | null>(null);
 
-  const dirty = useMemo(() => JSON.stringify(mxData) !== JSON.stringify(savedGroups), [mxData, savedGroups]);
+  const dirty = useMemo(
+    () => JSON.stringify(mxData) !== JSON.stringify(savedGroups) || JSON.stringify(links) !== JSON.stringify(savedLinks),
+    [mxData, savedGroups, links, savedLinks]
+  );
 
   const applyEdit = (fn: (draft: MxGroup[]) => void) =>
     setMxData((prev) => {
@@ -274,6 +481,51 @@ export default function MaintenanceOrgChart({
       else s.open = n;
     });
 
+  // Move a person from one section to another: pull them from the source (which
+  // reopens the seat they left, a backfill req), and drop them into the
+  // destination bucket (consuming an open seat there if one exists). This is the
+  // maintenance equivalent of the pilot chart's cross-aircraft move.
+  const movePerson = (
+    fromGIdx: number,
+    fromSIdx: number,
+    fromBucket: FillBucket,
+    name: string,
+    dest: { gIdx: number; sIdx: number },
+    arrive: FillBucket
+  ) =>
+    applyEdit((d) => {
+      const src = sectionOf(d, fromGIdx, fromSIdx);
+      pull(src, fromBucket, name);
+      src.open = (src.open ?? 0) + 1;
+      const dst = sectionOf(d, dest.gIdx, dest.sIdx);
+      push(dst, arrive, name);
+      if ((dst.open ?? 0) > 0) {
+        const n = (dst.open ?? 0) - 1;
+        if (n === 0) delete dst.open;
+        else dst.open = n;
+      }
+    });
+
+  // Every section a person could move TO, excluding the one they are in.
+  const moveDestsExcluding = (gIdx: number, sIdx: number): MoveDest[] => {
+    const out: MoveDest[] = [];
+    mxData.forEach((g, gi) =>
+      g.sections.forEach((s, si) => {
+        if (gi === gIdx && si === sIdx) return;
+        out.push({ gIdx: gi, sIdx: si, label: `${g.name} · ${s.label}` });
+      })
+    );
+    return out;
+  };
+
+  const linkPerson = (name: string, candidateId: string) => setLinks((prev) => ({ ...prev, [name]: candidateId }));
+  const unlinkPerson = (name: string) =>
+    setLinks((prev) => {
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+
   const postRoster = async (body: unknown) => {
     setSaving(true);
     setSaveErr(null);
@@ -284,22 +536,26 @@ export default function MaintenanceOrgChart({
         body: JSON.stringify(body)
       });
       if (!res.ok) throw new Error(String(res.status));
-      const data = (await res.json()) as { groups: MxGroup[] };
+      const data = (await res.json()) as { groups: MxGroup[]; links?: Record<string, string> };
       setMxData(data.groups);
       setSavedGroups(data.groups);
+      const nextLinks = data.links ?? {};
+      setLinks(nextLinks);
+      setSavedLinks(nextLinks);
     } catch {
       setSaveErr("Couldn't save — check your connection or that you're signed in as an admin.");
     } finally {
       setSaving(false);
     }
   };
-  const save = () => postRoster({ groups: mxData });
+  const save = () => postRoster({ groups: mxData, links });
   const resetSeed = () => {
     if (typeof window !== "undefined" && !window.confirm("Reset the maintenance chart to the original source data? This discards all saved manual edits.")) return;
     postRoster({ reset: true });
   };
   const exitEdit = () => {
     setMxData(savedGroups);
+    setLinks(savedLinks);
     setSaveErr(null);
     setEditMode(false);
   };
@@ -633,6 +889,11 @@ export default function MaintenanceOrgChart({
                       onRemove={(bucket, name) => removePerson(openIdx as number, i, bucket, name)}
                       onSetStatus={(from, to, name) => setStatus(openIdx as number, i, from, to, name)}
                       onAdjustOpen={(delta) => adjustOpen(openIdx as number, i, delta)}
+                      moveDests={moveDestsExcluding(openIdx as number, i)}
+                      onMove={(bucket, name, dest, arrive) => movePerson(openIdx as number, i, bucket, name, dest, arrive)}
+                      links={links}
+                      onLink={linkPerson}
+                      onUnlink={unlinkPerson}
                     />
                   ))}
                 </div>
@@ -644,7 +905,7 @@ export default function MaintenanceOrgChart({
               <>
                 <div className="m-cols">
                   {active.sections.map((sec, i) => (
-                    <SectionCol key={i} sec={sec} />
+                    <SectionCol key={i} sec={sec} links={links} />
                   ))}
                 </div>
                 <Pipeline d={active} />

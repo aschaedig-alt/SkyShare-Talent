@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import type { Seat } from "@/lib/fleet/staffing/types";
 import { normSeat, initials } from "@/lib/fleet/staffing/compute";
 
@@ -29,12 +30,33 @@ const TAG_LABEL: Record<string, string> = {
 };
 
 /** A named person row in a modal column, with optional Lead + qualification tags. */
-export function PersonRow({ name, cls, rp, lead, tags }: { name: string; cls: string; rp: string; lead?: boolean; tags?: string[] }) {
+export function PersonRow({
+  name,
+  cls,
+  rp,
+  lead,
+  tags,
+  href
+}: {
+  name: string;
+  cls: string;
+  rp: string;
+  lead?: boolean;
+  tags?: string[];
+  /** When set, the person's name links to their candidate profile. */
+  href?: string;
+}) {
   return (
     <div className={`prow ${cls}`}>
       <span className="av">{initials(name)}</span>
       <span className="pn">
-        {name}
+        {href ? (
+          <Link href={href} style={{ color: "inherit", textDecoration: "underline", textUnderlineOffset: "2px" }}>
+            {name}
+          </Link>
+        ) : (
+          name
+        )}
         {lead ? <span className="ltag">Lead</span> : null}
         {(tags || []).map((t, i) => (
           <span key={i} className={t === "ARGUS" ? "ltag" : "ptag"}>

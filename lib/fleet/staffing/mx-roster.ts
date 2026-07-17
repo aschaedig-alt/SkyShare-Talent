@@ -10,9 +10,34 @@
 import type { MxGroup, MxPool, MxSection } from "./types";
 import { MX_GROUPS } from "./maintenance-data";
 
+/**
+ * Links a person on the chart to their Candidate record, keyed by the EXACT name
+ * string as it appears on the chart. Kept separate from the roster names because
+ * the two often differ — the chart says "Augustin Quintero", his candidate
+ * profile says "Auggie Quintero" — so we cannot match on the name itself; an
+ * admin points each one at the right candidate once, and moving them keeps the
+ * name string (and therefore the link) intact.
+ */
+export type MxLinks = Record<string, string>;
+
+/** What the mx-roster WorkspaceSetting stores: the roster plus the name→candidate links. */
+export type MxRoster = { groups: MxGroup[]; links: MxLinks };
+
 /** The seed roster (deep-cloned so callers can freely mutate their copy). */
 export function defaultMxRoster(): MxGroup[] {
   return structuredClone(MX_GROUPS);
+}
+
+/** Coerce a stored/posted links blob into a safe { name: candidateId } map. */
+export function normalizeMxLinks(input: unknown): MxLinks {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
+  const out: MxLinks = {};
+  for (const [name, id] of Object.entries(input as Record<string, unknown>)) {
+    const n = name.trim();
+    const cid = typeof id === "string" ? id.trim() : "";
+    if (n && cid) out[n] = cid;
+  }
+  return out;
 }
 
 // --- normalization -------------------------------------------------------

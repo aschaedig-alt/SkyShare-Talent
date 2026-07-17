@@ -8,8 +8,8 @@ import { getMxRoster, saveMxRoster, resetMxRoster } from "@/lib/fleet/staffing/m
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const groups = await getMxRoster();
-  return NextResponse.json({ groups });
+  const roster = await getMxRoster();
+  return NextResponse.json(roster);
 }
 
 export async function POST(request: Request) {
@@ -21,11 +21,11 @@ export async function POST(request: Request) {
   try {
     const payload = await request.json();
     if (payload && typeof payload === "object" && (payload as { reset?: unknown }).reset === true) {
-      const groups = await resetMxRoster();
-      return NextResponse.json({ groups });
+      const roster = await resetMxRoster();
+      return NextResponse.json(roster);
     }
-    const groups = await saveMxRoster((payload as { groups?: unknown })?.groups);
-    return NextResponse.json({ groups });
+    const roster = await saveMxRoster((payload as { groups?: unknown; links?: unknown }) ?? {});
+    return NextResponse.json(roster);
   } catch {
     return NextResponse.json({ message: "Unable to save the maintenance roster." }, { status: 500 });
   }

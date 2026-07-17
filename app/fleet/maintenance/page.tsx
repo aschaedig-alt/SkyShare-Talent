@@ -7,11 +7,11 @@ export const dynamic = "force-dynamic";
 
 export default async function MaintenanceOrgChartPage() {
   const { role } = await requireModulePageAccess("fleet");
-  const groups = await getMxRoster();
+  const { groups, links } = await getMxRoster();
   const canEdit = hasPermission(role, "settings:admin");
   return (
     <div className="p-4 md:p-6">
-      <MaintenanceOrgChart initialGroups={groups} canEdit={canEdit} />
+      <MaintenanceOrgChart initialGroups={groups} initialLinks={links} canEdit={canEdit} />
     </div>
   );
 }
