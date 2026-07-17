@@ -557,17 +557,29 @@
 .wrap :global(.seat.seat-i span) {
   opacity: 0.8;
 }
-/* Offered seat square — gold, with a gold glow on hover. */
+/* Offered seat square — yellow fill (in-training) with red marching ants (open). */
 .wrap :global(.seat.seat-of) {
-  background: rgba(234, 170, 0, 0.22);
-  color: #7a5a0e;
-  border: 1.5px solid var(--gold);
-  transition: box-shadow 0.15s ease;
+  position: relative;
+  background: var(--train-bg);
+  color: var(--train-fg);
 }
-.wrap :global(.seat.seat-of:hover) {
-  box-shadow: 0 0 10px 1px rgba(234, 170, 0, 0.6);
+.wrap :global(.seat.seat-of)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  pointer-events: none;
+  background-image: linear-gradient(90deg, var(--accent) 50%, transparent 50%),
+    linear-gradient(90deg, var(--accent) 50%, transparent 50%),
+    linear-gradient(0deg, var(--accent) 50%, transparent 50%),
+    linear-gradient(0deg, var(--accent) 50%, transparent 50%);
+  background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+  background-size: 6px 1.5px, 6px 1.5px, 1.5px 6px, 1.5px 6px;
+  background-position: 0 0, 0 100%, 0 0, 100% 0;
+  animation: seatmarch 0.55s linear infinite;
 }
 .wrap :global(.seat.seat-of span) {
+  position: relative;
   opacity: 0.85;
 }
 .wrap :global(.seat.seat-p) {
@@ -793,10 +805,19 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
 }
+/* Edit mode packs a lot into each row (name + status + move + link + remove), so
+   give every section the full modal width — a two-up grid clipped the controls. */
+.wrap :global(.m-cols.editing) {
+  grid-template-columns: 1fr;
+}
+.wrap :global(.m-cols.editing .m-col) {
+  border-right: none;
+}
 .wrap :global(.m-col) {
   padding: 14px 16px;
   border-right: 1px solid var(--n200);
   border-bottom: 1px solid var(--n200);
+  min-width: 0;
 }
 .wrap :global(.m-col:nth-child(even)) {
   border-right: none;
@@ -908,26 +929,42 @@
 .wrap :global(.prow.p .rp) {
   color: var(--park-fg);
 }
-/* Offered: a candidate we've actually extended an offer to. Gold-tinted, with a
-   gold glow on hover — the brand's "offered" signal, distinct from a tentative
-   candidate. */
+/* Offered: a candidate we've actually extended an offer to. A YELLOW box (like
+   in-training) wrapped in RED marching ants (like an open seat) — not open, not
+   yet in training, the two combined. */
 .wrap :global(.prow.of) {
-  background: rgba(234, 170, 0, 0.12);
-  border: 1px solid rgba(234, 170, 0, 0.55);
-  transition: box-shadow 0.15s ease;
+  position: relative;
+  background: var(--train-bg);
 }
-.wrap :global(.prow.of:hover) {
-  box-shadow: 0 0 0 1px rgba(234, 170, 0, 0.6), 0 0 14px 2px rgba(234, 170, 0, 0.55);
+.wrap :global(.prow.of)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  pointer-events: none;
+  background-image: linear-gradient(90deg, var(--accent) 50%, transparent 50%),
+    linear-gradient(90deg, var(--accent) 50%, transparent 50%),
+    linear-gradient(0deg, var(--accent) 50%, transparent 50%),
+    linear-gradient(0deg, var(--accent) 50%, transparent 50%);
+  background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+  background-size: 7px 1.5px, 7px 1.5px, 1.5px 7px, 1.5px 7px;
+  background-position: 0 0, 0 100%, 0 0, 100% 0;
+  animation: seatmarch 0.6s linear infinite;
+}
+.wrap :global(.prow.of .av),
+.wrap :global(.prow.of .pn),
+.wrap :global(.prow.of .rp) {
+  position: relative;
 }
 .wrap :global(.prow.of .av) {
-  background: var(--gold);
-  color: #3a2a05;
+  background: var(--train-fg);
+  color: #fff;
 }
 .wrap :global(.prow.of .pn) {
   color: var(--ink);
 }
 .wrap :global(.prow.of .rp) {
-  color: #9a7213;
+  color: var(--accent);
 }
 .wrap :global(.ltag) {
   font: 800 8px/1 var(--fh);
@@ -1183,6 +1220,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
+  flex-wrap: wrap;
 }
 .wrap :global(.ec-dot) {
   width: 9px;
@@ -1207,17 +1245,22 @@
   border: 1px solid var(--int-bd);
 }
 .wrap :global(.ec-dot.of) {
-  background: rgba(234, 170, 0, 0.3);
-  border: 1px solid var(--gold);
+  background: var(--train-bg);
+  border: 1px solid var(--accent);
 }
-/* Offered person in the edit list: a gold glow on hover, matching the read view. */
-.wrap :global(.ec-row.of:hover) {
-  box-shadow: 0 0 12px 1px rgba(234, 170, 0, 0.5);
+/* Offered person in the edit list: a yellow row inside a red dashed border. */
+.wrap :global(.ec-row.of) {
+  background: var(--train-bg);
+  border: 1px dashed var(--accent);
   border-radius: 4px;
+  padding: 5px 6px;
+  margin: 2px 0;
 }
 .wrap :global(.ec-nm) {
   font: 600 12.5px/1.3 var(--fh);
   color: var(--ink);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .wrap :global(.ec-tag) {
   font: 700 8.5px/1 var(--fh);
@@ -1232,6 +1275,8 @@
   margin-left: auto;
   display: flex;
   gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 .wrap :global(.ec-act button) {
   padding: 4px 6px;

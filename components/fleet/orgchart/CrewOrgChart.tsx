@@ -540,40 +540,44 @@ export default function CrewOrgChart({
   const hiring = counted.filter((g) => g.o > 0).length;
 
   useEffect(() => {
+    const root = wrapRef.current;
+    if (!root) return;
+    let raf = 0;
+    // Ignore the resize callbacks caused by our OWN minHeight writes.
+    let locked = false;
     const equalize = () => {
-      const root = wrapRef.current;
-      if (!root) return;
-      const cards = root.querySelectorAll<HTMLElement>(".card");
-      cards.forEach((c) => {
-        c.style.minHeight = "0px";
-      });
+      const cards = Array.from(root.querySelectorAll<HTMLElement>(".card"));
+      if (!cards.length) return;
+      locked = true;
+      cards.forEach((c) => (c.style.minHeight = "0px"));
       let mx = 0;
       cards.forEach((c) => {
         const h = c.getBoundingClientRect().height;
         if (h > mx) mx = h;
       });
       if (mx > 0) cards.forEach((c) => (c.style.minHeight = `${Math.round(mx)}px`));
+      requestAnimationFrame(() => requestAnimationFrame(() => (locked = false)));
     };
-    const raf = requestAnimationFrame(() => requestAnimationFrame(equalize));
-    // Re-equalize after the Archivo web font finishes loading — it reflows the
-    // card text and changes their natural heights AFTER the first measure, which
-    // otherwise leaves the cards locked to mismatched fallback-font heights.
-    // The extra delayed passes catch any other late layout settle.
-    const timers = [setTimeout(equalize, 250), setTimeout(equalize, 700)];
+    const schedule = () => {
+      if (locked) return;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(equalize);
+    };
+    schedule();
+    // A ResizeObserver re-equalizes whenever a card's real size changes — most
+    // importantly when the Archivo web font loads in on a cold page and reflows
+    // the card text after the first measure. That reflow is what used to leave the
+    // cards at mismatched heights until a manual refresh.
+    const ro = new ResizeObserver(schedule);
+    root.querySelectorAll<HTMLElement>(".card").forEach((c) => ro.observe(c));
     if (typeof document !== "undefined" && document.fonts?.ready) {
-      document.fonts.ready.then(equalize).catch(() => {});
+      document.fonts.ready.then(schedule).catch(() => {});
     }
-    let t: ReturnType<typeof setTimeout>;
-    const onResize = () => {
-      clearTimeout(t);
-      t = setTimeout(equalize, 120);
-    };
-    window.addEventListener("resize", onResize);
+    window.addEventListener("resize", schedule);
     return () => {
       cancelAnimationFrame(raf);
-      timers.forEach(clearTimeout);
-      window.removeEventListener("resize", onResize);
-      clearTimeout(t);
+      ro.disconnect();
+      window.removeEventListener("resize", schedule);
     };
   }, [sort, parked, groupsData, editMode]);
 
@@ -988,7 +992,7 @@ export default function CrewOrgChart({
             </div>
             {editMode ? (
               <>
-                <div className="m-cols">
+                <div className="m-cols editing">
                   <EditCol
                     group={active}
                     gIdx={openIdx as number}

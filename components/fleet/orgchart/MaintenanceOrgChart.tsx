@@ -505,36 +505,44 @@ export default function MaintenanceOrgChart({
   const hiring = groups.filter((g) => g.t.o > 0).length;
 
   useEffect(() => {
+    const root = wrapRef.current;
+    if (!root) return;
+    let raf = 0;
+    // Ignore the resize callbacks caused by our OWN minHeight writes, so setting
+    // heights doesn't loop back into re-measuring.
+    let locked = false;
     const equalize = () => {
-      const root = wrapRef.current;
-      if (!root) return;
-      const cards = root.querySelectorAll<HTMLElement>(".card");
-      cards.forEach((c) => {
-        c.style.minHeight = "0px";
-      });
+      const cards = Array.from(root.querySelectorAll<HTMLElement>(".card"));
+      if (!cards.length) return;
+      locked = true;
+      cards.forEach((c) => (c.style.minHeight = "0px"));
       let mx = 0;
       cards.forEach((c) => {
         const h = c.getBoundingClientRect().height;
         if (h > mx) mx = h;
       });
       if (mx > 0) cards.forEach((c) => (c.style.minHeight = `${Math.round(mx)}px`));
+      requestAnimationFrame(() => requestAnimationFrame(() => (locked = false)));
     };
-    const raf = requestAnimationFrame(() => requestAnimationFrame(equalize));
-    let t: ReturnType<typeof setTimeout>;
-    const onResize = () => {
-      clearTimeout(t);
-      t = setTimeout(equalize, 120);
+    const schedule = () => {
+      if (locked) return;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(equalize);
     };
-    const timers = [setTimeout(equalize, 250), setTimeout(equalize, 700)];
+    schedule();
+    // A ResizeObserver re-equalizes whenever a card's real size changes — the font
+    // loading in on a cold page, a late reflow, a width change. That is what used
+    // to leave the heights uneven until a manual refresh.
+    const ro = new ResizeObserver(schedule);
+    root.querySelectorAll<HTMLElement>(".card").forEach((c) => ro.observe(c));
     if (typeof document !== "undefined" && document.fonts?.ready) {
-      document.fonts.ready.then(equalize).catch(() => {});
+      document.fonts.ready.then(schedule).catch(() => {});
     }
-    window.addEventListener("resize", onResize);
+    window.addEventListener("resize", schedule);
     return () => {
       cancelAnimationFrame(raf);
-      timers.forEach(clearTimeout);
-      window.removeEventListener("resize", onResize);
-      clearTimeout(t);
+      ro.disconnect();
+      window.removeEventListener("resize", schedule);
     };
   }, [sort, mxData, editMode]);
 
@@ -799,7 +807,7 @@ export default function MaintenanceOrgChart({
             </div>
             {editMode ? (
               <>
-                <div className="m-cols">
+                <div className="m-cols editing">
                   {active.sections.map((sec, i) => (
                     <MxEditSection
                       key={i}
