@@ -30,11 +30,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const q = new URL(request.url).searchParams.get("q")?.trim() ?? "";
+  const params = new URL(request.url).searchParams;
+  const q = params.get("q")?.trim() ?? "";
+  // Opt-in: include ARCHIVED candidates too. Off by default so the everyday picker
+  // stays active-only, but the "add to a job" search turns it on — you often need
+  // to link someone who was archived (reconsidering them for a new position, which
+  // is exactly what archiving should not block).
+  const includeArchived = params.get("includeArchived") === "1";
 
   const candidates = await prisma.candidate.findMany({
     where: {
-      archivedAt: null,
+      ...(includeArchived ? {} : { archivedAt: null }),
       ...(q
         ? {
             OR: [
@@ -45,12 +51,15 @@ export async function GET(request: Request) {
           }
         : {})
     },
-    orderBy: { updatedAt: "desc" },
+    // Active (archivedAt null) first, then most recently touched.
+    orderBy: [{ archivedAt: { sort: "asc", nulls: "first" } }, { updatedAt: "desc" }],
     take: 10,
-    select: { id: true, displayName: true, currentTitle: true, stage: true, primaryEmail: true }
+    select: { id: true, displayName: true, currentTitle: true, stage: true, primaryEmail: true, archivedAt: true }
   });
 
-  return NextResponse.json({ candidates });
+  return NextResponse.json({
+    candidates: candidates.map(({ archivedAt, ...c }) => ({ ...c, archived: Boolean(archivedAt) }))
+  });
 }
 
 // POST /api/candidates — create a candidate (optionally linking to a job in one step).

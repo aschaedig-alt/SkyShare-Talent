@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserPlus, X, Search, Plus } from "lucide-react";
 
-type Found = { id: string; displayName: string; currentTitle: string | null; stage: string | null; primaryEmail: string | null };
+type Found = { id: string; displayName: string; currentTitle: string | null; stage: string | null; primaryEmail: string | null; archived?: boolean };
 
 const FIELD = "w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100";
 
@@ -24,7 +24,9 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
     const ctrl = new AbortController();
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/candidates?q=${encodeURIComponent(query)}`, { signal: ctrl.signal });
+        // includeArchived: a candidate you archived can still be linked to a new
+        // job (reconsidering them). Linking one reactivates them (see the API).
+        const res = await fetch(`/api/candidates?q=${encodeURIComponent(query)}&includeArchived=1`, { signal: ctrl.signal });
         if (res.ok) {
           const body = (await res.json()) as { candidates: Found[] };
           setResults(body.candidates);
@@ -138,8 +140,18 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
                         className="flex w-full items-center justify-between gap-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-2 text-left transition hover:border-brand-sweet hover:bg-brand-sweet/15 hover:shadow-glow disabled:opacity-60 dark:border-white/10 dark:bg-white/5"
                       >
                         <span className="min-w-0">
-                          <span className="block truncate text-sm font-semibold text-brand-lea dark:text-slate-100">{c.displayName}</span>
-                          <span className="block truncate text-xs text-brand-grey dark:text-slate-400">{[c.currentTitle, c.primaryEmail].filter(Boolean).join(" · ") || "No details"}</span>
+                          <span className="flex items-center gap-1.5">
+                            <span className="truncate text-sm font-semibold text-brand-lea dark:text-slate-100">{c.displayName}</span>
+                            {c.archived && (
+                              <span className="shrink-0 rounded bg-brand-cloudDancer px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:bg-white/10 dark:text-slate-300">
+                                Archived
+                              </span>
+                            )}
+                          </span>
+                          <span className="block truncate text-xs text-brand-grey dark:text-slate-400">
+                            {[c.currentTitle, c.primaryEmail].filter(Boolean).join(" · ") || "No details"}
+                            {c.archived ? " · linking reactivates them" : ""}
+                          </span>
                         </span>
                         <Plus className="h-4 w-4 shrink-0 text-brand-eden" />
                       </button>

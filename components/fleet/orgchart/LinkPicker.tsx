@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 // the charts often differ from the profile (chart "Augustin Quintero" vs profile
 // "Auggie Quintero"), so linking is an explicit pick, never a name match.
 
-export type OrgCandidate = { id: string; displayName: string; currentTitle: string | null; stage: string | null };
+export type OrgCandidate = { id: string; displayName: string; currentTitle: string | null; stage: string | null; archived?: boolean };
 
 /** Small pill button used for the move / link / unlink affordances on a person row. */
 export const orgLinkBtnStyle: React.CSSProperties = {
@@ -46,7 +46,9 @@ export function LinkPicker({
       }
       setLoading(true);
       try {
-        const res = await fetch(`/api/candidates?q=${encodeURIComponent(q.trim())}`);
+        // Include archived candidates — a chart person may well be someone who was
+        // archived, and you still want to point their card at the right profile.
+        const res = await fetch(`/api/candidates?q=${encodeURIComponent(q.trim())}&includeArchived=1`);
         const data = (await res.json()) as { candidates?: OrgCandidate[] };
         if (alive) setResults(data.candidates ?? []);
       } catch {
@@ -84,6 +86,7 @@ export function LinkPicker({
           >
             <b>{c.displayName}</b>
             {c.currentTitle ? <span style={{ opacity: 0.7 }}> · {c.currentTitle}</span> : null}
+            {c.archived ? <span style={{ opacity: 0.7 }}> · archived</span> : null}
           </button>
         ))}
       </div>

@@ -42,7 +42,22 @@ export async function POST(request: Request) {
       }
     });
 
-    return NextResponse.json({ application: { id: application.id }, reused: false });
+    // Linking an ARCHIVED candidate to a job means you are actively considering
+    // them again, so bring them back into the active pipeline — otherwise they'd
+    // have a live application but stay hidden from the candidate list.
+    const candidate = await prisma.candidate.findUnique({
+      where: { id: body.candidateId },
+      select: { archivedAt: true }
+    });
+    const reactivated = Boolean(candidate?.archivedAt);
+    if (reactivated) {
+      await prisma.candidate.update({
+        where: { id: body.candidateId },
+        data: { archivedAt: null, status: "ACTIVE" }
+      });
+    }
+
+    return NextResponse.json({ application: { id: application.id }, reused: false, reactivated });
   } catch {
     return NextResponse.json({ message: "Unable to link candidate to job." }, { status: 500 });
   }
