@@ -504,47 +504,9 @@ export default function MaintenanceOrgChart({
   const target = groups.reduce((a, g) => a + g.t.at, 0);
   const hiring = groups.filter((g) => g.t.o > 0).length;
 
-  useEffect(() => {
-    const root = wrapRef.current;
-    if (!root) return;
-    let raf = 0;
-    // Ignore the resize callbacks caused by our OWN minHeight writes, so setting
-    // heights doesn't loop back into re-measuring.
-    let locked = false;
-    const equalize = () => {
-      const cards = Array.from(root.querySelectorAll<HTMLElement>(".card"));
-      if (!cards.length) return;
-      locked = true;
-      cards.forEach((c) => (c.style.minHeight = "0px"));
-      let mx = 0;
-      cards.forEach((c) => {
-        const h = c.getBoundingClientRect().height;
-        if (h > mx) mx = h;
-      });
-      if (mx > 0) cards.forEach((c) => (c.style.minHeight = `${Math.round(mx)}px`));
-      requestAnimationFrame(() => requestAnimationFrame(() => (locked = false)));
-    };
-    const schedule = () => {
-      if (locked) return;
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(equalize);
-    };
-    schedule();
-    // A ResizeObserver re-equalizes whenever a card's real size changes — the font
-    // loading in on a cold page, a late reflow, a width change. That is what used
-    // to leave the heights uneven until a manual refresh.
-    const ro = new ResizeObserver(schedule);
-    root.querySelectorAll<HTMLElement>(".card").forEach((c) => ro.observe(c));
-    if (typeof document !== "undefined" && document.fonts?.ready) {
-      document.fonts.ready.then(schedule).catch(() => {});
-    }
-    window.addEventListener("resize", schedule);
-    return () => {
-      cancelAnimationFrame(raf);
-      ro.disconnect();
-      window.removeEventListener("resize", schedule);
-    };
-  }, [sort, mxData, editMode]);
+  // Card heights are equalized purely in CSS now (the grid stretches each row —
+  // see .grid/.card in OrgChart.module.css). The old JS pass that measured and set
+  // minHeight raced the web-font load and left cards uneven until a manual refresh.
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

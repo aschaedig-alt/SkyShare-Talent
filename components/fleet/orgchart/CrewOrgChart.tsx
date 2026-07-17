@@ -539,47 +539,9 @@ export default function CrewOrgChart({
   const target = counted.reduce((a, g) => a + g.cp.at + (g.cs ? g.cs.at : 0), 0);
   const hiring = counted.filter((g) => g.o > 0).length;
 
-  useEffect(() => {
-    const root = wrapRef.current;
-    if (!root) return;
-    let raf = 0;
-    // Ignore the resize callbacks caused by our OWN minHeight writes.
-    let locked = false;
-    const equalize = () => {
-      const cards = Array.from(root.querySelectorAll<HTMLElement>(".card"));
-      if (!cards.length) return;
-      locked = true;
-      cards.forEach((c) => (c.style.minHeight = "0px"));
-      let mx = 0;
-      cards.forEach((c) => {
-        const h = c.getBoundingClientRect().height;
-        if (h > mx) mx = h;
-      });
-      if (mx > 0) cards.forEach((c) => (c.style.minHeight = `${Math.round(mx)}px`));
-      requestAnimationFrame(() => requestAnimationFrame(() => (locked = false)));
-    };
-    const schedule = () => {
-      if (locked) return;
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(equalize);
-    };
-    schedule();
-    // A ResizeObserver re-equalizes whenever a card's real size changes — most
-    // importantly when the Archivo web font loads in on a cold page and reflows
-    // the card text after the first measure. That reflow is what used to leave the
-    // cards at mismatched heights until a manual refresh.
-    const ro = new ResizeObserver(schedule);
-    root.querySelectorAll<HTMLElement>(".card").forEach((c) => ro.observe(c));
-    if (typeof document !== "undefined" && document.fonts?.ready) {
-      document.fonts.ready.then(schedule).catch(() => {});
-    }
-    window.addEventListener("resize", schedule);
-    return () => {
-      cancelAnimationFrame(raf);
-      ro.disconnect();
-      window.removeEventListener("resize", schedule);
-    };
-  }, [sort, parked, groupsData, editMode]);
+  // Card heights are equalized purely in CSS now (the grid stretches each row —
+  // see .grid/.card in OrgChart.module.css). The old JS pass that measured and set
+  // minHeight raced the Archivo web-font load and left cards uneven until a refresh.
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

@@ -288,7 +288,9 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
-  align-items: start;
+  /* stretch (not start) so every card in a row takes the row's height — equal
+     heights come from CSS, live, instead of a JS pass that raced the web font. */
+  align-items: stretch;
 }
 .wrap :global(.grid.g4) {
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -315,6 +317,8 @@
 .wrap :global(.card) {
   width: 100%;
   min-width: 0;
+  /* fill the (now stretched) grid cell so cards in a row are the same height */
+  height: 100%;
   background: var(--color-bg);
   border: 1px solid var(--n300);
   border-radius: 4px;
@@ -728,6 +732,14 @@
   pointer-events: auto;
   transform: translate(-50%, -50%);
 }
+/* Breathing room at the very bottom of the scrolling modal so the last section's
+   content (add form / link picker) never sits flush against the edge. A flex
+   spacer is reliable where padding-bottom on a scroll container can be dropped. */
+.wrap :global(.modal)::after {
+  content: "";
+  display: block;
+  flex: 0 0 16px;
+}
 .wrap :global(.m-h) {
   position: sticky;
   top: 0;
@@ -814,7 +826,7 @@
   border-right: none;
 }
 .wrap :global(.m-col) {
-  padding: 14px 16px;
+  padding: 14px 16px 20px;
   border-right: 1px solid var(--n200);
   border-bottom: 1px solid var(--n200);
   min-width: 0;
