@@ -4,12 +4,13 @@
 // Card layout (from the printer proof):
 //   Name
 //   TITLE
-//   skyops <#>   mobile <cell>
+//   <phoneLabel> <#>   mobile <cell>
 //   email <@skyshare>   web <site>
 //
-// The only piece that varies is the "skyops" number:
-//   - Pilots & cabin attendants use the shared SkyOps line.
-//   - Everyone else uses the main SkyLove number.
+// The first line varies by whether the person is flight crew, BOTH its label and
+// its number:
+//   - Pilots & cabin attendants: labelled "skyops", shared SkyOps line (801…).
+//   - Everyone else: labelled "phone #", the main SkyLove number (855…).
 // Everything else comes straight off the employee record.
 
 // Per-person order status. Cards are ordered in bulk ahead of orientation, and
@@ -59,6 +60,13 @@ export const SKYOPS_NUMBER = "801.516.9189"; // shared SkyOps line — pilots & 
 export const SKYLOVE_NUMBER = "855.SKY.LOVE"; // main line — everyone else
 export const DEFAULT_WEB = "skyshare.com";
 
+// The label on the first phone line. Flight crew's line is the SkyOps desk, so it
+// is labelled "skyops"; for everyone else it is just their phone, so "phone #".
+// Lowercase to match the card's other labels (mobile / email / web).
+export const SKYOPS_LABEL = "skyops";
+export const PHONE_LABEL = "phone #";
+export const phoneLabelFor = (crew: boolean) => (crew ? SKYOPS_LABEL : PHONE_LABEL);
+
 export type BusinessCardInput = {
   name: string;
   position: string | null;
@@ -70,6 +78,8 @@ export type BusinessCardInput = {
 export type BusinessCard = {
   name: string;
   title: string;
+  /** The label for the first phone line: "skyops" for crew, "phone #" otherwise. */
+  phoneLabel: string;
   skyops: string;
   mobile: string;
   email: string;
@@ -107,6 +117,7 @@ export function buildBusinessCard(input: BusinessCardInput): BusinessCard {
   return {
     name: input.name,
     title: (input.cardTitle?.trim() || defaultCardTitle(input.position)).toUpperCase(),
+    phoneLabel: phoneLabelFor(crew),
     skyops: crew ? SKYOPS_NUMBER : SKYLOVE_NUMBER,
     mobile,
     email,
@@ -138,6 +149,9 @@ export function buildVariantCard(input: BusinessCardInput, variant: VariantOverr
   return {
     name: input.name,
     title,
+    // Label follows crew status, not the variant's number override — a manually
+    // set number is still "skyops" for a pilot and "phone #" for anyone else.
+    phoneLabel: base.phoneLabel,
     skyops: variant.skyops?.trim() || base.skyops,
     mobile,
     email,
@@ -149,7 +163,7 @@ export function buildVariantCard(input: BusinessCardInput, variant: VariantOverr
 
 // One card in the printer's format (what you paste into the order email).
 export function formatCardText(c: BusinessCard): string {
-  return [c.name, c.title, `skyops ${c.skyops}   mobile ${c.mobile}`, `email ${c.email}   web ${c.web}`].join("\n");
+  return [c.name, c.title, `${c.phoneLabel} ${c.skyops}   mobile ${c.mobile}`, `email ${c.email}   web ${c.web}`].join("\n");
 }
 
 // Several cards for one order — blank line between each.
@@ -172,7 +186,7 @@ export function formatCardHtml(c: BusinessCard): string {
     `<div style="font-size:15px;font-weight:bold;color:#302f31;">${esc(c.name)}</div>`,
     `<div style="font-size:11px;letter-spacing:0.08em;color:#63666a;text-transform:uppercase;">${esc(c.title)}</div>`,
     '<div style="margin-top:6px;">',
-    row("skyops", c.skyops),
+    row(c.phoneLabel, c.skyops),
     row("mobile", c.mobile),
     row("email", c.email),
     row("web", c.web),

@@ -23,7 +23,7 @@ export function BusinessCardVisual({ card }: { card: BusinessCard }) {
       <div className="text-base font-semibold text-brand-black dark:text-slate-100">{card.name || "—"}</div>
       <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{card.title || "—"}</div>
       <div className="mt-3 space-y-2">
-        <Field label="skyops" value={card.skyops} />
+        <Field label={card.phoneLabel} value={card.skyops} />
         <Field label="mobile" value={card.mobile} />
         <Field label="email" value={card.email} />
         <Field label="web" value={card.web} />

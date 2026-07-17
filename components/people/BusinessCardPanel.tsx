@@ -269,7 +269,7 @@ export function BusinessCardPanel({
           {field("Title", "title", primary.title || "Same as profile")}
           <div className="flex gap-3">
             <div className="w-1/2">{field("Mobile", "mobile", primary.mobile || "Same as profile")}</div>
-            <div className="w-1/2">{field("SkyOps #", "skyops", primary.skyops)}</div>
+            <div className="w-1/2">{field(primary.isFlightCrew ? "SkyOps #" : "Phone #", "skyops", primary.skyops)}</div>
           </div>
           {field("Email", "email", primary.email || "Same as profile")}
           {field("Web", "web", primary.web)}
