@@ -43,13 +43,26 @@ export async function POST(request: Request) {
     });
 
     // Linking an ARCHIVED candidate to a job means you are actively considering
-    // them again, so bring them back into the active pipeline — otherwise they'd
-    // have a live application but stay hidden from the candidate list.
+    // them again, so bring them back into the active pipeline — UNLESS they are
+    // archived because they were already HIRED and are a current employee. Those
+    // candidate records are archived precisely because the person graduated to a
+    // NewHire; reactivating them would wrongly shove an employee back into the
+    // candidate pipeline (e.g. Matt Dahle, an active PC-12 Captain).
     const candidate = await prisma.candidate.findUnique({
       where: { id: body.candidateId },
       select: { archivedAt: true }
     });
-    const reactivated = Boolean(candidate?.archivedAt);
+    const employedHire = candidate?.archivedAt
+      ? await prisma.newHire.findFirst({
+          where: {
+            candidateId: body.candidateId,
+            stage: { in: ["ACTIVE", "POST_ONBOARD"] },
+            NOT: { employmentStatus: "TERMINATED" }
+          },
+          select: { id: true }
+        })
+      : null;
+    const reactivated = Boolean(candidate?.archivedAt) && !employedHire;
     if (reactivated) {
       await prisma.candidate.update({
         where: { id: body.candidateId },
