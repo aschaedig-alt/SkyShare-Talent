@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { clsx } from "clsx";
-import { FileText, Briefcase, StickyNote, CalendarClock, History, Plane, Clock, Sparkles, Mail } from "lucide-react";
+import { FileText, Briefcase, StickyNote, CalendarClock, History, Plane, Clock, Sparkles, Mail, FileSignature } from "lucide-react";
 import { Button } from "@/components/ui";
 import { CandidateDocuments } from "@/components/candidates/CandidateDocuments";
 import { DocumentChecklist } from "@/components/candidates/DocumentChecklist";
@@ -15,6 +15,7 @@ import { HistoricalMatchPanel } from "@/components/candidates/HistoricalMatchPan
 import { LinkedHistoricalPanel } from "@/components/candidates/LinkedHistoricalPanel";
 import { MoveToPreOnboardingPanel } from "@/components/candidates/MoveToPreOnboardingPanel";
 import { OfferControl } from "@/components/candidates/OfferControl";
+import { offerStatusLabel } from "@/lib/offers/constants";
 import { CandidateTimeline } from "@/components/candidates/CandidateTimeline";
 import { AiSummaryCard } from "@/components/candidates/AiSummaryCard";
 import { CandidateCommunications } from "@/components/candidates/CandidateCommunications";
@@ -46,7 +47,7 @@ const PROFILE_DEFAULT_LAYOUT: GridItem[] = [
   { i: "record", x: 0, y: 32, w: 3, h: 5 }
 ];
 
-type ProfileTab = "documents" | "applications" | "notes" | "interviews" | "timeline" | "summary" | "communications" | "activity" | "travel";
+type ProfileTab = "documents" | "applications" | "offers" | "notes" | "interviews" | "timeline" | "summary" | "communications" | "activity" | "travel";
 
 type CandidateEditForm = {
   displayName: string;
@@ -180,7 +181,8 @@ export function CandidateProfileWorkspace({
 
   const tabs: Array<{ id: ProfileTab; label: string; icon: typeof FileText; count: number }> = [
     { id: "documents", label: "Documents", icon: FileText, count: candidate.files.length },
-    { id: "applications", label: "Applications", icon: Briefcase, count: candidate.applications.length },
+    { id: "applications", label: "Applied to", icon: Briefcase, count: candidate.applications.length },
+    { id: "offers", label: "Offers", icon: FileSignature, count: candidate.applications.filter((a) => (a.offerStatus ?? "NONE") !== "NONE").length },
     { id: "notes", label: "Notes", icon: StickyNote, count: candidate.notes.length },
     { id: "interviews", label: "Interviews", icon: CalendarClock, count: candidate.interviews.length },
     { id: "timeline", label: "Timeline", icon: Clock, count: candidate.timeline.length },
@@ -494,9 +496,16 @@ export function CandidateProfileWorkspace({
                         ) : null}
                       </div>
 
-                      {/* An offer is always for a specific job, so it belongs on
-                          the application rather than the person. */}
-                      <OfferControl application={application} canEdit={canEdit} />
+                      {/* The offer for this application lives on the Offers tab —
+                          keep this tab about which jobs they applied to. */}
+                      {(application.offerStatus ?? "NONE") !== "NONE" && (
+                        <button
+                          onClick={() => setActiveTab("offers")}
+                          className="mt-1 text-[11px] font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-brand-sweet"
+                        >
+                          {offerStatusLabel(application.offerStatus)} — manage in Offers →
+                        </button>
+                      )}
                       {application.questionnaire.length > 0 && (
                         <div className="mt-2">
                           <button
@@ -521,6 +530,32 @@ export function CandidateProfileWorkspace({
                   ))
                 ) : (
                   <EmptyState title="No applications yet" detail="Application history appears here after imports or manual linking." />
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Offers tab — one place to work every offer, per job. An offer is the
+              last act of recruiting, so it gets its own home rather than hiding
+              inside the application list. */}
+          {activeTab === "offers" && (
+            <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+              <div className="space-y-3">
+                {candidate.applications.length > 0 ? (
+                  candidate.applications.map((application) => (
+                    <div key={application.id} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
+                      {application.job ? (
+                        <Link href={`/recruiting-jobs?id=${application.job.id}`} className="font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-100">
+                          {application.job.title}
+                        </Link>
+                      ) : (
+                        <div className="font-semibold text-brand-lea dark:text-slate-100">Unlinked job</div>
+                      )}
+                      <OfferControl application={application} canEdit={canEdit} />
+                    </div>
+                  ))
+                ) : (
+                  <EmptyState title="No applications to offer against" detail="An offer is made for a specific job, so add an application first (under Applied to)." />
                 )}
               </div>
             </section>

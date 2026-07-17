@@ -38,7 +38,7 @@ async function loadOfferSteps(candidateId: string) {
   });
   if (apps.length === 0) return undefined;
 
-  const rank: Record<string, number> = { SIGNED: 4, SENT: 3, PLANNED: 2, DECLINED: 1, NONE: 0 };
+  const rank: Record<string, number> = { SIGNED: 5, SENT: 4, STARTED: 3, PLANNED: 2, DECLINED: 1, NONE: 0 };
   const best = [...apps].sort((a, b) => (rank[b.offerStatus] ?? 0) - (rank[a.offerStatus] ?? 0))[0];
   if (!best || (rank[best.offerStatus] ?? 0) === 0) return undefined;
 

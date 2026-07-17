@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { recordOfferStatus } from "@/lib/offers/record-offer-status";
+import type { OfferStatus } from "@/lib/offers/constants";
 import {
   deriveOfferStatus,
   parseOfferSteps,
@@ -53,7 +54,14 @@ export async function recordOfferStep(
     return { ok: true, steps, status: "DECLINED" };
   }
 
-  const status = deriveOfferStatus(steps);
+  // An offer you have already opened should not silently vanish to "no offer"
+  // just because you cleared its steps — you still decided to offer. So once an
+  // offer exists, clearing every step floors it at PLANNED, not NONE. Going all
+  // the way back to NONE is the explicit "No offer" choice on the status control.
+  let status: OfferStatus = deriveOfferStatus(steps);
+  if (status === "NONE" && app.offerStatus !== "NONE" && app.offerStatus !== "DECLINED") {
+    status = "PLANNED";
+  }
   const result = await recordOfferStatus(applicationId, {
     status,
     at,

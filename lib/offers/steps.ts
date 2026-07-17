@@ -68,18 +68,20 @@ export function serializeOfferSteps(steps: OfferSteps): string | null {
 /**
  * The status these steps add up to.
  *
- * Signing is the handoff, so it wins outright. "Sent" means it is out and waiting
- * on them. Anything earlier is still being prepared, which is "planned" — the
- * supervisor and president signing are OUR steps, not theirs, so they do not
- * advance it past planned.
+ * Signing is the handoff, so it wins outright. "Sent" means the letter is out and
+ * waiting on them. Any of the prep steps before that — verbal, drafting, the
+ * supervisor and president signatures — means the offer is under way but not yet
+ * in the candidate's hands, which is "started". "Planned" is the step BEFORE any
+ * of that: you have decided to offer but not begun, so it is not derived from a
+ * step (there is none) — it is set explicitly (the "Start an offer" action).
  *
  * DECLINED is deliberately NOT derivable: declining is something THEY do, not a
  * step we take, so it stays an explicit action.
  */
-export function deriveOfferStatus(steps: OfferSteps): Exclude<OfferStatus, "DECLINED"> {
+export function deriveOfferStatus(steps: OfferSteps): Exclude<OfferStatus, "DECLINED" | "PLANNED"> {
   if (steps.candidate_signed) return "SIGNED";
   if (steps.offer_letter_sent) return "SENT";
-  if (OFFER_STEP_KEYS.some((k) => steps[k])) return "PLANNED";
+  if (OFFER_STEP_KEYS.some((k) => steps[k])) return "STARTED";
   return "NONE";
 }
 

@@ -9,6 +9,7 @@
 export const OFFER_STATUSES = [
   { value: "NONE", label: "No offer" },
   { value: "PLANNED", label: "Offer planned" },
+  { value: "STARTED", label: "Offer started" },
   { value: "SENT", label: "Offer sent" },
   { value: "SIGNED", label: "Offer signed" },
   { value: "DECLINED", label: "Offer declined" }

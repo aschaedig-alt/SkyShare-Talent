@@ -20,7 +20,7 @@ export type OfferRow = {
 
 export type OffersBoard = {
   rows: OfferRow[];
-  counts: { planned: number; sent: number; signed: number; declined: number };
+  counts: { planned: number; started: number; sent: number; signed: number; declined: number };
   /** Signed but not yet moved into onboarding — the list that actually needs doing. */
   awaitingOnboarding: number;
 };
@@ -29,7 +29,8 @@ const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
 // Outstanding work first: an offer that is out is the one you are waiting on,
 // and a signed offer that has not been onboarded is the one you are late on.
-const ORDER: Record<string, number> = { SENT: 0, SIGNED: 1, PLANNED: 2, DECLINED: 3 };
+// Started/planned are still in your court, so they sit below the sent/signed ones.
+const ORDER: Record<string, number> = { SENT: 0, SIGNED: 1, STARTED: 2, PLANNED: 3, DECLINED: 4 };
 
 export async function getOffersBoard(): Promise<OffersBoard> {
   const apps = await prisma.candidateApplication.findMany({
@@ -87,6 +88,7 @@ export async function getOffersBoard(): Promise<OffersBoard> {
 
   const counts = {
     planned: rows.filter((r) => r.status === "PLANNED").length,
+    started: rows.filter((r) => r.status === "STARTED").length,
     sent: rows.filter((r) => r.status === "SENT").length,
     signed: rows.filter((r) => r.status === "SIGNED").length,
     declined: rows.filter((r) => r.status === "DECLINED").length

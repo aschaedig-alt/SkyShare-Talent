@@ -21,6 +21,7 @@ function fmtDate(iso: string | null): string | null {
 const CHIP: Record<string, string> = {
   NONE: "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400",
   PLANNED: "bg-brand-sweet/25 text-brand-lea dark:text-slate-100",
+  STARTED: "bg-brand-eden/20 text-brand-eden dark:bg-brand-sweet/20 dark:text-slate-100",
   SENT: "bg-brand-gold/25 text-brand-lea dark:text-slate-100",
   SIGNED: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
   DECLINED: "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300"
@@ -162,12 +163,16 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
           </select>
         )}
 
-        {/* Before an offer exists, the steps are the way in — you should be able
-            to start working an offer for someone you only MIGHT hire, without
-            first creating a new-hire record. */}
+        {/* Before an offer exists, this is the way in — you should be able to
+            work an offer for someone you only MIGHT hire, without first creating a
+            new-hire record. It records the intent (PLANNED) and opens the steps;
+            ticking the first prep step then moves it to "started". */}
         {canEdit && !stepsOpen && (
           <button
-            onClick={() => setShowSteps(true)}
+            onClick={() => {
+              setShowSteps(true);
+              void set("PLANNED");
+            }}
             className="rounded text-[11px] font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-brand-sweet"
           >
             Start an offer

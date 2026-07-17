@@ -17,12 +17,13 @@ function fmtDate(iso: string | null): string | null {
 
 const CHIP: Record<string, string> = {
   PLANNED: "bg-brand-sweet/25 text-brand-lea dark:text-slate-100",
+  STARTED: "bg-brand-eden/20 text-brand-eden dark:bg-brand-sweet/20 dark:text-slate-100",
   SENT: "bg-brand-gold/25 text-brand-lea dark:text-slate-100",
   SIGNED: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
   DECLINED: "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300"
 };
 
-type Filter = "ALL" | "PLANNED" | "SENT" | "SIGNED" | "DECLINED";
+type Filter = "ALL" | "PLANNED" | "STARTED" | "SENT" | "SIGNED" | "DECLINED";
 
 function OfferCard({ row }: { row: OfferRow }) {
   // A signed offer with nobody onboarding them is the thing that falls through
@@ -124,6 +125,7 @@ export function OffersWorkspace({ board }: { board: OffersBoard }) {
     { key: "ALL", label: "All", count: board.rows.length },
     { key: "SENT", label: "Out", count: board.counts.sent },
     { key: "SIGNED", label: "Signed", count: board.counts.signed },
+    { key: "STARTED", label: "Started", count: board.counts.started },
     { key: "PLANNED", label: "Planned", count: board.counts.planned },
     { key: "DECLINED", label: "Declined", count: board.counts.declined }
   ];
