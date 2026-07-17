@@ -10,7 +10,7 @@
 // The first line varies by whether the person is flight crew, BOTH its label and
 // its number:
 //   - Pilots & cabin attendants: labelled "skyops", shared SkyOps line (801…).
-//   - Everyone else: labelled "phone #", the main SkyLove number (855…).
+//   - Everyone else: labelled "phone", the main SkyLove number (855…).
 // Everything else comes straight off the employee record.
 
 // Per-person order status. Cards are ordered in bulk ahead of orientation, and
@@ -61,10 +61,10 @@ export const SKYLOVE_NUMBER = "855.SKY.LOVE"; // main line — everyone else
 export const DEFAULT_WEB = "skyshare.com";
 
 // The label on the first phone line. Flight crew's line is the SkyOps desk, so it
-// is labelled "skyops"; for everyone else it is just their phone, so "phone #".
+// is labelled "skyops"; for everyone else it is just their phone, so "phone".
 // Lowercase to match the card's other labels (mobile / email / web).
 export const SKYOPS_LABEL = "skyops";
-export const PHONE_LABEL = "phone #";
+export const PHONE_LABEL = "phone";
 export const phoneLabelFor = (crew: boolean) => (crew ? SKYOPS_LABEL : PHONE_LABEL);
 
 export type BusinessCardInput = {
@@ -78,7 +78,7 @@ export type BusinessCardInput = {
 export type BusinessCard = {
   name: string;
   title: string;
-  /** The label for the first phone line: "skyops" for crew, "phone #" otherwise. */
+  /** The label for the first phone line: "skyops" for crew, "phone" otherwise. */
   phoneLabel: string;
   skyops: string;
   mobile: string;
