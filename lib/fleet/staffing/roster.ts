@@ -15,6 +15,28 @@
 import type { CrewGroup, CrewPool, Departure, Seat } from "./types";
 import { CREW_GROUPS } from "./crew-data";
 
+/**
+ * Links a pilot on the chart to their Candidate record, keyed by the EXACT name
+ * string as it appears on the chart. Kept separate from the roster names because
+ * the two often differ, so we cannot match on the name itself; an admin points
+ * each one at the right candidate once, and a move keeps the name (and link).
+ * Same shape and rationale as the maintenance chart's links.
+ */
+export type CrewLinks = Record<string, string>;
+export type CrewRoster = { groups: CrewGroup[]; links: CrewLinks };
+
+/** Coerce a stored/posted links blob into a safe { name: candidateId } map. */
+export function normalizeCrewLinks(input: unknown): CrewLinks {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
+  const out: CrewLinks = {};
+  for (const [name, id] of Object.entries(input as Record<string, unknown>)) {
+    const n = name.trim();
+    const cid = typeof id === "string" ? id.trim() : "";
+    if (n && cid) out[n] = cid;
+  }
+  return out;
+}
+
 /** The seed roster (deep-cloned so callers can freely mutate their copy). */
 export function defaultCrewRoster(): CrewGroup[] {
   return structuredClone(CREW_GROUPS);

@@ -9,8 +9,8 @@ import { getCrewRoster, saveCrewRoster, resetCrewRoster } from "@/lib/fleet/staf
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const groups = await getCrewRoster();
-  return NextResponse.json({ groups });
+  const roster = await getCrewRoster();
+  return NextResponse.json(roster);
 }
 
 export async function POST(request: Request) {
@@ -22,11 +22,11 @@ export async function POST(request: Request) {
   try {
     const payload = await request.json();
     if (payload && typeof payload === "object" && (payload as { reset?: unknown }).reset === true) {
-      const groups = await resetCrewRoster();
-      return NextResponse.json({ groups });
+      const roster = await resetCrewRoster();
+      return NextResponse.json(roster);
     }
-    const groups = await saveCrewRoster((payload as { groups?: unknown })?.groups);
-    return NextResponse.json({ groups });
+    const roster = await saveCrewRoster((payload as { groups?: unknown; links?: unknown }) ?? {});
+    return NextResponse.json(roster);
   } catch {
     return NextResponse.json({ message: "Unable to save the crew roster." }, { status: 500 });
   }

@@ -7,11 +7,11 @@ export const dynamic = "force-dynamic";
 
 export default async function CrewOrgChartPage() {
   const { role } = await requireModulePageAccess("fleet");
-  const [groups] = await Promise.all([getCrewRoster()]);
+  const { groups, links } = await getCrewRoster();
   const canEdit = hasPermission(role, "settings:admin");
   return (
     <div className="p-4 md:p-6">
-      <CrewOrgChart initialGroups={groups} canEdit={canEdit} />
+      <CrewOrgChart initialGroups={groups} initialLinks={links} canEdit={canEdit} />
     </div>
   );
 }

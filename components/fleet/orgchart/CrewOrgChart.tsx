@@ -7,6 +7,7 @@ import type { CrewGroup, Seat } from "@/lib/fleet/staffing/types";
 import { normSeat, cntSeat } from "@/lib/fleet/staffing/compute";
 import { CREW_GROUPS, CREW_LEADERSHIP, CREW_TRAINING, CREW_PILOT_TURNOVER, turnoverFor } from "@/lib/fleet/staffing/crew-data";
 import { SeatSquares, PersonRow, SlotRow } from "./SeatParts";
+import { LinkPicker, orgLinkBtnStyle } from "./LinkPicker";
 import styles from "./OrgChart.module.css";
 
 type SortKey = "Fleet size" | "Open seats";
@@ -55,20 +56,23 @@ function ColBody({
   seat,
   leadName,
   showParked,
-  tags
+  tags,
+  links = {}
 }: {
   seat?: Seat | null;
   leadName?: string;
   showParked: boolean;
   tags?: Record<string, string[]>;
+  links?: Record<string, string>;
 }) {
   if (!seat) return <div className="m-empty">Single-pilot / two-captain aircraft — no first-officer seat.</div>;
   const o = normSeat(seat);
+  const href = (n: string) => (links[n] ? `/candidates/${links[n]}` : undefined);
   const rows: ReactNode[] = [];
-  o.line.forEach((n, i) => rows.push(<PersonRow key={`l${i}`} name={n} cls="g" rp="On line" lead={n === leadName} tags={tags?.[n]} />));
-  o.train.forEach((n, i) => rows.push(<PersonRow key={`t${i}`} name={n} cls="t" rp="In training" tags={tags?.[n]} />));
-  o.cand.forEach((n, i) => rows.push(<PersonRow key={`c${i}`} name={n} cls="r" rp="Tentative · external" tags={tags?.[n]} />));
-  o.candInt.forEach((n, i) => rows.push(<PersonRow key={`ci${i}`} name={n} cls="i" rp="Tentative · internal" tags={tags?.[n]} />));
+  o.line.forEach((n, i) => rows.push(<PersonRow key={`l${i}`} name={n} cls="g" rp="On line" lead={n === leadName} tags={tags?.[n]} href={href(n)} />));
+  o.train.forEach((n, i) => rows.push(<PersonRow key={`t${i}`} name={n} cls="t" rp="In training" tags={tags?.[n]} href={href(n)} />));
+  o.cand.forEach((n, i) => rows.push(<PersonRow key={`c${i}`} name={n} cls="r" rp="Tentative · external" tags={tags?.[n]} href={href(n)} />));
+  o.candInt.forEach((n, i) => rows.push(<PersonRow key={`ci${i}`} name={n} cls="i" rp="Tentative · internal" tags={tags?.[n]} href={href(n)} />));
   for (let i = 0; i < o.open; i++) rows.push(<SlotRow key={`o${i}`} label="Open seat" cls="o" rp="Sourcing" />);
   if (showParked) for (let i = 0; i < o.parked; i++) rows.push(<SlotRow key={`p${i}`} label="On hold (parked)" cls="p" rp="Not counted" />);
   if (rows.length === 0) return <div className="m-empty">No crew listed.</div>;
@@ -103,7 +107,10 @@ function EditCol({
   onAdjustOpen,
   onToggleTrain,
   onSetMove,
-  onMove
+  onMove,
+  links,
+  onLink,
+  onUnlink
 }: {
   group: CrewGroup;
   gIdx: number;
@@ -117,11 +124,16 @@ function EditCol({
   onToggleTrain: (name: string, toTrain: boolean) => void;
   onSetMove: (p: MovePick | null) => void;
   onMove: (from: MovePick, toIdx: number, toSeat: SeatKey, bucket: FillBucket) => void;
+  links: Record<string, string>;
+  onLink: (name: string, candidateId: string) => void;
+  onUnlink: (name: string) => void;
 }) {
   const [draftName, setDraftName] = useState("");
   const [draftBucket, setDraftBucket] = useState<FillBucket>("line");
   const [moveDest, setMoveDest] = useState("");
   const [moveStatus, setMoveStatus] = useState<FillBucket>("line");
+  // Which person's link picker is open.
+  const [linkFor, setLinkFor] = useState<string | null>(null);
   const o = normSeat(group[seatKey]);
   const filled = o.line.length + o.train.length;
   const total = filled + o.open + o.openNamed.length + o.cand.length + o.candInt.length;
@@ -129,11 +141,21 @@ function EditCol({
   const row = (name: string, bucket: FillBucket, tone: string, tag?: string) => {
     const isMoving =
       !!movePick && movePick.gIdx === gIdx && movePick.seatKey === seatKey && movePick.bucket === bucket && movePick.name === name;
+    const linkedId = links[name];
+    const isLinking = linkFor === name;
     return (
       <div className="ec-row" key={`${bucket}-${name}`}>
         <div className="ec-line">
           <span className={`ec-dot ${tone}`} />
-          <span className="ec-nm">{name}</span>
+          <span className="ec-nm">
+            {linkedId ? (
+              <Link href={`/candidates/${linkedId}`} style={{ color: "inherit", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                {name}
+              </Link>
+            ) : (
+              name
+            )}
+          </span>
           {tag ? <span className="ec-tag">{tag}</span> : null}
           <span className="ec-act">
             {bucket === "line" ? (
@@ -161,11 +183,36 @@ function EditCol({
             >
               move
             </button>
+            <button
+              type="button"
+              style={{ ...orgLinkBtnStyle, borderColor: linkedId ? "var(--green, #2e7d32)" : undefined, color: linkedId ? "var(--green, #2e7d32)" : undefined }}
+              title={linkedId ? "Linked to a candidate profile" : "Link to a candidate profile"}
+              onClick={() => setLinkFor(isLinking ? null : name)}
+            >
+              {linkedId ? "linked" : "link"}
+            </button>
             <button type="button" className="del" onClick={() => onRemove(bucket, name)} title="Remove">
               ✕
             </button>
           </span>
         </div>
+        {isLinking ? (
+          <div>
+            {linkedId ? (
+              <button type="button" style={{ ...orgLinkBtnStyle, marginBottom: 4 }} onClick={() => { onUnlink(name); setLinkFor(null); }}>
+                Unlink from current candidate
+              </button>
+            ) : null}
+            <LinkPicker
+              initialQuery={name}
+              onPick={(candidateId) => {
+                onLink(name, candidateId);
+                setLinkFor(null);
+              }}
+              onCancel={() => setLinkFor(null)}
+            />
+          </div>
+        ) : null}
         {isMoving ? (
           <div className="ec-move">
             <select value={moveDest} onChange={(e) => setMoveDest(e.target.value)} aria-label="Move destination">
@@ -296,9 +343,11 @@ function Transitions({ d }: { d: CrewGroup }) {
 
 export default function CrewOrgChart({
   initialGroups,
+  initialLinks,
   canEdit = false
 }: {
   initialGroups?: CrewGroup[];
+  initialLinks?: Record<string, string>;
   canEdit?: boolean;
 } = {}) {
   const [sort, setSort] = useState<SortKey>("Fleet size");
@@ -309,12 +358,26 @@ export default function CrewOrgChart({
 
   const [groupsData, setGroupsData] = useState<CrewGroup[]>(() => initialGroups ?? CREW_GROUPS);
   const [savedGroups, setSavedGroups] = useState<CrewGroup[]>(() => initialGroups ?? CREW_GROUPS);
+  // name -> candidateId, edited alongside the roster and saved with it.
+  const [links, setLinks] = useState<Record<string, string>>(() => initialLinks ?? {});
+  const [savedLinks, setSavedLinks] = useState<Record<string, string>>(() => initialLinks ?? {});
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [movePick, setMovePick] = useState<MovePick | null>(null);
 
-  const dirty = useMemo(() => JSON.stringify(groupsData) !== JSON.stringify(savedGroups), [groupsData, savedGroups]);
+  const dirty = useMemo(
+    () => JSON.stringify(groupsData) !== JSON.stringify(savedGroups) || JSON.stringify(links) !== JSON.stringify(savedLinks),
+    [groupsData, savedGroups, links, savedLinks]
+  );
+
+  const linkPerson = (name: string, candidateId: string) => setLinks((prev) => ({ ...prev, [name]: candidateId }));
+  const unlinkPerson = (name: string) =>
+    setLinks((prev) => {
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
 
   const applyEdit = (fn: (draft: CrewGroup[]) => void) =>
     setGroupsData((prev) => {
@@ -411,16 +474,19 @@ export default function CrewOrgChart({
         body: JSON.stringify(body)
       });
       if (!res.ok) throw new Error(String(res.status));
-      const data = (await res.json()) as { groups: CrewGroup[] };
+      const data = (await res.json()) as { groups: CrewGroup[]; links?: Record<string, string> };
       setGroupsData(data.groups);
       setSavedGroups(data.groups);
+      const nextLinks = data.links ?? {};
+      setLinks(nextLinks);
+      setSavedLinks(nextLinks);
     } catch {
       setSaveErr("Couldn't save — check your connection or that you're signed in as an admin.");
     } finally {
       setSaving(false);
     }
   };
-  const save = () => postRoster({ groups: groupsData });
+  const save = () => postRoster({ groups: groupsData, links });
   const resetSeed = () => {
     if (typeof window !== "undefined" && !window.confirm("Reset the crew chart to the original source data? This discards all saved manual edits.")) return;
     postRoster({ reset: true });
@@ -428,6 +494,7 @@ export default function CrewOrgChart({
   // Leave edit mode, dropping any unsaved local changes (a plain "cancel").
   const exitEdit = () => {
     setGroupsData(savedGroups);
+    setLinks(savedLinks);
     setMovePick(null);
     setSaveErr(null);
     setEditMode(false);
@@ -928,6 +995,9 @@ export default function CrewOrgChart({
                     onToggleTrain={(name, toTrain) => toggleTrain(openIdx as number, "pic", name, toTrain)}
                     onSetMove={setMovePick}
                     onMove={doMove}
+                    links={links}
+                    onLink={linkPerson}
+                    onUnlink={unlinkPerson}
                   />
                   <EditCol
                     group={active}
@@ -942,6 +1012,9 @@ export default function CrewOrgChart({
                     onToggleTrain={(name, toTrain) => toggleTrain(openIdx as number, "sic", name, toTrain)}
                     onSetMove={setMovePick}
                     onMove={doMove}
+                    links={links}
+                    onLink={linkPerson}
+                    onUnlink={unlinkPerson}
                   />
                   {active.cabin ? (
                     <EditCol
@@ -957,6 +1030,9 @@ export default function CrewOrgChart({
                       onToggleTrain={(name, toTrain) => toggleTrain(openIdx as number, "cabin", name, toTrain)}
                       onSetMove={setMovePick}
                       onMove={doMove}
+                      links={links}
+                      onLink={linkPerson}
+                      onUnlink={unlinkPerson}
                     />
                   ) : null}
                 </div>
@@ -988,14 +1064,14 @@ export default function CrewOrgChart({
                         {acp.f}/{acp.at}
                       </span>
                     </div>
-                    <ColBody seat={active.pic} leadName={active.lead} showParked={showParked} tags={active.tags} />
+                    <ColBody seat={active.pic} leadName={active.lead} showParked={showParked} tags={active.tags} links={links} />
                   </div>
                   <div className="m-col">
                     <div className="colh">
                       <span>First Officers</span>
                       <span>{as && acs ? `${acs.f}/${acs.at}` : "—"}</span>
                     </div>
-                    <ColBody seat={active.sic} showParked={showParked} tags={active.tags} />
+                    <ColBody seat={active.sic} showParked={showParked} tags={active.tags} links={links} />
                   </div>
                   {acab && acabc ? (
                     <div className="m-cab">
@@ -1006,7 +1082,7 @@ export default function CrewOrgChart({
                         </span>
                       </div>
                       {acab.line.map((n, i) => (
-                        <PersonRow key={`cl${i}`} name={n} cls="g" rp="On board" />
+                        <PersonRow key={`cl${i}`} name={n} cls="g" rp="On board" href={links[n] ? `/candidates/${links[n]}` : undefined} />
                       ))}
                       {acab.openNamed.map((l, i) => (
                         <SlotRow key={`co${i}`} label={l} cls="o" rp="To fill" />

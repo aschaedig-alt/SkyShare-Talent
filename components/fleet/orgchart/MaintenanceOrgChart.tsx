@@ -7,6 +7,7 @@ import type { MxGroup, MxSection, Seat } from "@/lib/fleet/staffing/types";
 import { normSeat, cntSeat } from "@/lib/fleet/staffing/compute";
 import { MX_DIRECTOR, MX_TURNOVER } from "@/lib/fleet/staffing/maintenance-data";
 import { SeatSquares, PersonRow, SlotRow } from "./SeatParts";
+import { LinkPicker, orgLinkBtnStyle as linkBtnStyle } from "./LinkPicker";
 import styles from "./OrgChart.module.css";
 
 type SortKey = "Team size" | "Open seats";
@@ -35,92 +36,6 @@ function push(seat: Seat, bucket: FillBucket, name: string) {
 }
 
 type MoveDest = { gIdx: number; sIdx: number; label: string };
-type MxCandidate = { id: string; displayName: string; currentTitle: string | null; stage: string | null };
-
-const linkBtnStyle: React.CSSProperties = {
-  fontSize: 10,
-  fontWeight: 700,
-  padding: "1px 6px",
-  borderRadius: 4,
-  border: "1px solid var(--line, #cdd7e2)",
-  background: "transparent",
-  cursor: "pointer",
-  whiteSpace: "nowrap"
-};
-
-/** Search for a candidate to point a chart name at. Module-scoped so its search
-    box keeps focus while typing. Pre-seeded with the chart name, though it often
-    will not match (chart "Augustin" vs profile "Auggie") — so a last-name search
-    is the reliable move. */
-function LinkPicker({
-  initialQuery,
-  onPick,
-  onCancel
-}: {
-  initialQuery: string;
-  onPick: (candidateId: string, displayName: string) => void;
-  onCancel: () => void;
-}) {
-  const [q, setQ] = useState(initialQuery);
-  const [results, setResults] = useState<MxCandidate[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-    const t = setTimeout(async () => {
-      if (q.trim().length < 2) {
-        setResults([]);
-        return;
-      }
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/candidates?q=${encodeURIComponent(q.trim())}`);
-        const data = (await res.json()) as { candidates?: MxCandidate[] };
-        if (alive) setResults(data.candidates ?? []);
-      } catch {
-        if (alive) setResults([]);
-      } finally {
-        if (alive) setLoading(false);
-      }
-    }, 250);
-    return () => {
-      alive = false;
-      clearTimeout(t);
-    };
-  }, [q]);
-
-  return (
-    <div style={{ marginTop: 4, padding: 6, border: "1px solid var(--line, #cdd7e2)", borderRadius: 6, background: "var(--card, #fff)" }}>
-      <input
-        autoFocus
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Search candidates by name…"
-        style={{ width: "100%", fontSize: 12, padding: "3px 6px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)" }}
-      />
-      <div style={{ maxHeight: 160, overflowY: "auto", marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
-        {loading ? <div style={{ fontSize: 11, opacity: 0.6, padding: 4 }}>Searching…</div> : null}
-        {!loading && q.trim().length >= 2 && results.length === 0 ? (
-          <div style={{ fontSize: 11, opacity: 0.6, padding: 4 }}>No matches — try a last name.</div>
-        ) : null}
-        {results.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => onPick(c.id, c.displayName)}
-            style={{ textAlign: "left", fontSize: 12, padding: "3px 6px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)", background: "transparent", cursor: "pointer" }}
-          >
-            <b>{c.displayName}</b>
-            {c.currentTitle ? <span style={{ opacity: 0.7 }}> · {c.currentTitle}</span> : null}
-          </button>
-        ))}
-      </div>
-      <button type="button" onClick={onCancel} style={{ ...linkBtnStyle, marginTop: 4 }}>
-        Cancel
-      </button>
-    </div>
-  );
-}
 
 /** One editable maintenance section in the edit-mode modal. Module-scoped so the
     "add name" input keeps focus across the parent's re-renders. */
