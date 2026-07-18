@@ -3,6 +3,7 @@ import { getCandidateProfileData } from "@/lib/data/candidates";
 import { getTravelTripsForCandidate, getCandidateLoyalty } from "@/lib/data/travel";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { getPageLayout } from "@/lib/data/page-layout";
+import { isAdminOrRecruiter } from "@/lib/auth/roles";
 import { notFound } from "next/navigation";
 
 type CandidateDetailPageProps = {
@@ -22,7 +23,10 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
   return (
     <CandidateProfileWorkspace
       candidate={candidate}
-      canEdit={access.role === "ADMIN"}
+      // Recruiters run onboarding, not just admins — the Move-to-onboarding,
+      // Link-to-a-job, and offer controls all POST candidates:write, which the
+      // RECRUITER role already has. (Set a coordinator's account to RECRUITER.)
+      canEdit={isAdminOrRecruiter(access.role)}
       savedLayout={layout.layout}
       savedWidgets={layout.widgets}
       travelTrips={travelTrips}

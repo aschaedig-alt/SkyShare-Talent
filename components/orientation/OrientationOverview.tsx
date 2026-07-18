@@ -275,7 +275,7 @@ export function OrientationOverview({
           <section>
             <h2 className="mb-2 text-sm font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Upcoming</h2>
             {upcoming.length === 0 ? (
-              <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">No upcoming sessions. Create one, or use the Cohorts tab to spin one up from pre-onboarding orientation dates.</p>
+              <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">No upcoming sessions. Create one, or use the Cohorts tab to spin one up from onboarding orientation dates.</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{upcoming.map((s) => <SessionCard key={s.id} s={s} />)}</div>
             )}
@@ -302,7 +302,7 @@ export function OrientationOverview({
           <section>
             <h2 className="mb-2 text-sm font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Cohorts by orientation date</h2>
             {cohorts.length === 0 ? (
-              <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">No active hires have an orientation date set yet. Set one on a hire in Pre-onboarding and they&apos;ll group here.</p>
+              <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">No active hires have an orientation date set yet. Set one on a hire under New hires and they&apos;ll group here.</p>
             ) : (
               <div className="grid gap-3 lg:grid-cols-2">
                 {cohorts.map((c) => <CohortCard key={c.dateISO} c={c} onCreate={createFromCohort} onAddMissing={addMissing} busy={busy} />)}

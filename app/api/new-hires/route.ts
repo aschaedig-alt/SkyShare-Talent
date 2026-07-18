@@ -80,6 +80,26 @@ export async function POST(request: Request) {
           { status: 409 }
         );
       }
+    } else if (!body.force) {
+      // No candidate behind this one (the walk-in / quick-add path), so the
+      // candidate-level guard above can't fire. Guard on name instead: a second
+      // quick-add of the same name is almost always the same person entered
+      // twice. Same name CAN be two real people, so this is a soft 409 with a
+      // force escape rather than a hard block — the caller can add anyway.
+      const sameName = await prisma.newHire.findFirst({
+        where: { name: { equals: name, mode: "insensitive" }, stage: { in: ["ACTIVE", "POST_ONBOARD"] } },
+        select: { id: true, name: true, position: true }
+      });
+      if (sameName) {
+        return NextResponse.json(
+          {
+            message: `A hire named ${sameName.name} already exists${sameName.position ? ` (${sameName.position})` : ""}. Open that one, or add anyway if this is a different person.`,
+            existing: sameName,
+            duplicate: true
+          },
+          { status: 409 }
+        );
+      }
     }
 
     // Carry across what was already ticked while they were still a candidate, so

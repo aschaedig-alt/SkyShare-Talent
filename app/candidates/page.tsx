@@ -2,9 +2,10 @@ import { CandidatesWorkspace } from "@/components/candidates/CandidatesWorkspace
 import { getCandidateListData } from "@/lib/data/candidates";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { getPageLayout } from "@/lib/data/page-layout";
+import { isAdminOrRecruiter } from "@/lib/auth/roles";
 
 type CandidatesPageProps = {
-  searchParams?: Promise<{ q?: string }>;
+  searchParams?: Promise<{ q?: string; from?: string }>;
 };
 
 export default async function CandidatesPage({ searchParams }: CandidatesPageProps) {
@@ -17,7 +18,8 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
     <CandidatesWorkspace
       data={data}
       query={query}
-      canEdit={access.role === "ADMIN"}
+      canEdit={isAdminOrRecruiter(access.role)}
+      onboardingIntent={params?.from === "onboarding"}
       savedLayout={layout.layout}
       savedWidgets={layout.widgets}
     />

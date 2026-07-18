@@ -138,6 +138,7 @@ export async function POST(request: Request) {
       }
     }
 
+    let reactivated = false;
     if (body.jobId) {
       const already = await prisma.candidateApplication.findFirst({
         where: { candidateId: candidate.id, jobId: body.jobId }
@@ -154,9 +155,35 @@ export async function POST(request: Request) {
           }
         });
       }
+
+      // If we matched an ARCHIVED candidate, linking them to a job means we are
+      // considering them again — bring them back into the active pipeline, the
+      // same way POST /api/candidate-applications does. But NOT if they are
+      // archived because they were already HIRED and are a current employee
+      // (their candidate record is archived precisely so an employee doesn't sit
+      // in the candidate pipeline — e.g. Matt Dahle). Without this, the "new
+      // candidate on a job" path silently left an archived match archived and
+      // could staple an application onto a working employee's record.
+      if (existing?.archivedAt) {
+        const employedHire = await prisma.newHire.findFirst({
+          where: {
+            candidateId: candidate.id,
+            stage: { in: ["ACTIVE", "POST_ONBOARD"] },
+            NOT: { employmentStatus: "TERMINATED" }
+          },
+          select: { id: true }
+        });
+        if (!employedHire) {
+          await prisma.candidate.update({
+            where: { id: candidate.id },
+            data: { archivedAt: null, status: "ACTIVE" }
+          });
+          reactivated = true;
+        }
+      }
     }
 
-    return NextResponse.json({ candidate: { id: candidate.id, displayName: candidate.displayName }, reused: Boolean(existing) });
+    return NextResponse.json({ candidate: { id: candidate.id, displayName: candidate.displayName }, reused: Boolean(existing), reactivated });
   } catch {
     return NextResponse.json({ message: "Unable to create candidate." }, { status: 500 });
   }

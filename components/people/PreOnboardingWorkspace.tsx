@@ -24,6 +24,7 @@ export type PeopleTab = "dashboard" | "grid" | "post" | "archived";
 type Props = {
   tab: PeopleTab;
   counts: { active: number; postOnboard: number; archived: number };
+  canManage?: boolean;
   dashboard?: OnboardingDashboard;
   grid?: GridHire[];
   milestones?: MilestoneData;
@@ -31,11 +32,18 @@ type Props = {
   archived?: NewHireRow[];
 };
 
-export function PreOnboardingWorkspace({ tab, counts, dashboard, grid, milestones, post, archived }: Props) {
+export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboard, grid, milestones, post, archived }: Props) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: "", position: "", department: "", startDate: "" });
+  // A hire with no start date drops off nearly every dashboard panel (no
+  // "starting soon", no reminders), so this shortcut path makes the choice
+  // explicit rather than letting a blank date slip through silently.
+  const [noDateAck, setNoDateAck] = useState(false);
+  // A same-name hire already exists. Same name can be two real people, so this
+  // isn't a hard stop — offer to open the existing one or add anyway.
+  const [dupe, setDupe] = useState<{ id: string; name: string; position: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [gridView, setGridView] = useState<"grid" | "milestones">("grid");
 
@@ -46,20 +54,29 @@ export function PreOnboardingWorkspace({ tab, counts, dashboard, grid, milestone
     { key: "archived", label: "Archived", badge: counts.archived }
   ];
 
-  async function createHire() {
+  async function createHire(force = false) {
     if (!form.name.trim()) {
       setError("Name is required.");
       return;
     }
     setSaving(true);
     setError(null);
+    setDupe(null);
     try {
       const res = await fetch("/api/new-hires", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify({ ...form, force })
       });
-      const payload = (await res.json().catch(() => null)) as { id?: string; message?: string } | null;
+      const payload = (await res.json().catch(() => null)) as
+        | { id?: string; message?: string; duplicate?: boolean; existing?: { id: string; name: string; position: string | null } }
+        | null;
+      // Soft duplicate: a hire with this name already exists. Let them choose.
+      if (res.status === 409 && payload?.duplicate && payload.existing) {
+        setDupe(payload.existing);
+        setSaving(false);
+        return;
+      }
       if (!res.ok || !payload?.id) {
         throw new Error(payload?.message ?? "Unable to add new hire.");
       }
@@ -81,8 +98,25 @@ export function PreOnboardingWorkspace({ tab, counts, dashboard, grid, milestone
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <ImportHiresButton />
-          <Button onClick={() => setAdding(true)}>+ Add new hire</Button>
+          {/* The right door, made the obvious one: a real Link (ctrl/right-click
+              to a new tab) so someone starts from the candidate — keeping the
+              resume, offer, and history attached. */}
+          <Link
+            href="/candidates?from=onboarding"
+            className="inline-flex items-center gap-1.5 rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden hover:shadow-glow dark:bg-brand-sweet dark:text-brand-lea"
+          >
+            Start from a candidate →
+          </Link>
+          {/* Escape hatches for admins only: both create a hire with NO candidate
+              link — right for a true walk-in or a back-catalog import, wrong for a
+              live pipeline hire. Demoted to secondary so they don't out-shout the
+              correct path. */}
+          {canManage && (
+            <>
+              <ImportHiresButton />
+              <Button variant="secondary" onClick={() => { setNoDateAck(false); setError(null); setDupe(null); setAdding(true); }}>+ Add new hire</Button>
+            </>
+          )}
         </div>
       </section>
 
@@ -130,21 +164,38 @@ export function PreOnboardingWorkspace({ tab, counts, dashboard, grid, milestone
       <Modal open={adding} onClose={() => setAdding(false)} busy={saving}>
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Add new hire</h2>
         <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">Creates an active hire with the standard checklist.</p>
+        {/* Nudge back to the linked path — this modal makes a hire with no
+            candidate record behind it, which is only right for a true walk-in. */}
+        <p className="mt-2 rounded bg-brand-cloudDancer/50 px-3 py-2 text-xs text-brand-grey dark:bg-white/5 dark:text-slate-400">
+          Most hires should <Link href="/candidates" className="font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-brand-sweet">start from the candidate</Link> so their resume, offer, and history stay attached. Use this only for someone with no candidate record.
+        </p>
         <div className="mt-4 space-y-3">
           <Input autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name *" />
           <Input value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} placeholder="Position" />
           <div className="flex gap-3">
             <Input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} placeholder="Department" className="w-1/2" />
-            <Input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="w-1/2" />
+            <Input type="date" value={form.startDate} onChange={(e) => { setForm({ ...form, startDate: e.target.value }); if (e.target.value) setNoDateAck(false); }} className="w-1/2" />
           </div>
+          {!form.startDate && (
+            <label className="flex items-start gap-2 rounded bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+              <input type="checkbox" checked={noDateAck} onChange={(e) => setNoDateAck(e.target.checked)} className="mt-0.5" />
+              <span>No start date yet. They will sit in a “No start date” bucket — off the “starting soon” views until a date is set. I understand.</span>
+            </label>
+          )}
+          {dupe ? (
+            <div className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+              A hire named <span className="font-semibold">{dupe.name}</span>{dupe.position ? ` (${dupe.position})` : ""} already exists.{" "}
+              <Link href={`/people/${dupe.id}`} className="font-semibold underline underline-offset-2">Open that record</Link>, or add anyway if this is a different person.
+            </div>
+          ) : null}
           {error ? <p className="text-sm font-medium text-red-700 dark:text-red-300">{error}</p> : null}
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setAdding(false)} disabled={saving}>
             Cancel
           </Button>
-          <Button onClick={createHire} disabled={saving}>
-            {saving ? "Adding..." : "Add hire"}
+          <Button onClick={() => createHire(Boolean(dupe))} disabled={saving || (!form.startDate && !noDateAck)}>
+            {saving ? "Adding..." : dupe ? "Add anyway" : "Add hire"}
           </Button>
         </div>
       </Modal>

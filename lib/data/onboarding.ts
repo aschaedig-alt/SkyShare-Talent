@@ -93,6 +93,10 @@ export type OnboardingDashboard = {
   startingSoonList: DrillPerson[];
   needsAttentionList: DrillPerson[];
   missingItemsList: DrillPerson[];
+  // Active hires with no start date. They're filtered out of every date-based
+  // panel above (starting soon, upcoming, by week), so without this bucket they
+  // silently vanish from the dashboard until someone sets a date.
+  noStartDateList: DrillPerson[];
   // Top onboarding tasks still incomplete across active hires (where it's jamming).
   bottlenecks: ChartDatum[];
   // Hires starting in the next ~3 weeks, with progress + status, for the quick scan.
@@ -336,6 +340,11 @@ function buildDashboard(active: HireWithTasks[], now: number, travelByHire: Map<
     .filter(({ row }) => row.applicableCount - row.doneCount > 0)
     .map(toDrill)
     .sort((a, b) => b.applicableCount - b.doneCount - (a.applicableCount - a.doneCount));
+  // Dateless active hires (excluding canceled) — surfaced so they don't disappear.
+  const noStartDateList = rows
+    .filter(({ row }) => !row.startDate && !row.canceled)
+    .map(toDrill)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   // Checklist bottlenecks: onboarding tasks still TODO across the most hires.
   const todoByTask = new Map<string, { label: string; count: number }>();
@@ -409,6 +418,7 @@ function buildDashboard(active: HireWithTasks[], now: number, travelByHire: Map<
     startingSoonList,
     needsAttentionList,
     missingItemsList,
+    noStartDateList,
     bottlenecks,
     readyForStart,
     orientationTimeliness,

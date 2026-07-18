@@ -18,6 +18,10 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Found[]>([]);
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", currentTitle: "" });
+  // A short confirmation shown when the action wasn't a plain create/link:
+  // matched an existing candidate, already linked, or reactivated an archived one.
+  // Without it, those cases closed silently and looked identical to a fresh add.
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || mode !== "existing") return;
@@ -45,7 +49,7 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  async function linkExisting(candidateId: string) {
+  async function linkExisting(candidateId: string, name: string) {
     setBusy(true);
     setError(null);
     try {
@@ -54,8 +58,17 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ candidateId, jobId })
       });
+      const body = (await res.json().catch(() => ({}))) as { reused?: boolean; reactivated?: boolean };
       if (res.ok) {
-        finish();
+        if (body.reused) {
+          setNotice(`${name} was already linked to ${jobTitle} — nothing duplicated.`);
+          router.refresh();
+        } else if (body.reactivated) {
+          setNotice(`${name} was archived — linking brought them back into the active pipeline and added them to ${jobTitle}.`);
+          router.refresh();
+        } else {
+          finish();
+        }
       } else {
         setError("Could not link candidate.");
       }
@@ -79,10 +92,22 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, jobId })
       });
+      const body = (await res.json().catch(() => ({}))) as { candidate?: { displayName: string }; reused?: boolean; reactivated?: boolean; message?: string };
       if (res.ok) {
-        finish();
+        // Email/phone matched an existing person → say so instead of silently
+        // reusing them under a "new candidate" action.
+        if (body.reused && body.candidate) {
+          const who = body.candidate.displayName;
+          setNotice(
+            body.reactivated
+              ? `Matched an existing candidate — ${who} was archived, so linking to ${jobTitle} brought them back into the active pipeline.`
+              : `Matched an existing candidate — linked ${who} to ${jobTitle} instead of creating a duplicate.`
+          );
+          router.refresh();
+        } else {
+          finish();
+        }
       } else {
-        const body = (await res.json().catch(() => ({}))) as { message?: string };
         setError(body.message ?? "Could not create candidate.");
       }
     } catch {
@@ -98,6 +123,7 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
     setResults([]);
     setForm({ firstName: "", lastName: "", email: "", phone: "", currentTitle: "" });
     setMode("existing");
+    setNotice(null);
     router.refresh();
   }
 
@@ -111,12 +137,22 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-lea/40 p-4" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-lea/40 p-4" onClick={finish}>
           <div className="w-full max-w-md rounded bg-white p-5 shadow-xl dark:bg-brand-panel" onClick={(e) => e.stopPropagation()}>
             <div className="mb-1 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Add candidate</h2>
-              <button onClick={() => setOpen(false)} className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close"><X className="h-5 w-5" /></button>
+              <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">{notice ? "Done" : "Add candidate"}</h2>
+              <button onClick={finish} className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close"><X className="h-5 w-5" /></button>
             </div>
+
+            {notice ? (
+              <div>
+                <p className="rounded border border-brand-gold/40 bg-brand-sweet/12 p-3 text-sm text-brand-lea dark:bg-brand-gold/10 dark:text-slate-100">{notice}</p>
+                <div className="mt-4 flex justify-end">
+                  <button onClick={finish} className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden dark:bg-brand-sweet dark:text-brand-lea">Done</button>
+                </div>
+              </div>
+            ) : (
+            <>
             <p className="mb-3 text-xs text-brand-grey dark:text-slate-400">Linking to <span className="font-semibold text-brand-lea">{jobTitle}</span></p>
 
             <div className="mb-3 inline-flex overflow-hidden rounded border border-brand-lea/20 text-xs font-semibold dark:border-white/10">
@@ -135,7 +171,7 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
                     results.map((c) => (
                       <button
                         key={c.id}
-                        onClick={() => linkExisting(c.id)}
+                        onClick={() => linkExisting(c.id, c.displayName)}
                         disabled={busy}
                         className="flex w-full items-center justify-between gap-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-2 text-left transition hover:border-brand-sweet hover:bg-brand-sweet/15 hover:shadow-glow disabled:opacity-60 dark:border-white/10 dark:bg-white/5"
                       >
@@ -177,6 +213,8 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
             )}
 
             {error && <p className="mt-3 text-xs font-semibold text-red-600 dark:text-red-400">{error}</p>}
+            </>
+            )}
           </div>
         </div>
       )}

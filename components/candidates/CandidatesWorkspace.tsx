@@ -24,6 +24,9 @@ type CandidatesWorkspaceProps = {
   canEdit?: boolean;
   savedLayout?: GridItem[] | null;
   savedWidgets?: WidgetInstance[] | null;
+  // Set when the user arrived here via "Start from a candidate" on New hires, so
+  // the list carries the intent instead of dropping them onto an anonymous page.
+  onboardingIntent?: boolean;
 };
 
 // Default arrangement of the resizable boxes (stats row + records table).
@@ -87,7 +90,7 @@ function initials(name: string) {
     .join("");
 }
 
-export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout = null, savedWidgets = null }: CandidatesWorkspaceProps) {
+export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout = null, savedWidgets = null, onboardingIntent = false }: CandidatesWorkspaceProps) {
   const statsPanel = (
     <section className="grid h-full content-start gap-3 grid-cols-[repeat(auto-fit,minmax(150px,1fr))]">
       {statConfig.map(({ key, label, icon: Icon, accent }) => (
@@ -252,6 +255,15 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
           </div>
         </div>
       </section>
+
+      {onboardingIntent && (
+        <div className="flex items-start gap-3 rounded border border-brand-gold/40 bg-brand-sweet/15 px-4 py-3 dark:bg-brand-gold/10">
+          <UserCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-eden dark:text-brand-sweet" />
+          <p className="text-sm text-brand-lea dark:text-slate-100">
+            <span className="font-semibold">Onboarding someone?</span> Find and open their candidate below, then use <span className="font-semibold">Move to onboarding</span> on their profile. Not in the list yet? Add them with <span className="font-semibold">New candidate</span>.
+          </p>
+        </div>
+      )}
 
       <CandidateViewTabs active="list" />
 

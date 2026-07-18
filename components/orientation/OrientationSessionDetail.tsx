@@ -326,7 +326,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
             <select value={addId} onChange={(e) => setAddId(e.target.value)} className="flex-1 rounded border border-brand-lea/15 px-2 py-1.5 text-sm text-brand-lea dark:border-white/10 dark:text-slate-100">
               <option value="">Add attendee…</option>
               {session.candidates.filter((c) => c.suggested).length > 0 ? (
-                <optgroup label="Suggested · in pre-onboarding, not yet attended">
+                <optgroup label="Suggested · in onboarding, not yet attended">
                   {session.candidates.filter((c) => c.suggested).map((c) => <option key={c.id} value={c.id}>{c.name}{c.position ? ` · ${c.position}` : ""}</option>)}
                 </optgroup>
               ) : null}

@@ -14,6 +14,7 @@ import { CandidateActivityTimeline } from "@/components/candidates/CandidateActi
 import { HistoricalMatchPanel } from "@/components/candidates/HistoricalMatchPanel";
 import { LinkedHistoricalPanel } from "@/components/candidates/LinkedHistoricalPanel";
 import { MoveToPreOnboardingPanel } from "@/components/candidates/MoveToPreOnboardingPanel";
+import { AddJobToCandidate } from "@/components/candidates/AddJobToCandidate";
 import { OfferControl } from "@/components/candidates/OfferControl";
 import { offerStatusLabel } from "@/lib/offers/constants";
 import { CandidateTimeline } from "@/components/candidates/CandidateTimeline";
@@ -472,6 +473,14 @@ export function CandidateProfileWorkspace({
           {/* Applications tab */}
           {activeTab === "applications" && (
             <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+              {/* Link to a job right here — no detour to the Jobs page. Once linked,
+                  the offer for it can be worked on the Offers tab. */}
+              {canEdit && (
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <p className="text-xs text-brand-grey dark:text-slate-400">Jobs this candidate has applied to or been linked to.</p>
+                  <AddJobToCandidate candidateId={candidate.id} />
+                </div>
+              )}
               <div className="space-y-2">
                 {candidate.applications.length > 0 ? (
                   candidate.applications.map((application) => (
@@ -529,7 +538,7 @@ export function CandidateProfileWorkspace({
                     </div>
                   ))
                 ) : (
-                  <EmptyState title="No applications yet" detail="Application history appears here after imports or manual linking." />
+                  <EmptyState title="No applications yet" detail={canEdit ? "Use “Link to a job” above to attach this candidate to a role — then work the offer on the Offers tab." : "Application history appears here after imports or manual linking."} />
                 )}
               </div>
             </section>
@@ -555,7 +564,7 @@ export function CandidateProfileWorkspace({
                     </div>
                   ))
                 ) : (
-                  <EmptyState title="No applications to offer against" detail="An offer is made for a specific job, so add an application first (under Applied to)." />
+                  <EmptyState title="No applications to offer against" detail={canEdit ? "An offer is made for a specific job. Open the “Applied to” tab and use “Link to a job” to attach one, then come back here to work the offer." : "An offer is made for a specific job. Once this candidate is linked to a role, its offer appears here."} />
                 )}
               </div>
             </section>

@@ -216,6 +216,31 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
 
       {drillView ? <DrillPanel title={drillView.title} people={drillView.people} onClose={() => setDrill(null)} /> : null}
 
+      {/* No start date — these hires are filtered out of every date-based panel
+          below, so surface them here or they silently disappear from the board. */}
+      {dashboard.noStartDateList.length > 0 && (
+        <section className="rounded border border-amber-300/70 bg-amber-50 p-4 shadow-panel dark:border-amber-500/30 dark:bg-amber-500/10">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-base font-semibold text-amber-900 dark:text-amber-200">No start date yet · {dashboard.noStartDateList.length}</h2>
+            <span className="text-[11px] text-amber-800 dark:text-amber-300">Hidden from “starting soon” until a date is set</span>
+          </div>
+          <div className="mt-2 divide-y divide-amber-200/60 dark:divide-amber-500/20">
+            {dashboard.noStartDateList.map((p) => (
+              <Link key={p.id} href={`/people/${p.id}`} className="flex items-center justify-between gap-3 py-2 text-sm transition hover:opacity-90 hover:shadow-glow">
+                <span className="min-w-0 truncate">
+                  <span className="font-semibold text-amber-900 dark:text-amber-100">{p.name}</span>
+                  {p.position ? <span className="text-amber-800/80 dark:text-amber-300/80"> · {p.position}</span> : null}
+                </span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className="text-xs text-amber-800/80 dark:text-amber-300/80">{p.doneCount}/{p.applicableCount}</span>
+                  <span className="rounded bg-amber-200/70 px-2 py-0.5 text-[10px] font-semibold text-amber-900 dark:bg-amber-500/20 dark:text-amber-200">Set a start date</span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Ready for their start — quick scan of who's starting soon and how ready */}
       <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Ready for their start?</h2>

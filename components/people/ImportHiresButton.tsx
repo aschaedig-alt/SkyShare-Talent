@@ -84,11 +84,15 @@ export function ImportHiresButton() {
       </Button>
 
       <Modal open={open} onClose={close} busy={importing} maxWidth="max-w-2xl">
-            <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Import hires from your spreadsheet</h2>
+            <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Import historical / back-catalog hires</h2>
             <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
               Paste or upload your sheet (works whether names run across the top or down the first column). Re-importing the whole
               sheet is safe — people already here get any changed dates/info updated (never wiped), unchanged ones are left alone, and
               anyone new is added.
+            </p>
+            <p className="mt-2 rounded bg-brand-cloudDancer/50 px-3 py-2 text-xs text-brand-grey dark:bg-white/5 dark:text-slate-400">
+              Imported hires are not linked to a candidate. For someone in your live pipeline, start from their candidate profile
+              instead so their resume, offer, and history stay attached.
             </p>
 
             {!result ? (

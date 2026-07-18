@@ -23,6 +23,40 @@ function strOrNull(v: unknown): string | null {
   return t.length ? t : null;
 }
 
+// GET /api/recruiting-jobs?q= — lightweight job search for the candidate-side
+// "Link to a job" picker, so an offer can be attached without detouring to the
+// Jobs page. Mirrors the candidates search endpoint. OPEN roles first; MERGED
+// and RETIRED requisitions are hidden so you can't link to a dead one.
+export async function GET(request: Request) {
+  const auth = await requireApiPermission("jobs:read");
+  if (!auth.ok) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const q = new URL(request.url).searchParams.get("q")?.trim() ?? "";
+
+  const jobs = await prisma.job.findMany({
+    where: {
+      status: { notIn: ["MERGED", "RETIRED"] },
+      ...(q
+        ? {
+            OR: [
+              { title: { contains: q, mode: "insensitive" } },
+              { normalizedTitle: { contains: q.toLowerCase() } },
+              { department: { contains: q, mode: "insensitive" } }
+            ]
+          }
+        : {})
+    },
+    // OPEN before FILLED (alphabetical puts FILLED < OPEN, so desc), then title.
+    orderBy: [{ status: "desc" }, { title: "asc" }],
+    take: 12,
+    select: { id: true, title: true, status: true, department: true, baseLocation: true }
+  });
+
+  return NextResponse.json({ jobs });
+}
+
 // Same normalization the importer uses, so a job added here and the same job
 // arriving by import collide on purpose rather than becoming two rows.
 const normalizeTitle = (value: string) => value.toLowerCase().replace(/\s+/g, " ").trim();

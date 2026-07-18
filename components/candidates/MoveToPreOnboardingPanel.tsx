@@ -43,6 +43,10 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
   const [position, setPosition] = useState(pre.suggestedPosition ?? "");
   const [department, setDepartment] = useState(pre.suggestedDepartment ?? "");
   const [startDate, setStartDate] = useState(pre.suggestedStartDate?.slice(0, 10) ?? "");
+  // Moving someone with no start date is allowed, but it must be a deliberate
+  // choice: a dateless hire drops off the "starting soon" views, so require an
+  // explicit acknowledgement rather than letting a blank date pass silently.
+  const [noDateAck, setNoDateAck] = useState(false);
   const [ssEmail, setSsEmail] = useState(pre.suggestedEmail ?? "");
   // Only warn while they still hold the colliding address — editing clears it.
   const emailClash = pre.emailTakenBy && ssEmail.trim().toLowerCase() === (pre.suggestedEmail ?? "").toLowerCase();
@@ -75,10 +79,10 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
         })
       });
       const data = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
-      if (!res.ok || !data.id) throw new Error(data.message || "Unable to create the pre-onboarding record.");
+      if (!res.ok || !data.id) throw new Error(data.message || "Unable to create the onboarding record.");
       router.push(`/people/${data.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to create the pre-onboarding record.");
+      setError(err instanceof Error ? err.message : "Unable to create the onboarding record.");
       setBusy(null);
     }
   };
@@ -101,7 +105,7 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
       <div className="grid gap-2 sm:grid-cols-2">
         {field("Position", position, setPosition, "text", "e.g. Gulfstream G200 First Officer")}
         {field("Department", department, setDepartment, "text", "e.g. Pilot")}
-        {field("Start date", startDate, setStartDate, "date")}
+        {field("Start date", startDate, (v) => { setStartDate(v); if (v) setNoDateAck(false); }, "date")}
         {field("Company email", ssEmail, setSsEmail, "text")}
       </div>
 
@@ -111,9 +115,12 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
         </p>
       )}
       {!startDate && (
-        <p className="mt-2 text-[11px] text-brand-grey dark:text-slate-400">
-          Without a start date they will not show on the New hires dashboard — no “starting soon”, no reminders.
-        </p>
+        <label className="mt-2 flex items-start gap-2 rounded bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+          <input type="checkbox" checked={noDateAck} onChange={(e) => setNoDateAck(e.target.checked)} className="mt-0.5" />
+          <span>
+            No start date yet — they will sit in a “No start date” bucket on the dashboard, off the “starting soon” views until a date is set. Move them anyway.
+          </span>
+        </label>
       )}
       {missing && (
         <p className="mt-1 text-[11px] text-brand-grey dark:text-slate-400">Still blank: {missing}. You can fill it in later.</p>
@@ -123,7 +130,7 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           onClick={() => void createHire()}
-          disabled={busy !== null}
+          disabled={busy !== null || (!startDate && !noDateAck)}
           className="rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50 dark:text-slate-100"
         >
           {busy === "create" ? "Moving…" : "Move to onboarding"}
@@ -166,7 +173,7 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
         <div className="flex flex-wrap items-center gap-3">
           <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" />
           <p className="text-sm text-brand-lea dark:text-slate-100">
-            In {pre.hireStage === "ACTIVE" ? "pre-onboarding" : "onboarding records"} as a new hire.
+            In {pre.hireStage === "ACTIVE" ? "onboarding" : "onboarding records"} as a new hire.
           </p>
           <Link
             href={`/people/${pre.hireId}`}
@@ -192,7 +199,7 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
-              Already in {m.stage === "ACTIVE" ? "pre-onboarding" : "onboarding records"}
+              Already in {m.stage === "ACTIVE" ? "onboarding" : "onboarding records"}
             </p>
             <p className="mt-1 text-sm text-brand-lea dark:text-slate-100">
               <span className="font-semibold">{m.name}</span>
@@ -272,11 +279,11 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
                 {pre.offerSigned ? "Offer signed — ready to onboard" : "Hired — ready to onboard"}
               </p>
               <p className="mt-1 text-sm text-brand-lea dark:text-slate-100">
-                Move {candidate.displayName} into pre-onboarding to start their onboarding checklist.
+                Move {candidate.displayName} into onboarding to start their checklist.
               </p>
             </>
           ) : (
-            <p className="text-sm text-brand-lea dark:text-slate-100">Move this candidate into pre-onboarding.</p>
+            <p className="text-sm text-brand-lea dark:text-slate-100">Move this candidate into onboarding.</p>
           )}
           <p className="mt-0.5 text-[11px] text-brand-grey dark:text-slate-400">
             {prefill ? `Will prefill: ${prefill}` : ""}
