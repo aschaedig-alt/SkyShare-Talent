@@ -186,7 +186,7 @@ function LinkedCandidates({ job }: { job: RecruitingJobDetail }) {
           ))
         ) : (
           <p className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-            No linked candidates yet. Suggested candidates will be added after matching logic exists.
+            No linked candidates yet. Use “Add candidate” to link one, or find matches on the Matchboard.
           </p>
         )}
       </div>
