@@ -218,6 +218,20 @@ export async function updateTrip(tripId: string, patch: Record<string, unknown>)
     data,
     include: { items: { orderBy: { startsAt: "asc" } }, receipts: { orderBy: { uploadedAt: "desc" } } }
   });
+
+  // Booking a hire's trip means their travel is arranged, so tick the onboarding
+  // checklist's "Travel accommodations complete" — otherwise a fully-handled hire
+  // sits at "N-1/N" forever because nothing else sets this task. Forward-only: we
+  // do not auto-untick on cancel (a hire can have several trips, and clobbering a
+  // hand-set value is worse than a rare stale tick). Candidate fly-out trips have
+  // no NewHire, so they are skipped.
+  if ((data.status === "BOOKED" || data.status === "COMPLETED") && trip.newHireId) {
+    await prisma.onboardingTask.updateMany({
+      where: { newHireId: trip.newHireId, key: "travel_complete", status: { not: "DONE" } },
+      data: { status: "DONE", completedAt: new Date() }
+    });
+  }
+
   return { ok: true, trip: toTravelTripView(trip) };
 }
 
