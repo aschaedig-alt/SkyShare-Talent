@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { clsx } from "clsx";
-import { CreditCard, Copy, Check, Plus, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { CreditCard, Copy, Check, Plus, Pencil, Trash2, AlertTriangle, ExternalLink } from "lucide-react";
 import { Modal, Input, Button } from "@/components/ui";
 import {
   buildBusinessCard,
@@ -204,9 +205,19 @@ export function BusinessCardPanel({
         <h2 className="flex items-center gap-1.5 text-base font-semibold text-brand-lea dark:text-slate-100">
           <CreditCard className="h-4 w-4" /> Business card{variants.length ? "s" : ""}
         </h2>
-        <button onClick={openAdd} title="Add another card" className="inline-flex items-center gap-1 rounded border border-brand-lea/20 px-2 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/5">
-          <Plus className="h-3.5 w-3.5" /> Add
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Jump to the bulk order page (order everyone's cards for the printer). */}
+          <Link
+            href="/business-cards"
+            title="Open the Business cards page to order in bulk"
+            className="inline-flex items-center gap-1 rounded border border-brand-lea/20 px-2 py-1 text-xs font-semibold text-brand-eden transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
+          >
+            <ExternalLink className="h-3.5 w-3.5" /> Order
+          </Link>
+          <button onClick={openAdd} title="Add another card" className="inline-flex items-center gap-1 rounded border border-brand-lea/20 px-2 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/5">
+            <Plus className="h-3.5 w-3.5" /> Add
+          </button>
+        </div>
       </div>
 
       {/* Order status + orientation deadline */}

@@ -9,7 +9,7 @@ import { formatCardText, formatCardsBatch, formatCardHtml, formatCardsHtml, card
 import { copyRich } from "@/lib/business-cards/copy";
 import { BusinessCardVisual } from "@/components/business-cards/BusinessCardVisual";
 
-type View = "all" | "new" | "needs";
+type View = "all" | "new" | "needs" | "missing";
 
 function fmtDay(iso: string | null) {
   return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(iso)) : "";
@@ -40,6 +40,7 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
     return items.filter((r) => {
       if (view === "new" && !r.onboarding) return false;
       if (view === "needs" && r.status !== "NEEDED") return false;
+      if (view === "missing" && !r.card.missing.includes("email")) return false;
       if (!needle) return true;
       return [r.card.name, r.card.title, r.department].filter(Boolean).some((v) => v!.toLowerCase().includes(needle));
     });
@@ -54,6 +55,9 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
   const staffCount = new Set(items.map((c) => c.personId)).size;
   const newHireCount = new Set(items.filter((c) => c.onboarding).map((c) => c.personId)).size;
   const needsCount = new Set(items.filter((c) => c.status === "NEEDED").map((c) => c.personId)).size;
+  // People whose card can't be finished because their company email is blank —
+  // catch these BEFORE the cards go to the printer.
+  const missingEmailCount = new Set(items.filter((c) => c.card.missing.includes("email")).map((c) => c.personId)).size;
 
   function toggle(key: string) {
     setSelected((cur) => {
@@ -109,7 +113,8 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
   const tabs: { key: View; label: string; count: number }[] = [
     { key: "all", label: "All staff", count: staffCount },
     { key: "new", label: "New hires", count: newHireCount },
-    { key: "needs", label: "Needs cards", count: needsCount }
+    { key: "needs", label: "Needs cards", count: needsCount },
+    { key: "missing", label: "Missing email", count: missingEmailCount }
   ];
 
   return (
@@ -130,7 +135,7 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
               className={clsx(
                 "rounded px-3 py-1.5 text-sm font-semibold transition",
                 view === t.key ? "bg-brand-lea text-white" : "border border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400",
-                t.key === "needs" && t.count > 0 && view !== t.key ? "border-amber-400 text-amber-700 dark:text-amber-300" : ""
+                (t.key === "needs" || t.key === "missing") && t.count > 0 && view !== t.key ? "border-amber-400 text-amber-700 dark:text-amber-300" : ""
               )}
             >
               {t.label} <span className="opacity-70">· {t.count}</span>
