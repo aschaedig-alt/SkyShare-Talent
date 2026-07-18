@@ -27,6 +27,8 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
       // Link-to-a-job, and offer controls all POST candidates:write, which the
       // RECRUITER role already has. (Set a coordinator's account to RECRUITER.)
       canEdit={isAdminOrRecruiter(access.role)}
+      // Test-data deletion is admin-only and further gated on the TEST tag.
+      canDelete={access.role === "ADMIN"}
       savedLayout={layout.layout}
       savedWidgets={layout.widgets}
       travelTrips={travelTrips}

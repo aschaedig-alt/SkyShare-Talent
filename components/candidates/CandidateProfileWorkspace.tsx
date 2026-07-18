@@ -15,7 +15,9 @@ import { HistoricalMatchPanel } from "@/components/candidates/HistoricalMatchPan
 import { LinkedHistoricalPanel } from "@/components/candidates/LinkedHistoricalPanel";
 import { MoveToPreOnboardingPanel } from "@/components/candidates/MoveToPreOnboardingPanel";
 import { AddJobToCandidate } from "@/components/candidates/AddJobToCandidate";
+import { DeleteCandidateButton } from "@/components/candidates/DeleteCandidateButton";
 import { OfferControl } from "@/components/candidates/OfferControl";
+import { isTestTagged } from "@/lib/testdata/markers";
 import { offerStatusLabel } from "@/lib/offers/constants";
 import { CandidateTimeline } from "@/components/candidates/CandidateTimeline";
 import { AiSummaryCard } from "@/components/candidates/AiSummaryCard";
@@ -30,6 +32,7 @@ import type { TravelTripView, TravelerLoyalty } from "@/lib/data/travel";
 type CandidateProfileWorkspaceProps = {
   candidate: CandidateProfileData;
   canEdit?: boolean;
+  canDelete?: boolean;
   savedLayout?: GridItem[] | null;
   savedWidgets?: WidgetInstance[] | null;
   travelTrips?: TravelTripView[];
@@ -103,6 +106,7 @@ const labelClass = "text-[10px] font-bold uppercase tracking-[0.16em] text-brand
 export function CandidateProfileWorkspace({
   candidate: initialCandidate,
   canEdit = false,
+  canDelete = false,
   savedLayout = null,
   savedWidgets = null,
   travelTrips = [],
@@ -251,6 +255,14 @@ export function CandidateProfileWorkspace({
             >
               {isEditing ? "Cancel" : "Edit"}
             </button>
+            {/* Test-data teardown — admin only, and only for a TEST-tagged record. */}
+            {canDelete && !isEditing && isTestTagged(candidate.tags) && (
+              <DeleteCandidateButton
+                candidateId={candidate.id}
+                candidateName={candidate.displayName}
+                hasHire={Boolean(candidate.preOnboarding.hireId)}
+              />
+            )}
           </div>
         </div>
       </section>

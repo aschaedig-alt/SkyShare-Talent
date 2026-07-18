@@ -5,6 +5,7 @@ import { requireApiPermission } from "@/lib/auth/route-auth";
 import { normalizeEmail, normalizeName, normalizePhone } from "@/lib/candidates/normalize";
 import { getCandidateProfileData } from "@/lib/data/candidates";
 import { logActivity } from "@/lib/activity/logger";
+import { isTestTagged, TEST_TAG } from "@/lib/testdata/markers";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireApiPermission("candidates:read");
@@ -194,43 +195,84 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 }
 
+// Permanently delete a candidate — a TEST-DATA-ONLY teardown, not a general
+// control. Because dev and prod share one live database, this is fenced three
+// ways: (1) admin only (settings:admin), (2) the candidate must carry the TEST
+// tag, and (3) the caller must type the exact display name to confirm. A real
+// candidate has none of the TEST marker, so it simply cannot be removed here.
+// Most child rows cascade at the DB level (applications, offers, notes, tags,
+// interviews, travel, etc.); the loose NewHire.candidateId link has no FK, so an
+// onboarding record it produced is removed too only when deleteHire is set.
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireApiPermission("candidates:write");
+  const auth = await requireApiPermission("settings:admin");
   if (!auth.ok) {
-  return NextResponse.json(
-    { message: "Unauthorized" },
-    { status: 401 }
-  );
-}
+    return NextResponse.json({ message: "Admin access is required." }, { status: 403 });
+  }
 
   const { id } = await params;
 
   const candidate = await prisma.candidate.findUnique({
-    where: { id }
+    where: { id },
+    include: { candidateTags: { include: { tag: { select: { label: true } } } } }
   });
 
   if (!candidate) {
     return NextResponse.json({ message: "Candidate not found." }, { status: 404 });
   }
 
+  // Merge legacy tagsJson tags with normalized CandidateTag labels, then require
+  // the TEST marker. This is the guard that makes real data untouchable.
+  let jsonTags: string[] = [];
+  try {
+    const parsed = candidate.tagsJson ? (JSON.parse(candidate.tagsJson) as unknown) : [];
+    if (Array.isArray(parsed)) jsonTags = parsed.map((t) => String(t));
+  } catch {
+    jsonTags = [];
+  }
+  const tags = [...jsonTags, ...candidate.candidateTags.map((ct) => ct.tag.label)];
+  if (!isTestTagged(tags)) {
+    return NextResponse.json(
+      { message: `Only test candidates can be deleted here. Add the "${TEST_TAG}" tag to this candidate first.` },
+      { status: 403 }
+    );
+  }
+
+  const body = (await request.json().catch(() => ({}))) as { confirmName?: unknown; deleteHire?: unknown };
+  if (typeof body.confirmName !== "string" || body.confirmName.trim() !== candidate.displayName.trim()) {
+    return NextResponse.json(
+      { message: "Type the candidate's exact name to confirm deletion." },
+      { status: 400 }
+    );
+  }
+  const deleteHire = body.deleteHire === true;
+
   try {
     const candidateName = candidate.displayName;
 
-    await prisma.candidate.delete({
-      where: { id }
+    // The NewHire link is a loose id (no FK), so deleting the candidate never
+    // touches it — remove it explicitly when asked, in the same transaction so a
+    // teardown is all-or-nothing.
+    const linkedHires = deleteHire
+      ? await prisma.newHire.findMany({ where: { candidateId: id }, select: { id: true } })
+      : [];
+
+    await prisma.$transaction(async (tx) => {
+      if (linkedHires.length > 0) {
+        await tx.newHire.deleteMany({ where: { id: { in: linkedHires.map((h) => h.id) } } });
+      }
+      await tx.candidate.delete({ where: { id } });
     });
 
-    // Log activity
     await logActivity({
       userId: auth.user?.id,
       userEmail: auth.user?.email || undefined,
       activityType: "CANDIDATE_DELETED",
-      description: `Deleted candidate ${candidateName}`,
+      description: `Deleted TEST candidate ${candidateName}${linkedHires.length ? ` + ${linkedHires.length} onboarding record(s)` : ""}`,
       entityType: "Candidate",
       entityId: id,
     });
 
-    return NextResponse.json({ ok: true, message: "Candidate deleted." });
+    return NextResponse.json({ ok: true, message: "Test candidate deleted.", deletedHires: linkedHires.length });
   } catch (error) {
     console.error("Error deleting candidate:", error);
     return NextResponse.json({ message: "Failed to delete candidate." }, { status: 500 });

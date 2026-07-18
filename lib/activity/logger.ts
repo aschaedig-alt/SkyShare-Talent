@@ -19,7 +19,8 @@ export type ActivityType =
   | "INTERVIEW_CANCELED"
   | "PERMISSION_CHANGED"
   | "USER_LOGIN"
-  | "USER_LOGOUT";
+  | "USER_LOGOUT"
+  | "USER_DELETED";
 
 export interface ActivityLogPayload {
   userId?: string;
