@@ -13,6 +13,9 @@ import { PaycomReqField } from "@/components/recruiting-jobs/PaycomReqField";
 import { JobActiveToggle } from "@/components/recruiting-jobs/JobActiveToggle";
 import { ResumeIntake } from "@/components/candidates/ResumeIntake";
 import { DocumentIntake } from "@/components/candidates/DocumentIntake";
+import { JobScreeningPanel } from "@/components/recruiting-jobs/JobScreeningPanel";
+import { loadJobScreening } from "@/app/recruiting-jobs/screening-actions";
+import type { JobScreeningData } from "@/lib/data/job-screening";
 import type { WidgetInstance } from "@/lib/data/page-layout";
 import type { WidgetData } from "@/components/widgets/registry";
 
@@ -41,7 +44,8 @@ const JOBS_DEFAULT_LAYOUT: GridItem[] = [
   { i: "rjobs-detail-header", x: 6, y: 5, w: 6, h: 6 },
   { i: "rjobs-linked-cands", x: 6, y: 11, w: 3, h: 7 },
   { i: "rjobs-linked-reqs", x: 9, y: 11, w: 3, h: 7 },
-  { i: "rjobs-source", x: 6, y: 18, w: 6, h: 3 }
+  { i: "rjobs-source", x: 6, y: 18, w: 6, h: 3 },
+  { i: "rjobs-screening", x: 0, y: 21, w: 12, h: 14 }
 ];
 
 function locationLabel(job: { city: string | null; state: string | null }) {
@@ -252,6 +256,35 @@ export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLay
     window.history.replaceState(null, "", url.toString());
   }, [selectedId, query]);
 
+  // Screening/candidate-fit is loaded on demand for the selected job (it scans
+  // candidates), rather than for every job on page load. Tagged with the job id so
+  // a stale result from a previous selection is never shown.
+  const [screening, setScreening] = useState<{ jobId: string; data: JobScreeningData } | null>(null);
+  const [screeningLoading, setScreeningLoading] = useState(false);
+  useEffect(() => {
+    if (!selectedId) {
+      setScreening(null);
+      setScreeningLoading(false);
+      return;
+    }
+    let alive = true;
+    setScreeningLoading(true);
+    loadJobScreening(selectedId)
+      .then((d) => {
+        if (alive) {
+          setScreening({ jobId: selectedId, data: d });
+          setScreeningLoading(false);
+        }
+      })
+      .catch(() => {
+        if (alive) setScreeningLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [selectedId]);
+  const screeningData = screening && screening.jobId === selectedId ? screening.data : null;
+
   // ALWAYS the same 7 panels (detail panels show a placeholder when nothing is
   // selected) AND a stable array reference via useMemo. EditableGrid re-runs its
   // layout init whenever the panels reference or the set of panel ids changes; a
@@ -269,9 +302,22 @@ export function RecruitingJobsWorkspace({ data, query, canEdit = false, savedLay
       { id: "rjobs-detail-header", title: "Job detail", node: job ? <JobDetailHeader job={job} canEdit={canEdit} /> : <NoJobPanel /> },
       { id: "rjobs-linked-cands", title: "Linked candidates", node: job ? <LinkedCandidates job={job} /> : <EmptyDetail title="Linked candidates" /> },
       { id: "rjobs-linked-reqs", title: "Linked requirements", node: job ? <LinkedRequirements job={job} /> : <EmptyDetail title="Linked requirements" /> },
-      { id: "rjobs-source", title: "Source record", node: job ? <SourceRecord job={job} /> : <EmptyDetail title="Source record" /> }
+      { id: "rjobs-source", title: "Source record", node: job ? <SourceRecord job={job} /> : <EmptyDetail title="Source record" /> },
+      {
+        id: "rjobs-screening",
+        title: "Screening",
+        node: !job ? (
+          <EmptyDetail title="Screening" />
+        ) : screeningData ? (
+          <JobScreeningPanel data={screeningData} />
+        ) : (
+          <div className="flex h-full items-center justify-center rounded bg-white p-6 text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">
+            {screeningLoading ? "Loading candidate fit…" : "Select a job to see its candidate fit."}
+          </div>
+        )
+      }
     ],
-    [job, selectedId, query, pilotJobs, supportJobs, data.stats, canEdit]
+    [job, selectedId, query, pilotJobs, supportJobs, data.stats, canEdit, screeningData, screeningLoading]
   );
 
   return (

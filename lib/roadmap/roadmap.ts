@@ -49,7 +49,7 @@ Filling out the platform.
 - [x] Document expiry + currency panel (Jun 14) — CandidateFile.expiresAt; expirable docs (Medical, Passport, Driver's License, FCC, Pilot's Certificate, Insurance) get a date picker on the Documents tab. A Currency panel on the profile counts down each dated doc and color-codes expired (red) / due within 30 days (amber) / current (green), and lists expirable docs still missing a date
 - [x] Document type tags (Jun 14) — CandidateFile.documentType (Resume, Pilot Application, Paycom Application, Medical, Passport, FCC Radio Operator's License, Driver's License, Pilot's Certificate, Insurance, Other). Auto-detected from filename on every upload path (resume/document intake, profile Add, Link); editable via a dropdown on each document in the Documents tab. lib/files/document-types.ts holds the list + detector
 - [x] Bulk document intake (Jun 14) — "Upload documents" button (Candidates page + each job): drop many docs and each is matched to an EXISTING candidate (by email in the file, then by the name on the filename) and attached; unmatched files drop into the Documents "Link" queue. POST /api/document-intake (one file per request); optional jobId also links matched candidates to the job
-- [ ] 4.1 Jobs Page Integration — PARTIAL: job-to-candidate and job-to-requirement linking + resume/document intake are live on /recruiting-jobs (Linked candidates / Linked requirements panels). Remaining: surface the candidate-fit / screening (JobScreeningPanel) on the Jobs page itself — today it only lives on the Matchboard (/matching). (The stale "Suggested candidates will be added after matching logic exists" empty-state text was replaced Jul 17 with an accurate prompt pointing to Add candidate / the Matchboard.)
+- [x] 4.1 Jobs Page Integration (Jul 17) — job-to-candidate and job-to-requirement linking + resume/document intake were already live on /recruiting-jobs. Now the candidate-fit / screening panel (JobScreeningPanel) is surfaced on the Jobs page itself — it used to live only on the Matchboard. It loads on demand for whichever job is selected (a candidate scan is heavy, so it is not run for every job on page load), tagged by job id so a stale result is never shown; a job with a linked requirement shows the scored tiers (Strong signal / Worth a look / Needs review) with the scan button, and one without shows the "link a requirement" prompt. Added as a full-width panel below the job detail in the editable grid. Verified in the live UI (a rare success for this app): selecting a job with a requirement renders the tiers + scan, one without shows the no-requirement message. The stale "Suggested candidates will be added after matching logic exists" empty-state text was also replaced with an accurate prompt.
 - [ ] Support-role gates — when a job is Support, disable most pilot gates but keep U.S. work authorization and U.S. driver's license required; allow position-specific gate fields
 - [ ] Role identity defaults to job title — pilot requirement role identity should default to the job post title instead of a synthesized "Citation 560 XL Captain"; support roles get a non-pilot seat/identity
 - [x] 4.2 User Access Controls / RBAC (Jun 9) — 4 roles, permission matrix
@@ -320,12 +320,18 @@ The Offers list shipped too (Jul 16): Recruiting > Offers shows every offer with
 - [ ] Help section: training guides for every page anyone might need to access
 - [x] Bug: with the left sidebar minimized, hovering the Recruiting tab renders the flyout BEHIND the candidate page (z-index) so you cannot see all of the dropdown items (fixed Jul 16, reported by Hannah) — the flyout already asked for z-50 and it made no difference, because position:sticky ALWAYS creates a stacking context: the sidebar shell is sticky, so the flyout's z-50 only ranked it against its own siblings inside that shell. The shell itself had no z-index, so it sat at the default level and, being before the main content in the markup, anything painted in the page won over it — on the Candidates page that was the loading skeleton. Fixed by giving the sticky shell z-30 so the whole sidebar (flyout included) sits above the page content, still below the mobile drawer and modals at z-50. Raising the flyout's own z-index, the obvious first guess, could never have worked.
 
-## Q3 Rocks (added Jul 14)
-Already in place, but each must be finished before the end of Q3 to count as complete.
-- [ ] Pre-Onboarding tracking
-- [ ] Orientation scheduling and tracking
-- [ ] Travel for Orientation / Indoc
-- [ ] Business card process
-- [ ] Historical interview history
-- [ ] Pilot recruiting status tracking
+## Q3 Rocks — due Oct 1 (the only priority until they ship)
+HARD DEADLINE Oct 1, 2026. "Done" means all three gates, not just built: (1) built, (2) tested and bugs worked through, (3) IN USE by the team. Most are built — the remaining work is certifying and driving adoption. Finish-by dates below leave a one-week buffer (Sep 24) before Oct 1. Live tracker: the Q3 Rocks artifact.
+- [~] Pre-Onboarding tracking — finish by Aug 1. Built (mature). Left: end-to-end test pass + confirm the team is using it daily.
+- [~] Orientation scheduling and tracking — finish by Aug 15. Built (mature). Left: test pass + team adoption.
+- [~] Business card process — finish by Aug 22. Built. Left: test pass + team actually running orders through it.
+- [~] Travel for Orientation / Indoc — finish by Sep 5. Manual flow built (auto-fill from confirmations is an IMPROVEMENT, not required for the rock). Left: certify the manual trip flow + team using it.
+- [~] Historical interview history — finish by Sep 12. Jazz archive imported + searchable. Left: confirm the team can find what they need + any bug fixes.
+- [ ] Pilot recruiting status tracking — finish by Sep 24. THE RISK ROCK — least complete (recruiting-workbook migration is partial). Gets the most runway; start early. Left: scope what "done" means, build the gaps, test, get recruiters using it.
+
+## Q4 Rocks — after Oct 1 (do not start until Q3 ships)
+Real, but out of scope until every Q3 rock is done. Noted here so they are not lost.
+- [ ] Interview Feedback and Tracking
+- [ ] Dashboard and reporting
+- [ ] Interview Scheduling
 `;
