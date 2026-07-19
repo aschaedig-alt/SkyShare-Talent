@@ -40,7 +40,7 @@ function CandidateCard({ candidate, keep, onKeep }: { candidate: NonNullable<Dup
       <Link
         href={`/candidates/${candidate.id}`}
         onClick={(e) => e.stopPropagation()}
-        className="mt-2 inline-block text-[11px] font-semibold text-brand-eden transition hover:text-brand-lea hover:shadow-glow dark:text-slate-100"
+        className="mt-2 inline-block text-[11px] font-semibold text-brand-eden transition hover:text-brand-lea dark:text-slate-100"
       >
         Open profile
       </Link>

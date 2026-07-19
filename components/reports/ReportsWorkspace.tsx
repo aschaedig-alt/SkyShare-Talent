@@ -840,7 +840,7 @@ function DocumentCurrency({ dc }: { dc: ReportsData["documentCurrency"] }) {
               {dc.upcoming.map((item, i) => {
                 const tone = item.status === "expired" ? "text-red-600 dark:text-red-300" : item.status === "due30" ? "text-amber-600 dark:text-amber-300" : "text-brand-lea dark:text-slate-100";
                 return (
-                  <tr key={i} className="transition hover:bg-brand-sweet/10">
+                  <tr key={i} className="row-wash">
                     <td className="px-3 py-2">
                       <Link href={`/candidates/${item.candidateId}`} className="font-semibold text-brand-lea transition hover:text-brand-eden dark:text-slate-100 dark:hover:text-[#8fb3d6]">
                         {item.candidateName}

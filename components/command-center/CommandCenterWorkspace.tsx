@@ -31,7 +31,7 @@ export function CommandCenterWorkspace({ data }: CommandCenterWorkspaceProps) {
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
           {statLabels.map(([key, label, href]) => (
-            <Link key={key} href={href} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 transition hover:ring-brand-sweet hover:shadow-glow dark:bg-brand-panel dark:ring-white/10">
+            <Link key={key} href={href} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 transition-shadow hover:shadow-glow dark:bg-brand-panel dark:ring-white/10">
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey dark:text-slate-400">{label}</div>
               <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{data.stats[key]}</div>
               <div className="mt-2 h-1 rounded-full bg-brand-gold/25">
@@ -47,7 +47,7 @@ export function CommandCenterWorkspace({ data }: CommandCenterWorkspaceProps) {
             <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Needs action</h2>
             <div className="mt-3 space-y-2">
               {data.attentionItems.map((item) => (
-                <Link key={item.label} href={item.href} className="block rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 transition hover:border-brand-sweet hover:bg-brand-sweet/18 hover:shadow-glow dark:border-white/10 dark:bg-white/5">
+                <Link key={item.label} href={item.href} className="block rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 transition-shadow hover:shadow-glow dark:border-white/10 dark:bg-white/5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="font-semibold text-brand-lea dark:text-slate-100">{item.label}</div>
@@ -80,7 +80,7 @@ export function CommandCenterWorkspace({ data }: CommandCenterWorkspaceProps) {
             <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Latest records</h2>
             <div className="mt-3 space-y-2">
               {data.recentCandidates.map((candidate) => (
-                <Link key={candidate.id} href={`/candidates/${candidate.id}`} className="block rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 transition hover:border-brand-sweet hover:bg-brand-sweet/18 hover:shadow-glow dark:border-white/10 dark:bg-white/5">
+                <Link key={candidate.id} href={`/candidates/${candidate.id}`} className="block rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 transition-shadow hover:shadow-glow dark:border-white/10 dark:bg-white/5">
                   <div className="font-semibold text-brand-lea dark:text-slate-100">{candidate.displayName}</div>
                   <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">
                     {[candidate.currentTitle, candidate.stage].filter(Boolean).join(" - ")}
@@ -96,7 +96,7 @@ export function CommandCenterWorkspace({ data }: CommandCenterWorkspaceProps) {
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Recent jobs</h2>
           <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
             {data.recentJobs.map((job) => (
-              <Link key={job.id} href={`/recruiting-jobs?id=${job.id}`} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 transition hover:border-brand-sweet hover:bg-brand-sweet/18 hover:shadow-glow dark:border-white/10 dark:bg-white/5">
+              <Link key={job.id} href={`/recruiting-jobs?id=${job.id}`} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 transition-shadow hover:shadow-glow dark:border-white/10 dark:bg-white/5">
                 <div className="font-semibold text-brand-lea dark:text-slate-100">{job.title}</div>
                 <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">
                   {job.status} - {job.isPilotRole ? "Pilot role" : "Support role"}

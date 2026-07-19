@@ -26,7 +26,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 function SessionCard({ s }: { s: SessionListItem }) {
   const soon = new Date(s.date).getTime() - Date.now() <= 7 * 86_400_000 && s.status !== "COMPLETE";
   return (
-    <Link href={`/orientation/${s.id}`} className="block rounded border border-brand-lea/10 bg-white p-4 shadow-panel transition hover:ring-2 hover:ring-brand-gold/30 hover:shadow-glow dark:border-white/10 dark:bg-brand-panel">
+    <Link href={`/orientation/${s.id}`} className="block rounded border border-brand-lea/10 bg-white p-4 shadow-panel transition-shadow hover:shadow-glow dark:border-white/10 dark:bg-brand-panel">
       <div className="flex items-center justify-between gap-2">
         <span className="text-base font-semibold text-brand-lea dark:text-slate-100">{fmt(s.date)}</span>
         <span className={clsx("rounded px-2 py-0.5 text-[11px] font-semibold", s.status === "COMPLETE" ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : soon ? "bg-brand-gold/15 text-brand-lea dark:text-slate-100" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400")}>
@@ -75,7 +75,7 @@ function MiniMonth({ year, month, markers }: { year: number; month: number; mark
               ) : null}
             </div>
           );
-          return m?.sessionId ? <Link key={i} href={`/orientation/${m.sessionId}`} className="transition hover:shadow-glow">{content}</Link> : <div key={i}>{content}</div>;
+          return m?.sessionId ? <Link key={i} href={`/orientation/${m.sessionId}`} className="block rounded transition-shadow hover:shadow-glow">{content}</Link> : <div key={i}>{content}</div>;
         })}
       </div>
     </div>
@@ -240,7 +240,7 @@ export function OrientationOverview({
           <div className="mt-3 space-y-1.5">
             {unscheduled.map((h) => (
               <div key={h.id} className="flex flex-wrap items-center gap-2 rounded bg-white/70 px-3 py-2 text-sm dark:bg-white/5">
-                <Link href={`/people/${h.id}`} className="font-medium text-brand-lea hover:underline transition hover:shadow-glow dark:text-slate-100">{h.name}</Link>
+                <Link href={`/people/${h.id}`} className="font-medium text-brand-lea hover:underline dark:text-slate-100">{h.name}</Link>
                 <span className="text-xs text-brand-grey dark:text-slate-400">{h.position ?? "—"}</span>
                 {h.rescheduleCount > 0 ? <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold text-brand-lea dark:text-slate-100">moved {h.rescheduleCount}×</span> : null}
                 <span className="ml-auto">

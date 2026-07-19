@@ -13,6 +13,25 @@
   --skyshare-black: #302f31;
   /* Light-mode page background — "cool mist" tint so white cards lift off it. */
   --skyshare-page: #eaf0f7;
+  /* The gold hover glow, single-sourced as a variable so it is themeable (see
+     .dark below) and consumed by the Tailwind `shadow-glow` token. Three layers:
+     a ~3% gold inset fill (washes the whole element), a 1px gold ring, and an
+     18px soft bloom. Give a glowing row `rounded` + padding and keep its
+     container un-clipped so the bloom has room. Tables can't carry a box-shadow,
+     so table rows use `.row-wash` instead. */
+  --glow: inset 0 0 0 9999px rgba(234, 170, 0, 0.03), 0 0 0 1px rgba(234, 170, 0, 0.85), 0 0 18px 3px rgba(234, 170, 0, 0.55);
+}
+
+@layer components {
+  /* Table rows can't render a box-shadow (browsers don't paint it on <tr>), so a
+     full-row gold WASH is the clean, no-crop highlight for data tables. Defined
+     once here so every table matches instead of drifting to blue/grey tints. */
+  .row-wash {
+    @apply transition-colors;
+  }
+  .row-wash:hover {
+    @apply bg-brand-gold/[0.07];
+  }
 }
 
 /* Dark mode (opt-in via .dark on <html>). Page goes deep navy; cards and text
@@ -24,6 +43,10 @@
      var(--skyshare-red). (Tailwind `brand-red` utilities are handled per-use
      with dark: variants; solid red fills with white text keep their hue.) */
   --skyshare-red: #f87171;
+  /* Dark seam for the hover glow (not yet tuned — the light pass is the priority):
+     the 3% gold inset fill is invisible on deep navy, so lift the fill to ~6% and
+     ease the ring/bloom down a touch so it doesn't scream. */
+  --glow: inset 0 0 0 9999px rgba(234, 170, 0, 0.06), 0 0 0 1px rgba(234, 170, 0, 0.65), 0 0 18px 3px rgba(234, 170, 0, 0.45);
   /* Tell the UA to render form controls, native <select> option lists, and
      default scrollbars in their dark variants so they don't flash light. */
   color-scheme: dark;

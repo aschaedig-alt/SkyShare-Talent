@@ -293,7 +293,7 @@ export function TimeGridCalendar({
                     onClick={() => onInterviewClick?.(interview)}
                     style={blockStyle(interview)}
                     className={clsx(
-                      "absolute left-0.5 right-0.5 cursor-pointer overflow-hidden rounded border px-1.5 py-1 text-left text-[10px] shadow-sm transition hover:shadow-glow",
+                      "absolute left-0.5 right-0.5 cursor-pointer overflow-hidden rounded border px-1.5 py-1 text-left text-[10px] shadow-sm transition hover:brightness-105",
                       blockClasses(interview, colorMode, departmentColors),
                       draggingId === interview.id && "opacity-40"
                     )}

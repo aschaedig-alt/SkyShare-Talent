@@ -156,8 +156,8 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
             <p className="mb-3 text-xs text-brand-grey dark:text-slate-400">Linking to <span className="font-semibold text-brand-lea">{jobTitle}</span></p>
 
             <div className="mb-3 inline-flex overflow-hidden rounded border border-brand-lea/20 text-xs font-semibold dark:border-white/10">
-              <button onClick={() => setMode("existing")} className={`px-3 py-1.5 transition hover:shadow-glow ${mode === "existing" ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60 dark:text-slate-100 dark:bg-white/5"}`}>Existing candidate</button>
-              <button onClick={() => setMode("new")} className={`px-3 py-1.5 transition hover:shadow-glow ${mode === "new" ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60 dark:text-slate-100 dark:bg-white/5"}`}>New candidate</button>
+              <button onClick={() => setMode("existing")} className={`px-3 py-1.5 transition ${mode === "existing" ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60 dark:text-slate-100 dark:bg-white/5"}`}>Existing candidate</button>
+              <button onClick={() => setMode("new")} className={`px-3 py-1.5 transition ${mode === "new" ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/60 dark:text-slate-100 dark:bg-white/5"}`}>New candidate</button>
             </div>
 
             {mode === "existing" ? (
@@ -173,7 +173,7 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
                         key={c.id}
                         onClick={() => linkExisting(c.id, c.displayName)}
                         disabled={busy}
-                        className="flex w-full items-center justify-between gap-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-2 text-left transition hover:border-brand-sweet hover:bg-brand-sweet/15 hover:shadow-glow disabled:opacity-60 dark:border-white/10 dark:bg-white/5"
+                        className="flex w-full items-center justify-between gap-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-2 text-left transition-colors hover:bg-brand-gold/[0.07] disabled:opacity-60 dark:border-white/10 dark:bg-white/5"
                       >
                         <span className="min-w-0">
                           <span className="flex items-center gap-1.5">

@@ -220,7 +220,7 @@ function TypePicker({ types, onPick }: { types: PublicBookingType[]; onPick: (t:
           <button
             key={t.id}
             onClick={() => onPick(t)}
-            className="flex w-full items-start justify-between gap-3 rounded border border-brand-lea/15 p-4 text-left transition hover:border-brand-sweet hover:bg-brand-sweet/5 hover:shadow-glow dark:border-white/10"
+            className="flex w-full items-start justify-between gap-3 rounded border border-brand-lea/15 p-4 text-left transition-shadow hover:shadow-glow dark:border-white/10"
           >
             <div>
               <div className="font-semibold text-brand-lea dark:text-slate-100">{t.name}</div>
@@ -300,7 +300,7 @@ function SlotPicker({
                   <button
                     key={t.iso}
                     onClick={() => onPick(t.iso)}
-                    className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:border-brand-sweet hover:bg-brand-sweet/10 hover:shadow-glow dark:border-white/10 dark:text-slate-100"
+                    className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition-shadow hover:shadow-glow dark:border-white/10 dark:text-slate-100"
                   >
                     {t.label}
                   </button>

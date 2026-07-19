@@ -94,7 +94,7 @@ function CompactInterviewList({
               key={interview.id}
               type="button"
               onClick={() => onInterviewClick(interview)}
-              className="block w-full rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-2 text-left transition hover:border-brand-sweet hover:bg-brand-sweet/10 hover:shadow-glow dark:border-white/10 dark:bg-white/5"
+              className="block w-full rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-2 text-left transition-shadow hover:shadow-glow dark:border-white/10 dark:bg-white/5"
             >
               <div className="truncate text-xs font-semibold text-brand-lea dark:text-slate-100">{interview.candidate.displayName}</div>
               <div className="truncate text-[11px] text-brand-grey dark:text-slate-400">{interview.title}</div>

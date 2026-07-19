@@ -290,7 +290,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
                   {(requirementsByCategory.get(category) ?? []).map((req) => (
                     <div
                       key={req.key}
-                      className="flex items-center justify-between gap-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/30 px-3 py-2 transition hover:border-brand-gold/50 hover:bg-brand-sweet/15 hover:shadow-glow-soft dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+                      className="flex items-center justify-between gap-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/30 px-3 py-2 transition-shadow hover:shadow-glow dark:border-white/10 dark:bg-white/5"
                     >
                       <span className="text-sm text-brand-lea dark:text-slate-100">{req.label}</span>
                       <StatusToggle
@@ -530,7 +530,7 @@ function StatusToggle({
           disabled={disabled}
           onClick={() => onChange(option.key)}
           className={clsx(
-            "px-3 py-1 transition hover:shadow-glow",
+            "rounded px-3 py-1 transition-shadow hover:shadow-glow",
             value === option.key ? option.active : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-brand-panel dark:text-slate-400",
             disabled && "cursor-not-allowed opacity-60"
           )}

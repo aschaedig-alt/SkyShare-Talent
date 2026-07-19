@@ -135,7 +135,7 @@ export function UsersManagementWorkspace({ users: initialUsers, currentUserId = 
             </thead>
             <tbody>
               {users.map((user) => (
-                <tr key={user.id} className="border-b border-brand-lea/10 hover:bg-brand-cloudDancer/20 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10">
+                <tr key={user.id} className="row-wash border-b border-brand-lea/10 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10">
                   <td className="px-4 py-3">
                     <div className="font-medium text-brand-lea dark:text-slate-100">{user.name || "Unknown"}</div>
                   </td>

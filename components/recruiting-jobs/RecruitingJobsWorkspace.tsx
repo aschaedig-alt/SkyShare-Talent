@@ -142,7 +142,7 @@ function LinkedRequirements({ job }: { job: RecruitingJobDetail }) {
             <Link
               key={requirement.id}
               href={`/pilot-requirements?id=${requirement.id}`}
-              className="block rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 transition hover:border-brand-sweet hover:bg-brand-sweet/18 hover:shadow-glow dark:border-white/10 dark:bg-white/5"
+              className="block rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 transition-shadow hover:shadow-glow dark:border-white/10 dark:bg-white/5"
             >
               <div className="font-semibold text-brand-lea dark:text-slate-100">{requirement.title}</div>
               <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">
@@ -180,7 +180,7 @@ function LinkedCandidates({ job }: { job: RecruitingJobDetail }) {
             <Link
               key={candidate.id}
               href={`/candidates?q=${encodeURIComponent(candidate.displayName)}`}
-              className="block rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 transition hover:border-brand-sweet hover:bg-brand-sweet/18 hover:shadow-glow dark:border-white/10 dark:bg-white/5"
+              className="block rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 transition-shadow hover:shadow-glow dark:border-white/10 dark:bg-white/5"
             >
               <div className="font-semibold text-brand-lea dark:text-slate-100">{candidate.displayName}</div>
               <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">

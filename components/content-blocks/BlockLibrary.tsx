@@ -605,7 +605,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
         key={block.id}
         type="button"
         onClick={() => selectBlock(block.id)}
-        className={`w-full px-4 py-4 text-left transition hover:shadow-glow ${
+        className={`w-full rounded px-4 py-4 text-left transition-shadow hover:shadow-glow ${
           selectedBlock?.id === block.id && mode !== "create" ? "bg-brand-sweet/35" : "hover:bg-brand-cloudDancer/70 dark:bg-white/5"
         }`}
       >

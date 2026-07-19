@@ -84,7 +84,7 @@ export function ProjectChecklistWorkspace() {
             <section key={section.id} className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
               <button
                 onClick={() => toggleSection(section.id)}
-                className="flex w-full items-center justify-between gap-4 px-5 py-4 transition hover:bg-brand-cloudDancer/10 hover:shadow-glow dark:bg-white/5"
+                className="flex w-full items-center justify-between gap-4 rounded px-5 py-4 transition-shadow hover:shadow-glow dark:bg-white/5"
               >
                 <div className="flex-1 text-left">
                   <h3 className="font-semibold text-brand-lea dark:text-slate-100">{section.title}</h3>

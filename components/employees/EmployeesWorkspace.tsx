@@ -386,9 +386,9 @@ export function EmployeesWorkspace({ employees, counts, initialColumns }: { empl
         <>
           <div className="space-y-2 sm:hidden">
             {rows.map((e) => (
-              <div key={e.id} className={clsx("flex items-start gap-2 rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10", selected.has(e.id) && "ring-brand-gold")}>
+              <div key={e.id} className={clsx("flex items-start gap-2 rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 transition-shadow hover:shadow-glow dark:bg-brand-panel dark:ring-white/10", selected.has(e.id) && "ring-brand-gold")}>
                 <input type="checkbox" aria-label={`Select ${e.name}`} className="mt-1" checked={selected.has(e.id)} onChange={() => toggleSelect(e.id)} />
-                <Link href={`/people/${e.id}`} className="min-w-0 flex-1 transition hover:shadow-glow">
+                <Link href={`/people/${e.id}`} className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <span className="font-semibold text-brand-lea dark:text-slate-100">{e.name}</span>
                     {(() => { const b = statusBadge(e); return <Badge tone={b.tone}>{b.label}</Badge>; })()}
@@ -420,12 +420,12 @@ export function EmployeesWorkspace({ employees, counts, initialColumns }: { empl
                 </thead>
                 <tbody>
                   {rows.map((e) => (
-                    <tr key={e.id} className={clsx("border-b border-brand-lea/5 hover:bg-brand-cloudDancer/30 dark:border-white/10 dark:hover:bg-white/5", selected.has(e.id) && "bg-brand-gold/10 dark:bg-brand-gold/10")}>
+                    <tr key={e.id} className={clsx("row-wash border-b border-brand-lea/5 dark:border-white/10 dark:hover:bg-white/5", selected.has(e.id) && "bg-brand-gold/10 dark:bg-brand-gold/10")}>
                       <td className="px-3 py-2.5">
                         <input type="checkbox" aria-label={`Select ${e.name}`} checked={selected.has(e.id)} onChange={() => toggleSelect(e.id)} />
                       </td>
                       <td className="px-4 py-2.5">
-                        <Link href={`/people/${e.id}`} className="font-semibold text-brand-lea hover:underline transition hover:shadow-glow dark:text-slate-100">{e.name}</Link>
+                        <Link href={`/people/${e.id}`} className="font-semibold text-brand-lea hover:underline dark:text-slate-100">{e.name}</Link>
                       </td>
                       {orderedVisible.map((key) => (
                         <td key={key} className="px-4 py-2.5 text-brand-grey dark:text-slate-400">{COLUMNS[key].cell(e)}</td>

@@ -103,7 +103,7 @@ function FacetFilter({
                     key={option}
                     type="button"
                     onClick={() => toggle(option)}
-                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-brand-lea transition hover:bg-brand-cloudDancer/70 hover:shadow-glow dark:text-slate-100 dark:bg-white/5"
+                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-brand-lea transition-colors hover:bg-brand-gold/[0.07] dark:text-slate-100 dark:bg-white/5"
                   >
                     <span
                       className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
@@ -327,7 +327,7 @@ export function CandidateComparison({ data }: { data: CandidateComparisonData })
                         key={column.key}
                         type="button"
                         onClick={() => toggleColumn(column.key)}
-                        className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-brand-lea transition hover:bg-brand-cloudDancer/70 hover:shadow-glow dark:text-slate-100 dark:bg-white/5"
+                        className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-brand-lea transition-colors hover:bg-brand-gold/[0.07] dark:text-slate-100 dark:bg-white/5"
                       >
                         <span
                           className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
@@ -413,7 +413,7 @@ export function CandidateComparison({ data }: { data: CandidateComparisonData })
               </thead>
               <tbody className="divide-y divide-brand-lea/10 dark:divide-white/10">
                 {rows.map((row) => (
-                  <tr key={row.id} className="transition hover:bg-brand-sweet/10">
+                  <tr key={row.id} className="row-wash">
                     <td className="sticky left-0 z-10 bg-white px-5 py-3 dark:bg-brand-panel">
                       <Link href={`/candidates/${row.id}`} className="font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-100">
                         {row.displayName}

@@ -121,7 +121,7 @@ export function AddJobToCandidate({ candidateId }: { candidateId: string }) {
                         key={j.id}
                         onClick={() => link(j)}
                         disabled={busy}
-                        className="flex w-full items-center justify-between gap-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-2 text-left transition hover:border-brand-sweet hover:bg-brand-sweet/15 hover:shadow-glow disabled:opacity-60 dark:border-white/10 dark:bg-white/5"
+                        className="flex w-full items-center justify-between gap-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-2 text-left transition-colors hover:bg-brand-gold/[0.07] disabled:opacity-60 dark:border-white/10 dark:bg-white/5"
                       >
                         <span className="min-w-0">
                           <span className="flex items-center gap-1.5">

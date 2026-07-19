@@ -78,7 +78,7 @@ function DrillPanel({ title, people, onClose }: { title: string; people: DrillPe
       ) : (
         <div className="mt-2 divide-y divide-brand-lea/5 dark:divide-white/10">
           {people.map((p) => (
-            <Link key={p.id} href={`/people/${p.id}`} className="-mx-2 flex items-center justify-between gap-3 rounded px-2 py-2 text-sm transition-colors hover:bg-brand-gold/[0.07] dark:hover:bg-white/[0.06]">
+            <Link key={p.id} href={`/people/${p.id}`} className="flex items-center justify-between gap-3 rounded px-4 py-2.5 text-sm transition-shadow hover:shadow-glow">
               <span className="min-w-0 truncate">
                 <span className="font-semibold text-brand-lea dark:text-slate-100">{p.name}</span>
                 {p.position ? <span className="text-brand-grey dark:text-slate-400"> · {p.position}</span> : null}
@@ -196,7 +196,7 @@ function VBars({ data }: { data: ChartDatum[] }) {
 function WorklistRow({ p, onHide, onRestore }: { p: WorklistPerson; onHide?: () => void; onRestore?: () => void }) {
   const pct = p.applicableCount > 0 ? Math.round((p.doneCount / p.applicableCount) * 100) : 0;
   return (
-    <div className="group -mx-2 flex items-center gap-3 rounded px-2 py-2 text-sm transition-colors hover:bg-brand-gold/[0.07] dark:hover:bg-white/[0.06]">
+    <div className="group flex items-center gap-3 rounded px-4 py-2.5 text-sm transition-shadow hover:shadow-glow">
       {onHide && (
         <button
           onClick={onHide}
@@ -288,7 +288,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
           </div>
           <div className="mt-2 divide-y divide-amber-200/60 dark:divide-amber-500/20">
             {dashboard.noStartDateList.map((p) => (
-              <Link key={p.id} href={`/people/${p.id}`} className="-mx-2 flex items-center justify-between gap-3 rounded px-2 py-2 text-sm transition-colors hover:bg-brand-gold/[0.07] dark:hover:bg-white/[0.06]">
+              <Link key={p.id} href={`/people/${p.id}`} className="flex items-center justify-between gap-3 rounded px-4 py-2.5 text-sm transition-shadow hover:shadow-glow">
                 <span className="min-w-0 truncate">
                   <span className="font-semibold text-amber-900 dark:text-amber-100">{p.name}</span>
                   {p.position ? <span className="text-amber-800/80 dark:text-amber-300/80"> · {p.position}</span> : null}
@@ -314,7 +314,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
             {dashboard.readyForStart.map((p) => {
               const pct = p.applicableCount > 0 ? Math.round((p.doneCount / p.applicableCount) * 100) : 0;
               return (
-                <Link key={p.id} href={`/people/${p.id}`} className="-mx-2 flex items-center gap-3 rounded px-2 py-2 text-sm transition-colors hover:bg-brand-gold/[0.07] dark:hover:bg-white/[0.06]">
+                <Link key={p.id} href={`/people/${p.id}`} className="flex items-center gap-3 rounded px-4 py-2.5 text-sm transition-shadow hover:shadow-glow">
                   <span className="w-12 shrink-0 font-semibold text-sky-700 dark:text-sky-300">{p.startDate ? fmtDate(p.startDate) : "—"}</span>
                   <span className="min-w-0 flex-1 truncate">
                     <span className="font-semibold text-brand-lea dark:text-slate-100">{p.name}</span>
@@ -444,7 +444,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
         </div>
         <div className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Needs attention</h2>
-          <div className="mt-3 divide-y divide-brand-lea/5 overflow-hidden rounded border border-brand-lea/10 dark:divide-white/10 dark:border-white/10">
+          <div className="mt-3 space-y-1 rounded border border-brand-lea/10 p-1.5 dark:border-white/10">
             {dashboard.alerts.length === 0 ? (
               <p className="px-3 py-4 text-sm text-brand-grey dark:text-slate-400">Nothing flagged — every active hire is on track.</p>
             ) : (
@@ -454,7 +454,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
                   <Link
                     key={`${a.id}-${i}`}
                     href={`/people/${a.id}`}
-                    className={clsx("flex items-center justify-between gap-3 px-3 py-2.5 text-sm transition hover:ring-1 hover:ring-inset hover:ring-brand-gold/40", s.row)}
+                    className={clsx("flex items-center justify-between gap-3 rounded px-4 py-2.5 text-sm transition-shadow hover:shadow-glow", s.row)}
                   >
                     <span className="text-brand-black dark:text-slate-100">
                       <span className="font-semibold">{a.name}</span> — {a.text}
@@ -475,7 +475,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
             <p className="text-sm text-brand-grey dark:text-slate-400">No upcoming starts.</p>
           ) : (
             dashboard.upcomingStarts.map((u) => (
-              <Link key={u.id} href={`/people/${u.id}`} className="-mx-2 flex items-center gap-3 rounded px-2 py-1.5 text-sm transition-colors hover:bg-brand-gold/[0.07] dark:hover:bg-white/[0.06]">
+              <Link key={u.id} href={`/people/${u.id}`} className="flex items-center gap-3 rounded px-4 py-2.5 text-sm transition-shadow hover:shadow-glow">
                 <span className="w-14 shrink-0 font-semibold text-sky-700 dark:text-sky-300">{fmtDate(u.startDate)}</span>
                 <span className="truncate text-brand-black dark:text-slate-100">
                   {u.name}

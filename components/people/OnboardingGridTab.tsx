@@ -161,7 +161,7 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
     return (
       <div className="space-y-3">
         <div className="flex justify-end">
-          <button onClick={() => setManaging(true)} className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 hover:shadow-glow dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/5">
+          <button onClick={() => setManaging(true)} className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition-shadow hover:shadow-glow dark:border-white/10 dark:text-slate-100">
             <Settings2 className="h-4 w-4" /> Manage tasks
           </button>
         </div>
@@ -273,7 +273,7 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
                     <div className="flex justify-center">
                       <input type="checkbox" checked={selected.has(h.id)} onChange={() => toggleOne(h.id)} aria-label={`Select ${h.name}`} className="h-3.5 w-3.5" />
                     </div>
-                    <Link href={`/people/${h.id}`} className="mt-1 block text-center font-medium text-brand-lea hover:underline transition hover:shadow-glow dark:text-slate-100">
+                    <Link href={`/people/${h.id}`} className="mt-1 block text-center font-medium text-brand-lea hover:underline dark:text-slate-100">
                       {h.name}
                     </Link>
                     <div className="mx-auto mt-1.5 h-1.5 w-24 overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/5">
@@ -334,7 +334,7 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
                             <button
                               type="button"
                               onClick={() => cycle(h.id, task.id, task.status)}
-                              className="inline-flex h-8 w-full items-center justify-center transition hover:bg-brand-cloudDancer/50 hover:shadow-glow dark:hover:bg-white/5"
+                              className="inline-flex h-8 w-full items-center justify-center transition-colors hover:bg-brand-gold/10 dark:hover:bg-white/5"
                               title="Click to change"
                             >
                               <Glyph status={task.status} />

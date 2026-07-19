@@ -283,8 +283,8 @@ export function TravelHubWorkspace({ data }: { data: TravelHubData }) {
                   <tr
                     key={r.tripId}
                     className={clsx(
-                      "group border-t border-brand-lea/10 transition hover:bg-brand-sweet/10 dark:border-white/10",
-                      traveler?.id === r.travelerId && "bg-brand-sweet/15 dark:bg-brand-sweet/10"
+                      "group row-wash border-t border-brand-lea/10 dark:border-white/10",
+                      traveler?.id === r.travelerId && "bg-brand-gold/10 dark:bg-brand-sweet/10"
                     )}
                   >
                     <td className="py-2 pr-3">
@@ -294,7 +294,7 @@ export function TravelHubWorkspace({ data }: { data: TravelHubData }) {
                         <button
                           onClick={() => openTraveler({ type: r.travelerType, id: r.travelerId })}
                           disabled={!r.travelerId || loadingTraveler}
-                          className="inline-flex items-center gap-1.5 rounded font-semibold text-brand-lea transition hover:text-brand-eden hover:shadow-glow disabled:opacity-60 dark:text-slate-100"
+                          className="inline-flex items-center gap-1.5 rounded font-semibold text-brand-lea transition hover:text-brand-eden disabled:opacity-60 dark:text-slate-100"
                           title={`Open ${r.travelerName}'s travel here`}
                         >
                           {r.travelerType === "newHire" ? (

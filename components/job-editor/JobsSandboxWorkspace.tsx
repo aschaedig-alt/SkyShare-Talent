@@ -1740,7 +1740,7 @@ export function JobsSandboxWorkspace({ initialJobs, initialBlocks, mode = "sandb
                       setSelectedJobId(job.id);
                       setJobListView("archived");
                     }}
-                    className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 p-3 text-left hover:bg-brand-sweet/30 transition hover:shadow-glow dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+                    className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 p-3 text-left transition-shadow hover:shadow-glow dark:border-white/10 dark:bg-white/5"
                   >
                     <div className="text-sm font-bold text-brand-lea dark:text-slate-100">{job.title}</div>
                     <div className="mt-1 text-xs font-semibold text-brand-grey dark:text-slate-400">{job.department ?? "Department pending"}</div>

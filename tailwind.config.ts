@@ -53,8 +53,12 @@ const config: Config = {
       },
       boxShadow: {
         panel: "0 18px 45px rgba(13, 44, 67, 0.10)",
-        // Gold hover glow — the "you're interacting" cue, used app-wide.
-        glow: "0 0 0 1px rgba(234, 170, 0, 0.85), 0 0 18px 3px rgba(234, 170, 0, 0.55)",
+        // Gold hover glow — the "you're interacting" cue, used app-wide via
+        // `hover:shadow-glow`. Single-sourced as the --glow CSS var (app/globals.css)
+        // so it is themeable (dark mode overrides the var). ~3% gold inset fill +
+        // 1px ring + 18px bloom. Give rows padding + rounded and keep their container
+        // un-clipped so the bloom has room; table rows use `.row-wash` instead.
+        glow: "var(--glow)",
         "glow-soft": "0 0 0 1px rgba(234, 170, 0, 0.5), 0 0 10px 1px rgba(234, 170, 0, 0.3)"
       }
     }

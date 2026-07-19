@@ -47,7 +47,7 @@ function EventCard({ event }: { event: EventListItem }) {
   return (
     <Link
       href={`/events/${event.id}`}
-      className="block rounded border border-brand-lea/10 bg-white p-4 shadow-panel transition hover:ring-2 hover:ring-brand-gold/30 hover:shadow-glow dark:border-white/10 dark:bg-brand-panel"
+      className="block rounded border border-brand-lea/10 bg-white p-4 shadow-panel transition-shadow hover:shadow-glow dark:border-white/10 dark:bg-brand-panel"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">

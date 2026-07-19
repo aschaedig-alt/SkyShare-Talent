@@ -69,7 +69,7 @@ export function JobMergedHistory() {
     <section className="mt-4 rounded border border-brand-lea/10 bg-white dark:border-white/10 dark:bg-brand-panel">
       <button
         onClick={toggleOpen}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-brand-cloudDancer/20 hover:shadow-glow dark:bg-white/5 dark:hover:bg-white/10"
+        className="flex w-full items-center justify-between gap-3 rounded px-4 py-3 text-left transition-shadow hover:shadow-glow dark:bg-white/5"
       >
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Merged job history</p>
@@ -123,7 +123,7 @@ export function JobMergedHistory() {
                         <Link
                           href={`/recruiting-jobs?id=${job.mergedInto.id}`}
                           target="_blank"
-                          className="font-medium text-brand-lea underline hover:text-brand-gold transition hover:shadow-glow dark:text-slate-100"
+                          className="font-medium text-brand-lea underline hover:text-brand-gold transition dark:text-slate-100"
                         >
                           {job.mergedInto.title}
                         </Link>

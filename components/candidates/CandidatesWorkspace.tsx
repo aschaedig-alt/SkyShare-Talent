@@ -136,7 +136,7 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
               </thead>
               <tbody className="divide-y divide-brand-lea/10 dark:divide-white/10">
                 {data.candidates.map((candidate) => (
-                  <tr key={candidate.id} className="align-top transition hover:bg-brand-sweet/10">
+                  <tr key={candidate.id} className="row-wash align-top">
                     <td className="px-5 py-4">
                       <div className="flex gap-3">
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-lea/10 text-xs font-bold text-brand-lea dark:text-slate-100">

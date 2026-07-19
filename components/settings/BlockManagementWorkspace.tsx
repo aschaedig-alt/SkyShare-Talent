@@ -107,7 +107,7 @@ export function BlockManagementWorkspace({ blocks: initialBlocks }: Props) {
               key={b.id}
               type="button"
               onClick={() => select(b.id)}
-              className={clsx("w-full px-4 py-3 text-left transition hover:shadow-glow", selected?.id === b.id ? "bg-brand-sweet/35" : "hover:bg-brand-cloudDancer/70 dark:bg-white/5")}
+              className={clsx("w-full rounded px-4 py-3 text-left transition-shadow hover:shadow-glow", selected?.id === b.id ? "bg-brand-sweet/35" : "dark:bg-white/5")}
             >
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-brand-lea dark:text-slate-100">{b.name}</span>

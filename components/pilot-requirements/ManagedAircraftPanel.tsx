@@ -163,7 +163,7 @@ export function ManagedAircraftPanel({ requirementId, variants, canEdit }: Props
                     <button
                       type="button"
                       onClick={() => openEdit(v)}
-                      className="rounded-element border border-brand-lea/15 p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer hover:shadow-glow dark:border-white/10 dark:text-slate-400"
+                      className="rounded-element border border-brand-lea/15 p-1.5 text-brand-grey transition hover:bg-brand-gold/10 dark:border-white/10 dark:text-slate-400"
                       aria-label={`Edit ${v.tailNumber}`}
                     >
                       <Pencil className="h-3.5 w-3.5" />
