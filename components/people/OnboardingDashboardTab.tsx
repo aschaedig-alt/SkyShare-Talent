@@ -78,7 +78,7 @@ function DrillPanel({ title, people, onClose }: { title: string; people: DrillPe
       ) : (
         <div className="mt-2 divide-y divide-brand-lea/5 dark:divide-white/10">
           {people.map((p) => (
-            <Link key={p.id} href={`/people/${p.id}`} className="flex items-center justify-between gap-3 py-2 text-sm transition hover:opacity-90 hover:shadow-glow">
+            <Link key={p.id} href={`/people/${p.id}`} className="-mx-2 flex items-center justify-between gap-3 rounded px-2 py-2 text-sm transition-colors hover:bg-brand-gold/[0.07] dark:hover:bg-white/[0.06]">
               <span className="min-w-0 truncate">
                 <span className="font-semibold text-brand-lea dark:text-slate-100">{p.name}</span>
                 {p.position ? <span className="text-brand-grey dark:text-slate-400"> · {p.position}</span> : null}
@@ -196,7 +196,7 @@ function VBars({ data }: { data: ChartDatum[] }) {
 function WorklistRow({ p, onHide, onRestore }: { p: WorklistPerson; onHide?: () => void; onRestore?: () => void }) {
   const pct = p.applicableCount > 0 ? Math.round((p.doneCount / p.applicableCount) * 100) : 0;
   return (
-    <div className="flex items-center gap-3 py-2 text-sm">
+    <div className="group -mx-2 flex items-center gap-3 rounded px-2 py-2 text-sm transition-colors hover:bg-brand-gold/[0.07] dark:hover:bg-white/[0.06]">
       {onHide && (
         <button
           onClick={onHide}
@@ -206,7 +206,7 @@ function WorklistRow({ p, onHide, onRestore }: { p: WorklistPerson; onHide?: () 
           <Check className="h-3 w-3" />
         </button>
       )}
-      <Link href={`/people/${p.id}`} className="min-w-0 flex-1 truncate transition hover:opacity-90 hover:shadow-glow">
+      <Link href={`/people/${p.id}`} className="min-w-0 flex-1 truncate group-hover:underline">
         <span className="font-semibold text-brand-lea dark:text-slate-100">{p.name}</span>
         {p.position ? <span className="text-brand-grey dark:text-slate-400"> · {p.position}</span> : null}
       </Link>
@@ -288,7 +288,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
           </div>
           <div className="mt-2 divide-y divide-amber-200/60 dark:divide-amber-500/20">
             {dashboard.noStartDateList.map((p) => (
-              <Link key={p.id} href={`/people/${p.id}`} className="flex items-center justify-between gap-3 py-2 text-sm transition hover:opacity-90 hover:shadow-glow">
+              <Link key={p.id} href={`/people/${p.id}`} className="-mx-2 flex items-center justify-between gap-3 rounded px-2 py-2 text-sm transition-colors hover:bg-brand-gold/[0.07] dark:hover:bg-white/[0.06]">
                 <span className="min-w-0 truncate">
                   <span className="font-semibold text-amber-900 dark:text-amber-100">{p.name}</span>
                   {p.position ? <span className="text-amber-800/80 dark:text-amber-300/80"> · {p.position}</span> : null}
@@ -314,7 +314,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
             {dashboard.readyForStart.map((p) => {
               const pct = p.applicableCount > 0 ? Math.round((p.doneCount / p.applicableCount) * 100) : 0;
               return (
-                <Link key={p.id} href={`/people/${p.id}`} className="flex items-center gap-3 py-2 text-sm transition hover:opacity-90 hover:shadow-glow">
+                <Link key={p.id} href={`/people/${p.id}`} className="-mx-2 flex items-center gap-3 rounded px-2 py-2 text-sm transition-colors hover:bg-brand-gold/[0.07] dark:hover:bg-white/[0.06]">
                   <span className="w-12 shrink-0 font-semibold text-sky-700 dark:text-sky-300">{p.startDate ? fmtDate(p.startDate) : "—"}</span>
                   <span className="min-w-0 flex-1 truncate">
                     <span className="font-semibold text-brand-lea dark:text-slate-100">{p.name}</span>
@@ -454,7 +454,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
                   <Link
                     key={`${a.id}-${i}`}
                     href={`/people/${a.id}`}
-                    className={clsx("flex items-center justify-between gap-3 px-3 py-2.5 text-sm transition hover:opacity-90 hover:shadow-glow", s.row)}
+                    className={clsx("flex items-center justify-between gap-3 px-3 py-2.5 text-sm transition hover:ring-1 hover:ring-inset hover:ring-brand-gold/40", s.row)}
                   >
                     <span className="text-brand-black dark:text-slate-100">
                       <span className="font-semibold">{a.name}</span> — {a.text}
@@ -475,7 +475,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
             <p className="text-sm text-brand-grey dark:text-slate-400">No upcoming starts.</p>
           ) : (
             dashboard.upcomingStarts.map((u) => (
-              <Link key={u.id} href={`/people/${u.id}`} className="flex items-center gap-3 text-sm hover:underline transition hover:shadow-glow">
+              <Link key={u.id} href={`/people/${u.id}`} className="-mx-2 flex items-center gap-3 rounded px-2 py-1.5 text-sm transition-colors hover:bg-brand-gold/[0.07] dark:hover:bg-white/[0.06]">
                 <span className="w-14 shrink-0 font-semibold text-sky-700 dark:text-sky-300">{fmtDate(u.startDate)}</span>
                 <span className="truncate text-brand-black dark:text-slate-100">
                   {u.name}
