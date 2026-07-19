@@ -12,6 +12,7 @@ import {
 } from "@/lib/navigation/modules";
 import { isAuthRequired } from "@/lib/auth/auth-config";
 import { isRoleName } from "@/lib/auth/roles";
+import { isEmailBlocked } from "@/lib/auth/blocklist";
 
 const workspaceSettingKey = "module-access";
 const workspaceSettingScope = "workspace";
@@ -78,6 +79,12 @@ export async function requireModulePageAccess(moduleId: ModuleId) {
 
   if (authRequired && !role) {
     redirect("/login?reason=session-required");
+  }
+
+  // A revoked account may still hold a valid JWT until it expires; catch it here,
+  // on the next page it loads, and send it back to the login screen.
+  if (authRequired && (await isEmailBlocked(session?.user?.email))) {
+    redirect("/login?reason=access-revoked");
   }
 
   const policy = await getWorkspaceModuleAccessPolicy();

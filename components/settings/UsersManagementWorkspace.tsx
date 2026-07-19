@@ -14,14 +14,66 @@ interface UserWithPermissions {
 
 interface UsersManagementWorkspaceProps {
   users: UserWithPermissions[];
+  currentUserId?: string | null;
+  blockedEmails?: string[];
 }
 
-export function UsersManagementWorkspace({ users: initialUsers }: UsersManagementWorkspaceProps) {
+export function UsersManagementWorkspace({ users: initialUsers, currentUserId = null, blockedEmails = [] }: UsersManagementWorkspaceProps) {
   const [users, setUsers] = useState(initialUsers);
+  const [blocked, setBlocked] = useState<string[]>(blockedEmails);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: string; text: string } | null>(null);
+  // Remove-access confirm flow: the user being removed + the typed-email guard.
+  const [removing, setRemoving] = useState<UserWithPermissions | null>(null);
+  const [confirmEmail, setConfirmEmail] = useState("");
+
+  const flash = (type: "success" | "error", text: string) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage(null), 3000);
+  };
+
+  const removeAccess = async () => {
+    if (!removing) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/users/${removing.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmEmail })
+      });
+      const data = (await res.json().catch(() => ({}))) as { message?: string };
+      if (!res.ok) throw new Error(data.message ?? "Failed to remove access");
+      setUsers(users.filter((u) => u.id !== removing.id));
+      if (removing.email) setBlocked((b) => [...new Set([...b, removing.email!.toLowerCase()])]);
+      flash("success", "Access removed.");
+      setRemoving(null);
+      setConfirmEmail("");
+    } catch (err) {
+      flash("error", err instanceof Error ? err.message : "Failed to remove access");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const restoreAccess = async (email: string) => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/access", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+      if (!res.ok) throw new Error("Failed to restore access");
+      setBlocked((b) => b.filter((e) => e !== email.toLowerCase()));
+      flash("success", "Access restored.");
+    } catch (err) {
+      flash("error", err instanceof Error ? err.message : "Failed to restore access");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     setSaving(true);
@@ -125,15 +177,26 @@ export function UsersManagementWorkspace({ users: initialUsers }: UsersManagemen
                         </button>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => {
-                          setEditingUserId(user.id);
-                          setSelectedRole(user.role);
-                        }}
-                        className="rounded bg-brand-sweet/20 px-3 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-sweet/30 dark:text-slate-100"
-                      >
-                        Change Role
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingUserId(user.id);
+                            setSelectedRole(user.role);
+                          }}
+                          className="rounded bg-brand-sweet/20 px-3 py-1 text-xs font-semibold text-brand-lea hover:bg-brand-sweet/30 dark:text-slate-100"
+                        >
+                          Change Role
+                        </button>
+                        {/* Full offboarding — blocks + deletes. Hidden for yourself. */}
+                        {user.id !== currentUserId && (
+                          <button
+                            onClick={() => { setRemoving(user); setConfirmEmail(""); }}
+                            className="rounded border border-red-300 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 dark:border-red-500/40 dark:text-red-300 dark:hover:bg-red-500/10"
+                          >
+                            Remove access
+                          </button>
+                        )}
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -148,6 +211,29 @@ export function UsersManagementWorkspace({ users: initialUsers }: UsersManagemen
           </div>
         )}
       </section>
+
+      {blocked.length > 0 && (
+        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+          <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Revoked access</h2>
+          <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
+            These emails are blocked — they cannot sign in, and any live session is rejected on its next request. Restore to let them back in as a viewer.
+          </p>
+          <div className="mt-3 divide-y divide-brand-lea/10 dark:divide-white/10">
+            {blocked.map((email) => (
+              <div key={email} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <span className="font-medium text-brand-lea dark:text-slate-100">{email}</span>
+                <button
+                  onClick={() => restoreAccess(email)}
+                  disabled={saving}
+                  className="rounded border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-eden transition hover:bg-brand-cloudDancer/40 disabled:opacity-50 dark:border-white/10 dark:text-slate-200"
+                >
+                  Restore access
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Role Permissions</h2>
@@ -166,6 +252,40 @@ export function UsersManagementWorkspace({ users: initialUsers }: UsersManagemen
           ))}
         </div>
       </section>
+
+      {removing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-lea/40 p-4" onClick={() => !saving && setRemoving(null)}>
+          <div className="w-full max-w-md rounded bg-white p-5 shadow-xl dark:bg-brand-panel" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-semibold text-red-700 dark:text-red-300">Remove access</h2>
+            <p className="mt-2 text-sm text-brand-grey dark:text-slate-400">
+              This blocks <span className="font-semibold text-brand-lea dark:text-slate-100">{removing.email}</span> from signing in and deletes their account.
+              Any active session is rejected on its next request. You can restore access later.
+            </p>
+            <label className="mt-3 block">
+              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Type the email to confirm</span>
+              <input
+                autoFocus
+                value={confirmEmail}
+                onChange={(e) => setConfirmEmail(e.target.value)}
+                placeholder={removing.email ?? ""}
+                className="mt-1 w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-400/20 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
+              />
+            </label>
+            <div className="mt-5 flex justify-end gap-2">
+              <button onClick={() => setRemoving(null)} disabled={saving} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/40 disabled:opacity-50 dark:border-white/10 dark:text-slate-100">
+                Cancel
+              </button>
+              <button
+                onClick={removeAccess}
+                disabled={saving || confirmEmail.trim().toLowerCase() !== (removing.email ?? "").toLowerCase()}
+                className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-40"
+              >
+                {saving ? "Removing…" : "Remove access"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,6 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { hasPermission, isRoleName, type Permission, type RoleName } from "@/lib/auth/roles";
 import { isAuthRequired } from "@/lib/auth/auth-config";
+import { isEmailBlocked } from "@/lib/auth/blocklist";
+
+const revokedResponse = () => NextResponse.json({ message: "Your access has been revoked." }, { status: 403 });
 
 export type ApiRouteUser = {
   id: string | null;
@@ -41,6 +44,10 @@ export async function requireApiUser(): Promise<ApiAuthResult> {
     };
   }
 
+  if (await isEmailBlocked(session.user.email)) {
+    return { ok: false, response: revokedResponse() };
+  }
+
   return {
     ok: true,
     user: {
@@ -74,6 +81,10 @@ export async function requireApiPermission(permission: Permission): Promise<ApiA
       ok: false,
       response: NextResponse.json({ message: "Authentication is required." }, { status: 401 })
     };
+  }
+
+  if (await isEmailBlocked(session.user.email)) {
+    return { ok: false, response: revokedResponse() };
   }
 
   if (!hasPermission(role, permission)) {

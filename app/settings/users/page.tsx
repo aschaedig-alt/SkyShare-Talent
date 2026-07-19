@@ -1,6 +1,9 @@
 import { UsersManagementWorkspace } from "@/components/settings/UsersManagementWorkspace";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/auth";
+import { getBlockedEmails } from "@/lib/auth/blocklist";
 
 export const dynamic = "force-dynamic";
 
@@ -8,13 +11,17 @@ export default async function UsersPage() {
   try {
     await requireModulePageAccess("settings");
 
-    const users = await prisma.user.findMany({
-      include: {
-        accounts: true,
-        permissions: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const [users, blockedEmails, session] = await Promise.all([
+      prisma.user.findMany({
+        include: {
+          accounts: true,
+          permissions: true,
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      getBlockedEmails(),
+      getServerSession(authOptions),
+    ]);
 
     return (
       <div className="space-y-4 px-5 py-5 lg:px-8">
@@ -23,7 +30,11 @@ export default async function UsersPage() {
           <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Team Members</h1>
         </section>
 
-        <UsersManagementWorkspace users={users} />
+        <UsersManagementWorkspace
+          users={users}
+          currentUserId={session?.user?.id ?? null}
+          blockedEmails={blockedEmails}
+        />
       </div>
     );
   } catch (error) {

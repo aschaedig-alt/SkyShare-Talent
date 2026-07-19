@@ -3,6 +3,7 @@ import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 import { isRoleName, type RoleName } from "@/lib/auth/roles";
+import { isEmailBlocked } from "@/lib/auth/blocklist";
 
 function csvEnv(name: string) {
   return (process.env[name] ?? "")
@@ -98,6 +99,11 @@ export const authOptions: NextAuthOptions = {
     : [],
   callbacks: {
     async signIn({ user }) {
+      // A revoked (blocked) email can never sign back in, even if its domain is
+      // otherwise allowed — this is what makes offboarding stick.
+      if (await isEmailBlocked(user.email)) {
+        return false;
+      }
       return isEmailAllowedForAuth(user.email);
     },
     async jwt({ token, user }) {
