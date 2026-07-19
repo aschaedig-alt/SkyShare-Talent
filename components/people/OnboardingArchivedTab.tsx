@@ -26,11 +26,24 @@ function stateOf(r: NewHireRow): { label: string; tone: BadgeTone } {
   return { label: "Archived", tone: "neutral" };
 }
 
-export function OnboardingArchivedTab({ rows }: { rows: NewHireRow[] }) {
+type ArchiveFilter = "all" | "current" | "former";
+
+// Former = a terminated employee; current = archived for any other reason (e.g.
+// finished onboarding but still employed). Keeps the two from blurring together.
+function isFormer(r: NewHireRow) {
+  return r.employmentStatus === "TERMINATED";
+}
+
+export function OnboardingArchivedTab({ rows: allRows }: { rows: NewHireRow[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [filter, setFilter] = useState<ArchiveFilter>("all");
+
+  const formerCount = allRows.filter(isFormer).length;
+  const currentCount = allRows.length - formerCount;
+  const rows = allRows.filter((r) => (filter === "all" ? true : filter === "former" ? isFormer(r) : !isFormer(r)));
 
   const allSelected = rows.length > 0 && selected.size === rows.length;
   function toggleOne(id: string) {
@@ -82,12 +95,39 @@ export function OnboardingArchivedTab({ rows }: { rows: NewHireRow[] }) {
     }
   }
 
-  if (rows.length === 0) {
+  if (allRows.length === 0) {
     return <EmptyState title="Nothing archived." />;
   }
+
+  const filters: Array<{ key: ArchiveFilter; label: string; count: number }> = [
+    { key: "all", label: "All", count: allRows.length },
+    { key: "current", label: "Current employees", count: currentCount },
+    { key: "former", label: "Former (terminated)", count: formerCount }
+  ];
+
   return (
     <div className="space-y-3">
       <BulkActionBar count={selected.size} actions={ARCHIVED_BULK_ACTIONS} onApply={applyBulk} onDelete={deleteSelected} onClear={() => setSelected(new Set())} busy={bulkBusy} />
+
+      <div className="flex w-fit gap-1 rounded bg-white p-1 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+        {filters.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => { setFilter(f.key); setSelected(new Set()); }}
+            className={clsx(
+              "rounded px-3 py-1.5 text-sm font-semibold transition hover:shadow-glow",
+              filter === f.key ? "bg-brand-lea text-white shadow-sm" : "text-brand-grey hover:text-brand-lea dark:text-slate-400"
+            )}
+          >
+            {f.label} <span className={clsx("ml-1", filter === f.key ? "text-white/70" : "text-brand-grey/70 dark:text-slate-500")}>· {f.count}</span>
+          </button>
+        ))}
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">No {filter === "former" ? "former" : "current"} employees in the archive.</p>
+      ) : (
+       <>
 
       {/* Mobile: stacked cards (the table below is desktop-only) */}
       <div className="space-y-2 sm:hidden">
@@ -164,6 +204,8 @@ export function OnboardingArchivedTab({ rows }: { rows: NewHireRow[] }) {
       </table>
       </div>
       </div>
+       </>
+      )}
     </div>
   );
 }

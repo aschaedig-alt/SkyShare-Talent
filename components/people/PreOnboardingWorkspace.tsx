@@ -6,14 +6,13 @@ import { useState } from "react";
 import { clsx } from "clsx";
 import type {
   GridHire,
-  MilestoneData,
   NewHireRow,
   OnboardingDashboard,
   PostOnboardHire
 } from "@/lib/data/onboarding";
+import type { GridChecklistGroup } from "@/lib/data/onboarding-grid-config";
 import { OnboardingDashboardTab } from "@/components/people/OnboardingDashboardTab";
 import { OnboardingGridTab } from "@/components/people/OnboardingGridTab";
-import { OnboardingMilestonesTab } from "@/components/people/OnboardingMilestonesTab";
 import { PostOnboardTab } from "@/components/people/PostOnboardTab";
 import { OnboardingArchivedTab } from "@/components/people/OnboardingArchivedTab";
 import { ImportHiresButton } from "@/components/people/ImportHiresButton";
@@ -27,12 +26,12 @@ type Props = {
   canManage?: boolean;
   dashboard?: OnboardingDashboard;
   grid?: GridHire[];
-  milestones?: MilestoneData;
+  checklist?: GridChecklistGroup[];
   post?: PostOnboardHire[];
   archived?: NewHireRow[];
 };
 
-export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboard, grid, milestones, post, archived }: Props) {
+export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboard, grid, checklist, post, archived }: Props) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -45,11 +44,10 @@ export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboa
   // isn't a hard stop — offer to open the existing one or add anyway.
   const [dupe, setDupe] = useState<{ id: string; name: string; position: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [gridView, setGridView] = useState<"grid" | "milestones">("grid");
 
   const tabs: Array<{ key: PeopleTab; label: string; badge?: number }> = [
     { key: "dashboard", label: "Dashboard" },
-    { key: "grid", label: "Grid & milestones", badge: counts.active },
+    { key: "grid", label: "Checklist", badge: counts.active },
     { key: "post", label: "Post-onboard", badge: counts.postOnboard },
     { key: "archived", label: "Archived", badge: counts.archived }
   ];
@@ -139,25 +137,7 @@ export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboa
       </div>
 
       {tab === "dashboard" && dashboard ? <OnboardingDashboardTab dashboard={dashboard} /> : null}
-      {tab === "grid" && grid ? (
-        <div className="space-y-3">
-          <div className="flex w-fit gap-1 rounded bg-white p-1 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-            {(["grid", "milestones"] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setGridView(v)}
-                className={clsx(
-                  "rounded px-3 py-1.5 text-sm font-semibold transition hover:shadow-glow",
-                  gridView === v ? "bg-brand-lea text-white shadow-sm" : "text-brand-grey hover:text-brand-lea dark:text-slate-400"
-                )}
-              >
-                {v === "grid" ? "Grid" : "Milestones"}
-              </button>
-            ))}
-          </div>
-          {gridView === "grid" ? <OnboardingGridTab hires={grid} /> : milestones ? <OnboardingMilestonesTab data={milestones} /> : null}
-        </div>
-      ) : null}
+      {tab === "grid" && grid ? <OnboardingGridTab hires={grid} checklist={checklist ?? []} /> : null}
       {tab === "post" && post ? <PostOnboardTab hires={post} /> : null}
       {tab === "archived" && archived ? <OnboardingArchivedTab rows={archived} /> : null}
 

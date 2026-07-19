@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { clsx } from "clsx";
-import { CircleCheck, Archive, CalendarClock, Building2, Trash2 } from "lucide-react";
-import { ONBOARDING_GROUPS, ONBOARDING_TASKS, groupLabel } from "@/lib/onboarding/tasks";
+import { CircleCheck, Archive, CalendarClock, Building2, Trash2, Settings2 } from "lucide-react";
 import type { GridHire, GridTaskStatus, HireStatus } from "@/lib/data/onboarding";
+import type { GridChecklistGroup } from "@/lib/data/onboarding-grid-config";
 import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
 import { EmptyState } from "@/components/ui";
 
@@ -47,11 +47,25 @@ function Glyph({ status }: { status: GridTaskStatus }) {
   return <span className="text-brand-grey/50">–</span>;
 }
 
-export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
+export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHire[]; checklist: GridChecklistGroup[] }) {
   const router = useRouter();
   const [hires, setHires] = useState(initial);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+
+  // Manage-tasks mode: rename / hide built-ins, add / rename / remove customs.
+  const [managing, setManaging] = useState(false);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [newTask, setNewTask] = useState("");
+  const [mBusy, setMBusy] = useState(false);
+  const [mErr, setMErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    setHires(initial);
+  }, [initial]);
+  useEffect(() => {
+    setDrafts(Object.fromEntries(checklist.flatMap((g) => g.tasks.map((t) => [t.key, t.label]))));
+  }, [checklist]);
 
   const allSelected = hires.length > 0 && selected.size === hires.length;
   function toggleOne(id: string) {
@@ -111,13 +125,131 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
     }
   }
 
-  if (hires.length === 0) {
-    return <EmptyState title="No active hires." />;
+  // --- task management ---
+  async function manageCall(url: string, method: string, body?: unknown) {
+    setMBusy(true);
+    setMErr(null);
+    try {
+      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+      if (!res.ok) {
+        const p = (await res.json().catch(() => null)) as { message?: string } | null;
+        throw new Error(p?.message ?? "Something went wrong.");
+      }
+      router.refresh();
+    } catch (err) {
+      setMErr(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setMBusy(false);
+    }
+  }
+  const renameTask = (t: { key: string; custom: boolean }) =>
+    t.custom
+      ? manageCall("/api/onboarding-milestones", "PATCH", { key: t.key, label: drafts[t.key] })
+      : manageCall("/api/onboarding-grid", "PATCH", { key: t.key, label: drafts[t.key] });
+  const hideTask = (key: string, hidden: boolean) => manageCall("/api/onboarding-grid", "PATCH", { key, hidden });
+  const removeCustom = (key: string) => manageCall(`/api/onboarding-milestones?key=${encodeURIComponent(key)}`, "DELETE");
+  const addTask = async () => {
+    if (!newTask.trim()) {
+      setMErr("Enter a task name.");
+      return;
+    }
+    await manageCall("/api/onboarding-milestones", "POST", { label: newTask });
+    setNewTask("");
+  };
+
+  if (hires.length === 0 && !managing) {
+    return (
+      <div className="space-y-3">
+        <div className="flex justify-end">
+          <button onClick={() => setManaging(true)} className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 hover:shadow-glow dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/5">
+            <Settings2 className="h-4 w-4" /> Manage tasks
+          </button>
+        </div>
+        <EmptyState title="No active hires." />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-3">
       <BulkActionBar count={selected.size} actions={GRID_BULK_ACTIONS} onApply={applyBulk} onDelete={deleteSelected} onClear={() => setSelected(new Set())} busy={bulkBusy} />
+
+      <div className="flex items-center justify-end">
+        <button
+          onClick={() => setManaging((m) => !m)}
+          className={clsx(
+            "inline-flex items-center gap-1.5 rounded border px-3 py-1.5 text-sm font-semibold transition hover:shadow-glow",
+            managing ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-lea hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/5"
+          )}
+        >
+          <Settings2 className="h-4 w-4" /> {managing ? "Done managing" : "Manage tasks"}
+        </button>
+      </div>
+
+      {managing && (
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Manage checklist tasks</h2>
+          <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
+            Rename any task (applies to the grid and every hire&apos;s checklist), hide a built-in you don&apos;t use, or add your own. Added tasks appear in a Custom group and don&apos;t count toward the completion percentage.
+          </p>
+          {mErr ? <p className="mt-2 text-sm font-medium text-red-700 dark:text-red-300">{mErr}</p> : null}
+          <div className="mt-3 space-y-4">
+            {checklist.map((g) => (
+              <div key={g.key}>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-brand-gold">{g.label}</p>
+                <div className="mt-1.5 space-y-1.5">
+                  {g.tasks.map((t) => {
+                    const dirty = (drafts[t.key] ?? t.label) !== t.label;
+                    return (
+                      <div key={t.key} className={clsx("flex flex-wrap items-center gap-2", t.hidden && "opacity-60")}>
+                        <input
+                          value={drafts[t.key] ?? t.label}
+                          onChange={(e) => setDrafts({ ...drafts, [t.key]: e.target.value })}
+                          onKeyDown={(e) => e.key === "Enter" && dirty && renameTask(t)}
+                          className="min-w-0 flex-1 rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
+                        />
+                        {t.custom ? (
+                          <span className="rounded bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">custom</span>
+                        ) : t.hidden ? (
+                          <span className="rounded bg-brand-cloudDancer px-2 py-0.5 text-[10px] font-semibold text-brand-grey dark:bg-white/10 dark:text-slate-300">hidden</span>
+                        ) : null}
+                        <button onClick={() => renameTask(t)} disabled={mBusy || !dirty} className="rounded bg-brand-lea px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-eden disabled:opacity-40">
+                          Save
+                        </button>
+                        {t.custom ? (
+                          <button onClick={() => removeCustom(t.key)} disabled={mBusy} className="rounded border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10">
+                            Remove
+                          </button>
+                        ) : (
+                          <button onClick={() => hideTask(t.key, !t.hidden)} disabled={mBusy} className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-eden transition hover:bg-brand-cloudDancer/40 disabled:opacity-50 dark:border-white/10 dark:text-slate-200">
+                            {t.hidden ? "Show" : "Hide"}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center gap-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
+            <input
+              value={newTask}
+              onChange={(e) => setNewTask(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addTask()}
+              placeholder="New task name"
+              className="flex-1 rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500"
+            />
+            <button onClick={addTask} disabled={mBusy} className="rounded bg-brand-lea px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
+              + Add task
+            </button>
+          </div>
+        </section>
+      )}
+
+      {hires.length === 0 ? (
+        <EmptyState title="No active hires." />
+      ) : (
       <div className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
         <p className="text-sm text-brand-grey dark:text-slate-400">
@@ -177,14 +309,15 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
               </tr>
             ))}
 
-            {/* task groups */}
-            {ONBOARDING_GROUPS.map((g) => {
-              const groupTasks = ONBOARDING_TASKS.filter((t) => t.group === g.key);
+            {/* task groups (built-in + custom), hidden tasks dropped */}
+            {checklist.map((g) => {
+              const groupTasks = g.tasks.filter((t) => !t.hidden);
+              if (groupTasks.length === 0) return null;
               return (
                 <Fragment key={g.key}>
                   <tr>
                     <td className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-brand-cloudDancer/60 px-3 py-1.5 text-right text-[10px] font-bold uppercase tracking-wide text-brand-gold dark:border-white/10 dark:bg-white/5">
-                      {groupLabel(g.key)}
+                      {g.label}
                     </td>
                     {hires.map((h) => (
                       <td key={h.id} className="border-b border-brand-lea/5 bg-brand-cloudDancer/40 dark:border-white/10 dark:bg-white/5" />
@@ -218,6 +351,7 @@ export function OnboardingGridTab({ hires: initial }: { hires: GridHire[] }) {
         </table>
       </div>
       </div>
+      )}
     </div>
   );
 }

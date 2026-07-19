@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clsx } from "clsx";
-import { Archive, CalendarClock, Building2, Trash2 } from "lucide-react";
+import { Archive, CalendarClock, Building2, Trash2, ListChecks } from "lucide-react";
 import type { Checkin, EmploymentStatus, GridTaskStatus, PostOnboardHire } from "@/lib/data/onboarding";
+import { MAINTENANCE_TASKS } from "@/lib/onboarding/tasks";
 import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
 import { EmptyState } from "@/components/ui";
 
@@ -14,6 +15,7 @@ function fmtDate(iso: string | null) {
 }
 
 const POST_ONBOARD_BULK_ACTIONS: BulkAction[] = [
+  { kind: "choice", key: "checkin", label: "Mark check-in done", icon: ListChecks, options: MAINTENANCE_TASKS.map((t) => ({ value: t.key, label: t.label })) },
   { kind: "patch", key: "archive", label: "Archive", icon: Archive, patch: { stage: "ARCHIVED" }, confirm: true, tone: "danger" },
   { kind: "date", key: "orientation", label: "Set orientation date", icon: CalendarClock },
   { kind: "text", key: "dept", label: "Set department", icon: Building2, placeholder: "Department" },
@@ -64,6 +66,38 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
     router.refresh();
   }
 
+  async function bulkCheckin(_actionKey: string, key: string) {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/onboarding-tasks/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hireIds: ids, key, status: "DONE" })
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; archivedIds?: string[]; message?: string };
+      if (!res.ok || !data.ok) {
+        window.alert(data.message ?? "Could not update check-ins.");
+        return;
+      }
+      const archived = new Set(data.archivedIds ?? []);
+      setHires((cur) =>
+        cur
+          .filter((h) => !archived.has(h.id))
+          .map((h) =>
+            selected.has(h.id)
+              ? { ...h, checkins: h.checkins.map((c) => (c.key === key ? { ...c, status: "DONE" as GridTaskStatus, dueSoon: false } : c)) }
+              : h
+          )
+      );
+      setSelected(new Set());
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function setEmployment(hireId: string, status: EmploymentStatus) {
     const prev = hires;
     // Terminating moves the employee to Archived, so drop them from this list.
@@ -99,6 +133,12 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
         body: JSON.stringify({ status: next })
       });
       if (!res.ok) throw new Error();
+      const data = (await res.json().catch(() => ({}))) as { archived?: boolean };
+      // All check-ins done → the server moved them to Archived. Drop them here.
+      if (data.archived) {
+        setHires((cur) => cur.filter((h) => h.id !== hireId));
+        router.refresh();
+      }
     } catch {
       setHires(prev);
     }
@@ -112,7 +152,7 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
 
   return (
     <div className="space-y-3">
-      <BulkActionBar count={selected.size} actions={POST_ONBOARD_BULK_ACTIONS} onApply={applyBulk} onDelete={deleteSelected} onClear={() => setSelected(new Set())} busy={busy} />
+      <BulkActionBar count={selected.size} actions={POST_ONBOARD_BULK_ACTIONS} onApply={applyBulk} onChoice={bulkCheckin} onDelete={deleteSelected} onClear={() => setSelected(new Set())} busy={busy} />
       <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
@@ -175,7 +215,9 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
                           <svg width="13" height="13" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                         </span>
                       ) : c.dueSoon ? (
-                        <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold text-brand-lea dark:text-slate-100">due</span>
+                        <span className="inline-flex animate-pulse items-center gap-1 rounded bg-red-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm ring-2 ring-red-300 dark:ring-red-500/40">
+                          due
+                        </span>
                       ) : (
                         <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/30" />
                       )}

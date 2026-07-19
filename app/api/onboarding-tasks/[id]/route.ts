@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
+import { MAINTENANCE_GROUP } from "@/lib/onboarding/tasks";
+import { maybeArchiveOnCheckinsComplete } from "@/lib/data/onboarding";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -26,7 +28,13 @@ export async function PATCH(request: Request, context: RouteContext) {
       data: { status, completedAt: status === "DONE" ? new Date() : null }
     });
 
-    return NextResponse.json({ ok: true, task: { id: updated.id, status: updated.status } });
+    // Completing a check-in may be the last one — auto-archive if so.
+    let archived = false;
+    if (updated.group === MAINTENANCE_GROUP && status === "DONE") {
+      archived = await maybeArchiveOnCheckinsComplete(updated.newHireId);
+    }
+
+    return NextResponse.json({ ok: true, task: { id: updated.id, status: updated.status }, archived });
   } catch (error) {
     console.error("Onboarding task update error:", error);
     return NextResponse.json({ message: "Unable to update task." }, { status: 500 });

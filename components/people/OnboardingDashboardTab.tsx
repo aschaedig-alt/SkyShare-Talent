@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { clsx } from "clsx";
-import type { ChartDatum, DrillPerson, OnboardingDashboard } from "@/lib/data/onboarding";
+import { Check, RotateCcw } from "lucide-react";
+import type { ChartDatum, DrillPerson, OnboardingDashboard, WorklistPerson } from "@/lib/data/onboarding";
 
 const STATUS_COLOR: Record<string, string> = {
   "In progress": "#b8860b",
@@ -192,9 +193,70 @@ function VBars({ data }: { data: ChartDatum[] }) {
   );
 }
 
+function WorklistRow({ p, onHide, onRestore }: { p: WorklistPerson; onHide?: () => void; onRestore?: () => void }) {
+  const pct = p.applicableCount > 0 ? Math.round((p.doneCount / p.applicableCount) * 100) : 0;
+  return (
+    <div className="flex items-center gap-3 py-2 text-sm">
+      {onHide && (
+        <button
+          onClick={onHide}
+          title="Check off — hide from this list"
+          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-brand-grey/40 text-transparent transition hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-500/15"
+        >
+          <Check className="h-3 w-3" />
+        </button>
+      )}
+      <Link href={`/people/${p.id}`} className="min-w-0 flex-1 truncate transition hover:opacity-90 hover:shadow-glow">
+        <span className="font-semibold text-brand-lea dark:text-slate-100">{p.name}</span>
+        {p.position ? <span className="text-brand-grey dark:text-slate-400"> · {p.position}</span> : null}
+      </Link>
+      <span className="hidden h-2 w-24 shrink-0 overflow-hidden rounded-full bg-brand-cloudDancer sm:block dark:bg-white/10">
+        <span className={clsx("block h-full rounded-full", pct === 100 ? "bg-emerald-500" : "bg-brand-gold")} style={{ width: `${Math.max(4, pct)}%` }} />
+      </span>
+      <span className="w-16 shrink-0 text-right text-xs text-brand-grey dark:text-slate-400">
+        {p.onboardedAt ? `onb ${fmtDate(p.onboardedAt)}` : p.startDate ? fmtDate(p.startDate) : "no date"}
+      </span>
+      <span className={clsx("w-20 shrink-0 rounded px-2 py-0.5 text-center text-[10px] font-semibold", DRILL_STATUS_STYLE[p.status] ?? "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400")}>{p.status}</span>
+      {onRestore && (
+        <button onClick={onRestore} title="Show again" className="shrink-0 rounded border border-brand-lea/20 px-2 py-0.5 text-[11px] font-semibold text-brand-eden transition hover:bg-brand-cloudDancer/40 dark:border-white/10 dark:text-slate-200">
+          <RotateCcw className="h-3 w-3" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDashboard }) {
   const [drill, setDrill] = useState<null | "starting" | "missing" | "attention">(null);
   const toggle = (key: "starting" | "missing" | "attention") => setDrill((cur) => (cur === key ? null : key));
+
+  // Worklist state — checking someone off hides them for everyone (shared, reversible).
+  const [worklist, setWorklist] = useState<WorklistPerson[]>(dashboard.worklist);
+  const [hidden, setHidden] = useState<WorklistPerson[]>(dashboard.worklistHidden);
+  const [showHidden, setShowHidden] = useState(false);
+  useEffect(() => {
+    setWorklist(dashboard.worklist);
+    setHidden(dashboard.worklistHidden);
+  }, [dashboard.worklist, dashboard.worklistHidden]);
+
+  async function setHiddenState(p: WorklistPerson, hide: boolean) {
+    if (hide) {
+      setWorklist((w) => w.filter((x) => x.id !== p.id));
+      setHidden((h) => [p, ...h]);
+    } else {
+      setHidden((h) => h.filter((x) => x.id !== p.id));
+      setWorklist((w) => [...w, p]);
+    }
+    try {
+      await fetch("/api/onboarding/dashboard-hidden", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: p.id, hidden: hide })
+      });
+    } catch {
+      /* best-effort; a reload reconciles from the server */
+    }
+  }
 
   const drillView =
     drill === "starting"
@@ -266,6 +328,41 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
                 </Link>
               );
             })}
+          </div>
+        )}
+      </section>
+
+      {/* In onboarding — the running worklist: active + recently onboarded, check
+          off to hide (shared across the team). */}
+      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">In onboarding</h2>
+            <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">Everyone active, plus anyone onboarded in the last few weeks. Check a person off to hide them. · {worklist.length}</p>
+          </div>
+          {hidden.length > 0 && (
+            <button onClick={() => setShowHidden((v) => !v)} className="text-[11px] font-semibold text-brand-gold transition hover:underline">
+              {showHidden ? "Hide checked-off" : `Show checked-off (${hidden.length})`}
+            </button>
+          )}
+        </div>
+        {worklist.length === 0 ? (
+          <p className="mt-3 text-sm text-brand-grey dark:text-slate-400">No one in onboarding right now.</p>
+        ) : (
+          <div className="mt-2 divide-y divide-brand-lea/5 dark:divide-white/10">
+            {worklist.map((p) => (
+              <WorklistRow key={p.id} p={p} onHide={() => setHiddenState(p, true)} />
+            ))}
+          </div>
+        )}
+        {showHidden && hidden.length > 0 && (
+          <div className="mt-3 border-t border-brand-lea/10 pt-2 dark:border-white/10">
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Checked off · {hidden.length}</p>
+            <div className="divide-y divide-brand-lea/5 opacity-70 dark:divide-white/10">
+              {hidden.map((p) => (
+                <WorklistRow key={p.id} p={p} onRestore={() => setHiddenState(p, false)} />
+              ))}
+            </div>
           </div>
         )}
       </section>

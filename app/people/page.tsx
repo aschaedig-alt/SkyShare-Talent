@@ -3,10 +3,10 @@ import {
   getOnboardingCounts,
   getActiveDashboard,
   getActiveGridHires,
-  getActiveMilestoneData,
   getPostOnboardHires,
   getArchivedRows
 } from "@/lib/data/onboarding";
+import { getGridChecklist } from "@/lib/data/onboarding-grid-config";
 import { PreOnboardingWorkspace, type PeopleTab } from "@/components/people/PreOnboardingWorkspace";
 import { isAdminOrRecruiter } from "@/lib/auth/roles";
 
@@ -36,8 +36,8 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
     return <PreOnboardingWorkspace tab={tab} counts={counts} canManage={canManage} dashboard={await getActiveDashboard()} />;
   }
   if (tab === "grid") {
-    const [grid, milestones] = await Promise.all([getActiveGridHires(), getActiveMilestoneData()]);
-    return <PreOnboardingWorkspace tab={tab} counts={counts} canManage={canManage} grid={grid} milestones={milestones} />;
+    const [grid, checklist] = await Promise.all([getActiveGridHires(), getGridChecklist()]);
+    return <PreOnboardingWorkspace tab={tab} counts={counts} canManage={canManage} grid={grid} checklist={checklist} />;
   }
   if (tab === "post") {
     return <PreOnboardingWorkspace tab={tab} counts={counts} canManage={canManage} post={await getPostOnboardHires()} />;

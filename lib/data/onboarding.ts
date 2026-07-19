@@ -7,6 +7,8 @@ import {
   type OnboardingTaskDef
 } from "@/lib/onboarding/tasks";
 import { getMilestoneCatalog } from "@/lib/data/onboarding-milestones";
+import { getDashboardHiddenIds } from "@/lib/data/dashboard-hidden";
+import { getGridHiddenKeys } from "@/lib/data/onboarding-grid-config";
 import { computeTenure } from "@/lib/data/tenure";
 import { isOfferStepKey, offerStepCompletedAt, type OfferSteps } from "@/lib/offers/steps";
 
@@ -77,6 +79,11 @@ export type DrillPerson = {
   applicableCount: number;
 };
 
+// A row on the dashboard "In onboarding" worklist: active hires plus anyone
+// onboarded recently, so the whole recent picture is scannable. onboardedAt is
+// set for the finished ones.
+export type WorklistPerson = DrillPerson & { onboardedAt: string | null };
+
 export type OnboardingDashboard = {
   startingSoon: number;
   missingItems: number;
@@ -97,6 +104,10 @@ export type OnboardingDashboard = {
   // panel above (starting soon, upcoming, by week), so without this bucket they
   // silently vanish from the dashboard until someone sets a date.
   noStartDateList: DrillPerson[];
+  // Everyone currently in onboarding + anyone onboarded in the last few weeks,
+  // minus the ones checked off. worklistHidden holds the checked-off ones.
+  worklist: WorklistPerson[];
+  worklistHidden: WorklistPerson[];
   // Top onboarding tasks still incomplete across active hires (where it's jamming).
   bottlenecks: ChartDatum[];
   // Hires starting in the next ~3 weeks, with progress + status, for the quick scan.
@@ -137,6 +148,7 @@ type HireWithTasks = {
   birthCountry: string | null;
   citizenshipCountry: string | null;
   terminationDate: Date | null;
+  onboardedAt: Date | null;
   stage: string;
   canceled: boolean;
   employmentStatus: string;
@@ -233,7 +245,13 @@ async function travelStatusByHire(hireIds: string[]): Promise<Map<string, HireTr
   return map;
 }
 
-function buildDashboard(active: HireWithTasks[], now: number, travelByHire: Map<string, HireTravelStatus>): OnboardingDashboard {
+function buildDashboard(
+  active: HireWithTasks[],
+  now: number,
+  travelByHire: Map<string, HireTravelStatus>,
+  recentlyOnboarded: HireWithTasks[] = [],
+  hiddenIds: Set<string> = new Set()
+): OnboardingDashboard {
   const rows = active.map((h) => ({ hire: h, row: toRow(h, now) }));
 
   const startingSoon = rows.filter(
@@ -346,6 +364,30 @@ function buildDashboard(active: HireWithTasks[], now: number, travelByHire: Map<
     .map(toDrill)
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  // In-onboarding worklist: every active hire + anyone onboarded recently, split
+  // into shown vs checked-off (hidden). In-onboarding first (by start date), then
+  // the recently onboarded (most recent first).
+  const recentRows = recentlyOnboarded.map((h) => ({ hire: h, row: toRow(h, now) }));
+  const worklistAll: WorklistPerson[] = [...rows, ...recentRows].map(({ hire, row }) => ({
+    id: row.id,
+    name: row.name,
+    position: row.position,
+    startDate: row.startDate,
+    status: row.status,
+    doneCount: row.doneCount,
+    applicableCount: row.applicableCount,
+    onboardedAt: iso(hire.onboardedAt)
+  }));
+  worklistAll.sort((a, b) => {
+    const ao = a.onboardedAt ? 1 : 0;
+    const bo = b.onboardedAt ? 1 : 0;
+    if (ao !== bo) return ao - bo; // in-onboarding before onboarded
+    if (a.onboardedAt && b.onboardedAt) return new Date(b.onboardedAt).getTime() - new Date(a.onboardedAt).getTime();
+    return (a.startDate ? new Date(a.startDate).getTime() : Infinity) - (b.startDate ? new Date(b.startDate).getTime() : Infinity);
+  });
+  const worklist = worklistAll.filter((p) => !hiddenIds.has(p.id));
+  const worklistHidden = worklistAll.filter((p) => hiddenIds.has(p.id));
+
   // Checklist bottlenecks: onboarding tasks still TODO across the most hires.
   const todoByTask = new Map<string, { label: string; count: number }>();
   for (const { hire } of rows) {
@@ -419,6 +461,8 @@ function buildDashboard(active: HireWithTasks[], now: number, travelByHire: Map<
     needsAttentionList,
     missingItemsList,
     noStartDateList,
+    worklist,
+    worklistHidden,
     bottlenecks,
     readyForStart,
     orientationTimeliness,
@@ -448,6 +492,7 @@ const hireSelect = {
   birthCountry: true,
   citizenshipCountry: true,
   terminationDate: true,
+  onboardedAt: true,
   stage: true,
   canceled: true,
   employmentStatus: true,
@@ -522,6 +567,22 @@ export function defaultTaskCreateData(
   });
 }
 
+// When every maintenance check-in (30/60/90 + benefits) is done, a post-onboard
+// employee is finished with onboarding, so move them to Archived — but keep their
+// employmentStatus (they are a CURRENT employee, not terminated). The Archived
+// tab's current/former filter keeps the two distinct. Returns true if archived.
+export async function maybeArchiveOnCheckinsComplete(hireId: string): Promise<boolean> {
+  const hire = await prisma.newHire.findUnique({
+    where: { id: hireId },
+    select: { stage: true, tasks: { where: { group: MAINTENANCE_GROUP }, select: { status: true } } }
+  });
+  if (!hire || hire.stage !== "POST_ONBOARD") return false;
+  const checkins = hire.tasks;
+  if (checkins.length === 0 || !checkins.every((t) => t.status === "DONE")) return false;
+  await prisma.newHire.update({ where: { id: hireId }, data: { stage: "ARCHIVED" } });
+  return true;
+}
+
 export async function getOnboardingCounts() {
   const [active, postOnboard, archived] = await Promise.all([
     prisma.newHire.count({ where: { stage: "ACTIVE" } }),
@@ -532,13 +593,23 @@ export async function getOnboardingCounts() {
 }
 
 export async function getActiveDashboard(): Promise<OnboardingDashboard> {
-  const hires = (await prisma.newHire.findMany({
-    where: { stage: "ACTIVE" },
-    select: hireSelect,
-    orderBy: [{ startDate: "asc" }, { name: "asc" }]
-  })) as HireWithTasks[];
+  const now = Date.now();
+  const [hires, recentlyOnboarded, hiddenIds] = await Promise.all([
+    prisma.newHire.findMany({
+      where: { stage: "ACTIVE" },
+      select: hireSelect,
+      orderBy: [{ startDate: "asc" }, { name: "asc" }]
+    }) as Promise<HireWithTasks[]>,
+    // Recently onboarded (last ~3 weeks) so the worklist shows the full recent picture.
+    prisma.newHire.findMany({
+      where: { stage: "POST_ONBOARD", onboardedAt: { gte: new Date(now - 21 * DAY) } },
+      select: hireSelect,
+      orderBy: [{ onboardedAt: "desc" }]
+    }) as Promise<HireWithTasks[]>,
+    getDashboardHiddenIds()
+  ]);
   const travelByHire = await travelStatusByHire(hires.map((h) => h.id));
-  return buildDashboard(hires, Date.now(), travelByHire);
+  return buildDashboard(hires, now, travelByHire, recentlyOnboarded, new Set(hiddenIds));
 }
 
 // ---- Grid + Milestones (active hires only) ----
@@ -565,11 +636,14 @@ export type GridHire = {
 
 export async function getActiveGridHires(): Promise<GridHire[]> {
   const now = Date.now();
-  const hires = (await prisma.newHire.findMany({
-    where: { stage: "ACTIVE" },
-    select: hireSelect,
-    orderBy: [{ startDate: "asc" }, { name: "asc" }]
-  })) as HireWithTasks[];
+  const [hires, hiddenKeys] = await Promise.all([
+    prisma.newHire.findMany({
+      where: { stage: "ACTIVE" },
+      select: hireSelect,
+      orderBy: [{ startDate: "asc" }, { name: "asc" }]
+    }) as Promise<HireWithTasks[]>,
+    getGridHiddenKeys()
+  ]);
 
   return hires.map((h) => {
     const row = toRow(h, now);
@@ -577,6 +651,11 @@ export async function getActiveGridHires(): Promise<GridHire[]> {
       .filter((t) => t.group !== MAINTENANCE_GROUP)
       .sort((a, b) => a.order - b.order)
       .map((t) => ({ id: t.id, key: t.key, status: t.status as GridTaskStatus }));
+    // Progress counts the visible built-in checklist only — a hidden task no
+    // longer drags the percentage, and custom tasks are extras that don't count.
+    const counted = h.tasks.filter(
+      (t) => t.group !== MAINTENANCE_GROUP && t.group !== CUSTOM_GROUP && !hiddenKeys.has(t.key) && t.status !== "NA"
+    );
     return {
       id: h.id,
       name: h.name,
@@ -590,8 +669,8 @@ export async function getActiveGridHires(): Promise<GridHire[]> {
       ssEmail: h.ssEmail,
       personalEmail: h.personalEmail,
       status: row.status,
-      doneCount: row.doneCount,
-      applicableCount: row.applicableCount,
+      doneCount: counted.filter((t) => t.status === "DONE").length,
+      applicableCount: counted.length,
       tasks
     };
   });

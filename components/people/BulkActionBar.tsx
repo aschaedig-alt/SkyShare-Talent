@@ -32,6 +32,7 @@ export type BulkAction =
   | { kind: "patch"; key: string; label: string; icon: LucideIcon; patch: BulkPatch; confirm?: boolean; tone?: "primary" | "default" | "danger" }
   | { kind: "date"; key: string; label: string; icon: LucideIcon } // sets orientationDate
   | { kind: "text"; key: string; label: string; icon: LucideIcon; placeholder: string } // sets department
+  | { kind: "choice"; key: string; label: string; icon: LucideIcon; options: Array<{ value: string; label: string }> } // pick one, calls onChoice
   | { kind: "delete"; key: string; label: string; icon: LucideIcon }; // permanent delete
 
 type Props = {
@@ -40,10 +41,12 @@ type Props = {
   onApply: (patch: BulkPatch) => Promise<void> | void;
   onClear: () => void;
   onDelete?: () => Promise<void> | void;
+  // Called for a "choice" action with the selected option value (e.g. a check-in key).
+  onChoice?: (actionKey: string, value: string) => Promise<void> | void;
   busy?: boolean;
 };
 
-export function BulkActionBar({ count, actions, onApply, onClear, onDelete, busy }: Props) {
+export function BulkActionBar({ count, actions, onApply, onClear, onDelete, onChoice, busy }: Props) {
   const [openInput, setOpenInput] = useState<BulkAction | null>(null);
   const [value, setValue] = useState("");
 
@@ -70,6 +73,10 @@ export function BulkActionBar({ count, actions, onApply, onClear, onDelete, busy
       if (!value.trim()) return;
       await onApply({ department: value.trim() });
     }
+    if (openInput.kind === "choice") {
+      if (!value) return;
+      await onChoice?.(openInput.key, value);
+    }
     setOpenInput(null);
     setValue("");
   }
@@ -91,6 +98,17 @@ export function BulkActionBar({ count, actions, onApply, onClear, onDelete, busy
               autoFocus
               className="rounded border border-brand-lea/20 px-2 py-1 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
             />
+          ) : openInput.kind === "choice" ? (
+            <select
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              autoFocus
+              className="rounded border border-brand-lea/20 px-2 py-1 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+            >
+              {openInput.options.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
           ) : (
             <input
               type="text"
@@ -121,7 +139,7 @@ export function BulkActionBar({ count, actions, onApply, onClear, onDelete, busy
                   else if (a.kind === "delete") runDelete();
                   else {
                     setOpenInput(a);
-                    setValue("");
+                    setValue(a.kind === "choice" ? a.options[0]?.value ?? "" : "");
                   }
                 }}
                 className={clsx(
