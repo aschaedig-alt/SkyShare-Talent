@@ -2,12 +2,18 @@
 
 import { useEffect, useState } from "react";
 
-// Shared candidate-link picker for the org charts (crew, maintenance, and any
-// future department chart). Points a chart NAME at a Candidate record: names on
-// the charts often differ from the profile (chart "Augustin Quintero" vs profile
-// "Auggie Quintero"), so linking is an explicit pick, never a name match.
+// Shared people-link picker for the org charts (crew, maintenance, and any future
+// department chart). Points a chart NAME at a Candidate record: names on the charts
+// often differ from the profile (chart "Augustin Quintero" vs profile "Auggie
+// Quintero"), so linking is an explicit pick, never a name match.
+//
+// It searches BOTH candidates AND current employees. An employee who has no
+// candidate record yet (hired before the app, a direct hire, a rehire) still shows
+// up; picking them creates/links a minimal candidate on the server and returns its
+// id — so the chart link is always a candidate id, unchanged from before.
 
-export type OrgCandidate = { id: string; displayName: string; currentTitle: string | null; stage: string | null; archived?: boolean };
+export type OrgCandidate = { id: string; displayName: string; currentTitle: string | null; stage?: string | null; archived?: boolean };
+type OrgPerson = { id: string; displayName: string; currentTitle: string | null; kind: "candidate" | "employee"; candidateId: string | null; archived?: boolean };
 
 /** Small pill button used for the move / link / unlink affordances on a person row. */
 export const orgLinkBtnStyle: React.CSSProperties = {
@@ -21,9 +27,9 @@ export const orgLinkBtnStyle: React.CSSProperties = {
   whiteSpace: "nowrap"
 };
 
-/** Search for a candidate to link a chart name to. Pre-seeds the search with the
-    chart name, though it often will not match — so a last-name search is the
-    reliable move. Calls onPick with the chosen candidate's id. */
+/** Search for a person to link a chart name to. Pre-seeds with the chart name,
+    though it often won't match — a last-name search is the reliable move. Calls
+    onPick with the resolved candidate id. */
 export function LinkPicker({
   initialQuery,
   onPick,
@@ -34,8 +40,10 @@ export function LinkPicker({
   onCancel: () => void;
 }) {
   const [q, setQ] = useState(initialQuery);
-  const [results, setResults] = useState<OrgCandidate[]>([]);
+  const [results, setResults] = useState<OrgPerson[]>([]);
   const [loading, setLoading] = useState(false);
+  const [linkingId, setLinkingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -46,11 +54,9 @@ export function LinkPicker({
       }
       setLoading(true);
       try {
-        // Include archived candidates — a chart person may well be someone who was
-        // archived, and you still want to point their card at the right profile.
-        const res = await fetch(`/api/candidates?q=${encodeURIComponent(q.trim())}&includeArchived=1`);
-        const data = (await res.json()) as { candidates?: OrgCandidate[] };
-        if (alive) setResults(data.candidates ?? []);
+        const res = await fetch(`/api/fleet/people-search?q=${encodeURIComponent(q.trim())}`);
+        const data = (await res.json()) as { people?: OrgPerson[] };
+        if (alive) setResults(data.people ?? []);
       } catch {
         if (alive) setResults([]);
       } finally {
@@ -63,13 +69,41 @@ export function LinkPicker({
     };
   }, [q]);
 
+  async function pick(p: OrgPerson) {
+    // A candidate (or an employee already linked to one) resolves directly.
+    if (p.candidateId) {
+      onPick(p.candidateId, p.displayName);
+      return;
+    }
+    // An unlinked current employee: ensure they have a candidate record, then link.
+    setLinkingId(p.id);
+    setError(null);
+    try {
+      const res = await fetch("/api/fleet/link-employee", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hireId: p.id })
+      });
+      const data = (await res.json().catch(() => ({}))) as { candidateId?: string; displayName?: string; message?: string };
+      if (res.ok && data.candidateId) {
+        onPick(data.candidateId, data.displayName ?? p.displayName);
+      } else {
+        setError(data.message ?? "Couldn't link that person.");
+      }
+    } catch {
+      setError("Couldn't link that person.");
+    } finally {
+      setLinkingId(null);
+    }
+  }
+
   return (
     <div style={{ marginTop: 4, padding: 6, border: "1px solid var(--line, #cdd7e2)", borderRadius: 6, background: "var(--card, #fff)" }}>
       <input
         autoFocus
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Search candidates by name…"
+        placeholder="Search people by name…"
         style={{ width: "100%", fontSize: 12, padding: "3px 6px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)" }}
       />
       <div style={{ maxHeight: 160, overflowY: "auto", marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
@@ -77,19 +111,25 @@ export function LinkPicker({
         {!loading && q.trim().length >= 2 && results.length === 0 ? (
           <div style={{ fontSize: 11, opacity: 0.6, padding: 4 }}>No matches — try a last name.</div>
         ) : null}
-        {results.map((c) => (
+        {results.map((p) => (
           <button
-            key={c.id}
+            key={`${p.kind}:${p.id}`}
             type="button"
-            onClick={() => onPick(c.id, c.displayName)}
-            style={{ textAlign: "left", fontSize: 12, padding: "3px 6px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)", background: "transparent", cursor: "pointer" }}
+            disabled={linkingId !== null}
+            onClick={() => void pick(p)}
+            style={{ textAlign: "left", fontSize: 12, padding: "3px 6px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)", background: "transparent", cursor: "pointer", opacity: linkingId && linkingId !== p.id ? 0.5 : 1 }}
           >
-            <b>{c.displayName}</b>
-            {c.currentTitle ? <span style={{ opacity: 0.7 }}> · {c.currentTitle}</span> : null}
-            {c.archived ? <span style={{ opacity: 0.7 }}> · archived</span> : null}
+            <b>{p.displayName}</b>
+            {p.currentTitle ? <span style={{ opacity: 0.7 }}> · {p.currentTitle}</span> : null}
+            {p.kind === "employee" ? (
+              <span style={{ opacity: 0.7 }}> · {linkingId === p.id ? "linking…" : "on staff"}</span>
+            ) : p.archived ? (
+              <span style={{ opacity: 0.7 }}> · archived</span>
+            ) : null}
           </button>
         ))}
       </div>
+      {error ? <div style={{ fontSize: 11, color: "#c23b52", padding: 4 }}>{error}</div> : null}
       <button type="button" onClick={onCancel} style={{ ...orgLinkBtnStyle, marginTop: 4 }}>
         Cancel
       </button>
