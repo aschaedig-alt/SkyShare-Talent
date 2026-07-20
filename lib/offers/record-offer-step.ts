@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { recordOfferStatus } from "@/lib/offers/record-offer-status";
+import { syncOfferStepToOnboarding } from "@/lib/offers/onboarding-sync";
 import type { OfferStatus } from "@/lib/offers/constants";
 import {
   deriveOfferStatus,
@@ -33,7 +34,7 @@ export async function recordOfferStep(
 ): Promise<OfferStepResult> {
   const app = await prisma.candidateApplication.findUnique({
     where: { id: applicationId },
-    select: { id: true, offerStatus: true, offerStepsJson: true }
+    select: { id: true, candidateId: true, offerStatus: true, offerStepsJson: true }
   });
   if (!app) return { ok: false, message: "Application not found." };
 
@@ -46,6 +47,11 @@ export async function recordOfferStep(
     where: { id: applicationId },
     data: { offerStepsJson: serializeOfferSteps(steps) }
   });
+
+  // Keep the linked hire's onboarding OFFER task in step (no-op if not moved in
+  // yet). Done for every offer-step write, whatever the resulting status — so this
+  // runs before the DECLINED short-circuit below.
+  await syncOfferStepToOnboarding(app.candidateId, key, done, at);
 
   // A decline is something THEY did — it is not derivable from our steps, and it
   // must not be silently undone by someone tidying up a checkbox afterwards.

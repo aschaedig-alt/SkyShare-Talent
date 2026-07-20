@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { MAINTENANCE_GROUP } from "@/lib/onboarding/tasks";
 import { maybeArchiveOnCheckinsComplete } from "@/lib/data/onboarding";
+import { isOfferStepKey } from "@/lib/offers/steps";
+import { syncOnboardingTaskToOffer } from "@/lib/offers/onboarding-sync";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -27,6 +29,14 @@ export async function PATCH(request: Request, context: RouteContext) {
       where: { id },
       data: { status, completedAt: status === "DONE" ? new Date() : null }
     });
+
+    // If this is one of the 6 OFFER steps, mirror it back to the offer on the
+    // candidate's application (through the audited recordOfferStep path) so the
+    // candidate's Offers tab + the offer status/dates stay in step. NA isn't an
+    // offer concept, so only DONE/TODO write back.
+    if (isOfferStepKey(updated.key) && status !== "NA") {
+      await syncOnboardingTaskToOffer(updated.newHireId, updated.key, status === "DONE", { id: auth.user.id, email: auth.user.email });
+    }
 
     // Completing a check-in may be the last one — auto-archive if so.
     let archived = false;
