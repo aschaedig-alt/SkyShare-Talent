@@ -16,11 +16,17 @@ export type BusinessCardRow = {
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
-// Active staff, each turned into their primary card plus any secondary cards.
+// Everyone currently on staff, each turned into their primary card plus any
+// secondary cards. This is intentionally NOT gated on onboarding stage: you order
+// cards for brand-new hires AND reorder for long-tenured employees, and once a hire
+// finishes onboarding + check-ins they auto-archive to stage ARCHIVED while staying
+// employmentStatus ACTIVE. Gating on stage hid every established employee (147 of
+// them). So the gate is employment status only — current staff (ACTIVE), never
+// former (TERMINATED), never a fallen-through offer (canceled).
 export async function getBusinessCards(): Promise<BusinessCardRow[]> {
   const now = Date.now();
   const people = await prisma.newHire.findMany({
-    where: { stage: { in: ["ACTIVE", "POST_ONBOARD"] }, employmentStatus: "ACTIVE" },
+    where: { employmentStatus: "ACTIVE", canceled: false },
     select: {
       id: true,
       name: true,
