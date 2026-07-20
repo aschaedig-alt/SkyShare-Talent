@@ -4,6 +4,7 @@ import { authOptions } from "@/auth";
 import { isAuthRequired } from "@/lib/auth/auth-config";
 import { isRoleName, type RoleName } from "@/lib/auth/roles";
 import { getWorkspaceModuleAccessPolicy } from "@/lib/data/module-access";
+import { resolveUserHome } from "@/lib/data/user-home";
 import { getWorkspaceBranding, resolveBrandingLogo } from "@/lib/data/branding";
 import { EnvironmentBanner } from "@/components/layout/EnvironmentBanner";
 import { ModuleAccessShell } from "@/components/layout/ModuleAccessShell";
@@ -27,11 +28,14 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   const branding = await getWorkspaceBranding();
   const sidebarLogo = resolveBrandingLogo(branding, "sidebar");
   const showSidebar = Boolean(role);
+  const homeHref = role ? await resolveUserHome(session?.user?.id, policy, role) : "/command-center";
 
   return (
     <div className="min-h-screen bg-[var(--skyshare-page)] text-brand-black dark:text-slate-100">
       <div className="flex min-h-screen">
-        {showSidebar && role ? <Sidebar role={role} policy={policy} logoDataUrl={sidebarLogo} /> : null}
+        {showSidebar && role ? (
+          <Sidebar role={role} policy={policy} logoDataUrl={sidebarLogo} userEmail={session?.user?.email ?? null} homeHref={homeHref} />
+        ) : null}
         <main className="min-w-0 flex-1">
           {/* Spacer so the fixed mobile menu button doesn't overlap content */}
           {showSidebar ? <div className="h-12 lg:hidden" /> : null}

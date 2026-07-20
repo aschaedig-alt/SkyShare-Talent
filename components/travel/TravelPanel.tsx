@@ -41,6 +41,7 @@ import {
 } from "@/app/travel/actions";
 import type { ParsedTravel } from "@/lib/extraction/travel-confirmation";
 import { TravelGaps, TravelGapBadge } from "@/components/travel/TravelGaps";
+import { useDialogClose } from "@/lib/hooks/useDialogClose";
 
 type Props = {
   subjectType: "newHire" | "candidate";
@@ -189,6 +190,7 @@ export function TravelPanel({
 
 function NewTripButton({ creating, onCreate }: { creating: boolean; onCreate: (purpose: string) => void }) {
   const [open, setOpen] = useState(false);
+  useDialogClose(() => setOpen(false), open);
   return (
     <div className="relative">
       <button

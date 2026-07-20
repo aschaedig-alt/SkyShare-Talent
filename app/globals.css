@@ -150,14 +150,19 @@ select {
     #fff;
 }
 
-[data-module-access="VIEW_ONLY"] button,
+/* View-only mutes EDIT controls, but never dismissal controls: a popup's close X
+   is a real <button>, so without the :not([data-dialog-close]) exclusion the
+   blanket rule below made it un-clickable (pointer-events:none) for view-only
+   users — the reported "dead X" bug. Tag any close/dismiss button with
+   data-dialog-close to keep it live. */
+[data-module-access="VIEW_ONLY"] button:not([data-dialog-close]),
 [data-module-access="VIEW_ONLY"] input,
 [data-module-access="VIEW_ONLY"] select,
 [data-module-access="VIEW_ONLY"] textarea {
   cursor: not-allowed;
 }
 
-[data-module-access="VIEW_ONLY"] button,
+[data-module-access="VIEW_ONLY"] button:not([data-dialog-close]),
 [data-module-access="VIEW_ONLY"] input[type="button"],
 [data-module-access="VIEW_ONLY"] input[type="submit"],
 [data-module-access="VIEW_ONLY"] input[type="reset"],

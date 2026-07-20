@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Check } from "lucide-react";
+import { useDialogClose } from "@/lib/hooks/useDialogClose";
 import {
   COLOR_PALETTE,
   PALETTE_ORDER,
@@ -37,6 +38,8 @@ export function DepartmentColorEditor({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useDialogClose(onClose, true);
 
   async function save() {
     setSaving(true);
@@ -79,7 +82,7 @@ export function DepartmentColorEditor({
             <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Department colors</h2>
             <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">Pick a color for each department. Used to color interviews across every calendar view.</p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="rounded p-1 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5">
+          <button onClick={onClose} data-dialog-close aria-label="Close" className="rounded p-1 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5">
             <X className="h-5 w-5" />
           </button>
         </div>

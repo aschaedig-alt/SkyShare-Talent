@@ -1009,7 +1009,7 @@ export default function CrewOrgChart({
         {active && active.poolFlown ? (
           <>
             <div className="m-h">
-              <button className="m-close" aria-label="Close" onClick={() => setOpenIdx(null)}>
+              <button className="m-close" aria-label="Close" data-dialog-close onClick={() => setOpenIdx(null)}>
                 ✕
               </button>
               <div className="m-ty">{active.name}</div>
@@ -1025,7 +1025,7 @@ export default function CrewOrgChart({
         {active && !active.poolFlown && ap && acp ? (
           <>
             <div className="m-h">
-              <button className="m-close" aria-label="Close" onClick={() => setOpenIdx(null)}>
+              <button className="m-close" aria-label="Close" data-dialog-close onClick={() => setOpenIdx(null)}>
                 ✕
               </button>
               <div className="m-ty">{active.name}</div>

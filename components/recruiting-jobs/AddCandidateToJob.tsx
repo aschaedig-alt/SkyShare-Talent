@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserPlus, X, Search, Plus } from "lucide-react";
+import { useDialogClose } from "@/lib/hooks/useDialogClose";
 
 type Found = { id: string; displayName: string; currentTitle: string | null; stage: string | null; primaryEmail: string | null; archived?: boolean };
 
@@ -127,6 +128,8 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
     router.refresh();
   }
 
+  useDialogClose(finish, open);
+
   return (
     <>
       <button
@@ -141,7 +144,7 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
           <div className="w-full max-w-md rounded bg-white p-5 shadow-xl dark:bg-brand-panel" onClick={(e) => e.stopPropagation()}>
             <div className="mb-1 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">{notice ? "Done" : "Add candidate"}</h2>
-              <button onClick={finish} className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close"><X className="h-5 w-5" /></button>
+              <button onClick={finish} data-dialog-close className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close"><X className="h-5 w-5" /></button>
             </div>
 
             {notice ? (

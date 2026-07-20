@@ -4,6 +4,22 @@ import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 import { isRoleName, type RoleName } from "@/lib/auth/roles";
 import { isEmailBlocked } from "@/lib/auth/blocklist";
+import { logActivity } from "@/lib/activity/logger";
+
+// Record a sign-in attempt to the activity log so admins can see who tried to get
+// in and why they were turned away. Only what actually reaches us is capturable:
+// Google validates the password upstream, so a genuine bad-credentials attempt
+// never gets here — the reasons we can record are "ok", "blocked", and
+// "not_allowed_domain". Never throws (logActivity swallows its own errors) so a
+// logging hiccup can't stop a legitimate login.
+async function logSignInAttempt(email: string | null | undefined, success: boolean, reason: string) {
+  await logActivity({
+    activityType: "AUTH_SIGN_IN_ATTEMPT",
+    userEmail: email ?? undefined,
+    description: `Sign-in ${success ? "succeeded" : "denied"}${email ? `: ${email}` : ""}${success ? "" : ` (${reason})`}`,
+    metadata: { success, reason, email: email ?? null }
+  });
+}
 
 function csvEnv(name: string) {
   return (process.env[name] ?? "")
@@ -97,14 +113,29 @@ export const authOptions: NextAuthOptions = {
         })
       ]
     : [],
+  events: {
+    // Successful sign-out — the login side is logged as an attempt in the signIn
+    // callback below, so we only record the logout here.
+    async signOut({ token }) {
+      await logActivity({
+        activityType: "USER_LOGOUT",
+        userId: typeof token?.id === "string" ? token.id : undefined,
+        userEmail: typeof token?.email === "string" ? token.email : undefined,
+        description: `Signed out${token?.email ? `: ${String(token.email)}` : ""}`
+      });
+    }
+  },
   callbacks: {
     async signIn({ user }) {
       // A revoked (blocked) email can never sign back in, even if its domain is
       // otherwise allowed — this is what makes offboarding stick.
       if (await isEmailBlocked(user.email)) {
+        await logSignInAttempt(user.email, false, "blocked");
         return false;
       }
-      return isEmailAllowedForAuth(user.email);
+      const allowed = isEmailAllowedForAuth(user.email);
+      await logSignInAttempt(user.email, allowed, allowed ? "ok" : "not_allowed_domain");
+      return allowed;
     },
     async jwt({ token, user }) {
       const email = (user?.email ?? token.email)?.trim().toLowerCase();

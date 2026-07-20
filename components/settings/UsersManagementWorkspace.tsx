@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { VALID_ROLES, ROLE_PERMISSIONS } from "@/lib/auth/permissions";
+import { useDialogClose } from "@/lib/hooks/useDialogClose";
 
 interface UserWithPermissions {
   id: string;
@@ -28,6 +29,10 @@ export function UsersManagementWorkspace({ users: initialUsers, currentUserId = 
   // Remove-access confirm flow: the user being removed + the typed-email guard.
   const [removing, setRemoving] = useState<UserWithPermissions | null>(null);
   const [confirmEmail, setConfirmEmail] = useState("");
+
+  // Escape closes the remove-access modal (unless mid-save), matching its
+  // click-outside behavior below.
+  useDialogClose(() => { if (!saving) setRemoving(null); }, Boolean(removing));
 
   const flash = (type: "success" | "error", text: string) => {
     setMessage({ type, text });
@@ -272,7 +277,7 @@ export function UsersManagementWorkspace({ users: initialUsers, currentUserId = 
               />
             </label>
             <div className="mt-5 flex justify-end gap-2">
-              <button onClick={() => setRemoving(null)} disabled={saving} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/40 disabled:opacity-50 dark:border-white/10 dark:text-slate-100">
+              <button data-dialog-close onClick={() => setRemoving(null)} disabled={saving} className="rounded border border-brand-lea/20 px-4 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/40 disabled:opacity-50 dark:border-white/10 dark:text-slate-100">
                 Cancel
               </button>
               <button

@@ -10,6 +10,7 @@ import { EMPLOYEE_COLUMN_KEYS, type EmployeeColumnKey } from "@/lib/employees/co
 import { EmployeeTags, displayTags } from "@/components/employees/EmployeeTags";
 import { Badge, Button, EmptyState, Modal } from "@/components/ui";
 import type { BadgeTone } from "@/components/ui/Badge";
+import { useDialogClose } from "@/lib/hooks/useDialogClose";
 
 type Filter = "all" | "current" | "past";
 const FILTER_KEY = "skyshare-employees-filter";
@@ -117,6 +118,12 @@ export function EmployeesWorkspace({ employees, counts, initialColumns }: { empl
   const [merging, setMerging] = useState(false);
   const [mergeErr, setMergeErr] = useState<string | null>(null);
   const selectedRows = useMemo(() => employees.filter((e) => selected.has(e.id)), [employees, selected]);
+
+  // Escape closes each open overlay. The merge dialog ignores Escape mid-merge,
+  // matching its busy-guarded backdrop.
+  useDialogClose(() => { if (!merging) setMergeOpen(false); }, mergeOpen);
+  useDialogClose(() => setFiltersOpen(false), filtersOpen);
+  useDialogClose(() => setColsOpen(false), colsOpen);
 
   useEffect(() => {
     const savedFilter = window.localStorage.getItem(FILTER_KEY);
@@ -468,7 +475,7 @@ export function EmployeesWorkspace({ employees, counts, initialColumns }: { empl
         </div>
         {mergeErr ? <p className="mt-3 text-sm font-medium text-red-700 dark:text-red-300">{mergeErr}</p> : null}
         <div className="mt-5 flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setMergeOpen(false)} disabled={merging}>Cancel</Button>
+          <Button variant="secondary" data-dialog-close onClick={() => setMergeOpen(false)} disabled={merging}>Cancel</Button>
           <Button variant="danger" onClick={doMerge} disabled={merging || !primaryId}>{merging ? "Merging…" : "Merge & delete the other"}</Button>
         </div>
       </Modal>

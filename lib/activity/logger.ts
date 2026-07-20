@@ -20,6 +20,7 @@ export type ActivityType =
   | "PERMISSION_CHANGED"
   | "USER_LOGIN"
   | "USER_LOGOUT"
+  | "AUTH_SIGN_IN_ATTEMPT"
   | "USER_DELETED";
 
 export interface ActivityLogPayload {

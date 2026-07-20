@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { MessageSquare, X, Lightbulb, Bug, HelpCircle, Check, Loader, ImagePlus, Trash2 } from "lucide-react";
 import { clsx } from "clsx";
+import { useDialogClose } from "@/lib/hooks/useDialogClose";
 
 type FeedbackType = "IDEA" | "BUG" | "QUESTION";
 
@@ -239,6 +240,8 @@ export function FeedbackButton() {
     setTimeout(reset, 200);
   }
 
+  useDialogClose(close, open);
+
   async function submit() {
     if (message.trim().length < 2) {
       setError("Please enter a bit more detail.");
@@ -315,7 +318,7 @@ export function FeedbackButton() {
         >
           <div className="flex items-center justify-between border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
             <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">Send feedback</span>
-            <button onClick={close} className="text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close">
+            <button onClick={close} data-dialog-close className="text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close">
               <X className="h-4 w-4" />
             </button>
           </div>

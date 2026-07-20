@@ -15,6 +15,7 @@ import {
 import { loadTravelerDetail } from "@/app/travel/actions";
 import { TravelerWorkspace, TravelerLoading } from "@/components/travel/TravelerInline";
 import type { TravelHubData, TravelTravelerOption, TravelerDetail } from "@/lib/data/travel";
+import { useDialogClose } from "@/lib/hooks/useDialogClose";
 
 const STATUS_STYLE: Record<string, string> = {
   NEEDED: "bg-brand-gold/15 text-brand-gold border-brand-gold/30",
@@ -49,6 +50,8 @@ function NewTripButton({
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [typeFilter, setTypeFilter] = useState<"ALL" | "newHire" | "candidate">("ALL");
+
+  useDialogClose(() => setOpen(false), open);
 
   const matches = useMemo(() => {
     const query = q.trim().toLowerCase();

@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FilePlus2, X, Check, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui";
+import { useDialogClose } from "@/lib/hooks/useDialogClose";
 
 type DocResult = {
   filename: string;
@@ -40,6 +41,9 @@ export function DocumentIntake({
     setProgress(null);
     if (inputRef.current) inputRef.current.value = "";
   }
+
+  const close = useCallback(() => { setOpen(false); reset(); }, []);
+  useDialogClose(close, open);
 
   // One file per request (serverless body cap), matched to an existing candidate server-side.
   async function submit() {
@@ -91,7 +95,7 @@ export function DocumentIntake({
           <div className="w-full max-w-lg rounded bg-white p-5 shadow-xl dark:bg-brand-panel" onClick={(e) => e.stopPropagation()}>
             <div className="mb-1 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Upload documents</h2>
-              <button onClick={() => { setOpen(false); reset(); }} className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close"><X className="h-5 w-5" /></button>
+              <button data-dialog-close onClick={() => { setOpen(false); reset(); }} className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close"><X className="h-5 w-5" /></button>
             </div>
             <p className="mb-3 text-xs text-brand-grey dark:text-slate-400">
               Each document is matched to an existing candidate — by the email in the file, then by the name on the filename — and attached. Anything it can&apos;t confidently match is left in the Documents &ldquo;Link&rdquo; queue.

@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment, useEffect, useState } from "react";
 import { clsx } from "clsx";
-import { Plane, Menu, X, ChevronsLeft, ChevronsRight, ChevronDown, ChevronRight } from "lucide-react";
+import { Plane, Menu, X, ChevronsLeft, ChevronsRight, ChevronDown, ChevronRight, CircleUser } from "lucide-react";
 import type { RoleName } from "@/lib/auth/roles";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { SignOutButton } from "@/components/layout/SignOutButton";
 import {
   getVisibleNavigationGroups,
   type ModuleAccessPolicy,
@@ -18,6 +19,8 @@ type SidebarProps = {
   role: RoleName;
   policy: ModuleAccessPolicy;
   logoDataUrl?: string | null;
+  userEmail?: string | null;
+  homeHref?: string;
 };
 
 const COLLAPSE_KEY = "skyshare-sidebar-collapsed";
@@ -27,7 +30,7 @@ function matchesPath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
+export function Sidebar({ role, policy, logoDataUrl, userEmail, homeHref = "/command-center" }: SidebarProps) {
   const pathname = usePathname();
   const groups = getVisibleNavigationGroups(policy, role);
 
@@ -86,10 +89,10 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
 
   const activeGroup =
     groups.find((g) => g.sections.some((s) => s.items.some((i) => i.href === activeHref))) ?? null;
-  const onHome = matchesPath(pathname, "/command-center");
+  const onHome = matchesPath(pathname, homeHref);
 
   function firstHref(group: VisibleNavigationGroup) {
-    return group.sections[0]?.items[0]?.href ?? "/command-center";
+    return group.sections[0]?.items[0]?.href ?? homeHref;
   }
 
   // One rail tile (icon + label) plus its collapsed-mode flyout.
@@ -163,7 +166,7 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
           <aside className="absolute left-0 top-0 h-full w-72 overflow-y-auto bg-brand-lea text-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
-              <Link href="/command-center" className="flex items-center gap-2">
+              <Link href={homeHref} className="flex items-center gap-2">
                 <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded bg-brand-gold/90 p-1 text-brand-lea">
                   {logoDataUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -191,8 +194,17 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
                 ))
               )}
             </nav>
-            <div className="mt-auto border-t border-white/10 px-3 py-3">
+            <div className="mt-auto space-y-2 border-t border-white/10 px-3 py-3">
               <ThemeToggle />
+              {userEmail ? (
+                <Link
+                  href="/account"
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm font-medium text-white/90 transition hover:bg-white/10 hover:text-white"
+                >
+                  <CircleUser className="h-4 w-4 shrink-0" /> My preferences
+                </Link>
+              ) : null}
+              {userEmail ? <SignOutButton email={userEmail} /> : null}
             </div>
           </aside>
         </div>
@@ -207,7 +219,7 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
         {/* Icon rail */}
         <div className="flex w-[70px] flex-col items-center border-r border-white/10 bg-brand-eden py-3">
           <Link
-            href="/command-center"
+            href={homeHref}
             title="Home"
             aria-label="Home"
             className={clsx(
@@ -234,6 +246,19 @@ export function Sidebar({ role, policy, logoDataUrl }: SidebarProps) {
           </div>
 
           <ThemeToggle collapsed />
+
+          {userEmail ? (
+            <Link
+              href="/account"
+              title="My preferences"
+              aria-label="My preferences"
+              className="mt-2 flex h-9 w-9 items-center justify-center rounded text-white/70 transition hover:bg-white/10 hover:text-white"
+            >
+              <CircleUser className="h-5 w-5" />
+            </Link>
+          ) : null}
+
+          {userEmail ? <SignOutButton email={userEmail} collapsed /> : null}
 
           <button
             onClick={toggleCollapsed}

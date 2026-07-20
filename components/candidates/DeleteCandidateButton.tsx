@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, X, AlertTriangle } from "lucide-react";
+import { useDialogClose } from "@/lib/hooks/useDialogClose";
 
 /**
  * TEST-DATA teardown for a candidate. Only rendered when the viewer is an admin
@@ -27,6 +28,10 @@ export function DeleteCandidateButton({
   const [error, setError] = useState<string | null>(null);
 
   const confirmed = typed.trim() === candidateName.trim();
+
+  // Don't let Escape yank the modal shut mid-delete.
+  const close = useCallback(() => { if (!busy) setOpen(false); }, [busy]);
+  useDialogClose(close, open);
 
   async function remove() {
     if (!confirmed) return;
@@ -67,7 +72,7 @@ export function DeleteCandidateButton({
               <h2 className="flex items-center gap-2 text-lg font-semibold text-red-700 dark:text-red-300">
                 <AlertTriangle className="h-5 w-5" /> Delete test candidate
               </h2>
-              <button onClick={() => !busy && setOpen(false)} className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close">
+              <button data-dialog-close onClick={() => !busy && setOpen(false)} className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close">
                 <X className="h-5 w-5" />
               </button>
             </div>

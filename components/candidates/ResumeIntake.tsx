@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileUp, X, Check, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui";
+import { useDialogClose } from "@/lib/hooks/useDialogClose";
 
 type IntakeResult = {
   filename: string;
@@ -43,6 +44,9 @@ export function ResumeIntake({
     setProgress(null);
     if (inputRef.current) inputRef.current.value = "";
   }
+
+  const close = useCallback(() => { setOpen(false); reset(); }, []);
+  useDialogClose(close, open);
 
   // Upload one file per request. Hosted serverless functions cap the request body
   // (~4.5 MB), so a batch of resumes in a single POST gets rejected before it reaches
@@ -99,7 +103,7 @@ export function ResumeIntake({
           <div className="w-full max-w-lg rounded bg-white p-5 shadow-xl dark:bg-brand-panel" onClick={(e) => e.stopPropagation()}>
             <div className="mb-1 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Upload resumes</h2>
-              <button onClick={() => { setOpen(false); reset(); }} className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close"><X className="h-5 w-5" /></button>
+              <button data-dialog-close onClick={() => { setOpen(false); reset(); }} className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close"><X className="h-5 w-5" /></button>
             </div>
             <p className="mb-3 text-xs text-brand-grey dark:text-slate-400">
               Each resume becomes a candidate — name, email, and phone are read from the file and the resume is attached.

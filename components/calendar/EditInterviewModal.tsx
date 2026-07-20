@@ -8,6 +8,7 @@ import type { CalendarData } from "@/lib/data/calendar";
 import { interviewTypes, INTERVIEW_TYPE_META, DEFAULT_INTERVIEW_TYPE } from "@/lib/calendar/interview-types";
 import { resolveDepartmentKey } from "@/lib/calendar/departments";
 import { InterviewerPicker } from "@/components/calendar/InterviewerPicker";
+import { useDialogClose } from "@/lib/hooks/useDialogClose";
 
 type Interview = CalendarData["interviews"][number];
 
@@ -35,6 +36,8 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [interviewType, setInterviewType] = useState<string>(interview.interviewType || DEFAULT_INTERVIEW_TYPE);
   const [selectedJobId, setSelectedJobId] = useState<string>(interview.job?.id ?? "");
+
+  useDialogClose(onClose, true);
 
   // The linked job's department surfaces matching interviewers first in the picker.
   const activeDepartmentKey = useMemo(() => {
@@ -140,7 +143,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
               <Link href={`/interviews/${interview.id}`} className={buttonClasses({ variant: "secondary", size: "sm" })}>
                 <ClipboardCheck className="h-4 w-4" /> Scorecards
               </Link>
-              <button onClick={onClose} className="text-brand-grey hover:text-brand-lea dark:text-slate-400">
+              <button onClick={onClose} data-dialog-close aria-label="Close" className="text-brand-grey hover:text-brand-lea dark:text-slate-400">
                 ✕
               </button>
             </div>
