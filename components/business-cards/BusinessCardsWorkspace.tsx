@@ -9,7 +9,17 @@ import { formatCardText, formatCardsBatch, formatCardHtml, formatCardsHtml, card
 import { copyRich } from "@/lib/business-cards/copy";
 import { BusinessCardVisual } from "@/components/business-cards/BusinessCardVisual";
 
-type View = "all" | "new" | "needs" | "missing";
+type View = "all" | "new" | "needs" | "ordered" | "received" | "notNeeded" | "missing";
+
+// The tabs that are just "everyone currently at this order status". Changing a
+// card's status re-derives the rows, so the person drops out of one status tab and
+// appears under the new one automatically.
+const STATUS_VIEW: Partial<Record<View, CardStatus>> = {
+  needs: "NEEDED",
+  ordered: "ORDERED",
+  received: "RECEIVED",
+  notNeeded: "NOT_NEEDED"
+};
 
 function fmtDay(iso: string | null) {
   return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(iso)) : "";
@@ -37,9 +47,10 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
+    const statusFilter = STATUS_VIEW[view];
     return items.filter((r) => {
       if (view === "new" && !r.onboarding) return false;
-      if (view === "needs" && r.status !== "NEEDED") return false;
+      if (statusFilter && r.status !== statusFilter) return false;
       if (view === "missing" && !r.card.missing.includes("email")) return false;
       if (!needle) return true;
       return [r.card.name, r.card.title, r.department].filter(Boolean).some((v) => v!.toLowerCase().includes(needle));
@@ -52,12 +63,18 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
     [items]
   );
 
-  const staffCount = new Set(items.map((c) => c.personId)).size;
-  const newHireCount = new Set(items.filter((c) => c.onboarding).map((c) => c.personId)).size;
-  const needsCount = new Set(items.filter((c) => c.status === "NEEDED").map((c) => c.personId)).size;
+  // Counts are of PEOPLE (deduped across a person's primary + variant cards), since
+  // status is shared across a person's cards.
+  const peopleWith = (pred: (c: BusinessCardRow) => boolean) => new Set(items.filter(pred).map((c) => c.personId)).size;
+  const staffCount = peopleWith(() => true);
+  const newHireCount = peopleWith((c) => c.onboarding);
+  const needsCount = peopleWith((c) => c.status === "NEEDED");
+  const orderedCount = peopleWith((c) => c.status === "ORDERED");
+  const receivedCount = peopleWith((c) => c.status === "RECEIVED");
+  const notNeededCount = peopleWith((c) => c.status === "NOT_NEEDED");
   // People whose card can't be finished because their company email is blank —
   // catch these BEFORE the cards go to the printer.
-  const missingEmailCount = new Set(items.filter((c) => c.card.missing.includes("email")).map((c) => c.personId)).size;
+  const missingEmailCount = peopleWith((c) => c.card.missing.includes("email"));
 
   function toggle(key: string) {
     setSelected((cur) => {
@@ -110,11 +127,15 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
     setTimeout(() => setBulkMsg(null), 2600);
   }
 
-  const tabs: { key: View; label: string; count: number }[] = [
+  // `attention` tabs glow amber when non-empty — they represent work still to do.
+  const tabs: { key: View; label: string; count: number; attention?: boolean }[] = [
     { key: "all", label: "All staff", count: staffCount },
     { key: "new", label: "New hires", count: newHireCount },
-    { key: "needs", label: "Needs cards", count: needsCount },
-    { key: "missing", label: "Missing email", count: missingEmailCount }
+    { key: "needs", label: "Needs cards", count: needsCount, attention: true },
+    { key: "ordered", label: "Ordered", count: orderedCount },
+    { key: "received", label: "Received", count: receivedCount },
+    { key: "notNeeded", label: "Not needed", count: notNeededCount },
+    { key: "missing", label: "Missing email", count: missingEmailCount, attention: true }
   ];
 
   return (
@@ -135,7 +156,7 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
               className={clsx(
                 "rounded px-3 py-1.5 text-sm font-semibold transition",
                 view === t.key ? "bg-brand-lea text-white" : "border border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400",
-                (t.key === "needs" || t.key === "missing") && t.count > 0 && view !== t.key ? "border-amber-400 text-amber-700 dark:text-amber-300" : ""
+                t.attention && t.count > 0 && view !== t.key ? "border-amber-400 text-amber-700 dark:text-amber-300" : ""
               )}
             >
               {t.label} <span className="opacity-70">· {t.count}</span>
@@ -222,7 +243,17 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
       {/* Card gallery */}
       {rows.length === 0 ? (
         <div className="rounded border border-brand-lea/10 bg-white p-8 text-center text-sm text-brand-grey shadow-panel dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">
-          {view === "needs" ? "No one is marked as needing a card." : "No matching staff."}
+          {view === "needs"
+            ? "No one is marked as needing a card."
+            : view === "ordered"
+              ? "No cards are marked ordered."
+              : view === "received"
+                ? "No cards are marked received."
+                : view === "notNeeded"
+                  ? "No one is marked not needed."
+                  : view === "missing"
+                    ? "No one is missing a company email."
+                    : "No matching staff."}
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
