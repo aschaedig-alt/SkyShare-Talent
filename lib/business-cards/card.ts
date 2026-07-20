@@ -1,16 +1,27 @@
 // Business card model + the automatic rules that match the SkyShare Business
 // Cards order spreadsheet / printer proof.
 //
-// Card layout (from the printer proof):
+// Card layout (what you paste into the printer's order email) — each field is its
+// label on one line and the value on the next, with a half-line of space between
+// the groups:
 //   Name
 //   TITLE
-//   <phoneLabel> <#>   mobile <cell>
-//   email <@skyshare>   web <site>
 //
-// The first line varies by whether the person is flight crew, BOTH its label and
-// its number:
-//   - Pilots & cabin attendants: labelled "skyops", shared SkyOps line (801…).
-//   - Everyone else: labelled "phone", the main SkyLove number (855…).
+//   skyops
+//   <first #>
+//
+//   mobile
+//   <cell>
+//
+//   email
+//   <@skyshare>
+//
+//   web
+//   <site>
+//
+// The first line's LABEL is always "skyops"; only its NUMBER varies by role:
+//   - Pilots & cabin attendants: the shared SkyOps line (801…).
+//   - Everyone else (support staff): the main SkyLove number (855…).
 // Everything else comes straight off the employee record.
 
 // Per-person order status. Cards are ordered in bulk ahead of orientation, and
@@ -60,12 +71,11 @@ export const SKYOPS_NUMBER = "801.516.9189"; // shared SkyOps line — pilots & 
 export const SKYLOVE_NUMBER = "855.SKY.LOVE"; // main line — everyone else
 export const DEFAULT_WEB = "skyshare.com";
 
-// The label on the first phone line. Flight crew's line is the SkyOps desk, so it
-// is labelled "skyops"; for everyone else it is just their phone, so "phone".
-// Lowercase to match the card's other labels (mobile / email / web).
+// The first phone line is always labelled "skyops" — for pilots, cabin attendants
+// AND support staff. Only the NUMBER behind it changes by role (the SkyOps line for
+// crew, the main SkyLove number for everyone else). Lowercase to match the card's
+// other labels (mobile / email / web).
 export const SKYOPS_LABEL = "skyops";
-export const PHONE_LABEL = "phone";
-export const phoneLabelFor = (crew: boolean) => (crew ? SKYOPS_LABEL : PHONE_LABEL);
 
 export type BusinessCardInput = {
   name: string;
@@ -117,7 +127,7 @@ export function buildBusinessCard(input: BusinessCardInput): BusinessCard {
   return {
     name: input.name,
     title: (input.cardTitle?.trim() || defaultCardTitle(input.position)).toUpperCase(),
-    phoneLabel: phoneLabelFor(crew),
+    phoneLabel: SKYOPS_LABEL,
     skyops: crew ? SKYOPS_NUMBER : SKYLOVE_NUMBER,
     mobile,
     email,
@@ -149,8 +159,8 @@ export function buildVariantCard(input: BusinessCardInput, variant: VariantOverr
   return {
     name: input.name,
     title,
-    // Label follows crew status, not the variant's number override — a manually
-    // set number is still "skyops" for a pilot and "phone #" for anyone else.
+    // Always "skyops" (same as the primary) — the label never changes, only the
+    // number can be overridden per variant.
     phoneLabel: base.phoneLabel,
     skyops: variant.skyops?.trim() || base.skyops,
     mobile,
@@ -161,42 +171,69 @@ export function buildVariantCard(input: BusinessCardInput, variant: VariantOverr
   };
 }
 
-// One card in the printer's format (what you paste into the order email).
+// One card in the printer's format (what you paste into the order email): each
+// field is its label on one line and the value on the next, with a blank line —
+// the "half line" of space — between the groups.
 export function formatCardText(c: BusinessCard): string {
-  return [c.name, c.title, `${c.phoneLabel} ${c.skyops}   mobile ${c.mobile}`, `email ${c.email}   web ${c.web}`].join("\n");
+  return [
+    c.name,
+    c.title,
+    "",
+    c.phoneLabel,
+    c.skyops,
+    "",
+    "mobile",
+    c.mobile,
+    "",
+    "email",
+    c.email,
+    "",
+    "web",
+    c.web
+  ].join("\n");
 }
 
-// Several cards for one order — blank line between each.
+// Several cards for one order — a divider between each so the blocks stay distinct.
 export function formatCardsBatch(cards: BusinessCard[]): string {
-  return cards.map(formatCardText).join("\n\n");
+  return cards.map(formatCardText).join("\n\n----------\n\n");
 }
 
-// Rich version for pasting into an email — the printer sees the card laid out
-// in SkyShare's colors (red labels, grey title, black values) instead of a
-// wall of plain text. Inline styles only, so it survives Gmail/Outlook.
+// Rich version for pasting into an email — the printer sees the card laid out in
+// SkyShare's colors (red labels, grey title, dark values), label above value with a
+// half-line between groups. Inline styles only, so it survives Gmail/Outlook.
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// Keep phone / email / web from turning into blue hyperlinks when the value is
+// pasted into an email. There is no <a> anywhere; on top of that we split the value
+// across two adjacent spans (held on one line) so the destination's auto-linker
+// never sees a single contiguous token to match. No hidden characters are inserted,
+// so copying the value back out yields exactly the original text.
+function noAutoLink(value: string): string {
+  const at = value.indexOf("@");
+  const cut = at >= 0 ? at + 1 : Math.max(1, Math.ceil(value.length / 2));
+  return `<span style="white-space:nowrap;"><span>${esc(value.slice(0, cut))}</span><span>${esc(value.slice(cut))}</span></span>`;
+}
+
 export function formatCardHtml(c: BusinessCard): string {
-  const row = (label: string, value: string) =>
-    `<div style="margin-top:2px;"><span style="color:#ba0c2f;font-weight:bold;">${label}</span> <span style="color:#302f31;">${esc(value || "—")}</span></div>`;
+  const group = (label: string, value: string) =>
+    `<div style="margin-top:9px;"><div style="color:#ba0c2f;font-weight:bold;font-size:12px;line-height:1.3;">${esc(label)}</div><div style="color:#302f31;font-size:13px;line-height:1.3;">${value ? noAutoLink(value) : "&mdash;"}</div></div>`;
   return [
-    '<div style="font-family:Arial,Helvetica,sans-serif;line-height:1.45;font-size:13px;">',
+    '<div style="font-family:Arial,Helvetica,sans-serif;color:#302f31;">',
     `<div style="font-size:15px;font-weight:bold;color:#302f31;">${esc(c.name)}</div>`,
     `<div style="font-size:11px;letter-spacing:0.08em;color:#63666a;text-transform:uppercase;">${esc(c.title)}</div>`,
-    '<div style="margin-top:6px;">',
-    row(c.phoneLabel, c.skyops),
-    row("mobile", c.mobile),
-    row("email", c.email),
-    row("web", c.web),
-    "</div></div>"
+    group(c.phoneLabel, c.skyops),
+    group("mobile", c.mobile),
+    group("email", c.email),
+    group("web", c.web),
+    "</div>"
   ].join("");
 }
 
 // Several cards for one order — each in its own block, spaced apart.
 export function formatCardsHtml(cards: BusinessCard[]): string {
   return `<div style="font-family:Arial,Helvetica,sans-serif;">${cards
-    .map((c) => `<div style="margin:0 0 18px;">${formatCardHtml(c)}</div>`)
+    .map((c) => `<div style="margin:0 0 22px;">${formatCardHtml(c)}</div>`)
     .join("")}</div>`;
 }
