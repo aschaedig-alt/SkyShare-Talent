@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireModulePageAccess } from "@/lib/data/module-access";
+import { hasPermission } from "@/lib/auth/roles";
 import { getNewHireDetail } from "@/lib/data/onboarding";
 import { getTravelTripsForNewHire, getNewHireLoyalty } from "@/lib/data/travel";
 import { getEmployeeJourney } from "@/lib/data/employee-journey";
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 const ROLE_TITLE_OPTIONS = FLEET_POSITIONS.map((p) => p.title);
 
 export default async function NewHirePage({ params }: { params: Promise<{ id: string }> }) {
-  await requireModulePageAccess("people");
+  const access = await requireModulePageAccess("people");
   const { id } = await params;
   const hire = await getNewHireDetail(id);
   if (!hire) {
@@ -31,6 +32,7 @@ export default async function NewHirePage({ params }: { params: Promise<{ id: st
       travelLoyalty={travelLoyalty}
       journey={journey}
       roleTitleOptions={ROLE_TITLE_OPTIONS}
+      canEdit={hasPermission(access.role, "candidates:write")}
     />
   );
 }

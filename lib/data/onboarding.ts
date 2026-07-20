@@ -10,7 +10,8 @@ import { getMilestoneCatalog } from "@/lib/data/onboarding-milestones";
 import { getDashboardHiddenIds } from "@/lib/data/dashboard-hidden";
 import { getGridHiddenKeys } from "@/lib/data/onboarding-grid-config";
 import { computeTenure } from "@/lib/data/tenure";
-import { isOfferStepKey, offerStepCompletedAt, type OfferSteps } from "@/lib/offers/steps";
+import { isOfferStepKey, offerStepCompletedAt, parseOfferSteps, type OfferSteps, type OfferApplicationView } from "@/lib/offers/steps";
+import { findOfferApplicationId } from "@/lib/offers/onboarding-sync";
 
 const DAY = 86_400_000;
 
@@ -530,16 +531,54 @@ export async function getOnboardingWorkspaceData(stage: HireStage = "ACTIVE"): P
   return { counts: { active, postOnboard: post, archived }, rows, dashboard };
 }
 
-export type NewHireDetail = NewHireRow & { tasks: TaskView[] };
+export type NewHireDetail = NewHireRow & { tasks: TaskView[]; offer: OfferApplicationView | null };
+
+// The hire's live offer (from the linked candidate's furthest-along application),
+// in the shape the OfferControl stepper renders — so the same offer stepper shown
+// on the candidate profile also shows on the onboarding record, both driving (and
+// kept in step by) the offer<->onboarding sync. Null when the hire isn't linked to
+// a candidate, or that candidate has no application to carry an offer.
+async function loadHireOffer(candidateId: string | null | undefined): Promise<OfferApplicationView | null> {
+  if (!candidateId) return null;
+  const applicationId = await findOfferApplicationId(candidateId);
+  if (!applicationId) return null;
+  const app = await prisma.candidateApplication.findUnique({
+    where: { id: applicationId },
+    select: {
+      id: true,
+      offerStatus: true,
+      offerStepsJson: true,
+      offerSentAt: true,
+      offerSignedAt: true,
+      offerDeclinedAt: true,
+      offerDeclineReason: true,
+      offerStartDate: true,
+      offerSource: true
+    }
+  });
+  if (!app) return null;
+  return {
+    id: app.id,
+    offerStatus: app.offerStatus,
+    offerSteps: parseOfferSteps(app.offerStepsJson),
+    offerSentAt: app.offerSentAt?.toISOString() ?? null,
+    offerSignedAt: app.offerSignedAt?.toISOString() ?? null,
+    offerDeclinedAt: app.offerDeclinedAt?.toISOString() ?? null,
+    offerDeclineReason: app.offerDeclineReason,
+    offerStartDate: app.offerStartDate?.toISOString() ?? null,
+    offerSource: app.offerSource
+  };
+}
 
 export async function getNewHireDetail(id: string): Promise<NewHireDetail | null> {
   const hire = (await prisma.newHire.findUnique({ where: { id }, select: hireSelect })) as HireWithTasks | null;
   if (!hire) return null;
+  const link = await prisma.newHire.findUnique({ where: { id }, select: { candidateId: true } });
   const row = toRow(hire, Date.now());
   const tasks: TaskView[] = [...hire.tasks]
     .sort((a, b) => a.order - b.order)
     .map((t) => ({ id: t.id, key: t.key, label: t.label, group: t.group, order: t.order, status: t.status as TaskView["status"] }));
-  return { ...row, tasks };
+  return { ...row, tasks, offer: await loadHireOffer(link?.candidateId) };
 }
 
 // Builds the default task set for a brand-new (manually added) hire.

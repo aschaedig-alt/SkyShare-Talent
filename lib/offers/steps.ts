@@ -94,3 +94,18 @@ export function offerStepCompletedAt(steps: OfferSteps, key: OfferStepKey): Date
 }
 
 export const offerStepsDone = (steps: OfferSteps) => OFFER_STEP_KEYS.filter((k) => Boolean(steps[k])).length;
+
+// The offer fields the OfferControl stepper renders. Shared so the SAME stepper can
+// be fed from either the candidate profile OR the onboarding record (a hire's linked
+// offer) — the two are kept in step by the offer<->onboarding sync.
+export type OfferApplicationView = {
+  id: string;
+  offerStatus: string;
+  offerSteps: Record<string, string>;
+  offerSentAt: string | null;
+  offerSignedAt: string | null;
+  offerDeclinedAt: string | null;
+  offerDeclineReason: string | null;
+  offerStartDate: string | null;
+  offerSource: string | null;
+};

@@ -252,12 +252,37 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
     );
   }
 
-  // 3) No record yet — offer to create, highlighted when they're hired.
+  // 3) No record yet — offer to create.
+  //
+  // Moving in early is the ENCOURAGED path: as soon as an offer is under way, the
+  // person belongs on the onboarding board, where the offer simply keeps going.
+  // So the prominent, positive treatment fires the moment an offer exists — not
+  // only once it is signed. Signing is still the strongest nudge; it is just no
+  // longer implied to be required.
   const hired = pre.isHired;
+  // An offer that has begun but isn't signed yet — any step ticked lands the
+  // application at STARTED, the letter going out lands it at SENT.
+  const offerSent = !hired && candidate.applications.some((a) => a.offerStatus === "SENT");
+  const offerUnderway = !hired && candidate.applications.some((a) => a.offerStatus === "STARTED" || a.offerStatus === "SENT");
+  // Prominent = there's an offer in flight (signed, hired, or under way).
+  const prominent = hired || offerUnderway;
+
+  const eyebrow = pre.offerSigned
+    ? "Signed — bring them in"
+    : hired
+      ? "Hired — ready to onboard"
+      : offerSent
+        ? "Offer out — move them in now"
+        : "Offer under way — move them in now";
+  const lead =
+    hired
+      ? `Move ${candidate.displayName} into onboarding to start their checklist.`
+      : `Move ${candidate.displayName} onto the onboarding board now — you don't have to wait for the signature. The offer keeps going right there.`;
+
   return (
     <section
       className={
-        hired
+        prominent
           ? "rounded border border-brand-gold/40 bg-brand-sweet/12 p-4 shadow-panel ring-1 ring-brand-gold/20 dark:bg-brand-gold/10"
           : "rounded border border-brand-lea/10 bg-white p-3 dark:bg-brand-panel dark:border-white/10"
       }
@@ -265,7 +290,7 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
       <div className="flex flex-wrap items-start gap-3">
         <div
           className={
-            hired
+            prominent
               ? "flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-gold/25 text-brand-lea dark:text-slate-100"
               : "flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400"
           }
@@ -273,14 +298,10 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
           <UserPlus className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
-          {hired ? (
+          {prominent ? (
             <>
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
-                {pre.offerSigned ? "Offer signed — ready to onboard" : "Hired — ready to onboard"}
-              </p>
-              <p className="mt-1 text-sm text-brand-lea dark:text-slate-100">
-                Move {candidate.displayName} into onboarding to start their checklist.
-              </p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">{eyebrow}</p>
+              <p className="mt-1 text-sm text-brand-lea dark:text-slate-100">{lead}</p>
             </>
           ) : (
             <p className="text-sm text-brand-lea dark:text-slate-100">Move this candidate into onboarding.</p>
@@ -299,7 +320,7 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
                 onClick={() => setForm(true)}
                 disabled={busy !== null}
                 className={
-                  hired
+                  prominent
                     ? "rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50 dark:text-slate-100"
                     : "rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-eden transition hover:bg-brand-cloudDancer/40 disabled:opacity-50 dark:border-white/10 dark:text-slate-200"
                 }

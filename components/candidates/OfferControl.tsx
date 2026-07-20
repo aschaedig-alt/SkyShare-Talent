@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { FileSignature, Check } from "lucide-react";
 import { clsx } from "clsx";
 import { OFFER_STATUSES, offerStatusLabel } from "@/lib/offers/constants";
-import { OFFER_STEPS } from "@/lib/offers/steps";
-import type { CandidateProfileData } from "@/lib/data/candidates";
+import { OFFER_STEPS, type OfferApplicationView } from "@/lib/offers/steps";
 
-type Application = CandidateProfileData["applications"][number];
+// The candidate profile passes its full application object (a superset); the
+// onboarding record passes the hire's linked offer built to this same shape.
+type Application = OfferApplicationView;
 
 // Explicit locale + UTC so server and client render the same string.
 function fmtDate(iso: string | null): string | null {

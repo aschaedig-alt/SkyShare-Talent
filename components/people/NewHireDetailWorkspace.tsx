@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { clsx } from "clsx";
 import { ONBOARDING_GROUPS, groupLabel } from "@/lib/onboarding/tasks";
+import { OfferControl } from "@/components/candidates/OfferControl";
 import type { NewHireDetail, TaskView } from "@/lib/data/onboarding";
 import { TravelPanel } from "@/components/travel/TravelPanel";
 import type { TravelTripView, TravelerLoyalty } from "@/lib/data/travel";
@@ -27,6 +28,7 @@ type Props = {
   travelLoyalty: TravelerLoyalty;
   journey: Journey;
   roleTitleOptions: string[];
+  canEdit: boolean;
 };
 
 function toDateInput(iso: string | null) {
@@ -39,7 +41,7 @@ const STATUS_BTN: Record<TaskView["status"], { label: string; on: string }> = {
   NA: { label: "N/A", on: "bg-brand-grey text-white" }
 };
 
-export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journey, roleTitleOptions }: Props) {
+export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journey, roleTitleOptions, canEdit }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskView[]>(hire.tasks);
   const [details, setDetails] = useState({
@@ -387,6 +389,15 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
             </label>
           </div>
         </section>
+
+        {/* Offer — the same stepper as the candidate's Offers tab, fed by the hire's
+            linked offer. Editing here syncs back to the candidate side and vice versa. */}
+        {hire.offer && (
+          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+            <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Offer</h2>
+            <OfferControl application={hire.offer} canEdit={canEdit} />
+          </section>
+        )}
 
         {/* Checklist */}
         <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
