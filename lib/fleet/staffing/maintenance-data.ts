@@ -70,11 +70,14 @@ export const MX_GROUPS: MxGroup[] = [
     sections: [{ label: "Planner", line: ["Charles Hicks"] }]
   },
   {
-    name: "Parts & Logistics",
+    name: "Parts, Logistics and Base Support",
     pool: "Admin",
     sub: "OGD · MX Parts",
     mgr: "Jonathan Schaedig",
-    sections: [{ label: "Parts Admin", line: ["Jessica Storey"] }]
+    sections: [
+      { label: "Parts & Logistics", line: ["Jessica Storey"] },
+      { label: "Base Support", openNamed: ["Base Support"] }
+    ]
   },
   {
     name: "Aircraft Compliance",
