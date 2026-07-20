@@ -53,6 +53,7 @@ export const rolePermissions: Record<RoleName, Permission[]> = {
     "files:read",
     "files:write",
     "jobs:read",
+    "jobs:write",
     "requirements:read",
     "calendar:read",
     "calendar:write",

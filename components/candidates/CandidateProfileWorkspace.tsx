@@ -33,6 +33,7 @@ type CandidateProfileWorkspaceProps = {
   candidate: CandidateProfileData;
   canEdit?: boolean;
   canDelete?: boolean;
+  canCreateJob?: boolean;
   savedLayout?: GridItem[] | null;
   savedWidgets?: WidgetInstance[] | null;
   travelTrips?: TravelTripView[];
@@ -107,6 +108,7 @@ export function CandidateProfileWorkspace({
   candidate: initialCandidate,
   canEdit = false,
   canDelete = false,
+  canCreateJob = false,
   savedLayout = null,
   savedWidgets = null,
   travelTrips = [],
@@ -490,7 +492,7 @@ export function CandidateProfileWorkspace({
               {canEdit && (
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <p className="text-xs text-brand-grey dark:text-slate-400">Jobs this candidate has applied to or been linked to.</p>
-                  <AddJobToCandidate candidateId={candidate.id} />
+                  <AddJobToCandidate candidateId={candidate.id} canCreateJob={canCreateJob} />
                 </div>
               )}
               <div className="space-y-2">
