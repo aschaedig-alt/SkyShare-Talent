@@ -4,6 +4,8 @@ import { requireApiPermission } from "@/lib/auth/route-auth";
 import { extractPilotMetrics } from "@/lib/extraction/pilot-metrics";
 import { extractFileText } from "@/lib/files/pdf-text";
 import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
+import { extractPaycomApplication, looksLikePaycomApplication, isPaycomExtractConfigured } from "@/lib/extraction/paycom-application";
+import { normalizeEmail, normalizePhone } from "@/lib/candidates/normalize";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -91,16 +93,74 @@ export async function POST(_request: Request, context: RouteContext) {
       suggested += 1;
     }
 
+    // Paycom application: pull the candidate Paycom person id + any MISSING
+    // identity/contact fields from the application text, and fill only BLANKS —
+    // never overwrite anything already entered. Reuses the doc text extracted above.
+    const paycomFilled: string[] = [];
+    if (isPaycomExtractConfigured()) {
+      const cand = await prisma.candidate.findUnique({
+        where: { id },
+        select: { paycomPersonId: true, firstName: true, lastName: true, primaryEmail: true, primaryPhone: true }
+      });
+      const appFile = (
+        await prisma.candidateFile.findMany({
+          where: { candidateId: id, extractedText: { not: null } },
+          orderBy: { uploadedAt: "desc" },
+          select: { extractedText: true, displayFilename: true, originalFilename: true }
+        })
+      ).find((f) => looksLikePaycomApplication(f.displayFilename ?? f.originalFilename, f.extractedText ?? ""));
+
+      if (cand && appFile) {
+        try {
+          const ex = await extractPaycomApplication(appFile.extractedText ?? "");
+          const data: Record<string, string> = {};
+          if (ex.paycomPersonId && !cand.paycomPersonId) {
+            data.paycomPersonId = ex.paycomPersonId;
+            paycomFilled.push("Paycom ID");
+          }
+          if (ex.email && !cand.primaryEmail) {
+            data.primaryEmail = ex.email;
+            const n = normalizeEmail(ex.email);
+            if (n) data.normalizedEmail = n;
+            paycomFilled.push("email");
+          }
+          if (ex.phone && !cand.primaryPhone) {
+            data.primaryPhone = ex.phone;
+            const n = normalizePhone(ex.phone);
+            if (n) data.normalizedPhone = n;
+            paycomFilled.push("phone");
+          }
+          if (ex.firstName && !cand.firstName) {
+            data.firstName = ex.firstName;
+            paycomFilled.push("first name");
+          }
+          if (ex.lastName && !cand.lastName) {
+            data.lastName = ex.lastName;
+            paycomFilled.push("last name");
+          }
+          if (Object.keys(data).length > 0) {
+            await prisma.candidate.update({ where: { id }, data });
+          }
+        } catch (e) {
+          console.error("Paycom application extraction failed:", e);
+        }
+      }
+    }
+
     const metrics = await prisma.candidateMetric.findMany({
       where: { candidateId: id, status: { not: "DISMISSED" } },
       orderBy: { createdAt: "asc" }
     });
 
+    const parts = [files.length === 0 ? "No document text to scan yet." : `Scanned ${files.length} document(s).`];
+    if (paycomFilled.length > 0) parts.push(`Paycom application: filled ${paycomFilled.join(", ")}.`);
+
     return NextResponse.json({
       ok: true,
       scannedFiles: files.length,
       suggested,
-      message: files.length === 0 ? "No document text to scan yet." : `Scanned ${files.length} document(s).`,
+      paycomFilled,
+      message: parts.join(" "),
       metrics
     });
   } catch (error) {
