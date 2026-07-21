@@ -11,6 +11,7 @@ import { TravelPanel } from "@/components/travel/TravelPanel";
 import type { TravelTripView, TravelerLoyalty } from "@/lib/data/travel";
 import { EmployeeJourney } from "@/components/people/EmployeeJourney";
 import { BusinessCardPanel } from "@/components/people/BusinessCardPanel";
+import { SendOnboardingEmailButton } from "@/components/people/SendOnboardingEmailButton";
 import type { EmployeeJourney as Journey } from "@/lib/data/employee-journey";
 import { Button, Input, Modal } from "@/components/ui";
 import { EMPLOYEE_TAGS } from "@/lib/employees/columns";
@@ -410,19 +411,30 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
                   {items.map((t) => (
                     <div key={t.id} className="flex items-center justify-between gap-3 rounded border border-brand-lea/10 px-3 py-2 dark:border-white/10">
                       <span className={clsx("text-sm", t.status === "DONE" ? "text-brand-grey line-through dark:text-slate-400" : "text-brand-black dark:text-slate-100")}>{t.label}</span>
-                      <div className="flex shrink-0 overflow-hidden rounded border border-brand-lea/15 dark:border-white/10">
-                        {(["TODO", "DONE", "NA"] as const).map((s) => (
-                          <button
-                            key={s}
-                            onClick={() => setTaskStatus(t.id, s)}
-                            className={clsx(
-                              "px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow",
-                              t.status === s ? STATUS_BTN[s].on : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-brand-panel dark:text-slate-400"
-                            )}
-                          >
-                            {STATUS_BTN[s].label}
-                          </button>
-                        ))}
+                      <div className="flex shrink-0 items-center gap-2">
+                        {t.key === "onboarding_journey" && (
+                          <SendOnboardingEmailButton
+                            hireId={hire.id}
+                            hireName={hire.name}
+                            taskStatus={t.status}
+                            canEdit={canEdit}
+                            onSent={() => setTasks((cur) => cur.map((x) => (x.key === "onboarding_journey" ? { ...x, status: "DONE" } : x)))}
+                          />
+                        )}
+                        <div className="flex shrink-0 overflow-hidden rounded border border-brand-lea/15 dark:border-white/10">
+                          {(["TODO", "DONE", "NA"] as const).map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => setTaskStatus(t.id, s)}
+                              className={clsx(
+                                "px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow",
+                                t.status === s ? STATUS_BTN[s].on : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-brand-panel dark:text-slate-400"
+                              )}
+                            >
+                              {STATUS_BTN[s].label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   ))}
