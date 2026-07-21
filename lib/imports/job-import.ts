@@ -257,14 +257,27 @@ export async function importJobRows({ rows, sourceFilename, sourceType, importBa
       const aircraftTypes = extractAircraftTypes(`${title}\n${sourceText}`);
       const filledDate = parseDate(getFirstValue(row, filledKeys));
 
-      const existing = await prisma.job.findFirst({
-        where: {
-          OR: [
-            sourceJobId ? { sourceJobId } : undefined,
-            jobReqId ? { jobReqId } : undefined
-          ].filter(Boolean) as Array<{ sourceJobId: string } | { jobReqId: string }>
-        }
-      });
+      const identityMatches = [
+        sourceJobId ? { sourceJobId } : undefined,
+        jobReqId ? { jobReqId } : undefined
+      ].filter(Boolean) as Array<{ sourceJobId: string } | { jobReqId: string }>;
+
+      let existing = identityMatches.length
+        ? await prisma.job.findFirst({ where: { OR: identityMatches } })
+        : null;
+
+      // Fall back to the job TITLE. A PDF printed from the careers site carries no
+      // stable id — the generated one is derived from the filename — so identity
+      // matching alone meant re-importing the same posting created a second copy
+      // of a job that already existed. That is how the duplicate pile (54 merged
+      // jobs, and 48 pilot requirements hidden behind them) built up in the first
+      // place. Merged-away duplicates are excluded so a loser is never revived.
+      if (!existing) {
+        existing = await prisma.job.findFirst({
+          where: { normalizedTitle: normalizeTitle(title), mergedIntoJobId: null },
+          orderBy: { updatedAt: "desc" }
+        });
+      }
 
       const commonData = {
         title,

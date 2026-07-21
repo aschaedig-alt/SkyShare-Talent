@@ -6,12 +6,152 @@ export type ParsedJobPdfText = {
 };
 
 export function parseJobPdfText(text: string, filename: string): ParsedJobPdfText {
+  // Current careers site first — this is the layout you get today by opening a
+  // posting on skyshare.com/careers and printing to PDF.
+  if (looksLikeCareersSitePdf(text)) {
+    const parsed = parseCareersSitePdfText(text, filename);
+    if (parsed.records.length) return parsed;
+  }
+  // Older careers-site layout, kept so previously-saved PDFs still import.
   if (/About\s+the\s+Role:|Qualifications:|SkyShare\s+Pilot\s+Jobs|Job Location:/i.test(text)) {
     const parsed = parseWebsiteJobPostingPdfText(text, filename);
     if (parsed.records.length) return parsed;
   }
   if (/job_\d+_[A-Z0-9]+/i.test(text)) return parseMinimalJobPdfText(text, filename);
   return parseMessyHoursPdfText(text, filename);
+}
+
+/* ------------------------------------------------------------------------- *
+ * Current skyshare.com/careers layout (print-to-PDF)
+ *
+ * The site was redesigned and this importer was not, so every posting printed
+ * from it silently produced zero rows: the old parser hunts for "Job Location:",
+ * "About the Role:" and "Qualifications:" (with a colon), and the current page
+ * uses "Location:", "Job Summary" and "Qualifications" (no colon). The file was
+ * always perfectly readable text — it just did not match anything.
+ *
+ * Anchors used here are the ones the page actually renders:
+ *   "S K Y S H A R E   C A R E E R S"  letter-spaced banner
+ *   title line, then "$pay | rotation", "Location: SLC OGD", "Full Time Posted: ..."
+ *   sections: Job Summary / Qualifications / Responsibilities / Salary / Benefits /
+ *             Location / Work Authorization
+ * ------------------------------------------------------------------------- */
+
+/** The letter-spaced banner survives text extraction as single characters. */
+const CAREERS_BANNER = /S\s*K\s*Y\s*S\s*H\s*A\s*R\s*E\s+C\s*A\s*R\s*E\s*E\s*R\s*S/i;
+
+export function looksLikeCareersSitePdf(text: string): boolean {
+  if (CAREERS_BANNER.test(text)) return true;
+  // Belt and braces if the banner is ever dropped: the section set is distinctive.
+  return /^\s*Job Summary\s*$/im.test(text) && /^\s*Qualifications:?\s*$/im.test(text);
+}
+
+/** Browser print headers/footers: "7/21/26, 4:11 PM Title", "about:blank 1/2". */
+function isPrintChrome(line: string): boolean {
+  const l = line.trim();
+  if (/^about:blank\b/i.test(l)) return true;
+  if (/^\d{1,2}\/\d{1,2}\/\d{2,4},\s*\d{1,2}:\d{2}\s*(AM|PM)\b/i.test(l)) return true;
+  if (CAREERS_BANNER.test(l)) return true;
+  return false;
+}
+
+const CAREERS_SECTIONS = [
+  "Job Summary",
+  "About Us:",
+  "Right Person, Right Seat:",
+  "Qualifications",
+  "Responsibilities & Physical Requirements:",
+  "Salary, Schedule & Availability:",
+  "Benefits:",
+  "Location",
+  "Work Authorization",
+  "Ready to Apply?"
+];
+
+function isCareersSectionHeading(line: string): boolean {
+  const l = line.trim().replace(/:$/, "").toLowerCase();
+  return CAREERS_SECTIONS.some((s) => s.replace(/:$/, "").toLowerCase() === l);
+}
+
+/** Everything under `heading` up to the next known heading. */
+function careersSection(lines: string[], heading: string): string {
+  const target = heading.replace(/:$/, "").toLowerCase();
+  const start = lines.findIndex((l) => l.trim().replace(/:$/, "").toLowerCase() === target);
+  if (start < 0) return "";
+  const body: string[] = [];
+  for (let i = start + 1; i < lines.length; i += 1) {
+    if (isCareersSectionHeading(lines[i])) break;
+    body.push(lines[i]);
+  }
+  return body.join("\n").trim();
+}
+
+function parseCareersSitePdfText(text: string, filename: string): ParsedJobPdfText {
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l && !isPrintChrome(l));
+
+  if (!lines.length) return { parser: "careers-site-pdf", records: [] };
+
+  // The title is the first real line once the print chrome is gone. The browser
+  // header repeats it, which is why chrome has to be stripped before this.
+  const title = cleanWebsiteJobTitle(lines[0]);
+  if (!title || !looksLikeWebsiteJobTitle(title)) return { parser: "careers-site-pdf", records: [] };
+
+  // Header block above the first section: pay/rotation, bases, employment type.
+  const firstSection = lines.findIndex((l) => isCareersSectionHeading(l));
+  const header = lines.slice(1, firstSection < 0 ? Math.min(lines.length, 6) : firstSection);
+  const headerText = header.join("\n");
+
+  const payLine = header.find((l) => /\$\s*[\d,]{4,}/.test(l)) ?? "";
+  const locationLine = header.find((l) => /^Location\s*:/i.test(l)) ?? "";
+  // "Location: SLC OGD" — bases, not a city. Keep the first as the primary.
+  const bases = locationLine
+    .replace(/^Location\s*:/i, "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  const summary = careersSection(lines, "Job Summary");
+  const qualifications = careersSection(lines, "Qualifications");
+  const responsibilities = careersSection(lines, "Responsibilities & Physical Requirements:");
+  const salary = careersSection(lines, "Salary, Schedule & Availability:");
+  const locationSection = careersSection(lines, "Location");
+  const rightPerson = careersSection(lines, "Right Person, Right Seat:");
+
+  const minimumRequirements = [qualifications, responsibilities, rightPerson, locationSection]
+    .filter(Boolean)
+    .join("\n\n");
+
+  // Only the parts that describe the ROLE — "About Us" and "Benefits" are the same
+  // boilerplate on every posting and would just add noise to matching.
+  const description = [title, headerText, summary, qualifications, responsibilities, salary, locationSection]
+    .filter(Boolean)
+    .join("\n\n");
+
+  const department = inferWebsiteJobDepartment(title, `${title} ${summary}`);
+
+  return {
+    parser: "careers-site-pdf",
+    records: [
+      {
+        job_id: `pdf_${slugify(filename)}_${slugify(title)}_1`,
+        job_title: title,
+        job_department: department,
+        job_city: bases[0] ?? "",
+        job_state: "",
+        job_postal: "",
+        job_open: "",
+        job_filled: "",
+        job_req_id: "",
+        job_description: description,
+        "Minimum Requirements": minimumRequirements || (department === "Pilot" ? description : ""),
+        "Pay Scale": [payLine, salary].filter(Boolean).join(" ").trim(),
+        source_pdf: filename
+      }
+    ]
+  };
 }
 
 function parseWebsiteJobPostingPdfText(text: string, filename: string): ParsedJobPdfText {
@@ -307,5 +447,5 @@ export function diagnoseJobPdf(text: string, recordCount: number): string | null
   }
 
   const firstLine = trimmed.split("\n").find((l) => l.trim().length > 3)?.trim().slice(0, 60) ?? "";
-  return `Read ${chars} characters, but this is not a layout the job importer recognises${firstLine ? ` (it starts "${firstLine}…")` : ""}. It expects a PDF of a posting from the SkyShare careers site — a job title with a "Job Location:" line under it. To add a pilot role, New requirement on the Pilot Requirements page is the direct route.`;
+  return `Read ${chars} characters, but this is not a layout the job importer recognises${firstLine ? ` (it starts "${firstLine}…")` : ""}. It expects a single job posting from skyshare.com/careers, opened and printed to PDF. To add a pilot role directly, use New requirement on the Pilot Requirements page.`;
 }
