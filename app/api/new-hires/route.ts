@@ -6,6 +6,7 @@ import { ensureCustomMilestoneTasks } from "@/lib/data/onboarding-milestones";
 import { ensureInitialRole } from "@/lib/data/ensure-initial-role";
 import { parseOfferSteps } from "@/lib/offers/steps";
 import { suggestCompanyEmail } from "@/lib/people/company-email";
+import { toCalendarDay } from "@/lib/dates/display";
 
 function parseDate(value: unknown): Date | null {
   if (value === null || value === undefined || value === "") return null;
@@ -128,8 +129,14 @@ export async function POST(request: Request) {
         ssEmail,
         personalEmail: strOrNull(body.personalEmail),
         // Fall back to the dates the offer already knows, so they are not retyped.
-        offerSentDate: parseDate(body.offerSentDate) ?? offer?.sentAt ?? null,
-        offerSignedDate: parseDate(body.offerSignedDate) ?? offer?.signedAt ?? null,
+        //
+        // sentAt/signedAt are MOMENTS (they carry a time of day) and these columns
+        // are calendar days rendered in UTC, so they are converted to the day it
+        // was in Mountain rather than copied across raw. Copy the raw instant and
+        // an offer signed at 6pm Mountain lands on tomorrow's date here — the same
+        // bug that was reported on the offer stepper.
+        offerSentDate: parseDate(body.offerSentDate) ?? toCalendarDay(offer?.sentAt) ?? null,
+        offerSignedDate: parseDate(body.offerSignedDate) ?? toCalendarDay(offer?.signedAt) ?? null,
         startDate: parseDate(body.startDate) ?? offer?.startDate ?? null,
         orientationDate: parseDate(body.orientationDate),
         stage: "ACTIVE",

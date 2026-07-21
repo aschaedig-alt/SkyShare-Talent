@@ -47,6 +47,18 @@ function Glyph({ status }: { status: GridTaskStatus }) {
   return <span className="text-brand-grey/50">–</span>;
 }
 
+/**
+ * Vertical rule between people. Every column IS one person's checklist, and
+ * without a line down each side they run together — the grid reads as one wall
+ * of ticks rather than a column per hire, which is exactly the complaint the
+ * spreadsheet this replaced did not have.
+ *
+ * Applied to every cell in the column (header, facts, group bands, task rows) so
+ * the line runs unbroken top to bottom. Kept faint on purpose: the point is to
+ * separate columns, not to draw a cage around every tick.
+ */
+const COLUMN_RULE = "border-r border-brand-lea/10 dark:border-white/10";
+
 export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHire[]; checklist: GridChecklistGroup[] }) {
   const router = useRouter();
   const [hires, setHires] = useState(initial);
@@ -269,7 +281,7 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
               {hires.map((h) => {
                 const pct = h.applicableCount > 0 ? Math.round((h.doneCount / h.applicableCount) * 100) : 0;
                 return (
-                  <th key={h.id} className={clsx("sticky top-0 z-10 border-b border-brand-lea/10 px-3 py-2 align-bottom dark:border-white/10", selected.has(h.id) ? "bg-brand-eden/10 dark:bg-white/10" : "bg-white dark:bg-brand-panel")} style={{ minWidth: 132 }}>
+                  <th key={h.id} className={clsx("sticky top-0 z-10 border-b px-3 py-2 align-bottom", COLUMN_RULE, selected.has(h.id) ? "bg-brand-eden/10 dark:bg-white/10" : "bg-white dark:bg-brand-panel")} style={{ minWidth: 132 }}>
                     <div className="flex justify-center">
                       <input type="checkbox" checked={selected.has(h.id)} onChange={() => toggleOne(h.id)} aria-label={`Select ${h.name}`} className="h-3.5 w-3.5" />
                     </div>
@@ -304,7 +316,7 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
               <tr key={label}>
                 <td className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">{label}</td>
                 {hires.map((h) => (
-                  <td key={h.id} className="border-b border-brand-lea/5 px-3 py-1.5 text-center text-brand-grey break-words dark:border-white/10 dark:text-slate-400">{get(h)}</td>
+                  <td key={h.id} className={clsx("border-b border-brand-lea/5 px-3 py-1.5 text-center text-brand-grey break-words dark:border-white/10 dark:text-slate-400", COLUMN_RULE)}>{get(h)}</td>
                 ))}
               </tr>
             ))}
@@ -320,7 +332,7 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
                       {g.label}
                     </td>
                     {hires.map((h) => (
-                      <td key={h.id} className="border-b border-brand-lea/5 bg-brand-cloudDancer/40 dark:border-white/10 dark:bg-white/5" />
+                      <td key={h.id} className={clsx("border-b border-brand-lea/5 bg-brand-cloudDancer/40 dark:border-white/10 dark:bg-white/5", COLUMN_RULE)} />
                     ))}
                   </tr>
                   {groupTasks.map((def) => (
@@ -328,9 +340,9 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
                       <td className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-black dark:border-white/10 dark:bg-brand-panel dark:text-slate-100">{def.label}</td>
                       {hires.map((h) => {
                         const task = h.tasks.find((t) => t.key === def.key);
-                        if (!task) return <td key={h.id} className="border-b border-brand-lea/5 text-center text-brand-grey/50 dark:border-white/10">–</td>;
+                        if (!task) return <td key={h.id} className={clsx("border-b border-brand-lea/5 text-center text-brand-grey/50 dark:border-white/10", COLUMN_RULE)}>–</td>;
                         return (
-                          <td key={h.id} className="border-b border-brand-lea/5 text-center dark:border-white/10">
+                          <td key={h.id} className={clsx("border-b border-brand-lea/5 text-center dark:border-white/10", COLUMN_RULE)}>
                             <button
                               type="button"
                               onClick={() => cycle(h.id, task.id, task.status)}

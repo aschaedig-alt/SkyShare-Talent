@@ -80,6 +80,23 @@ export function formatCalendarDay(value: string | Date | null | undefined): stri
   }).format(d);
 }
 
+/**
+ * Turn a MOMENT into the CALENDAR DAY it fell on in the office timezone, stored
+ * the way calendar days are stored (midnight UTC).
+ *
+ * Use this when copying a timestamp into a date-only column — an offer's signedAt
+ * into a hire's offerSignedDate, say. Copying the raw instant instead puts a time
+ * of day into a column everything else renders in UTC, so an evening signature
+ * silently lands on the next day.
+ */
+export function toCalendarDay(value: string | Date | null | undefined): Date | null {
+  const d = toDate(value);
+  if (!d) return null;
+  // en-CA gives yyyy-mm-dd, which is exactly the shape we need back.
+  const day = new Intl.DateTimeFormat("en-CA", { timeZone: OFFICE_TZ }).format(d);
+  return new Date(`${day}T00:00:00.000Z`);
+}
+
 /** "Jul 15" — a chosen day, without the year, for dense tables. */
 export function formatCalendarDayShort(value: string | Date | null | undefined): string {
   const d = toDate(value);
