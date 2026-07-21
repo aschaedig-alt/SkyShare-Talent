@@ -16,6 +16,7 @@ import { OnboardingGridTab } from "@/components/people/OnboardingGridTab";
 import { PostOnboardTab } from "@/components/people/PostOnboardTab";
 import { OnboardingArchivedTab } from "@/components/people/OnboardingArchivedTab";
 import { ImportHiresButton } from "@/components/people/ImportHiresButton";
+import { PaycomScanButton } from "@/components/people/PaycomScanButton";
 import { Button, Modal, Input } from "@/components/ui";
 
 export type PeopleTab = "dashboard" | "grid" | "post" | "archived";
@@ -105,6 +106,9 @@ export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboa
           >
             Start from a candidate →
           </Link>
+          {/* Reads Paycom's background-check notices out of Front on demand. The
+              nightly cron already does this; the button is for checking now. */}
+          {canManage && <PaycomScanButton />}
           {/* Escape hatches for admins only: both create a hire with NO candidate
               link — right for a true walk-in or a back-catalog import, wrong for a
               live pipeline hire. Demoted to secondary so they don't out-shout the

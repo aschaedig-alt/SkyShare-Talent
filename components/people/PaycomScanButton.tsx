@@ -1,0 +1,133 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { MailCheck } from "lucide-react";
+import { Button, Modal } from "@/components/ui";
+
+/**
+ * On-demand pull of Paycom's background-check notices out of Front.
+ *
+ * The nightly cron does this on its own; this button is for "did hers come in
+ * yet?" moments, and for seeing what the automation is actually doing. It runs
+ * the real thing (not a dry run) because the underlying handler only ticks
+ * forward and is idempotent — clicking twice cannot do damage.
+ */
+
+type ScanRow = {
+  personName: string | null;
+  hireName: string | null;
+  matchedBy?: "exact" | "nickname";
+  outcome: string;
+};
+
+type ScanResponse = {
+  ok?: boolean;
+  message?: string;
+  conversationsScanned: number;
+  noticesFound: number;
+  ticked: number;
+  results: ScanRow[];
+};
+
+export function PaycomScanButton() {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<ScanResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run() {
+    setOpen(true);
+    setRunning(true);
+    setResult(null);
+    setError(null);
+    try {
+      const res = await fetch("/api/front/scan-paycom?apply=1", { method: "POST" });
+      const data = (await res.json().catch(() => null)) as ScanResponse | null;
+      if (!res.ok || !data?.ok) throw new Error(data?.message ?? "Could not read the inbox.");
+      setResult(data);
+      if (data.ticked > 0) router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not read the inbox.");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  const ticked = result?.results.filter((r) => r.outcome === "ticked") ?? [];
+  // People Paycom named that we deliberately left alone — usually former staff or
+  // someone who never made it onto the roster. Shown so it isn't silent.
+  const unmatched = result ? [...new Set(result.results.filter((r) => r.outcome === "no-match").map((r) => r.personName))] : [];
+
+  return (
+    <>
+      <Button variant="secondary" onClick={run}>
+        <MailCheck className="h-4 w-4" />
+        Check Paycom mail
+      </Button>
+
+      <Modal open={open} onClose={() => !running && setOpen(false)} busy={running}>
+        <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Paycom background checks</h2>
+        <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
+          Reads Paycom&apos;s automated notices in Front and ticks &ldquo;background check started&rdquo; for anyone whose check has
+          begun. This runs on its own each morning — clicking is just for checking now.
+        </p>
+
+        {running ? (
+          <p className="mt-4 text-sm text-brand-grey dark:text-slate-400">Reading the inbox…</p>
+        ) : error ? (
+          <p className="mt-4 text-sm font-medium text-red-700 dark:text-red-300">{error}</p>
+        ) : result ? (
+          <div className="mt-4">
+            {ticked.length > 0 ? (
+              <div className="rounded border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+                <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+                  Marked started for {ticked.length} {ticked.length === 1 ? "person" : "people"}
+                </p>
+                <ul className="mt-1 space-y-0.5 text-sm text-emerald-900 dark:text-emerald-200">
+                  {ticked.map((r, i) => (
+                    <li key={i}>
+                      {r.hireName}
+                      {r.matchedBy === "nickname" ? (
+                        <span className="text-xs text-emerald-700 dark:text-emerald-400"> — Paycom said &ldquo;{r.personName}&rdquo;</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 p-3 dark:border-white/10 dark:bg-white/5">
+                <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">Nothing new</p>
+                <p className="mt-0.5 text-sm text-brand-grey dark:text-slate-400">
+                  {result.noticesFound} {result.noticesFound === 1 ? "notice" : "notices"} found, all already recorded.
+                </p>
+              </div>
+            )}
+
+            {unmatched.length > 0 && (
+              <div className="mt-3 rounded border border-brand-lea/10 p-3 dark:border-white/10">
+                <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">Left alone</p>
+                <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
+                  Paycom named these people, but they aren&apos;t a current new hire here — usually former staff, or someone who
+                  never made it onto the roster. Nothing was changed for them.
+                </p>
+                <p className="mt-1 text-sm text-brand-lea dark:text-slate-100">{unmatched.join(", ")}</p>
+              </div>
+            )}
+
+            <p className="mt-3 text-xs text-brand-grey dark:text-slate-400">
+              Checked the {result.conversationsScanned} most recent Paycom threads.
+            </p>
+          </div>
+        ) : null}
+
+        <div className="mt-5 flex justify-end">
+          <Button onClick={() => setOpen(false)} disabled={running}>
+            Done
+          </Button>
+        </div>
+      </Modal>
+    </>
+  );
+}
