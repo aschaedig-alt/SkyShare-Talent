@@ -58,8 +58,13 @@ function isProtectedPath(pathname: string) {
   );
 }
 
+// Must stay in step with isAuthRequired() in lib/auth/auth-config.ts — the edge
+// middleware bundle can't import it, so the rule is deliberately duplicated.
+// Auth is required everywhere except a demonstrably local dev machine; a hosted
+// deployment must never bypass just because NODE_ENV isn't "production".
 function isAuthRequired() {
-  return process.env.REQUIRE_AUTH === "true" || process.env.NODE_ENV === "production";
+  if (process.env.REQUIRE_AUTH === "true") return true;
+  return !(process.env.NODE_ENV === "development" && !process.env.VERCEL_ENV && !process.env.VERCEL);
 }
 
 function isApiPath(pathname: string) {
