@@ -8,7 +8,8 @@ import {
   Mail,
   Phone,
   StickyNote,
-  Search
+  Search,
+  Archive
 } from "lucide-react";
 import type { CandidateListData } from "@/lib/data/candidates";
 import { NewCandidateButton } from "@/components/candidates/NewCandidateButton";
@@ -42,12 +43,17 @@ type StatConfig = {
   accent: string; // background tint + text for the icon chip
 };
 
+// "Total candidates" used to count every record ever imported, so the page
+// announced 3,213 above a list of 45 and read as though candidates had gone
+// missing. Every tile now counts what this page actually shows; the historical
+// import is its own clearly-labelled tile.
 const statConfig: StatConfig[] = [
-  { key: "total", label: "Total candidates", icon: Users, accent: "bg-brand-lea/10 text-brand-lea dark:text-slate-100" },
+  { key: "total", label: "Candidates here", icon: Users, accent: "bg-brand-lea/10 text-brand-lea dark:text-slate-100" },
   { key: "active", label: "Active", icon: UserCheck, accent: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" },
   { key: "withFiles", label: "With files", icon: FileText, accent: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" },
   { key: "withApplications", label: "With applications", icon: Send, accent: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300" },
-  { key: "scheduledInterviews", label: "Scheduled interviews", icon: CalendarClock, accent: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-500/15 dark:text-fuchsia-300" }
+  { key: "scheduledInterviews", label: "Scheduled interviews", icon: CalendarClock, accent: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-500/15 dark:text-fuchsia-300" },
+  { key: "archived", label: "In historical archive", icon: Archive, accent: "bg-slate-200 text-slate-700 dark:bg-white/10 dark:text-slate-300" }
 ];
 
 function formatDate(value: string) {
@@ -104,6 +110,18 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
           </div>
         </div>
       ))}
+      {/* Make the archive reachable from the number, so "where did the rest go"
+          has an answer on screen rather than needing to be asked. */}
+      {data.stats.archived > 0 && (
+        <p className="col-span-full -mt-1 text-[11px] text-brand-grey dark:text-slate-400">
+          The working list holds your live candidates. {data.stats.archived.toLocaleString()} older records from the
+          JazzHR import live in the{" "}
+          <Link href="/archive" className="font-semibold text-brand-lea underline hover:text-brand-gold dark:text-slate-100">
+            historical archive
+          </Link>{" "}
+          — and searching here finds them too.
+        </p>
+      )}
     </section>
   );
 
@@ -112,8 +130,13 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
       <div className="flex shrink-0 items-center justify-between border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
         <div>
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Candidate records</h2>
+          {/* Say plainly when the list is a subset. "Showing up to 100" left you
+              to work out whether 45 meant "that is all of them" or "the rest are
+              hidden" — which is the confusion that made this look like data loss. */}
           <p className="text-xs text-brand-grey dark:text-slate-400">
-            Showing up to 100 records{query ? ` matching "${query}"` : ""}.
+            {data.matchingTotal > data.candidates.length
+              ? `Showing the first ${data.candidates.length} of ${data.matchingTotal.toLocaleString()}${query ? ` matching "${query}"` : ""} — search to narrow it down.`
+              : `Showing all ${data.candidates.length}${query ? ` matching "${query}"` : ""}.`}
           </p>
         </div>
         <span className="rounded bg-brand-cloudDancer/70 px-3 py-1 text-xs font-semibold text-brand-lea dark:bg-white/5 dark:text-slate-100">

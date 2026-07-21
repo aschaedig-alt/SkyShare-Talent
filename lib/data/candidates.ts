@@ -22,14 +22,27 @@ export type CandidateListItem = {
   docMatch: { filename: string; snippet: string } | null;
 };
 
+/**
+ * The list is capped rather than paged. Anything beyond this is reachable by
+ * searching — but the UI must SAY it is showing a subset, or the page reads as
+ * "the rest of my candidates vanished".
+ */
+export const CANDIDATE_LIST_LIMIT = 100;
+
 export type CandidateListData = {
   candidates: CandidateListItem[];
+  /** How many candidates match the current view in total — the list itself is capped. */
+  matchingTotal: number;
+  /** The cap applied to the list, so the UI can say when it is showing a subset. */
+  listLimit: number;
   stats: {
     total: number;
     active: number;
     withFiles: number;
     withApplications: number;
     scheduledInterviews: number;
+    /** Historical (Jazz) records, kept out of the working list but findable by search. */
+    archived: number;
   };
 };
 
@@ -287,10 +300,10 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
       } as const)
     : false;
 
-  const [candidateRows, total, active, withFiles, withApplications, scheduledInterviews] = await Promise.all([
+  const [candidateRows, total, active, withFiles, withApplications, scheduledInterviews, archived] = await Promise.all([
     prisma.candidate.findMany({
       where: candidateWhere,
-      take: 100,
+      take: CANDIDATE_LIST_LIMIT,
       orderBy: [{ updatedAt: "desc" }, { displayName: "asc" }],
       include: {
         files: filesInclude,
@@ -304,11 +317,16 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
         }
       }
     }),
-    prisma.candidate.count(),
-    prisma.candidate.count({ where: { status: "ACTIVE" } }),
-    prisma.candidate.count({ where: { files: { some: {} } } }),
-    prisma.candidate.count({ where: { applications: { some: {} } } }),
-    prisma.interview.count({ where: { status: "SCHEDULED" } })
+    // Count the SAME population the list shows. These used to count every
+    // candidate ever, so the page announced 3,213 above a list of 45 and read as
+    // "most of my candidates are missing" — they were the 3,169 archived Jazz
+    // historical records, which live on the Historical Archive page.
+    prisma.candidate.count({ where: candidateWhere }),
+    prisma.candidate.count({ where: { ...candidateWhere, status: "ACTIVE" } }),
+    prisma.candidate.count({ where: { ...candidateWhere, files: { some: {} } } }),
+    prisma.candidate.count({ where: { ...candidateWhere, applications: { some: {} } } }),
+    prisma.interview.count({ where: { status: "SCHEDULED" } }),
+    prisma.candidate.count({ where: { archivedAt: { not: null } } })
   ]);
 
   const candidates: CandidateListItem[] = candidateRows.map((candidate) => {
@@ -343,12 +361,15 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
 
   return {
     candidates,
+    matchingTotal: total,
+    listLimit: CANDIDATE_LIST_LIMIT,
     stats: {
       total,
       active,
       withFiles,
       withApplications,
-      scheduledInterviews
+      scheduledInterviews,
+      archived
     }
   };
 }
