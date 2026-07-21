@@ -32,6 +32,16 @@
   .row-wash:hover {
     @apply bg-brand-gold/[0.07];
   }
+  /* A sticky first column can't take the wash as a background-COLOR — it has to
+     stay opaque so the rest of the table scrolls underneath it, and an opaque
+     colour covers the row's wash. So the same tint is layered as a background
+     IMAGE on top of its solid colour, which keeps it opaque AND lets the
+     highlight run the full width of the row, label included. Without this the
+     row lights up but its name does not, which is the half that tells you which
+     row you are on. */
+  .row-wash:hover .row-wash-sticky {
+    background-image: linear-gradient(rgba(234, 170, 0, 0.07), rgba(234, 170, 0, 0.07));
+  }
 }
 
 /* Dark mode (opt-in via .dark on <html>). Page goes deep navy; cards and text

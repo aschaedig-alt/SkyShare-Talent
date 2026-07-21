@@ -313,8 +313,8 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
               ["Position", (h: GridHire) => h.position ?? "—"],
               ["Department", (h: GridHire) => h.department ?? "—"]
             ] as Array<[string, (h: GridHire) => string]>).map(([label, get]) => (
-              <tr key={label}>
-                <td className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">{label}</td>
+              <tr key={label} className="row-wash dark:hover:bg-white/5">
+                <td className="row-wash-sticky sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">{label}</td>
                 {hires.map((h) => (
                   <td key={h.id} className={clsx("border-b border-brand-lea/5 px-3 py-1.5 text-center text-brand-grey break-words dark:border-white/10 dark:text-slate-400", COLUMN_RULE)}>{get(h)}</td>
                 ))}
@@ -336,8 +336,8 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
                     ))}
                   </tr>
                   {groupTasks.map((def) => (
-                    <tr key={def.key}>
-                      <td className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-black dark:border-white/10 dark:bg-brand-panel dark:text-slate-100">{def.label}</td>
+                    <tr key={def.key} className="row-wash dark:hover:bg-white/5">
+                      <td className="row-wash-sticky sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-black dark:border-white/10 dark:bg-brand-panel dark:text-slate-100">{def.label}</td>
                       {hires.map((h) => {
                         const task = h.tasks.find((t) => t.key === def.key);
                         if (!task) return <td key={h.id} className={clsx("border-b border-brand-lea/5 text-center text-brand-grey/50 dark:border-white/10", COLUMN_RULE)}>–</td>;
