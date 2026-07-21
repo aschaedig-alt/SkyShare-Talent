@@ -1,0 +1,159 @@
+<title>SkyShare Business Cards — Order & Fulfillment SOP</title>
+<style>
+  :root{
+    --navy:#0d2c43; --gold:#eaaa00; --eden:#466481; --sweet:#a6c9e7;
+    --page:#eaf0f7; --card:#ffffff; --ink:#17252f; --muted:#5b6b78;
+    --line:#d7e2ee; --line-soft:#e7eef6; --ok:#2e7d54; --warn:#b26a00;
+    --shadow:0 1px 2px rgba(13,44,67,.06), 0 8px 24px rgba(13,44,67,.06);
+  }
+  *{box-sizing:border-box}
+  .wrap{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink); background:var(--page);
+    max-width:820px; margin:0 auto; padding:40px 22px 72px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .eyebrow{font-size:11px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; color:var(--gold); margin:0}
+  h1{font-size:34px; line-height:1.1; letter-spacing:-.01em; margin:.28em 0 .12em; color:var(--navy); text-wrap:balance}
+  .lede{font-size:16px; line-height:1.55; color:var(--muted); margin:0; max-width:60ch}
+  .meta{display:flex; flex-wrap:wrap; gap:8px; margin-top:18px}
+  .chip{font-size:12px; font-weight:600; color:var(--eden); background:var(--card);
+    border:1px solid var(--line); border-radius:4px; padding:5px 10px}
+  .chip b{color:var(--navy)}
+
+  .phase{margin-top:40px}
+  .phase-head{display:flex; align-items:baseline; gap:12px; padding-bottom:10px; border-bottom:2px solid var(--navy)}
+  .phase-kicker{font-size:12px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--gold)}
+  .phase-head h2{font-size:22px; margin:0; color:var(--navy); letter-spacing:-.01em}
+  .phase-head .where{margin-left:auto; font-size:12px; color:var(--muted); font-weight:600}
+
+  ol.steps{list-style:none; counter-reset:s; margin:18px 0 0; padding:0; display:flex; flex-direction:column; gap:12px}
+  li.step{
+    counter-increment:s; position:relative; background:var(--card);
+    border:1px solid var(--line); border-left:3px solid var(--gold); border-radius:4px;
+    padding:16px 18px 16px 60px; box-shadow:var(--shadow);
+  }
+  li.step::before{
+    content:counter(s); position:absolute; left:16px; top:15px;
+    width:30px; height:30px; border-radius:4px; background:var(--navy); color:#fff;
+    font-size:15px; font-weight:700; display:flex; align-items:center; justify-content:center;
+    font-variant-numeric:tabular-nums;
+  }
+  .step h3{margin:0 0 3px; font-size:16px; color:var(--navy)}
+  .step p{margin:0; font-size:14.5px; line-height:1.5; color:var(--ink)}
+  .step p + p{margin-top:6px; color:var(--muted); font-size:13.5px}
+  .tags{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
+  .tag{font-size:11px; font-weight:700; letter-spacing:.02em; padding:3px 8px; border-radius:4px; text-transform:uppercase}
+  .tag.app{color:var(--navy); background:rgba(234,170,0,.16)}
+  .tag.ext{color:var(--eden); background:#eef4fa; border:1px solid var(--line)}
+  .tag.each{color:var(--warn); background:#fbf1df}
+  .tag.batch{color:var(--muted); background:#eef1f4}
+
+  .callout{margin-top:22px; background:var(--card); border:1px solid var(--line); border-radius:4px;
+    padding:16px 18px; box-shadow:var(--shadow)}
+  .callout h4{margin:0 0 8px; font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--gold)}
+  .callout p{margin:0 0 8px; font-size:14px; line-height:1.55; color:var(--ink)}
+  .callout p:last-child{margin-bottom:0}
+  .callout b{color:var(--navy)}
+  .pill{display:inline-block; font-size:11px; font-weight:700; padding:2px 7px; border-radius:4px; background:var(--navy); color:#fff; letter-spacing:.02em}
+  .pill.ok{background:var(--ok)}
+
+  footer{margin-top:40px; padding-top:18px; border-top:1px solid var(--line); font-size:12.5px; color:var(--muted)}
+  footer b{color:var(--navy)}
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">People Ops · Standard Operating Procedure</p>
+  <h1>Business Cards</h1>
+  <p class="lede">Ordering &amp; fulfillment — from an auto-built card to a printed set in the employee's hand. Cards are built from each person's record; you order in bulk ahead of orientation.</p>
+  <div class="meta">
+    <span class="chip"><b>Where:</b> People → Business cards</span>
+    <span class="chip"><b>Lead time:</b> order ~2 weeks before orientation</span>
+    <span class="chip"><b>Owner:</b> you send the printer order from Front</span>
+  </div>
+
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-kicker">Part 1</span>
+      <h2>Order the cards</h2>
+      <span class="where">App + Front</span>
+    </div>
+    <ol class="steps">
+      <li class="step">
+        <h3>See who needs a card</h3>
+        <p>On the Business cards page, use <b>New hires</b> and <b>Needs cards</b>. Cards are due ~2 weeks before orientation — watch the amber <b>order-by</b> date, and the "Order now" flag if it's overdue.</p>
+        <div class="tags"><span class="tag app">In app</span><span class="tag batch">Per batch</span></div>
+      </li>
+      <li class="step">
+        <h3>Clear any missing emails first</h3>
+        <p>Check the <b>Missing email</b> tab. No card goes to the printer without a company <b>@skyshare.com</b> email — fix it on the person's profile before ordering.</p>
+        <div class="tags"><span class="tag app">In app</span></div>
+      </li>
+      <li class="step">
+        <h3>Select and Copy for printer</h3>
+        <p>Tick the people you're ordering, then <b>Copy for printer</b>. The formatted cards go on your clipboard as plain text — phone, email, and web come across with <b>no hyperlinks</b>.</p>
+        <div class="tags"><span class="tag app">In app</span><span class="tag batch">Per batch</span></div>
+      </li>
+      <li class="step">
+        <h3>Send the order from Front</h3>
+        <p>Paste into the printer order email in <b>Front</b> and send. It arrives as clean black text, ready for the printer to lay out.</p>
+        <div class="tags"><span class="tag ext">Front</span><span class="tag batch">Per batch</span></div>
+      </li>
+      <li class="step">
+        <h3>Mark them Ordered</h3>
+        <p>Back in the app, set each ordered card's status to <b>Ordered</b>. They move to the <b>Ordered</b> tab so you always know what's out at the printer.</p>
+        <div class="tags"><span class="tag app">In app</span></div>
+      </li>
+    </ol>
+  </section>
+
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-kicker">Part 2</span>
+      <h2>After you send the order</h2>
+      <span class="where">Front · Ramp · SLC · orientation</span>
+    </div>
+    <ol class="steps">
+      <li class="step">
+        <h3>Approve the proof</h3>
+        <p>The printer sends a proof — approve it via the <b>email link</b> they provide.</p>
+        <div class="tags"><span class="tag ext">Front / email</span><span class="tag batch">Per order</span></div>
+      </li>
+      <li class="step">
+        <h3>Pay the invoice</h3>
+        <p>Pay the printer's invoice in <b>Ramp</b>.</p>
+        <div class="tags"><span class="tag ext">Ramp</span><span class="tag batch">Per order</span></div>
+      </li>
+      <li class="step">
+        <h3>Confirm SLC received the box</h3>
+        <p>Check that the <b>SLC</b> office received the shipment of printed cards.</p>
+        <div class="tags"><span class="tag ext">SLC office</span><span class="tag batch">Per order</span></div>
+      </li>
+      <li class="step">
+        <h3>Arrange orientation-day availability</h3>
+        <p>Make sure the cards are out and available on <b>orientation day</b> — usually coordinated with <b>Morgan</b>.</p>
+        <div class="tags"><span class="tag ext">Morgan</span><span class="tag batch">Per order</span></div>
+      </li>
+      <li class="step">
+        <h3>Mark the employee received their cards</h3>
+        <p>Once a person has their cards in hand, set their status to <b>Received</b> in the app.</p>
+        <div class="tags"><span class="tag app">In app</span><span class="tag each">Per person</span></div>
+      </li>
+      <li class="step">
+        <h3>Ship to remote employees</h3>
+        <p>For anyone not based in SLC, <b>ship</b> their cards to them, then mark <b>Received</b> once delivered.</p>
+        <div class="tags"><span class="tag ext">Shipping</span><span class="tag each">Per person</span></div>
+      </li>
+    </ol>
+  </section>
+
+  <div class="callout">
+    <h4>What the app tracks today</h4>
+    <p>The app currently tracks the card status per person: <span class="pill">Needed</span> <span class="pill">Ordered</span> <span class="pill ok">Received</span> <span class="pill">Not needed</span> — each with its own tab, and a card moves tabs the moment you change its status.</p>
+    <p>The <b>Part 2</b> steps (approve, pay, SLC receipt, orientation hand-off, remote shipping) are <b>manual for now</b> — this SOP is the source of truth for them. In-app tracking of the after-order steps is a planned follow-up once the flow settles over a few real orders.</p>
+  </div>
+
+  <footer>
+    <b>SkyShare Talent-Ops</b> · Business Cards SOP · updated Jul 19, 2026. First real order sent and verified this week.
+  </footer>
+</div>

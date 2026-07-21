@@ -1,0 +1,157 @@
+<title>SkyShare Talent-Ops Handbook</title>
+<style>
+  :root{
+    --navy:#0d2c43; --gold:#eaaa00; --eden:#466481;
+    --page:#eaf0f7; --card:#ffffff; --ink:#17252f; --muted:#5b6b78;
+    --line:#d7e2ee; --warn:#b26a00; --bad:#c23b52;
+    --shadow:0 1px 2px rgba(13,44,67,.06), 0 8px 24px rgba(13,44,67,.06);
+  }
+  *{box-sizing:border-box}
+  .wrap{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink); background:var(--page);
+    max-width:840px; margin:0 auto; padding:44px 22px 80px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .cover{border-bottom:3px solid var(--gold); padding-bottom:26px; margin-bottom:26px}
+  .eyebrow{font-size:11px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; color:var(--gold); margin:0}
+  h1{font-size:38px; line-height:1.08; letter-spacing:-.015em; margin:.24em 0 .14em; color:var(--navy); text-wrap:balance}
+  .lede{font-size:16.5px; line-height:1.55; color:var(--muted); margin:0; max-width:64ch}
+
+  .toc{background:var(--card); border:1px solid var(--line); border-radius:4px; padding:18px 20px; box-shadow:var(--shadow); margin-bottom:34px}
+  .toc h2{margin:0 0 12px; font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--gold)}
+  .toc ol{margin:0; padding-left:0; list-style:none; counter-reset:t; display:flex; flex-direction:column; gap:9px}
+  .toc li{counter-increment:t; display:flex; gap:12px; align-items:baseline}
+  .toc li::before{content:counter(t); flex:0 0 26px; height:26px; border-radius:4px; background:var(--navy); color:#fff;
+    font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; font-variant-numeric:tabular-nums}
+  .toc a{color:var(--navy); font-weight:600; font-size:15.5px; text-decoration:none}
+  .toc a:hover{text-decoration:underline}
+  .toc .d{display:block; font-size:13px; color:var(--muted); font-weight:400; margin-top:1px}
+
+  .chap{margin-top:46px; scroll-margin-top:16px}
+  .chap-head{border-bottom:2px solid var(--navy); padding-bottom:11px; margin-bottom:6px}
+  .chap-num{font-size:12px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--gold)}
+  .chap-head h2{font-size:25px; margin:4px 0 0; color:var(--navy); letter-spacing:-.01em}
+  .chap-purpose{font-size:14.5px; color:var(--muted); margin:10px 0 0; line-height:1.55}
+  .where{display:inline-block; margin-top:9px; font-size:12px; font-weight:600; color:var(--eden); background:var(--card);
+    border:1px solid var(--line); border-radius:4px; padding:4px 9px}
+
+  ol.steps{list-style:none; counter-reset:s; margin:18px 0 0; padding:0; display:flex; flex-direction:column; gap:11px}
+  li.step{
+    counter-increment:s; position:relative; background:var(--card);
+    border:1px solid var(--line); border-left:3px solid var(--gold); border-radius:4px;
+    padding:14px 17px 14px 56px; box-shadow:var(--shadow); break-inside:avoid;
+  }
+  li.step::before{
+    content:counter(s); position:absolute; left:15px; top:13px;
+    width:28px; height:28px; border-radius:4px; background:var(--navy); color:#fff;
+    font-size:14px; font-weight:700; display:flex; align-items:center; justify-content:center; font-variant-numeric:tabular-nums;
+  }
+  .step h3{margin:0 0 3px; font-size:15.5px; color:var(--navy)}
+  .step p{margin:0; font-size:14.5px; line-height:1.5; color:var(--ink)}
+
+  .note{margin-top:14px; border-left:3px solid var(--gold); background:rgba(234,170,0,.08); border-radius:0 4px 4px 0; padding:10px 14px; font-size:14px; line-height:1.55; color:var(--ink)}
+  .note b{color:var(--navy)}
+  .stop{margin-top:12px; border-left:3px solid var(--bad); background:#fbe6ea; border-radius:0 4px 4px 0; padding:10px 14px; font-size:14px; line-height:1.55; color:#5e1421}
+  .stop b{color:var(--bad)}
+
+  footer{margin-top:52px; padding-top:18px; border-top:1px solid var(--line); font-size:12.5px; color:var(--muted); line-height:1.6}
+  footer b{color:var(--navy)}
+</style>
+
+<div class="wrap">
+  <div class="cover">
+    <p class="eyebrow">SkyShare Talent-Ops</p>
+    <h1>Talent-Ops Handbook</h1>
+    <p class="lede">Every standard operating procedure in one place — hiring a person from candidate through to onboarded, and the supporting workflows around it. Each chapter also exists as its own shareable SOP if you only need to hand someone one piece.</p>
+  </div>
+
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#c1">Pre-onboarding a new hire, start to finish<span class="d">The full journey: candidate → offer → onboarding board → onboarded</span></a></li>
+      <li><a href="#c2">Offers<span class="d">Working the six offer steps, and moving people in before they sign</span></a></li>
+      <li><a href="#c3">Business cards<span class="d">Ordering ahead of orientation, and the six after-order steps</span></a></li>
+      <li><a href="#c4">Org charts — adding &amp; linking people<span class="d">Putting someone on a fleet card and linking their profile</span></a></li>
+    </ol>
+  </nav>
+
+  <!-- ── 1 ───────────────────────────────────────────── -->
+  <section class="chap" id="c1">
+    <div class="chap-head">
+      <span class="chap-num">Chapter 1</span>
+      <h2>Pre-onboarding a new hire, start to finish</h2>
+    </div>
+    <p class="chap-purpose">The whole journey. Start on the candidate, work the offer, move them onto the board <em>early</em>, then finish the checklist on their onboarding record.</p>
+    <span class="where">People → New hires · candidate profile · new-hire record</span>
+    <ol class="steps">
+      <li class="step"><h3>Start from the candidate</h3><p>People → New hires → <b>Start from a candidate</b>. This keeps their resume, offer and history attached.</p></li>
+      <li class="step"><h3>Find them — or add them</h3><p>Search the Candidates list. New? <b>New candidate</b> → name + email/phone. A "matched an existing candidate" notice means it found a duplicate — check it's the right person.</p></li>
+      <li class="step"><h3>Open their profile</h3><p>The offer is worked here; from "Move to onboarding" on, it continues on their onboarding record.</p></li>
+      <li class="step"><h3>Link them to the job</h3><p><b>Applied to</b> tab → <b>Link to a job</b>. If the job doesn't exist yet, type the title and <b>create it right there</b> — fill in its details later.</p></li>
+      <li class="step"><h3>Start the offer</h3><p><b>Offers</b> tab → <b>Start an offer</b>, then tick the six steps as they happen. The status follows the steps automatically.</p></li>
+      <li class="step"><h3>Move them in — early</h3><p><b>Don't wait for the signature.</b> Once the offer is started or sent, <b>Move to onboarding</b>. Confirm position, department and start date; the company email auto-fills. No start date yet? Tick the box that puts them in the "No start date yet" bucket.</p></li>
+      <li class="step"><h3>Finish the offer + work the checklist</h3><p>On the new-hire record: the six offer steps are the front of the 19-step checklist and stay in sync with the Offers tab — tick from either side. Mark <b>Signed</b> + start date, then work pilot documents and onboarding &amp; systems.</p></li>
+      <li class="step"><h3>Mark them onboarded</h3><p><b>Mark onboarded</b> on their record moves them to Post-onboard for their 30/60/90-day check-ins. When those are all done they auto-archive as a current employee.</p></li>
+    </ol>
+    <div class="note"><b>Two steps tick themselves:</b> "Attended orientation" ticks when you mark the orientation session complete, and "Travel complete" ticks when a trip is booked. If they're already green, that's why.</div>
+    <div class="stop"><b>Don't use for a live hire:</b> "+ Add new hire" and "Import hires" create a record with <i>no candidate link</i> — no resume, no offer history. They're only for a true walk-in or a back-catalogue import.</div>
+  </section>
+
+  <!-- ── 2 ───────────────────────────────────────────── -->
+  <section class="chap" id="c2">
+    <div class="chap-head">
+      <span class="chap-num">Chapter 2</span>
+      <h2>Offers</h2>
+    </div>
+    <p class="chap-purpose">An offer is the last act of recruiting; signing is the handoff. The offer and the onboarding checklist are one thing seen from two places.</p>
+    <span class="where">Candidate profile → Offers tab · onboarding record</span>
+    <ol class="steps">
+      <li class="step"><h3>Link the candidate to the job</h3><p>An offer is always for a specific role, so link the job first (create it inline if it's new).</p></li>
+      <li class="step"><h3>Start the offer and tick the six steps</h3><p>Verbal offer → draft letter → supervisor signs → president signs → letter sent → candidate signs. Status derives: any step = <b>Started</b>, letter sent = <b>Sent</b>, signed = <b>Signed</b>. "Declined" is set by hand — it's something they do.</p></li>
+      <li class="step"><h3>Move them in early</h3><p>As soon as the offer is started or sent, move them onto the onboarding board. The offer keeps going there and you can see exactly where everyone stands.</p></li>
+      <li class="step"><h3>Keep ticking from either side</h3><p>The six offer steps appear on both the candidate's Offers tab and the new-hire's onboarding record, and stay in step automatically — nothing is entered twice.</p></li>
+      <li class="step"><h3>Signed — the handoff</h3><p>Tick <b>Candidate signed</b> and set the start date ("not known yet" is allowed so signing is never blocked). The rest of the onboarding checklist carries on from there.</p></li>
+    </ol>
+    <div class="note"><b>No pay amounts, ever.</b> Paycom owns compensation; this app owns the workflow.</div>
+  </section>
+
+  <!-- ── 3 ───────────────────────────────────────────── -->
+  <section class="chap" id="c3">
+    <div class="chap-head">
+      <span class="chap-num">Chapter 3</span>
+      <h2>Business cards</h2>
+    </div>
+    <p class="chap-purpose">Cards are built from each person's record and ordered in bulk ahead of orientation.</p>
+    <span class="where">People → Business cards · Front · Ramp</span>
+    <ol class="steps">
+      <li class="step"><h3>See who needs a card</h3><p>Use the <b>New hires</b> and <b>Needs cards</b> tabs. Order about two weeks before orientation — watch the amber order-by date.</p></li>
+      <li class="step"><h3>Clear any missing emails</h3><p>Check the <b>Missing email</b> tab. No card goes to the printer without a company @skyshare.com address.</p></li>
+      <li class="step"><h3>Select and copy for printer</h3><p>Tick the people you're ordering, then <b>Copy for printer</b>. The cards land on your clipboard as clean text with no hyperlinks.</p></li>
+      <li class="step"><h3>Send the order from Front, then mark them Ordered</h3><p>Paste into the printer order email in Front and send. Back in the app set each card to <b>Ordered</b> so you know what's out.</p></li>
+    </ol>
+    <div class="note"><b>After you send the order</b> — currently tracked by hand: ① approve the proof via the printer's email link · ② pay the invoice in Ramp · ③ confirm the SLC office received the box · ④ arrange orientation-day availability (Morgan) · ⑤ mark the employee <b>Received</b> in the app · ⑥ ship to any remote employees.</div>
+  </section>
+
+  <!-- ── 4 ───────────────────────────────────────────── -->
+  <section class="chap" id="c4">
+    <div class="chap-head">
+      <span class="chap-num">Chapter 4</span>
+      <h2>Org charts — adding &amp; linking people</h2>
+    </div>
+    <p class="chap-purpose">Putting someone on a Crew or Maintenance card, linking them to their profile, and managing openings.</p>
+    <span class="where">Fleet → Crew / Maintenance Org Chart · Admin</span>
+    <ol class="steps">
+      <li class="step"><h3>Open the chart in edit mode</h3><p>Fleet → the chart → <b>Edit roster</b> (admin only). <b>Cancel</b> leaves without changing anyone.</p></li>
+      <li class="step"><h3>Open the group and add the person</h3><p>Click the card, then use <b>Add name…</b> in the right section. Set their status: <b>On staff</b>, <b>Offered</b>, or <b>Candidate</b>.</p></li>
+      <li class="step"><h3>Link them to their profile</h3><p>Click <b>link</b> and search their <b>last name</b>. Results include candidates <em>and</em> current employees (marked "on staff"). Pick them and the row shows <b>linked</b>.</p></li>
+      <li class="step"><h3>Openings, moves, and save</h3><p>Use the <b>Open positions</b> +/− counter for seats, <b>move</b> to send someone to another card or base (their link travels with them), then <b>Save changes</b>.</p></li>
+    </ol>
+    <div class="note"><b>Search last names.</b> Chart names often differ from profile names ("Augustin" vs "Auggie"), so a first-name search frequently misses. Linking is always an explicit pick — the chart never guesses from a name.</div>
+  </section>
+
+  <footer>
+    <b>SkyShare Talent-Ops Handbook</b> · updated Jul 20, 2026.<br>
+    Source of truth lives in the repo at <b>docs/sops/</b> — edit there, then republish. Each chapter is also published as its own SOP for handing to one person.
+  </footer>
+</div>

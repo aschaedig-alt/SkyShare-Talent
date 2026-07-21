@@ -1,0 +1,201 @@
+<title>Pre-Onboarding SOP — Step by Step</title>
+<style>
+  /* Deliberately light-only: this SOP always renders on a light ground so the
+     flow diagram and chips stay high-contrast regardless of the viewer's theme. */
+  :root {
+    --page: #eaf0f7; --card: #ffffff; --ink: #0d2c43; --ink-soft: #3d5468; --muted: #5f748a;
+    --line: #d5e0ec; --navy: #0d2c43; --gold: #eaaa00; --eden: #466481; --sweet: #a6c9e7;
+    --good: #2f7d5b; --good-bg: #e4f1ea; --warn: #b7791f; --warn-bg: #fbf1dd;
+    --bad: #c23b52; --bad-bg: #fbe6ea; --shadow: 0 1px 2px rgba(13,44,67,.06), 0 8px 24px rgba(13,44,67,.08);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font-family: "Segoe UI", system-ui, -apple-system, sans-serif; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 44px 22px 80px; }
+
+  header { border-bottom: 3px solid var(--gold); padding-bottom: 24px; margin-bottom: 32px; }
+  .eyebrow { text-transform: uppercase; letter-spacing: .16em; font-size: 12px; font-weight: 700; color: var(--eden); margin: 0 0 10px; }
+  h1 { font-size: clamp(28px, 5vw, 38px); line-height: 1.1; margin: 0 0 12px; font-weight: 800; letter-spacing: -.01em; text-wrap: balance; color: var(--navy); }
+  .lede { font-size: 16.5px; color: var(--ink-soft); margin: 0; max-width: 64ch; }
+
+  .prereq { display: flex; gap: 14px; align-items: flex-start; background: var(--warn-bg); border: 1px solid var(--warn); border-radius: 4px; padding: 14px 18px; margin: 24px 0; }
+  .prereq .ic { font-size: 20px; line-height: 1.3; }
+  .prereq p { margin: 0; font-size: 14.5px; color: var(--ink); }
+  .prereq b { color: #8a5a13; }
+
+  .whatsnew { display: flex; gap: 14px; align-items: flex-start; background: linear-gradient(180deg,rgba(234,170,0,.12),rgba(234,170,0,.05)); border: 1px solid rgba(234,170,0,.5); border-radius: 4px; padding: 14px 18px; margin: 22px 0; }
+  .whatsnew .ic { font-size: 20px; line-height: 1.3; }
+  .whatsnew p { margin: 0; font-size: 14.5px; color: var(--ink); }
+  .whatsnew b { color: var(--navy); }
+
+  h2 { font-size: 15px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--eden); margin: 40px 0 14px; }
+
+  .diagram-card { background: #ffffff; border: 1px solid var(--line); border-radius: 4px; box-shadow: var(--shadow); padding: 16px; overflow-x: auto; }
+  pre.mermaid { margin: 0; text-align: center; min-width: 540px; }
+  /* Force the diagram's label + edge colors so no auto-theme can pale them out. */
+  .mermaid text, .mermaid .nodeLabel, .mermaid span, .mermaid p, .mermaid foreignObject div { fill: #0d2c43 !important; color: #0d2c43 !important; }
+  .mermaid .edgeLabel, .mermaid .edgeLabel p, .mermaid .edgeLabel span { color: #0d2c43 !important; fill: #0d2c43 !important; background-color: #eef4fb !important; }
+  .mermaid .edgeLabel rect { fill: #eef4fb !important; }
+  .mermaid .edgePath .path, .mermaid path.path, .mermaid line, .mermaid .flowchart-link { stroke: #7f97ab !important; }
+  .mermaid marker path, .mermaid .arrowheadPath, .mermaid .arrowMarkerPath { fill: #7f97ab !important; stroke: #7f97ab !important; }
+
+  .steps { display: flex; flex-direction: column; gap: 14px; counter-reset: step; }
+  .step { background: var(--card); border: 1px solid var(--line); border-radius: 4px; box-shadow: var(--shadow); padding: 20px 22px 20px 66px; position: relative; }
+  .step.hot { border-left: 3px solid var(--gold); }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    position: absolute; left: 18px; top: 20px; width: 34px; height: 34px; border-radius: 4px;
+    background: var(--navy); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 16px;
+  }
+  .step .screen { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #fff; background: var(--navy); border-radius: 4px; padding: 2px 9px; margin-bottom: 8px; }
+  .step h3 { margin: 0 0 6px; font-size: 18px; color: var(--navy); font-weight: 800; }
+  .step p { margin: 6px 0 0; font-size: 14.5px; color: var(--ink-soft); }
+  .step .do b, .step p b { color: var(--ink); }
+  .btn { display: inline-block; font-weight: 700; font-size: 13px; border-radius: 4px; padding: 2px 9px; white-space: nowrap; }
+  .btn.gold { background: var(--gold); color: #1a1a1a; }
+  .btn.navy { background: var(--navy); color: #fff; }
+  .btn.ghost { border: 1px solid var(--eden); color: var(--eden); }
+  .btn.tab { background: #eef4fb; border: 1px solid var(--eden); color: var(--eden); }
+
+  .seen { margin-top: 12px; border-left: 3px solid var(--good); background: var(--good-bg); border-radius: 0 4px 4px 0; padding: 9px 14px; font-size: 13.5px; color: #1c3b2c; }
+  .seen b { color: var(--good); }
+  .watch { margin-top: 10px; border-left: 3px solid var(--warn); background: var(--warn-bg); border-radius: 0 4px 4px 0; padding: 9px 14px; font-size: 13.5px; color: #4a3708; }
+  .watch b { color: #8a5a13; }
+
+  .autonote { display: flex; gap: 12px; align-items: flex-start; background: var(--good-bg); border: 1px solid var(--good); border-radius: 4px; padding: 14px 18px; margin: 16px 0; font-size: 14px; color: #1c3b2c; }
+  .autonote b { color: var(--good); }
+
+  .testing { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--gold); border-radius: 4px; box-shadow: var(--shadow); padding: 22px 24px; margin-top: 16px; }
+  .testing h3 { margin: 0 0 4px; font-size: 18px; font-weight: 800; color: var(--navy); }
+  .testing ol { margin: 12px 0 0; padding-left: 20px; }
+  .testing li { font-size: 14.5px; color: var(--ink-soft); margin-bottom: 9px; }
+  .testing li b { color: var(--ink); }
+  .tag { display:inline-block; font-size: 12px; font-weight: 800; letter-spacing: .05em; background: var(--navy); color:#fff; border-radius: 4px; padding: 1px 7px; }
+
+  .wrongdoors { display:flex; gap:12px; align-items:flex-start; background: var(--bad-bg); border:1px solid var(--bad); border-radius:4px; padding:14px 18px; margin-top:16px; font-size:14px; color:#5e1421; }
+  .wrongdoors b { color: var(--bad); }
+  code { font-family: "Cascadia Code", Consolas, monospace; font-size: 12.5px; background: var(--page); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; color: var(--navy); }
+  footer { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">SkyShare Talent-Ops · Standard Operating Procedure</p>
+    <h1>Pre-Onboarding a new hire, start to finish</h1>
+    <p class="lede">Everything starts on the candidate's profile and carries onto their onboarding record — the offer travels with them, so nothing is re-entered. Follow the steps below; the callouts tell you exactly what you'll see so nothing looks broken.</p>
+  </header>
+
+  <div class="prereq">
+    <span class="ic">🔑</span>
+    <p><b>Before you start:</b> your account must be <b>Admin</b> or <b>Recruiter</b>. As a Viewer the action buttons are hidden. Check under <b>Settings → Team Members</b>; change a role there if needed. (Recruiters can now also create jobs.)</p>
+  </div>
+
+  <div class="whatsnew">
+    <span class="ic">✨</span>
+    <p><b>What changed:</b> you now <b>move a new hire onto the board as soon as the offer is under way — you don't wait for the signature.</b> The six offer steps stay in step whether you tick them on the candidate's Offers tab or on their onboarding record, so you can track exactly where everyone is while the offer is still in flight.</p>
+  </div>
+
+  <h2>The flow at a glance</h2>
+  <div class="diagram-card">
+<pre class="mermaid">
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#dcebf8','primaryBorderColor':'#466481','primaryTextColor':'#0d2c43','lineColor':'#7f97ab','fontFamily':'Segoe UI, system-ui, sans-serif','fontSize':'14px','darkMode':false}}}%%
+flowchart TD
+    a([New hires page]):::nav --> b[Start from a candidate]:::step
+    b --> c[Find or add the candidate]:::step
+    c --> d[Open their profile]:::step
+    d --> e[Applied to tab:<br/>Link to a job<br/>create it inline if new]:::step
+    e --> f[Offers tab:<br/>start the offer, tick the steps]:::step
+    f --> g[[Move to onboarding<br/>EARLY — before signed]]:::move
+    g --> h[Onboarding record:<br/>offer steps + 19-step checklist<br/>synced both ways]:::step
+    h --> i[Mark signed + start date<br/>from either side]:::step
+    i --> j[Orientation + travel<br/>tick themselves]:::auto
+    j --> k([Mark onboarded]):::done
+
+    classDef nav fill:#bcd6ee,stroke:#0d2c43,stroke-width:2px,color:#0d2c43
+    classDef step fill:#dcebf8,stroke:#466481,color:#0d2c43
+    classDef move fill:#faedc4,stroke:#b7791f,stroke-width:2px,color:#4a3708
+    classDef auto fill:#d3ecdf,stroke:#2f7d5b,color:#123a2a
+    classDef done fill:#bfe3cf,stroke:#2f7d5b,stroke-width:2px,color:#123a2a
+</pre>
+  </div>
+
+  <h2>The eight steps</h2>
+  <div class="steps">
+
+    <div class="step">
+      <span class="screen">People → New hires</span>
+      <h3>Start from the candidate</h3>
+      <p class="do">Open <b>People → New hires</b> and click <span class="btn navy">Start from a candidate</span>. This is always the right first move — it keeps the person's resume, offer, and history attached.</p>
+      <div class="seen"><b>You'll see:</b> the Candidates list with a banner, "Onboarding someone? Find and open their candidate…" That banner confirms you're on the right path.</div>
+    </div>
+
+    <div class="step">
+      <span class="screen">Candidates</span>
+      <h3>Find them — or add them</h3>
+      <p class="do">Search the list for the person. Already there? Skip to step 3. New to the system? Click <span class="btn gold">New candidate</span> (top right) and fill in name + email/phone.</p>
+      <div class="watch"><b>Watch for:</b> if their email or phone already exists, you'll get a note — <i>"Matched an existing candidate — opened their record instead of creating a duplicate."</i> That's expected, not an error. Just check it's the right person.</div>
+    </div>
+
+    <div class="step">
+      <span class="screen">Candidates</span>
+      <h3>Open their profile</h3>
+      <p class="do">Click the person's name to open their <b>candidate profile</b>. The offer is worked here; from "Move to onboarding" on, it continues on their onboarding record.</p>
+    </div>
+
+    <div class="step">
+      <span class="screen">Profile → Applied to</span>
+      <h3>Link them to the job</h3>
+      <p class="do">Open the <span class="btn tab">Applied to</span> tab and click <span class="btn ghost">Link to a job</span>. Search the role and pick it. <b>Doesn't exist yet?</b> Type the title and choose <b>"Create … as a new job"</b> right there — no trip to the Jobs page. (You can fill in the job's details later.)</p>
+      <div class="seen"><b>Why this matters:</b> an offer is always made <i>for a specific job</i>, so the offer can't start until a job is linked.</div>
+    </div>
+
+    <div class="step">
+      <span class="screen">Profile → Offers</span>
+      <h3>Start the offer</h3>
+      <p class="do">Open the <span class="btn tab">Offers</span> tab and click <b>Start an offer</b>. Tick the <b>6 steps</b> as they actually happen: verbal → draft → supervisor approval → president approval → letter sent → signed. The status follows the steps — you don't set it by hand.</p>
+      <div class="watch"><b>You don't need "signed" to keep going.</b> As soon as the offer is <i>started</i> or <i>sent</i>, move to the next step — you'll finish the signature on the onboarding side.</div>
+    </div>
+
+    <div class="step hot">
+      <span class="screen">Profile → Move panel</span>
+      <h3>Move to onboarding — early</h3>
+      <p class="do"><b>Don't wait for the signature.</b> Once the offer is under way, the panel turns gold and pushes you to <span class="btn gold">Move to onboarding</span>. Confirm position, department, and start date. The <b>company email auto-fills</b> (first initial + last name); a warning shows if it collides with someone. They land on the board with the offer still in flight.</p>
+      <div class="watch"><b>No start date yet?</b> Tick the box that sits them in the "No start date yet" bucket — a deliberate choice so nobody quietly disappears from the dashboard.</div>
+    </div>
+
+    <div class="step">
+      <span class="screen">New-hire record</span>
+      <h3>Finish the offer + work the checklist</h3>
+      <p class="do">You land on the new-hire record. The <b>6 offer steps are the front of the 19-step checklist</b> and stay in sync with the candidate's Offers tab — tick from <b>either</b> side. Mark <b>Signed</b> and set the <b>start date</b> when it happens, then work <b>pilot documents</b> and <b>onboarding &amp; systems</b>, starting with the "Start Your Onboarding Journey" email via Front.</p>
+      <div class="autonote"><span>🔄</span><div><b>Two steps tick themselves — don't do them by hand:</b> "Attended orientation" ticks when you mark the orientation session complete, and "Travel complete" ticks when a trip is booked. If they're already green, that's why.</div></div>
+    </div>
+
+    <div class="step">
+      <span class="screen">New-hire record</span>
+      <h3>Mark them onboarded</h3>
+      <p class="do">Once the checklist is done, click <span class="btn gold">Mark onboarded</span> at the top of the hire's record. They move to <b>Post-onboard</b>, where their 30 / 60 / 90-day check-ins live.</p>
+      <div class="seen"><b>Doing several at once?</b> The <span class="btn tab">Checklist</span> tab (People → New hires) lets you tick multiple people and a bulk <span class="btn ghost">Mark onboarded</span> appears in the action bar.</div>
+      <div class="autonote"><span>🗂️</span><div><b>What happens after:</b> when all their 30/60/90-day check-ins are ticked, they auto-move to <b>Archived</b> as a <i>current</i> employee — the Archived tab's Current / Former filter keeps them separate from people who've left.</div></div>
+    </div>
+
+  </div>
+
+  <div class="wrongdoors">
+    <span>🚫</span>
+    <div><b>Don't use these for a live hire:</b> the <b>+ Add new hire</b> and <b>Import hires</b> buttons on the New hires page create a record with <i>no candidate link</i> — no resume, no offer history. They're only for a true walk-in with no candidate record, or a back-catalog import. Always start from the candidate.</div>
+  </div>
+
+  <h2>Testing this end to end</h2>
+  <div class="testing">
+    <h3>Run it, then reset — cleanly</h3>
+    <ol>
+      <li><b>Tag your test person <span class="tag">TEST</span></b> when you add them (the Tags field on "New candidate"). This is what lets you delete them afterward.</li>
+      <li><b>Run all eight steps above</b> with that candidate — a fake name is fine, e.g. "ZZ Test Pilot."</li>
+      <li><b>Reset when done:</b> open their profile → <span class="btn ghost" style="border-color:var(--bad);color:var(--bad)">Delete test</span> (only appears for a TEST-tagged record). Type the name to confirm, and tick <b>"also delete the onboarding record"</b> for a full reset. Real candidates have no TEST tag, so they can't be deleted this way.</li>
+      <li><b>Test login accounts:</b> remove them under <b>Settings → Team Members → Remove access</b> (real offboarding) — or use a <code>+test</code> email so the backend test-user delete applies.</li>
+    </ol>
+  </div>
+
+  <footer>
+    Updated Jul 20, 2026 for the early move-in flow — you move a hire onto the board before the offer is signed, and the offer's 6 steps stay in sync across the candidate's Offers tab and the onboarding record. Also reflects inline job creation and recruiter job-creation access. If a screen doesn't match this SOP, tell me what you saw and I'll reconcile it.
+  </footer>
+</div>

@@ -1,0 +1,157 @@
+<title>SkyShare Org Charts — Adding & Linking People</title>
+<style>
+  :root{
+    --navy:#0d2c43; --gold:#eaaa00; --eden:#466481; --sweet:#a6c9e7;
+    --page:#eaf0f7; --card:#ffffff; --ink:#17252f; --muted:#5b6b78;
+    --line:#d7e2ee; --ok:#2e7d54; --warn:#b26a00;
+    --shadow:0 1px 2px rgba(13,44,67,.06), 0 8px 24px rgba(13,44,67,.06);
+  }
+  *{box-sizing:border-box}
+  .wrap{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink); background:var(--page);
+    max-width:820px; margin:0 auto; padding:40px 22px 72px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .eyebrow{font-size:11px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; color:var(--gold); margin:0}
+  h1{font-size:34px; line-height:1.1; letter-spacing:-.01em; margin:.28em 0 .12em; color:var(--navy); text-wrap:balance}
+  .lede{font-size:16px; line-height:1.55; color:var(--muted); margin:0; max-width:62ch}
+  .meta{display:flex; flex-wrap:wrap; gap:8px; margin-top:18px}
+  .chip{font-size:12px; font-weight:600; color:var(--eden); background:var(--card);
+    border:1px solid var(--line); border-radius:4px; padding:5px 10px}
+  .chip b{color:var(--navy)}
+
+  .banner{margin-top:22px; background:linear-gradient(180deg,rgba(234,170,0,.10),rgba(234,170,0,.04)); border:1px solid rgba(234,170,0,.45);
+    border-radius:6px; padding:14px 16px}
+  .banner p{margin:0; font-size:14.5px; line-height:1.55; color:var(--ink)}
+  .banner b{color:var(--navy)}
+
+  .phase{margin-top:38px}
+  .phase-head{display:flex; align-items:baseline; gap:12px; padding-bottom:10px; border-bottom:2px solid var(--navy)}
+  .phase-kicker{font-size:12px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--gold)}
+  .phase-head h2{font-size:22px; margin:0; color:var(--navy); letter-spacing:-.01em}
+  .phase-head .where{margin-left:auto; font-size:12px; color:var(--muted); font-weight:600}
+
+  ol.steps{list-style:none; counter-reset:s; margin:18px 0 0; padding:0; display:flex; flex-direction:column; gap:12px}
+  li.step{
+    counter-increment:s; position:relative; background:var(--card);
+    border:1px solid var(--line); border-left:3px solid var(--gold); border-radius:4px;
+    padding:16px 18px 16px 60px; box-shadow:var(--shadow);
+  }
+  li.step::before{
+    content:counter(s); position:absolute; left:16px; top:15px;
+    width:30px; height:30px; border-radius:4px; background:var(--navy); color:#fff;
+    font-size:15px; font-weight:700; display:flex; align-items:center; justify-content:center;
+    font-variant-numeric:tabular-nums;
+  }
+  .step h3{margin:0 0 3px; font-size:16px; color:var(--navy)}
+  .step p{margin:0; font-size:14.5px; line-height:1.5; color:var(--ink)}
+  .step p + p{margin-top:6px; color:var(--muted); font-size:13.5px}
+  .tags{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
+  .tag{font-size:11px; font-weight:700; letter-spacing:.02em; padding:3px 8px; border-radius:4px; text-transform:uppercase}
+  .tag.app{color:var(--navy); background:rgba(234,170,0,.16)}
+  .tag.adm{color:var(--eden); background:#eef4fa; border:1px solid var(--line)}
+
+  .callout{margin-top:24px; background:var(--card); border:1px solid var(--line); border-radius:4px;
+    padding:16px 18px; box-shadow:var(--shadow)}
+  .callout h4{margin:0 0 8px; font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--gold)}
+  .callout p{margin:0 0 8px; font-size:14px; line-height:1.55; color:var(--ink)}
+  .callout p:last-child{margin-bottom:0}
+  .callout b{color:var(--navy)}
+
+  footer{margin-top:40px; padding-top:18px; border-top:1px solid var(--line); font-size:12.5px; color:var(--muted)}
+  footer b{color:var(--navy)}
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">People Ops · Standard Operating Procedure</p>
+  <h1>Org charts — adding &amp; linking people</h1>
+  <p class="lede">How to put someone on a Crew or Maintenance org-chart card, link them to their profile, and open or close positions. The same steps work on every chart.</p>
+  <div class="meta">
+    <span class="chip"><b>Where:</b> Fleet → Crew / Maintenance Org Chart</span>
+    <span class="chip"><b>Access:</b> Admin (Edit roster)</span>
+    <span class="chip"><b>Nothing saves</b> until you click Save changes</span>
+  </div>
+
+  <div class="banner">
+    <p><b>What changed:</b> the link search now finds <b>current employees as well as candidates</b>. You no longer have to create a candidate record first for someone who already works here — pick them and the link is wired up for you.</p>
+  </div>
+
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-kicker">Part 1</span>
+      <h2>Put them on the card</h2>
+      <span class="where">Edit roster</span>
+    </div>
+    <ol class="steps">
+      <li class="step">
+        <h3>Open the chart in edit mode</h3>
+        <p>Go to <b>Fleet → Crew Org Chart</b> or <b>Maintenance Org Chart</b> and click <b>Edit roster</b>. A banner confirms you're editing; <b>Cancel</b> leaves without changing anyone.</p>
+        <div class="tags"><span class="tag adm">Admin only</span></div>
+      </li>
+      <li class="step">
+        <h3>Open the group you want</h3>
+        <p>Click the card (e.g. <b>Parts, Logistics and Base Support</b>). It opens showing each role section, the people in it, and its open positions.</p>
+      </li>
+      <li class="step">
+        <h3>Add the person</h3>
+        <p>In the section's <b>Add name…</b> box, type their name and click <b>Add</b>. Then set their status on the row: <b>On staff</b> for a current employee, <b>Offered</b> for someone with an offer out, <b>Candidate</b> for someone still in the running.</p>
+        <div class="tags"><span class="tag app">In app</span></div>
+      </li>
+    </ol>
+  </section>
+
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-kicker">Part 2</span>
+      <h2>Link them to their profile</h2>
+      <span class="where">the "link" button</span>
+    </div>
+    <ol class="steps">
+      <li class="step">
+        <h3>Click "link" on their row and search their last name</h3>
+        <p>Search by <b>last name</b> — chart names often differ from profile names (the chart may say "Augustin" where the profile says "Auggie"), so a first-name search frequently misses.</p>
+        <p>Results include <b>candidates</b> and <b>current employees</b> (employees are marked <b>on staff</b>). Pick the right person and the row shows <b>linked</b>.</p>
+        <div class="tags"><span class="tag app">In app</span></div>
+      </li>
+      <li class="step">
+        <h3>If they're an employee with no candidate record — nothing extra to do</h3>
+        <p>Picking them quietly creates and links their profile record behind the scenes. You do <b>not</b> need to go make a candidate first, and it won't put them into recruiting.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-kicker">Part 3</span>
+      <h2>Openings, moves, and saving</h2>
+      <span class="where">Edit roster</span>
+    </div>
+    <ol class="steps">
+      <li class="step">
+        <h3>Open or close a position</h3>
+        <p>Use the <b>Open positions</b> +/− counter in each section. Open seats show as the dashed "hiring" slots on the card and feed the <b>Open reqs</b> count.</p>
+      </li>
+      <li class="step">
+        <h3>Move someone to another card or base</h3>
+        <p>Click <b>move</b> on their row and choose the destination. Their link travels with them, so you don't re-link after a move.</p>
+      </li>
+      <li class="step">
+        <h3>Save changes</h3>
+        <p>Click <b>Save changes</b>. Until you do, the banner shows <b>unsaved changes</b> and nothing is written. <b>Reset to source</b> throws away all customisation and returns the chart to its seeded roster — use with care.</p>
+        <div class="tags"><span class="tag adm">Admin only</span></div>
+      </li>
+    </ol>
+  </section>
+
+  <div class="callout">
+    <h4>Worth knowing</h4>
+    <p><b>Search last names.</b> The single most common reason "I can't find them" is searching a first name that differs from the profile.</p>
+    <p><b>Linking is an explicit pick, never a name match.</b> That's deliberate — two people can share a name, and chart names drift from profile names. The chart will never guess.</p>
+    <p><b>Every chart works the same way.</b> Cross-location moves and person-to-profile linking are a standing requirement for the crew chart, the maintenance chart, and any department chart added later.</p>
+  </div>
+
+  <footer>
+    <b>SkyShare Talent-Ops</b> · Org charts SOP · updated Jul 20, 2026 — reflects the link search finding current employees, not just candidates.
+  </footer>
+</div>
