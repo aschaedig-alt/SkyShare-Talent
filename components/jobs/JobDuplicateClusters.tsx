@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import { Loader, Check, ChevronDown } from "lucide-react";
 import type { DuplicateCluster, DuplicateClusterJob } from "@/lib/jobs/duplicate-detection";
+import { formatCalendarDay } from "@/lib/dates/display";
 
 interface JobDuplicateClustersProps {
   initialClusters?: DuplicateCluster[] | null;
@@ -404,7 +405,10 @@ function JobDetails({ job }: { job: DuplicateClusterJob }) {
     ["Recruiter", job.recruiter],
     ["Job Req ID", job.jobReqId],
     ["Source", job.source],
-    ["Opened", job.openedDate ? new Date(job.openedDate).toLocaleDateString() : undefined],
+    // openedDate is a calendar day stored at midnight UTC. Formatting it with no
+    // timezone rendered it in the viewer's zone, which turns midnight UTC into
+    // 6pm the PREVIOUS day — so every "Opened" date here read one day early.
+    ["Opened", job.openedDate ? formatCalendarDay(job.openedDate) : undefined],
     ["Base", job.baseLocation],
     ["Seat", job.pilotSeat],
     ["Category", job.roleCategory],

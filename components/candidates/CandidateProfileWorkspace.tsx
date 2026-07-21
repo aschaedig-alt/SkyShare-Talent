@@ -28,6 +28,7 @@ import { TravelPanel } from "@/components/travel/TravelPanel";
 import type { WidgetInstance } from "@/lib/data/page-layout";
 import type { CandidateProfileData } from "@/lib/data/candidates";
 import type { TravelTripView, TravelerLoyalty } from "@/lib/data/travel";
+import { formatMomentDate, formatMomentDateTime } from "@/lib/dates/display";
 
 type CandidateProfileWorkspaceProps = {
   candidate: CandidateProfileData;
@@ -68,18 +69,16 @@ type CandidateEditForm = {
   paycomPersonId: string | null;
 };
 
+// These are all MOMENTS (created/updated, an interview's start), so they render
+// in the office timezone explicitly. Left to Intl's default they took whatever
+// zone the renderer happened to be in — the browser's on the client, but UTC on
+// the server, which is both inconsistent and wrong for anyone outside Mountain.
 function formatDate(value: string | null) {
-  if (!value) return "Not recorded";
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
+  return value ? formatMomentDate(value) : "Not recorded";
 }
 
 function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  }).format(new Date(value));
+  return formatMomentDateTime(value);
 }
 
 function initials(name: string) {
