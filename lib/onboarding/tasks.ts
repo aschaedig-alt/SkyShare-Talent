@@ -30,8 +30,15 @@ export const ONBOARDING_TASKS: OnboardingTaskDef[] = [
 
   { key: "onboarding_journey", label: "Send “Start Your Onboarding Journey” email via Front", group: "SYSTEMS" },
   { key: "company_gmail", label: "Create a Company Gmail and send password to personal email", group: "SYSTEMS" },
-  { key: "bg_check_start", label: "Start background check in Paycom", group: "SYSTEMS" },
-  { key: "bg_check_complete", label: "Background check complete", group: "SYSTEMS" },
+  // A background check is THREE steps, and only the last two can be automated.
+  // Paycom emails hrotasks@ at each of the two milestones; the first step is a
+  // button in Paycom that nothing tells us about, so it stays a manual tick.
+  //   1. bg_check_start    — you click Run Background Check in Paycom  (MANUAL)
+  //   2. bg_check_info     — Paycom: "Requested Information Completed" (AUTO)
+  //   3. bg_check_complete — Paycom: "Background check is completed"   (AUTO)
+  { key: "bg_check_start", label: "Run background check in Paycom", group: "SYSTEMS" },
+  { key: "bg_check_info", label: "Candidate submitted background check info", group: "SYSTEMS" },
+  { key: "bg_check_complete", label: "Background check complete — clear to hire", group: "SYSTEMS" },
   { key: "paycom_hire", label: "Hire in Paycom (send invitation, complete New Hire Setup)", group: "SYSTEMS" },
   { key: "groups_drive", label: "Add to groups and drive", group: "SYSTEMS" },
   { key: "business_card", label: "Order business card", group: "SYSTEMS" },
@@ -62,6 +69,7 @@ export const MILESTONE_KEYS: Array<{ key: string; short: string }> = [
   { key: "onboarding_journey", short: "Onboarding email sent" },
   { key: "company_gmail", short: "Company Gmail created" },
   { key: "bg_check_start", short: "Background check started" },
+  { key: "bg_check_info", short: "BG info submitted" },
   { key: "bg_check_complete", short: "Background check complete" },
   { key: "paycom_hire", short: "Hired in Paycom" },
   { key: "groups_drive", short: "Added to groups & drive" },
@@ -99,7 +107,10 @@ export const SHEET_LABEL_TO_KEY: Record<string, string> = {
   "send start your onboarding journey email via front": "onboarding_journey",
   "create a company gmail and send password to personal email": "company_gmail",
   "start background check in paycom": "bg_check_start",
+  "run background check in paycom": "bg_check_start",
+  "candidate submitted background check info": "bg_check_info",
   "background check complete": "bg_check_complete",
+  "background check complete — clear to hire": "bg_check_complete",
   "hire in paycom (send invitation, complete new hire setup)": "paycom_hire",
   "add to groups and drive": "groups_drive",
   "email docs to its for pre-employement drug screen": "drug_screen",

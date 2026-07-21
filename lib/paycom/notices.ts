@@ -19,7 +19,7 @@ import type { FrontMessage } from "@/lib/front";
  * guess here would put false compliance state on a person.
  */
 
-export type PaycomNoticeKind = "BG_CHECK_STARTED" | "BG_CHECK_COMPLETE";
+export type PaycomNoticeKind = "BG_INFO_SUBMITTED" | "BG_CHECK_COMPLETE";
 
 type NoticeDef = {
   kind: PaycomNoticeKind;
@@ -31,12 +31,26 @@ type NoticeDef = {
   name: RegExp;
 };
 
-// Add the completion notice here once we have a real sample of it — that is the
-// whole change needed to support it.
+/**
+ * SUBJECT COLLISION — the reason these patterns are as tight as they are.
+ *
+ *   step 2  "Background Check Requested Information Completed"
+ *   step 3  "Background check is completed"
+ *
+ * Both contain "background check" and "completed", so any loose pattern like
+ * /background check.*completed/ matches BOTH — and would start marking people
+ * CLEAR TO HIRE the moment they merely submitted their information. The two
+ * subjects are separated on the words only one of them has: "requested
+ * information" versus "is completed". There is a test for exactly this below the
+ * fold in the scan script, because getting it wrong is a compliance problem, not
+ * a cosmetic one.
+ */
 const NOTICES: NoticeDef[] = [
   {
-    kind: "BG_CHECK_STARTED",
-    taskKey: "bg_check_start",
+    // Step 2 of 3: the candidate filled in their details. The check has STARTED,
+    // it is not finished — the subject's "Completed" refers to the information.
+    kind: "BG_INFO_SUBMITTED",
+    taskKey: "bg_check_info",
     subject: /background\s+check\s+requested\s+information\s+completed/i,
     // Paycom sends TWO body wordings under this one subject:
     //   "TARA WARD has completed the background check."
@@ -46,6 +60,19 @@ const NOTICES: NoticeDef[] = [
     // captures "You have received this email because JONATHAN SOTO" — the second
     // wording has no punctuation to stop it.
     name: /\b([A-Z][A-Z'’\-]+(?:\s+[A-Z][A-Z'’\-]+){1,3})\s+has\s+completed\b/
+  },
+  {
+    // Step 3 of 3: the check itself came back. This is the one that means the
+    // person is clear to hire.
+    kind: "BG_CHECK_COMPLETE",
+    taskKey: "bg_check_complete",
+    subject: /background\s+check\s+is\s+completed/i,
+    // "The background check for TARA WARD has been completed and is ready for
+    // review." The name sits BETWEEN "for" and "has been completed", so the
+    // step-2 pattern (which expects the name immediately before "has completed")
+    // cannot read this one — hence a separate expression rather than a shared,
+    // looser one.
+    name: /\bfor\s+([A-Z][A-Z'’\-]+(?:\s+[A-Z][A-Z'’\-]+){1,3})\s+has\s+been\s+completed\b/
   }
 ];
 
