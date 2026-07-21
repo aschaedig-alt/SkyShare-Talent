@@ -17,7 +17,14 @@ export async function POST(request: Request) {
 
   if ((request.headers.get("content-type") ?? "").includes("application/json")) {
     const payload = (await request.json()) as {
-      files?: Array<{ filename?: string; parser?: string; extractedCharacters?: number; records?: ParsedJobPdfRow[] }>;
+      files?: Array<{
+        filename?: string;
+        parser?: string;
+        extractedCharacters?: number;
+        records?: ParsedJobPdfRow[];
+        /** Why the browser got no rows out of this PDF — see diagnoseJobPdf. */
+        skippedReason?: string | null;
+      }>;
     };
     const files = payload.files ?? [];
     if (!files.length) return NextResponse.json({ message: "No parsed PDF job rows were provided." }, { status: 400 });
@@ -27,7 +34,13 @@ export async function POST(request: Request) {
     let skipped = 0;
     let requirements = 0;
     let warnings = 0;
-    const parsedFiles: Array<{ filename: string; parser: string; rows: number; extractedCharacters: number }> = [];
+    const parsedFiles: Array<{
+      filename: string;
+      parser: string;
+      rows: number;
+      extractedCharacters: number;
+      skippedReason?: string | null;
+    }> = [];
 
     for (const file of files) {
       const records = file.records ?? [];
@@ -35,7 +48,15 @@ export async function POST(request: Request) {
       if (!records.length) {
         skipped += 1;
         warnings += 1;
-        parsedFiles.push({ filename, parser: file.parser ?? "unknown", rows: 0, extractedCharacters: file.extractedCharacters ?? 0 });
+        parsedFiles.push({
+          filename,
+          parser: file.parser ?? "unknown",
+          rows: 0,
+          extractedCharacters: file.extractedCharacters ?? 0,
+          // Carry the browser's explanation through so the UI can say what went
+          // wrong instead of only "skipped 1".
+          skippedReason: file.skippedReason ?? "No job rows could be read from this PDF."
+        });
         continue;
       }
 
@@ -54,9 +75,19 @@ export async function POST(request: Request) {
       parsedFiles.push({ filename, parser: file.parser ?? "browser-pdf-parser", rows: records.length, extractedCharacters: file.extractedCharacters ?? 0 });
     }
 
+    // Don't report "imported 0" as if it were a success — when nothing landed,
+    // lead with that and let the per-file reason below explain why.
+    const imported = created + updated;
+    const message =
+      imported === 0
+        ? files.length === 1
+          ? "Nothing was imported from this PDF."
+          : `Nothing was imported from ${files.length} PDFs.`
+        : `Imported ${imported} PDF job record${imported === 1 ? "" : "s"} and created ${requirements} pilot requirement draft${requirements === 1 ? "" : "s"}.`;
+
     return NextResponse.json({
       ok: true,
-      message: `Imported ${created + updated} PDF job records and created ${requirements} pilot requirement draft${requirements === 1 ? "" : "s"}.`,
+      message,
       created,
       updated,
       skipped,

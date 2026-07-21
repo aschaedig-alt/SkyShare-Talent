@@ -275,3 +275,37 @@ function slugify(value: string) {
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+
+/**
+ * Say, in plain English, why a PDF produced no job rows.
+ *
+ * The import used to report a bare "imported 0, skipped 1", which is true and
+ * useless — it doesn't distinguish "this file has no readable text in it" from
+ * "this file is fine but isn't the layout I know how to read", and those need
+ * completely different things from the person holding the file.
+ *
+ * Returns null when rows WERE found, so callers can use it as the skip reason.
+ */
+export function diagnoseJobPdf(text: string, recordCount: number): string | null {
+  if (recordCount > 0) return null;
+
+  const trimmed = text.trim();
+  const chars = trimmed.length;
+
+  if (chars === 0) {
+    return "No text could be read from this PDF at all, so it is almost certainly a scan or an image export. Re-save it as a text PDF — printing the job posting web page to PDF works — or add the role with New requirement on the Pilot Requirements page.";
+  }
+  // Check the SHAPE before the length. Seeing these markers proves the text layer
+  // read fine, so a short file here is an incomplete posting, not a scan — telling
+  // someone to re-save a perfectly readable PDF would send them down a dead end.
+  if (/About\s+the\s+Role:|Qualifications:|Job Location:/i.test(trimmed)) {
+    return `Read ${chars} characters and this does look like a job posting, but no complete posting could be pulled out of it — the importer needs a job title, a "Job Location:" line under it, and at least a short paragraph of description. If the posting is split awkwardly across pages, the CSV import is more reliable.`;
+  }
+
+  if (chars < 200) {
+    return `Only ${chars} characters of text came out of this PDF, which usually means the pages are images rather than text. Re-save it as a text PDF, or add the role with New requirement on the Pilot Requirements page.`;
+  }
+
+  const firstLine = trimmed.split("\n").find((l) => l.trim().length > 3)?.trim().slice(0, 60) ?? "";
+  return `Read ${chars} characters, but this is not a layout the job importer recognises${firstLine ? ` (it starts "${firstLine}…")` : ""}. It expects a PDF of a posting from the SkyShare careers site — a job title with a "Job Location:" line under it. To add a pilot role, New requirement on the Pilot Requirements page is the direct route.`;
+}

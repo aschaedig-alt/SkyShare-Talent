@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { parseJobPdfText, type ParsedJobPdfRow } from "@/lib/imports/job-pdf-parser";
+import { parseJobPdfText, diagnoseJobPdf, type ParsedJobPdfRow } from "@/lib/imports/job-pdf-parser";
 
 type ImportResult = {
   message?: string;
@@ -11,6 +11,8 @@ type ImportResult = {
   skipped?: number;
   warnings?: number;
   files?: number;
+  /** Per-file outcome; skippedReason explains any PDF that yielded no rows. */
+  parsedFiles?: Array<{ filename: string; rows: number; extractedCharacters: number; skippedReason?: string | null }>;
 };
 
 type PresignedFileUpload = {
@@ -429,6 +431,7 @@ export function JobPdfImportCard() {
           parser: string;
           extractedCharacters: number;
           records: ParsedJobPdfRow[];
+          skippedReason: string | null;
         }> = [];
 
         for (const [index, file] of files.entries()) {
@@ -440,7 +443,10 @@ export function JobPdfImportCard() {
             filename: file.name,
             parser: parsed.parser,
             extractedCharacters: text.length,
-            records: parsed.records
+            records: parsed.records,
+            // Work out WHY there are no rows here, where the extracted text still
+            // exists — the server only ever sees the parsed rows.
+            skippedReason: diagnoseJobPdf(text, parsed.records.length)
           });
         }
 
@@ -495,9 +501,33 @@ export function JobPdfImportCard() {
             </div>
           ) : null}
           {result ? (
-            <div role="status" aria-live="polite" className="rounded border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 p-2 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-              {result.message} Created {result.created ?? result.files ?? 0}, updated {result.updated ?? 0}, skipped {result.skipped ?? 0}.
-            </div>
+            (() => {
+              // "Imported 0, skipped 1" on its own tells you nothing you can act on.
+              // When a PDF produced no rows, show the reason instead of a green tick.
+              const unread = (result.parsedFiles ?? []).filter((f) => f.skippedReason);
+              const nothingLanded = (result.created ?? 0) + (result.updated ?? 0) === 0;
+              return (
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className={
+                    nothingLanded
+                      ? "rounded border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200"
+                      : "rounded border border-emerald-200 bg-emerald-50 p-2 text-xs font-semibold text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300"
+                  }
+                >
+                  <p className="font-semibold">
+                    {result.message}
+                    {nothingLanded ? "" : ` Created ${result.created ?? 0}, updated ${result.updated ?? 0}, skipped ${result.skipped ?? 0}.`}
+                  </p>
+                  {unread.map((f) => (
+                    <p key={f.filename} className="mt-1.5 font-normal leading-5">
+                      <span className="font-semibold">{f.filename}</span> — {f.skippedReason}
+                    </p>
+                  ))}
+                </div>
+              );
+            })()
           ) : null}
           {error ? (
             <div role="alert" className="rounded border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15 p-2 text-xs font-semibold text-red-800 dark:text-red-300">
