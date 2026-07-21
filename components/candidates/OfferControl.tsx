@@ -6,18 +6,23 @@ import { FileSignature, Check } from "lucide-react";
 import { clsx } from "clsx";
 import { OFFER_STATUSES, offerStatusLabel } from "@/lib/offers/constants";
 import { OFFER_STEPS, type OfferApplicationView } from "@/lib/offers/steps";
+import { formatMomentDate, formatCalendarDay } from "@/lib/dates/display";
 
 // The candidate profile passes its full application object (a superset); the
 // onboarding record passes the hire's linked offer built to this same shape.
 type Application = OfferApplicationView;
 
-// Explicit locale + UTC so server and client render the same string.
-function fmtDate(iso: string | null): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
-}
+// Two different kinds of date here, and they are NOT interchangeable.
+//
+// WHEN something happened (sent / signed / declined, and each step's timestamp)
+// is a real moment, so it renders in the office timezone. It used to render in
+// UTC, which meant anything done after ~6pm Mountain displayed as the NEXT day —
+// sign an offer at 6:10pm on the 20th and the app told you the 21st.
+//
+// The START DATE is a calendar day someone picked, stored at midnight UTC, so it
+// must stay in UTC or it reads back as the previous day.
+const fmtMoment = (iso: string | null) => formatMomentDate(iso) || null;
+const fmtDay = (iso: string | null) => formatCalendarDay(iso) || null;
 
 const CHIP: Record<string, string> = {
   NONE: "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400",
@@ -112,10 +117,10 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
   }
 
   const dates = [
-    application.offerSentAt ? `sent ${fmtDate(application.offerSentAt)}` : null,
-    application.offerSignedAt ? `signed ${fmtDate(application.offerSignedAt)}` : null,
-    application.offerDeclinedAt ? `declined ${fmtDate(application.offerDeclinedAt)}` : null,
-    application.offerStartDate ? `starts ${fmtDate(application.offerStartDate)}` : null
+    application.offerSentAt ? `sent ${fmtMoment(application.offerSentAt)}` : null,
+    application.offerSignedAt ? `signed ${fmtMoment(application.offerSignedAt)}` : null,
+    application.offerDeclinedAt ? `declined ${fmtMoment(application.offerDeclinedAt)}` : null,
+    application.offerStartDate ? `starts ${fmtDay(application.offerStartDate)}` : null
   ].filter(Boolean);
 
   return (
@@ -207,7 +212,7 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
                     {done && <Check className="h-2.5 w-2.5" />}
                   </span>
                   <span className={clsx("flex-1", done && "font-semibold")}>{step.label}</span>
-                  {done && <span className="shrink-0 text-[10px] text-brand-grey dark:text-slate-500">{fmtDate(at)}</span>}
+                  {done && <span className="shrink-0 text-[10px] text-brand-grey dark:text-slate-500">{fmtMoment(at)}</span>}
                 </button>
               </li>
             );

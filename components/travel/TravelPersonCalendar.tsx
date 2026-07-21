@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Plane, Building2, Car, Bus, Receipt, Calenda
 import { buildTravelCalendar, spanDays, type TravelEventKind } from "@/lib/travel/schedule";
 import { travelPurposeLabel } from "@/lib/travel/constants";
 import type { TravelTripView } from "@/lib/data/travel";
+import { formatMomentTime } from "@/lib/dates/display";
 
 const KIND_ICON: Record<TravelEventKind, typeof Plane> = {
   FLIGHT: Plane,
@@ -24,8 +25,10 @@ const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const todayKey = () => new Date().toISOString().slice(0, 10);
 const monthLabel = (y: number, m: number) =>
   new Intl.DateTimeFormat("en", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(y, m, 1)));
-const fmtTime = (iso: string) =>
-  new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit", timeZone: "UTC" }).format(new Date(iso));
+// A flight time is a real moment, so it shows in the office timezone. This used
+// to render in UTC, which put every flight six hours out — a 9:37am departure
+// displayed as 3:37.
+const fmtTime = (iso: string) => formatMomentTime(iso);
 
 /**
  * One person's travel on a month grid — when they are away, and where.

@@ -6,14 +6,12 @@ import { clsx } from "clsx";
 import { FileSignature, ArrowRight } from "lucide-react";
 import { offerStatusLabel } from "@/lib/offers/constants";
 import type { OffersBoard, OfferRow } from "@/lib/data/offers";
+import { formatMomentDate, formatCalendarDay } from "@/lib/dates/display";
 
-// Explicit locale + UTC so server and client agree.
-function fmtDate(iso: string | null): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
-}
+// sent/signed/declined are real moments (office timezone); the start date is a
+// chosen calendar day (UTC). See lib/dates/display.ts for why they differ.
+const fmtMoment = (iso: string | null) => formatMomentDate(iso) || null;
+const fmtDay = (iso: string | null) => formatCalendarDay(iso) || null;
 
 const CHIP: Record<string, string> = {
   PLANNED: "bg-brand-sweet/25 text-brand-lea dark:text-slate-100",
@@ -30,10 +28,10 @@ function OfferCard({ row }: { row: OfferRow }) {
   // the cracks, so it gets called out rather than blending into the list.
   const needsOnboarding = row.status === "SIGNED" && !row.hireId;
   const dates = [
-    row.sentAt ? `sent ${fmtDate(row.sentAt)}` : null,
-    row.signedAt ? `signed ${fmtDate(row.signedAt)}` : null,
-    row.declinedAt ? `declined ${fmtDate(row.declinedAt)}` : null,
-    row.startDate ? `starts ${fmtDate(row.startDate)}` : null
+    row.sentAt ? `sent ${fmtMoment(row.sentAt)}` : null,
+    row.signedAt ? `signed ${fmtMoment(row.signedAt)}` : null,
+    row.declinedAt ? `declined ${fmtMoment(row.declinedAt)}` : null,
+    row.startDate ? `starts ${fmtDay(row.startDate)}` : null
   ].filter(Boolean);
 
   return (

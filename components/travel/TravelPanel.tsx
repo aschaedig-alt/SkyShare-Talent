@@ -42,6 +42,7 @@ import {
 import type { ParsedTravel } from "@/lib/extraction/travel-confirmation";
 import { TravelGaps, TravelGapBadge } from "@/components/travel/TravelGaps";
 import { useDialogClose } from "@/lib/hooks/useDialogClose";
+import { formatMomentDate, formatCalendarDayShort } from "@/lib/dates/display";
 
 type Props = {
   subjectType: "newHire" | "candidate";
@@ -87,9 +88,14 @@ function toDateTimeLocal(iso: string | null) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-function fmtDate(iso: string | null) {
-  if (!iso) return null;
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(iso));
+// requestedArrival is a real moment (it carries a time of day) so it reads in the
+// office timezone; orientationDate is a chosen calendar day stored at midnight
+// UTC and must stay in UTC. See lib/dates/display.ts.
+function fmtMoment(iso: string | null) {
+  return formatMomentDate(iso) || null;
+}
+function fmtDay(iso: string | null) {
+  return formatCalendarDayShort(iso) || null;
 }
 
 function tripWithRecomputedTotal(trip: TravelTripView, items: TravelItemView[]): TravelTripView {
@@ -273,7 +279,7 @@ function TripCard({
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const route = [trip.originAirport, trip.destinationAirport].filter(Boolean).join(" → ");
-  const dateSummary = fmtDate(trip.requestedArrival) || fmtDate(trip.orientationDate);
+  const dateSummary = fmtMoment(trip.requestedArrival) || fmtDay(trip.orientationDate);
 
   async function saveField(field: string, value: string) {
     const res = await updateTrip(trip.id, { [field]: value });

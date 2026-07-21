@@ -16,6 +16,7 @@ import { loadTravelerDetail } from "@/app/travel/actions";
 import { TravelerWorkspace, TravelerLoading } from "@/components/travel/TravelerInline";
 import type { TravelHubData, TravelTravelerOption, TravelerDetail } from "@/lib/data/travel";
 import { useDialogClose } from "@/lib/hooks/useDialogClose";
+import { formatMomentDate } from "@/lib/dates/display";
 
 const STATUS_STYLE: Record<string, string> = {
   NEEDED: "bg-brand-gold/15 text-brand-gold border-brand-gold/30",
@@ -24,9 +25,10 @@ const STATUS_STYLE: Record<string, string> = {
   CANCELED: "bg-brand-cloudDancer text-brand-grey border-brand-lea/15 dark:bg-white/5 dark:text-slate-400 dark:border-white/10"
 };
 
+// Trip/segment times carry a real time of day, so the DAY has to be read in the
+// office timezone too — otherwise an evening departure shows as the next day.
 function fmtDate(iso: string | null) {
-  if (!iso) return "—";
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(iso));
+  return formatMomentDate(iso) || "—";
 }
 
 const selectClass =
