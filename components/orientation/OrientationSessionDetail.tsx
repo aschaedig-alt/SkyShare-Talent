@@ -9,6 +9,7 @@ import type { AttendeeView, ConfirmStatus, PrepTaskView, SessionDetail, TravelSt
 import type { EmailTemplateDef } from "@/lib/orientation/defaults";
 import { formatUsd } from "@/lib/travel/constants";
 import { formatDateLong, formatTime, zoneLabel, toMountainDateTimeParts, mountainWallClockToIso } from "@/lib/calendar/format";
+import { formatMomentDateShort } from "@/lib/dates/display";
 
 function fmtShort(iso: string) {
   // Always Mountain Time, regardless of the viewer's / server's zone.
@@ -310,7 +311,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                           >
                             <option value="">Move to…</option>
                             {session.otherSessions.map((o) => (
-                              <option key={o.id} value={o.id}>→ {new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(o.date))}</option>
+                              <option key={o.id} value={o.id}>→ {formatMomentDateShort(o.date)}</option>
                             ))}
                           </select>
                         ) : null}

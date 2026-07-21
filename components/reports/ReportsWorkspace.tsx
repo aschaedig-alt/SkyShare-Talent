@@ -8,6 +8,7 @@ import type { ReportsData } from "@/lib/data/reports";
 import type { UpgradePilot } from "@/lib/data/employee-journey";
 import { formatUsd, travelPurposeLabel, travelStatusLabel } from "@/lib/travel/constants";
 import { ReportShareButton } from "@/components/reports/ReportShareButton";
+import { formatCalendarDay, formatMomentDate } from "@/lib/dates/display";
 
 type ReportsWorkspaceProps = {
   data: ReportsData;
@@ -15,9 +16,14 @@ type ReportsWorkspaceProps = {
   canShare?: boolean;
 };
 
+// Chosen calendar days (start dates, expiries) read in UTC; real moments — an
+// orientation session, a flight's departure — read in Mountain. See
+// lib/dates/display.ts for why the two cannot share one formatter.
 function fmtDate(iso: string | null) {
-  if (!iso) return "—";
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(iso));
+  return formatCalendarDay(iso) || "—";
+}
+function fmtMoment(iso: string | null) {
+  return formatMomentDate(iso) || "—";
 }
 
 // Human span for a day count (upgrade timing).
@@ -233,7 +239,7 @@ function PilotJourney({ steps }: { steps: UpgradePilot["steps"] }) {
           )}
           <span className={clsx("inline-flex flex-col rounded border px-2 py-1 transition", STEP_CHIP[s.kind])}>
             <span className="text-xs font-semibold leading-tight">{s.title}</span>
-            <span className="text-[9px] uppercase tracking-wide opacity-70">{STEP_LABEL[s.kind]} · {fmtDate(s.date)}</span>
+            <span className="text-[9px] uppercase tracking-wide opacity-70">{STEP_LABEL[s.kind]} · {fmtMoment(s.date)}</span>
           </span>
         </Fragment>
       ))}
@@ -762,7 +768,7 @@ function TravelSpend({ travel }: { travel: ReportsData["travelSpend"] }) {
                                   <span className="text-sm font-semibold text-brand-grey dark:text-slate-400">{t.travelerName}</span>
                                 )}
                                 <span className="ml-2 text-xs text-brand-grey dark:text-slate-400">
-                                  {t.route ?? "route TBD"} · {fmtDate(t.startsAt)}
+                                  {t.route ?? "route TBD"} · {fmtMoment(t.startsAt)}
                                 </span>
                               </div>
                               <div className="flex items-center gap-2">

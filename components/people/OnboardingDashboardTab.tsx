@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { clsx } from "clsx";
 import { Check, RotateCcw } from "lucide-react";
 import type { ChartDatum, DrillPerson, OnboardingDashboard, WorklistPerson } from "@/lib/data/onboarding";
+import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
 
 const STATUS_COLOR: Record<string, string> = {
   "In progress": "#b8860b",
@@ -19,8 +20,14 @@ const ALERT_STYLE: Record<string, { row: string; tag: string; label: string }> =
   missing: { row: "bg-brand-gold/10", tag: "text-brand-lea dark:text-slate-100", label: "To do" }
 };
 
+// startDate is a chosen calendar day (UTC); onboardedAt is the moment someone was
+// marked onboarded, so it reads in Mountain — otherwise anyone onboarded in the
+// evening shows tomorrow's date. See lib/dates/display.ts.
 function fmtDate(iso: string) {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(iso));
+  return formatCalendarDayShort(iso);
+}
+function fmtMoment(iso: string) {
+  return formatMomentDateShort(iso);
 }
 
 function MetricCard({
@@ -214,7 +221,7 @@ function WorklistRow({ p, onHide, onRestore }: { p: WorklistPerson; onHide?: () 
         <span className={clsx("block h-full rounded-full", pct === 100 ? "bg-emerald-500" : "bg-brand-gold")} style={{ width: `${Math.max(4, pct)}%` }} />
       </span>
       <span className="w-16 shrink-0 text-right text-xs text-brand-grey dark:text-slate-400">
-        {p.onboardedAt ? `onb ${fmtDate(p.onboardedAt)}` : p.startDate ? fmtDate(p.startDate) : "no date"}
+        {p.onboardedAt ? `onb ${fmtMoment(p.onboardedAt)}` : p.startDate ? fmtDate(p.startDate) : "no date"}
       </span>
       <span className={clsx("w-20 shrink-0 rounded px-2 py-0.5 text-center text-[10px] font-semibold", DRILL_STATUS_STYLE[p.status] ?? "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400")}>{p.status}</span>
       {onRestore && (

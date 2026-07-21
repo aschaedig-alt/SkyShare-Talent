@@ -42,6 +42,13 @@ export function formatMomentDate(value: string | Date | null | undefined): strin
   }).format(d);
 }
 
+/** "Jul 20" — the date this happened, without the year, for dense tables. */
+export function formatMomentDateShort(value: string | Date | null | undefined): string {
+  const d = toDate(value);
+  if (!d) return "";
+  return new Intl.DateTimeFormat("en-US", { timeZone: OFFICE_TZ, month: "short", day: "numeric" }).format(d);
+}
+
 /** "6:10 PM" — the time this happened, as seen from the office. */
 export function formatMomentTime(value: string | Date | null | undefined): string {
   const d = toDate(value);

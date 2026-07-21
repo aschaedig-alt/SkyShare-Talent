@@ -9,9 +9,15 @@ import type { Checkin, EmploymentStatus, GridTaskStatus, PostOnboardHire } from 
 import { MAINTENANCE_TASKS } from "@/lib/onboarding/tasks";
 import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
 import { EmptyState } from "@/components/ui";
+import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
 
+// startDate is a chosen calendar day (UTC); onboardedAt is the moment they were
+// marked onboarded, so it reads in Mountain. See lib/dates/display.ts.
 function fmtDate(iso: string | null) {
-  return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(iso)) : "—";
+  return formatCalendarDayShort(iso) || "—";
+}
+function fmtMoment(iso: string | null) {
+  return formatMomentDateShort(iso) || "—";
 }
 
 const POST_ONBOARD_BULK_ACTIONS: BulkAction[] = [
@@ -183,7 +189,7 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
                 </td>
                 <td className="px-4 py-3 text-brand-grey dark:text-slate-400">{h.department ?? "—"}</td>
                 <td className="px-4 py-3 text-brand-grey dark:text-slate-400">{fmtDate(h.startDate)}</td>
-                <td className="px-4 py-3 text-brand-grey dark:text-slate-400">{fmtDate(h.onboardedAt)}</td>
+                <td className="px-4 py-3 text-brand-grey dark:text-slate-400">{fmtMoment(h.onboardedAt)}</td>
                 <td className="px-4 py-3">
                   <select
                     value={h.employmentStatus}
