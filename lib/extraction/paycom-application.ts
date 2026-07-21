@@ -68,6 +68,39 @@ export function parsePaycomExtract(raw: string): PaycomExtract {
   };
 }
 
+// Deterministic extraction from the SKYSHARE Paycom application template, which
+// carries clearly-labelled fields:
+//   "Application ID ######"  ·  "Email Address …"  ·  "Name Last, First Middle"
+//   ·  "Primary Phone …"
+// This is the PRIMARY path and needs no API key — the LLM below is only a fallback
+// for fields the template regex can't find (a non-standard layout).
+export function extractPaycomRegex(text: string): PaycomExtract {
+  const t = text.replace(/\s+/g, " ");
+  const idRaw = t.match(/Application\s*ID[\s:]*?(\d{4,8})/i)?.[1] ?? "";
+  const email = t.match(/Email\s*Address[\s:]*([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/i)?.[1] ?? null;
+  const phoneRaw = t.match(/Primary\s*Phone[\s:]*(\+?\d[\d()\s.\-]{6,}\d)/i)?.[1] ?? null;
+  // "Name Last, First Middle" — the comma tells it apart from First/Last Name fields.
+  const nameM = t.match(/\bName\s+([A-Z][A-Za-z'’.\-]+),\s*([A-Z][A-Za-z'’.\-]+)/);
+  return {
+    paycomPersonId: /^\d{4,8}$/.test(idRaw) ? idRaw : null,
+    firstName: nameM?.[2] ?? null,
+    lastName: nameM?.[1] ?? null,
+    email,
+    phone: phoneRaw ? phoneRaw.trim() : null
+  };
+}
+
+// Merge two extracts, preferring the first (the deterministic regex) per field.
+export function mergePaycomExtract(primary: PaycomExtract, fallback: PaycomExtract): PaycomExtract {
+  return {
+    paycomPersonId: primary.paycomPersonId ?? fallback.paycomPersonId,
+    firstName: primary.firstName ?? fallback.firstName,
+    lastName: primary.lastName ?? fallback.lastName,
+    email: primary.email ?? fallback.email,
+    phone: primary.phone ?? fallback.phone
+  };
+}
+
 export async function extractPaycomApplication(text: string): Promise<PaycomExtract> {
   if (!process.env.ANTHROPIC_API_KEY) return EMPTY;
   const client = new Anthropic();

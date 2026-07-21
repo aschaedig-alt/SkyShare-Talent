@@ -40,7 +40,10 @@ function isGoogleAuthReady() {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
-  const callbackUrl = params.next || "/command-center";
+  // Land on the app root after sign-in, not a hard-coded page — the "/" route
+  // resolves each user's chosen home page (falling back to Command Center). A
+  // "next" (the page they were bounced from) still wins.
+  const callbackUrl = params.next || "/";
   const authReady = isGoogleAuthReady();
   const title = authReady ? "Sign in to SkyShare Talent" : "Authentication setup required";
 

@@ -4,7 +4,7 @@ import { requireApiPermission } from "@/lib/auth/route-auth";
 import { extractPilotMetrics } from "@/lib/extraction/pilot-metrics";
 import { extractFileText } from "@/lib/files/pdf-text";
 import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
-import { extractPaycomApplication, looksLikePaycomApplication, isPaycomExtractConfigured } from "@/lib/extraction/paycom-application";
+import { extractPaycomRegex, extractPaycomApplication, mergePaycomExtract, looksLikePaycomApplication, isPaycomExtractConfigured } from "@/lib/extraction/paycom-application";
 import { normalizeEmail, normalizePhone } from "@/lib/candidates/normalize";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -94,10 +94,12 @@ export async function POST(_request: Request, context: RouteContext) {
     }
 
     // Paycom application: pull the candidate Paycom person id + any MISSING
-    // identity/contact fields from the application text, and fill only BLANKS —
-    // never overwrite anything already entered. Reuses the doc text extracted above.
+    // identity/contact fields, filling only BLANKS (never overwrites). The Paycom
+    // template is cleanly labelled, so regex handles it WITH NO API KEY; the LLM is
+    // only a fallback for a non-standard layout when a key is configured.
     const paycomFilled: string[] = [];
-    if (isPaycomExtractConfigured()) {
+    let paycomAppFound = false;
+    {
       const cand = await prisma.candidate.findUnique({
         where: { id },
         select: { paycomPersonId: true, firstName: true, lastName: true, primaryEmail: true, primaryPhone: true }
@@ -111,8 +113,18 @@ export async function POST(_request: Request, context: RouteContext) {
       ).find((f) => looksLikePaycomApplication(f.displayFilename ?? f.originalFilename, f.extractedText ?? ""));
 
       if (cand && appFile) {
+        paycomAppFound = true;
         try {
-          const ex = await extractPaycomApplication(appFile.extractedText ?? "");
+          const text = appFile.extractedText ?? "";
+          let ex = extractPaycomRegex(text);
+          // Only reach for the LLM when the template regex missed something.
+          if (isPaycomExtractConfigured() && (!ex.paycomPersonId || !ex.email || !ex.phone || !ex.firstName)) {
+            try {
+              ex = mergePaycomExtract(ex, await extractPaycomApplication(text));
+            } catch (e) {
+              console.error("Paycom LLM fallback failed:", e);
+            }
+          }
           const data: Record<string, string> = {};
           if (ex.paycomPersonId && !cand.paycomPersonId) {
             data.paycomPersonId = ex.paycomPersonId;
@@ -154,6 +166,7 @@ export async function POST(_request: Request, context: RouteContext) {
 
     const parts = [files.length === 0 ? "No document text to scan yet." : `Scanned ${files.length} document(s).`];
     if (paycomFilled.length > 0) parts.push(`Paycom application: filled ${paycomFilled.join(", ")}.`);
+    else if (paycomAppFound) parts.push("Paycom application scanned — nothing new to fill.");
 
     return NextResponse.json({
       ok: true,
