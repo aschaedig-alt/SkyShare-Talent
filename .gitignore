@@ -15,3 +15,6 @@ storage/
 
 # Local run-state from one-off maintenance scripts (undo records, review files)
 scripts/_*_output/
+
+# TypeScript incremental build cache — machine-generated, regenerates on every build
+*.tsbuildinfo
