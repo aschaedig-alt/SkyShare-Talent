@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
+import { PasteableDates } from "@/components/shared/PasteableDates";
 
 // Product typeface. Self-hosted by next/font at build time (no runtime Google
 // dependency); replaces the dated Verdana body font. Exposed as a CSS var so
@@ -29,6 +30,8 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning>
+        {/* Lets every date field in the app take a pasted date. Renders nothing. */}
+        <PasteableDates />
         <AppShell>{children}</AppShell>
       </body>
     </html>

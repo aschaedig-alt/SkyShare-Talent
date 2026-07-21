@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { defaultTaskCreateData } from "@/lib/data/onboarding";
 import { ensureCustomMilestoneTasks } from "@/lib/data/onboarding-milestones";
+import { syncCardStatusFromChecklist } from "@/lib/business-cards/checklist-sync";
 import type { ParsedHireRow } from "@/lib/onboarding/import-hires";
 
 function parseDate(value: unknown): Date | null {
@@ -54,6 +55,9 @@ async function applyTasks(hireId: string, tasks: { key: string; status: string }
       data: { status: t.status, completedAt: t.status === "DONE" ? new Date() : null }
     });
     changed += res.count;
+    // A sheet can carry N/A for "Order business card" too — same rule as toggling
+    // it in the app, so an import can't leave someone stranded as outstanding.
+    if (res.count > 0) await syncCardStatusFromChecklist(hireId, t.key, t.status);
   }
   return changed;
 }

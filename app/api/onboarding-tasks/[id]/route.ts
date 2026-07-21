@@ -5,6 +5,7 @@ import { MAINTENANCE_GROUP } from "@/lib/onboarding/tasks";
 import { maybeArchiveOnCheckinsComplete } from "@/lib/data/onboarding";
 import { isOfferStepKey } from "@/lib/offers/steps";
 import { syncOnboardingTaskToOffer } from "@/lib/offers/onboarding-sync";
+import { syncCardStatusFromChecklist } from "@/lib/business-cards/checklist-sync";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -38,13 +39,18 @@ export async function PATCH(request: Request, context: RouteContext) {
       await syncOnboardingTaskToOffer(updated.newHireId, updated.key, status === "DONE", { id: auth.user.id, email: auth.user.email });
     }
 
+    // N/A on "Order business card" means this person isn't getting cards — move
+    // them out of the Business cards outstanding list instead of leaving them
+    // sitting there. Only touches NEEDED/NOT_NEEDED; see the sync for why.
+    const cardSync = await syncCardStatusFromChecklist(updated.newHireId, updated.key, status);
+
     // Completing a check-in may be the last one — auto-archive if so.
     let archived = false;
     if (updated.group === MAINTENANCE_GROUP && status === "DONE") {
       archived = await maybeArchiveOnCheckinsComplete(updated.newHireId);
     }
 
-    return NextResponse.json({ ok: true, task: { id: updated.id, status: updated.status }, archived });
+    return NextResponse.json({ ok: true, task: { id: updated.id, status: updated.status }, archived, cardSync });
   } catch (error) {
     console.error("Onboarding task update error:", error);
     return NextResponse.json({ message: "Unable to update task." }, { status: 500 });
