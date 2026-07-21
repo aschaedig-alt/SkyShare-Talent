@@ -8,6 +8,7 @@ import { PilotRequirementEditor } from "@/components/pilot-requirements/PilotReq
 import { CandidateTriagePanel } from "@/components/pilot-requirements/CandidateTriagePanel";
 import { FleetPositionEditor } from "@/components/pilot-requirements/FleetPositionEditor";
 import { ManagedAircraftPanel } from "@/components/pilot-requirements/ManagedAircraftPanel";
+import { NewRequirementButton } from "@/components/pilot-requirements/NewRequirementButton";
 import { Button } from "@/components/ui";
 
 type PilotRequirementsWorkspaceProps = {
@@ -334,17 +335,22 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
               gates become editable matching inputs.
             </p>
           </div>
-          <form className="flex w-full gap-2 xl:w-[520px]">
-            <input
-              name="q"
-              defaultValue={query}
-              placeholder="Search aircraft, seat, base, status, hours"
-              className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
-            />
-            <Button type="submit">
-              Search
-            </Button>
-          </form>
+          <div className="flex w-full items-center gap-2 xl:w-[620px]">
+            <form className="flex min-w-0 flex-1 gap-2">
+              <input
+                name="q"
+                defaultValue={query}
+                placeholder="Search aircraft, seat, base, status, hours"
+                className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+              />
+              <Button type="submit">
+                Search
+              </Button>
+            </form>
+            {/* Requirements used to be creatable only by importing a job, which is
+                why people reached for the PDF importer to add a role. */}
+            {data.canEditScoring ? <NewRequirementButton /> : null}
+          </div>
         </div>
       </section>
 

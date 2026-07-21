@@ -1,0 +1,241 @@
+{
+  "writtenAt": "2026-07-21T22:29:35.062Z",
+  "jobs": [
+    {
+      "id": "cmq5lgfdf00d704l7svos7a78",
+      "mergedIntoJobId": "cmq5idxre000104l7f2c1eknm"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "cmq5ie5cr006n04l7lvdsnfp7",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5ie593006m04l7q4xte53p"
+    },
+    {
+      "id": "cmq5ie7rp008u04l7m3w2s7tn",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5ie7o1008t04l70gue6ri9"
+    },
+    {
+      "id": "cmq5iea5w00b104l7uqz4v3cn",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5iea2600b004l7w4mvu3ie"
+    },
+    {
+      "id": "cmq5ie2w6004g04l7q04kjsox",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5ie2sf004f04l7cg0a3waf"
+    },
+    {
+      "id": "cmq5ieeyi00ff04l7j5gj8gvk",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5ieeuw00fe04l7i5cedzl4"
+    },
+    {
+      "id": "cmq5ieh7v00hm04l773c5ugmo",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5ieh4g00hl04l7a55ts4bz"
+    },
+    {
+      "id": "cmq5iejgr00jt04l7lne6hao0",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5iejdc00js04l75efbvp18"
+    },
+    {
+      "id": "cmq5jwmjq002904l492fnz9by",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5jwmfu002804l4z0pouknn"
+    },
+    {
+      "id": "cmq5ieq6y00qe04l75u5hq0qj",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5ieq3j00qd04l7cljnqc91"
+    },
+    {
+      "id": "cmq5jwp59004g04l4l0bs3r6r",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5jwp1e004f04l4mkhc7ull"
+    },
+    {
+      "id": "cmq5iezj600z604l7jygv1wza",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5iezfl00z504l7ihm6qqbz"
+    },
+    {
+      "id": "cmq5if1w7011d04l7pptsbofj",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5if1sl011c04l7oixu9go7"
+    },
+    {
+      "id": "cmq5if6ng015r04l7x83cuqjm",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5if6js015q04l7d2dfkpgh"
+    },
+    {
+      "id": "cmq5jwjw0000204l4kh85hc58",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5jwjrm000104l4lj0p3k4c"
+    },
+    {
+      "id": "cmq5jwrol006n04l4nerefi1a",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5jwrkq006m04l4rlremxrj"
+    },
+    {
+      "id": "cmq5jwu88008u04l4dx37s0d1",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5jwu4e008t04l45p98l80x"
+    },
+    {
+      "id": "cmq5jwwt900b104l4d7xzkq3w",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5jwwpe00b004l481e0s7uy"
+    },
+    {
+      "id": "cmq5jx4el00hm04l44fvlafxy",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5jx4aq00hl04l4smdrpuni"
+    },
+    {
+      "id": "cmq5jx6y200jt04l42t8gn04m",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5jx6u700js04l44z063wy9"
+    },
+    {
+      "id": "cmq5jxc1d00o704l4sswt59jw",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5jxbxj00o604l4f8q1948j"
+    },
+    {
+      "id": "cmq5jxekh00qe04l411dqzf14",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5jxegn00qd04l4m7m90nkp"
+    },
+    {
+      "id": "cmq5jxm5j00wz04l4w0pkfnj0",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5jxm1i00wy04l4ti6dikw4"
+    },
+    {
+      "id": "cmq5jxr7c011d04l421hj5l7v",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5jxr3i011c04l4d0egcqmd"
+    },
+    {
+      "id": "cmq5jxtqa013k04l44sikurxe",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5jxtmf013j04l4mt2hbbb5"
+    },
+    {
+      "id": "cmq5jxw9m015r04l4ib4zoapw",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5jxw5s015q04l4ro9e1ft1"
+    },
+    {
+      "id": "cmq5jxooe00z604l4hsqam1yr",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5jxokk00z504l4fljfet4b"
+    },
+    {
+      "id": "cmq5lg8es006n04l768l2dv9q",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5lg8as006m04l7tx833yd6"
+    },
+    {
+      "id": "cmq5lghti00ff04l7cp9ab8ps",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5lghpx00fe04l7kj5k8l8g"
+    },
+    {
+      "id": "cmq5lg61k004g04l75ujs435z",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5lg5xq004f04l73efk487e"
+    },
+    {
+      "id": "cmq5lgd4k00b104l7zp02226k",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5lgd0z00b004l7gwh1gys2"
+    },
+    {
+      "id": "cmq5lgmqb00jt04l7546qjpyn",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5lgmmq00js04l7qpdknlew"
+    },
+    {
+      "id": "cmq5lgard008u04l70xv5mx8h",
+      "status": "INACTIVE",
+      "sourceJobRecordId": "cmq5lgans008t04l7mx4agi1p"
+    },
+    {
+      "id": "cmq5jx1vf00ff04l4ait9mdas",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5jx1rl00fe04l4h2rqzpxw"
+    },
+    {
+      "id": "cmq5lgke100hm04l7r0906zkb",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5lgkae00hl04l7b2bqjk2t"
+    },
+    {
+      "id": "cmq5idxvy000204l7xcs44w2l",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5idxre000104l7f2c1eknm"
+    },
+    {
+      "id": "cmq5ie0g7002904l7ka1gnkzq",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5ie0cj002804l7m3rp7eww"
+    },
+    {
+      "id": "cmq5ieck500d804l766kzs3rh",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5iecgh00d704l7vj2cbss1"
+    },
+    {
+      "id": "cmq5ielpf00m004l7xky4hwko",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5ielm100lz04l74tnljco5"
+    },
+    {
+      "id": "cmq5jxjma00us04l4em0rkrn9",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5jxjig00ur04l4aytgxjfb"
+    },
+    {
+      "id": "cmq5ieny300o704l75i3o6n3a",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5ienuo00o604l7t0qtk7cg"
+    },
+    {
+      "id": "cmq5jx9i000m004l4x4ib6mr0",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5jx9e500lz04l4gold9g7u"
+    },
+    {
+      "id": "cmq5ieuss00us04l74ao23pl7",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5ieup600ur04l7t9fqqjy1"
+    },
+    {
+      "id": "cmq5jwzce00d804l48awzreeb",
+      "status": "INACTIVE",
+      "sourceJobRecordId": "cmq5jwz8j00d704l40i4hzh5w"
+    },
+    {
+      "id": "cmq5if497013k04l7zxktq0k4",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5if45l013j04l7xj2zbkel"
+    },
+    {
+      "id": "cmq5iex6800wz04l7ifmfnqpi",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5iex2n00wy04l72chyu9k6"
+    },
+    {
+      "id": "cmq5iesfn00sl04l7z8t2zy3q",
+      "status": "ACTIVE",
+      "sourceJobRecordId": "cmq5iesc500sk04l7v2if3j5b"
+    }
+  ]
+}

@@ -1,0 +1,159 @@
+PILOT REQUIREMENT CONSOLIDATION — PROPOSED PLAN (nothing has been written)
+==============================================================================
+
+60 requirements: 58 carry a fleet position slug and collapse
+into 26 real roles. 2 have no slug and are LEFT ALONE (end of file).
+
+KEEP   = stays, and is re-pointed at the surviving canonical job so it shows again.
+RETIRE = status set to HISTORICAL. NOTHING IS DELETED — gates, history and
+         applications stay attached, and apply.ts writes an undo file.
+
+Keeper is chosen by: most gates actually turned on, then furthest through
+review, then most recently updated.
+
+------------------------------------------------------------------------------
+ROLE 560xl-captain   (3 records)
+  KEEP   Citation 560XL Captain                       gates 18/38 APPROVED     apps=0 variants=0  [hidden today]
+  RETIRE Citation 560XL Captain                       gates 15/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Citation 560XL Captain                       gates 13/38 DRAFT        apps=0 variants=0  [hidden today]
+         keeper's job: "Citation 560XL Captain" [MERGED]
+------------------------------------------------------------------------------
+ROLE 560xl-first-officer   (3 records)
+  KEEP   Citation 560XL First Officer                 gates 22/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Citation 560XL First Officer                 gates 15/38 NEEDS_REVIEW apps=0 variants=0  [hidden today]
+  RETIRE Citation 560XL First Officer                 gates 15/38 DRAFT        apps=0 variants=0  [hidden today]
+         keeper's job: "Citation 560XL First Officer" [MERGED]
+------------------------------------------------------------------------------
+ROLE 560xls-plus-captain   (1 record)
+  KEEP   560XLS+ Captain                              gates 13/38 DRAFT        apps=0 variants=1
+         keeper's job: (none)
+------------------------------------------------------------------------------
+ROLE 560xls-plus-first-officer   (1 record)
+  KEEP   560XLS+ First Officer                        gates 15/38 DRAFT        apps=0 variants=1
+         keeper's job: (none)
+------------------------------------------------------------------------------
+ROLE cj-captain   (1 record)
+  KEEP   CJ Captain                                   gates 18/38 DRAFT        apps=0 variants=1  [hidden today]
+         keeper's job: "Citation CE525 Captain" [MERGED]
+------------------------------------------------------------------------------
+ROLE cj2-captain   (5 records)
+  KEEP   Citation CE-525 (CJ2) Captain                gates 21/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Citation CJ2 Captain                         gates 16/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Citation CJ2 Captain                         gates 15/38 NEEDS_REVIEW apps=0 variants=0  [hidden today]
+  RETIRE Citation CJ2 Captain                         gates 15/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Citation CJ2 Captain                         gates 14/38 NEEDS_REVIEW apps=0 variants=0  [hidden today]
+         keeper's job: "Citation CE-525 (CJ2) Captain" [OPEN]
+------------------------------------------------------------------------------
+ROLE cj2-first-officer   (3 records)
+  KEEP   Citation CE-525 First Officer                gates 21/38 NEEDS_REVIEW apps=0 variants=0  [hidden today]
+  RETIRE Citation CJ2 First Officer                   gates 12/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Citation CJ2 First Officer                   gates 12/38 DRAFT        apps=0 variants=0  [hidden today]
+         keeper's job: "Citation CE-525 First Officer" [MERGED]
+------------------------------------------------------------------------------
+ROLE g200-captain   (3 records)
+  KEEP   Gulfstream G200 Captain                      gates 23/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Gulfstream G200 Captain                      gates 15/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Gulfstream G200 Captain                      gates 15/38 DRAFT        apps=0 variants=0  [hidden today]
+         keeper's job: "Gulfstream G200 Captain" [MERGED]
+------------------------------------------------------------------------------
+ROLE g200-first-officer   (3 records)
+  KEEP   Gulfstream G200 First Officer                gates 22/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Gulfstream G200 First Officer                gates 14/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Gulfstream G200 First Officer                gates 14/38 DRAFT        apps=0 variants=0  [hidden today]
+         keeper's job: "Gulfstream G200 First Officer" [MERGED]
+------------------------------------------------------------------------------
+ROLE g450-and-gv-captain   (1 record)
+  KEEP   Gulfstream G450 & GV Captain (Home-Based)    gates 21/38 DRAFT        apps=0 variants=0
+         keeper's job: "Gulfstream G450 & GV Captain (Home-Based)" [RETIRED]
+------------------------------------------------------------------------------
+ROLE g450-and-gv-first-officer   (1 record)
+  KEEP   Gulfstream G450 & GV First Officer (Home-Bas gates 21/38 DRAFT        apps=0 variants=0
+         keeper's job: "Gulfstream G450 & GV First Officer (Home-Based)" [RETIRED]
+------------------------------------------------------------------------------
+ROLE g450-captain   (2 records)
+  KEEP   Gulfstream G450 Captain                      gates 17/38 DRAFT        apps=0 variants=1  [hidden today]
+  RETIRE Gulfstream G450 Captain                      gates 17/38 DRAFT        apps=0 variants=0  [hidden today]
+         keeper's job: "Gulfstream G450 Captain" [MERGED]
+------------------------------------------------------------------------------
+ROLE g450-first-officer   (4 records)
+  KEEP   Gulfstream G450 First Officer                gates 15/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Gulfstream G450 First Officer                gates 14/38 NEEDS_REVIEW apps=0 variants=1  [hidden today]
+  RETIRE Gulfstream G450 First Officer                gates 14/38 NEEDS_REVIEW apps=0 variants=0  [hidden today]
+  RETIRE Gulfstream G450 First Officer                gates  0/0 DRAFT        apps=0 variants=0  [hidden today]
+         keeper's job: "Gulfstream G450 First Officer" [MERGED]
+------------------------------------------------------------------------------
+ROLE g450-lead-captain   (2 records)
+  KEEP   Gulfstream G450 Lead Captain                 gates 17/38 DRAFT        apps=0 variants=1  [hidden today]
+  RETIRE Gulfstream G450 Lead Captain                 gates 17/38 DRAFT        apps=0 variants=0  [hidden today]
+         keeper's job: "Gulfstream G450 Lead Captain" [MERGED]
+------------------------------------------------------------------------------
+ROLE legacy-650-captain   (1 record)
+  KEEP   Legacy 650 Captain                           gates 17/38 DRAFT        apps=0 variants=1
+         keeper's job: (none)
+------------------------------------------------------------------------------
+ROLE legacy-650-lead-captain   (1 record)
+  KEEP   Legacy 650 Lead Captain                      gates 17/38 DRAFT        apps=0 variants=1
+         keeper's job: (none)
+------------------------------------------------------------------------------
+ROLE m2-captain   (1 record)
+  KEEP   M2 Captain                                   gates 16/38 DRAFT        apps=0 variants=1
+         keeper's job: (none)
+------------------------------------------------------------------------------
+ROLE m2-first-officer   (2 records)
+  KEEP   Citation M2 First Officer                    gates 12/38 DRAFT        apps=0 variants=1  [hidden today]
+  RETIRE Citation M2 First Officer                    gates 12/38 DRAFT        apps=0 variants=0  [hidden today]
+         keeper's job: "Citation M2 First Officer" [MERGED]
+------------------------------------------------------------------------------
+ROLE pc-12-captain   (7 records)
+  KEEP   PC-12 Captain                                gates 20/38 NEEDS_REVIEW apps=0 variants=0  [hidden today]
+  RETIRE Pilatus PC-12 Captain                        gates 16/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Pilatus PC-12 Captain                        gates 16/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Pilatus PC-12 Captain                        gates 14/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Pilatus PC-12 Captain                        gates 14/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Pilatus PC-12 Captain                        gates 14/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Pilatus PC-12 Captain                        gates 14/38 DRAFT        apps=0 variants=0  [hidden today]
+         keeper's job: "Pilatus PC-12 Captain" [MERGED]
+------------------------------------------------------------------------------
+ROLE pc-12-first-officer   (3 records)
+  KEEP   Pilatus PC-12 First Officer                  gates 17/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Pilatus PC-12 First Officer                  gates 11/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Pilatus PC-12 First Officer                  gates 11/38 DRAFT        apps=0 variants=0  [hidden today]
+         keeper's job: "Pilatus PC-12 First Officer" [MERGED]
+------------------------------------------------------------------------------
+ROLE pc-12-ng-captain   (4 records)
+  KEEP   Pilatus PC-12 NG Lead Captain                gates 15/38 DRAFT        apps=0 variants=1  [hidden today]
+  RETIRE Pilatus PC-12 NG Lead Captain                gates 15/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Pilatus PC-12 NG Lead Captain                gates 15/38 DRAFT        apps=0 variants=0  [hidden today]
+  RETIRE Pilatus PC-12 NG Lead Captain                gates 14/38 DRAFT        apps=0 variants=0  [hidden today]
+         keeper's job: "Pilatus PC-12 NG Lead Captain" [MERGED]
+------------------------------------------------------------------------------
+ROLE pc-12-ngx-captain   (2 records)
+  KEEP   PC-12 NGX Lead Captain                       gates 15/38 DRAFT        apps=0 variants=1  [hidden today]
+  RETIRE PC-12 NGX Lead Captain                       gates 15/38 DRAFT        apps=0 variants=0  [hidden today]
+         keeper's job: "PC-12 NGX Lead Captain" [MERGED]
+------------------------------------------------------------------------------
+ROLE phenom-100-captain   (1 record)
+  KEEP   Phenom 100 Captain                           gates 16/38 DRAFT        apps=0 variants=1
+         keeper's job: (none)
+------------------------------------------------------------------------------
+ROLE phenom-100-first-officer   (1 record)
+  KEEP   Phenom 100 First Officer                     gates 12/38 DRAFT        apps=0 variants=1
+         keeper's job: (none)
+------------------------------------------------------------------------------
+ROLE phenom-300-captain   (1 record)
+  KEEP   Phenom 300 Captain                           gates 16/38 DRAFT        apps=0 variants=1
+         keeper's job: (none)
+------------------------------------------------------------------------------
+ROLE phenom-300-first-officer   (1 record)
+  KEEP   Phenom 300 First Officer                     gates 12/38 DRAFT        apps=0 variants=1
+         keeper's job: (none)
+
+==============================================================================
+LEFT ALONE — no fleet position slug, so the app cannot say which role these are.
+Neither is touched by apply.ts. Both need a human decision:
+  Citation CE525 Captain                       gates 18/38 status=ACTIVE roleCategory=Pilot
+  G450 Aircraft Maintenance Technician         gates 10/38 status=ACTIVE roleCategory=Pilot
+
+==============================================================================
+SUMMARY: keep 26, retire 32, delete 0, leave alone 2.
+15 currently-hidden keepers become visible again.

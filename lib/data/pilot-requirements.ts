@@ -244,16 +244,25 @@ function groupAllGates(gates: RequirementGateView[]) {
 }
 
 export async function getPilotRequirementsData(query = "", selectedId?: string): Promise<PilotRequirementsData> {
-  // Hide requirements whose source job was merged away as a duplicate. Requirements
-  // with no source job stay visible. This mirrors the deduped Jobs list and self-heals:
-  // unmerging the source job brings its requirement back automatically.
-  const hideMergedSourceJob = {
-    NOT: { sourceJobRecord: { mergedIntoJobId: { not: null } } }
+  // Show the requirements that are CURRENT. Retired ones keep their gates, history
+  // and applications — they are simply out of the working list.
+  //
+  // This replaces an older rule that hid a requirement whenever its source JOB had
+  // been merged away as a duplicate. That rule quietly removed 48 of 60
+  // requirements — every core fleet seat — because de-duplicating jobs
+  // de-duplicated requirements as a side effect, and the merge never re-pointed
+  // them at the surviving job. Worse, it was invisible: nothing on screen said why
+  // a role had disappeared, and there was no way to bring one back.
+  //
+  // Visibility now depends on the requirement's OWN status, which a person can see
+  // in the editor and change.
+  const onlyCurrent = {
+    status: { in: ["ACTIVE", "INACTIVE", "EVERGREEN"] }
   };
 
   const [rows, total, active, needsReview, catalogItems, scannedCount] = await Promise.all([
     prisma.pilotRequirement.findMany({
-      where: hideMergedSourceJob,
+      where: onlyCurrent,
       orderBy: [{ status: "asc" }, { title: "asc" }],
       include: {
         sourceJobRecord: {
@@ -270,9 +279,9 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
         }
       }
     }),
-    prisma.pilotRequirement.count({ where: hideMergedSourceJob }),
-    prisma.pilotRequirement.count({ where: { ...hideMergedSourceJob, status: "ACTIVE" } }),
-    prisma.pilotRequirement.count({ where: { ...hideMergedSourceJob, reviewStatus: { not: "APPROVED" } } }),
+    prisma.pilotRequirement.count({ where: onlyCurrent }),
+    prisma.pilotRequirement.count({ where: { ...onlyCurrent, status: "ACTIVE" } }),
+    prisma.pilotRequirement.count({ where: { ...onlyCurrent, reviewStatus: { not: "APPROVED" } } }),
     prisma.requirementCatalogItem.count({ where: { archivedAt: null } }),
     prisma.candidate.count({ where: { status: "ACTIVE" } })
   ]);
