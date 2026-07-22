@@ -54,10 +54,52 @@ export async function addTags(
   conversationId: string,
   tagIds: string[]
 ): Promise<void> {
+  if (tagIds.length === 0) return;
   await frontFetch(`/conversations/${conversationId}/tags`, {
     method: "POST",
     body: JSON.stringify({ tag_ids: tagIds }),
   });
+}
+
+export type FrontTag = { id: string; name: string };
+
+/**
+ * Every tag in the account. Cached for the life of the process — tags are
+ * created by hand and effectively never change, and this is called once per
+ * message otherwise.
+ */
+let tagCache: FrontTag[] | null = null;
+
+export async function listTags(force = false): Promise<FrontTag[]> {
+  if (tagCache && !force) return tagCache;
+  const page = (await frontFetch("/tags")) as { _results?: FrontTag[] };
+  tagCache = (page._results ?? []).map((t) => ({ id: t.id, name: t.name }));
+  return tagCache;
+}
+
+/**
+ * Turn tag NAMES into ids.
+ *
+ * Name-based on purpose: it means someone can create a tag in Front and have the
+ * automation start using it without anyone copying an opaque id into the code.
+ * Matching is case-insensitive and trims, because a tag typed by hand rarely
+ * matches a string literal exactly.
+ *
+ * Names with no matching tag come back in `missing` rather than throwing — a tag
+ * that has not been created yet must never cost us the checklist update, which is
+ * the part that actually matters.
+ */
+export async function resolveTagIds(names: string[]): Promise<{ ids: string[]; missing: string[] }> {
+  const tags = await listTags();
+  const byName = new Map(tags.map((t) => [t.name.trim().toLowerCase(), t.id]));
+  const ids: string[] = [];
+  const missing: string[] = [];
+  for (const name of names) {
+    const id = byName.get(name.trim().toLowerCase());
+    if (id) ids.push(id);
+    else missing.push(name);
+  }
+  return { ids, missing };
 }
 
 /** Leave an internal note on a thread (audit trail of what the automation did). */

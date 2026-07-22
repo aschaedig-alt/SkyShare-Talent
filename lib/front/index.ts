@@ -26,6 +26,8 @@ export {
   iterateConversations,
   getMessages,
   addTags,
+  listTags,
+  resolveTagIds,
   addComment,
   downloadAttachment,
   type FrontConversation,

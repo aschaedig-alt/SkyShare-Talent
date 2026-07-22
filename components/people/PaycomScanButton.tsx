@@ -30,6 +30,8 @@ type ScanResponse = {
   noticesFound: number;
   ticked: number;
   results: ScanRow[];
+  /** Tag names it wanted to apply in Front but couldn't find. */
+  missingTags?: string[];
 };
 
 export function PaycomScanButton() {
@@ -142,6 +144,17 @@ export function PaycomScanButton() {
                     {d}
                   </p>
                 ))}
+              </div>
+            )}
+
+            {result.missingTags && result.missingTags.length > 0 && (
+              <div className="mt-3 rounded border border-brand-lea/10 p-3 dark:border-white/10">
+                <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">Tag not in Front yet</p>
+                <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
+                  Threads get tagged so you can search for them in Front. Create a tag with this exact name and it starts
+                  being used — nothing else to set up.
+                </p>
+                <p className="mt-1 font-mono text-sm text-brand-lea dark:text-slate-100">{result.missingTags.join(", ")}</p>
               </div>
             )}
 

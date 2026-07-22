@@ -1,4 +1,4 @@
-import { iterateConversations, getMessages, addComment } from "@/lib/front";
+import { iterateConversations, getMessages, addComment, addTags, resolveTagIds } from "@/lib/front";
 import { processPaycomMessage, senderEmail, type PaycomNoticeResult } from "@/lib/paycom/notices";
 
 /**
@@ -8,6 +8,29 @@ import { processPaycomMessage, senderEmail, type PaycomNoticeResult } from "@/li
  * behaviour: the manual endpoint, the nightly cron, and (once Front's admin sets
  * up a rule) a webhook. Only the doorbell differs — the logic must not.
  */
+
+/**
+ * Front tags applied to a thread once it has been handled, so the work is
+ * searchable in Front rather than only visible as an internal comment.
+ *
+ * Matched by NAME, case-insensitively — create a tag in Front with one of these
+ * names and it starts being used; delete it and it silently stops. A name with no
+ * matching tag is reported but never fails the scan: the checklist update is the
+ * part that matters, and a missing label must not cost us it.
+ *
+ * "submitted background check" already existed in the account and means exactly
+ * what step 2 means, so it is reused rather than duplicated.
+ */
+export const TAGS = {
+  /** On every thread the automation acted on — one search shows all of its work. */
+  automated: "[Automated]",
+  /** Step 2: the candidate filled in their details. */
+  infoSubmitted: "submitted background check",
+  /** Step 3: the check came back clear. */
+  checkComplete: "background check complete",
+  /** Seen but NOT actioned — an unknown name, or wording we could not read. */
+  needsReview: "talent-ops needs review"
+} as const;
 
 export const DEFAULT_QUERY = "from:employmentscreening@paycomonline.com";
 export const DEFAULT_MAX_CONVERSATIONS = 40;
@@ -25,6 +48,8 @@ export type ScanReport = {
   results: ScanRow[];
   /** Only when asked for: what the Front search really returned. */
   sample?: Array<{ subject: string; from: string; inbound: boolean }>;
+  /** Tag names the scan wanted to apply but could not find in Front. */
+  missingTags?: string[];
 };
 
 export type ScanOptions = {
@@ -48,6 +73,9 @@ export async function scanPaycomInbox(opts: ScanOptions = {}): Promise<ScanRepor
   const maxConversations = opts.maxConversations ?? DEFAULT_MAX_CONVERSATIONS;
 
   const results: ScanRow[] = [];
+  // Tag names we wanted but that do not exist in Front yet — reported so a
+  // missing tag is visible rather than silently doing nothing.
+  const missingTags: string[] = [];
   const sample: ScanReport["sample"] = [];
   let conversationsScanned = 0;
 
@@ -86,6 +114,31 @@ export async function scanPaycomInbox(opts: ScanOptions = {}): Promise<ScanRepor
           /* the checklist is already updated — a failed note must not fail the scan */
         }
       }
+
+      // Tag the thread so this is searchable in Front, not just readable as a
+      // comment on one conversation. Only on a real run: a dry run must stay
+      // read-only, tags included.
+      if (apply) {
+        const wanted: string[] = [];
+        if (result.outcome === "ticked") {
+          wanted.push(TAGS.automated);
+          if (result.kind === "BG_INFO_SUBMITTED") wanted.push(TAGS.infoSubmitted);
+          if (result.kind === "BG_CHECK_COMPLETE") wanted.push(TAGS.checkComplete);
+        } else if (result.outcome === "no-match" || result.outcome === "ambiguous-match" || result.outcome === "no-name-found" || result.outcome === "unrecognised-subject") {
+          // Seen, understood as Paycom mail, but nothing was ticked. Tagging these
+          // turns Front itself into the follow-up list.
+          wanted.push(TAGS.needsReview);
+        }
+        if (wanted.length) {
+          try {
+            const { ids, missing } = await resolveTagIds(wanted);
+            missingTags.push(...missing);
+            await addTags(conversation.id, ids);
+          } catch {
+            /* a tag is a label, not the work — never let it fail the scan */
+          }
+        }
+      }
     }
   }
 
@@ -101,6 +154,7 @@ export async function scanPaycomInbox(opts: ScanOptions = {}): Promise<ScanRepor
     ticked: results.filter((r) => r.outcome === "ticked").length,
     tally,
     results,
+    ...(missingTags.length ? { missingTags: [...new Set(missingTags)] } : {}),
     ...(opts.debug ? { sample } : {})
   };
 }
