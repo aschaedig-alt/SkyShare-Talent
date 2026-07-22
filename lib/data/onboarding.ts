@@ -17,7 +17,12 @@ const DAY = 86_400_000;
 
 export type HireStage = "ACTIVE" | "POST_ONBOARD" | "ARCHIVED";
 export type HireStatus = "Ready" | "In progress" | "Due soon" | "Overdue" | "Onboarded" | "Archived" | "Canceled";
-export type AlertLevel = "blocked" | "urgent" | "missing";
+// "ready" is the one POSITIVE level: nothing is wrong, someone is just waiting on
+// us to act. Every other level marks a problem.
+/** Days a cleared-but-unhired candidate may sit before the alert turns red. */
+const READY_TO_HIRE_ESCALATE_DAYS = 3;
+
+export type AlertLevel = "blocked" | "urgent" | "missing" | "ready";
 
 export type TaskView = {
   id: string;
@@ -157,7 +162,8 @@ type HireWithTasks = {
   businessCardTitle: string | null;
   travelStatus: string | null;
   notes: string | null;
-  tasks: { id: string; key: string; label: string; group: string; order: number; status: string }[];
+  // completedAt drives "how long has this been sitting" — see the ready-to-hire alert.
+  tasks: { id: string; key: string; label: string; group: string; order: number; status: string; completedAt: Date | null }[];
 };
 
 function iso(d: Date | null): string | null {
@@ -266,15 +272,40 @@ function buildDashboard(
     const signed = hire.tasks.find((t) => t.key === "candidate_signed");
     const startMs = row.startDate ? new Date(row.startDate).getTime() : null;
     const soon = startMs !== null && startMs - now <= 14 * DAY;
+
+    // Cleared by the background check but not yet hired in Paycom. This is the one
+    // point in the process where a person is waiting on US and nothing on the board
+    // said so — the check comes back, the box gets ticked, and then it just sits.
+    // Self-clearing: tick "Hire in Paycom" and the row disappears on its own.
+    const bgCleared = hire.tasks.find((t) => t.key === "bg_check_complete");
+    const paycomHire = hire.tasks.find((t) => t.key === "paycom_hire");
+    const waitingToHire = bgCleared?.status === "DONE" && paycomHire?.status === "TODO";
+    const clearedDays =
+      waitingToHire && bgCleared?.completedAt
+        ? Math.floor((now - new Date(bgCleared.completedAt).getTime()) / DAY)
+        : 0;
+
     if (row.status === "Overdue") {
       alerts.push({ id: hire.id, name: hire.name, level: "blocked", text: `start date passed, ${row.doneCount} of ${row.applicableCount} tasks done` });
+    } else if (waitingToHire) {
+      alerts.push({
+        id: hire.id,
+        name: hire.name,
+        // Good news turns into a problem if nobody acts on it, so this goes red
+        // once it has been sitting. READY_TO_HIRE_ESCALATE_DAYS is the dial.
+        level: clearedDays >= READY_TO_HIRE_ESCALATE_DAYS ? "urgent" : "ready",
+        text:
+          clearedDays >= 1
+            ? `background check cleared ${clearedDays}d ago — hire in Paycom`
+            : "background check cleared — hire in Paycom"
+      });
     } else if (signed && signed.status === "TODO") {
       alerts.push({ id: hire.id, name: hire.name, level: soon ? "urgent" : "missing", text: "offer letter not signed yet" });
     } else if (row.nextAction && (row.status === "Due soon" || row.applicableCount - row.doneCount > 0)) {
       alerts.push({ id: hire.id, name: hire.name, level: row.status === "Due soon" ? "urgent" : "missing", text: `${row.nextAction.toLowerCase()}` });
     }
   }
-  const severity: Record<AlertLevel, number> = { blocked: 0, urgent: 1, missing: 2 };
+  const severity: Record<AlertLevel, number> = { blocked: 0, urgent: 1, ready: 2, missing: 3 };
   alerts.sort((a, b) => severity[a.level] - severity[b.level]);
 
   const upcomingStarts: UpcomingStart[] = rows
@@ -503,7 +534,7 @@ const hireSelect = {
   notes: true,
   pdpGraduate: true,
   employmentStints: { select: { startDate: true, endDate: true } },
-  tasks: { select: { id: true, key: true, label: true, group: true, order: true, status: true } }
+  tasks: { select: { id: true, key: true, label: true, group: true, order: true, status: true, completedAt: true } }
 } as const;
 
 export async function getOnboardingWorkspaceData(stage: HireStage = "ACTIVE"): Promise<OnboardingWorkspaceData> {

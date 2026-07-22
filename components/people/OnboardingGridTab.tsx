@@ -7,6 +7,7 @@ import { clsx } from "clsx";
 import { CircleCheck, Archive, CalendarClock, Building2, Trash2, Settings2 } from "lucide-react";
 import type { GridHire, GridTaskStatus, HireStatus } from "@/lib/data/onboarding";
 import type { GridChecklistGroup } from "@/lib/data/onboarding-grid-config";
+import { CUSTOM_GROUP as CUSTOM_GROUP_KEY } from "@/lib/onboarding/tasks";
 import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
 import { EmptyState } from "@/components/ui";
 
@@ -68,6 +69,8 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
   // Manage-tasks mode: rename / hide built-ins, add / rename / remove customs.
   const [managing, setManaging] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  // Draft names for the GROUP headings, same pattern as the per-task drafts.
+  const [groupDrafts, setGroupDrafts] = useState<Record<string, string>>({});
   const [newTask, setNewTask] = useState("");
   const [mBusy, setMBusy] = useState(false);
   const [mErr, setMErr] = useState<string | null>(null);
@@ -77,6 +80,7 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
   }, [initial]);
   useEffect(() => {
     setDrafts(Object.fromEntries(checklist.flatMap((g) => g.tasks.map((t) => [t.key, t.label]))));
+    setGroupDrafts(Object.fromEntries(checklist.map((g) => [g.key, g.label])));
   }, [checklist]);
 
   const allSelected = hires.length > 0 && selected.size === hires.length;
@@ -158,6 +162,10 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
     t.custom
       ? manageCall("/api/onboarding-milestones", "PATCH", { key: t.key, label: drafts[t.key] })
       : manageCall("/api/onboarding-grid", "PATCH", { key: t.key, label: drafts[t.key] });
+  // Renames only the heading. Tasks stay filed against the same group key, so
+  // nothing that looks a task up by key is affected.
+  const renameGroupHeading = (groupKey: string) =>
+    manageCall("/api/onboarding-grid", "PATCH", { groupKey, label: groupDrafts[groupKey] });
   const hideTask = (key: string, hidden: boolean) => manageCall("/api/onboarding-grid", "PATCH", { key, hidden });
   const removeCustom = (key: string) => manageCall(`/api/onboarding-milestones?key=${encodeURIComponent(key)}`, "DELETE");
   const addTask = async () => {
@@ -208,7 +216,31 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
           <div className="mt-3 space-y-4">
             {checklist.map((g) => (
               <div key={g.key}>
-                <p className="text-[10px] font-bold uppercase tracking-wide text-brand-gold">{g.label}</p>
+                {/* The group heading is editable too. Only the display name changes —
+                    tasks stay filed against the same underlying group, so nothing
+                    that looks a task up by key is affected by a rename. */}
+                {g.key === CUSTOM_GROUP_KEY ? (
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-brand-gold">{g.label}</p>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={groupDrafts[g.key] ?? g.label}
+                      onChange={(e) => setGroupDrafts({ ...groupDrafts, [g.key]: e.target.value })}
+                      onKeyDown={(e) => e.key === "Enter" && (groupDrafts[g.key] ?? g.label) !== g.label && renameGroupHeading(g.key)}
+                      aria-label={`Rename the ${g.label} group`}
+                      className="min-w-0 flex-1 rounded border border-brand-lea/15 bg-transparent px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-brand-gold dark:border-white/10"
+                    />
+                    {(groupDrafts[g.key] ?? g.label) !== g.label && (
+                      <button
+                        onClick={() => renameGroupHeading(g.key)}
+                        disabled={mBusy}
+                        className="rounded bg-brand-lea px-3 py-1 text-xs font-semibold text-white transition hover:bg-brand-eden disabled:opacity-50 dark:bg-brand-sweet dark:text-brand-lea"
+                      >
+                        Save name
+                      </button>
+                    )}
+                  </div>
+                )}
                 <div className="mt-1.5 space-y-1.5">
                   {g.tasks.map((t) => {
                     const dirty = (drafts[t.key] ?? t.label) !== t.label;

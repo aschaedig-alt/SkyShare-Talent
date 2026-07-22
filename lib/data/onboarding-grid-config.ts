@@ -11,19 +11,22 @@ const KEY = "onboarding-grid-overrides";
 
 const BUILTIN_KEYS = new Set(ONBOARDING_TASKS.map((t) => t.key));
 
-type Overrides = { overrides: Record<string, string>; hidden: string[] };
+// `groups` renames a GROUP heading (Offer / Pilot documents / ...). Kept beside
+// the per-task overrides in the same setting so there is one place to look.
+type Overrides = { overrides: Record<string, string>; hidden: string[]; groups: Record<string, string> };
 
 async function read(): Promise<Overrides> {
   const row = await prisma.workspaceSetting.findFirst({ where: { scope: SCOPE, key: KEY }, select: { valueJson: true } });
-  if (!row?.valueJson) return { overrides: {}, hidden: [] };
+  if (!row?.valueJson) return { overrides: {}, hidden: [], groups: {} };
   try {
-    const p = JSON.parse(row.valueJson) as { overrides?: Record<string, string>; hidden?: string[] };
+    const p = JSON.parse(row.valueJson) as { overrides?: Record<string, string>; hidden?: string[]; groups?: Record<string, string> };
     return {
       overrides: p.overrides && typeof p.overrides === "object" ? p.overrides : {},
-      hidden: Array.isArray(p.hidden) ? p.hidden.filter((x): x is string => typeof x === "string") : []
+      hidden: Array.isArray(p.hidden) ? p.hidden.filter((x): x is string => typeof x === "string") : [],
+      groups: p.groups && typeof p.groups === "object" ? p.groups : {}
     };
   } catch {
-    return { overrides: {}, hidden: [] };
+    return { overrides: {}, hidden: [], groups: {} };
   }
 }
 
@@ -47,7 +50,7 @@ export async function getGridChecklist(): Promise<GridChecklistGroup[]> {
   const hidden = new Set(ov.hidden);
   const groups: GridChecklistGroup[] = ONBOARDING_GROUPS.map((g) => ({
     key: g.key,
-    label: g.label,
+    label: ov.groups[g.key] ?? g.label,
     tasks: ONBOARDING_TASKS.filter((t) => t.group === g.key).map((t) => ({
       key: t.key,
       label: ov.overrides[t.key] ?? t.label,
@@ -77,6 +80,28 @@ export async function renameBuiltinTask(key: string, label: string): Promise<voi
   await write(o);
   // Sync the per-hire task label so the detail page matches the grid.
   await prisma.onboardingTask.updateMany({ where: { key }, data: { label: trimmed } });
+}
+
+/**
+ * Rename a checklist GROUP heading — "Pilot documents", "Onboarding & systems".
+ *
+ * Only the display name changes. The group KEY stays fixed, because tasks are
+ * filed against it and the Paycom/offer handlers look tasks up by key; renaming
+ * the heading must never re-file anything. Passing an empty label restores the
+ * built-in name rather than blanking the heading.
+ */
+export async function renameGroup(groupKey: string, label: string): Promise<void> {
+  if (!ONBOARDING_GROUPS.some((g) => g.key === groupKey)) throw new Error("Not a checklist group.");
+  const trimmed = label.trim().slice(0, 60);
+  const o = await read();
+  if (trimmed) o.groups[groupKey] = trimmed;
+  else delete o.groups[groupKey];
+  await write(o);
+  // The group is denormalised onto each hire's task rows, so bring those with it.
+  const keys = ONBOARDING_TASKS.filter((t) => t.group === groupKey).map((t) => t.key);
+  if (keys.length) {
+    await prisma.onboardingTask.updateMany({ where: { key: { in: keys } }, data: { group: groupKey } });
+  }
 }
 
 export async function setBuiltinHidden(key: string, hidden: boolean): Promise<void> {

@@ -17,7 +17,9 @@ const STATUS_COLOR: Record<string, string> = {
 const ALERT_STYLE: Record<string, { row: string; tag: string; label: string }> = {
   blocked: { row: "bg-red-50 dark:bg-red-500/15", tag: "text-red-700 dark:text-red-300", label: "Overdue" },
   urgent: { row: "bg-red-50 dark:bg-red-500/15", tag: "text-red-700 dark:text-red-300", label: "Urgent" },
-  missing: { row: "bg-brand-gold/10", tag: "text-brand-lea dark:text-slate-100", label: "To do" }
+  missing: { row: "bg-brand-gold/10", tag: "text-brand-lea dark:text-slate-100", label: "To do" },
+  // The only positive level: nothing is wrong, someone is waiting on us to act.
+  ready: { row: "bg-emerald-50 dark:bg-emerald-500/15", tag: "text-emerald-700 dark:text-emerald-300", label: "Ready" }
 };
 
 // startDate is a chosen calendar day (UTC); onboardedAt is the moment someone was
