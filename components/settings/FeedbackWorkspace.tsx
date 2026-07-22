@@ -118,6 +118,12 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
     (i) => (typeFilter === "ALL" || i.type === typeFilter) && (statusFilter === "ALL" || i.status === statusFilter)
   );
 
+  // Done work sinks to the bottom and fades, so the top of the page is only
+  // the things still needing attention. Both halves keep the newest-first
+  // order they arrived in.
+  const active = filtered.filter((i) => i.status !== "DONE");
+  const done = filtered.filter((i) => i.status === "DONE");
+
   const counts = {
     total: items.length,
     new: items.filter((i) => i.status === "NEW").length,
@@ -182,115 +188,140 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map((item) => {
-            const meta = TYPE_META[item.type] ?? TYPE_META.IDEA;
-            const Icon = meta.icon;
-            return (
-              <div key={item.id} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className={clsx("inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold", meta.chip)}>
-                      <Icon className="h-3 w-3" />
-                      {meta.label}
-                    </span>
-                    <span className={clsx("rounded px-2 py-0.5 text-[11px] font-semibold", STATUS_CHIP[item.status])}>
-                      {item.status}
-                    </span>
-                  </div>
-                  <span className="text-xs text-brand-grey dark:text-slate-400">{formatDate(item.createdAt)}</span>
+          {active.map((item) => renderItem(item))}
+
+          {done.length > 0 && (
+            <>
+              {/* Divider only earns its place when there is something above it. */}
+              {active.length > 0 && (
+                <div className="flex items-center gap-3 pt-4">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">
+                    Done · {done.length}
+                  </span>
+                  <span className="h-px flex-1 bg-brand-lea/10 dark:bg-white/10" />
                 </div>
-
-                <p className="mt-2 whitespace-pre-wrap text-sm text-brand-black/85 dark:text-slate-300">{item.message}</p>
-
-                {/* The screenshot, if one was attached. Served through an
-                    admin-gated route (never a public URL) because these routinely
-                    contain candidate PII. Click opens it full size. */}
-                {item.imageKey && (
-                  <a
-                    href={`/api/feedback/${item.id}/image`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-2 block w-fit rounded border border-brand-lea/15 p-1 transition hover:shadow-glow dark:border-white/10"
-                    title={item.imageName ?? "Open the full screenshot"}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element -- authenticated same-origin route, not an optimizable asset */}
-                    <img
-                      src={`/api/feedback/${item.id}/image`}
-                      alt={item.imageName ?? "Screenshot attached to this feedback"}
-                      className="max-h-48 rounded object-contain"
-                    />
-                  </a>
-                )}
-
-                {/* Auto-captured context — the full URL (with its query string),
-                    the screen it happened on, and anything that blew up. */}
-                {(() => {
-                  const ctx = parseContext(item.contextJson);
-                  if (!ctx) return null;
-                  const chips = [
-                    ctx.viewport ? `${ctx.viewport}${ctx.dpr && ctx.dpr !== 1 ? ` @${ctx.dpr}x` : ""}` : null,
-                    ctx.theme ? `${ctx.theme} mode` : null,
-                    browserLabel(ctx.userAgent)
-                  ].filter((c): c is string => Boolean(c));
-                  return (
-                    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-brand-grey dark:text-slate-400">
-                      {ctx.url && (
-                        <a
-                          href={ctx.url}
-                          title={ctx.url}
-                          className="rounded bg-brand-cloudDancer/60 px-1.5 py-0.5 font-semibold text-brand-eden hover:underline dark:bg-white/5 dark:text-slate-300"
-                        >
-                          {shortUrl(ctx.url)}
-                        </a>
-                      )}
-                      {chips.map((c) => (
-                        <span key={c} className="rounded bg-brand-cloudDancer/60 px-1.5 py-0.5 dark:bg-white/5">
-                          {c}
-                        </span>
-                      ))}
-                      {ctx.errors?.length ? (
-                        <span
-                          title={ctx.errors.join("\n\n")}
-                          className="rounded bg-red-100 px-1.5 py-0.5 font-semibold text-red-800 dark:bg-red-500/15 dark:text-red-300"
-                        >
-                          {ctx.errors.length} runtime error{ctx.errors.length === 1 ? "" : "s"}
-                        </span>
-                      ) : null}
-                    </div>
-                  );
-                })()}
-
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
-                  <div className="text-xs text-brand-grey dark:text-slate-400">
-                    {item.userName || item.userEmail || "Unknown"}
-                    {item.page && <span className="ml-2 rounded bg-brand-cloudDancer/60 px-1.5 py-0.5 dark:bg-white/5">{item.page}</span>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={item.status}
-                      onChange={(e) => updateStatus(item.id, e.target.value)}
-                      className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-xs dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
-                    >
-                      {STATUSES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={() => remove(item.id)}
-                      className="rounded border border-red-200 p-1.5 text-red-600 transition hover:bg-red-50 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/15"
-                      aria-label="Delete feedback"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+              )}
+              {done.map((item) => renderItem(item, true))}
+            </>
+          )}
         </div>
       )}
     </div>
   );
+
+  function renderItem(item: FeedbackItem, isDone = false) {
+    const meta = TYPE_META[item.type] ?? TYPE_META.IDEA;
+    const Icon = meta.icon;
+    return (
+      <div
+        key={item.id}
+        className={clsx(
+          "rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10",
+          // Faded to read as settled — but restored on hover so it stays legible
+          // when you do go back to look at one.
+          isDone && "opacity-55 transition-opacity hover:opacity-100"
+        )}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className={clsx("inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold", meta.chip)}>
+              <Icon className="h-3 w-3" />
+              {meta.label}
+            </span>
+            <span className={clsx("rounded px-2 py-0.5 text-[11px] font-semibold", STATUS_CHIP[item.status])}>
+              {item.status}
+            </span>
+          </div>
+          <span className="text-xs text-brand-grey dark:text-slate-400">{formatDate(item.createdAt)}</span>
+        </div>
+
+        <p className="mt-2 whitespace-pre-wrap text-sm text-brand-black/85 dark:text-slate-300">{item.message}</p>
+
+        {/* The screenshot, if one was attached. Served through an
+            admin-gated route (never a public URL) because these routinely
+            contain candidate PII. Click opens it full size. */}
+        {item.imageKey && (
+          <a
+            href={`/api/feedback/${item.id}/image`}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 block w-fit rounded border border-brand-lea/15 p-1 transition hover:shadow-glow dark:border-white/10"
+            title={item.imageName ?? "Open the full screenshot"}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- authenticated same-origin route, not an optimizable asset */}
+            <img
+              src={`/api/feedback/${item.id}/image`}
+              alt={item.imageName ?? "Screenshot attached to this feedback"}
+              className="max-h-48 rounded object-contain"
+            />
+          </a>
+        )}
+
+        {/* Auto-captured context — the full URL (with its query string),
+            the screen it happened on, and anything that blew up. */}
+        {(() => {
+          const ctx = parseContext(item.contextJson);
+          if (!ctx) return null;
+          const chips = [
+            ctx.viewport ? `${ctx.viewport}${ctx.dpr && ctx.dpr !== 1 ? ` @${ctx.dpr}x` : ""}` : null,
+            ctx.theme ? `${ctx.theme} mode` : null,
+            browserLabel(ctx.userAgent)
+          ].filter((c): c is string => Boolean(c));
+          return (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-brand-grey dark:text-slate-400">
+              {ctx.url && (
+                <a
+                  href={ctx.url}
+                  title={ctx.url}
+                  className="rounded bg-brand-cloudDancer/60 px-1.5 py-0.5 font-semibold text-brand-eden hover:underline dark:bg-white/5 dark:text-slate-300"
+                >
+                  {shortUrl(ctx.url)}
+                </a>
+              )}
+              {chips.map((c) => (
+                <span key={c} className="rounded bg-brand-cloudDancer/60 px-1.5 py-0.5 dark:bg-white/5">
+                  {c}
+                </span>
+              ))}
+              {ctx.errors?.length ? (
+                <span
+                  title={ctx.errors.join("\n\n")}
+                  className="rounded bg-red-100 px-1.5 py-0.5 font-semibold text-red-800 dark:bg-red-500/15 dark:text-red-300"
+                >
+                  {ctx.errors.length} runtime error{ctx.errors.length === 1 ? "" : "s"}
+                </span>
+              ) : null}
+            </div>
+          );
+        })()}
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
+          <div className="text-xs text-brand-grey dark:text-slate-400">
+            {item.userName || item.userEmail || "Unknown"}
+            {item.page && <span className="ml-2 rounded bg-brand-cloudDancer/60 px-1.5 py-0.5 dark:bg-white/5">{item.page}</span>}
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={item.status}
+              onChange={(e) => updateStatus(item.id, e.target.value)}
+              className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-xs dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
+            >
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => remove(item.id)}
+              className="rounded border border-red-200 p-1.5 text-red-600 transition hover:bg-red-50 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/15"
+              aria-label="Delete feedback"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 }
