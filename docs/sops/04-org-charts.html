@@ -22,7 +22,7 @@
   .chip b{color:var(--navy)}
 
   .banner{margin-top:22px; background:linear-gradient(180deg,rgba(234,170,0,.10),rgba(234,170,0,.04)); border:1px solid rgba(234,170,0,.45);
-    border-radius:6px; padding:14px 16px}
+    border-radius:4px; padding:14px 16px}
   .banner p{margin:0; font-size:14.5px; line-height:1.55; color:var(--ink)}
   .banner b{color:var(--navy)}
 
@@ -59,6 +59,8 @@
   .callout p:last-child{margin-bottom:0}
   .callout b{color:var(--navy)}
 
+  .fill { background: #fbf1dd; border: 1px dashed #b7791f; border-radius: 4px; padding: 1px 6px; font-weight: 700; color: #8a5a13; font-size: .95em; }
+
   footer{margin-top:40px; padding-top:18px; border-top:1px solid var(--line); font-size:12.5px; color:var(--muted)}
   footer b{color:var(--navy)}
 </style>
@@ -66,37 +68,49 @@
 <div class="wrap">
   <p class="eyebrow">People Ops · Standard Operating Procedure</p>
   <h1>Org charts — adding &amp; linking people</h1>
-  <p class="lede">How to put someone on a Crew or Maintenance org-chart card, link them to their profile, and open or close positions. The same steps work on every chart.</p>
+  <p class="lede">How to put someone on a Crew or Maintenance org-chart card, link them to their profile, and open or close positions.</p>
   <div class="meta">
-    <span class="chip"><b>Where:</b> Fleet → Crew / Maintenance Org Chart</span>
-    <span class="chip"><b>Access:</b> Admin (Edit roster)</span>
-    <span class="chip"><b>Nothing saves</b> until you click Save changes</span>
+    <span class="chip"><b>Where:</b> Fleet → Crew Org Chart / Maintenance Org Chart</span>
+    <span class="chip"><b>Access:</b> Admin. No <b>Edit all</b> button at the top and no <b>Edit this aircraft</b> on a card means you don't have it — ask the <b>Recruiting Manager</b> (Aimee Schaedig)</span>
+    <span class="chip"><b>Nothing saves</b> until you click Save — except <b>Remove this aircraft</b> while you are editing that one card, which saves at once</span>
   </div>
 
   <div class="banner">
-    <p><b>What changed:</b> the link search now finds <b>current employees as well as candidates</b>. You no longer have to create a candidate record first for someone who already works here — pick them and the link is wired up for you.</p>
+    <p><b>Two buttons you cannot undo.</b> <b>Reset to source</b> sits beside <b>Save changes</b> in the Edit all bar: it deletes every saved edit anyone has ever made to that chart and reloads the built-in roster. It exists only in that bar — a card you opened with <b>Edit this aircraft</b> or <b>Edit this location</b> has no <b>Reset to source</b>, so you must be in an <b>Edit all</b> session to reach it. <b>Remove this aircraft</b> sits at the bottom of a crew card while you are editing it, and takes the card's pilots off with it; when you are editing that one card it saves the moment you confirm — there is no Cancel and no undo. Both write straight to the live database the whole company uses. Read the confirmation box before you click OK.</p>
   </div>
 
   <section class="phase">
     <div class="phase-head">
       <span class="phase-kicker">Part 1</span>
       <h2>Put them on the card</h2>
-      <span class="where">Edit roster</span>
+      <span class="where">Edit this aircraft / Edit this location, or Edit all</span>
     </div>
     <ol class="steps">
       <li class="step">
-        <h3>Open the chart in edit mode</h3>
-        <p>Go to <b>Fleet → Crew Org Chart</b> or <b>Maintenance Org Chart</b> and click <b>Edit roster</b>. A banner confirms you're editing; <b>Cancel</b> leaves without changing anyone.</p>
+        <h3>Open the chart</h3>
+        <p>In the left sidebar click <b>Fleet</b>, then <b>Crew Org Chart</b> or <b>Maintenance Org Chart</b>.</p>
+      </li>
+      <li class="step">
+        <h3>Open the card you need</h3>
+        <p>Click the card. On the <b>Crew Org Chart</b> each card is one aircraft and opens into the columns <b>Captains</b>, <b>First Officers</b> and, on some aircraft, <b>Cabin</b>. On the <b>Maintenance Org Chart</b> each card is one location (e.g. <b>Parts, Logistics and Base Support</b>) and opens into its role sections.</p>
+      </li>
+      <li class="step">
+        <h3>Turn on editing</h3>
+        <p>At the bottom of the open card, click <b>Edit this aircraft</b> (crew) or <b>Edit this location</b> (maintenance). To edit several cards in one session instead, click <b>Edit all</b> under <b>Roster</b> at the top of the page.</p>
+        <p>To leave a card without changing anyone, click <b>Cancel</b> at the bottom of the card. To leave an <b>Edit all</b> session, click <b>Done</b> in the bar at the top — it reads <b>Cancel</b> once you have changed something, and asks you to confirm before throwing your changes away.</p>
+        <p>You are also warned if you try to leave with unsaved changes — reloading, closing the tab, or clicking any link on the page. That includes a pilot's name inside the chart you are editing, which links out to their profile.</p>
         <div class="tags"><span class="tag adm">Admin only</span></div>
       </li>
       <li class="step">
-        <h3>Open the group you want</h3>
-        <p>Click the card (e.g. <b>Parts, Logistics and Base Support</b>). It opens showing each role section, the people in it, and its open positions.</p>
+        <h3>Add the person</h3>
+        <p>Find the column for the seat they are filling — <b>Captains</b>, <b>First Officers</b> or <b>Cabin</b> on the crew chart, the named role section on maintenance. Type their name in that column's <b>Add name…</b> box, pick their status in the dropdown beside it, then click <b>Add</b>. The status is chosen before you add them, not afterwards.</p>
+        <p>Crew statuses: <b>On line</b>, <b>In training</b>, <b>Offered</b>, <b>Tentative · external</b>, <b>Tentative · internal</b>. Maintenance statuses: <b>On staff</b>, <b>In training</b>, <b>Candidate</b>, <b>Candidate · internal</b>, <b>Offered</b>.</p>
+        <p>If a third dropdown appears listing <b>Fills: …</b> options, pick the named opening this person is taking. Leave it on <b>Adds a new seat</b> only if they are an extra head on top of that opening.</p>
+        <div class="tags"><span class="tag app">In app</span></div>
       </li>
       <li class="step">
-        <h3>Add the person</h3>
-        <p>In the section's <b>Add name…</b> box, type their name and click <b>Add</b>. Then set their status on the row: <b>On staff</b> for a current employee, <b>Offered</b> for someone with an offer out, <b>Candidate</b> for someone still in the running.</p>
-        <div class="tags"><span class="tag app">In app</span></div>
+        <h3>Change someone's status later</h3>
+        <p>On the maintenance chart, use the status dropdown on the person's row. On the crew chart there is no row dropdown: a row shows <b>→trng</b> for someone on line and <b>→line</b> for someone in training, and nothing else — any other change means removing them with <b>✕</b> and adding them again with the right status.</p>
       </li>
     </ol>
   </section>
@@ -109,14 +123,20 @@
     </div>
     <ol class="steps">
       <li class="step">
-        <h3>Click "link" on their row and search their last name</h3>
-        <p>Search by <b>last name</b> — chart names often differ from profile names (the chart may say "Augustin" where the profile says "Auggie"), so a first-name search frequently misses.</p>
-        <p>Results include <b>candidates</b> and <b>current employees</b> (employees are marked <b>on staff</b>). Pick the right person and the row shows <b>linked</b>.</p>
+        <h3>Click "link" on their row</h3>
+        <p>With the card in edit mode, click <b>link</b> on their row.</p>
         <div class="tags"><span class="tag app">In app</span></div>
       </li>
       <li class="step">
-        <h3>If they're an employee with no candidate record — nothing extra to do</h3>
-        <p>Picking them quietly creates and links their profile record behind the scenes. You do <b>not</b> need to go make a candidate first, and it won't put them into recruiting.</p>
+        <h3>Search their last name</h3>
+        <p>Clear the <b>Search people by name…</b> box — it opens pre-filled with the chart's version of their name — and type their <b>last name</b>, at least 2 letters. Chart names drift from profile names (the chart may say "Augustin" where the profile says "Auggie"), so a first-name search misses.</p>
+        <p>Results include <b>candidates</b> and <b>current employees</b> (employees are marked <b>on staff</b>). Click the right person; the row then shows <b>linked</b>.</p>
+      </li>
+      <li class="step">
+        <h3>Fix a link you got wrong</h3>
+        <p>With the card in edit mode, click <b>linked</b> on their row. Click <b>Unlink from current candidate</b> above the search box, then link them again to the right person. The row goes back to <b>link</b>.</p>
+        <p>Unlinking is part of your unsaved changes — it only takes effect when you save the card or the chart.</p>
+        <div class="tags"><span class="tag app">In app</span></div>
       </li>
     </ol>
   </section>
@@ -125,20 +145,30 @@
     <div class="phase-head">
       <span class="phase-kicker">Part 3</span>
       <h2>Openings, moves, and saving</h2>
-      <span class="where">Edit roster</span>
+      <span class="where">Edit this aircraft / Edit this location, or Edit all</span>
     </div>
     <ol class="steps">
       <li class="step">
         <h3>Open or close a position</h3>
-        <p>Use the <b>Open positions</b> +/− counter in each section. Open seats show as the dashed "hiring" slots on the card and feed the <b>Open reqs</b> count.</p>
+        <p>Use the <b>+</b> and <b>−</b> buttons on the counter at the bottom of each column — labelled <b>Open seats</b> on the crew chart and <b>Open positions</b> on maintenance. Each open seat shows as a dashed "hiring" slot on the card and adds to the <b>Open reqs</b> count.</p>
       </li>
       <li class="step">
         <h3>Move someone to another card or base</h3>
-        <p>Click <b>move</b> on their row and choose the destination. Their link travels with them, so you don't re-link after a move.</p>
+        <p>Click <b>move</b> on their row. In the first dropdown (<b>Move to…</b>) pick the destination — on the crew chart that is an aircraft and a seat, e.g. <b>G200 — First Officer</b>. In the second dropdown pick the status they arrive with. Then click <b>Move</b>: nothing moves until you press it. Their profile link travels with them.</p>
       </li>
       <li class="step">
-        <h3>Save changes</h3>
-        <p>Click <b>Save changes</b>. Until you do, the banner shows <b>unsaved changes</b> and nothing is written. <b>Reset to source</b> throws away all customisation and returns the chart to its seeded roster — use with care.</p>
+        <h3>Answer the journey prompt (crew chart, linked people only)</h3>
+        <p>If a box headed <b>Record this move on … journey?</b> appears, either fill in <b>New role title</b> and <b>Effective date</b>, pick a <b>Transition</b> type, and click <b>Record role change</b> — or click <b>Skip</b>. The chart move stands either way.</p>
+        <p><b>Record role change</b> writes to that person's employee journey straight away, even though the chart itself is still unsaved.</p>
+      </li>
+      <li class="step">
+        <h3>Copy an aircraft to a new tail (crew chart only)</h3>
+        <p>With the card in edit mode, click <b>Duplicate this aircraft</b> at the bottom of the card. A <b>Copy this aircraft to a new tail</b> panel opens with <b>Aircraft type</b>, <b>Tail number</b> and <b>Owner / company</b>. Fill them in and click <b>Add this tail</b>.</p>
+        <p>The seat layout carries over as <b>open seats</b>. Pilots, tags and notes do not — the new tail starts empty. The copy is unsaved until you save.</p>
+      </li>
+      <li class="step">
+        <h3>Save</h3>
+        <p>Click <b>Save this aircraft</b> (crew) or <b>Save this location</b> (maintenance) at the bottom of the card. In an <b>Edit all</b> session that button reads <b>Save all changes</b> instead, at the bottom of whichever card you have open. The bar at the top of the page has the same thing labelled <b>Save changes</b>. Both save the whole chart — use whichever is in front of you, and prefer the one in the card, because the top bar scrolls out of sight while you work. Nothing is written until you press one.</p>
         <div class="tags"><span class="tag adm">Admin only</span></div>
       </li>
     </ol>
@@ -146,12 +176,14 @@
 
   <div class="callout">
     <h4>Worth knowing</h4>
-    <p><b>Search last names.</b> The single most common reason "I can't find them" is searching a first name that differs from the profile.</p>
-    <p><b>Linking is an explicit pick, never a name match.</b> That's deliberate — two people can share a name, and chart names drift from profile names. The chart will never guess.</p>
-    <p><b>Every chart works the same way.</b> Cross-location moves and person-to-profile linking are a standing requirement for the crew chart, the maintenance chart, and any department chart added later.</p>
+    <p><b>Linking is always an explicit pick.</b> The chart never matches by name — two people can share one, and chart names drift from profile names.</p>
+    <p><b>Linking a current employee who has no candidate record creates that record and links it for you.</b> Do not go and make a candidate first. It does not put them into recruiting.</p>
+    <p><b>That record is created the instant you click the person in the search results</b> — not when you save. It is written straight to the live database the whole company uses, and it stays there even if you then click <b>Cancel</b> and never save the chart. So click the name only once you are sure it is the right person; if you pick the wrong one, use <b>Unlink from current candidate</b> to correct the chart, and tell the <b>Recruiting Manager</b> (Aimee Schaedig) so the stray record can be cleaned up.</p>
+    <p><b>The two charts are not identical.</b> Linking and cross-location moves work the same way on both, but the crew chart says <b>On line</b> and <b>Open seats</b> where maintenance says <b>On staff</b> and <b>Open positions</b>; only maintenance lets you change a status from a person's row; and only the crew chart has <b>Duplicate this aircraft</b> and <b>Remove this aircraft</b> and offers to record a move on a linked employee's journey.</p>
+    <p><b>Cross-location moves and person-to-profile linking are required on every org chart.</b> That means the crew chart, the maintenance chart, and any department chart added later. If a new chart ships without <b>move</b> and <b>link</b> on a person's row, it is not finished — say so.</p>
   </div>
 
   <footer>
-    <b>SkyShare Talent-Ops</b> · Org charts SOP · updated Jul 20, 2026 — reflects the link search finding current employees, not just candidates.
+    <b>SkyShare Talent-Ops</b> · Org charts SOP · updated Jul 22, 2026 — reflects per-card editing (Edit this aircraft / Edit this location) alongside Edit all, plus Duplicate / Remove this aircraft on the crew chart.
   </footer>
 </div>

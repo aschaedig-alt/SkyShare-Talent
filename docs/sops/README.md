@@ -24,6 +24,29 @@ the published pages are generated *from* these files, never the other way around
 
 PDFs of each are generated on request into the user's `Downloads` folder.
 
+## Status (2026-07-22)
+
+All five files were rewritten in the Jul 22 accuracy audit and **republished to their existing
+URLs** the same day, so every link the team already holds now serves the corrected text.
+
+The 14 open questions were answered on 2026-07-22 and **every placeholder is filled — none remain.**
+The `.fill` CSS rule is kept in each file so the next unknown fact can be marked the same way.
+
+Reference facts now baked into the SOPs (update them here if any change):
+
+| Fact | Value |
+|---|---|
+| Printer | Sun Print Solutions — mark.bengtzen@sunlitho.net |
+| Card orders sent from | recruiting@skyshare.com (Front) |
+| Quantity | 100 cards per person |
+| Sends + pays for the order | Recruiting Manager (Aimee Schaedig); any recruiter can |
+| Receives + inspects the box | Brett Nielson, Marketing — brett@skyshare.com |
+| | ⚠️ Two standing exceptions for Brett: his surname ends **-son**, and `brett@` is a deliberate one-off that does **not** follow the first-initial + last-name convention. Neither is a typo — do not "correct" them. |
+| Sets cards out on orientation day | Morgan Langholf, EA to the CEO — mlangholf@skyshare.com |
+| Ships cards to remote staff | Morgan Langholf, or Hannah Byers — hbyers@skyshare.com (you never need the address) |
+| Offer letters | Live in **Paycom** — template, drafting and both signatures. The app's six offer steps only *record* that each happened. |
+| Role changes, access, escalations | Recruiting Manager |
+
 ## Updating an SOP
 
 1. Edit the file here.
@@ -44,3 +67,7 @@ SOPs rot when the app changes underneath them. Two habits keep these honest:
 
 Known drift risks to check first: the offer↔onboarding flow (Ch. 1 & 2), anything gated on
 `ANTHROPIC_API_KEY` or the Front token, and the org-chart link behaviour (Ch. 4).
+
+The Jul 22 audit found the most damaging drift was **navigation**, not procedure — a sidebar reorg
+silently invalidated the first instruction in three documents. When checking these, diff
+`lib/navigation/modules.ts` first; a renamed nav group breaks every SOP at once.

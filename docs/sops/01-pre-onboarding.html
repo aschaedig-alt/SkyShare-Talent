@@ -22,11 +22,6 @@
   .prereq p { margin: 0; font-size: 14.5px; color: var(--ink); }
   .prereq b { color: #8a5a13; }
 
-  .whatsnew { display: flex; gap: 14px; align-items: flex-start; background: linear-gradient(180deg,rgba(234,170,0,.12),rgba(234,170,0,.05)); border: 1px solid rgba(234,170,0,.5); border-radius: 4px; padding: 14px 18px; margin: 22px 0; }
-  .whatsnew .ic { font-size: 20px; line-height: 1.3; }
-  .whatsnew p { margin: 0; font-size: 14.5px; color: var(--ink); }
-  .whatsnew b { color: var(--navy); }
-
   h2 { font-size: 15px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--eden); margin: 40px 0 14px; }
 
   .diagram-card { background: #ffffff; border: 1px solid var(--line); border-radius: 4px; box-shadow: var(--shadow); padding: 16px; overflow-x: auto; }
@@ -74,6 +69,7 @@
   .wrongdoors { display:flex; gap:12px; align-items:flex-start; background: var(--bad-bg); border:1px solid var(--bad); border-radius:4px; padding:14px 18px; margin-top:16px; font-size:14px; color:#5e1421; }
   .wrongdoors b { color: var(--bad); }
   code { font-family: "Cascadia Code", Consolas, monospace; font-size: 12.5px; background: var(--page); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; color: var(--navy); }
+  .fill { background: #fbf1dd; border: 1px dashed #b7791f; border-radius: 4px; padding: 1px 6px; font-weight: 700; color: #8a5a13; font-size: .95em; }
   footer { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
 </style>
 
@@ -81,17 +77,12 @@
   <header>
     <p class="eyebrow">SkyShare Talent-Ops · Standard Operating Procedure</p>
     <h1>Pre-Onboarding a new hire, start to finish</h1>
-    <p class="lede">Everything starts on the candidate's profile and carries onto their onboarding record — the offer travels with them, so nothing is re-entered. Follow the steps below; the callouts tell you exactly what you'll see so nothing looks broken.</p>
+    <p class="lede">Everything starts on the candidate's profile and carries onto their onboarding record, so nothing is re-entered.</p>
   </header>
 
   <div class="prereq">
     <span class="ic">🔑</span>
-    <p><b>Before you start:</b> your account must be <b>Admin</b> or <b>Recruiter</b>. As a Viewer the action buttons are hidden. Check under <b>Settings → Team Members</b>; change a role there if needed. (Recruiters can now also create jobs.)</p>
-  </div>
-
-  <div class="whatsnew">
-    <span class="ic">✨</span>
-    <p><b>What changed:</b> you now <b>move a new hire onto the board as soon as the offer is under way — you don't wait for the signature.</b> The six offer steps stay in step whether you tick them on the candidate's Offers tab or on their onboarding record, so you can track exactly where everyone is while the offer is still in flight.</p>
+    <p><b>Before you start:</b> your account must be <b>Admin</b> or <b>Recruiter</b>. As a Viewer most action buttons are hidden, and the ones still visible (such as <b>New candidate</b>) fail when you save. If your role is Viewer, ask the Recruiting Manager (<b>Aimee Schaedig</b>) to set it to <b>Recruiter</b> under <b>Settings → Team Members</b>. Only Admins can open that page; you cannot change your own role.</p>
   </div>
 
   <h2>The flow at a glance</h2>
@@ -105,9 +96,9 @@ flowchart TD
     d --> e[Applied to tab:<br/>Link to a job<br/>create it inline if new]:::step
     e --> f[Offers tab:<br/>start the offer, tick the steps]:::step
     f --> g[[Move to onboarding<br/>EARLY — before signed]]:::move
-    g --> h[Onboarding record:<br/>offer steps + 19-step checklist<br/>synced both ways]:::step
-    h --> i[Mark signed + start date<br/>from either side]:::step
-    i --> j[Orientation + travel<br/>tick themselves]:::auto
+    g --> h[Onboarding record:<br/>20-step checklist<br/>offer steps are the first 6<br/>synced both ways]:::step
+    h --> i[Tick Candidate signed offer letter<br/>then set the start date]:::step
+    i --> j[Onboarding email, background check,<br/>orientation and travel steps tick themselves<br/>once you book the session and the trip]:::auto
     j --> k([Mark onboarded]):::done
 
     classDef nav fill:#bcd6ee,stroke:#0d2c43,stroke-width:2px,color:#0d2c43
@@ -122,80 +113,89 @@ flowchart TD
   <div class="steps">
 
     <div class="step">
-      <span class="screen">People → New hires</span>
+      <span class="screen">Onboarding → New hires</span>
       <h3>Start from the candidate</h3>
-      <p class="do">Open <b>People → New hires</b> and click <span class="btn navy">Start from a candidate</span>. This is always the right first move — it keeps the person's resume, offer, and history attached.</p>
-      <div class="seen"><b>You'll see:</b> the Candidates list with a banner, "Onboarding someone? Find and open their candidate…" That banner confirms you're on the right path.</div>
+      <p class="do">In the left sidebar click <b>Onboarding → New hires</b>, then click <span class="btn navy">Start from a candidate →</span> in the top right of the page.</p>
+      <div class="seen"><b>You'll see:</b> the Candidates list, with a gold-bordered banner on a pale blue ground across the top, beginning <i>"Onboarding someone?"</i></div>
     </div>
 
     <div class="step">
       <span class="screen">Candidates</span>
       <h3>Find them — or add them</h3>
-      <p class="do">Search the list for the person. Already there? Skip to step 3. New to the system? Click <span class="btn gold">New candidate</span> (top right) and fill in name + email/phone.</p>
-      <div class="watch"><b>Watch for:</b> if their email or phone already exists, you'll get a note — <i>"Matched an existing candidate — opened their record instead of creating a duplicate."</i> That's expected, not an error. Just check it's the right person.</div>
+      <p class="do">Type their name into the search box on the Candidates list. Already there? Go to step 3. Not there? Click <span class="btn gold">New candidate</span> (top right), fill in <b>First name</b> and <b>Last name</b> — the form only requires one of the two — add <b>Email</b> or <b>Phone</b> so the app can spot duplicates, then click <b>Create candidate</b>.</p>
+      <div class="watch"><b>Only practising?</b> Type <code>TEST</code> into <b>Tags (comma-separated)</b> <i>before</i> you click <b>Create candidate</b>. Dev and production share one live database, so anyone you create here is a real candidate — and only an Admin can delete them, only on a TEST-tagged record. Full instructions in <b>Testing this end to end</b> at the bottom.</div>
+      <div class="watch"><b>Watch for:</b> if that email or phone already belongs to someone, the box's heading changes to <i>Matched an existing candidate</i> and it tells you it opened that person instead of creating a duplicate. That's expected. Check it's the right person, click <b>Open their record</b>, and go to step 4.</div>
     </div>
 
     <div class="step">
       <span class="screen">Candidates</span>
       <h3>Open their profile</h3>
-      <p class="do">Click the person's name to open their <b>candidate profile</b>. The offer is worked here; from "Move to onboarding" on, it continues on their onboarding record.</p>
+      <p class="do">Click the person's name in the Candidates list to open their <b>candidate profile</b>.</p>
     </div>
 
     <div class="step">
       <span class="screen">Profile → Applied to</span>
       <h3>Link them to the job</h3>
-      <p class="do">Open the <span class="btn tab">Applied to</span> tab and click <span class="btn ghost">Link to a job</span>. Search the role and pick it. <b>Doesn't exist yet?</b> Type the title and choose <b>"Create … as a new job"</b> right there — no trip to the Jobs page. (You can fill in the job's details later.)</p>
-      <div class="seen"><b>Why this matters:</b> an offer is always made <i>for a specific job</i>, so the offer can't start until a job is linked.</div>
+      <p class="do">Open the <span class="btn tab">Applied to</span> tab and click <span class="btn ghost">Link to a job</span> at the top of the panel. Type the job title into the search box and click the job in the results. <b>Doesn't exist yet?</b> Type the full title and click <b>Create "&lt;your title&gt;" as a new job</b>. You can fill in the job's details later. If that option never appears, you do not have job-creating rights — ask an Admin to create the job first.</p>
+      <div class="seen"><b>Required:</b> you can't start an offer until a job is linked.</div>
     </div>
 
     <div class="step">
       <span class="screen">Profile → Offers</span>
       <h3>Start the offer</h3>
-      <p class="do">Open the <span class="btn tab">Offers</span> tab and click <b>Start an offer</b>. Tick the <b>6 steps</b> as they actually happen: verbal → draft → supervisor approval → president approval → letter sent → signed. The status follows the steps — you don't set it by hand.</p>
-      <div class="watch"><b>You don't need "signed" to keep going.</b> As soon as the offer is <i>started</i> or <i>sent</i>, move to the next step — you'll finish the signature on the onboarding side.</div>
+      <p class="do">Open the <span class="btn tab">Offers</span> tab. Find the block headed with the job you linked in step 4 and click <b>Start an offer</b> inside that block. Six steps appear: <b>Verbal offer extended to candidate</b> → <b>Draft offer letter</b> → <b>Supervisor signs offer letter</b> → <b>President signs offer letter</b> → <b>Offer letter sent to candidate</b> → <b>Candidate signed offer letter</b>. Don't set the status dropdown by hand; it follows the ticks.</p>
+      <div class="watch"><b>Do the work in Paycom first.</b> Paycom is the source of truth for the offer — the letter template, the drafting and both signatures all live there. Each step here is a record that it already happened in Paycom, so do the step in Paycom, then come back and tick it. If the two disagree, Paycom is right.</div>
+      <div class="seen"><b>Already showing the six steps?</b> The offer has been started already — there is no <b>Start an offer</b> link to click. Go straight to ticking. Judge by the step list, not the status chip: the chip is always there, reading <b>No offer</b> until an offer exists.</div>
+      <div class="watch"><b>Don't wait for the signature.</b> Once you have ticked at least one step, go to step 6. You'll tick <b>Candidate signed offer letter</b> later, on the onboarding record.</div>
     </div>
 
     <div class="step hot">
-      <span class="screen">Profile → Move panel</span>
+      <span class="screen">Profile → panel above the tabs</span>
       <h3>Move to onboarding — early</h3>
-      <p class="do"><b>Don't wait for the signature.</b> Once the offer is under way, the panel turns gold and pushes you to <span class="btn gold">Move to onboarding</span>. Confirm position, department, and start date. The <b>company email auto-fills</b> (first initial + last name); a warning shows if it collides with someone. They land on the board with the offer still in flight.</p>
-      <div class="watch"><b>No start date yet?</b> Tick the box that sits them in the "No start date yet" bucket — a deliberate choice so nobody quietly disappears from the dashboard.</div>
+      <p class="do"><b>Tick at least one offer step first.</b> The panel above the profile tabs only turns gold once a step is ticked or the letter is sent — a plain white panel means no step is ticked yet. Then:</p>
+      <p class="do">1. Click <span class="btn gold">Move to onboarding</span> in that panel. A form opens.<br>2. Fill in <b>Position</b>, <b>Department</b>, <b>Start date</b> and <b>Company email</b>. <b>Company email</b> fills in as first initial + last name; if an amber warning says someone already has that address, type a different one.<br>3. Click <span class="btn gold">Move to onboarding</span> again — the second button, inside the form — to create the record. You land on it.</p>
+      <div class="watch"><b>No start date yet?</b> Leave <b>Start date</b> blank and tick the amber checkbox that appears under it. The second <b>Move to onboarding</b> button stays greyed out until you tick it. They then sit in the <b>No start date</b> bucket on the dashboard until a date is set.</div>
     </div>
 
     <div class="step">
-      <span class="screen">New-hire record</span>
+      <span class="screen">Onboarding record</span>
       <h3>Finish the offer + work the checklist</h3>
-      <p class="do">You land on the new-hire record. The <b>6 offer steps are the front of the 19-step checklist</b> and stay in sync with the candidate's Offers tab — tick from <b>either</b> side. Mark <b>Signed</b> and set the <b>start date</b> when it happens, then work <b>pilot documents</b> and <b>onboarding &amp; systems</b>, starting with the "Start Your Onboarding Journey" email via Front.</p>
-      <div class="autonote"><span>🔄</span><div><b>Two steps tick themselves — don't do them by hand:</b> "Attended orientation" ticks when you mark the orientation session complete, and "Travel complete" ticks when a trip is booked. If they're already green, that's why.</div></div>
+      <p class="do">You land on the onboarding record. The <b>6 offer steps are the first 6 of the 20-step checklist</b> and stay in sync with the candidate's Offers tab — tick from <b>either</b> side. To tick a checklist row, click <b>Done</b> on it; click <b>N/A</b> for a row that doesn't apply to this person. Then, in order:</p>
+      <p class="do">1. Tick <b>Candidate signed offer letter</b> in the <b>Offer</b> panel when the signed letter comes back.<br>2. Type the date into <b>Start date</b> in the <b>Details</b> panel and click <b>Save</b> at the top of that panel.<br>3. Work the <b>Pilot documents</b> group.<br>4. Work the <b>Onboarding &amp; systems</b> group, starting with <b>Send email</b> on the "Send &ldquo;Start Your Onboarding Journey&rdquo; email via Front" row — check the preview, then click <b>Send to …</b>. Do not compose it in Front by hand.<br>5. The background check is three rows. Tick <b>Run background check in Paycom</b> yourself; Paycom's own emails tick the other two. <b>Check Paycom mail</b> on the New hires page pulls them in now rather than waiting for the overnight run.</p>
+      <p class="do">6. <b>Put them on an orientation session.</b> Set <b>Orientation</b> in the <b>Details</b> panel, then open <b>Onboarding → Orientation</b>. Find their name in the amber <i>"… still need an orientation"</i> box and pick the session date from the <b>Add to…</b> dropdown beside it. If it says <i>create a session first</i>, click <span class="btn navy">+ New session</span>, set <b>Date</b> and <b>Time (MT)</b> and click <b>Create session</b>, then come back to <b>Onboarding → Orientation</b> and use the dropdown. After the session has happened, open it and click <span class="btn navy">Mark complete</span>.</p>
+      <p class="do">7. <b>Create their trip.</b> Scroll to the <b>Travel &amp; logistics</b> panel at the bottom of this same onboarding record, click <span class="btn navy">New trip</span> and choose <b>Orientation</b>. Fill in the flights, hotel and car. Once everything is booked, set the status dropdown on that trip card to <b>Booked</b>.</p>
+      <div class="watch"><b>Neither of these is optional.</b> Putting them on a session and creating their trip are the only things that can tick <b>Attended orientation</b> and <b>Travel accommodations complete</b> — the last two rows of the checklist. Skip them and those rows sit unticked forever, and nobody arranges the hire's orientation or their flights.</div>
+      <div class="watch"><b>Once "Background check complete — clear to hire" ticks</b>, the person shows on the Dashboard as <b>cleared to hire</b> until you tick <b>Hire in Paycom</b>. That row turns red after 3 days.</div>
+      <div class="autonote"><span>🔄</span><div><b>Five steps tick themselves — don't do them by hand:</b> "Send &ldquo;Start Your Onboarding Journey&rdquo; email via Front" ticks when you send it from its checklist row; "Candidate submitted background check info" and "Background check complete — clear to hire" tick from Paycom's emails; "Attended orientation" ticks when you click <b>Mark complete</b> on the session they are on; "Travel accommodations complete" ticks when you set their trip to <b>Booked</b> or <b>Completed</b>. Never click <b>Done</b> on these five rows. The last two tick only after you have put them on a session and created their trip — neither happens on its own.</div></div>
     </div>
 
     <div class="step">
-      <span class="screen">New-hire record</span>
+      <span class="screen">Onboarding record</span>
       <h3>Mark them onboarded</h3>
-      <p class="do">Once the checklist is done, click <span class="btn gold">Mark onboarded</span> at the top of the hire's record. They move to <b>Post-onboard</b>, where their 30 / 60 / 90-day check-ins live.</p>
-      <div class="seen"><b>Doing several at once?</b> The <span class="btn tab">Checklist</span> tab (People → New hires) lets you tick multiple people and a bulk <span class="btn ghost">Mark onboarded</span> appears in the action bar.</div>
-      <div class="autonote"><span>🗂️</span><div><b>What happens after:</b> when all their 30/60/90-day check-ins are ticked, they auto-move to <b>Archived</b> as a <i>current</i> employee — the Archived tab's Current / Former filter keeps them separate from people who've left.</div></div>
+      <p class="do">Once the checklist is done, click <span class="btn navy">Mark onboarded</span> in the button row at the top of their onboarding record — not <b>Archive</b>, and not <b>Mark as former employee</b>. They move to the <b>Post-onboard</b> tab, which holds four check-ins: 30-day, 60-day, 90-day and <b>Benefits enrolled</b>.</p>
+      <div class="seen"><b>Doing several at once?</b> Open the <span class="btn tab">Checklist</span> tab on <b>Onboarding → New hires</b>. The grid is one column per person — tick the checkbox at the top of each person's column, and a bulk <span class="btn ghost">Mark onboarded</span> appears in the action bar above the grid.</div>
+      <div class="autonote"><span>🗂️</span><div><b>What happens after:</b> when all four Post-onboard check-ins are ticked — 30-day, 60-day, 90-day <i>and</i> Benefits enrolled — they auto-move to <b>Archived</b> as a <i>current</i> employee. On the Archived tab, click <b>Current employees</b> to find them — the other two filters are <b>All</b> and <b>Former (terminated)</b>.</div></div>
     </div>
 
   </div>
 
   <div class="wrongdoors">
     <span>🚫</span>
-    <div><b>Don't use these for a live hire:</b> the <b>+ Add new hire</b> and <b>Import hires</b> buttons on the New hires page create a record with <i>no candidate link</i> — no resume, no offer history. They're only for a true walk-in with no candidate record, or a back-catalog import. Always start from the candidate.</div>
+    <div><b>Don't use these for a live hire:</b> the <b>+ Add new hire</b> and <b>Import hires</b> buttons on the New hires page create a record with <i>no candidate link</i> — no resume, no offer history. Use them only for someone hired without ever being a candidate here, or when bulk-loading past hires from a spreadsheet. Always start from the candidate.</div>
   </div>
 
   <h2>Testing this end to end</h2>
   <div class="testing">
     <h3>Run it, then reset — cleanly</h3>
     <ol>
-      <li><b>Tag your test person <span class="tag">TEST</span></b> when you add them (the Tags field on "New candidate"). This is what lets you delete them afterward.</li>
+      <li><b>Tag your test person <span class="tag">TEST</span></b> when you add them — type <code>TEST</code> into the <b>Tags (comma-separated)</b> field on the New candidate box, before you click <b>Create candidate</b>. That tag is the only thing that lets anyone delete them afterwards, and dev and production share one live database, so an untagged practice hire is a real hire.</li>
       <li><b>Run all eight steps above</b> with that candidate — a fake name is fine, e.g. "ZZ Test Pilot."</li>
-      <li><b>Reset when done:</b> open their profile → <span class="btn ghost" style="border-color:var(--bad);color:var(--bad)">Delete test</span> (only appears for a TEST-tagged record). Type the name to confirm, and tick <b>"also delete the onboarding record"</b> for a full reset. Real candidates have no TEST tag, so they can't be deleted this way.</li>
-      <li><b>Test login accounts:</b> remove them under <b>Settings → Team Members → Remove access</b> (real offboarding) — or use a <code>+test</code> email so the backend test-user delete applies.</li>
+      <li><b>Reset when done:</b> open their candidate profile and click <span class="btn ghost" style="border-color:var(--bad);color:var(--bad)">Delete test</span> — Admins only, and only on a TEST-tagged record, so ask an Admin if you are a Recruiter. In the box that opens, tick <b>"Also delete the onboarding record this candidate produced"</b>, type the person's name into <b>Type the name to confirm</b>, and click <b>Delete permanently</b>.</li>
+      <li><b>Test login accounts:</b> remove them under <b>Settings → Team Members → Remove access</b> (Admins only). If you create throwaway logins often, sign them up with a <code>+test</code> email so they can be deleted outright.</li>
     </ol>
   </div>
 
   <footer>
-    Updated Jul 20, 2026 for the early move-in flow — you move a hire onto the board before the offer is signed, and the offer's 6 steps stay in sync across the candidate's Offers tab and the onboarding record. Also reflects inline job creation and recruiter job-creation access. If a screen doesn't match this SOP, tell me what you saw and I'll reconcile it.
+    Updated Jul 22, 2026 for the three-step background check and Paycom auto-ticking. If a screen doesn't match this SOP, tell the Recruiting Manager (<b>Aimee Schaedig</b>) what you saw.
   </footer>
 </div>

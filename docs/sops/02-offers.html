@@ -20,9 +20,10 @@
   .chip{font-size:12px; font-weight:600; color:var(--eden); background:var(--card);
     border:1px solid var(--line); border-radius:4px; padding:5px 10px}
   .chip b{color:var(--navy)}
+  .fill{background:#fbf1dd; border:1px dashed #b7791f; border-radius:4px; padding:1px 6px; font-weight:700; color:#8a5a13; font-size:.95em}
 
   .banner{margin-top:22px; background:linear-gradient(180deg,rgba(234,170,0,.10),rgba(234,170,0,.04)); border:1px solid rgba(234,170,0,.45);
-    border-radius:6px; padding:14px 16px}
+    border-radius:4px; padding:14px 16px}
   .banner b{color:var(--navy)}
   .banner p{margin:0; font-size:14.5px; line-height:1.55; color:var(--ink)}
 
@@ -74,43 +75,52 @@
 <div class="wrap">
   <p class="eyebrow">People Ops · Standard Operating Procedure</p>
   <h1>Offers</h1>
-  <p class="lede">Working an offer — from the candidate through to a signed hire on the onboarding board. An offer is the last act of recruiting; signing is the handoff. The offer and the onboarding checklist are one thing, seen from two places.</p>
+  <p class="lede">Working an offer — from the candidate through to a signed hire on the New hires board (Onboarding → New hires).</p>
   <div class="meta">
-    <span class="chip"><b>Where:</b> Candidate profile → Offers tab</span>
+    <span class="chip"><b>Where:</b> Recruiting → <b>Candidates</b> → search their name → click it → <b>Offers</b> tab</span>
+    <span class="chip"><b>Also:</b> Recruiting → Offers lists every offer and flags signed offers nobody has moved into onboarding</span>
     <span class="chip"><b>Owner:</b> recruiter / coordinator</span>
-    <span class="chip"><b>No pay amounts:</b> Paycom owns comp</span>
+    <span class="chip"><b>Before you start:</b> your account role in this app must be <b>Recruiter</b> or <b>Admin</b> (the app has no Coordinator role). No buttons on the Offers tab means you don't have it — ask the Recruiting Manager (<b>Aimee Schaedig</b>).</span>
+    <span class="chip"><b>No pay amounts:</b> pay is set in Paycom</span>
   </div>
 
   <div class="banner">
-    <p><b>What's new:</b> move a candidate into onboarding <b>as soon as the offer is under way — you don't wait for the signature.</b> They show on the onboarding board right away, the offer keeps going there, and the six offer steps stay in step whether you tick them on the candidate's Offers tab or on their onboarding record.</p>
+    <p><b>What's new:</b> move a candidate into onboarding <b>as soon as the offer is started or sent — don't wait for the signature.</b></p>
+    <p style="margin-top:8px">Onboarding one person end to end? Follow the Pre-Onboarding SOP — it already contains these steps in order. This SOP is the offer on its own.</p>
   </div>
 
   <section class="phase">
     <div class="phase-head">
       <span class="phase-kicker">Part 1</span>
       <h2>Work the offer</h2>
-      <span class="where">Candidate → Offers tab</span>
+      <span class="where">Candidate profile → Applied to tab, then Offers tab</span>
     </div>
     <ol class="steps">
       <li class="step">
         <h3>Link the candidate to the job</h3>
-        <p>On the candidate's <b>Applied to</b> tab, use <b>Link to a job</b> (an offer is always for a specific role). If the job doesn't exist yet, create it right there — no trip out to Jobs.</p>
+        <p>Open the candidate's <b>Applied to</b> tab and click <b>Link to a job</b> at the top right of the panel. Type the job title into the <b>Search jobs by title or department</b> box, then click the job in the results.</p>
+        <p>If nothing matches, click <b>Create &ldquo;&lt;your title&gt;&rdquo; as a new job</b> underneath the search box. That option only appears for Recruiter and Admin — otherwise ask an Admin to create the job first.</p>
+        <p><b>Required:</b> you cannot start an offer until a job is linked. The offer lives on the application, so with no linked job there is nothing on the <b>Offers</b> tab to start.</p>
         <div class="tags"><span class="tag cand">In app · candidate</span></div>
       </li>
       <li class="step">
         <h3>Start the offer, then tick the steps as you go</h3>
-        <p>On the <b>Offers</b> tab, <b>Start an offer</b>, then check off each step as it happens. The status follows the steps automatically — you don't set it by hand.</p>
+        <p>On the <b>Offers</b> tab, find the card for the job you are offering and click <b>Start an offer</b> on that card. Six checkboxes appear — tick each as it happens.</p>
+        <p>Already showing a status chip other than <b>No offer</b>, with the six steps listed underneath? The offer is already under way and there is no <b>Start an offer</b> link on that card. Go straight to ticking the steps.</p>
         <div class="steps6">
           <h4>The six offer steps</h4>
           <div class="flow">
-            <span class="pill">Verbal offer</span><span class="arr">›</span>
-            <span class="pill">Draft letter</span><span class="arr">›</span>
-            <span class="pill">Supervisor signs</span><span class="arr">›</span>
-            <span class="pill">President signs</span><span class="arr">›</span>
-            <span class="pill">Letter sent</span><span class="arr">›</span>
-            <span class="pill">Candidate signs</span>
+            <span class="pill">Verbal offer extended to candidate</span><span class="arr">›</span>
+            <span class="pill">Draft offer letter</span><span class="arr">›</span>
+            <span class="pill">Supervisor signs offer letter</span><span class="arr">›</span>
+            <span class="pill">President signs offer letter</span><span class="arr">›</span>
+            <span class="pill">Offer letter sent to candidate</span><span class="arr">›</span>
+            <span class="pill">Candidate signed offer letter</span>
           </div>
-          <p class="note">Status derives: any step ticked = <b>Started</b> · letter sent = <b>Sent</b> · candidate signed = <b>Signed</b>. "Declined" is set by hand — it's something they do.</p>
+          <p class="note"><b>Paycom is the source of truth for the offer. Every one of these six steps happens in Paycom first.</b> The offer letter template lives there, and the drafting, the supervisor's signature and the president's signature are all done there. Ticking a step here records that it happened — it does not do it. <b>Do the step in Paycom, then come back and tick it.</b> If the two ever disagree, Paycom is right and this app is stale.</p>
+          <p class="note">Clicking <b>Start an offer</b> sets the status to <b>Offer planned</b>. From there the status follows the steps: any step ticked = <b>Offer started</b> · <b>Offer letter sent to candidate</b> ticked = <b>Offer sent</b> · <b>Candidate signed offer letter</b> ticked = <b>Offer signed</b>. Clearing every step drops back to <b>Offer planned</b>, not to <b>No offer</b>.</p>
+          <p class="note">The dropdown beside the status chip lists all six statuses — <b>No offer</b>, <b>Offer planned</b>, <b>Offer started</b>, <b>Offer sent</b>, <b>Offer signed</b>, <b>Offer declined</b> — and picking any of them sets it. Let the ticks drive it instead; set it by hand only for the two the steps cannot record.</p>
+          <p class="note"><b>Offer declined:</b> pick it in the dropdown, type a reason in the box that appears, and click <b>Save</b>.</p>
         </div>
         <div class="tags"><span class="tag cand">In app · candidate</span></div>
       </li>
@@ -121,13 +131,22 @@
     <div class="phase-head">
       <span class="phase-kicker">Part 2</span>
       <h2>Move them in — early</h2>
-      <span class="where">Candidate → Move to onboarding</span>
+      <span class="where">Candidate profile → panel above the tabs</span>
     </div>
     <ol class="steps">
       <li class="step">
-        <h3>Move to onboarding as soon as the offer is under way</h3>
-        <p>Don't wait for the signature. Once an offer is <b>started or sent</b>, click <b>Move to onboarding</b> on the candidate — they land on the New-hires board so you can track exactly where they are.</p>
-        <p>Their candidate record, resume, and interview history stay linked. The offer keeps going on the onboarding record.</p>
+        <h3>Move to onboarding — before they sign</h3>
+        <p>Once the status reads <b>Offer started</b> or <b>Offer sent</b>, click <b>Move to onboarding</b> in the panel above the candidate's profile tabs. A form opens — fill in <b>Position</b>, <b>Department</b>, <b>Start date</b> and <b>Company email</b>, then click <b>Move to onboarding</b> again to create the record.</p>
+        <p><b>Company email</b> is already filled in by the house rule — first initial plus last name at skyshare.com, so Hankyu Park is hpark@skyshare.com. Leave it as it is unless an amber warning says someone already has that address; then type a different one.</p>
+        <p>No start date yet? Tick the amber checkbox that ends <b>Move them anyway</b> — the second <b>Move to onboarding</b> button stays greyed out until you do, and they sit in the <b>No start date</b> bucket on the New hires dashboard.</p>
+        <p>Their candidate record, resume, and interview history stay linked. They appear under <b>Onboarding → New hires</b>, and you land on their onboarding record.</p>
+        <div class="tags"><span class="tag cand">In app · candidate</span><span class="tag each">Per person</span></div>
+      </li>
+      <li class="step">
+        <h3>If the panel says someone with that name already exists</h3>
+        <p>Instead of the form you get a gold panel headed <b>Already in onboarding</b>, naming the existing record. Click <b>View that record</b> and check whether it is the same person.</p>
+        <p>Same person: click <b>Link to that record</b>. No duplicate is created, and their resume, interviews, and history connect to it.</p>
+        <p>Genuinely a different person with the same name: click <b>Different person — create separate</b>. The move form opens underneath with a warning above it — fill it in and click <b>Move to onboarding</b>.</p>
         <div class="tags"><span class="tag cand">In app · candidate</span><span class="tag each">Per person</span></div>
       </li>
     </ol>
@@ -142,7 +161,9 @@
     <ol class="steps">
       <li class="step">
         <h3>Keep ticking the offer steps from either side</h3>
-        <p>The six offer steps are the front of the onboarding checklist. Tick them on the candidate's <b>Offers</b> tab <b>or</b> on the new-hire's <b>onboarding record</b> — the two stay in step automatically, so nothing is entered twice and nothing drifts.</p>
+        <p>Tick them on the candidate's <b>Offers</b> tab, or open <b>Onboarding → New hires</b>, click the person, and tick the same six in the <b>Offer</b> box directly above <b>Checklist</b>. The Offer group inside <b>Checklist</b> is the same six again — ticking them there writes back too. All three doors work; use whichever is in front of you.</p>
+        <p>One exception: setting a Checklist offer row to <b>N/A</b> does not write back. Only <b>Done</b> and <b>To do</b> reach the offer.</p>
+        <p>Each side updates the other — provided the hire is linked to a candidate with at least one application. A hire added straight to the New hires board with no linked candidate has no <b>Offer</b> box on their onboarding record, and their Offer checklist ticks stay on that checklist only.</p>
         <div class="tags"><span class="tag cand">In app · candidate</span><span class="tag onb">In app · onboarding</span></div>
       </li>
     </ol>
@@ -152,13 +173,15 @@
     <div class="phase-head">
       <span class="phase-kicker">Part 4</span>
       <h2>Signed — the handoff</h2>
-      <span class="where">Offers stepper</span>
+      <span class="where">Offers tab → step list</span>
     </div>
     <ol class="steps">
       <li class="step">
         <h3>Mark it signed and set the start date</h3>
-        <p>When the candidate signs, tick <b>Candidate signed</b> (or set status to <b>Signed</b>). You'll be asked for the <b>start date</b> — there's a "not known yet" escape so signing is never blocked on it.</p>
-        <p>Signing is the handoff: the rest of the onboarding checklist (documents, systems, orientation) carries on from there.</p>
+        <p>When the candidate signs, tick <b>Candidate signed offer letter</b>. The status flips to <b>Offer signed</b> on its own.</p>
+        <p>Ticking that step does <b>not</b> prompt you for a start date. Click <b>Add their start date</b> below the step list, type the date, and click <b>Save</b>. That link only appears while no start date is recorded — once one is saved it disappears, and the date shows in the line of dates above.</p>
+        <p>Choosing <b>Offer signed</b> in the status dropdown instead asks for the date straight away. The second button in that panel reads <b>Not known yet</b> before the offer is signed, and <b>Cancel</b> once the status is already <b>Offer signed</b>.</p>
+        <p>The rest of the onboarding checklist — documents, systems, orientation — carries on from there.</p>
         <div class="tags"><span class="tag cand">In app · candidate</span><span class="tag onb">In app · onboarding</span><span class="tag each">Per person</span></div>
       </li>
     </ol>
@@ -166,11 +189,10 @@
 
   <div class="callout">
     <h4>Why it works this way</h4>
-    <p>An <b>offer is the last act of recruiting</b>, so it lives on the candidate's application — you can work an offer for someone you only <em>might</em> hire, no new-hire record needed. <b>Signing is the handoff</b> to onboarding.</p>
-    <p>Moving people in <b>early</b> means offer-stage hires are visible on the board instead of hidden until they sign. And because the six offer steps are the same six that open the onboarding checklist, editing them on either side keeps both in step — one source of truth, two windows.</p>
+    <p>An offer lives on the candidate's application, so you can work one for someone you only <em>might</em> hire — no onboarding record needed. The six offer steps are the first six of the 20-step onboarding checklist, which is why editing them on either side keeps both in step.</p>
   </div>
 
   <footer>
-    <b>SkyShare Talent-Ops</b> · Offers SOP · updated Jul 20, 2026.
+    <b>SkyShare Talent-Ops</b> · Offers SOP · updated Jul 22, 2026 — app labels checked against the screen. If a screen doesn't match this SOP, tell the Recruiting Manager (Aimee Schaedig) what you saw.
   </footer>
 </div>
