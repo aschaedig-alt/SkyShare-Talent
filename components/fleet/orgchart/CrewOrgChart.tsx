@@ -8,6 +8,7 @@ import { normSeat, cntSeat } from "@/lib/fleet/staffing/compute";
 import { CREW_GROUPS, CREW_LEADERSHIP, CREW_TRAINING, CREW_PILOT_TURNOVER, turnoverFor } from "@/lib/fleet/staffing/crew-data";
 import { SeatSquares, PersonRow, SlotRow } from "./SeatParts";
 import { LinkPicker, orgLinkBtnStyle } from "./LinkPicker";
+import { useUnsavedGuard } from "./useUnsavedGuard";
 import styles from "./OrgChart.module.css";
 
 type SortKey = "Fleet size" | "Open seats";
@@ -728,7 +729,10 @@ export default function CrewOrgChart({
     void postRoster({ reset: true });
   };
   // Leave edit mode, dropping any unsaved local changes (a plain "cancel").
+  // ALWAYS confirm when there is something to lose: this button sits one click
+  // from discarding a whole "Edit all" pass, and it did exactly that to someone.
   const exitEdit = () => {
+    if (dirty && !window.confirm("Discard your unsaved changes to this chart? Everything you have edited since the last save will be lost.")) return;
     setGroupsData(savedGroups);
     setLinks(savedLinks);
     setMovePick(null);
@@ -826,6 +830,8 @@ export default function CrewOrgChart({
   // Card heights are equalized purely in CSS now (the grid stretches each row —
   // see .grid/.card in OrgChart.module.css). The old JS pass that measured and set
   // minHeight raced the Archivo web-font load and left cards uneven until a refresh.
+
+  useUnsavedGuard(dirty, "You have unsaved changes to the crew chart. Leave this page and lose them?");
 
   // Escape closes the card. Routed through a ref because closeModal now has to
   // check for unsaved card edits, and this listener is bound once.
@@ -1328,7 +1334,7 @@ export default function CrewOrgChart({
                   </div>
                 ) : null}
                 <div className="m-edithint">
-                  Changes are local until you press <b>{cardEditing ? "Save this aircraft" : "Save changes"}</b>{cardEditing ? " below" : " in the edit bar"}. Adding a person fills an open seat; removing one reopens it. <b>Move</b> lets you pick where and how (on-line / training / tentative); a tentative move reopens the old seat and shows the pilot transitioning out here. Tentative — external (red) is an outside candidate; internal (blue) is a SkyShare employee moving in.
+                  Changes are local until you press <b>{cardEditing ? "Save this aircraft" : "Save all changes"}</b> below. Adding a person fills an open seat; removing one reopens it. <b>Move</b> lets you pick where and how (on-line / training / tentative); a tentative move reopens the old seat and shows the pilot transitioning out here. Tentative — external (red) is an outside candidate; internal (blue) is a SkyShare employee moving in.
                 </div>
               </>
             ) : (
@@ -1401,6 +1407,32 @@ export default function CrewOrgChart({
               Edit this aircraft
             </button>
             <span style={{ fontSize: 11.5, opacity: 0.65 }}>Changes here affect only {active.sub}.</span>
+          </div>
+        ) : null}
+
+        {/* During an "Edit all" session the Save button lives in the header bar,
+            which is off-screen while you are down in a card. Repeat it here so
+            edits can be banked without hunting for it — the reported loss was
+            exactly this: card after card edited, then away without saving. */}
+        {active && editMode ? (
+          <div style={{ borderTop: "1px solid var(--line, #cdd7e2)", marginTop: 14, paddingTop: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving || !dirty}
+              style={{ background: dirty ? "var(--navy, #0d2c43)" : "transparent", color: dirty ? "#fff" : "var(--ink, #1a2b3c)", border: dirty ? "none" : "1px solid var(--line, #cdd7e2)", borderRadius: 4, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: saving || !dirty ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}
+            >
+              {saving ? "Saving…" : "Save all changes"}
+            </button>
+            {saveErr ? (
+              <span style={{ color: "#c0392b", fontSize: 12 }}>{saveErr}</span>
+            ) : dirty ? (
+              <span style={{ color: "#b0670e", fontSize: 12, fontWeight: 600 }}>
+                Unsaved — editing every aircraft. Nothing is stored until you save.
+              </span>
+            ) : (
+              <span style={{ fontSize: 11.5, opacity: 0.65 }}>All changes saved.</span>
+            )}
           </div>
         ) : null}
 
