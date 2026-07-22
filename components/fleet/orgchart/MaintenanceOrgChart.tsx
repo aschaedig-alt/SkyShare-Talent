@@ -349,10 +349,22 @@ export default function MaintenanceOrgChart({
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState<string | null>(null);
+  // Per-card editing: the group index open for editing, plus the roster as it
+  // stood when that editor opened (what Cancel restores).
+  const [cardEdit, setCardEdit] = useState<number | null>(null);
+  const [cardSnapshot, setCardSnapshot] = useState<{ groups: MxGroup[]; links: Record<string, string> } | null>(null);
 
   const dirty = useMemo(
     () => JSON.stringify(mxData) !== JSON.stringify(savedGroups) || JSON.stringify(links) !== JSON.stringify(savedLinks),
     [mxData, savedGroups, links, savedLinks]
+  );
+  /** Changed since THIS card editor opened — separate from chart-wide `dirty`. */
+  const cardDirty = useMemo(
+    () =>
+      cardSnapshot !== null &&
+      (JSON.stringify(mxData) !== JSON.stringify(cardSnapshot.groups) ||
+        JSON.stringify(links) !== JSON.stringify(cardSnapshot.links)),
+    [mxData, links, cardSnapshot]
   );
 
   const applyEdit = (fn: (draft: MxGroup[]) => void) =>
@@ -445,7 +457,7 @@ export default function MaintenanceOrgChart({
       return next;
     });
 
-  const postRoster = async (body: unknown) => {
+  const postRoster = async (body: unknown): Promise<boolean> => {
     setSaving(true);
     setSaveErr(null);
     try {
@@ -461,22 +473,66 @@ export default function MaintenanceOrgChart({
       const nextLinks = data.links ?? {};
       setLinks(nextLinks);
       setSavedLinks(nextLinks);
+      return true;
     } catch {
       setSaveErr("Couldn't save — check your connection or that you're signed in as an admin.");
+      return false;
     } finally {
       setSaving(false);
     }
   };
-  const save = () => postRoster({ groups: mxData, links });
+  const save = () => void postRoster({ groups: mxData, links });
   const resetSeed = () => {
     if (typeof window !== "undefined" && !window.confirm("Reset the maintenance chart to the original source data? This discards all saved manual edits.")) return;
-    postRoster({ reset: true });
+    void postRoster({ reset: true });
   };
   const exitEdit = () => {
     setMxData(savedGroups);
     setLinks(savedLinks);
     setSaveErr(null);
     setEditMode(false);
+  };
+
+  // --- per-card editing ----------------------------------------------------
+  // Mirrors the crew chart: click the location you want to change and edit it
+  // there. Cancel restores a snapshot rather than one group by index, because a
+  // cross-location move deliberately touches two groups.
+  const startCardEdit = (idx: number) => {
+    setCardSnapshot({ groups: structuredClone(mxData), links: { ...links } });
+    setCardEdit(idx);
+    setSaveErr(null);
+  };
+  const cancelCardEdit = () => {
+    if (cardSnapshot) {
+      setMxData(cardSnapshot.groups);
+      setLinks(cardSnapshot.links);
+    }
+    setCardSnapshot(null);
+    setCardEdit(null);
+    setSaveErr(null);
+  };
+  const saveCardEdit = async () => {
+    const ok = await postRoster({ groups: mxData, links });
+    if (!ok) return; // leave the editor open so the changes aren't lost
+    setCardSnapshot(null);
+    setCardEdit(null);
+  };
+  /** Open a card, guarding unsaved work on the one being left. */
+  const openCard = (idx: number) => {
+    if (cardEdit !== null && cardEdit !== idx) {
+      if (cardDirty && !window.confirm("Discard the unsaved changes to the location you were editing?")) return;
+      cancelCardEdit();
+    }
+    setOpenIdx(idx);
+  };
+  const closeModal = () => {
+    if (cardEdit !== null && cardDirty) {
+      if (!window.confirm("Discard the unsaved changes to this location?")) return;
+      cancelCardEdit();
+    } else if (cardEdit !== null) {
+      cancelCardEdit();
+    }
+    setOpenIdx(null);
   };
 
   const groups = mxData.map((d, idx) => {
@@ -508,9 +564,13 @@ export default function MaintenanceOrgChart({
   // see .grid/.card in OrgChart.module.css). The old JS pass that measured and set
   // minHeight raced the web-font load and left cards uneven until a manual refresh.
 
+  // Routed through a ref because closeModal now checks for unsaved card edits,
+  // and this listener is bound once.
+  const closeModalRef = useRef(closeModal);
+  closeModalRef.current = closeModal;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpenIdx(null);
+      if (e.key === "Escape") closeModalRef.current();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -532,11 +592,11 @@ export default function MaintenanceOrgChart({
           className="card"
           tabIndex={0}
           role="button"
-          onClick={() => setOpenIdx(g.idx)}
+          onClick={() => openCard(g.idx)}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              setOpenIdx(g.idx);
+              openCard(g.idx);
             }
           }}
         >
@@ -614,6 +674,10 @@ export default function MaintenanceOrgChart({
 
   const active = openIdx != null ? mxData[openIdx] : null;
   const at = active ? groupTotals(active) : null;
+  // The open card is editable either because this one card is being edited, or
+  // because the whole chart is in the bulk "Edit all" session.
+  const cardEditing = cardEdit !== null && cardEdit === openIdx;
+  const isEditing = editMode || cardEditing;
 
   return (
     <div className={styles.wrap} ref={wrapRef}>
@@ -625,7 +689,7 @@ export default function MaintenanceOrgChart({
           <div className="ttl">Maintenance Org Chart</div>
           <div className="desc">
             Maintenance staffing across the maintenance teams and the administrative group.{" "}
-            <b>Click any group to see its people.</b> Candidates and unfilled lead roles count as open positions until they start.
+            <b>Click any group to see its people{canEdit ? " — and to edit that group" : ""}.</b> Candidates and unfilled lead roles count as open positions until they start.
           </div>
           <div className="ctrls">
             <div className="seg">
@@ -637,11 +701,26 @@ export default function MaintenanceOrgChart({
                 Open seats
               </button>
             </div>
+            {/* Editing is per card now — click a location and edit it there.
+                This stays only as the bulk fallback for a whole-chart session. */}
             {canEdit ? (
               <div className="seg">
                 <span className="lbl">Roster</span>
-                <button className={editMode ? "on" : ""} onClick={() => (editMode ? exitEdit() : setEditMode(true))}>
-                  {editMode ? "Editing" : "Edit"}
+                <button
+                  className={editMode ? "on" : ""}
+                  onClick={() => {
+                    if (editMode) exitEdit();
+                    else {
+                      // Switching to a bulk session would revert an open card
+                      // editor, so never do that silently.
+                      if (cardEdit !== null && cardDirty && !window.confirm("Discard the unsaved changes to the location you were editing?")) return;
+                      cancelCardEdit();
+                      setEditMode(true);
+                    }
+                  }}
+                  title="Edit every location at once. To change one location, click it and press Edit on the card."
+                >
+                  {editMode ? "Editing all" : "Edit all"}
                 </button>
               </div>
             ) : null}
@@ -754,12 +833,12 @@ export default function MaintenanceOrgChart({
       </div>
       <span className="mockflag">Seed data · current MX roster + active candidates · candidates count as open until start date</span>
 
-      <div className={`backdrop${active ? " open" : ""}`} onClick={() => setOpenIdx(null)} />
+      <div className={`backdrop${active ? " open" : ""}`} onClick={closeModal} />
       <div className={`modal${active ? " open" : ""}`} role="dialog" aria-modal="true">
         {active && at ? (
           <>
             <div className="m-h">
-              <button className="m-close" aria-label="Close" data-dialog-close onClick={() => setOpenIdx(null)}>
+              <button className="m-close" aria-label="Close" data-dialog-close onClick={closeModal}>
                 ✕
               </button>
               <div className="m-ty">{active.name}</div>
@@ -767,7 +846,7 @@ export default function MaintenanceOrgChart({
                 {active.sub} · {at.f}/{at.at} staffed · reports to {active.mgr}
               </div>
             </div>
-            {editMode ? (
+            {isEditing ? (
               <>
                 <div className="m-cols editing">
                   {active.sections.map((sec, i) => (
@@ -787,7 +866,7 @@ export default function MaintenanceOrgChart({
                   ))}
                 </div>
                 <div className="m-edithint">
-                  Changes are local until you press <b>Save changes</b> in the edit bar. Use each person&apos;s status dropdown to change them (e.g. <b>Candidate → In training</b>). Adding a person fills an open position; removing one reopens it. Candidate = red (external), Candidate · internal = blue.
+                  Changes are local until you press <b>{cardEditing ? "Save this location" : "Save changes"}</b>{cardEditing ? " below" : " in the edit bar"}. Use each person&apos;s status dropdown to change them (e.g. <b>Candidate → In training</b>). Adding a person fills an open position; removing one reopens it. Candidate = red (external), Candidate · internal = blue.
                 </div>
               </>
             ) : (
@@ -801,6 +880,56 @@ export default function MaintenanceOrgChart({
               </>
             )}
           </>
+        ) : null}
+
+        {/* Per-card edit entry point, and its own Save / Cancel.
+
+            NO "Duplicate this location" here, deliberately. The crew chart has
+            Duplicate/Remove for aircraft; this chart was left without it BY
+            REQUEST on 2026-07-22 — a new managed tail is a routine arrival, a
+            new maintenance line station is not. It is a decision, not a gap, so
+            please don't add it purely to make the two charts match the standing
+            "every chart ships the same capabilities" rule. If maintenance ever
+            genuinely needs a new location, build it then. */}
+        {active && canEdit && !isEditing ? (
+          <div style={{ borderTop: "1px solid var(--line, #cdd7e2)", marginTop: 14, paddingTop: 12, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => startCardEdit(openIdx as number)}
+              style={{ background: "var(--navy, #0d2c43)", color: "#fff", border: "none", borderRadius: 4, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+            >
+              Edit this location
+            </button>
+            <span style={{ fontSize: 11.5, opacity: 0.65 }}>Changes here affect only {active.name}.</span>
+          </div>
+        ) : null}
+
+        {active && cardEditing ? (
+          <div style={{ borderTop: "1px solid var(--line, #cdd7e2)", marginTop: 14, paddingTop: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => void saveCardEdit()}
+              disabled={saving || !cardDirty}
+              style={{ background: "var(--navy, #0d2c43)", color: "#fff", border: "none", borderRadius: 4, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: saving || !cardDirty ? "default" : "pointer", opacity: saving || !cardDirty ? 0.5 : 1 }}
+            >
+              {saving ? "Saving…" : "Save this location"}
+            </button>
+            <button
+              type="button"
+              onClick={cancelCardEdit}
+              disabled={saving}
+              style={{ background: "none", border: "none", color: "var(--ink, #1a2b3c)", opacity: 0.7, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+            >
+              Cancel
+            </button>
+            {saveErr ? (
+              <span style={{ color: "#c0392b", fontSize: 12 }}>{saveErr}</span>
+            ) : (
+              <span style={{ fontSize: 11.5, opacity: 0.65 }}>
+                {cardDirty ? "Unsaved changes" : "No changes yet"} · a move also writes the location the person goes to.
+              </span>
+            )}
+          </div>
         ) : null}
       </div>
     </div>

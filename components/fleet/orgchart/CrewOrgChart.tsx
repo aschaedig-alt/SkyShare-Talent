@@ -402,10 +402,30 @@ export default function CrewOrgChart({
   const [roleBusy, setRoleBusy] = useState(false);
   const [roleErr, setRoleErr] = useState<string | null>(null);
   const [roleDone, setRoleDone] = useState<string | null>(null);
+  // "Duplicate this aircraft" — the index of the card being copied, plus the new
+  // tail's details. dupFrom is null unless the form is open.
+  const [dupFrom, setDupFrom] = useState<number | null>(null);
+  const [dupType, setDupType] = useState("");
+  const [dupTail, setDupTail] = useState("");
+  const [dupOwner, setDupOwner] = useState("");
+  const [dupErr, setDupErr] = useState<string | null>(null);
+  // Per-card editing: the group index whose card is open for editing, plus the
+  // roster as it stood when that editor opened (what Cancel restores).
+  const [cardEdit, setCardEdit] = useState<number | null>(null);
+  const [cardSnapshot, setCardSnapshot] = useState<{ groups: CrewGroup[]; links: Record<string, string> } | null>(null);
 
   const dirty = useMemo(
     () => JSON.stringify(groupsData) !== JSON.stringify(savedGroups) || JSON.stringify(links) !== JSON.stringify(savedLinks),
     [groupsData, savedGroups, links, savedLinks]
+  );
+  /** Has anything changed since THIS card editor opened? Drives its Save button
+      and the discard prompt — separate from `dirty`, which is chart-wide. */
+  const cardDirty = useMemo(
+    () =>
+      cardSnapshot !== null &&
+      (JSON.stringify(groupsData) !== JSON.stringify(cardSnapshot.groups) ||
+        JSON.stringify(links) !== JSON.stringify(cardSnapshot.links)),
+    [groupsData, links, cardSnapshot]
   );
 
   const linkPerson = (name: string, candidateId: string) => setLinks((prev) => ({ ...prev, [name]: candidateId }));
@@ -422,6 +442,95 @@ export default function CrewOrgChart({
       fn(d);
       return d;
     });
+
+  /** Open the duplicate form for a card, prefilled with its aircraft type.
+      The tail and owner start blank — they are what makes it a different tail. */
+  const startDuplicate = (idx: number) => {
+    setDupFrom(idx);
+    setDupType(groupsData[idx]?.name ?? "");
+    setDupTail("");
+    setDupOwner("");
+    setDupErr(null);
+  };
+
+  /** A seat with the SAME number of seats as the source but nobody in them.
+      A new tail inherits the crew LAYOUT, not the crew — so three captains
+      becomes three open captain seats. Returns null when the source aircraft
+      has no such seat, so "no first officer" stays "no first officer". */
+  const emptySeatLike = (seat: Seat | null | undefined): Seat | null => {
+    if (!seat) return null;
+    const total = cntSeat(normSeat(seat)).at;
+    return total > 0 ? { open: total } : null;
+  };
+
+  /** Copy an aircraft into a new tail, inserted directly after the source so it
+      lands beside it on the chart. Local until Save, like every other edit. */
+  const duplicateGroup = () => {
+    if (dupFrom == null) return;
+    const src = groupsData[dupFrom];
+    if (!src) return;
+
+    const type = dupType.trim();
+    const tail = dupTail.trim();
+    const owner = dupOwner.trim();
+    if (!type) return setDupErr("Aircraft type is required.");
+    if (!tail) return setDupErr("Tail number is required — it is what identifies the new card.");
+
+    const sub = owner ? `${tail} · ${owner}` : tail;
+    if (groupsData.some((g) => g.sub.trim().toLowerCase() === sub.toLowerCase())) {
+      return setDupErr(`${tail} is already on the chart.`);
+    }
+
+    // Structure carries over; people, tags, departures, notes and the photo do
+    // not — those belong to the aircraft we copied, not to the new one.
+    const copy: CrewGroup = {
+      name: type,
+      pool: src.pool,
+      sub,
+      pic: emptySeatLike(src.pic),
+      sic: emptySeatLike(src.sic)
+    };
+    const cabin = emptySeatLike(src.cabin);
+    if (cabin) copy.cabin = cabin;
+    if (src.poolFlown) copy.poolFlown = true;
+
+    applyEdit((d) => {
+      d.splice(dupFrom + 1, 0, copy);
+    });
+    setDupFrom(null);
+    setOpenIdx(dupFrom + 1);
+    // Follow the card editor onto the new tail, so the copy can be saved from
+    // the card you are now looking at. The snapshot is untouched, so Cancel
+    // still undoes the duplication.
+    if (cardEdit !== null) setCardEdit(dupFrom + 1);
+  };
+
+  /** Remove an aircraft outright. The escape hatch for a duplicate made in
+      error — without it a saved mistake would need a developer.
+
+      In card mode this SAVES IMMEDIATELY: removing the card closes the only
+      editor that could have saved it, so leaving the change local would strand
+      it. In an "Edit all" session the chart-wide Save still owns it. */
+  const removeGroup = (idx: number) => {
+    const g = groupsData[idx];
+    if (!g) return;
+    const cardMode = cardEdit !== null;
+    const tail = `${g.name} (${g.sub})`;
+    const confirmMsg = cardMode
+      ? `Remove ${tail} from the chart? Its pilots come off with it, and this saves immediately.`
+      : `Remove ${tail} from the chart? Its pilots come off with it. Nothing is saved until you press Save changes.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    const next = groupsData.filter((_, i) => i !== idx);
+    setGroupsData(next);
+    setOpenIdx(null);
+    setDupFrom(null);
+    if (cardMode) {
+      setCardEdit(null);
+      setCardSnapshot(null);
+      void postRoster({ groups: next, links });
+    }
+  };
 
   const addPerson = (gIdx: number, seatKey: SeatKey, bucket: FillBucket, name: string, fillsNamed?: string) => {
     const clean = name.trim();
@@ -589,7 +698,7 @@ export default function CrewOrgChart({
       }
     });
 
-  const postRoster = async (body: unknown) => {
+  const postRoster = async (body: unknown): Promise<boolean> => {
     setSaving(true);
     setSaveErr(null);
     try {
@@ -605,16 +714,18 @@ export default function CrewOrgChart({
       const nextLinks = data.links ?? {};
       setLinks(nextLinks);
       setSavedLinks(nextLinks);
+      return true;
     } catch {
       setSaveErr("Couldn't save — check your connection or that you're signed in as an admin.");
+      return false;
     } finally {
       setSaving(false);
     }
   };
-  const save = () => postRoster({ groups: groupsData, links });
+  const save = () => void postRoster({ groups: groupsData, links });
   const resetSeed = () => {
     if (typeof window !== "undefined" && !window.confirm("Reset the crew chart to the original source data? This discards all saved manual edits.")) return;
-    postRoster({ reset: true });
+    void postRoster({ reset: true });
   };
   // Leave edit mode, dropping any unsaved local changes (a plain "cancel").
   const exitEdit = () => {
@@ -623,6 +734,61 @@ export default function CrewOrgChart({
     setMovePick(null);
     setSaveErr(null);
     setEditMode(false);
+  };
+
+  // --- per-card editing ----------------------------------------------------
+  // The team's instinct is to click the aircraft they want to change, so a card
+  // carries its own Edit / Save / Cancel. The chart-wide mode still exists for
+  // bulk work ("Edit all"), which is why both can be true at once.
+  //
+  // Cancel restores a snapshot taken when the card was opened for editing,
+  // rather than reverting one group by index: a MOVE deliberately touches two
+  // aircraft (the pilot leaves one and lands on another), so reverting only the
+  // card you were on would strand the other half of the move.
+  const startCardEdit = (idx: number) => {
+    setCardSnapshot({ groups: structuredClone(groupsData), links: { ...links } });
+    setCardEdit(idx);
+    setSaveErr(null);
+  };
+  const cancelCardEdit = () => {
+    if (cardSnapshot) {
+      setGroupsData(cardSnapshot.groups);
+      setLinks(cardSnapshot.links);
+    }
+    setCardSnapshot(null);
+    setCardEdit(null);
+    setMovePick(null);
+    setDupFrom(null);
+    setSaveErr(null);
+  };
+  const saveCardEdit = async () => {
+    const ok = await postRoster({ groups: groupsData, links });
+    if (!ok) return; // leave the editor open so the changes aren't lost
+    setCardSnapshot(null);
+    setCardEdit(null);
+    setMovePick(null);
+    setDupFrom(null);
+  };
+  /** Open a card. If a DIFFERENT card is mid-edit with unsaved changes, ask
+      first — switching cards would otherwise strand that work somewhere the
+      user can no longer see or save it. */
+  const openCard = (idx: number) => {
+    if (cardEdit !== null && cardEdit !== idx) {
+      if (cardDirty && !window.confirm("Discard the unsaved changes to the aircraft you were editing?")) return;
+      cancelCardEdit();
+    }
+    setOpenIdx(idx);
+  };
+
+  /** Unsaved work in a card editor should never disappear to a stray click. */
+  const closeModal = () => {
+    if (cardEdit !== null && cardDirty) {
+      if (!window.confirm("Discard the unsaved changes to this aircraft?")) return;
+      cancelCardEdit();
+    } else if (cardEdit !== null) {
+      cancelCardEdit();
+    }
+    setOpenIdx(null);
   };
 
   const groups = groupsData.map((d, idx) => {
@@ -661,9 +827,13 @@ export default function CrewOrgChart({
   // see .grid/.card in OrgChart.module.css). The old JS pass that measured and set
   // minHeight raced the Archivo web-font load and left cards uneven until a refresh.
 
+  // Escape closes the card. Routed through a ref because closeModal now has to
+  // check for unsaved card edits, and this listener is bound once.
+  const closeModalRef = useRef(closeModal);
+  closeModalRef.current = closeModal;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpenIdx(null);
+      if (e.key === "Escape") closeModalRef.current();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -684,11 +854,11 @@ export default function CrewOrgChart({
             className="card"
             tabIndex={0}
             role="button"
-            onClick={() => setOpenIdx(g.idx)}
+            onClick={() => openCard(g.idx)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                setOpenIdx(g.idx);
+                openCard(g.idx);
               }
             }}
           >
@@ -748,11 +918,11 @@ export default function CrewOrgChart({
           className="card"
           tabIndex={0}
           role="button"
-          onClick={() => setOpenIdx(g.idx)}
+          onClick={() => openCard(g.idx)}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              setOpenIdx(g.idx);
+              openCard(g.idx);
             }
           }}
         >
@@ -859,6 +1029,10 @@ export default function CrewOrgChart({
   const mgG = groups.filter((g) => g.d.pool === "Managed");
 
   const active = openIdx != null ? groupsData[openIdx] : null;
+  // The open card is editable either because this one card is being edited, or
+  // because the whole chart is in the bulk "Edit all" session.
+  const cardEditing = cardEdit !== null && cardEdit === openIdx;
+  const isEditing = editMode || cardEditing;
   const ap = active ? normSeat(active.pic) : null;
   const as = active && active.sic ? normSeat(active.sic) : null;
   const acp = ap ? cntSeat(ap) : null;
@@ -876,7 +1050,7 @@ export default function CrewOrgChart({
           <div className="ttl">Crew Org Chart</div>
           <div className="desc">
             Flight Operations by aircraft group — fractional/charter aircraft plus each managed tail.{" "}
-            <b>Click any aircraft to see its pilots.</b> In-training pilots count as filled; turnover &amp; parked seats live under Additional info.
+            <b>Click any aircraft to see its pilots{canEdit ? " — and to edit that aircraft" : ""}.</b> In-training pilots count as filled; turnover &amp; parked seats live under Additional info.
           </div>
           <div className="ctrls">
             <div className="seg">
@@ -897,6 +1071,8 @@ export default function CrewOrgChart({
                 Show
               </button>
             </div>
+            {/* Editing is per card now — click an aircraft and edit it there.
+                This stays only as the bulk fallback for a whole-chart session. */}
             {canEdit ? (
               <div className="seg">
                 <span className="lbl">Roster</span>
@@ -904,10 +1080,17 @@ export default function CrewOrgChart({
                   className={editMode ? "on" : ""}
                   onClick={() => {
                     if (editMode) exitEdit();
-                    else setEditMode(true);
+                    else {
+                      // Switching to a bulk session would revert an open card
+                      // editor, so never do that silently.
+                      if (cardEdit !== null && cardDirty && !window.confirm("Discard the unsaved changes to the aircraft you were editing?")) return;
+                      cancelCardEdit();
+                      setEditMode(true);
+                    }
                   }}
+                  title="Edit every aircraft at once. To change one aircraft, click it and press Edit on the card."
                 >
-                  {editMode ? "Editing" : "Edit"}
+                  {editMode ? "Editing all" : "Edit all"}
                 </button>
               </div>
             ) : null}
@@ -927,7 +1110,7 @@ export default function CrewOrgChart({
       {editMode ? (
         <div className="editbar">
           <div className="eb-msg">
-            <b>Editing roster.</b> Click any aircraft to add or remove pilots, move them between aircraft, and open or close seats. Use <b>{dirty ? "Cancel" : "Done"}</b> to leave without changing anyone.
+            <b>Editing roster.</b> Click any aircraft to add or remove pilots, move them between aircraft, and open or close seats — or to <b>duplicate</b> it into another tail. Use <b>{dirty ? "Cancel" : "Done"}</b> to leave without changing anyone.
             {dirty ? (
               <span className="eb-dirty"> · unsaved changes</span>
             ) : (
@@ -1040,12 +1223,12 @@ export default function CrewOrgChart({
       </div>
       <span className="mockflag">Live data · Paycom + fleet summary + Recruiting Status Tracking (Master + Training) + turnover dashboard — Jul 2026 · roster, open reqs, training, time-to-fill &amp; department turnover all sourced</span>
 
-      <div className={`backdrop${active ? " open" : ""}`} onClick={() => setOpenIdx(null)} />
+      <div className={`backdrop${active ? " open" : ""}`} onClick={closeModal} />
       <div className={`modal${active ? " open" : ""}`} role="dialog" aria-modal="true">
         {active && active.poolFlown ? (
           <>
             <div className="m-h">
-              <button className="m-close" aria-label="Close" data-dialog-close onClick={() => setOpenIdx(null)}>
+              <button className="m-close" aria-label="Close" data-dialog-close onClick={closeModal}>
                 ✕
               </button>
               <div className="m-ty">{active.name}</div>
@@ -1061,7 +1244,7 @@ export default function CrewOrgChart({
         {active && !active.poolFlown && ap && acp ? (
           <>
             <div className="m-h">
-              <button className="m-close" aria-label="Close" data-dialog-close onClick={() => setOpenIdx(null)}>
+              <button className="m-close" aria-label="Close" data-dialog-close onClick={closeModal}>
                 ✕
               </button>
               <div className="m-ty">{active.name}</div>
@@ -1070,7 +1253,7 @@ export default function CrewOrgChart({
                 {as && acs ? ` · ${acs.f}/${acs.at} first officers` : ""}
               </div>
             </div>
-            {editMode ? (
+            {isEditing ? (
               <>
                 <div className="m-cols editing">
                   <EditCol
@@ -1145,7 +1328,7 @@ export default function CrewOrgChart({
                   </div>
                 ) : null}
                 <div className="m-edithint">
-                  Changes are local until you press <b>Save changes</b> in the edit bar. Adding a person fills an open seat; removing one reopens it. <b>Move</b> lets you pick where and how (on-line / training / tentative); a tentative move reopens the old seat and shows the pilot transitioning out here. Tentative — external (red) is an outside candidate; internal (blue) is a SkyShare employee moving in.
+                  Changes are local until you press <b>{cardEditing ? "Save this aircraft" : "Save changes"}</b>{cardEditing ? " below" : " in the edit bar"}. Adding a person fills an open seat; removing one reopens it. <b>Move</b> lets you pick where and how (on-line / training / tentative); a tentative move reopens the old seat and shows the pilot transitioning out here. Tentative — external (red) is an outside candidate; internal (blue) is a SkyShare employee moving in.
                 </div>
               </>
             ) : (
@@ -1203,6 +1386,128 @@ export default function CrewOrgChart({
               </>
             )}
           </>
+        ) : null}
+
+        {/* Card-level actions. Deliberately outside the branches above so they
+            are there for every kind of card — including a shared-pool tail,
+            which renders none of the seat columns. */}
+        {active && canEdit && !isEditing ? (
+          <div style={{ borderTop: "1px solid var(--line, #cdd7e2)", marginTop: 14, paddingTop: 12, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => startCardEdit(openIdx as number)}
+              style={{ background: "var(--navy, #0d2c43)", color: "#fff", border: "none", borderRadius: 4, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+            >
+              Edit this aircraft
+            </button>
+            <span style={{ fontSize: 11.5, opacity: 0.65 }}>Changes here affect only {active.sub}.</span>
+          </div>
+        ) : null}
+
+        {/* Save / Cancel for a single card. Absent during an "Edit all" session,
+            where the chart-wide edit bar owns saving. */}
+        {active && cardEditing ? (
+          <div style={{ borderTop: "1px solid var(--line, #cdd7e2)", marginTop: 14, paddingTop: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => void saveCardEdit()}
+              disabled={saving || !cardDirty}
+              style={{ background: "var(--navy, #0d2c43)", color: "#fff", border: "none", borderRadius: 4, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: saving || !cardDirty ? "default" : "pointer", opacity: saving || !cardDirty ? 0.5 : 1 }}
+            >
+              {saving ? "Saving…" : "Save this aircraft"}
+            </button>
+            <button
+              type="button"
+              onClick={cancelCardEdit}
+              disabled={saving}
+              style={{ background: "none", border: "none", color: "var(--ink, #1a2b3c)", opacity: 0.7, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+            >
+              Cancel
+            </button>
+            {saveErr ? (
+              <span style={{ color: "#c0392b", fontSize: 12 }}>{saveErr}</span>
+            ) : (
+              <span style={{ fontSize: 11.5, opacity: 0.65 }}>
+                {cardDirty ? "Unsaved changes" : "No changes yet"} · a move also writes the aircraft the pilot goes to.
+              </span>
+            )}
+          </div>
+        ) : null}
+
+        {active && isEditing ? (
+          <div style={{ borderTop: "1px solid var(--line, #cdd7e2)", marginTop: 14, paddingTop: 12 }}>
+            {dupFrom === openIdx ? (
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>Copy this aircraft to a new tail</div>
+                <div style={{ fontSize: 12, opacity: 0.75, marginTop: 3 }}>
+                  The seat layout carries over as OPEN seats — pilots, tags and notes do not, since they belong to {active.sub}.
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                  <label style={{ flex: "1 1 130px" }}>
+                    <span style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.7 }}>Aircraft type</span>
+                    <input
+                      value={dupType}
+                      onChange={(e) => setDupType(e.target.value)}
+                      style={{ width: "100%", marginTop: 3, padding: "6px 8px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)", fontSize: 13 }}
+                    />
+                  </label>
+                  <label style={{ flex: "1 1 110px" }}>
+                    <span style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.7 }}>Tail number</span>
+                    <input
+                      value={dupTail}
+                      onChange={(e) => setDupTail(e.target.value)}
+                      placeholder="N123AB"
+                      style={{ width: "100%", marginTop: 3, padding: "6px 8px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)", fontSize: 13 }}
+                    />
+                  </label>
+                  <label style={{ flex: "1 1 150px" }}>
+                    <span style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.7 }}>Owner / company</span>
+                    <input
+                      value={dupOwner}
+                      onChange={(e) => setDupOwner(e.target.value)}
+                      style={{ width: "100%", marginTop: 3, padding: "6px 8px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)", fontSize: 13 }}
+                    />
+                  </label>
+                </div>
+                {dupErr ? <div style={{ color: "#c0392b", fontSize: 12, marginTop: 8 }}>{dupErr}</div> : null}
+                <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center" }}>
+                  <button
+                    type="button"
+                    onClick={duplicateGroup}
+                    style={{ background: "var(--navy, #0d2c43)", color: "#fff", border: "none", borderRadius: 4, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                  >
+                    Add this tail
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDupFrom(null)}
+                    style={{ background: "none", border: "none", color: "var(--ink, #1a2b3c)", opacity: 0.7, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                  >
+                    Cancel
+                  </button>
+                  <span style={{ fontSize: 11.5, opacity: 0.65 }}>Nothing is stored until you press Save changes.</span>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => startDuplicate(openIdx as number)}
+                  style={{ ...orgLinkBtnStyle, fontSize: 12.5, fontWeight: 600, padding: "5px 10px" }}
+                >
+                  Duplicate this aircraft
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeGroup(openIdx as number)}
+                  style={{ background: "none", border: "none", color: "#c0392b", fontSize: 12.5, fontWeight: 600, cursor: "pointer", padding: "4px 2px" }}
+                >
+                  Remove this aircraft
+                </button>
+                <span style={{ fontSize: 11.5, opacity: 0.65 }}>Use Duplicate to add another managed tail of the same type.</span>
+              </div>
+            )}
+          </div>
         ) : null}
       </div>
 
