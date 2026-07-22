@@ -28,6 +28,7 @@ export {
   addTags,
   listTags,
   resolveTagIds,
+  resolveTagIdByNames,
   addComment,
   downloadAttachment,
   type FrontConversation,

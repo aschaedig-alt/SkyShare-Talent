@@ -1,4 +1,4 @@
-import { iterateConversations, getMessages, addComment, addTags, resolveTagIds } from "@/lib/front";
+import { iterateConversations, getMessages, addComment, addTags, resolveTagIdByNames } from "@/lib/front";
 import { processPaycomMessage, senderEmail, type PaycomNoticeResult } from "@/lib/paycom/notices";
 
 /**
@@ -13,23 +13,26 @@ import { processPaycomMessage, senderEmail, type PaycomNoticeResult } from "@/li
  * Front tags applied to a thread once it has been handled, so the work is
  * searchable in Front rather than only visible as an internal comment.
  *
- * Matched by NAME, case-insensitively — create a tag in Front with one of these
- * names and it starts being used; delete it and it silently stops. A name with no
- * matching tag is reported but never fails the scan: the checklist update is the
- * part that matters, and a missing label must not cost us it.
+ * Matched by NAME, case-insensitively. Each entry lists the acceptable spellings
+ * for ONE tag and the first that exists in Front wins — so a tag can be renamed
+ * without silently switching the tagging off, which matters because these were
+ * explicitly created as names that may change.
  *
- * "submitted background check" already existed in the account and means exactly
- * what step 2 means, so it is reused rather than duplicated.
+ * Nesting is irrelevant to matching: these live under an "App Tags" parent in
+ * Front, and a nested tag keeps its own plain name.
+ *
+ * A tag none of whose spellings exist is REPORTED, never thrown. The checklist
+ * update is the work; a missing label must not cost us it.
  */
 export const TAGS = {
   /** On every thread the automation acted on — one search shows all of its work. */
-  automated: "[Automated]",
+  automated: ["automated", "[Automated]"],
   /** Step 2: the candidate filled in their details. */
-  infoSubmitted: "submitted background check",
+  infoSubmitted: ["submitted background check"],
   /** Step 3: the check came back clear. */
-  checkComplete: "background check complete",
+  checkComplete: ["background check complete"],
   /** Seen but NOT actioned — an unknown name, or wording we could not read. */
-  needsReview: "talent-ops needs review"
+  needsReview: ["needs review", "talent-ops needs review"]
 } as const;
 
 export const DEFAULT_QUERY = "from:employmentscreening@paycomonline.com";
@@ -119,20 +122,32 @@ export async function scanPaycomInbox(opts: ScanOptions = {}): Promise<ScanRepor
       // comment on one conversation. Only on a real run: a dry run must stay
       // read-only, tags included.
       if (apply) {
-        const wanted: string[] = [];
-        if (result.outcome === "ticked") {
-          wanted.push(TAGS.automated);
-          if (result.kind === "BG_INFO_SUBMITTED") wanted.push(TAGS.infoSubmitted);
-          if (result.kind === "BG_CHECK_COMPLETE") wanted.push(TAGS.checkComplete);
-        } else if (result.outcome === "no-match" || result.outcome === "ambiguous-match" || result.outcome === "no-name-found" || result.outcome === "unrecognised-subject") {
-          // Seen, understood as Paycom mail, but nothing was ticked. Tagging these
-          // turns Front itself into the follow-up list.
-          wanted.push(TAGS.needsReview);
-        }
+        // Each entry is a list of acceptable spellings for ONE tag; the first that
+        // exists in Front wins, so renaming a tag doesn't silently stop tagging.
+        const wanted: readonly (readonly string[])[] =
+          result.outcome === "ticked"
+            ? [
+                TAGS.automated,
+                ...(result.kind === "BG_INFO_SUBMITTED" ? [TAGS.infoSubmitted] : []),
+                ...(result.kind === "BG_CHECK_COMPLETE" ? [TAGS.checkComplete] : [])
+              ]
+            : result.outcome === "no-match" ||
+                result.outcome === "ambiguous-match" ||
+                result.outcome === "no-name-found" ||
+                result.outcome === "unrecognised-subject"
+              ? // Seen, understood as Paycom mail, but nothing was ticked. Tagging
+                // these turns Front itself into the follow-up list.
+                [TAGS.needsReview]
+              : [];
+
         if (wanted.length) {
           try {
-            const { ids, missing } = await resolveTagIds(wanted);
-            missingTags.push(...missing);
+            const ids: string[] = [];
+            for (const candidates of wanted) {
+              const id = await resolveTagIdByNames([...candidates]);
+              if (id) ids.push(id);
+              else missingTags.push(candidates[0]);
+            }
             await addTags(conversation.id, ids);
           } catch {
             /* a tag is a label, not the work — never let it fail the scan */

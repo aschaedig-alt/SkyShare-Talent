@@ -102,6 +102,27 @@ export async function resolveTagIds(names: string[]): Promise<{ ids: string[]; m
   return { ids, missing };
 }
 
+/**
+ * Resolve the FIRST of several acceptable names for one tag.
+ *
+ * Tags get renamed — the account already holds both "[Automated]" and plainer
+ * spellings of the same idea. Accepting a list means a rename in Front doesn't
+ * silently stop the tagging: as long as any listed spelling still exists, it
+ * keeps working, and only when none of them do is it reported as missing.
+ *
+ * Nesting a tag under a parent in Front does NOT change its name, so a nested
+ * tag resolves exactly like a top-level one.
+ */
+export async function resolveTagIdByNames(candidates: string[]): Promise<string | null> {
+  const tags = await listTags();
+  const byName = new Map(tags.map((t) => [t.name.trim().toLowerCase(), t.id]));
+  for (const name of candidates) {
+    const id = byName.get(name.trim().toLowerCase());
+    if (id) return id;
+  }
+  return null;
+}
+
 /** Leave an internal note on a thread (audit trail of what the automation did). */
 export async function addComment(
   conversationId: string,
