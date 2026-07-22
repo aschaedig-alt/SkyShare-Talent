@@ -69,6 +69,73 @@ export function resolveLimit(requested: unknown): number {
   return Number.isFinite(n) && n > 0 ? Math.min(n, HARD_MAX_CONVERSATIONS) : DEFAULT_MAX_CONVERSATIONS;
 }
 
+/**
+ * Handle ONE conversation, for the webhook.
+ *
+ * Same logic as a scan, minus the searching — Front has already told us which
+ * thread changed, so re-scanning the inbox to find it would be daft. Idempotent
+ * exactly like the scan: an already-ticked step is left alone, so a webhook that
+ * fires twice, or fires on a thread the nightly cron already handled, costs
+ * nothing.
+ */
+export async function processConversationById(
+  conversationId: string,
+  opts: { apply?: boolean } = {}
+): Promise<ScanRow[]> {
+  const apply = opts.apply === true;
+  const out: ScanRow[] = [];
+
+  const messages = await getMessages(conversationId);
+  for (const message of messages) {
+    if (message.is_inbound === false) continue;
+    const result = await processPaycomMessage(message, { dryRun: !apply });
+    if (result.outcome === "not-a-paycom-notice") continue;
+    out.push({ conversationId, ...result });
+
+    if (!apply) continue;
+
+    if (result.outcome === "ticked") {
+      try {
+        const via = result.matchedBy === "nickname" ? ` (Paycom addressed them as "${result.personName}")` : "";
+        await addComment(
+          conversationId,
+          `SkyShare Talent-Ops: marked "${result.detail}" complete for ${result.hireName}${via} from this Paycom notice.`
+        );
+      } catch {
+        /* the checklist is already updated — a failed note must not fail this */
+      }
+    }
+
+    const wanted: readonly (readonly string[])[] =
+      result.outcome === "ticked"
+        ? [
+            TAGS.automated,
+            ...(result.kind === "BG_INFO_SUBMITTED" ? [TAGS.infoSubmitted] : []),
+            ...(result.kind === "BG_CHECK_COMPLETE" ? [TAGS.checkComplete] : [])
+          ]
+        : result.outcome === "no-match" ||
+            result.outcome === "ambiguous-match" ||
+            result.outcome === "no-name-found" ||
+            result.outcome === "unrecognised-subject"
+          ? [TAGS.needsReview]
+          : [];
+    if (wanted.length) {
+      try {
+        const ids: string[] = [];
+        for (const candidates of wanted) {
+          const id = await resolveTagIdByNames([...candidates]);
+          if (id) ids.push(id);
+        }
+        await addTags(conversationId, ids);
+      } catch {
+        /* a tag is a label, not the work */
+      }
+    }
+  }
+
+  return out;
+}
+
 /** Throws if Front can't be read — callers decide how to report that. */
 export async function scanPaycomInbox(opts: ScanOptions = {}): Promise<ScanReport> {
   const apply = opts.apply === true;
