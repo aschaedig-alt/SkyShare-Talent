@@ -300,11 +300,26 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
           Click any cell to cycle <span className="font-semibold text-brand-lea dark:text-slate-100">to-do → done → N/A</span>. Tick a name to select; scroll sideways for more.
         </p>
       </div>
-      <div className="overflow-x-auto">
+      {/* A bounded box rather than letting the table run the length of the page.
+          Three things follow from it, and the markup was already written for all
+          three but never got the container that makes them work:
+
+          1. The horizontal scrollbar sits at the bottom of THIS box, which is on
+             screen — so scrolling sideways no longer means scrolling to the
+             bottom of the page first to reach the bar.
+          2. The header row's sticky top-0 finally does something: names and
+             progress stay put while you scroll down the tasks.
+          3. The task-name column stays pinned as you scroll across, which it
+             already did.
+
+          max-h only caps: a short list still renders at its natural height. */}
+      <div className="max-h-[75vh] overflow-auto">
         <table className="border-separate border-spacing-0 text-xs">
           <thead>
             <tr>
-              <th className="sticky left-0 z-30 border-b border-r border-brand-lea/10 bg-white px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">
+              {/* The corner cell pins in BOTH directions, above the header row and
+                  the task column, so it never slides out from under either. */}
+              <th className="sticky left-0 top-0 z-30 border-b border-r border-brand-lea/10 bg-white px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">
                 <label className="flex items-center gap-1.5">
                   <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all hires" className="h-3.5 w-3.5" />
                   Task
@@ -313,7 +328,7 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
               {hires.map((h) => {
                 const pct = h.applicableCount > 0 ? Math.round((h.doneCount / h.applicableCount) * 100) : 0;
                 return (
-                  <th key={h.id} className={clsx("sticky top-0 z-10 border-b px-3 py-2 align-bottom", COLUMN_RULE, selected.has(h.id) ? "bg-brand-eden/10 dark:bg-white/10" : "bg-white dark:bg-brand-panel")} style={{ minWidth: 132 }}>
+                  <th key={h.id} className={clsx("sticky top-0 z-20 border-b px-3 py-2 align-bottom", COLUMN_RULE, selected.has(h.id) ? "bg-brand-eden/10 dark:bg-white/10" : "bg-white dark:bg-brand-panel")} style={{ minWidth: 132 }}>
                     <div className="flex justify-center">
                       <input type="checkbox" checked={selected.has(h.id)} onChange={() => toggleOne(h.id)} aria-label={`Select ${h.name}`} className="h-3.5 w-3.5" />
                     </div>
@@ -346,7 +361,7 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
               ["Department", (h: GridHire) => h.department ?? "—"]
             ] as Array<[string, (h: GridHire) => string]>).map(([label, get]) => (
               <tr key={label} className="row-wash dark:hover:bg-white/5">
-                <td className="row-wash-sticky sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">{label}</td>
+                <td className="row-wash-sticky sticky left-0 z-10 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">{label}</td>
                 {hires.map((h) => (
                   <td key={h.id} className={clsx("border-b border-brand-lea/5 px-3 py-1.5 text-center text-brand-grey break-words dark:border-white/10 dark:text-slate-400", COLUMN_RULE)}>{get(h)}</td>
                 ))}
@@ -360,7 +375,7 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
               return (
                 <Fragment key={g.key}>
                   <tr>
-                    <td className="sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-brand-cloudDancer/60 px-3 py-1.5 text-right text-[10px] font-bold uppercase tracking-wide text-brand-gold dark:border-white/10 dark:bg-white/5">
+                    <td className="sticky left-0 z-10 border-b border-r border-brand-lea/10 bg-brand-cloudDancer/60 px-3 py-1.5 text-right text-[10px] font-bold uppercase tracking-wide text-brand-gold dark:border-white/10 dark:bg-white/5">
                       {g.label}
                     </td>
                     {hires.map((h) => (
@@ -369,7 +384,7 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
                   </tr>
                   {groupTasks.map((def) => (
                     <tr key={def.key} className="row-wash dark:hover:bg-white/5">
-                      <td className="row-wash-sticky sticky left-0 z-20 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-black dark:border-white/10 dark:bg-brand-panel dark:text-slate-100">{def.label}</td>
+                      <td className="row-wash-sticky sticky left-0 z-10 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-black dark:border-white/10 dark:bg-brand-panel dark:text-slate-100">{def.label}</td>
                       {hires.map((h) => {
                         const task = h.tasks.find((t) => t.key === def.key);
                         if (!task) return <td key={h.id} className={clsx("border-b border-brand-lea/5 text-center text-brand-grey/50 dark:border-white/10", COLUMN_RULE)}>–</td>;
