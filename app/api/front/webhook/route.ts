@@ -60,6 +60,47 @@ function signatureMatches(rawBody: string, secret: string, presented: string): b
 }
 
 /**
+ * Any email address in the payload that looks like the SENDER.
+ *
+ * The rule fires on all inbound HR Onboarding mail, so most calls are about
+ * something we have no interest in. If the payload already tells us who sent it
+ * and it isn't Paycom, we can answer without spending a Front API request —
+ * which matters when the trigger is an entire inbox rather than one sender.
+ *
+ * Only ever used to skip work. If no sender can be found we fetch and check
+ * properly, so a payload shape we don't recognise costs a request rather than a
+ * missed notice.
+ */
+function findSenderEmail(payload: unknown): string | null {
+  const seen = new Set<unknown>();
+  const walk = (node: unknown, depth: number): string | null => {
+    if (!node || typeof node !== "object" || depth > 6 || seen.has(node)) return null;
+    seen.add(node);
+    const obj = node as Record<string, unknown>;
+
+    // Front marks the sender as the recipient carrying role "from".
+    const recipients = obj.recipients;
+    if (Array.isArray(recipients)) {
+      for (const r of recipients) {
+        if (r && typeof r === "object") {
+          const rec = r as Record<string, unknown>;
+          if (rec.role === "from" && typeof rec.handle === "string") return rec.handle;
+        }
+      }
+    }
+    for (const value of Object.values(obj)) {
+      const found = walk(value, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  };
+  return walk(payload, 0);
+}
+
+/** Same sender test the notice handler uses, applied early to skip cheaply. */
+const PAYCOM_SENDER = /@paycomonline\.com$/i;
+
+/**
  * Front's payload shape varies by trigger, so the conversation id is looked for
  * in the places it plausibly sits rather than assuming one. Returning null is
  * handled as "nothing to do", never as an error.
@@ -117,6 +158,15 @@ export async function POST(request: Request) {
     payload = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ ok: false, message: "Body was not JSON" }, { status: 400 });
+  }
+
+  // The rule fires on the whole HR Onboarding inbox, so most deliveries are
+  // ordinary mail. When the payload already names a non-Paycom sender, answer
+  // without spending a Front API request. Anything we can't identify falls
+  // through and gets fetched properly — cheap to be wrong in that direction.
+  const sender = findSenderEmail(payload);
+  if (sender && !PAYCOM_SENDER.test(sender.trim())) {
+    return NextResponse.json({ ok: true, ignored: "not a Paycom sender" });
   }
 
   const conversationId = findConversationId(payload);
