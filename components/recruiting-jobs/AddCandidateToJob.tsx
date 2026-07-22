@@ -19,6 +19,12 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Found[]>([]);
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", currentTitle: "" });
+
+  // Anything typed into the form counts as work worth confirming before we bin it.
+  // "stage" has a default, so it is compared against that rather than emptiness.
+  function isDirty() {
+    return Object.entries(form).some(([k, v]) => (k === "stage" ? v !== "New" : String(v ?? "").trim() !== ""));
+  }
   // A short confirmation shown when the action wasn't a plain create/link:
   // matched an existing candidate, already linked, or reactivated an archived one.
   // Without it, those cases closed silently and looked identical to a fresh add.
@@ -128,7 +134,7 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
     router.refresh();
   }
 
-  useDialogClose(finish, open);
+  const requestClose = useDialogClose(finish, open, { isDirty: isDirty(), message: "You have started adding a candidate. Close and lose what you entered?" });
 
   return (
     <>
@@ -140,11 +146,11 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-lea/40 p-4" onClick={finish}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-lea/40 p-4" onClick={requestClose}>
           <div className="w-full max-w-md rounded bg-white p-5 shadow-xl dark:bg-brand-panel" onClick={(e) => e.stopPropagation()}>
             <div className="mb-1 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">{notice ? "Done" : "Add candidate"}</h2>
-              <button onClick={finish} data-dialog-close className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close"><X className="h-5 w-5" /></button>
+              <button onClick={requestClose} data-dialog-close className="rounded p-1 text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close"><X className="h-5 w-5" /></button>
             </div>
 
             {notice ? (

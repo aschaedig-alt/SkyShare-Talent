@@ -9,7 +9,8 @@ import { getWorkspaceBranding, resolveBrandingLogo } from "@/lib/data/branding";
 import { EnvironmentBanner } from "@/components/layout/EnvironmentBanner";
 import { ModuleAccessShell } from "@/components/layout/ModuleAccessShell";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { FeedbackButton } from "@/components/feedback/FeedbackButton";
+// Feedback now lives in the sidebar rail (see Sidebar) rather than floating over
+// the page — a floating trigger could be dragged off-screen and sat behind modals.
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
   // Public booking pages and shared read-only reports render bare — no sidebar,
@@ -45,7 +46,6 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
           </ModuleAccessShell>
         </main>
       </div>
-      {showSidebar ? <FeedbackButton /> : null}
     </div>
   );
 }

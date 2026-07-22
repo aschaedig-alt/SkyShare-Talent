@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { MessageSquare, X, Lightbulb, Bug, HelpCircle, Check, Loader, ImagePlus, Trash2 } from "lucide-react";
 import { clsx } from "clsx";
@@ -71,26 +71,6 @@ function pastedImageName(pathname: string, type: string): string {
   return `screenshot-${slug}.${extension}`;
 }
 
-// Where the user has dragged the button to, if anywhere. null = default corner.
-type Position = { x: number; y: number };
-const POSITION_KEY = "feedback-button-position";
-const EDGE = 8; // keep this far from the viewport edges
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
-}
-
-// Anchor the open panel near the (possibly moved) button, clamped on-screen.
-function panelPosition(pos: Position): { left: number; top: number } | undefined {
-  if (typeof window === "undefined") return undefined;
-  const panelW = Math.min(360, window.innerWidth - 40);
-  const panelH = 340; // approximate; clamp just keeps it fully visible
-  return {
-    left: clamp(pos.x, EDGE, window.innerWidth - panelW - EDGE),
-    top: clamp(pos.y, EDGE, window.innerHeight - panelH - EDGE)
-  };
-}
-
 export function FeedbackButton() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -105,12 +85,6 @@ export function FeedbackButton() {
   const [preview, setPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Draggable position (shift-click + drag). Persisted so it stays out of the way.
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const [pos, setPos] = useState<Position | null>(null);
-  const [dragging, setDragging] = useState(false);
-  // Set true at the end of a drag so the trailing click doesn't open the panel.
-  const suppressClickRef = useRef(false);
 
   // Passively remember runtime errors so a bug report can carry them.
   useEffect(() => {
@@ -157,89 +131,7 @@ export function FeedbackButton() {
     return () => window.removeEventListener("paste", onPaste);
   }, [open, done, pathname]);
 
-  /**
-   * Pull a remembered position back inside the current window.
-   *
-   * The drag handler clamps to the window it was dragged in, and the result is
-   * remembered forever — but it used to be restored VERBATIM. Park the button on
-   * a 2560-wide monitor, then open the app in a 1707-wide window, and it renders
-   * at left:2400: off-screen, with no way to get it back, on every page. That is
-   * the "my feedback button is gone" report.
-   */
-  const clampToViewport = useCallback((p: Position): Position => {
-    const el = buttonRef.current;
-    const w = el?.offsetWidth ?? 150;
-    const h = el?.offsetHeight ?? 44;
-    return {
-      x: clamp(p.x, EDGE, Math.max(EDGE, window.innerWidth - w - EDGE)),
-      y: clamp(p.y, EDGE, Math.max(EDGE, window.innerHeight - h - EDGE))
-    };
-  }, []);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(POSITION_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<Position>;
-        if (typeof parsed?.x === "number" && typeof parsed?.y === "number") {
-          setPos(clampToViewport({ x: parsed.x, y: parsed.y }));
-        }
-      }
-    } catch {
-      /* ignore corrupt storage */
-    }
-  }, [clampToViewport]);
-
-  // Resizing the window (or moving between monitors) must not strand it either.
-  useEffect(() => {
-    const onResize = () => setPos((current) => (current ? clampToViewport(current) : current));
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [clampToViewport]);
-
-  function startDrag(e: React.PointerEvent<HTMLButtonElement>) {
-    if (!e.shiftKey) return; // plain click opens the panel; shift-drag moves it
-    e.preventDefault();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const offsetX = e.clientX - rect.left;
-    const offsetY = e.clientY - rect.top;
-    const { width, height } = rect;
-    setDragging(true);
-
-    const onMove = (ev: PointerEvent) => {
-      suppressClickRef.current = true;
-      setPos({
-        x: clamp(ev.clientX - offsetX, EDGE, window.innerWidth - width - EDGE),
-        y: clamp(ev.clientY - offsetY, EDGE, window.innerHeight - height - EDGE)
-      });
-    };
-    const onUp = () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      setDragging(false);
-      setPos((current) => {
-        if (current) {
-          try {
-            localStorage.setItem(POSITION_KEY, JSON.stringify(current));
-          } catch {
-            /* ignore */
-          }
-        }
-        return current;
-      });
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-  }
-
-  function handleClick(e: React.MouseEvent) {
-    if (e.shiftKey) return; // shift is reserved for dragging
-    if (suppressClickRef.current) {
-      suppressClickRef.current = false;
-      return; // this click is the tail end of a drag
-    }
-    setOpen(true);
-  }
+  const hasDraft = message.trim().length > 0 || image !== null;
 
   function reset() {
     setType("IDEA");
@@ -261,13 +153,22 @@ export function FeedbackButton() {
     setImage(file);
   }
 
-  function close() {
+  /**
+   * Closing KEEPS what you typed. The whole workflow here is: start writing, go
+   * and grab a screenshot (Win+Shift+S), come back and paste it in — and taking
+   * that screenshot means clicking away from this panel. Wiping the draft on the
+   * way out made the panel actively hostile to the thing it exists for.
+   *
+   * So this minimises rather than closes, and the tile shows a dot to say the
+   * draft is still there. Only a successful send, or Clear, empties it.
+   */
+  function minimize() {
     setOpen(false);
-    // brief delay so the closing animation doesn't show a reset form
-    setTimeout(reset, 200);
+    setError(null);
   }
 
-  useDialogClose(close, open);
+  // Deliberately NOT guarded with isDirty — nothing is lost on close here.
+  useDialogClose(minimize, open);
 
   async function submit() {
     if (message.trim().length < 2) {
@@ -301,7 +202,10 @@ export function FeedbackButton() {
         throw new Error(data?.message ?? "Unable to send feedback.");
       }
       setDone(true);
-      setTimeout(close, 1600);
+      setTimeout(() => {
+        setOpen(false);
+        reset();
+      }, 1600);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to send feedback.");
     } finally {
@@ -311,42 +215,33 @@ export function FeedbackButton() {
 
   return (
     <>
-      {/* Floating button. Shift-click + drag to reposition (stays out of the
-          way when resizing panels); position persists across reloads. */}
-      {!open && (
-        <button
-          ref={buttonRef}
-          onPointerDown={startDrag}
-          onClick={handleClick}
-          style={pos ? { left: pos.x, top: pos.y, bottom: "auto", right: "auto" } : undefined}
-          className={clsx(
-            "fixed z-[60] flex items-center gap-2 rounded bg-brand-lea px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-brand-eden print:hidden",
-            !pos && "bottom-5 right-5",
-            dragging ? "cursor-grabbing select-none" : "cursor-pointer"
-          )}
-          aria-label="Send feedback"
-          title="Shift-click and drag to move"
-        >
-          <MessageSquare className="h-5 w-5" />
-          <span className="hidden sm:inline">Feedback</span>
-        </button>
-      )}
+      {/* Rail tile, sitting with the other sidebar utilities. It used to float
+          over the page, which is what let it be dragged off-screen and hide behind
+          dialogs; in the rail neither is possible. The dot marks an unsent draft. */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={clsx(
+          "relative mt-2 flex h-9 w-9 items-center justify-center rounded transition print:hidden",
+          open ? "bg-white/15 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
+        )}
+        aria-label="Send feedback"
+        title="Send feedback"
+      >
+        <MessageSquare className="h-5 w-5" />
+        {hasDraft && !open && (
+          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-brand-gold" title="You have an unsent draft" />
+        )}
+      </button>
 
       {/* Click-away backdrop (transparent) */}
-      {open && <div className="fixed inset-0 z-[55]" onClick={close} aria-hidden="true" />}
+      {open && <div className="fixed inset-0 z-[55]" onClick={minimize} aria-hidden="true" />}
 
       {/* Panel — anchored to the button's (possibly moved) location. */}
       {open && (
-        <div
-          style={pos ? panelPosition(pos) : undefined}
-          className={clsx(
-            "fixed z-[60] w-[min(360px,calc(100vw-2.5rem))] rounded border border-brand-lea/15 bg-white shadow-2xl dark:border-white/10 dark:bg-brand-panel",
-            !pos && "bottom-5 right-5"
-          )}
-        >
+        <div className="fixed bottom-5 left-[76px] z-[60] w-[min(360px,calc(100vw-2.5rem))] rounded border border-brand-lea/15 bg-white shadow-2xl dark:border-white/10 dark:bg-brand-panel">
           <div className="flex items-center justify-between border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
             <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">Send feedback</span>
-            <button onClick={close} data-dialog-close className="text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close">
+            <button onClick={minimize} data-dialog-close className="text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close">
               <X className="h-4 w-4" />
             </button>
           </div>

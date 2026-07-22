@@ -6,6 +6,7 @@ import { Fragment, useEffect, useState } from "react";
 import { clsx } from "clsx";
 import { Plane, Menu, X, ChevronsLeft, ChevronsRight, ChevronDown, ChevronRight, CircleUser } from "lucide-react";
 import type { RoleName } from "@/lib/auth/roles";
+import { FeedbackButton } from "@/components/feedback/FeedbackButton";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { SignOutButton } from "@/components/layout/SignOutButton";
 import {
@@ -244,6 +245,8 @@ export function Sidebar({ role, policy, logoDataUrl, userEmail, homeHref = "/com
               </Fragment>
             ))}
           </div>
+
+          <FeedbackButton />
 
           <ThemeToggle collapsed />
 
