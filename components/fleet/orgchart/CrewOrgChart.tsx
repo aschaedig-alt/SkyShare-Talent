@@ -106,6 +106,7 @@ function EditCol({
   onAdd,
   onRemove,
   onAdjustOpen,
+  onRemoveNamed,
   onToggleTrain,
   onSetMove,
   onMove,
@@ -119,9 +120,10 @@ function EditCol({
   label: string;
   allGroups: CrewGroup[];
   movePick: MovePick | null;
-  onAdd: (name: string, bucket: FillBucket) => void;
+  onAdd: (name: string, bucket: FillBucket, fillsNamed?: string) => void;
   onRemove: (bucket: FillBucket, name: string) => void;
   onAdjustOpen: (delta: number) => void;
+  onRemoveNamed: (label: string) => void;
   onToggleTrain: (name: string, toTrain: boolean) => void;
   onSetMove: (p: MovePick | null) => void;
   onMove: (from: MovePick, toIdx: number, toSeat: SeatKey, bucket: FillBucket) => void;
@@ -131,6 +133,8 @@ function EditCol({
 }) {
   const [draftName, setDraftName] = useState("");
   const [draftBucket, setDraftBucket] = useState<FillBucket>("line");
+  // Which NAMED opening this person is filling, if any. Empty = an extra seat.
+  const [fillsNamed, setFillsNamed] = useState("");
   const [moveDest, setMoveDest] = useState("");
   const [moveStatus, setMoveStatus] = useState<FillBucket>("line");
   // Which person's link picker is open.
@@ -267,7 +271,8 @@ function EditCol({
       {o.candInt.map((n) => row(n, "candInt", "i", "internal"))}
       {o.openNamed.map((l, i) => (
         <div className="ec-named" key={`on${i}`}>
-          {l} · <span>named opening</span>
+          <span className="ec-named-label">{l} · <span>named opening</span></span>
+          <button type="button" className="ec-named-x" onClick={() => onRemoveNamed(l)} aria-label={`Remove the ${l} opening`} title="Remove this opening">×</button>
         </div>
       ))}
       <div className="ec-open">
@@ -284,8 +289,9 @@ function EditCol({
         className="ec-add"
         onSubmit={(e) => {
           e.preventDefault();
-          onAdd(draftName, draftBucket);
+          onAdd(draftName, draftBucket, fillsNamed || undefined);
           setDraftName("");
+          setFillsNamed("");
         }}
       >
         <input value={draftName} onChange={(e) => setDraftName(e.target.value)} placeholder="Add name…" />
@@ -296,11 +302,22 @@ function EditCol({
           <option value="cand">Tentative · external</option>
           <option value="candInt">Tentative · internal</option>
         </select>
+        {o.openNamed.length > 0 && (
+          <select value={fillsNamed} onChange={(e) => setFillsNamed(e.target.value)} aria-label="Which opening this person fills">
+            <option value="">Adds a new seat</option>
+            {o.openNamed.map((l, i) => (
+              <option key={`f${i}`} value={l}>Fills: {l}</option>
+            ))}
+          </select>
+        )}
         <button type="submit" disabled={!draftName.trim()}>
           Add
         </button>
       </form>
-      <div className="ec-addhint">Adding a person fills one open seat (if any).</div>
+      <div className="ec-addhint">
+        Adding a person fills one open seat (if any). A NAMED opening is only filled when you pick it above —
+        otherwise the person is an extra seat on top of it.
+      </div>
     </div>
   );
 }
@@ -406,12 +423,21 @@ export default function CrewOrgChart({
       return d;
     });
 
-  const addPerson = (gIdx: number, seatKey: SeatKey, bucket: FillBucket, name: string) => {
+  const addPerson = (gIdx: number, seatKey: SeatKey, bucket: FillBucket, name: string, fillsNamed?: string) => {
     const clean = name.trim();
     if (!clean) return;
     applyEdit((d) => {
       const s = ensureSeat(d[gIdx], seatKey);
       push(s, bucket, clean);
+      // Filling a NAMED opening removes that opening, so the person replaces the
+      // role rather than sitting alongside it. Without this the head count grows
+      // — three cabin attendants plus a "Lead Cabin Attendant" opening plus the
+      // new person reads as 5 seats when it should be 4.
+      if (fillsNamed && s.openNamed?.length) {
+        s.openNamed = s.openNamed.filter((l) => l !== fillsNamed);
+        if (s.openNamed.length === 0) delete s.openNamed;
+        return;
+      }
       // Filling a seat consumes one open req if any exist (a named on-line /
       // in-training / tentative person takes the place of an anonymous opening).
       // If there are no open reqs, the seat count grows instead.
@@ -431,6 +457,16 @@ export default function CrewOrgChart({
         s.open = (s.open ?? 0) + 1;
         tidySeat(d[gIdx], seatKey);
       }
+    });
+  // Drop a named opening outright — the role was cancelled, or somebody already
+  // in the seat turned out to be the person who fills it.
+  const removeNamedOpening = (gIdx: number, seatKey: SeatKey, label: string) =>
+    applyEdit((d) => {
+      const s = d[gIdx][seatKey];
+      if (!s?.openNamed) return;
+      s.openNamed = s.openNamed.filter((l) => l !== label);
+      if (s.openNamed.length === 0) delete s.openNamed;
+      tidySeat(d[gIdx], seatKey);
     });
   const adjustOpen = (gIdx: number, seatKey: SeatKey, delta: number) =>
     applyEdit((d) => {
@@ -1044,7 +1080,8 @@ export default function CrewOrgChart({
                     label="Captains"
                     allGroups={groupsData}
                     movePick={movePick}
-                    onAdd={(name, bucket) => addPerson(openIdx as number, "pic", bucket, name)}
+                    onAdd={(name, bucket, fillsNamed) => addPerson(openIdx as number, "pic", bucket, name, fillsNamed)}
+                    onRemoveNamed={(label) => removeNamedOpening(openIdx as number, "pic", label)}
                     onRemove={(bucket, name) => removePerson(openIdx as number, "pic", bucket, name)}
                     onAdjustOpen={(delta) => adjustOpen(openIdx as number, "pic", delta)}
                     onToggleTrain={(name, toTrain) => toggleTrain(openIdx as number, "pic", name, toTrain)}
@@ -1061,7 +1098,8 @@ export default function CrewOrgChart({
                     label="First Officers"
                     allGroups={groupsData}
                     movePick={movePick}
-                    onAdd={(name, bucket) => addPerson(openIdx as number, "sic", bucket, name)}
+                    onAdd={(name, bucket, fillsNamed) => addPerson(openIdx as number, "sic", bucket, name, fillsNamed)}
+                    onRemoveNamed={(label) => removeNamedOpening(openIdx as number, "sic", label)}
                     onRemove={(bucket, name) => removePerson(openIdx as number, "sic", bucket, name)}
                     onAdjustOpen={(delta) => adjustOpen(openIdx as number, "sic", delta)}
                     onToggleTrain={(name, toTrain) => toggleTrain(openIdx as number, "sic", name, toTrain)}
@@ -1079,7 +1117,8 @@ export default function CrewOrgChart({
                       label="Cabin"
                       allGroups={groupsData}
                       movePick={movePick}
-                      onAdd={(name, bucket) => addPerson(openIdx as number, "cabin", bucket, name)}
+                      onAdd={(name, bucket, fillsNamed) => addPerson(openIdx as number, "cabin", bucket, name, fillsNamed)}
+                    onRemoveNamed={(label) => removeNamedOpening(openIdx as number, "cabin", label)}
                       onRemove={(bucket, name) => removePerson(openIdx as number, "cabin", bucket, name)}
                       onAdjustOpen={(delta) => adjustOpen(openIdx as number, "cabin", delta)}
                       onToggleTrain={(name, toTrain) => toggleTrain(openIdx as number, "cabin", name, toTrain)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { MessageSquare, X, Lightbulb, Bug, HelpCircle, Check, Loader, ImagePlus, Trash2 } from "lucide-react";
 import { clsx } from "clsx";
@@ -106,6 +106,7 @@ export function FeedbackButton() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Draggable position (shift-click + drag). Persisted so it stays out of the way.
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [pos, setPos] = useState<Position | null>(null);
   const [dragging, setDragging] = useState(false);
   // Set true at the end of a drag so the trailing click doesn't open the panel.
@@ -156,19 +157,45 @@ export function FeedbackButton() {
     return () => window.removeEventListener("paste", onPaste);
   }, [open, done, pathname]);
 
+  /**
+   * Pull a remembered position back inside the current window.
+   *
+   * The drag handler clamps to the window it was dragged in, and the result is
+   * remembered forever — but it used to be restored VERBATIM. Park the button on
+   * a 2560-wide monitor, then open the app in a 1707-wide window, and it renders
+   * at left:2400: off-screen, with no way to get it back, on every page. That is
+   * the "my feedback button is gone" report.
+   */
+  const clampToViewport = useCallback((p: Position): Position => {
+    const el = buttonRef.current;
+    const w = el?.offsetWidth ?? 150;
+    const h = el?.offsetHeight ?? 44;
+    return {
+      x: clamp(p.x, EDGE, Math.max(EDGE, window.innerWidth - w - EDGE)),
+      y: clamp(p.y, EDGE, Math.max(EDGE, window.innerHeight - h - EDGE))
+    };
+  }, []);
+
   useEffect(() => {
     try {
       const raw = localStorage.getItem(POSITION_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<Position>;
         if (typeof parsed?.x === "number" && typeof parsed?.y === "number") {
-          setPos({ x: parsed.x, y: parsed.y });
+          setPos(clampToViewport({ x: parsed.x, y: parsed.y }));
         }
       }
     } catch {
       /* ignore corrupt storage */
     }
-  }, []);
+  }, [clampToViewport]);
+
+  // Resizing the window (or moving between monitors) must not strand it either.
+  useEffect(() => {
+    const onResize = () => setPos((current) => (current ? clampToViewport(current) : current));
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [clampToViewport]);
 
   function startDrag(e: React.PointerEvent<HTMLButtonElement>) {
     if (!e.shiftKey) return; // plain click opens the panel; shift-drag moves it
@@ -288,11 +315,12 @@ export function FeedbackButton() {
           way when resizing panels); position persists across reloads. */}
       {!open && (
         <button
+          ref={buttonRef}
           onPointerDown={startDrag}
           onClick={handleClick}
           style={pos ? { left: pos.x, top: pos.y, bottom: "auto", right: "auto" } : undefined}
           className={clsx(
-            "fixed z-40 flex items-center gap-2 rounded bg-brand-lea px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-brand-eden print:hidden",
+            "fixed z-[60] flex items-center gap-2 rounded bg-brand-lea px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-brand-eden print:hidden",
             !pos && "bottom-5 right-5",
             dragging ? "cursor-grabbing select-none" : "cursor-pointer"
           )}
@@ -305,14 +333,14 @@ export function FeedbackButton() {
       )}
 
       {/* Click-away backdrop (transparent) */}
-      {open && <div className="fixed inset-0 z-30" onClick={close} aria-hidden="true" />}
+      {open && <div className="fixed inset-0 z-[55]" onClick={close} aria-hidden="true" />}
 
       {/* Panel — anchored to the button's (possibly moved) location. */}
       {open && (
         <div
           style={pos ? panelPosition(pos) : undefined}
           className={clsx(
-            "fixed z-40 w-[min(360px,calc(100vw-2.5rem))] rounded border border-brand-lea/15 bg-white shadow-2xl dark:border-white/10 dark:bg-brand-panel",
+            "fixed z-[60] w-[min(360px,calc(100vw-2.5rem))] rounded border border-brand-lea/15 bg-white shadow-2xl dark:border-white/10 dark:bg-brand-panel",
             !pos && "bottom-5 right-5"
           )}
         >

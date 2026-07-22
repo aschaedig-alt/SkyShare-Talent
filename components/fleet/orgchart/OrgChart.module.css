@@ -1365,13 +1365,36 @@
   color: var(--accent);
 }
 .wrap :global(.ec-named) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font: 600 11.5px/1.3 var(--fh);
   color: var(--n600);
   padding: 5px 0;
 }
+.wrap :global(.ec-named-label) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 .wrap :global(.ec-named span) {
   color: var(--accent);
   font-weight: 700;
+}
+/* Remove a named opening. Matches the person rows' × so the two read as the
+   same action on the same kind of row. */
+.wrap :global(.ec-named-x) {
+  flex: 0 0 auto;
+  border: 1px solid var(--n300);
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--n600);
+  font: 700 12px/1 var(--fh);
+  padding: 3px 7px;
+}
+.wrap :global(.ec-named-x:hover) {
+  border-color: var(--danger, #a32d2d);
+  color: var(--danger, #a32d2d);
 }
 .wrap :global(.ec-open) {
   display: flex;
