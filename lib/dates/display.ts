@@ -1,4 +1,5 @@
 import { DEFAULT_TIMEZONE } from "@/lib/calendar/timezones";
+import { zonedWallClockToUtc } from "@/lib/booking/timezone";
 
 /**
  * Two kinds of date live in this database, and they must be displayed differently.
@@ -103,6 +104,65 @@ export function toCalendarDay(value: string | Date | null | undefined): Date | n
   const day = new Intl.DateTimeFormat("en-CA", { timeZone: OFFICE_TZ }).format(d);
   return new Date(`${day}T00:00:00.000Z`);
 }
+
+/**
+ * "2026-08-03" — which DAY this moment falls on, as seen from the office.
+ *
+ * Use instead of toISOString().slice(0,10) anywhere a moment is bucketed by day.
+ * The ISO form gives the UTC day, so an 8pm Mountain departure is already
+ * tomorrow in UTC and lands on the wrong square of a calendar.
+ */
+export function officeDayKey(value: string | Date | null | undefined): string {
+  const d = toDate(value);
+  if (!d) return "";
+  // en-CA formats as yyyy-mm-dd, which is exactly the key shape we want.
+  return new Intl.DateTimeFormat("en-CA", { timeZone: OFFICE_TZ }).format(d);
+}
+
+/**
+ * Midnight on `dayKey` ("2026-08-03") in the office timezone, as an instant.
+ *
+ * How a date with NO time is stored: a travel item often has a known day and an
+ * unknown departure time, and requiring a time to record the day at all is what
+ * made those items invisible to the calendar.
+ */
+export function startOfOfficeDay(dayKey: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+  if (!m) return null;
+  // Reuse the booking module's converter rather than re-deriving the offset — it
+  // already refines across DST transitions, and hand-rolling this got the sign
+  // wrong in both directions on the first attempt.
+  return zonedWallClockToUtc(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, OFFICE_TZ);
+}
+
+/**
+ * Does this moment carry a real time of day, or is it a day-only record?
+ *
+ * A value sitting exactly at midnight in the office timezone is one we stored
+ * from a date with no time. A genuine midnight departure is vanishingly rare, and
+ * the alternative — a schema column just to flag it — is not worth a migration.
+ */
+export function hasTimeOfDay(value: string | Date | null | undefined): boolean {
+  const d = toDate(value);
+  if (!d) return false;
+  const hm = new Intl.DateTimeFormat("en-US", {
+    timeZone: OFFICE_TZ,
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(d);
+  return hm !== "00:00" && hm !== "24:00";
+}
+
+/** "09:37" — the 24-hour office-local time, shaped for an <input type="time">. */
+export function officeTimeValue(value: string | Date | null | undefined): string {
+  const d = toDate(value);
+  if (!d) return "";
+  return new Intl.DateTimeFormat("en-GB", { timeZone: OFFICE_TZ, hour12: false, hour: "2-digit", minute: "2-digit" }).format(d);
+}
+
+/** The office timezone, for callers that must build a wall-clock instant. */
+export const OFFICE_TIMEZONE = OFFICE_TZ;
 
 /** "Jul 15" — a chosen day, without the year, for dense tables. */
 export function formatCalendarDayShort(value: string | Date | null | undefined): string {

@@ -9,6 +9,9 @@
  * samples to tune against (see memory: extraction-llm-upgrade, travel-module-plan).
  */
 
+import { zonedWallClockToUtc } from "@/lib/booking/timezone";
+import { DEFAULT_TIMEZONE } from "@/lib/calendar/timezones";
+
 export type ParsedTravelItem = {
   type: "FLIGHT" | "CAR" | "HOTEL" | "TRANSPORT" | "OTHER";
   vendor: string | null;
@@ -132,28 +135,77 @@ function findDate(text: string): string | null {
     const month = MONTHS[compact[2].toLowerCase()];
     const day = Number(compact[1]);
     if (month !== undefined) {
-      // UTC-anchored so the day survives however the reader's clock is set.
-      const d = new Date(Date.UTC(Number(compact[3]), month, day));
-      if (!Number.isNaN(d.getTime()) && d.getUTCMonth() === month && d.getUTCDate() === day) {
-        return d.toISOString();
-      }
+      // Midnight in the OFFICE timezone, not UTC. Midnight-UTC reads back as 6pm
+      // the previous day in Mountain, which put the flight on the wrong date.
+      const iso = officeInstant(Number(compact[3]), month, day);
+      if (iso) return iso;
     }
   }
 
   // e.g. "Feb 23, 2026 2:30 PM" or "02/23/2026" or "2026-02-23"
-  const patterns = [
-    /\b([A-Z][a-z]{2,8}\s+\d{1,2},?\s+\d{4}(?:\s+\d{1,2}:\d{2}\s*(?:AM|PM)?)?)/,
-    /\b(\d{1,2}\/\d{1,2}\/\d{4}(?:\s+\d{1,2}:\d{2}\s*(?:AM|PM)?)?)/,
-    /\b(\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2})?)/
-  ];
-  for (const re of patterns) {
-    const m = text.match(re);
-    if (m) {
-      const d = new Date(m[1]);
-      if (!Number.isNaN(d.getTime())) return d.toISOString();
+  //
+  // Parsed into COMPONENTS and re-anchored to the office timezone rather than
+  // handed to new Date(). A bare wall-clock string has no zone, so new Date()
+  // reads it in whatever zone the code happens to be running in — which is UTC
+  // on the server. That is how a 9:37am departure got stored as 09:37Z (3:37am
+  // Mountain) and reported as "every flight is six hours off".
+  const named = text.match(
+    /\b([A-Z][a-z]{2,8})\s+(\d{1,2}),?\s+(\d{4})(?:\s+(\d{1,2}):(\d{2})\s*(AM|PM)?)?/i
+  );
+  if (named) {
+    const month = MONTHS[named[1].toLowerCase()];
+    if (month !== undefined) {
+      const iso = officeInstant(Number(named[3]), month, Number(named[2]), named[4], named[5], named[6]);
+      if (iso) return iso;
     }
   }
+
+  const slashed = text.match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})\s*(AM|PM)?)?/i);
+  if (slashed) {
+    const iso = officeInstant(Number(slashed[3]), Number(slashed[1]) - 1, Number(slashed[2]), slashed[4], slashed[5], slashed[6]);
+    if (iso) return iso;
+  }
+
+  const dashed = text.match(/\b(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
+  if (dashed) {
+    const iso = officeInstant(Number(dashed[1]), Number(dashed[2]) - 1, Number(dashed[3]), dashed[4], dashed[5]);
+    if (iso) return iso;
+  }
+
   return null;
+}
+
+/**
+ * Build an instant from wall-clock components read out of a confirmation,
+ * interpreted in the OFFICE timezone — a departure time printed on a booking is
+ * local to the trip, never UTC and never the server's zone.
+ *
+ * With no hour, this returns midnight in the office timezone, which everything
+ * downstream treats as "day known, time unknown" (see lib/dates/display).
+ */
+function officeInstant(
+  year: number,
+  month: number,
+  day: number,
+  hourRaw?: string,
+  minuteRaw?: string,
+  meridiem?: string
+): string | null {
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  let hour = hourRaw ? Number(hourRaw) : 0;
+  const minute = minuteRaw ? Number(minuteRaw) : 0;
+  if (meridiem) {
+    const pm = /pm/i.test(meridiem);
+    if (pm && hour < 12) hour += 12;
+    if (!pm && hour === 12) hour = 0;
+  }
+  if (hour > 23 || minute > 59) return null;
+  const d = zonedWallClockToUtc(year, month, day, hour, minute, DEFAULT_TIMEZONE);
+  if (Number.isNaN(d.getTime())) return null;
+  // Guard against a rolled-over date (e.g. Feb 30 in a malformed confirmation).
+  const back = new Intl.DateTimeFormat("en-CA", { timeZone: DEFAULT_TIMEZONE }).format(d);
+  const expected = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  return back === expected ? d.toISOString() : null;
 }
 
 // A short, human "detail" line: the most informative non-empty line.

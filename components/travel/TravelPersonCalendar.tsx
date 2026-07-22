@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Plane, Building2, Car, Bus, Receipt, Calenda
 import { buildTravelCalendar, spanDays, type TravelEventKind } from "@/lib/travel/schedule";
 import { travelPurposeLabel } from "@/lib/travel/constants";
 import type { TravelTripView } from "@/lib/data/travel";
-import { formatMomentTime } from "@/lib/dates/display";
+import { formatMomentTime, hasTimeOfDay } from "@/lib/dates/display";
 
 const KIND_ICON: Record<TravelEventKind, typeof Plane> = {
   FLIGHT: Plane,
@@ -28,7 +28,9 @@ const monthLabel = (y: number, m: number) =>
 // A flight time is a real moment, so it shows in the office timezone. This used
 // to render in UTC, which put every flight six hours out — a 9:37am departure
 // displayed as 3:37.
-const fmtTime = (iso: string) => formatMomentTime(iso);
+// A date recorded with no time is stored at midnight Mountain; showing that as
+// "12:00 AM" would invent a departure time nobody entered. Blank means unknown.
+const fmtTime = (iso: string) => (hasTimeOfDay(iso) ? formatMomentTime(iso) : "");
 
 /**
  * One person's travel on a month grid — when they are away, and where.

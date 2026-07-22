@@ -15,6 +15,7 @@
 // labels it so nobody mistakes a guess for a confirmed booking.
 
 import type { TravelItemView, TravelTripView } from "@/lib/data/travel";
+import { officeDayKey } from "@/lib/dates/display";
 
 export type DateSource = "field" | "detail";
 
@@ -190,7 +191,9 @@ export type TravelAwaySpan = {
   inferred: boolean;
 };
 
-export const dayKey = (iso: string) => new Date(iso).toISOString().slice(0, 10);
+// Which DAY an item sits on, seen from Mountain. Using the UTC date here put an
+// evening departure (8pm MT = 02:00Z the next day) on the wrong calendar square.
+export const dayKey = (iso: string) => officeDayKey(iso);
 
 /** Does this ISO carry a meaningful clock time, or is it just a date? */
 function hasTime(iso: string): boolean {

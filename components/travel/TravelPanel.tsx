@@ -42,7 +42,16 @@ import {
 import type { ParsedTravel } from "@/lib/extraction/travel-confirmation";
 import { TravelGaps, TravelGapBadge } from "@/components/travel/TravelGaps";
 import { useDialogClose } from "@/lib/hooks/useDialogClose";
-import { formatMomentDate, formatCalendarDayShort } from "@/lib/dates/display";
+import {
+  formatMomentDate,
+  formatCalendarDayShort,
+  officeDayKey,
+  officeTimeValue,
+  startOfOfficeDay,
+  hasTimeOfDay,
+  OFFICE_TIMEZONE
+} from "@/lib/dates/display";
+import { zonedWallClockToUtc } from "@/lib/booking/timezone";
 
 type Props = {
   subjectType: "newHire" | "candidate";
@@ -661,14 +670,27 @@ function ItemRow({
 }) {
   const Icon = ITEM_ICON[item.type] ?? Receipt;
 
+  // This panel saves as you go — on blur for text, on change for the pickers —
+  // which is convenient but was completely silent, so "did that save?" had no
+  // answer and a failure looked exactly like a success. Every save now flashes.
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  function flash(ok: boolean) {
+    setSaveState(ok ? "saved" : "error");
+    if (ok) setTimeout(() => setSaveState((s) => (s === "saved" ? "idle" : s)), 1600);
+  }
+
   async function save(field: string, value: string) {
+    setSaveState("saving");
     const res = await updateItem(item.id, { [field]: value });
     if (res.ok && res.item) onPatch(res.item);
+    flash(Boolean(res.ok));
   }
-  // Non-string patches (the self-booked toggle) go through here.
+  // Non-string patches (the self-booked toggle, the date/time picker) come here.
   async function saveRaw(patch: Record<string, unknown>) {
+    setSaveState("saving");
     const res = await updateItem(item.id, patch);
     if (res.ok && res.item) onPatch(res.item);
+    flash(Boolean(res.ok));
   }
   async function handleRemove() {
     const res = await deleteItem(item.id);
@@ -679,6 +701,20 @@ function ItemRow({
     <div className="rounded border border-brand-lea/10 bg-white p-2.5 dark:border-white/10 dark:bg-brand-panel">
       <div className="flex items-center gap-2">
         <Icon className="h-4 w-4 shrink-0 text-brand-gold" />
+        {/* Autosave, said out loud. Sits first so it is in the same place on
+            every row rather than jumping around with the fields. */}
+        {saveState !== "idle" && (
+          <span
+            className={clsx(
+              "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+              saveState === "saving" && "bg-brand-cloudDancer text-brand-grey dark:bg-white/10 dark:text-slate-300",
+              saveState === "saved" && "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
+              saveState === "error" && "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300"
+            )}
+          >
+            {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : "Not saved"}
+          </span>
+        )}
         <select
           defaultValue={item.type}
           onChange={(e) => save("type", e.target.value)}
@@ -728,12 +764,14 @@ function ItemRow({
             className={inputClass}
           />
         </label>
-        <input
-          type="datetime-local"
-          defaultValue={toDateTimeLocal(item.startsAt)}
-          onBlur={(e) => save("startsAt", e.target.value)}
-          className={inputClass}
-          title="Starts"
+        {/* Date and time are SEPARATE inputs on purpose. A single datetime-local
+            yields nothing at all until BOTH halves are filled, so entering a
+            flight whose time you don't know yet saved no date — which is why
+            those items then vanished from the travel calendar. The day is what
+            matters; the time is a bonus. */}
+        <ItemWhen
+          startsAt={item.startsAt}
+          onSave={(iso) => saveRaw({ startsAt: iso })}
         />
       </div>
 
@@ -882,6 +920,70 @@ function DateField({ label, defaultValue, onSave }: { label: string; defaultValu
       <span className={labelClass}>{label}</span>
       <input type="date" defaultValue={defaultValue} onBlur={(e) => onSave(e.target.value)} className={clsx(inputClass, "mt-1")} />
     </label>
+  );
+}
+
+/**
+ * When a travel item happens: a required DAY and an optional TIME.
+ *
+ * Replaces a single datetime-local, which produced no value at all unless both
+ * halves were filled — so recording a flight whose departure time you don't know
+ * yet saved nothing, and the item then never appeared on the travel calendar.
+ *
+ * A day with no time is stored as midnight in the office timezone; everything
+ * that reads these treats exactly-midnight as "no time known" and shows the date
+ * alone. See lib/dates/display.ts.
+ */
+function ItemWhen({ startsAt, onSave }: { startsAt: string | null; onSave: (iso: string | null) => Promise<void> | void }) {
+  const [day, setDay] = useState(startsAt ? officeDayKey(startsAt) : "");
+  const [time, setTime] = useState(startsAt && hasTimeOfDay(startsAt) ? officeTimeValue(startsAt) : "");
+
+  // Keep in step when the row is re-rendered from a server patch.
+  useEffect(() => {
+    setDay(startsAt ? officeDayKey(startsAt) : "");
+    setTime(startsAt && hasTimeOfDay(startsAt) ? officeTimeValue(startsAt) : "");
+  }, [startsAt]);
+
+  function commit(nextDay: string, nextTime: string) {
+    if (!nextDay) {
+      void onSave(null);
+      return;
+    }
+    const [y, m, d] = nextDay.split("-").map(Number);
+    if (nextTime) {
+      const [hh, mm] = nextTime.split(":").map(Number);
+      // The typed wall-clock is Mountain — a departure time is local to the trip,
+      // not to whoever happens to be looking at the screen.
+      void onSave(zonedWallClockToUtc(y, m - 1, d, hh, mm, OFFICE_TIMEZONE).toISOString());
+    } else {
+      void onSave(startOfOfficeDay(nextDay)?.toISOString() ?? null);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <input
+        type="date"
+        value={day}
+        onChange={(e) => {
+          setDay(e.target.value);
+          commit(e.target.value, time);
+        }}
+        className={inputClass}
+        title="Date (required for this to show on the calendar)"
+      />
+      <input
+        type="time"
+        value={time}
+        onChange={(e) => {
+          setTime(e.target.value);
+          commit(day, e.target.value);
+        }}
+        disabled={!day}
+        className={clsx(inputClass, "w-[7.5rem]")}
+        title={day ? "Time (optional)" : "Pick a date first"}
+      />
+    </div>
   );
 }
 
