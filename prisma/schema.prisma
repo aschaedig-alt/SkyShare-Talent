@@ -231,6 +231,11 @@ model NewHire {
   phone           String?
   ssEmail         String?
   personalEmail   String?
+  // Who this hire reports to. Captured because the orientation emails cc the
+  // supervisor (and one is addressed to them) — that was a longhand instruction
+  // inside the Front template, so it could never be filled in automatically.
+  supervisorName  String?
+  supervisorEmail String?
   // Cross-cutting person labels shown as pills (Executive, Management, ...),
   // independent of department — a person can carry more than one. Hand-applied.
   // "Contract" is NOT stored here; it's derived from employmentStatus at display.
@@ -367,6 +372,9 @@ model EmploymentStint {
 model OrientationSession {
   id        String   @id @default(cuid())
   date      DateTime
+  // End of the session (same day). Nullable so the sessions that predate this
+  // field keep working; a session with no endsAt just shows a start time.
+  endsAt    DateTime?
   location  String?  @default("SkyShare HQ, Salt Lake City")
   address   String?
   meetLink  String?
