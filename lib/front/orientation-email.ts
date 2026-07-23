@@ -173,9 +173,26 @@ type AttendeeForEmail = {
   name: string;
   ssEmail: string | null;
   personalEmail: string | null;
+  /** Free-text fallback, for a supervisor who isn't in the app yet. */
   supervisorName: string | null;
   supervisorEmail: string | null;
+  /** The linked supervisor's own record — preferred, because their address is
+      read live rather than from a copy typed once and left to go stale. */
+  supervisorHire?: { name: string; ssEmail: string | null; personalEmail: string | null } | null;
 };
+
+/** The supervisor to use: the LINKED record wins over the typed fallback, so a
+    changed address follows automatically. Returns nulls when neither is set. */
+export function resolveSupervisor(a: AttendeeForEmail): { name: string | null; email: string | null; linked: boolean } {
+  const link = a.supervisorHire;
+  const linkedEmail = link?.ssEmail?.trim() || link?.personalEmail?.trim() || null;
+  if (link && linkedEmail) return { name: link.name, email: linkedEmail, linked: true };
+  return {
+    name: a.supervisorName?.trim() || link?.name || null,
+    email: a.supervisorEmail?.trim() || null,
+    linked: false
+  };
+}
 
 type SessionForEmail = {
   date: string;
@@ -219,13 +236,14 @@ export async function buildOrientationEmail(
   let to: string | undefined;
   let toName = attendee.name;
   let toSource: OrientationEmailPreview["toSource"];
+  const supervisor = resolveSupervisor(attendee);
   if (def.audience === "supervisor") {
-    to = attendee.supervisorEmail?.trim();
-    toName = attendee.supervisorName?.trim() || "there";
+    to = supervisor.email ?? undefined;
+    toName = supervisor.name || "there";
     toSource = "supervisor";
     if (!to) {
       throw new Error(
-        `${attendee.name} has no supervisor email on file — add one on their profile before sending the supervisors email.`
+        `${attendee.name} has no supervisor on file — link one (or type an address) on their profile before sending the supervisors email.`
       );
     }
   } else {
@@ -246,8 +264,7 @@ export async function buildOrientationEmail(
   if (!isTest) {
     cc.push(...(await getOrientationCc()).addresses);
     if (def.audience === "attendee") {
-      const sup = attendee.supervisorEmail?.trim();
-      if (sup) cc.push(sup);
+      if (supervisor.email) cc.push(supervisor.email);
       else warnings.push(`No supervisor on file for ${attendee.name}, so their supervisor is not cc'd.`);
     }
   }

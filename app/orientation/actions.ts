@@ -70,7 +70,17 @@ async function loadAttendee(attendeeId: string) {
       id: true,
       sentTemplateKeys: true,
       newHire: {
-        select: { id: true, name: true, ssEmail: true, personalEmail: true, supervisorName: true, supervisorEmail: true }
+        select: {
+          id: true,
+          name: true,
+          ssEmail: true,
+          personalEmail: true,
+          supervisorName: true,
+          supervisorEmail: true,
+          // The linked supervisor's live contact details win over the typed
+          // fallback, so a changed address follows automatically.
+          supervisorHire: { select: { name: true, ssEmail: true, personalEmail: true } }
+        }
       },
       session: { select: { id: true, date: true, endsAt: true, location: true } }
     }

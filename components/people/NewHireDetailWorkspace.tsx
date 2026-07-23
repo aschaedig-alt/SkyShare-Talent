@@ -12,6 +12,7 @@ import type { TravelTripView, TravelerLoyalty } from "@/lib/data/travel";
 import { EmployeeJourney } from "@/components/people/EmployeeJourney";
 import { BusinessCardPanel } from "@/components/people/BusinessCardPanel";
 import { SendOnboardingEmailButton } from "@/components/people/SendOnboardingEmailButton";
+import { SupervisorPicker } from "@/components/people/SupervisorPicker";
 import type { EmployeeJourney as Journey } from "@/lib/data/employee-journey";
 import { Button, Input, Modal } from "@/components/ui";
 import { EMPLOYEE_TAGS } from "@/lib/employees/columns";
@@ -57,6 +58,9 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     personalEmail: hire.personalEmail ?? "",
     supervisorName: hire.supervisorName ?? "",
     supervisorEmail: hire.supervisorEmail ?? "",
+    supervisorHireId: hire.supervisorHireId ?? "",
+    supervisorHireName: hire.supervisorHire?.name ?? "",
+    supervisorHireEmail: (hire.supervisorHire?.ssEmail || hire.supervisorHire?.personalEmail) ?? "",
     offerSentDate: toDateInput(hire.offerSentDate),
     offerSignedDate: toDateInput(hire.offerSignedDate),
     startDate: toDateInput(hire.startDate),
@@ -372,10 +376,37 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
             {field("Personal email", "personalEmail")}
             {/* Who they report to. The orientation emails cc the supervisor and
                 one is addressed to them, so this is what lets the app fill that
-                in instead of leaving it as a longhand note in the template. */}
-            <div className="grid grid-cols-2 gap-3">
-              {field("Supervisor", "supervisorName")}
-              {field("Supervisor email", "supervisorEmail")}
+                in instead of leaving it as a longhand note in the template.
+                Linking is preferred — the address is then read from their record
+                at send time rather than being a copy that goes stale. */}
+            <div className="space-y-2">
+              <span className="block text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">Supervisor</span>
+              <SupervisorPicker
+                hireId={hire.id}
+                linkedId={details.supervisorHireId || null}
+                linkedName={details.supervisorHireName || null}
+                linkedEmail={details.supervisorHireEmail || null}
+                onLink={(p) =>
+                  setDetails((f) => ({
+                    ...f,
+                    supervisorHireId: p.id,
+                    supervisorHireName: p.name,
+                    supervisorHireEmail: p.email ?? ""
+                  }))
+                }
+                onUnlink={() => setDetails((f) => ({ ...f, supervisorHireId: "", supervisorHireName: "", supervisorHireEmail: "" }))}
+              />
+              {!details.supervisorHireId ? (
+                <>
+                  <p className="text-[11px] text-brand-grey dark:text-slate-500">
+                    Not in the app yet? Type their details instead — these are used only when no supervisor is linked.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {field("Supervisor name", "supervisorName")}
+                    {field("Supervisor email", "supervisorEmail")}
+                  </div>
+                </>
+              ) : null}
             </div>
             <div className="grid grid-cols-2 gap-3">
               {field("Birth country", "birthCountry")}

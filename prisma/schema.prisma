@@ -234,6 +234,13 @@ model NewHire {
   // Who this hire reports to. Captured because the orientation emails cc the
   // supervisor (and one is addressed to them) — that was a longhand instruction
   // inside the Front template, so it could never be filled in automatically.
+  //
+  // Preferred form is the LINK: the supervisor's address is then read from their
+  // own record at send time, so it can't go stale. The two text fields remain as
+  // a fallback for a supervisor who isn't in the app yet.
+  supervisorHireId String?
+  supervisorHire   NewHire?  @relation("HireSupervisor", fields: [supervisorHireId], references: [id], onDelete: SetNull)
+  supervisees      NewHire[] @relation("HireSupervisor")
   supervisorName  String?
   supervisorEmail String?
   // Cross-cutting person labels shown as pills (Executive, Management, ...),

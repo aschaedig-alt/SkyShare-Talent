@@ -100,6 +100,12 @@ storage-backed feature works in prod just because it worked locally.
   (not plain node) and import from `prisma/generated/client/client`.
 - **`npm run build` can OOM** after compiling. Use
   `NODE_OPTIONS=--max-old-space-size=8192 npm run build`.
+- **`npx tsc --noEmit` OOMs too, and it FAILS SILENTLY IF YOU PIPE IT.** The crash
+  message goes to stderr and the type errors never print, so
+  `npx tsc --noEmit | grep MyFile` returns nothing and looks like a pass. Two real
+  errors hid behind a "clean" typecheck this way. Always run it as
+  `NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.json`, and
+  read the whole output rather than grepping for the file you touched.
 - **Don't run `npm run build` while the dev server is up.** They share `.next`, and
   the build leaves the running dev server serving an empty page shell. Looks like a
   broken app; it's a broken dev server. Restart it.
