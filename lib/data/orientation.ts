@@ -1,7 +1,19 @@
 import { prisma } from "@/lib/prisma";
-import { DEFAULT_PREP_TASKS, isPilotPosition } from "@/lib/orientation/defaults";
+import { isPilotPosition } from "@/lib/orientation/defaults";
+import { getPrepDefaults } from "@/lib/orientation/prep-defaults";
 import { getEmailTemplates } from "@/lib/data/orientation-templates";
 import type { EmailTemplateDef } from "@/lib/orientation/defaults";
+import { officeDayKey } from "@/lib/dates/display";
+
+/**
+ * The day a CALENDAR DATE falls on. A start date is a day someone picked, stored
+ * at midnight UTC, so its day is its UTC day — reading it in Mountain would shift
+ * it to the day before. The session's date is the other kind (a real instant), so
+ * it uses officeDayKey. Comparing the two requires each to be read its own way.
+ */
+function calendarDayKey(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
 
 export type SessionStatus = "UPCOMING" | "COMPLETE" | "CANCELED";
 export type ConfirmStatus = "PENDING" | "TENTATIVE" | "CONFIRMED" | "DECLINED";
@@ -14,6 +26,7 @@ function iso(d: Date | null) {
 export type SessionListItem = {
   id: string;
   date: string;
+  endsAt: string | null;
   location: string | null;
   status: SessionStatus;
   attendeeCount: number;
@@ -35,6 +48,7 @@ export async function getOrientationSessions(): Promise<{ upcoming: SessionListI
   const items: SessionListItem[] = sessions.map((s) => ({
     id: s.id,
     date: s.date.toISOString(),
+    endsAt: iso(s.endsAt),
     location: s.location,
     status: s.status as SessionStatus,
     attendeeCount: s.attendees.length,
@@ -78,11 +92,23 @@ export type PrepTaskView = {
   done: boolean;
 };
 
-export type SessionCandidate = { id: string; name: string; position: string | null; suggested: boolean };
+/** Someone who can be added to a session. `startDate` is surfaced so the picker
+    can show WHEN they start — the thing you actually decide on — and `startsAfter`
+    marks people whose start date falls after this session, so they read as "next
+    orientation" without being hidden (they stay addable by choice). */
+export type SessionCandidate = {
+  id: string;
+  name: string;
+  position: string | null;
+  suggested: boolean;
+  startDate: string | null;
+  startsAfter: boolean;
+};
 
 export type SessionDetail = {
   id: string;
   date: string;
+  endsAt: string | null;
   location: string | null;
   address: string | null;
   meetLink: string | null;
@@ -129,7 +155,10 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
         },
         orderBy: { newHire: { name: "asc" } }
       },
-      prepTasks: { orderBy: { order: "asc" } }
+      // Chronological: furthest-out task first, so the list reads as a countdown
+      // and changing an item's "days before" actually MOVES it. `order` only
+      // breaks ties (and carries items that have no days-before, which sort last).
+      prepTasks: { orderBy: [{ dueDaysBefore: { sort: "desc", nulls: "last" } }, { order: "asc" }] }
     }
   });
   if (!s) return null;
@@ -171,9 +200,9 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
   ).map((o) => ({ id: o.id, date: o.date.toISOString() }));
 
   const attendeeHireIds = new Set(s.attendees.map((a) => a.newHireId));
-  // Candidates to add: anyone not already on this session and not archived.
-  // "Suggested" = active pre-onboarding hires who have not attended orientation
-  // yet, so the people most likely being missed surface first.
+  // Candidates to add: anyone not already on this session and not archived —
+  // deliberately broad, because who attends is a judgment call (someone can be
+  // held back, squeezed in, or moved) and the tool should never block that.
   const hires = await prisma.newHire.findMany({
     where: { id: { notIn: [...attendeeHireIds] }, stage: { not: "ARCHIVED" } },
     select: {
@@ -181,16 +210,29 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
       name: true,
       position: true,
       stage: true,
+      startDate: true,
       tasks: { where: { key: "attended_orientation" }, select: { status: true } }
     },
     orderBy: { name: "asc" }
   });
-  const candidates: SessionCandidate[] = hires.map((h) => ({
-    id: h.id,
-    name: h.name,
-    position: h.position,
-    suggested: h.stage === "ACTIVE" && (h.tasks[0]?.status ?? "TODO") !== "DONE"
-  }));
+  // "Suggested" = the obvious ones: an active hire who hasn't attended AND has
+  // actually started (or starts) by the day of this session. Someone starting
+  // later belongs to the NEXT orientation, and someone with no start date can't
+  // be judged at all (no signed offer yet, typically) — neither is suggested,
+  // but both stay in the list so they can still be added on purpose.
+  const sessionDay = officeDayKey(s.date);
+  const candidates: SessionCandidate[] = hires.map((h) => {
+    const startsAfter = h.startDate ? calendarDayKey(h.startDate) > sessionDay : false;
+    const notAttended = (h.tasks[0]?.status ?? "TODO") !== "DONE";
+    return {
+      id: h.id,
+      name: h.name,
+      position: h.position,
+      startDate: h.startDate ? h.startDate.toISOString() : null,
+      startsAfter,
+      suggested: h.stage === "ACTIVE" && notAttended && h.startDate !== null && !startsAfter
+    };
+  });
   // suggested first
   candidates.sort((a, b) => Number(b.suggested) - Number(a.suggested) || a.name.localeCompare(b.name));
 
@@ -200,6 +242,7 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
   return {
     id: s.id,
     date: s.date.toISOString(),
+    endsAt: iso(s.endsAt),
     location: s.location,
     address: s.address,
     meetLink: s.meetLink,
@@ -278,6 +321,7 @@ export async function getUnscheduledHires(): Promise<UnscheduledHire[]> {
 
 export async function createOrientationSession(input: {
   date: Date;
+  endsAt?: Date | null;
   location?: string | null;
   address?: string | null;
   meetLink?: string | null;
@@ -286,11 +330,15 @@ export async function createOrientationSession(input: {
   const session = await prisma.orientationSession.create({
     data: {
       date: input.date,
+      endsAt: input.endsAt ?? null,
       location: input.location ?? "SkyShare HQ, Salt Lake City",
       address: input.address ?? null,
       meetLink: input.meetLink ?? null,
+      // Seeded from the STANDING checklist (curated in the app), not the
+      // hardcoded seed — so dropping an item you don't actually do yet sticks
+      // for every future orientation instead of coming back each time.
       prepTasks: {
-        create: DEFAULT_PREP_TASKS.map((t, i) => ({ label: t.label, owner: t.owner, dueDaysBefore: t.dueDaysBefore, order: i }))
+        create: (await getPrepDefaults()).tasks.map((t, i) => ({ label: t.label, owner: t.owner, dueDaysBefore: t.dueDaysBefore, order: i }))
       }
     }
   });

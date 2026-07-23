@@ -6,7 +6,7 @@ import { useState } from "react";
 import { clsx } from "clsx";
 import { Button, buttonClasses, Modal } from "@/components/ui";
 import type { Cohort, CalendarDay, SessionListItem, UnscheduledHire } from "@/lib/data/orientation";
-import { formatDateTimeWithZone, mountainWallClockToIso } from "@/lib/calendar/format";
+import { formatDateShort, formatDateTimeWithZone, formatTimeRange, mountainWallClockToIso } from "@/lib/calendar/format";
 
 function fmt(iso: string) {
   // Session date/time always shown in Mountain Time (with an "MT" label).
@@ -28,7 +28,9 @@ function SessionCard({ s }: { s: SessionListItem }) {
   return (
     <Link href={`/orientation/${s.id}`} className="block rounded border border-brand-lea/10 bg-white p-4 shadow-panel transition-shadow hover:shadow-glow dark:border-white/10 dark:bg-brand-panel">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-base font-semibold text-brand-lea dark:text-slate-100">{fmt(s.date)}</span>
+        <span className="text-base font-semibold text-brand-lea dark:text-slate-100">
+          {s.endsAt ? `${formatDateShort(s.date)} · ${formatTimeRange(s.date, s.endsAt)}` : fmt(s.date)}
+        </span>
         <span className={clsx("rounded px-2 py-0.5 text-[11px] font-semibold", s.status === "COMPLETE" ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : soon ? "bg-brand-gold/15 text-brand-lea dark:text-slate-100" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400")}>
           {s.status === "COMPLETE" ? "Complete" : daysUntil(s.date)}
         </span>
@@ -150,7 +152,9 @@ export function OrientationOverview({
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({ date: "", time: "09:00", location: "SkyShare HQ, Salt Lake City", address: "", meetLink: "" });
+  // Defaults to the standard orientation day (9:30 AM – 3:00 PM Mountain) so the
+  // common case is zero typing; both times stay editable.
+  const [form, setForm] = useState({ date: "", time: "09:30", endTime: "15:00", location: "SkyShare HQ, Salt Lake City", address: "", meetLink: "" });
 
   async function create() {
     if (!form.date) {
@@ -160,11 +164,17 @@ export function OrientationOverview({
     setSaving(true);
     setError(null);
     try {
-      const iso = mountainWallClockToIso(form.date, form.time) ?? new Date(`${form.date}T${form.time || "09:00"}:00`).toISOString();
+      const iso = mountainWallClockToIso(form.date, form.time) ?? new Date(`${form.date}T${form.time || "09:30"}:00`).toISOString();
+      const endIso = form.endTime ? mountainWallClockToIso(form.date, form.endTime) : null;
+      if (endIso && new Date(endIso).getTime() <= new Date(iso).getTime()) {
+        setError("The end time has to be after the start time.");
+        setSaving(false);
+        return;
+      }
       const res = await fetch("/api/orientation/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: iso, location: form.location, address: form.address, meetLink: form.meetLink })
+        body: JSON.stringify({ date: iso, endsAt: endIso, location: form.location, address: form.address, meetLink: form.meetLink })
       });
       const p = (await res.json().catch(() => null)) as { id?: string; message?: string } | null;
       if (!res.ok || !p?.id) throw new Error(p?.message ?? "Unable to create session.");
@@ -181,8 +191,13 @@ export function OrientationOverview({
       const res = await fetch("/api/orientation/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Cohort dates carry no time — default the session to 9:00 AM Mountain.
-        body: JSON.stringify({ date: mountainWallClockToIso(c.dateISO, "09:00") ?? c.dateISO, attendeeHireIds: c.hires.map((h) => h.id) })
+        // Cohort dates carry no time — default to the standard orientation day,
+        // 9:30 AM – 3:00 PM Mountain (editable afterwards on the session).
+        body: JSON.stringify({
+          date: mountainWallClockToIso(c.dateISO, "09:30") ?? c.dateISO,
+          endsAt: mountainWallClockToIso(c.dateISO, "15:00"),
+          attendeeHireIds: c.hires.map((h) => h.id)
+        })
       });
       const p = (await res.json().catch(() => null)) as { id?: string } | null;
       if (p?.id) router.push(`/orientation/${p.id}`);
@@ -322,8 +337,12 @@ export function OrientationOverview({
                   <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100" />
                 </label>
                 <label className="flex-1 text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
-                  Time (MT)
+                  Start (MT)
                   <input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100" />
+                </label>
+                <label className="flex-1 text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
+                  End (MT)
+                  <input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100" />
                 </label>
               </div>
               <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Location" className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />

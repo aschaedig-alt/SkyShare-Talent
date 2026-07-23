@@ -33,6 +33,25 @@ export async function PATCH(request: Request, ctx: Ctx) {
       const d = new Date(body.date);
       if (!Number.isNaN(d.getTime())) data.date = d;
     }
+    // endsAt: a string sets it, an explicit null clears it back to start-only.
+    if (body.endsAt === null) {
+      data.endsAt = null;
+    } else if (typeof body.endsAt === "string") {
+      const e = new Date(body.endsAt);
+      if (Number.isNaN(e.getTime())) {
+        return NextResponse.json({ message: "Invalid end time." }, { status: 400 });
+      }
+      // Validate against the new start if one is being set in the same request,
+      // otherwise against the start already stored.
+      const start =
+        data.date instanceof Date
+          ? data.date
+          : (await prisma.orientationSession.findUnique({ where: { id }, select: { date: true } }))?.date;
+      if (start && e.getTime() <= start.getTime()) {
+        return NextResponse.json({ message: "The end time has to be after the start time." }, { status: 400 });
+      }
+      data.endsAt = e;
+    }
     if (body.status === "UPCOMING" || body.status === "CANCELED") data.status = body.status;
 
     await prisma.orientationSession.update({ where: { id }, data });

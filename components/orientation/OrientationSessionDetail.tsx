@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clsx } from "clsx";
 import { Button } from "@/components/ui";
-import type { AttendeeView, ConfirmStatus, PrepTaskView, SessionDetail, TravelStatus } from "@/lib/data/orientation";
+import type { AttendeeView, ConfirmStatus, PrepTaskView, SessionCandidate, SessionDetail, TravelStatus } from "@/lib/data/orientation";
 import type { EmailTemplateDef } from "@/lib/orientation/defaults";
 import { formatUsd } from "@/lib/travel/constants";
-import { formatDateLong, formatTime, zoneLabel, toMountainDateTimeParts, mountainWallClockToIso } from "@/lib/calendar/format";
-import { formatMomentDateShort } from "@/lib/dates/display";
+import { formatDateLong, formatTime, formatTimeRange, zoneLabel, toMountainDateTimeParts, mountainWallClockToIso } from "@/lib/calendar/format";
+import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
 
 function fmtShort(iso: string) {
   // Always Mountain Time, regardless of the viewer's / server's zone.
@@ -17,6 +17,15 @@ function fmtShort(iso: string) {
 }
 function fmtTime(iso: string) {
   return `${formatTime(iso)} ${zoneLabel()}`;
+}
+
+/** "Tara Ward · Lead Cabin Attendant · starts Aug 3" — the start date is the
+    thing you decide on, so it belongs in the option text, not hidden on a
+    profile. Says so explicitly when there is no start date at all. */
+function candidateLabel(c: SessionCandidate): string {
+  const role = c.position ? ` · ${c.position}` : "";
+  const start = c.startDate ? ` · starts ${formatCalendarDayShort(c.startDate)}` : " · no start date";
+  return `${c.name}${role}${start}`;
 }
 
 async function patchJson(url: string, body: unknown, method = "PATCH") {
@@ -30,22 +39,34 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
   const [prep, setPrep] = useState(session.prepTasks);
   const [busy, setBusy] = useState(false);
   const [rescheduling, setRescheduling] = useState(false);
-  const [resched, setResched] = useState({ date: "", time: "" });
+  const [resched, setResched] = useState({ date: "", time: "", endTime: "" });
   const [savingDate, setSavingDate] = useState(false);
+  const [reschedErr, setReschedErr] = useState<string | null>(null);
 
   function openReschedule() {
-    setResched(toMountainDateTimeParts(session.date));
+    const start = toMountainDateTimeParts(session.date);
+    setResched({ ...start, endTime: session.endsAt ? toMountainDateTimeParts(session.endsAt).time : "" });
+    setReschedErr(null);
     setRescheduling(true);
   }
   async function saveReschedule() {
     const iso = mountainWallClockToIso(resched.date, resched.time);
     if (!iso) return;
+    // The end time belongs to the NEW date, so it moves with the session.
+    const endIso = resched.endTime ? mountainWallClockToIso(resched.date, resched.endTime) : null;
+    if (endIso && new Date(endIso).getTime() <= new Date(iso).getTime()) {
+      setReschedErr("The end time has to be after the start time.");
+      return;
+    }
     setSavingDate(true);
-    const ok = await patchJson(`/api/orientation/sessions/${session.id}`, { date: iso });
+    setReschedErr(null);
+    const ok = await patchJson(`/api/orientation/sessions/${session.id}`, { date: iso, endsAt: endIso });
     setSavingDate(false);
     if (ok) {
       setRescheduling(false);
       router.refresh();
+    } else {
+      setReschedErr("Couldn't save the new date.");
     }
   }
 
@@ -72,14 +93,48 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
     setPrep((cur) => cur.filter((p) => p.id !== id));
     await patchJson(`/api/orientation/prep-tasks/${id}`, null, "DELETE");
   }
-  const [newPrep, setNewPrep] = useState("");
+  /** Edit an item in place. Changing daysBefore re-sorts the list, because the
+      list is ordered by it — that is how you move something up or down. */
+  async function editPrep(id: string, patch: { label?: string; owner?: string | null; dueDaysBefore?: number | null }) {
+    setPrep((cur) => cur.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+    await patchJson(`/api/orientation/prep-tasks/${id}`, patch);
+    router.refresh(); // re-sorts server-side when daysBefore changed
+  }
+  const [newPrep, setNewPrep] = useState({ label: "", owner: "", days: "" });
   async function addPrep() {
-    if (!newPrep.trim()) return;
+    if (!newPrep.label.trim()) return;
     setBusy(true);
-    await patchJson("/api/orientation/prep-tasks", { sessionId: session.id, label: newPrep }, "POST");
-    setNewPrep("");
+    await patchJson(
+      "/api/orientation/prep-tasks",
+      {
+        sessionId: session.id,
+        label: newPrep.label,
+        owner: newPrep.owner.trim() || undefined,
+        dueDaysBefore: newPrep.days.trim() === "" ? undefined : Number(newPrep.days)
+      },
+      "POST"
+    );
+    setNewPrep({ label: "", owner: "", days: "" });
     setBusy(false);
     router.refresh();
+  }
+
+  // Promote THIS session's checklist to the standing list new sessions start
+  // from. Curating happens on a real session (where you can see what you
+  // actually do), then one click makes it stick — instead of deleting the same
+  // aspirational items on every future orientation.
+  const [defaultsMsg, setDefaultsMsg] = useState<string | null>(null);
+  async function saveAsDefault() {
+    if (!confirm(`Make this ${prep.length}-item checklist the default for FUTURE orientations?\n\nExisting sessions keep their own lists — this only changes what new ones start with.`)) return;
+    setBusy(true);
+    setDefaultsMsg(null);
+    const ok = await patchJson(
+      "/api/orientation/prep-defaults",
+      { tasks: prep.map((p) => ({ label: p.label, owner: p.owner, dueDaysBefore: p.dueDaysBefore })) },
+      "POST"
+    );
+    setBusy(false);
+    setDefaultsMsg(ok ? "Saved — new sessions will start from this list." : "Couldn't save the default checklist.");
   }
 
   // ---- attendees ----
@@ -123,6 +178,12 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
   }
   const [notice, setNotice] = useState<string | null>(null);
   const [addId, setAddId] = useState("");
+  // Suggested = the obvious ones. "Later" = starts after this session, so they
+  // normally belong to the next orientation but stay one click away. Everyone
+  // else (no start date, already attended, past onboarding) is still listed.
+  const suggestedCands = session.candidates.filter((c) => c.suggested);
+  const laterCands = session.candidates.filter((c) => !c.suggested && c.startsAfter);
+  const otherCands = session.candidates.filter((c) => !c.suggested && !c.startsAfter);
   async function addAttendee() {
     if (!addId) return;
     setBusy(true);
@@ -156,7 +217,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
           <div>
             <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Orientation · {fmtShort(session.date)}</h1>
             <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-              {fmtTime(session.date)} · {session.location ?? "—"}
+              {session.endsAt ? formatTimeRange(session.date, session.endsAt) : fmtTime(session.date)} · {session.location ?? "—"}
               {session.address ? ` · ${session.address}` : ""}
               {session.address ? <> · <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(session.address)}`} target="_blank" rel="noreferrer" className="text-brand-lea underline dark:text-slate-100">Map</a></> : null}
               {session.meetLink ? <> · <a href={session.meetLink} target="_blank" rel="noreferrer" className="text-brand-lea underline dark:text-slate-100">Meet link</a></> : null}
@@ -181,13 +242,17 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
               <input type="date" value={resched.date} onChange={(e) => setResched({ ...resched, date: e.target.value })} className="mt-1 block rounded border border-brand-lea/20 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100" />
             </label>
             <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Time (MT)</span>
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Start (MT)</span>
               <input type="time" value={resched.time} onChange={(e) => setResched({ ...resched, time: e.target.value })} className="mt-1 block rounded border border-brand-lea/20 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100" />
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">End (MT)</span>
+              <input type="time" value={resched.endTime} onChange={(e) => setResched({ ...resched, endTime: e.target.value })} className="mt-1 block rounded border border-brand-lea/20 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100" />
             </label>
             <Button onClick={saveReschedule} disabled={savingDate || !resched.date}>
               {savingDate ? "Saving…" : "Save new date"}
             </Button>
-            <span className="text-xs text-brand-grey dark:text-slate-400">Attendees keep their spots; this only moves the session date/time.</span>
+            {reschedErr ? <span className="text-xs font-semibold text-red-700 dark:text-red-300">{reschedErr}</span> : <span className="text-xs text-brand-grey dark:text-slate-400">Attendees keep their spots; this only moves the session date/time.</span>}
           </div>
         ) : null}
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
@@ -213,12 +278,25 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Prep checklist</h2>
           <div className="mt-3 space-y-1">
             {prep.map((t) => (
-              <PrepRow key={t.id} t={t} onToggle={togglePrep} onRemove={removePrep} />
+              <PrepRow key={t.id} t={t} onToggle={togglePrep} onRemove={removePrep} onEdit={editPrep} />
             ))}
           </div>
           <div className="mt-3 flex items-center gap-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
-            <input value={newPrep} onChange={(e) => setNewPrep(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addPrep()} placeholder="Add a prep task" className="flex-1 rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
+            <input value={newPrep.label} onChange={(e) => setNewPrep({ ...newPrep, label: e.target.value })} onKeyDown={(e) => e.key === "Enter" && addPrep()} placeholder="Add a prep task" className="flex-1 rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
+            <input value={newPrep.owner} onChange={(e) => setNewPrep({ ...newPrep, owner: e.target.value })} onKeyDown={(e) => e.key === "Enter" && addPrep()} placeholder="Owner" aria-label="Owner for the new task" className="w-24 rounded border border-brand-lea/15 px-2 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
+            <input value={newPrep.days} onChange={(e) => setNewPrep({ ...newPrep, days: e.target.value.replace(/[^0-9]/g, "") })} onKeyDown={(e) => e.key === "Enter" && addPrep()} placeholder="days" aria-label="Days before orientation for the new task" title="Days before orientation — also sets where it lands in the list" className="w-16 rounded border border-brand-lea/15 px-2 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
             <button onClick={addPrep} disabled={busy} className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">Add</button>
+          </div>
+          {/* Curate here, then promote — so the next orientation starts right. */}
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
+            <button onClick={saveAsDefault} disabled={busy || prep.length === 0} className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
+              Save as default for new sessions
+            </button>
+            {defaultsMsg ? (
+              <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">{defaultsMsg}</span>
+            ) : (
+              <span className="text-xs text-brand-grey dark:text-slate-400">Ordered by days before. Editing a task here changes only this session until you save it as the default.</span>
+            )}
           </div>
         </section>
 
@@ -326,14 +404,25 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
           <div className="mt-3 flex items-center gap-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
             <select value={addId} onChange={(e) => setAddId(e.target.value)} className="flex-1 rounded border border-brand-lea/15 px-2 py-1.5 text-sm text-brand-lea dark:border-white/10 dark:text-slate-100">
               <option value="">Add attendee…</option>
-              {session.candidates.filter((c) => c.suggested).length > 0 ? (
-                <optgroup label="Suggested · in onboarding, not yet attended">
-                  {session.candidates.filter((c) => c.suggested).map((c) => <option key={c.id} value={c.id}>{c.name}{c.position ? ` · ${c.position}` : ""}</option>)}
+              {/* Three groups, but nobody is hidden — who attends is a judgment
+                  call, so a late starter or someone with no start date can still
+                  be added on purpose. The start date is shown because that is
+                  what the decision actually turns on. */}
+              {suggestedCands.length > 0 ? (
+                <optgroup label="Suggested · started or starting by this session">
+                  {suggestedCands.map((c) => <option key={c.id} value={c.id}>{candidateLabel(c)}</option>)}
                 </optgroup>
               ) : null}
-              <optgroup label="All employees">
-                {session.candidates.filter((c) => !c.suggested).map((c) => <option key={c.id} value={c.id}>{c.name}{c.position ? ` · ${c.position}` : ""}</option>)}
-              </optgroup>
+              {laterCands.length > 0 ? (
+                <optgroup label="Starts after this session · normally the next orientation">
+                  {laterCands.map((c) => <option key={c.id} value={c.id}>{candidateLabel(c)}</option>)}
+                </optgroup>
+              ) : null}
+              {otherCands.length > 0 ? (
+                <optgroup label="Everyone else">
+                  {otherCands.map((c) => <option key={c.id} value={c.id}>{candidateLabel(c)}</option>)}
+                </optgroup>
+              ) : null}
             </select>
             <button onClick={addAttendee} disabled={busy || !addId} className="rounded bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-50">Add</button>
           </div>
@@ -388,16 +477,61 @@ function Flag({ on, onClick }: { on: boolean; onClick: () => void }) {
   );
 }
 
-function PrepRow({ t, onToggle, onRemove }: { t: PrepTaskView; onToggle: (id: string, done: boolean) => void; onRemove: (id: string) => void }) {
+function PrepRow({
+  t,
+  onToggle,
+  onRemove,
+  onEdit
+}: {
+  t: PrepTaskView;
+  onToggle: (id: string, done: boolean) => void;
+  onRemove: (id: string) => void;
+  onEdit: (id: string, patch: { owner?: string | null; dueDaysBefore?: number | null }) => void;
+}) {
+  // Local copies so typing doesn't fight the parent's re-render; committed on blur.
+  const [days, setDays] = useState(t.dueDaysBefore == null ? "" : String(t.dueDaysBefore));
+  const [owner, setOwner] = useState(t.owner ?? "");
+
   return (
     <div className="group flex items-center gap-2 border-b border-brand-lea/5 py-1.5 dark:border-white/10">
       <button onClick={() => onToggle(t.id, !t.done)} aria-label={t.done ? "Mark not done" : "Mark done"} className="shrink-0">
         {t.done ? <span className="text-emerald-600"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#d1fae5" /><path d="M5 8.5 L7 10.5 L11 6" fill="none" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span> : <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/40" />}
       </button>
       <span className={clsx("flex-1 text-[12.5px]", t.done ? "text-brand-grey line-through dark:text-slate-400" : "text-brand-black dark:text-slate-100")}>{t.label}</span>
-      {t.owner ? <span className="rounded bg-brand-cloudDancer/70 px-2 py-0.5 text-[10px] text-brand-grey dark:bg-white/5 dark:text-slate-400">{t.owner}</span> : null}
-      {t.dueDaysBefore != null && !t.done ? <span className="text-[10px] text-brand-grey dark:text-slate-400">{t.dueDaysBefore}d before</span> : null}
-      <button onClick={() => onRemove(t.id)} className="text-[11px] text-red-600 dark:text-red-400 opacity-0 transition group-hover:opacity-100">×</button>
+
+      {/* Owner and days-before are editable in place. Days-before is also the
+          sort key, so changing it is how you move an item up or down the list. */}
+      <input
+        value={owner}
+        onChange={(e) => setOwner(e.target.value)}
+        onBlur={() => { if ((t.owner ?? "") !== owner) onEdit(t.id, { owner: owner.trim() || null }); }}
+        placeholder="owner"
+        aria-label={`Owner for ${t.label}`}
+        className="w-20 rounded bg-brand-cloudDancer/70 px-2 py-0.5 text-[10px] text-brand-grey placeholder:text-brand-grey/50 dark:bg-white/5 dark:text-slate-400"
+      />
+      <span className="flex items-center gap-0.5 text-[10px] text-brand-grey dark:text-slate-400">
+        <input
+          value={days}
+          onChange={(e) => setDays(e.target.value.replace(/[^0-9]/g, ""))}
+          onBlur={() => {
+            const next = days.trim() === "" ? null : Number(days);
+            if (next !== t.dueDaysBefore) onEdit(t.id, { dueDaysBefore: next });
+          }}
+          placeholder="—"
+          aria-label={`Days before orientation for ${t.label}`}
+          title="Days before orientation. This also sets the order — bigger numbers come first."
+          className="w-8 rounded bg-brand-cloudDancer/70 px-1 py-0.5 text-center text-[10px] dark:bg-white/5"
+        />
+        d before
+      </span>
+      <button
+        onClick={() => onRemove(t.id)}
+        title="Remove this task from this session"
+        aria-label={`Remove ${t.label}`}
+        className="rounded px-1 text-[13px] leading-none text-red-600 opacity-40 transition hover:bg-red-50 hover:opacity-100 dark:text-red-400 dark:hover:bg-red-500/15"
+      >
+        ×
+      </button>
     </div>
   );
 }
