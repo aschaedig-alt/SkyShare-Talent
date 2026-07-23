@@ -100,6 +100,20 @@ storage-backed feature works in prod just because it worked locally.
   (not plain node) and import from `prisma/generated/client/client`.
 - **`npm run build` can OOM** after compiling. Use
   `NODE_OPTIONS=--max-old-space-size=8192 npm run build`.
+- **Don't run `npm run build` while the dev server is up.** They share `.next`, and
+  the build leaves the running dev server serving an empty page shell. Looks like a
+  broken app; it's a broken dev server. Restart it.
+- **Secrets are split across TWO env files, and `.env` is the smaller one.**
+  `.env` holds only `DATABASE_URL`; `.env.local` holds `NEXTAUTH_URL`,
+  `NEXTAUTH_SECRET`, `NEXT_PUBLIC_APP_ENV`, `ANTHROPIC_API_KEY` and
+  `FRONT_API_TOKEN`. Next.js loads both (`.env.local` wins), so the app is fine —
+  but `import "dotenv/config"` reads **`.env` only**, so an ad-hoc script silently
+  sees no Front/Anthropic token. Prisma scripts appear to work purely because
+  `DATABASE_URL` happens to live in `.env`. For scripts use
+  `node --env-file=.env.local …`, or load both paths explicitly (`.env.local`
+  first, so it takes precedence). **Do not "fix" this by copying vars between the
+  files** — duplicated secrets drift on the next rotation. This already produced one
+  confidently wrong "the token is missing" claim.
 - **The Browser pane cannot read this app's rendered content.** Worse than it sounds,
   and re-confirmed on `/travel` 2026-07-16: `body.innerText` returns ~136 chars,
   `main` holds ~74, `read_page`'s accessibility tree shows **only the sidebar**, and
