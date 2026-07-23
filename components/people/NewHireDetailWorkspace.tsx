@@ -55,6 +55,8 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     phone: hire.phone ?? "",
     ssEmail: hire.ssEmail ?? "",
     personalEmail: hire.personalEmail ?? "",
+    supervisorName: hire.supervisorName ?? "",
+    supervisorEmail: hire.supervisorEmail ?? "",
     offerSentDate: toDateInput(hire.offerSentDate),
     offerSignedDate: toDateInput(hire.offerSignedDate),
     startDate: toDateInput(hire.startDate),
@@ -368,6 +370,13 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
             {field("Phone", "phone")}
             {field("SkyShare email", "ssEmail")}
             {field("Personal email", "personalEmail")}
+            {/* Who they report to. The orientation emails cc the supervisor and
+                one is addressed to them, so this is what lets the app fill that
+                in instead of leaving it as a longhand note in the template. */}
+            <div className="grid grid-cols-2 gap-3">
+              {field("Supervisor", "supervisorName")}
+              {field("Supervisor email", "supervisorEmail")}
+            </div>
             <div className="grid grid-cols-2 gap-3">
               {field("Birth country", "birthCountry")}
               {field("Citizenship", "citizenshipCountry")}
