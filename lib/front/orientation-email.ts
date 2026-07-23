@@ -2,6 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { splitCandidateName } from "@/lib/candidates/normalize";
 import { formatTimeRange } from "@/lib/calendar/format";
 import { getOrientationCc } from "@/lib/orientation/email-cc";
+import {
+  ORIENTATION_TEMPLATE_META,
+  orientationTemplateMeta,
+  type OrientationTemplateKey
+} from "@/lib/orientation/email-templates-meta";
 import { frontFetch } from "./client";
 
 // Orientation email, sent from the app using the team's OWN Front templates.
@@ -23,32 +28,12 @@ import { frontFetch } from "./client";
 // So: strip that block, fill the recipients, and substitute the date placeholders
 // (1 in the subject + 2 in the body = the "3 times" the note means).
 
-export type OrientationTemplateKey = "invite" | "supervisors" | "reminder";
-
-/** The Front templates, in the order the team sends them. Ids are resolved by NAME
-    at send time (see resolveTemplateId) so renaming or rebuilding a template in
-    Front doesn't silently break the send — the id here is only a fast path. */
-export const ORIENTATION_TEMPLATES: Array<{
-  key: OrientationTemplateKey;
-  /** Label shown in the app. */
-  label: string;
-  /** Front template id as last seen. */
-  id: string;
-  /** Front template name, used to re-resolve if the id 404s. */
-  frontName: string;
-  /** Who it goes to — drives recipient building and which button appears. */
-  audience: "attendee" | "supervisor";
-}> = [
-  { key: "invite", label: "1. Invitation", id: "rsp_qnije", frontName: "1. New Hire Orientation", audience: "attendee" },
-  { key: "supervisors", label: "2. Supervisors", id: "rsp_qnimy", frontName: "2. (Supervisors) New Hire Orientation", audience: "supervisor" },
-  { key: "reminder", label: "3. Reminder", id: "rsp_qnioq", frontName: "3. REMINDER: New Hire Orientation", audience: "attendee" }
-];
-
-export function orientationTemplate(key: OrientationTemplateKey) {
-  const t = ORIENTATION_TEMPLATES.find((x) => x.key === key);
-  if (!t) throw new Error(`Unknown orientation template: ${key}`);
-  return t;
-}
+// The template list lives in a client-safe module so the UI and the send path
+// read the SAME definitions — this file can't be imported by a browser component
+// because it pulls in Prisma and the Front client.
+export const ORIENTATION_TEMPLATES = ORIENTATION_TEMPLATE_META;
+export const orientationTemplate = orientationTemplateMeta;
+export type { OrientationTemplateKey };
 
 type FrontTemplate = { id: string; name: string; subject: string; body: string };
 

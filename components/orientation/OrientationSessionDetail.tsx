@@ -6,8 +6,9 @@ import { useState } from "react";
 import { clsx } from "clsx";
 import { Button } from "@/components/ui";
 import type { AttendeeView, ConfirmStatus, PrepTaskView, SessionCandidate, SessionDetail, TravelStatus } from "@/lib/data/orientation";
-import type { EmailTemplateDef } from "@/lib/orientation/defaults";
+
 import { formatUsd } from "@/lib/travel/constants";
+import { OrientationEmailPanel } from "./OrientationEmailPanel";
 import { formatDateLong, formatTime, formatTimeRange, zoneLabel, toMountainDateTimeParts, mountainWallClockToIso } from "@/lib/calendar/format";
 import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
 
@@ -429,42 +430,26 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
         </section>
       </div>
 
-      {/* Email send tracker */}
+      {/* Sending + who's had what. Replaces the old tick-only tracker: the app can
+          now send the team's real Front templates, so the five slots the app had
+          invented (invitation / confirm_request / … ) are gone. */}
       {attendees.length > 0 ? (
-        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Who&apos;s been emailed</h2>
-          <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">Check a box when you send that email (via Front) so you can see who has what. Live sending is coming later.</p>
-          <div className="mt-3 overflow-x-auto">
-            <table className="min-w-full text-xs">
-              <thead>
-                <tr className="text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">
-                  <th className="py-2 pr-3">Attendee</th>
-                  {session.templates.map((t) => <th key={t.key} className="px-2 py-2 text-center" style={{ minWidth: 70 }}>{t.name}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {attendees.map((a) => (
-                  <tr key={a.id} className="border-t border-brand-lea/10 dark:border-white/10">
-                    <td className="py-2 pr-3 font-medium text-brand-lea dark:text-slate-100">{a.name}</td>
-                    {session.templates.map((t) => {
-                      const sent = a.sentTemplateKeys.includes(t.key);
-                      return (
-                        <td key={t.key} className="px-2 py-2 text-center">
-                          <button onClick={() => toggleEmail(a, t.key)} aria-label={sent ? "Mark as not sent" : "Mark as sent"} className="inline-flex items-center justify-center rounded p-0.5 transition hover:bg-brand-gold/10">
-                            {sent ? <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><svg width="11" height="11" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></span> : <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/30" />}
-                          </button>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <OrientationEmailPanel
+          attendees={attendees.map((a) => ({ id: a.id, name: a.name, sentTemplateKeys: a.sentTemplateKeys }))}
+          onToggle={(attendeeId, key) => {
+            const a = attendees.find((x) => x.id === attendeeId);
+            if (a) void toggleEmail(a, key);
+          }}
+          onSent={(attendeeId, key) => {
+            // A real send ticks the box server-side; mirror it locally so the
+            // grid updates without a full reload.
+            setAttendees((cur) =>
+              cur.map((x) => (x.id === attendeeId && !x.sentTemplateKeys.includes(key) ? { ...x, sentTemplateKeys: [...x.sentTemplateKeys, key] } : x))
+            );
+            router.refresh();
+          }}
+        />
       ) : null}
-
-      <EmailTemplates templates={session.templates} session={session} />
     </div>
   );
 }
@@ -532,103 +517,6 @@ function PrepRow({
       >
         ×
       </button>
-    </div>
-  );
-}
-
-function fillPlaceholders(text: string, session: SessionDetail) {
-  return text
-    .replace(/\{\{date\}\}/g, fmtShort(session.date))
-    .replace(/\{\{time\}\}/g, fmtTime(session.date))
-    .replace(/\{\{location\}\}/g, session.location ?? "")
-    .replace(/\{\{address\}\}/g, session.address ?? "")
-    .replace(/\{\{meetLink\}\}/g, session.meetLink ?? "");
-}
-
-function EmailTemplates({ templates, session }: { templates: EmailTemplateDef[]; session: SessionDetail }) {
-  const router = useRouter();
-  const [openKey, setOpenKey] = useState<string | null>(null);
-  const [copied, setCopied] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState({ name: "", subject: "", body: "" });
-
-  async function save(key: string, name: string, subject: string, body: string) {
-    setBusy(true);
-    await patchJson("/api/orientation/templates", { key, name, subject, body });
-    setBusy(false);
-    router.refresh();
-  }
-  async function remove(key: string) {
-    setBusy(true);
-    await patchJson(`/api/orientation/templates?key=${encodeURIComponent(key)}`, null, "DELETE");
-    setBusy(false);
-    router.refresh();
-  }
-  async function add() {
-    if (!draft.name.trim()) return;
-    setBusy(true);
-    await patchJson("/api/orientation/templates", draft, "POST");
-    setDraft({ name: "", subject: "", body: "" });
-    setAdding(false);
-    setBusy(false);
-    router.refresh();
-  }
-  function copy(t: EmailTemplateDef) {
-    const text = `Subject: ${fillPlaceholders(t.subject, session)}\n\n${fillPlaceholders(t.body, session)}`;
-    navigator.clipboard?.writeText(text);
-    setCopied(t.key);
-    setTimeout(() => setCopied((c) => (c === t.key ? null : c)), 1500);
-  }
-
-  return (
-    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-      <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Email templates</h2>
-        <button onClick={() => setAdding((a) => !a)} className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">{adding ? "Cancel" : "+ Add template"}</button>
-      </div>
-      <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">Placeholders: {"{{name}} {{date}} {{time}} {{location}} {{address}} {{meetLink}}"}. Copy fills the session details; replace {"{{name}}"} per person.</p>
-
-      {adding ? (
-        <div className="mt-3 space-y-2 rounded border border-brand-lea/10 p-3 dark:border-white/10">
-          <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Template name" className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
-          <input value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} placeholder="Subject" className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
-          <textarea value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} placeholder="Body" rows={4} className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
-          <button onClick={add} disabled={busy} className="rounded bg-brand-lea px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">Add template</button>
-        </div>
-      ) : null}
-
-      <div className="mt-3 space-y-2">
-        {templates.map((t) => (
-          <div key={t.key} className="rounded border border-brand-lea/10 dark:border-white/10">
-            <div className="flex items-center justify-between gap-2 px-3 py-2">
-              <button onClick={() => setOpenKey((k) => (k === t.key ? null : t.key))} className="flex items-center gap-2 text-left text-sm font-medium text-brand-lea transition hover:text-brand-eden dark:text-slate-100">
-                <span className="text-brand-grey dark:text-slate-400">{openKey === t.key ? "▾" : "▸"}</span> {t.name}
-              </button>
-              <div className="flex items-center gap-2">
-                <button onClick={() => copy(t)} className="text-xs font-semibold text-brand-lea hover:underline dark:text-slate-100">{copied === t.key ? "Copied!" : "Copy"}</button>
-                <button onClick={() => remove(t.key)} className="text-xs text-red-600 dark:text-red-400 hover:underline">Remove</button>
-              </div>
-            </div>
-            {openKey === t.key ? <TemplateEditor t={t} onSave={save} busy={busy} /> : null}
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function TemplateEditor({ t, onSave, busy }: { t: EmailTemplateDef; onSave: (key: string, name: string, subject: string, body: string) => void; busy: boolean }) {
-  const [name, setName] = useState(t.name);
-  const [subject, setSubject] = useState(t.subject);
-  const [body, setBody] = useState(t.body);
-  const dirty = name !== t.name || subject !== t.subject || body !== t.body;
-  return (
-    <div className="space-y-2 border-t border-brand-lea/10 px-3 py-3 dark:border-white/10">
-      <input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
-      <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" className="w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
-      <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={6} className="w-full rounded border border-brand-lea/15 px-3 py-2 font-mono text-xs dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
-      <button onClick={() => onSave(t.key, name, subject, body)} disabled={busy || !dirty} className="rounded bg-brand-lea px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-40">Save</button>
     </div>
   );
 }

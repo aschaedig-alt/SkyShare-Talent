@@ -1,8 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { isPilotPosition } from "@/lib/orientation/defaults";
 import { getPrepDefaults } from "@/lib/orientation/prep-defaults";
-import { getEmailTemplates } from "@/lib/data/orientation-templates";
-import type { EmailTemplateDef } from "@/lib/orientation/defaults";
 import { officeDayKey } from "@/lib/dates/display";
 
 /**
@@ -119,7 +117,6 @@ export type SessionDetail = {
   headcount: { total: number; outOfTown: number; pilots: number; confirmed: number };
   travelRollup: { traveling: number; booked: number; needsBooking: number; totalCost: number };
   candidates: SessionCandidate[];
-  templates: EmailTemplateDef[];
   otherSessions: SessionRef[];
   nextSessionId: string | null;
 };
@@ -265,7 +262,6 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
       totalCost: attendees.reduce((sum, a) => sum + a.travel.total, 0)
     },
     candidates,
-    templates: await getEmailTemplates(),
     otherSessions,
     nextSessionId
   };
