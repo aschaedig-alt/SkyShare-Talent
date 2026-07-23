@@ -80,7 +80,9 @@ async function loadAttendee(attendeeId: string) {
 /** Build (but do not send) the exact email, so it can be approved first. */
 export async function previewOrientationEmail(
   attendeeId: string,
-  key: OrientationTemplateKey
+  key: OrientationTemplateKey,
+  /** Redirect to one address and drop all cc — see buildOrientationEmail. */
+  testTo?: string | null
 ): Promise<OrientationPreviewResult> {
   if (!(await canSend())) return { ok: false, error: "You don't have permission to send this email." };
   const a = await loadAttendee(attendeeId);
@@ -91,7 +93,7 @@ export async function previewOrientationEmail(
       date: a.session.date.toISOString(),
       endsAt: a.session.endsAt ? a.session.endsAt.toISOString() : null,
       location: a.session.location
-    });
+    }, testTo);
     return { ok: true, preview, alreadySent: parseKeys(a.sentTemplateKeys).includes(key) };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Couldn't build the email." };
@@ -105,7 +107,8 @@ export async function previewOrientationEmail(
  */
 export async function sendOrientationEmail(
   attendeeId: string,
-  key: OrientationTemplateKey
+  key: OrientationTemplateKey,
+  testTo?: string | null
 ): Promise<OrientationSendResult> {
   if (!(await canSend())) return { ok: false, error: "You don't have permission to send this email." };
   const a = await loadAttendee(attendeeId);
@@ -117,7 +120,7 @@ export async function sendOrientationEmail(
       date: a.session.date.toISOString(),
       endsAt: a.session.endsAt ? a.session.endsAt.toISOString() : null,
       location: a.session.location
-    });
+    }, testTo);
     const channelId = await getOrientationChannelId();
 
     const sent = await sendEmail(channelId, {
@@ -131,22 +134,28 @@ export async function sendOrientationEmail(
     });
 
     const sentAt = new Date().toISOString();
-    await recordOrientationSend(attendeeId, key, {
-      conversationId: sent.conversationId,
-      messageId: sent.id,
-      sentAt,
-      to: email.to,
-      sentBy: await actorLabel()
-    });
 
-    // Tick the grid. Forward-only: a send is evidence it happened, and we never
-    // un-tick from here (the checkbox itself still toggles by hand).
-    const keys = parseKeys(a.sentTemplateKeys);
-    if (!keys.includes(key)) {
-      await prisma.orientationAttendee.update({
-        where: { id: attendeeId },
-        data: { sentTemplateKeys: JSON.stringify([...keys, key]) }
+    // A TEST send is not a send. It never records against the attendee and never
+    // ticks the grid — otherwise testing would leave the board claiming a real
+    // new hire had been emailed when they hadn't.
+    if (!testTo?.trim()) {
+      await recordOrientationSend(attendeeId, key, {
+        conversationId: sent.conversationId,
+        messageId: sent.id,
+        sentAt,
+        to: email.to,
+        sentBy: await actorLabel()
       });
+
+      // Tick the grid. Forward-only: a send is evidence it happened, and we never
+      // un-tick from here (the checkbox itself still toggles by hand).
+      const keys = parseKeys(a.sentTemplateKeys);
+      if (!keys.includes(key)) {
+        await prisma.orientationAttendee.update({
+          where: { id: attendeeId },
+          data: { sentTemplateKeys: JSON.stringify([...keys, key]) }
+        });
+      }
     }
 
     return { ok: true, conversationId: sent.conversationId, sentAt, to: email.to };

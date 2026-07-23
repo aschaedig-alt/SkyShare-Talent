@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { splitCandidateName } from "@/lib/candidates/normalize";
 import { formatTimeRange } from "@/lib/calendar/format";
+import { getOrientationCc } from "@/lib/orientation/email-cc";
 import { frontFetch } from "./client";
 
 // Orientation email, sent from the app using the team's OWN Front templates.
@@ -150,17 +151,9 @@ export function fillDatePlaceholders(text: string, sessionDate: string): { text:
 
 // --- recipients -------------------------------------------------------------
 
-/** The standing cc list from the template's red note. Stored here (not parsed out
-    of the template HTML) so it can be changed without editing a Front template —
-    people change roles far more often than the email body changes. */
-const STANDING_CC = [
-  "hrotasks@skyshare.com",
-  "mlangholf@skyshare.com",
-  "rlee@skyshare.com",
-  "hbyers@skyshare.com",
-  "ksherman@skyshare.com",
-  "aschaedig@skyshare.com"
-];
+// The standing cc list is an editable SETTING (lib/orientation/email-cc.ts), not a
+// constant here — it began as red text inside the Front template, and people change
+// roles far more often than the email body does.
 
 export type OrientationEmailPreview = {
   templateKey: OrientationTemplateKey;
@@ -168,7 +161,7 @@ export type OrientationEmailPreview = {
   to: string;
   toName: string;
   /** Which field the address came from, so the confirm dialog can say so. */
-  toSource: "company" | "personal" | "supervisor";
+  toSource: "company" | "personal" | "supervisor" | "test";
   cc: string[];
   subject: string;
   html: string;
@@ -207,11 +200,18 @@ function greetingHtml(name: string): string {
 export async function buildOrientationEmail(
   key: OrientationTemplateKey,
   attendee: AttendeeForEmail,
-  session: SessionForEmail
+  session: SessionForEmail,
+  /**
+   * Redirect the whole email to ONE address and drop every cc. This is what makes
+   * a test send safe: without it, "just testing" would really email the new hire,
+   * their supervisor, and everyone on the standing cc list.
+   */
+  testTo?: string | null
 ): Promise<OrientationEmailPreview> {
   const def = orientationTemplate(key);
   const tpl = await fetchTemplate(key);
   const warnings: string[] = [];
+  const isTest = Boolean(testTo?.trim());
 
   // Recipient. The invitation says "company email" on purpose: by orientation the
   // SkyShare address exists (unlike the onboarding-journey email, which goes to a
@@ -241,11 +241,26 @@ export async function buildOrientationEmail(
     }
   }
 
-  const cc = [...STANDING_CC];
-  if (def.audience === "attendee") {
-    const sup = attendee.supervisorEmail?.trim();
-    if (sup) cc.push(sup);
-    else warnings.push(`No supervisor on file for ${attendee.name}, so their supervisor is not cc'd.`);
+  // cc: the editable standing list, plus this hire's own supervisor.
+  const cc: string[] = [];
+  if (!isTest) {
+    cc.push(...(await getOrientationCc()).addresses);
+    if (def.audience === "attendee") {
+      const sup = attendee.supervisorEmail?.trim();
+      if (sup) cc.push(sup);
+      else warnings.push(`No supervisor on file for ${attendee.name}, so their supervisor is not cc'd.`);
+    }
+  }
+
+  // A test overrides the recipient AFTER the real one has been resolved, so the
+  // preview still proves the real address would have been found.
+  if (isTest) {
+    const realTo = to;
+    to = testTo!.trim();
+    toSource = "test";
+    warnings.unshift(
+      `TEST SEND — going only to ${to}. Nobody is cc'd. The real recipient would have been ${realTo}.`
+    );
   }
 
   // Date placeholders: 1 in the subject + 2 in the body — the template's own red
