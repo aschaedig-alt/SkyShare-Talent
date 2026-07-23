@@ -1,0 +1,341 @@
+import { prisma } from "@/lib/prisma";
+import { splitCandidateName } from "@/lib/candidates/normalize";
+import { formatTimeRange } from "@/lib/calendar/format";
+import { frontFetch } from "./client";
+
+// Orientation email, sent from the app using the team's OWN Front templates.
+//
+// Same principle as onboarding-email.ts: the BODY LIVES IN FRONT. HR maintains the
+// templates there and edits them there, so we fetch the current body at send time
+// instead of keeping a copy that silently drifts. What the app adds is everything
+// the template currently asks a human to do by hand.
+//
+// The template body literally documents that manual work, in red, at the top:
+//
+//   <delete this part>
+//   to: (each new employee's company email)
+//   cc: (each new employees supervisor), HR hrotasks@, Morgan, Ricky, Hannah,
+//       Kevin, Aimee
+//   Update Day, Date 3 times
+//   <delete this part>
+//
+// So: strip that block, fill the recipients, and substitute the date placeholders
+// (1 in the subject + 2 in the body = the "3 times" the note means).
+
+export type OrientationTemplateKey = "invite" | "supervisors" | "reminder";
+
+/** The Front templates, in the order the team sends them. Ids are resolved by NAME
+    at send time (see resolveTemplateId) so renaming or rebuilding a template in
+    Front doesn't silently break the send — the id here is only a fast path. */
+export const ORIENTATION_TEMPLATES: Array<{
+  key: OrientationTemplateKey;
+  /** Label shown in the app. */
+  label: string;
+  /** Front template id as last seen. */
+  id: string;
+  /** Front template name, used to re-resolve if the id 404s. */
+  frontName: string;
+  /** Who it goes to — drives recipient building and which button appears. */
+  audience: "attendee" | "supervisor";
+}> = [
+  { key: "invite", label: "1. Invitation", id: "rsp_qnije", frontName: "1. New Hire Orientation", audience: "attendee" },
+  { key: "supervisors", label: "2. Supervisors", id: "rsp_qnimy", frontName: "2. (Supervisors) New Hire Orientation", audience: "supervisor" },
+  { key: "reminder", label: "3. Reminder", id: "rsp_qnioq", frontName: "3. REMINDER: New Hire Orientation", audience: "attendee" }
+];
+
+export function orientationTemplate(key: OrientationTemplateKey) {
+  const t = ORIENTATION_TEMPLATES.find((x) => x.key === key);
+  if (!t) throw new Error(`Unknown orientation template: ${key}`);
+  return t;
+}
+
+type FrontTemplate = { id: string; name: string; subject: string; body: string };
+
+/** Fetch by id, falling back to a name lookup if the template was rebuilt in Front
+    (a rebuild changes the id). Keeps the send working without a code change. */
+async function fetchTemplate(key: OrientationTemplateKey): Promise<FrontTemplate> {
+  const def = orientationTemplate(key);
+  try {
+    return await frontFetch<FrontTemplate>(`/message_templates/${def.id}`);
+  } catch {
+    const page = await frontFetch<{ _results: FrontTemplate[] }>("/message_templates");
+    const match = page._results.find((t) => t.name?.trim() === def.frontName);
+    if (!match) {
+      throw new Error(
+        `Front template "${def.frontName}" not found. It may have been renamed — check Front, then update ORIENTATION_TEMPLATES.`
+      );
+    }
+    return match;
+  }
+}
+
+// --- template cleanup -------------------------------------------------------
+
+/**
+ * Remove the red "<delete this part>" instruction block the template opens with.
+ *
+ * The markers are HTML-escaped in the stored body (&lt;delete this part&gt;) and
+ * appear twice, wrapping the note. We cut from the start of the element containing
+ * the first marker through the end of the one containing the second. If the markers
+ * aren't found the body is returned untouched — better to send the note visible
+ * (obvious, someone fixes it) than to guess at a cut and silently eat real content.
+ */
+export function stripInstructionBlock(html: string): { body: string; stripped: boolean } {
+  const marker = /&lt;\s*delete this part\s*&gt;/gi;
+  const hits = [...html.matchAll(marker)];
+  if (hits.length < 2) return { body: html, stripped: false };
+
+  const first = hits[0].index ?? 0;
+  const last = (hits[1].index ?? 0) + hits[1][0].length;
+
+  // Widen to whole elements so we don't leave a dangling <div>.
+  const openStart = html.lastIndexOf("<", first);
+  const start = openStart >= 0 ? html.lastIndexOf("<div", first) : first;
+  const closeEnd = html.indexOf("</div>", last);
+  const end = closeEnd >= 0 ? closeEnd + "</div>".length : last;
+
+  const cutFrom = start >= 0 ? start : first;
+  if (end <= cutFrom) return { body: html, stripped: false };
+  return { body: (html.slice(0, cutFrom) + html.slice(end)).trim(), stripped: true };
+}
+
+/** "Tuesday, August 4" — how a person writes an event date. Deliberately no year:
+    the templates read "we look forward to seeing you on [Day, Date]!", and a year
+    there is noise. Always the Mountain day, so a late-evening instant can't slip. */
+function sessionDayLabel(sessionDate: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Denver",
+    weekday: "long",
+    month: "long",
+    day: "numeric"
+  }).format(new Date(sessionDate));
+}
+
+/**
+ * Fill a SUBJECT line. Subjects are short plain text, so the "Location" token in
+ * the supervisors subject ("… - Day, Date - Location") can be replaced safely.
+ * Bodies deliberately do NOT get this: there, "Location" is a LABEL followed by
+ * the real address ("Location: 180 2400 W, Salt Lake City"), and replacing it
+ * would overwrite the address with itself. Verified against all three templates.
+ */
+export function fillSubject(subject: string, sessionDate: string, location: string | null): { text: string; count: number } {
+  const dated = fillDatePlaceholders(subject, sessionDate);
+  let text = dated.text;
+  let count = dated.count;
+  if (location?.trim()) {
+    text = text.replace(/\bLocation\b/g, () => {
+      count++;
+      return location.trim();
+    });
+  }
+  return { text, count };
+}
+
+/** Replace the template's [Day, Date] placeholders with the real session day.
+    Tolerates the unbracketed "Day, Date" the supervisors template uses. */
+export function fillDatePlaceholders(text: string, sessionDate: string): { text: string; count: number } {
+  const day = sessionDayLabel(sessionDate);
+  let count = 0;
+  const out = text
+    .replace(/\[\s*Day,\s*Date\s*\]/gi, () => {
+      count++;
+      return day;
+    })
+    .replace(/(?<![[\w])Day,\s*Date(?!\s*\])/g, () => {
+      count++;
+      return day;
+    });
+  return { text: out, count };
+}
+
+// --- recipients -------------------------------------------------------------
+
+/** The standing cc list from the template's red note. Stored here (not parsed out
+    of the template HTML) so it can be changed without editing a Front template —
+    people change roles far more often than the email body changes. */
+const STANDING_CC = [
+  "hrotasks@skyshare.com",
+  "mlangholf@skyshare.com",
+  "rlee@skyshare.com",
+  "hbyers@skyshare.com",
+  "ksherman@skyshare.com",
+  "aschaedig@skyshare.com"
+];
+
+export type OrientationEmailPreview = {
+  templateKey: OrientationTemplateKey;
+  templateName: string;
+  to: string;
+  toName: string;
+  /** Which field the address came from, so the confirm dialog can say so. */
+  toSource: "company" | "personal" | "supervisor";
+  cc: string[];
+  subject: string;
+  html: string;
+  /** Things the sender should see before approving. */
+  warnings: string[];
+};
+
+type AttendeeForEmail = {
+  name: string;
+  ssEmail: string | null;
+  personalEmail: string | null;
+  supervisorName: string | null;
+  supervisorEmail: string | null;
+};
+
+type SessionForEmail = {
+  date: string;
+  endsAt: string | null;
+  location: string | null;
+};
+
+function greetingHtml(name: string): string {
+  const safe = name.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
+  return (
+    `<div style="line-height: 1.5;" dir="ltr">` +
+    `<span style="font-family: Verdana, sans-serif;">` +
+    `<span style="background-color: transparent; font-size: 9pt;">Hi ${safe},</span>` +
+    `</span></div><div><br /></div>`
+  );
+}
+
+/**
+ * Build the exact email that would be sent — used for BOTH the preview and the
+ * send, so what is approved is what goes out.
+ */
+export async function buildOrientationEmail(
+  key: OrientationTemplateKey,
+  attendee: AttendeeForEmail,
+  session: SessionForEmail
+): Promise<OrientationEmailPreview> {
+  const def = orientationTemplate(key);
+  const tpl = await fetchTemplate(key);
+  const warnings: string[] = [];
+
+  // Recipient. The invitation says "company email" on purpose: by orientation the
+  // SkyShare address exists (unlike the onboarding-journey email, which goes to a
+  // personal address because the company one isn't created yet).
+  let to: string | undefined;
+  let toName = attendee.name;
+  let toSource: OrientationEmailPreview["toSource"];
+  if (def.audience === "supervisor") {
+    to = attendee.supervisorEmail?.trim();
+    toName = attendee.supervisorName?.trim() || "there";
+    toSource = "supervisor";
+    if (!to) {
+      throw new Error(
+        `${attendee.name} has no supervisor email on file — add one on their profile before sending the supervisors email.`
+      );
+    }
+  } else {
+    to = attendee.ssEmail?.trim() || attendee.personalEmail?.trim();
+    toSource = attendee.ssEmail?.trim() ? "company" : "personal";
+    if (!to) {
+      throw new Error(`${attendee.name} has no email address on file — add one before sending.`);
+    }
+    if (toSource === "personal") {
+      warnings.push(
+        "No SkyShare email on file, so this is going to their personal address. The template tells them a calendar invite went to their company email."
+      );
+    }
+  }
+
+  const cc = [...STANDING_CC];
+  if (def.audience === "attendee") {
+    const sup = attendee.supervisorEmail?.trim();
+    if (sup) cc.push(sup);
+    else warnings.push(`No supervisor on file for ${attendee.name}, so their supervisor is not cc'd.`);
+  }
+
+  // Date placeholders: 1 in the subject + 2 in the body — the template's own red
+  // note says "Update Day, Date 3 times".
+  const subjectFill = fillSubject(tpl.subject ?? "", session.date, session.location);
+  const cleaned = stripInstructionBlock(tpl.body ?? "");
+  if (!cleaned.stripped) {
+    warnings.push(
+      "Couldn't find the red 'delete this part' block in the template, so nothing was removed — check the preview before sending."
+    );
+  }
+  const bodyFill = fillDatePlaceholders(cleaned.body, session.date);
+  const filled = subjectFill.count + bodyFill.count;
+  if (filled === 0) {
+    warnings.push("No [Day, Date] placeholder found to replace — the date in this email may be stale.");
+  }
+
+  // Drift check: the template hardcodes the hours in prose. We deliberately do NOT
+  // rewrite that (it's HR's copy), but we do say when it disagrees with the session.
+  if (session.endsAt) {
+    const actual = formatTimeRange(session.date, session.endsAt).replace(/\s*MT$/, "");
+    const times = [...bodyFill.text.matchAll(/\d{1,2}:\d{2}\s*[ap]m\s*(?:to|-|–)\s*\d{1,2}:\d{2}\s*[ap]m/gi)].map((m) =>
+      m[0].toLowerCase().replace(/\s+/g, "")
+    );
+    const want = actual.toLowerCase().replace(/\s+/g, "").replace(/–/g, "-");
+    const mismatch = times.filter((t) => t.replace(/–/g, "-").replace(/to/g, "-") !== want.replace(/to/g, "-"));
+    if (times.length && mismatch.length) {
+      warnings.push(
+        `The template says ${times.join(" / ")} but this session is ${actual}. Fix the wording in Front if that's wrong.`
+      );
+    }
+  }
+
+  const { firstName } = splitCandidateName(toName);
+  const first = firstName || toName.split(/\s+/)[0] || "there";
+
+  return {
+    templateKey: key,
+    templateName: tpl.name,
+    to,
+    toName,
+    toSource,
+    cc,
+    subject: subjectFill.text,
+    html: greetingHtml(first) + bodyFill.text,
+    warnings
+  };
+}
+
+// --- send record ------------------------------------------------------------
+// Which orientation emails actually went out, per attendee. The existing
+// sentTemplateKeys column on OrientationAttendee stays the source of truth for the
+// tick boxes; this adds the Front conversation id so a send can be traced back.
+
+const SCOPE = "front";
+const KEY = "orientation-sends";
+
+export type OrientationSendRecord = {
+  conversationId?: string;
+  messageId?: string;
+  sentAt: string;
+  to: string;
+  sentBy?: string | null;
+};
+
+/** attendeeId -> templateKey -> record */
+type SendMap = Record<string, Record<string, OrientationSendRecord>>;
+
+async function readSends(): Promise<SendMap> {
+  const row = await prisma.workspaceSetting.findFirst({ where: { scope: SCOPE, key: KEY }, select: { valueJson: true } });
+  if (!row?.valueJson) return {};
+  try {
+    const parsed = JSON.parse(row.valueJson) as SendMap;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export async function recordOrientationSend(
+  attendeeId: string,
+  key: OrientationTemplateKey,
+  record: OrientationSendRecord
+): Promise<void> {
+  const map = await readSends();
+  map[attendeeId] = { ...(map[attendeeId] ?? {}), [key]: record };
+  const value = JSON.stringify(map);
+  await prisma.workspaceSetting.upsert({
+    where: { scope_key: { scope: SCOPE, key: KEY } },
+    create: { scope: SCOPE, key: KEY, valueJson: value },
+    update: { valueJson: value }
+  });
+}
