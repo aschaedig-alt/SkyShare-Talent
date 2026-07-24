@@ -77,9 +77,12 @@ async function loadAttendee(attendeeId: string) {
           personalEmail: true,
           supervisorName: true,
           supervisorEmail: true,
-          // The linked supervisor's live contact details win over the typed
+          supervisor2Name: true,
+          supervisor2Email: true,
+          // The linked supervisors' live contact details win over the typed
           // fallback, so a changed address follows automatically.
-          supervisorHire: { select: { name: true, ssEmail: true, personalEmail: true } }
+          supervisorHire: { select: { name: true, ssEmail: true, personalEmail: true } },
+          supervisor2Hire: { select: { name: true, ssEmail: true, personalEmail: true } }
         }
       },
       session: { select: { id: true, date: true, endsAt: true, location: true } }
@@ -153,7 +156,7 @@ export async function sendOrientationEmail(
         conversationId: sent.conversationId,
         messageId: sent.id,
         sentAt,
-        to: email.to,
+        to: email.to.join(", "),
         sentBy: await actorLabel()
       });
 
@@ -168,7 +171,7 @@ export async function sendOrientationEmail(
       }
     }
 
-    return { ok: true, conversationId: sent.conversationId, sentAt, to: email.to };
+    return { ok: true, conversationId: sent.conversationId, sentAt, to: email.to.join(", ") };
   } catch (err) {
     // Surface the real Front error — a 4xx here usually means a missing address or
     // a scope the token wasn't granted, and both need a human, not a retry.

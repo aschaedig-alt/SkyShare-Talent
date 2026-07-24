@@ -61,6 +61,11 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     supervisorHireId: hire.supervisorHireId ?? "",
     supervisorHireName: hire.supervisorHire?.name ?? "",
     supervisorHireEmail: (hire.supervisorHire?.ssEmail || hire.supervisorHire?.personalEmail) ?? "",
+    supervisor2Name: hire.supervisor2Name ?? "",
+    supervisor2Email: hire.supervisor2Email ?? "",
+    supervisor2HireId: hire.supervisor2HireId ?? "",
+    supervisor2HireName: hire.supervisor2Hire?.name ?? "",
+    supervisor2HireEmail: (hire.supervisor2Hire?.ssEmail || hire.supervisor2Hire?.personalEmail) ?? "",
     offerSentDate: toDateInput(hire.offerSentDate),
     offerSignedDate: toDateInput(hire.offerSignedDate),
     startDate: toDateInput(hire.startDate),
@@ -387,12 +392,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
                 linkedName={details.supervisorHireName || null}
                 linkedEmail={details.supervisorHireEmail || null}
                 onLink={(p) =>
-                  setDetails((f) => ({
-                    ...f,
-                    supervisorHireId: p.id,
-                    supervisorHireName: p.name,
-                    supervisorHireEmail: p.email ?? ""
-                  }))
+                  setDetails((f) => ({ ...f, supervisorHireId: p.id, supervisorHireName: p.name, supervisorHireEmail: p.email ?? "" }))
                 }
                 onUnlink={() => setDetails((f) => ({ ...f, supervisorHireId: "", supervisorHireName: "", supervisorHireEmail: "" }))}
               />
@@ -404,6 +404,33 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
                   <div className="grid grid-cols-2 gap-3">
                     {field("Supervisor name", "supervisorName")}
                     {field("Supervisor email", "supervisorEmail")}
+                  </div>
+                </>
+              ) : null}
+            </div>
+
+            {/* A second supervisor, for hires who report to two people. Both get
+                the supervisors email and both are cc'd on the invitation. */}
+            <div className="space-y-2">
+              <span className="block text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">Second supervisor <span className="normal-case text-brand-grey/70">(optional)</span></span>
+              <SupervisorPicker
+                hireId={hire.id}
+                linkedId={details.supervisor2HireId || null}
+                linkedName={details.supervisor2HireName || null}
+                linkedEmail={details.supervisor2HireEmail || null}
+                onLink={(p) =>
+                  setDetails((f) => ({ ...f, supervisor2HireId: p.id, supervisor2HireName: p.name, supervisor2HireEmail: p.email ?? "" }))
+                }
+                onUnlink={() => setDetails((f) => ({ ...f, supervisor2HireId: "", supervisor2HireName: "", supervisor2HireEmail: "" }))}
+              />
+              {!details.supervisor2HireId ? (
+                <>
+                  <p className="text-[11px] text-brand-grey dark:text-slate-500">
+                    Not in the app yet? Type their details instead — used only when no second supervisor is linked.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {field("Second supervisor name", "supervisor2Name")}
+                    {field("Second supervisor email", "supervisor2Email")}
                   </div>
                 </>
               ) : null}

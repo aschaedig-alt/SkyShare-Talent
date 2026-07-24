@@ -143,7 +143,8 @@ export function fillDatePlaceholders(text: string, sessionDate: string): { text:
 export type OrientationEmailPreview = {
   templateKey: OrientationTemplateKey;
   templateName: string;
-  to: string;
+  /** One or more recipients — the supervisors email goes to both supervisors. */
+  to: string[];
   toName: string;
   /** Which field the address came from, so the confirm dialog can say so. */
   toSource: "company" | "personal" | "supervisor" | "test";
@@ -154,29 +155,45 @@ export type OrientationEmailPreview = {
   warnings: string[];
 };
 
+type SupervisorFields = {
+  supervisorName: string | null;
+  supervisorEmail: string | null;
+  supervisorHire?: { name: string; ssEmail: string | null; personalEmail: string | null } | null;
+  supervisor2Name: string | null;
+  supervisor2Email: string | null;
+  supervisor2Hire?: { name: string; ssEmail: string | null; personalEmail: string | null } | null;
+};
+
 type AttendeeForEmail = {
   name: string;
   ssEmail: string | null;
   personalEmail: string | null;
-  /** Free-text fallback, for a supervisor who isn't in the app yet. */
-  supervisorName: string | null;
-  supervisorEmail: string | null;
-  /** The linked supervisor's own record — preferred, because their address is
-      read live rather than from a copy typed once and left to go stale. */
-  supervisorHire?: { name: string; ssEmail: string | null; personalEmail: string | null } | null;
-};
+} & SupervisorFields;
 
-/** The supervisor to use: the LINKED record wins over the typed fallback, so a
-    changed address follows automatically. Returns nulls when neither is set. */
-export function resolveSupervisor(a: AttendeeForEmail): { name: string | null; email: string | null; linked: boolean } {
-  const link = a.supervisorHire;
+type ResolvedSupervisor = { name: string | null; email: string | null; linked: boolean };
+
+/** One supervisor from a link-or-type pair: the LINKED record wins over the typed
+    fallback, so a changed address follows automatically. */
+function resolveOne(
+  link: { name: string; ssEmail: string | null; personalEmail: string | null } | null | undefined,
+  typedName: string | null,
+  typedEmail: string | null
+): ResolvedSupervisor | null {
   const linkedEmail = link?.ssEmail?.trim() || link?.personalEmail?.trim() || null;
   if (link && linkedEmail) return { name: link.name, email: linkedEmail, linked: true };
-  return {
-    name: a.supervisorName?.trim() || link?.name || null,
-    email: a.supervisorEmail?.trim() || null,
-    linked: false
-  };
+  const email = typedEmail?.trim() || null;
+  const name = typedName?.trim() || link?.name || null;
+  if (!name && !email) return null; // this slot is empty
+  return { name, email, linked: false };
+}
+
+/** Both supervisors, primary first, skipping empty slots. A hire may have zero,
+    one, or two. Callers decide what to do when a slot has a name but no address. */
+export function resolveSupervisors(a: SupervisorFields): ResolvedSupervisor[] {
+  return [
+    resolveOne(a.supervisorHire, a.supervisorName, a.supervisorEmail),
+    resolveOne(a.supervisor2Hire, a.supervisor2Name, a.supervisor2Email)
+  ].filter((s): s is ResolvedSupervisor => s !== null);
 }
 
 type SessionForEmail = {
@@ -218,25 +235,34 @@ export async function buildOrientationEmail(
   // Recipient. The invitation says "company email" on purpose: by orientation the
   // SkyShare address exists (unlike the onboarding-journey email, which goes to a
   // personal address because the company one isn't created yet).
-  let to: string | undefined;
+  // to can be more than one address — the supervisors email goes to BOTH
+  // supervisors when a hire has two.
+  let toList: string[] = [];
   let toName = attendee.name;
   let toSource: OrientationEmailPreview["toSource"];
-  const supervisor = resolveSupervisor(attendee);
+  const supervisors = resolveSupervisors(attendee);
+  const supervisorEmails = supervisors.map((s) => s.email).filter((e): e is string => Boolean(e));
+
   if (def.audience === "supervisor") {
-    to = supervisor.email ?? undefined;
-    toName = supervisor.name || "there";
+    toList = supervisorEmails;
+    toName = supervisors.map((s) => s.name).filter(Boolean).join(" and ") || "there";
     toSource = "supervisor";
-    if (!to) {
+    if (toList.length === 0) {
       throw new Error(
         `${attendee.name} has no supervisor on file — link one (or type an address) on their profile before sending the supervisors email.`
       );
     }
+    // A slot filled with a name but no address can't receive the email — say so
+    // rather than quietly sending to only one of the two.
+    const missing = supervisors.filter((s) => !s.email).map((s) => s.name);
+    if (missing.length) warnings.push(`No email on file for ${missing.join(" and ")}, so they won't get this.`);
   } else {
-    to = attendee.ssEmail?.trim() || attendee.personalEmail?.trim();
+    const one = attendee.ssEmail?.trim() || attendee.personalEmail?.trim();
     toSource = attendee.ssEmail?.trim() ? "company" : "personal";
-    if (!to) {
+    if (!one) {
       throw new Error(`${attendee.name} has no email address on file — add one before sending.`);
     }
+    toList = [one];
     if (toSource === "personal") {
       warnings.push(
         "No SkyShare email on file, so this is going to their personal address. The template tells them a calendar invite went to their company email."
@@ -244,24 +270,24 @@ export async function buildOrientationEmail(
     }
   }
 
-  // cc: the editable standing list, plus this hire's own supervisor.
+  // cc: the editable standing list, plus BOTH of this hire's supervisors.
   const cc: string[] = [];
   if (!isTest) {
     cc.push(...(await getOrientationCc()).addresses);
     if (def.audience === "attendee") {
-      if (supervisor.email) cc.push(supervisor.email);
-      else warnings.push(`No supervisor on file for ${attendee.name}, so their supervisor is not cc'd.`);
+      if (supervisorEmails.length) cc.push(...supervisorEmails);
+      else warnings.push(`No supervisor on file for ${attendee.name}, so no supervisor is cc'd.`);
     }
   }
 
   // A test overrides the recipient AFTER the real one has been resolved, so the
-  // preview still proves the real address would have been found.
+  // preview still proves the real address(es) would have been found.
   if (isTest) {
-    const realTo = to;
-    to = testTo!.trim();
+    const realTo = toList.join(", ");
+    toList = [testTo!.trim()];
     toSource = "test";
     warnings.unshift(
-      `TEST SEND — going only to ${to}. Nobody is cc'd. The real recipient would have been ${realTo}.`
+      `TEST SEND — going only to ${toList[0]}. Nobody is cc'd. The real recipient would have been ${realTo}.`
     );
   }
 
@@ -296,18 +322,27 @@ export async function buildOrientationEmail(
     }
   }
 
-  const { firstName } = splitCandidateName(toName);
-  const first = firstName || toName.split(/\s+/)[0] || "there";
+  // Dedupe case-insensitively, and keep cc from repeating anyone already in to.
+  const seen = new Set<string>();
+  const finalTo = toList.map((t) => t.trim()).filter((t) => t && !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
+  const finalCc = cc.map((c) => c.trim()).filter((c) => c && !seen.has(c.toLowerCase()) && seen.add(c.toLowerCase()));
+
+  // The greeting: attendee emails get a personal "Hi <first>,". The supervisors
+  // email does NOT — its template already opens "Hello Supervisors," and it can
+  // go to two people, so a single-name greeting would be wrong.
+  const { firstName } = splitCandidateName(attendee.name);
+  const first = firstName || attendee.name.split(/\s+/)[0] || "there";
+  const greeting = def.audience === "attendee" ? greetingHtml(first) : "";
 
   return {
     templateKey: key,
     templateName: tpl.name,
-    to,
+    to: finalTo,
     toName,
     toSource,
-    cc,
+    cc: finalCc,
     subject: subjectFill.text,
-    html: greetingHtml(first) + bodyFill.text,
+    html: greeting + bodyFill.text,
     warnings
   };
 }

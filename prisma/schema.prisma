@@ -243,6 +243,14 @@ model NewHire {
   supervisees      NewHire[] @relation("HireSupervisor")
   supervisorName  String?
   supervisorEmail String?
+  // A second supervisor, for hires who report to two people. Same link-or-type
+  // shape as the primary; both get the orientation email (and both are cc'd on
+  // the invitation). Optional — most hires have only the primary.
+  supervisor2HireId String?
+  supervisor2Hire   NewHire?  @relation("HireSupervisor2", fields: [supervisor2HireId], references: [id], onDelete: SetNull)
+  supervisees2      NewHire[] @relation("HireSupervisor2")
+  supervisor2Name  String?
+  supervisor2Email String?
   // Cross-cutting person labels shown as pills (Executive, Management, ...),
   // independent of department — a person can carry more than one. Hand-applied.
   // "Contract" is NOT stored here; it's derived from employmentStatus at display.

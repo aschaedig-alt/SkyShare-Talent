@@ -153,7 +153,7 @@ function SendDialog({
 
   async function doSend() {
     if (!preview) return;
-    const who = testMode ? `TEST to ${preview.to}` : `${attendee.name} at ${preview.to}`;
+    const who = testMode ? `TEST to ${preview.to.join(", ")}` : `${attendee.name} at ${preview.to.join(", ")}`;
     if (!confirm(`Send "${meta.label}" — ${who}?\n\nThis sends immediately and cannot be undone.`)) return;
     setSending(true);
     setResult(null);
@@ -218,7 +218,7 @@ function SendDialog({
           <dl className="space-y-1 text-[12.5px]">
             <Row label="To">
               <span className={clsx("font-medium", preview.toSource === "test" && "text-amber-700 dark:text-amber-300")}>
-                {preview.to}
+                {preview.to.join(", ")}
               </span>
               <span className="ml-1.5 text-brand-grey dark:text-slate-400">
                 ({preview.toSource === "test" ? "test address" : preview.toSource === "supervisor" ? "supervisor" : `${preview.toSource} email`})
