@@ -41,7 +41,10 @@ export async function POST(request: Request) {
     const report = await scanPilotApplications({
       apply,
       query,
-      maxConversations: resolveLimit(url.searchParams.get("limit"))
+      maxConversations: resolveLimit(url.searchParams.get("limit")),
+      // ?backfill=1 sweeps the ALREADY-ARCHIVED history too, filing what matches
+      // without commenting on or re-archiving threads the team already handled.
+      backfill: url.searchParams.get("backfill") === "1"
     });
 
     return NextResponse.json({

@@ -6,12 +6,19 @@ import { MailCheck } from "lucide-react";
 import { Button, Modal } from "@/components/ui";
 
 /**
- * On-demand pull of Paycom's background-check notices out of Front.
+ * On-demand pull of everything the app watches for in Front — Paycom's
+ * background-check notices AND completed pilot applications.
  *
- * The nightly cron does this on its own; this button is for "did hers come in
+ * ONE button rather than two, by request: the team shouldn't have to remember
+ * which sweep to run, and both answer the same question ("has anything come in
+ * for me?"). The two scans stay separate underneath so a failure in one still
+ * lets the other report.
+ *
+ * The nightly crons do this on their own; the button is for "did hers come in
  * yet?" moments, and for seeing what the automation is actually doing. It runs
- * the real thing (not a dry run) because the underlying handler only ticks
- * forward and is idempotent — clicking twice cannot do damage.
+ * the real thing, not a dry run, because both handlers are idempotent — an
+ * already-ticked step is left alone and an already-filed PDF is skipped by Front
+ * message id, so clicking twice cannot do damage.
  */
 
 type ScanRow = {
@@ -34,29 +41,72 @@ type ScanResponse = {
   missingTags?: string[];
 };
 
+type PilotAppRow = {
+  outcome: string;
+  signerName: string | null;
+  signerEmail: string | null;
+  candidateName?: string;
+  candidateId?: string;
+  matchedBy?: "email" | "name" | "nickname" | null;
+  detail?: string;
+};
+
+type PilotAppResponse = {
+  ok?: boolean;
+  message?: string;
+  conversationsScanned: number;
+  noticesFound: number;
+  attached: number;
+  archived: number;
+  results: PilotAppRow[];
+  missingTags?: string[];
+};
+
 export function PaycomScanButton() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<ScanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pilot, setPilot] = useState<PilotAppResponse | null>(null);
+  const [pilotError, setPilotError] = useState<string | null>(null);
 
   async function run() {
     setOpen(true);
     setRunning(true);
     setResult(null);
+    setPilot(null);
     setError(null);
-    try {
-      const res = await fetch("/api/front/scan-paycom?apply=1", { method: "POST" });
-      const data = (await res.json().catch(() => null)) as ScanResponse | null;
-      if (!res.ok || !data?.ok) throw new Error(data?.message ?? "Could not read the inbox.");
-      setResult(data);
-      if (data.ticked > 0) router.refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not read the inbox.");
-    } finally {
-      setRunning(false);
-    }
+    setPilotError(null);
+
+    // Run both, and let each fail on its own: if Paycom's sweep breaks, the
+    // pilot-application one should still report, and vice versa. Settled rather
+    // than raced so one rejection can't discard the other's result.
+    const [paycomRes, pilotRes] = await Promise.allSettled([
+      fetch("/api/front/scan-paycom?apply=1", { method: "POST" }).then(async (r) => {
+        const d = (await r.json().catch(() => null)) as ScanResponse | null;
+        if (!r.ok || !d?.ok) throw new Error(d?.message ?? "Could not read the inbox.");
+        return d;
+      }),
+      fetch("/api/front/scan-pilot-apps?apply=1", { method: "POST" }).then(async (r) => {
+        const d = (await r.json().catch(() => null)) as PilotAppResponse | null;
+        if (!r.ok || !d?.ok) throw new Error(d?.message ?? "Could not read pilot applications.");
+        return d;
+      })
+    ]);
+
+    if (paycomRes.status === "fulfilled") setResult(paycomRes.value);
+    else setError(paycomRes.reason instanceof Error ? paycomRes.reason.message : "Could not read the inbox.");
+
+    if (pilotRes.status === "fulfilled") setPilot(pilotRes.value);
+    else setPilotError(pilotRes.reason instanceof Error ? pilotRes.reason.message : "Could not read pilot applications.");
+
+    const changed =
+      (paycomRes.status === "fulfilled" && paycomRes.value.ticked > 0) ||
+      (pilotRes.status === "fulfilled" && pilotRes.value.attached > 0);
+    if (changed) router.refresh();
+
+    setRunning(false);
   }
 
   const ticked = result?.results.filter((r) => r.outcome === "ticked") ?? [];
@@ -77,23 +127,30 @@ export function PaycomScanButton() {
     <>
       <Button variant="secondary" onClick={run}>
         <MailCheck className="h-4 w-4" />
-        Check Paycom mail
+        Check Front mail
       </Button>
 
       <Modal open={open} onClose={() => !running && setOpen(false)} busy={running}>
-        <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Paycom background checks</h2>
+        <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Front mail</h2>
         <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-          Reads Paycom&apos;s automated notices in Front and ticks the background-check steps they report — the candidate
-          submitting their information, and the check coming back clear. Starting the check in Paycom stays a manual tick.
-          This runs on its own each morning; clicking is just for checking now.
+          Two sweeps in one: Paycom&apos;s background-check notices, and completed pilot applications waiting in pilotapp@.
+          Both run on their own each morning; clicking is just for checking now.
         </p>
 
         {running ? (
           <p className="mt-4 text-sm text-brand-grey dark:text-slate-400">Reading the inbox…</p>
-        ) : error ? (
-          <p className="mt-4 text-sm font-medium text-red-700 dark:text-red-300">{error}</p>
-        ) : result ? (
-          <div className="mt-4">
+        ) : null}
+
+        {!running && (error || result) ? (
+          <h3 className="mt-4 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
+            Paycom background checks
+          </h3>
+        ) : null}
+        {!running && error ? (
+          <p className="mt-2 text-sm font-medium text-red-700 dark:text-red-300">{error}</p>
+        ) : null}
+        {!running && result ? (
+          <div className="mt-2">
             {ticked.length > 0 ? (
               <div className="rounded border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
                 <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
@@ -164,6 +221,17 @@ export function PaycomScanButton() {
           </div>
         ) : null}
 
+        {/* --- pilot applications --- */}
+        {!running && (pilotError || pilot) ? (
+          <h3 className="mt-5 border-t border-brand-lea/10 pt-4 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:border-white/10 dark:text-slate-400">
+            Pilot applications
+          </h3>
+        ) : null}
+        {!running && pilotError ? (
+          <p className="mt-2 text-sm font-medium text-red-700 dark:text-red-300">{pilotError}</p>
+        ) : null}
+        {!running && pilot ? <PilotAppResults pilot={pilot} /> : null}
+
         <div className="mt-5 flex justify-end">
           <Button onClick={() => setOpen(false)} disabled={running}>
             Done
@@ -171,5 +239,106 @@ export function PaycomScanButton() {
         </div>
       </Modal>
     </>
+  );
+}
+
+/**
+ * What the pilot-application sweep did.
+ *
+ * The unfiled ones matter more than the filed ones here: a filed application is
+ * self-evident on the candidate, but one we could NOT place is sitting in Front
+ * waiting for a person, and that has to be visible rather than buried in a tally.
+ */
+function PilotAppResults({ pilot }: { pilot: PilotAppResponse }) {
+  const filed = pilot.results.filter((r) => r.outcome === "attached" && r.candidateId);
+  const unplaced = pilot.results.filter((r) => r.outcome === "no-match" || r.outcome === "ambiguous-match");
+  const unreadable = pilot.results.filter((r) => r.outcome === "no-identifier" || r.outcome === "no-attachment");
+
+  return (
+    <div className="mt-2">
+      {filed.length > 0 ? (
+        <div className="rounded border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+          <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+            Filed {filed.length} pilot {filed.length === 1 ? "application" : "applications"}
+          </p>
+          <ul className="mt-1 space-y-0.5 text-sm text-emerald-900 dark:text-emerald-200">
+            {filed.map((r, i) => (
+              <li key={i}>
+                {r.candidateName}
+                {r.matchedBy && r.matchedBy !== "name" ? (
+                  <span className="text-xs text-emerald-700 dark:text-emerald-400">
+                    {" "}
+                    — matched by {r.matchedBy === "email" ? "email" : "name variant"}
+                    {r.signerName && r.signerName !== r.candidateName ? ` (signed as “${r.signerName}”)` : ""}
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1.5 text-xs text-emerald-800/80 dark:text-emerald-300/80">
+            Each PDF is on the candidate&apos;s Documents tab, and its Front thread has been archived.
+          </p>
+        </div>
+      ) : (
+        <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 p-3 dark:border-white/10 dark:bg-white/5">
+          <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">Nothing new to file</p>
+          <p className="mt-0.5 text-sm text-brand-grey dark:text-slate-400">
+            {pilot.noticesFound === 0
+              ? "No unhandled pilot applications are waiting."
+              : `${pilot.noticesFound} ${pilot.noticesFound === 1 ? "notice" : "notices"} found, none newly filed.`}
+          </p>
+        </div>
+      )}
+
+      {unplaced.length > 0 && (
+        <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/15">
+          <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+            {unplaced.length} {unplaced.length === 1 ? "application needs" : "applications need"} a person
+          </p>
+          <p className="mt-0.5 text-xs text-amber-900/80 dark:text-amber-200/80">
+            Nothing was downloaded for these and their threads are still open in Front, with a note saying why. Add the
+            candidate and run this again, or file the PDF by hand.
+          </p>
+          <ul className="mt-1 space-y-0.5 text-sm text-amber-900 dark:text-amber-200">
+            {unplaced.map((r, i) => (
+              <li key={i}>
+                {r.signerName ?? r.signerEmail}
+                {r.outcome === "ambiguous-match" ? (
+                  <span className="text-xs"> — matches more than one candidate</span>
+                ) : (
+                  <span className="text-xs"> — no matching candidate</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {unreadable.length > 0 && (
+        <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/15">
+          <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+            {unreadable.length} {unreadable.length === 1 ? "notice" : "notices"} couldn&apos;t be read
+          </p>
+          <p className="mt-0.5 text-xs text-amber-900/80 dark:text-amber-200/80">
+            Either no PDF was attached or the signer couldn&apos;t be identified. Adobe may have changed the wording — worth
+            passing on to whoever looks after the app.
+          </p>
+        </div>
+      )}
+
+      {pilot.missingTags && pilot.missingTags.length > 0 && (
+        <div className="mt-3 rounded border border-brand-lea/10 p-3 dark:border-white/10">
+          <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">Tag not in Front yet</p>
+          <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
+            Create a tag with this exact name in Front and it starts being used — nothing else to set up.
+          </p>
+          <p className="mt-1 font-mono text-sm text-brand-lea dark:text-slate-100">{pilot.missingTags.join(", ")}</p>
+        </div>
+      )}
+
+      <p className="mt-3 text-xs text-brand-grey dark:text-slate-400">
+        Checked {pilot.conversationsScanned} open {pilot.conversationsScanned === 1 ? "thread" : "threads"} in pilotapp@.
+      </p>
+    </div>
   );
 }

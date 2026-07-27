@@ -36,17 +36,27 @@ import { readPilotApplication, signedPdf, type PilotAppResult } from "./notices"
     own handiwork and stay quiet instead of commenting again. */
 const COMMENT_MARKER = "SkyShare Talent-Ops:";
 
+/**
+ * Tag names as they REALLY exist in Front (read from the account, not guessed).
+ * Each entry lists acceptable spellings for one tag and the first that exists
+ * wins, so renaming one in Front doesn't silently switch the tagging off.
+ */
 export const TAGS = {
   /** On every thread the automation acted on. */
-  automated: ["automated", "[Automated]"],
-  /** Filed successfully. */
-  filed: ["pilot application filed", "pilot app filed"],
+  automated: ["[Automated]", "automated"],
+  /** What this thread is. */
+  pilotApp: ["Pilot App", "pilot app"],
+  /** The team's existing "this is in the ATS now" marker — the one that tells a
+      human the filing is genuinely done, which is why it's applied on success. */
+  addedToAts: ["Manually Added to ATS", "manually added to ats"],
   /** Seen but NOT actioned — no candidate, or two candidates. */
-  needsReview: ["needs review", "talent-ops needs review"]
+  needsReview: ["Needs Review", "needs review"]
 } as const;
 
 /** Adobe Sign is the only sender, and the group is the only cc that matters. */
 export const DEFAULT_QUERY = 'is:open cc:pilotapp@skyshare.com from:adobesign@adobesign.com';
+/** The same notices regardless of state — for the one-off historical backfill. */
+export const BACKFILL_QUERY = "cc:pilotapp@skyshare.com from:adobesign@adobesign.com";
 export const DEFAULT_MAX_CONVERSATIONS = 40;
 export const HARD_MAX_CONVERSATIONS = 300;
 
@@ -70,6 +80,16 @@ export type PilotAppScanOptions = {
   apply?: boolean;
   query?: string;
   maxConversations?: number;
+  /**
+   * One-off historical pass over threads the team ALREADY handled by hand.
+   *
+   * Files anything that matches, but stays silent otherwise: these threads are
+   * already archived and nobody is watching them, so commenting on the ones we
+   * cannot place would post dozens of notes into old history for no one, and
+   * re-archiving an archived thread is pointless. Tags still go on, because a
+   * tag is how you find them afterwards.
+   */
+  backfill?: boolean;
 };
 
 export function resolveLimit(requested: unknown): number {
@@ -165,9 +185,10 @@ async function tag(conversationId: string, wanted: readonly (readonly string[])[
  */
 export async function processPilotAppConversation(
   conversationId: string,
-  opts: { apply?: boolean; missingTags?: Set<string> } = {}
+  opts: { apply?: boolean; missingTags?: Set<string>; backfill?: boolean } = {}
 ): Promise<PilotAppRow[]> {
   const apply = opts.apply === true;
+  const backfill = opts.backfill === true;
   const missing = opts.missingTags ?? new Set<string>();
   const out: PilotAppRow[] = [];
 
@@ -206,7 +227,7 @@ export async function processPilotAppConversation(
             : result.matchedBy === "nickname"
               ? `matched "${result.signerName}" to them by surname and first name`
               : `matched on the name "${result.signerName}"`;
-        try {
+        if (!backfill) try {
           await addComment(
             conversationId,
             `SkyShare Talent-Ops: filed "${pdf.filename}" to ${result.candidateName}'s documents (${via}). Archiving this thread.`
@@ -214,9 +235,10 @@ export async function processPilotAppConversation(
         } catch {
           /* the document is filed — a failed note must not undo that */
         }
-        await tag(conversationId, [TAGS.automated, TAGS.filed], missing);
-        // ONLY now, with the document really attached.
-        await archiveConversation(conversationId);
+        await tag(conversationId, [TAGS.automated, TAGS.pilotApp, TAGS.addedToAts], missing);
+        // ONLY now, with the document really attached. Skipped on a backfill:
+        // those threads are already archived.
+        if (!backfill) await archiveConversation(conversationId);
         out.push({ conversationId, ...result, outcome: "attached", candidateFileId: fileId });
       } catch (err) {
         const why = err instanceof Error ? err.message : "Unknown error";
@@ -228,7 +250,7 @@ export async function processPilotAppConversation(
         } catch {
           /* nothing more we can do here */
         }
-        await tag(conversationId, [TAGS.automated, TAGS.needsReview], missing);
+        await tag(conversationId, [TAGS.automated, TAGS.pilotApp, TAGS.needsReview], missing);
         out.push({ conversationId, ...result, outcome: "no-attachment", detail: why });
       }
       continue;
@@ -249,8 +271,10 @@ export async function processPilotAppConversation(
     // These threads stay OPEN on purpose, so the nightly sweep sees them again.
     // Say it once: without this guard an unresolvable notice collects the same
     // note every night until a human gets to it.
-    let alreadySaid = false;
-    try {
+    // On a backfill we never comment: these threads are archived history and a
+    // note about a candidate who was never added helps nobody now.
+    let alreadySaid = backfill;
+    if (!backfill) try {
       const comments = await listComments(conversationId);
       alreadySaid = comments.some((c) => (c.body ?? "").includes(COMMENT_MARKER));
     } catch {
@@ -266,7 +290,7 @@ export async function processPilotAppConversation(
     } else {
       out.push({ conversationId, ...result, detail: `${result.detail ?? ""} (already flagged on this thread)`.trim() });
     }
-    await tag(conversationId, [TAGS.automated, TAGS.needsReview], missing);
+    await tag(conversationId, [TAGS.automated, TAGS.pilotApp, TAGS.needsReview], missing);
   }
 
   return out;
@@ -275,7 +299,8 @@ export async function processPilotAppConversation(
 /** Throws if Front can't be read — callers decide how to report that. */
 export async function scanPilotApplications(opts: PilotAppScanOptions = {}): Promise<PilotAppReport> {
   const apply = opts.apply === true;
-  const query = opts.query?.trim() || DEFAULT_QUERY;
+  const backfill = opts.backfill === true;
+  const query = opts.query?.trim() || (backfill ? BACKFILL_QUERY : DEFAULT_QUERY);
   const maxConversations = opts.maxConversations ?? DEFAULT_MAX_CONVERSATIONS;
 
   const results: PilotAppRow[] = [];
@@ -285,7 +310,7 @@ export async function scanPilotApplications(opts: PilotAppScanOptions = {}): Pro
   for await (const conversation of iterateConversations(query)) {
     if (conversationsScanned >= maxConversations) break;
     conversationsScanned++;
-    const rows = await processPilotAppConversation(conversation.id, { apply, missingTags });
+    const rows = await processPilotAppConversation(conversation.id, { apply, missingTags, backfill });
     results.push(...rows);
   }
 
