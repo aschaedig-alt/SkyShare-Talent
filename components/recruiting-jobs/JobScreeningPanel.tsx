@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { SlidersHorizontal, RefreshCw, ChevronDown, Lightbulb } from "lucide-react";
+import { SlidersHorizontal, RefreshCw, ChevronDown, Lightbulb, Archive } from "lucide-react";
 import Link from "next/link";
 import {
   scanRequirementMatches,
@@ -31,7 +31,7 @@ export function JobScreeningPanel({
 }) {
   const router = useRouter();
   const [best, setBest] = useState(data.best);
-  const [scan, setScan] = useState<{ count: number; at: string } | null>(null);
+  const [scan, setScan] = useState<{ count: number; current: number; archive: number; at: string } | null>(null);
   const [scanning, startScan] = useTransition();
   const [moving, startMove] = useTransition();
   const [scanError, setScanError] = useState<string | null>(null);
@@ -41,6 +41,7 @@ export function JobScreeningPanel({
   const [includeExcluded, setIncludeExcluded] = useState(false);
   const [tab, setTab] = useState<Tab>("all");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [archiveOpen, setArchiveOpen] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [preview, setPreview] = useState<CandidatePreviewData | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -69,18 +70,28 @@ export function JobScreeningPanel({
       .filter((match) => includeExcluded || !match.excludedReason);
   }, [data.applicants, best, overrides, exclusions, includeExcluded]);
 
+  // Two lanes, not one ranking. Archived (historical Jazz) people frequently
+  // out-score live candidates, so merging them into a single top-N pushed the
+  // working pipeline off the board. The archive is a deliberate rediscovery
+  // list sitting underneath the current pool.
+  const currentMatches = useMemo(() => merged.filter((match) => !match.fromArchive), [merged]);
+  const archiveMatches = useMemo(
+    () => merged.filter((match) => match.fromArchive).sort((a, b) => b.score - a.score || a.candidateName.localeCompare(b.candidateName)),
+    [merged]
+  );
+
   const grouped = useMemo(() => {
     const groups: Record<ReadinessLabel, PilotRequirementCandidateMatch[]> = {
       "Strong signal": [],
       "Worth a look": [],
       "Needs review": []
     };
-    for (const match of merged) groups[match.readiness].push(match);
+    for (const match of currentMatches) groups[match.readiness].push(match);
     for (const tier of TIER_ORDER) {
       groups[tier].sort((a, b) => b.score - a.score || a.candidateName.localeCompare(b.candidateName));
     }
     return groups;
-  }, [merged]);
+  }, [currentMatches]);
 
   function rescan(include: boolean) {
     if (!data.requirementId) return;
@@ -89,7 +100,12 @@ export function JobScreeningPanel({
       const res = await scanRequirementMatches(data.requirementId!, include);
       if (res.ok && res.data) {
         setBest(res.data.matches);
-        setScan({ count: res.data.scannedCount, at: res.data.scannedAt });
+        setScan({
+          count: res.data.scannedCount,
+          current: res.data.scannedCurrent,
+          archive: res.data.scannedArchive,
+          at: res.data.scannedAt
+        });
       } else {
         setScanError(res.error ?? "Could not scan candidates.");
       }
@@ -106,7 +122,7 @@ export function JobScreeningPanel({
     setExclusions((current) => ({ ...current, [candidateId]: reason }));
     setLearn(
       reason
-        ? `Ignoring ${candidateName} in scans — ${SCAN_EXCLUSION_LABELS[reason]}. They won't appear in new scans unless “Include excluded” is on.`
+        ? `Ignoring ${candidateName} in scans — ${SCAN_EXCLUSION_LABELS[reason]}. They won't appear in new scans unless “Include skipped” is on, and you can put them back from the Skipped list.`
         : `${candidateName} is back in the scan pool.`
     );
     startMove(async () => {
@@ -167,9 +183,12 @@ export function JobScreeningPanel({
   const selectedMatch = selectedId ? merged.find((match) => match.candidateId === selectedId) : undefined;
 
   const tabs: Array<{ key: Tab; label: string; count: number }> = [
-    { key: "all", label: "All", count: merged.length },
+    { key: "all", label: "All", count: currentMatches.length },
     ...TIER_ORDER.map((tier) => ({ key: tier, label: tier, count: grouped[tier].length }))
   ];
+
+  const scannedCurrent = scan?.current ?? data.scannedCurrent;
+  const scannedArchive = scan?.archive ?? data.scannedArchive;
 
   return (
     <section className="flex h-full flex-col overflow-hidden rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
@@ -203,7 +222,7 @@ export function JobScreeningPanel({
             <div className="text-[11px] text-brand-grey dark:text-slate-400">
               Scored against <span className="font-semibold text-brand-lea dark:text-slate-100">{data.requirementTitle}</span> ·{" "}
               <span className="font-semibold text-brand-lea dark:text-slate-100">{(scan?.count ?? data.scannedCount).toLocaleString()}</span>{" "}
-              active candidates
+              candidates ({scannedCurrent.toLocaleString()} current + {scannedArchive.toLocaleString()} archived)
               {scan ? <span> · scanned {formatScanTime(scan.at)}</span> : null}
             </div>
             <div className="flex items-center gap-3">
@@ -215,7 +234,7 @@ export function JobScreeningPanel({
                   disabled={scanning}
                   className="h-3.5 w-3.5 accent-brand-lea"
                 />
-                Include excluded
+                Include skipped
               </label>
               <button
                 type="button"
@@ -252,7 +271,8 @@ export function JobScreeningPanel({
             <p className="mt-2 text-[11px] text-brand-grey dark:text-slate-400">
               Click a name to preview the candidate on the right. Disagree with a read? Use “Move to” — the move
               sticks and the system learns. To keep someone out of scans (test record, hired, didn’t pass, not a
-              culture fit), set “Scan eligibility” on their card to ignore them.
+              culture fit, not eligible to hire), set “Scan eligibility” on their card. Skips are reversible — the
+              Matchboard’s Skipped list shows everyone held out and puts them back.
             </p>
           ) : null}
 
@@ -315,6 +335,54 @@ export function JobScreeningPanel({
                 </div>
               );
             })}
+
+            {/* The archive lane. Held apart from the tiers above on purpose:
+                these are historical Jazz records, and before this they had
+                never been scanned once. */}
+            {archiveMatches.length > 0 ? (
+              <div className="overflow-hidden rounded border border-brand-eden/25 dark:border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setArchiveOpen((value) => !value)}
+                  aria-expanded={archiveOpen}
+                  className="flex w-full items-center justify-between gap-2 bg-brand-sweet/20 px-3 py-2 text-left transition hover:bg-brand-sweet/30 dark:bg-white/5"
+                >
+                  <span className="flex items-center gap-2">
+                    <Archive className="h-3.5 w-3.5 text-brand-eden dark:text-slate-300" />
+                    <span className="text-[11px] font-semibold text-brand-lea dark:text-slate-100">From the archive</span>
+                    <span className="text-xs text-brand-grey dark:text-slate-400">({archiveMatches.length})</span>
+                  </span>
+                  <ChevronDown
+                    className={clsx("h-4 w-4 text-brand-grey transition-transform dark:text-slate-400", !archiveOpen && "-rotate-90")}
+                  />
+                </button>
+                {archiveOpen ? (
+                  <div className="space-y-3 p-3">
+                    <p className="text-[11px] text-brand-grey dark:text-slate-400">
+                      People already in the system from earlier hiring rounds, ranked separately so they never crowd out
+                      the current pool. Most have no structured hours on file, so their read comes largely from resume
+                      text — worth a look rather than a like-for-like comparison.
+                    </p>
+                    {archiveMatches.map((match) => (
+                      <MatchCard
+                        key={`archive:${match.candidateId}`}
+                        match={match}
+                        requirementId={data.requirementId}
+                        canEdit={data.canEdit}
+                        applied={appliedIds.has(match.candidateId)}
+                        onMoveTier={(next) => moveTo(match.candidateId, match.candidateName, next)}
+                        moving={moving}
+                        onExclude={(reason, note) => excludeCandidate(match.candidateId, match.candidateName, reason, note)}
+                        excluding={moving}
+                        onSelectName={selectCandidate}
+                        selected={selectedId === match.candidateId}
+                        onViewRoles={onViewCandidate}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
             {selectedId ? (
               <div className="min-h-0 w-1/2 flex-1">

@@ -59,7 +59,15 @@ export const DEFAULT_QUERY = 'is:open cc:pilotapp@skyshare.com from:adobesign@ad
 /** The same notices regardless of state — for the one-off historical backfill. */
 export const BACKFILL_QUERY = "cc:pilotapp@skyshare.com from:adobesign@adobesign.com";
 export const DEFAULT_MAX_CONVERSATIONS = 40;
-export const HARD_MAX_CONVERSATIONS = 300;
+/**
+ * Ceiling for one sweep. Raised from 300 to 800 to finish the one-off historical
+ * backfill: the archive holds 400-odd Adobe Sign notices and a 300 cap stopped
+ * partway through, leaving the tail permanently unreachable. The nightly run is
+ * unaffected (it uses DEFAULT_MAX_CONVERSATIONS against the is:open query, which
+ * is only ever a handful of threads). Still bounded rather than unlimited so a
+ * runaway query cannot walk the entire inbox.
+ */
+export const HARD_MAX_CONVERSATIONS = 800;
 
 export type PilotAppRow = PilotAppResult & { conversationId: string };
 
@@ -414,8 +422,13 @@ export async function scanPilotApplications(opts: PilotAppScanOptions = {}): Pro
     conversationsScanned,
     noticesFound: results.length,
     attached: results.filter((r) => r.outcome === "attached" && r.candidateFileId).length,
-    archived: apply ? results.filter((r) => r.outcome === "attached" && r.candidateFileId).length : 0,
-    commented: apply ? results.filter((r) => r.outcome !== "attached" && r.outcome !== "already-attached").length : 0,
+    // A backfill neither archives nor comments (those threads are already
+    // archived history nobody is watching), so counting them here reported 30
+    // archived threads on a run that archived none. Derived counts have to know
+    // about the flag that suppresses the thing they are counting.
+    archived: apply && !backfill ? results.filter((r) => r.outcome === "attached" && r.candidateFileId).length : 0,
+    commented:
+      apply && !backfill ? results.filter((r) => r.outcome !== "attached" && r.outcome !== "already-attached").length : 0,
     tally,
     results,
     ...(missingTags.size ? { missingTags: [...missingTags] } : {}),

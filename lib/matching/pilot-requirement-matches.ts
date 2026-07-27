@@ -13,6 +13,12 @@ import {
 import type { MatchFeedbackEntry, RequirementFeedback } from "@/lib/matching/match-feedback";
 import type { OverrideTier, TierOverrides } from "@/lib/matching/tier-override";
 import { isScanExclusionReason, type ScanExclusionReason } from "@/lib/candidates/scan-exclusion";
+import {
+  scanPoolWhere,
+  isArchivedCandidateStatus,
+  CURRENT_MATCH_LIMIT,
+  ARCHIVE_MATCH_LIMIT
+} from "@/lib/candidates/scan-pool";
 import { resolveFleetPosition, aircraftSharingTypeRating } from "@/lib/fleet/positions";
 import { parseStringArray } from "@/lib/json";
 
@@ -54,13 +60,14 @@ type CandidateForMatch = {
   displayName: string;
   currentTitle: string | null;
   stage: string | null;
+  status?: string | null;
   scanExcludedReason: string | null;
   scanExcludedNote: string | null;
   primaryEmail: string | null;
   tagsJson: string | null;
   foldersJson: string | null;
   notes: Array<{ body: string }>;
-  files: Array<{ displayFilename: string; originalFilename: string }>;
+  files: Array<{ displayFilename: string; originalFilename: string; extractedText?: string | null }>;
   applications: Array<{ job: { title: string; department: string | null } | null }>;
   metrics: CandidateMetricLite[];
 };
@@ -112,6 +119,8 @@ export type PilotRequirementCandidateMatch = {
   /** Set when the candidate is held out of scans (null = in the pool). */
   excludedReason: ScanExclusionReason | null;
   excludedNote: string | null;
+  /** True for a historical (archived Jazz) record rather than a live pipeline one. */
+  fromArchive: boolean;
   /** SIC seat where total time is >= 2x the role minimum — likely wants PIC. */
   overqualified: boolean;
   summary: string;
@@ -139,6 +148,13 @@ function normalize(value: string | null | undefined) {
     .trim();
 }
 
+/**
+ * Cap on how much extracted document text one candidate contributes. Resumes
+ * run ~3.7k chars but a scanned logbook can hit 20k+; without a ceiling a
+ * handful of outliers dominate the cost of a whole-pool scan.
+ */
+const MAX_DOC_TEXT_PER_FILE = 12000;
+
 function candidateText(candidate: CandidateForMatch) {
   return normalize(
     [
@@ -149,7 +165,14 @@ function candidateText(candidate: CandidateForMatch) {
       ...parseStringArray(candidate.tagsJson),
       ...parseStringArray(candidate.foldersJson),
       ...candidate.notes.map((note) => note.body),
-      ...candidate.files.flatMap((file) => [file.displayFilename, file.originalFilename]),
+      ...candidate.files.flatMap((file) => [
+        file.displayFilename,
+        file.originalFilename,
+        // The extracted resume/document text. Archived Jazz records carry no
+        // title, tags or structured hours, so without this they were being
+        // scored on a filename like "Jane Doe Document.pdf" — i.e. blind.
+        (file.extractedText ?? "").slice(0, MAX_DOC_TEXT_PER_FILE)
+      ]),
       ...candidate.metrics.map((metric) => metric.valueText ?? "")
     ]
       .filter(Boolean)
@@ -779,6 +802,7 @@ export function scoreCandidate(
     overridden,
     excludedReason: isScanExclusionReason(candidate.scanExcludedReason) ? candidate.scanExcludedReason : null,
     excludedNote: candidate.scanExcludedNote,
+    fromArchive: isArchivedCandidateStatus(candidate.status),
     overqualified,
     summary,
     subScores,
@@ -833,13 +857,14 @@ export const candidateMatchSelect = {
   displayName: true,
   currentTitle: true,
   stage: true,
+  status: true,
   scanExcludedReason: true,
   scanExcludedNote: true,
   primaryEmail: true,
   tagsJson: true,
   foldersJson: true,
   notes: { select: { body: true }, take: 10 },
-  files: { select: { displayFilename: true, originalFilename: true }, take: 10 },
+  files: { select: { displayFilename: true, originalFilename: true, extractedText: true }, take: 10 },
   applications: { take: 10, select: { job: { select: { title: true, department: true } } } },
   metrics: {
     select: { key: true, label: true, valueNumber: true, valueText: true, unit: true, status: true, sourceSnippet: true }
@@ -855,18 +880,46 @@ export async function getPilotRequirementCandidateMatches(
 ): Promise<PilotRequirementCandidateMatch[]> {
   if (!requirement) return [];
 
+  // No `take` here on purpose. The old 250-row cap ordered by updatedAt meant a
+  // scan silently saw only the most recently touched slice of the pool; with the
+  // archive included that would have hidden almost all of it. A whole-pool scan
+  // measures at ~1.4s of query and ~1.3s of scoring for 3,343 people.
   const candidates = await prisma.candidate.findMany({
-    take: 250,
-    where: { status: "ACTIVE", ...(includeExcluded ? {} : { scanExcludedReason: null }) },
-    orderBy: { updatedAt: "desc" },
+    where: scanPoolWhere(includeExcluded),
     select: candidateMatchSelect
   });
 
-  return candidates
+  const scored = candidates
     .map((candidate) => scoreCandidate(requirement, candidate, config, feedback[candidate.id] ?? null, overrides[candidate.id] ?? null))
     .filter((match) => match.overridden || match.score > 0 || match.factors.some((factor) => factor.status === "met"))
-    .sort((left, right) => right.score - left.score || left.candidateName.localeCompare(right.candidateName))
-    .slice(0, 12);
+    .sort(compareMatches);
+
+  // Two budgets, not one list. Archived candidates out-rank live ones often
+  // enough (10 of the top 12 on a real G450 scan) that a single merged cut
+  // pushed the working pipeline off the board entirely.
+  return [
+    ...scored.filter((match) => !match.fromArchive).slice(0, CURRENT_MATCH_LIMIT),
+    ...scored.filter((match) => match.fromArchive).slice(0, ARCHIVE_MATCH_LIMIT)
+  ];
+}
+
+/**
+ * Ranking order. Score first, but at pool scale scores tie in large blocks —
+ * 107 people shared the 12th-place score on a real G450 scan, and 434 on a
+ * Phenom 300 one. Falling straight through to alphabetical made the cut an
+ * arbitrary A-names sample, so ties break on STRENGTH OF EVIDENCE: who clears
+ * more of the role's hour minimums, then who has more of the role's factors
+ * actually established either way rather than unknown. Both are properties of
+ * the match itself; nothing here looks at the person.
+ */
+function compareMatches(left: PilotRequirementCandidateMatch, right: PilotRequirementCandidateMatch) {
+  if (right.score !== left.score) return right.score - left.score;
+  if (right.minsMet !== left.minsMet) return right.minsMet - left.minsMet;
+  const known = (match: PilotRequirementCandidateMatch) =>
+    match.factors.filter((factor) => factor.status !== "unknown").length;
+  const knownDelta = known(right) - known(left);
+  if (knownDelta !== 0) return knownDelta;
+  return left.candidateName.localeCompare(right.candidateName);
 }
 
 /**

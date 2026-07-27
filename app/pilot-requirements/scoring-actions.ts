@@ -413,5 +413,6 @@ export async function setCandidateScanExclusion(input: {
   revalidatePath("/recruiting-jobs");
   revalidatePath("/pilot-requirements");
   revalidatePath("/candidates");
+  revalidatePath("/matching");
   return { ok: true };
 }

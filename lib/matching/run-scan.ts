@@ -7,11 +7,14 @@ import { getProfileScoringConfig } from "@/lib/matching/scoring-config.server";
 import { getRequirementFeedback } from "@/lib/matching/match-feedback";
 import { getRequirementTierOverrides } from "@/lib/matching/tier-override";
 import { aircraftForSlugs } from "@/lib/fleet/positions";
+import { getScanPoolCounts } from "@/lib/candidates/scan-pool.server";
 import { parseStringArray } from "@/lib/json";
 
 export type RequirementScan = {
   matches: PilotRequirementCandidateMatch[];
-  scannedCount: number; // active candidates considered in this scan
+  scannedCount: number; // everyone considered in this scan (current + archive)
+  scannedCurrent: number;
+  scannedArchive: number;
   scannedAt: string; // ISO timestamp
 };
 
@@ -44,12 +47,15 @@ export async function runRequirementScan(requirementId: string, includeExcluded 
     }
   });
 
-  const scannedCount = await prisma.candidate.count({
-    where: { status: "ACTIVE", ...(includeExcluded ? {} : { scanExcludedReason: null }) }
-  });
+  const counts = await getScanPoolCounts(includeExcluded);
+  const countFields = {
+    scannedCount: counts.total,
+    scannedCurrent: counts.current,
+    scannedArchive: counts.archive
+  };
 
   if (!requirement) {
-    return { matches: [], scannedCount, scannedAt: nowIso };
+    return { matches: [], ...countFields, scannedAt: nowIso };
   }
 
   const aircraftTypes = parseStringArray(requirement.aircraftTypesJson);
@@ -80,5 +86,5 @@ export async function runRequirementScan(requirementId: string, includeExcluded 
     includeExcluded
   );
 
-  return { matches, scannedCount, scannedAt: nowIso };
+  return { matches, ...countFields, scannedAt: nowIso };
 }

@@ -9,6 +9,7 @@ import { canEditScoring, getProfileScoringConfig } from "@/lib/matching/scoring-
 import { getRequirementFeedback } from "@/lib/matching/match-feedback";
 import { getRequirementTierOverrides } from "@/lib/matching/tier-override";
 import { parseStringArray } from "@/lib/json";
+import { getScanPoolCounts } from "@/lib/candidates/scan-pool.server";
 
 export type JobScreeningData = {
   hasRequirement: boolean;
@@ -18,6 +19,10 @@ export type JobScreeningData = {
   best: PilotRequirementCandidateMatch[];
   applicantIds: string[];
   scannedCount: number;
+  /** Live pipeline candidates considered in the scan. */
+  scannedCurrent: number;
+  /** Historical (archived Jazz) candidates considered in the scan. */
+  scannedArchive: number;
   canEdit: boolean;
 };
 
@@ -37,6 +42,8 @@ export async function getJobScreening(jobId: string | null): Promise<JobScreenin
     best: [],
     applicantIds: [],
     scannedCount: 0,
+    scannedCurrent: 0,
+    scannedArchive: 0,
     canEdit
   };
 
@@ -64,10 +71,15 @@ export async function getJobScreening(jobId: string | null): Promise<JobScreenin
     }
   });
 
-  const scannedCount = await prisma.candidate.count({ where: { status: "ACTIVE", scanExcludedReason: null } });
+  const counts = await getScanPoolCounts();
+  const countFields = {
+    scannedCount: counts.total,
+    scannedCurrent: counts.current,
+    scannedArchive: counts.archive
+  };
   const requirement = job?.pilotRequirements[0];
   if (!job || !requirement) {
-    return { ...empty, scannedCount };
+    return { ...empty, ...countFields };
   }
 
   const matchRequirement: MatchRequirement = {
@@ -101,7 +113,7 @@ export async function getJobScreening(jobId: string | null): Promise<JobScreenin
     applicants,
     best,
     applicantIds,
-    scannedCount,
+    ...countFields,
     canEdit
   };
 }

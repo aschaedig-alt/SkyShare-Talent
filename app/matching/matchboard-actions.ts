@@ -1,6 +1,7 @@
 "use server";
 
 import { getRoleScreening, getCandidateRoleMatches } from "@/lib/matching/matchboard";
+import { getSkippedPool, type SkippedCandidate } from "@/lib/candidates/skipped-pool";
 import type { JobScreeningData } from "@/lib/data/job-screening";
 import type { CandidateRoleMatches } from "@/lib/matching/matchboard";
 
@@ -16,4 +17,14 @@ export async function loadMatchboardDetail(
     return { roleData: await getRoleScreening(id), candidateData: null };
   }
   return { roleData: null, candidateData: await getCandidateRoleMatches(id) };
+}
+
+// Read-only. The skip list is loaded on demand rather than with every Matchboard
+// render, because most visits never open it.
+export async function loadSkippedPool(): Promise<{ ok: boolean; data?: SkippedCandidate[]; error?: string }> {
+  try {
+    return { ok: true, data: await getSkippedPool() };
+  } catch {
+    return { ok: false, error: "Could not load the skipped list." };
+  }
 }

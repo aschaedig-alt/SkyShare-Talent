@@ -14,6 +14,10 @@ import { getRequirementTierOverrides, getCandidateTierOverrides } from "@/lib/ma
 import { FLEET_POSITIONS, resolveFleetPosition, positionFor } from "@/lib/fleet/positions";
 import type { JobScreeningData } from "@/lib/data/job-screening";
 import { parseStringArray } from "@/lib/json";
+import { getScanPoolCounts } from "@/lib/candidates/scan-pool.server";
+import { scanPoolWhere, isArchivedCandidateStatus } from "@/lib/candidates/scan-pool";
+import { isScanExclusionReason, type ScanExclusionReason } from "@/lib/candidates/scan-exclusion";
+import { findPriorSkips, type PriorSkip } from "@/lib/candidates/skipped-pool";
 
 
 // ---------------------------------------------------------------------------
@@ -39,6 +43,8 @@ export type CandidateSubject = {
   title: string | null;
   totalTime: number | null;
   excluded: boolean;
+  /** Historical (archived Jazz) record rather than a live pipeline one. */
+  fromArchive: boolean;
 };
 
 export type MatchboardSubjects = {
@@ -62,14 +68,17 @@ export async function getMatchboardSubjects(): Promise<MatchboardSubjects> {
         _count: { select: { applications: true } }
       }
     }),
+    // The whole pool, not just live records — looking someone up in the archive
+    // is the point. Skipped people stay in the picker (badged) so they can be
+    // opened and restored; the scan filter is what holds them out of results.
     prisma.candidate.findMany({
-      where: { status: "ACTIVE" },
+      where: scanPoolWhere(true),
       orderBy: { displayName: "asc" },
-      take: 500,
       select: {
         id: true,
         displayName: true,
         currentTitle: true,
+        status: true,
         scanExcludedReason: true,
         metrics: { where: { key: "total_time" }, select: { valueNumber: true }, take: 1 }
       }
@@ -143,7 +152,8 @@ export async function getMatchboardSubjects(): Promise<MatchboardSubjects> {
       name: cand.displayName,
       title: cand.currentTitle,
       totalTime: cand.metrics[0]?.valueNumber ?? null,
-      excluded: Boolean(cand.scanExcludedReason)
+      excluded: Boolean(cand.scanExcludedReason),
+      fromArchive: isArchivedCandidateStatus(cand.status)
     }))
   };
 }
@@ -198,6 +208,8 @@ export async function getRoleScreening(requirementId: string | null, includeExcl
     best: [],
     applicantIds: [],
     scannedCount: 0,
+    scannedCurrent: 0,
+    scannedArchive: 0,
     canEdit
   };
   if (!requirementId) return empty;
@@ -207,10 +219,13 @@ export async function getRoleScreening(requirementId: string | null, includeExcl
     select: { ...REQUIREMENT_SELECT, applications: { select: { candidateId: true } } }
   });
 
-  const scannedCount = await prisma.candidate.count({
-    where: { status: "ACTIVE", ...(includeExcluded ? {} : { scanExcludedReason: null }) }
-  });
-  if (!requirement) return { ...empty, scannedCount };
+  const counts = await getScanPoolCounts(includeExcluded);
+  const countFields = {
+    scannedCount: counts.total,
+    scannedCurrent: counts.current,
+    scannedArchive: counts.archive
+  };
+  if (!requirement) return { ...empty, ...countFields };
 
   const matchRequirement = toMatchRequirement(requirement);
   const aircraftTypes = parseStringArray(requirement.aircraftTypesJson);
@@ -233,7 +248,7 @@ export async function getRoleScreening(requirementId: string | null, includeExcl
     applicants,
     best,
     applicantIds,
-    scannedCount,
+    ...countFields,
     canEdit
   };
 }
@@ -257,9 +272,19 @@ export type CandidateRoleMatches = {
   currentTitle: string | null;
   stage: string | null;
   totalTime: number | null;
-  excludedReason: string | null;
+  excludedReason: ScanExclusionReason | null;
+  excludedNote: string | null;
+  excludedAt: string | null;
+  excludedBy: string | null;
+  fromArchive: boolean;
   canEdit: boolean;
   roles: RoleMatch[];
+  /**
+   * Earlier records for what looks like the same person, already on the skip
+   * list. Surfaced, never acted on — the point is to be reminded of the history
+   * and decide again, not to have a new application silently re-excluded.
+   */
+  priorSkips: PriorSkip[];
 };
 
 export async function getCandidateRoleMatches(candidateId: string | null): Promise<CandidateRoleMatches | null> {
@@ -268,11 +293,17 @@ export async function getCandidateRoleMatches(candidateId: string | null): Promi
 
   const candidate = await prisma.candidate.findUnique({
     where: { id: candidateId },
-    select: candidateMatchSelect
+    select: {
+      ...candidateMatchSelect,
+      normalizedEmail: true,
+      normalizedName: true,
+      scanExcludedAt: true,
+      scanExcludedBy: true
+    }
   });
   if (!candidate) return null;
 
-  const [requirements, doc, candidateFeedback, candidateOverrides] = await Promise.all([
+  const [requirements, doc, candidateFeedback, candidateOverrides, priorSkips] = await Promise.all([
     prisma.pilotRequirement.findMany({
       where: { status: "ACTIVE" },
       take: 300,
@@ -280,7 +311,13 @@ export async function getCandidateRoleMatches(candidateId: string | null): Promi
     }),
     getScoringConfigDoc(),
     getCandidateFeedback(candidateId),
-    getCandidateTierOverrides(candidateId)
+    getCandidateTierOverrides(candidateId),
+    findPriorSkips({
+      id: candidate.id,
+      displayName: candidate.displayName,
+      normalizedEmail: candidate.normalizedEmail,
+      normalizedName: candidate.normalizedName
+    })
   ]);
 
   const roles: RoleMatch[] = requirements
@@ -314,8 +351,13 @@ export async function getCandidateRoleMatches(candidateId: string | null): Promi
     currentTitle: candidate.currentTitle,
     stage: candidate.stage,
     totalTime,
-    excludedReason: candidate.scanExcludedReason,
+    excludedReason: isScanExclusionReason(candidate.scanExcludedReason) ? candidate.scanExcludedReason : null,
+    excludedNote: candidate.scanExcludedNote,
+    excludedAt: candidate.scanExcludedAt?.toISOString() ?? null,
+    excludedBy: candidate.scanExcludedBy,
+    fromArchive: isArchivedCandidateStatus(candidate.status),
     canEdit,
-    roles
+    roles,
+    priorSkips
   };
 }

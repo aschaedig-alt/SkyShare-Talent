@@ -222,12 +222,20 @@ export function MatchCard({
                     applied
                   </span>
                 ) : null}
+                {match.fromArchive ? (
+                  <span
+                    className="rounded bg-brand-sweet/40 px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-eden dark:bg-white/10 dark:text-slate-300"
+                    title="A historical record from the earlier applicant archive, not a live pipeline candidate"
+                  >
+                    archive
+                  </span>
+                ) : null}
                 {match.excludedReason ? (
                   <span
                     className="rounded bg-brand-cloudDancer px-1.5 py-0.5 text-[9px] font-bold uppercase text-brand-grey dark:bg-white/5 dark:text-slate-400"
                     title={match.excludedNote ?? undefined}
                   >
-                    Ignored · {SCAN_EXCLUSION_LABELS[match.excludedReason]}
+                    Skipped · {SCAN_EXCLUSION_LABELS[match.excludedReason]}
                   </span>
                 ) : null}
               </div>
@@ -324,7 +332,7 @@ export function MatchCard({
                 <option value="">In the pool</option>
                 {SCAN_EXCLUSION_REASONS.map((entry) => (
                   <option key={entry.key} value={entry.key}>
-                    Ignore — {entry.label}
+                    Skip — {entry.label}
                   </option>
                 ))}
               </select>

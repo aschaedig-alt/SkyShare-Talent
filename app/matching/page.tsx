@@ -9,7 +9,8 @@ type MatchingPageProps = {
 export default async function MatchingPage({ searchParams }: MatchingPageProps) {
   await requireModulePageAccess("matching");
   const params = await searchParams;
-  const mode: MatchboardMode = params?.mode === "candidate" ? "candidate" : "role";
+  const mode: MatchboardMode =
+    params?.mode === "candidate" ? "candidate" : params?.mode === "skipped" ? "skipped" : "role";
   const id = params?.id?.trim() || null;
 
   const subjects = await getMatchboardSubjects();
