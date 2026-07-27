@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { clsx } from "clsx";
+import { FileText } from "lucide-react";
 import { ONBOARDING_GROUPS, groupLabel } from "@/lib/onboarding/tasks";
 import { OfferControl } from "@/components/candidates/OfferControl";
 import type { NewHireDetail, TaskView } from "@/lib/data/onboarding";
@@ -247,6 +248,22 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
           </div>
           {hire.legalName ? (
             <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">Legal name: {hire.legalName}</p>
+          ) : null}
+          {/* The other half of the person. Documents (resume, pilot application)
+              and interview history live on the CANDIDATE record, not here — the
+              candidate page has always linked forward to this one, and this is
+              the way back, so nobody has to go and search for their own hire. */}
+          {hire.candidateId ? (
+            <Link
+              href={`/candidates/${hire.candidateId}`}
+              className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-slate-300"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Candidate profile — documents &amp; interview history
+              {hire.candidateName && hire.candidateName !== hire.name ? (
+                <span className="font-normal text-brand-grey dark:text-slate-400"> (as &ldquo;{hire.candidateName}&rdquo;)</span>
+              ) : null}
+            </Link>
           ) : null}
           <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
             {hire.position ?? "Position not set"}

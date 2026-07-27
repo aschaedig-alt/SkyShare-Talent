@@ -14,6 +14,7 @@ import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
 import { isPrivateFileStorageReady, shouldRequirePrivateFileStorage } from "@/lib/files/file-security";
 import { extractFileText } from "@/lib/files/pdf-text";
 import { detectDocumentType } from "@/lib/files/document-types";
+import { splitCandidateName, normalizeEmail, normalizeName } from "@/lib/candidates/normalize";
 import { readPilotApplication, signedPdf, type PilotAppResult } from "./notices";
 
 /**
@@ -73,6 +74,8 @@ export type PilotAppReport = {
   tally: Record<string, number>;
   results: PilotAppRow[];
   missingTags?: string[];
+  /** Candidates created because no existing one matched. */
+  createdCandidates?: string[];
 };
 
 export type PilotAppScanOptions = {
@@ -90,6 +93,12 @@ export type PilotAppScanOptions = {
    * tag is how you find them afterwards.
    */
   backfill?: boolean;
+  /**
+   * Create the candidate when none matched, instead of skipping the document.
+   * Off by default: it writes new people into the shared live database, so it
+   * should be a deliberate choice rather than a side effect of a routine sweep.
+   */
+  createMissing?: boolean;
 };
 
 export function resolveLimit(requested: unknown): number {
@@ -111,6 +120,60 @@ async function alreadyFiled(messageId: string): Promise<string | null> {
     select: { id: true }
   });
   return existing?.id ?? null;
+}
+
+/**
+ * Create the candidate this application belongs to, when nobody matched.
+ *
+ * A completed pilot application IS an application — the person went through
+ * Adobe Sign and signed it — so having no candidate record for them is a gap in
+ * the pipeline, not a reason to drop the document on the floor.
+ *
+ * REQUIRES BOTH A NAME AND AN EMAIL. Either alone is not enough: an email with
+ * no name gives a candidate called "jdfehrenba", and a name with no email has
+ * no key to dedupe against, which is exactly how you end up with two of
+ * somebody. The caller has already run the full three-tier match and found
+ * nothing, so this only fires when there is genuinely no near neighbour.
+ *
+ * They are NOT scan-excluded: this is a live applicant who should show up in
+ * matching and sourcing like any other.
+ */
+async function createCandidateFromApplication(
+  name: string,
+  email: string
+): Promise<{ id: string; displayName: string }> {
+  const { firstName, lastName, displayName } = splitCandidateName(name);
+  const normalizedEmail = normalizeEmail(email);
+
+  return prisma.$transaction(async (tx) => {
+    const c = await tx.candidate.create({
+      data: {
+        firstName,
+        lastName,
+        displayName,
+        normalizedName: normalizeName(displayName),
+        primaryEmail: email.trim(),
+        normalizedEmail,
+        status: "ACTIVE",
+        stage: "Applied",
+        source: "Pilot application (Adobe Sign)",
+        origin: "MANUAL"
+      }
+    });
+    if (normalizedEmail) {
+      await tx.candidateContact.create({
+        data: {
+          candidateId: c.id,
+          type: "EMAIL",
+          value: email.trim(),
+          normalized: normalizedEmail,
+          isPrimary: true,
+          source: "Pilot application"
+        }
+      });
+    }
+    return { id: c.id, displayName: c.displayName };
+  });
 }
 
 /** Download the signed PDF and attach it to the candidate. Returns the file id. */
@@ -185,17 +248,19 @@ async function tag(conversationId: string, wanted: readonly (readonly string[])[
  */
 export async function processPilotAppConversation(
   conversationId: string,
-  opts: { apply?: boolean; missingTags?: Set<string>; backfill?: boolean } = {}
+  opts: { apply?: boolean; missingTags?: Set<string>; backfill?: boolean; createMissing?: boolean; createdCandidates?: string[] } = {}
 ): Promise<PilotAppRow[]> {
   const apply = opts.apply === true;
   const backfill = opts.backfill === true;
+  const createMissing = opts.createMissing === true;
   const missing = opts.missingTags ?? new Set<string>();
+  const createdCandidates = opts.createdCandidates ?? [];
   const out: PilotAppRow[] = [];
 
   const messages = await getMessages(conversationId);
   for (const message of messages) {
     if (message.is_inbound === false) continue;
-    const result = await readPilotApplication(message);
+    let result = await readPilotApplication(message);
     if (result.outcome === "not-a-pilot-application") continue;
 
     // Idempotency check runs on dry runs too, so a preview tells the truth about
@@ -212,6 +277,31 @@ export async function processPilotAppConversation(
     }
 
     // --- from here on we are writing ---
+
+    // No candidate, but we know exactly who signed — create them and carry on.
+    // Only on a clean no-match: an AMBIGUOUS one means someone very like them is
+    // already here, and creating a second record is the worst possible answer.
+    if (createMissing && result.outcome === "no-match" && result.signerName && result.signerEmail) {
+      try {
+        const made = await createCandidateFromApplication(result.signerName, result.signerEmail);
+        result = {
+          ...result,
+          outcome: "attached",
+          candidateId: made.id,
+          candidateName: made.displayName,
+          matchedBy: null,
+          detail: `Created a new candidate from this application (${result.signerEmail}).`
+        };
+        createdCandidates.push(made.displayName);
+      } catch (err) {
+        out.push({
+          conversationId,
+          ...result,
+          detail: `Couldn't create the candidate — ${err instanceof Error ? err.message : "unknown error"}`
+        });
+        continue;
+      }
+    }
 
     if (result.outcome === "attached" && result.candidateId) {
       const pdf = signedPdf(message);
@@ -300,17 +390,19 @@ export async function processPilotAppConversation(
 export async function scanPilotApplications(opts: PilotAppScanOptions = {}): Promise<PilotAppReport> {
   const apply = opts.apply === true;
   const backfill = opts.backfill === true;
+  const createMissing = opts.createMissing === true;
   const query = opts.query?.trim() || (backfill ? BACKFILL_QUERY : DEFAULT_QUERY);
   const maxConversations = opts.maxConversations ?? DEFAULT_MAX_CONVERSATIONS;
 
   const results: PilotAppRow[] = [];
   const missingTags = new Set<string>();
+  const createdCandidates: string[] = [];
   let conversationsScanned = 0;
 
   for await (const conversation of iterateConversations(query)) {
     if (conversationsScanned >= maxConversations) break;
     conversationsScanned++;
-    const rows = await processPilotAppConversation(conversation.id, { apply, missingTags, backfill });
+    const rows = await processPilotAppConversation(conversation.id, { apply, missingTags, backfill, createMissing, createdCandidates });
     results.push(...rows);
   }
 
@@ -326,6 +418,7 @@ export async function scanPilotApplications(opts: PilotAppScanOptions = {}): Pro
     commented: apply ? results.filter((r) => r.outcome !== "attached" && r.outcome !== "already-attached").length : 0,
     tally,
     results,
-    ...(missingTags.size ? { missingTags: [...missingTags] } : {})
+    ...(missingTags.size ? { missingTags: [...missingTags] } : {}),
+    ...(createdCandidates.length ? { createdCandidates } : {})
   };
 }

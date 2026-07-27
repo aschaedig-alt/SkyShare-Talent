@@ -4,10 +4,18 @@ import { requireApiPermission } from "@/lib/auth/route-auth";
 
 export const dynamic = "force-dynamic";
 
-// People who can be picked as someone's supervisor: anyone on the roster who
-// isn't terminated or archived. Returns the address the orientation email would
-// actually use, so the picker can show it and the person choosing can see
-// straight away whether that supervisor is contactable.
+// People who can be picked as someone's supervisor: anyone still employed.
+//
+// Searches NewHire — the EMPLOYEE record — not Candidate. A supervisor is a
+// colleague, and most colleagues never had a candidate record (they were hired
+// before the app, or direct). Linking to their employee record is also what
+// keeps the address live.
+//
+// DO NOT filter on `stage` here. stage ARCHIVED means "finished onboarding",
+// i.e. a normal long-standing employee — NOT someone who left. An earlier
+// version excluded it and so offered 27 of 189 people, hiding almost every
+// tenured employee, which is precisely who a supervisor usually is. Employment
+// status is the only thing that says whether someone is still here.
 export async function GET(request: Request) {
   const auth = await requireApiPermission("candidates:read");
   if (!auth.ok) return NextResponse.json({ people: [] }, { status: 401 });
@@ -22,7 +30,6 @@ export async function GET(request: Request) {
     where: {
       canceled: false,
       employmentStatus: { not: "TERMINATED" },
-      stage: { not: "ARCHIVED" },
       ...(exclude ? { id: { not: exclude } } : {}),
       OR: [
         { name: { contains: q, mode: "insensitive" } },

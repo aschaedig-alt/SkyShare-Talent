@@ -594,7 +594,14 @@ export async function getOnboardingWorkspaceData(stage: HireStage = "ACTIVE"): P
   return { counts: { active, postOnboard: post, archived }, rows, dashboard };
 }
 
-export type NewHireDetail = NewHireRow & { tasks: TaskView[]; offer: OfferApplicationView | null };
+export type NewHireDetail = NewHireRow & {
+  tasks: TaskView[];
+  offer: OfferApplicationView | null;
+  /** The Candidate this hire came from, if linked — documents and interview
+      history live over there, so the profile needs a way to get to it. */
+  candidateId: string | null;
+  candidateName: string | null;
+};
 
 // The hire's live offer (from the linked candidate's furthest-along application),
 // in the shape the OfferControl stepper renders — so the same offer stepper shown
@@ -637,11 +644,22 @@ export async function getNewHireDetail(id: string): Promise<NewHireDetail | null
   const hire = (await prisma.newHire.findUnique({ where: { id }, select: hireSelect })) as HireWithTasks | null;
   if (!hire) return null;
   const link = await prisma.newHire.findUnique({ where: { id }, select: { candidateId: true } });
+  // NewHire.candidateId is a plain column with no Prisma relation, so the name
+  // needs its own lookup rather than an include.
+  const candidate = link?.candidateId
+    ? await prisma.candidate.findUnique({ where: { id: link.candidateId }, select: { displayName: true } })
+    : null;
   const row = toRow(hire, Date.now());
   const tasks: TaskView[] = [...hire.tasks]
     .sort((a, b) => a.order - b.order)
     .map((t) => ({ id: t.id, key: t.key, label: t.label, group: t.group, order: t.order, status: t.status as TaskView["status"] }));
-  return { ...row, tasks, offer: await loadHireOffer(link?.candidateId) };
+  return {
+    ...row,
+    tasks,
+    offer: await loadHireOffer(link?.candidateId),
+    candidateId: link?.candidateId ?? null,
+    candidateName: candidate?.displayName ?? null
+  };
 }
 
 // Builds the default task set for a brand-new (manually added) hire.

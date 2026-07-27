@@ -44,7 +44,10 @@ export async function POST(request: Request) {
       maxConversations: resolveLimit(url.searchParams.get("limit")),
       // ?backfill=1 sweeps the ALREADY-ARCHIVED history too, filing what matches
       // without commenting on or re-archiving threads the team already handled.
-      backfill: url.searchParams.get("backfill") === "1"
+      backfill: url.searchParams.get("backfill") === "1",
+      // ?createMissing=1 adds the candidate when nobody matches, instead of
+      // skipping the document. Writes new people, so it stays opt-in.
+      createMissing: url.searchParams.get("createMissing") === "1"
     });
 
     return NextResponse.json({
