@@ -31,6 +31,8 @@ export {
   resolveTagIdByNames,
   addComment,
   downloadAttachment,
+  archiveConversation,
+  listComments,
   type FrontConversation,
   type FrontMessage,
 } from "./inbound";

@@ -1,4 +1,4 @@
-import { iterateConversations, getMessages, addComment, addTags, resolveTagIdByNames } from "@/lib/front";
+import { iterateConversations, getMessages, addComment, addTags, resolveTagIdByNames, archiveConversation } from "@/lib/front";
 import { processPaycomMessage, senderEmail, type PaycomNoticeResult } from "@/lib/paycom/notices";
 
 /**
@@ -47,6 +47,8 @@ export type ScanReport = {
   noticesFound: number;
   /** How many checklist steps actually moved — 0 on a dry run, by definition. */
   ticked: number;
+  /** Threads archived because they were fully handled. */
+  archived: number;
   tally: Record<string, number>;
   results: ScanRow[];
   /** Only when asked for: what the Front search really returned. */
@@ -84,6 +86,12 @@ export async function processConversationById(
 ): Promise<ScanRow[]> {
   const apply = opts.apply === true;
   const out: ScanRow[] = [];
+  // Archive the thread once it has nothing left to give — but ONLY if nothing on
+  // it still needs a person. An archived thread is out of sight, so anything we
+  // could not action has to stay open. Decided across the whole conversation and
+  // applied after the loop, since a thread can hold several notices.
+  let anyHandled = false;
+  let anyNeedsHuman = false;
 
   const messages = await getMessages(conversationId);
   for (const message of messages) {
@@ -91,6 +99,11 @@ export async function processConversationById(
     const result = await processPaycomMessage(message, { dryRun: !apply });
     if (result.outcome === "not-a-paycom-notice") continue;
     out.push({ conversationId, ...result });
+
+    // "ticked" = we just actioned it; "already-done" = a previous run did. Either
+    // way the notice has been dealt with. Everything else wants a human.
+    if (result.outcome === "ticked" || result.outcome === "already-done") anyHandled = true;
+    else if (result.outcome !== "would-tick") anyNeedsHuman = true;
 
     if (!apply) continue;
 
@@ -133,6 +146,14 @@ export async function processConversationById(
     }
   }
 
+  if (apply && anyHandled && !anyNeedsHuman) {
+    try {
+      await archiveConversation(conversationId);
+    } catch {
+      /* the checklist is already updated — a failed archive must not undo that */
+    }
+  }
+
   return out;
 }
 
@@ -148,6 +169,7 @@ export async function scanPaycomInbox(opts: ScanOptions = {}): Promise<ScanRepor
   const missingTags: string[] = [];
   const sample: ScanReport["sample"] = [];
   let conversationsScanned = 0;
+  let archived = 0;
 
   for await (const conversation of iterateConversations(query)) {
     if (conversationsScanned >= maxConversations) break;
@@ -222,6 +244,24 @@ export async function scanPaycomInbox(opts: ScanOptions = {}): Promise<ScanRepor
         }
       }
     }
+
+    // Same rule as the single-conversation path: archive a thread only once it
+    // has been handled AND nothing on it still needs a person. Computed from the
+    // rows this conversation produced, so a thread carrying both a ticked notice
+    // and an unreadable one stays open.
+    if (apply) {
+      const rows = results.filter((r) => r.conversationId === conversation.id);
+      const handled = rows.some((r) => r.outcome === "ticked" || r.outcome === "already-done");
+      const needsHuman = rows.some((r) => r.outcome !== "ticked" && r.outcome !== "already-done" && r.outcome !== "would-tick");
+      if (handled && !needsHuman) {
+        try {
+          await archiveConversation(conversation.id);
+          archived += 1;
+        } catch {
+          /* the checklist is already updated — a failed archive must not undo that */
+        }
+      }
+    }
   }
 
   const tally = results.reduce<Record<string, number>>((acc, r) => {
@@ -234,6 +274,7 @@ export async function scanPaycomInbox(opts: ScanOptions = {}): Promise<ScanRepor
     conversationsScanned,
     noticesFound: results.length,
     ticked: results.filter((r) => r.outcome === "ticked").length,
+    archived,
     tally,
     results,
     ...(missingTags.length ? { missingTags: [...new Set(missingTags)] } : {}),

@@ -135,7 +135,36 @@ export async function addComment(
   });
 }
 
+/**
+ * Existing internal notes on a thread.
+ *
+ * Needed to stay quiet on repeat runs: a thread we could not action stays OPEN
+ * on purpose, so a nightly sweep would otherwise post the same "could not find
+ * the candidate" note every single night until someone dealt with it.
+ */
+export async function listComments(conversationId: string): Promise<Array<{ id: string; body?: string }>> {
+  const page = (await frontFetch(`/conversations/${conversationId}/comments`)) as {
+    _results?: Array<{ id: string; body?: string }>;
+  };
+  return page._results ?? [];
+}
+
 /** Download an inbound attachment's bytes (needs the Attachments-Read scope). */
 export function downloadAttachment(url: string): Promise<ArrayBuffer> {
   return frontFetchBinary(url);
+}
+
+/**
+ * Archive a thread — the "we're done with this" state in Front.
+ *
+ * A Conversations *write*, not a delete: the thread stays searchable and can be
+ * reopened, so this is safe in a way deleting never would be. Callers must only
+ * archive AFTER the real work succeeded, otherwise a failed run hides the thread
+ * from the humans who would have caught it.
+ */
+export async function archiveConversation(conversationId: string): Promise<void> {
+  await frontFetch(`/conversations/${conversationId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "archived" }),
+  });
 }
