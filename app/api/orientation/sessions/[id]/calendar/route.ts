@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import {
+  addGuestsToOrientationEvent,
   addOrientationAttendeesToEvent,
   createOrientationCalendarEvent,
   previewOrientationCalendar
@@ -36,8 +37,9 @@ export async function POST(request: Request, ctx: Ctx) {
   const { id } = await ctx.params;
 
   let action: unknown;
+  let emails: unknown;
   try {
-    ({ action } = (await request.json()) as { action?: unknown });
+    ({ action, emails } = (await request.json()) as { action?: unknown; emails?: unknown });
   } catch {
     return NextResponse.json({ message: "Expected a JSON body with an action." }, { status: 400 });
   }
@@ -53,7 +55,18 @@ export async function POST(request: Request, ctx: Ctx) {
       return NextResponse.json({ ok: true, ...result });
     }
 
-    return NextResponse.json({ message: 'Unknown action. Expected "create" or "add-attendees".' }, { status: 400 });
+    if (action === "add-guests") {
+      if (!Array.isArray(emails)) {
+        return NextResponse.json({ message: "Expected an emails array." }, { status: 400 });
+      }
+      const result = await addGuestsToOrientationEvent(id, auth.user.email, emails.map(String));
+      return NextResponse.json({ ok: true, ...result });
+    }
+
+    return NextResponse.json(
+      { message: 'Unknown action. Expected "create", "add-attendees" or "add-guests".' },
+      { status: 400 }
+    );
   } catch (error) {
     // These messages are written to be read by the person clicking the button —
     // a missing supervisor or an unconfigured Google is not a 500.

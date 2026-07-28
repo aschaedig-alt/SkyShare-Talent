@@ -15,6 +15,8 @@ import { Button } from "@/components/ui";
 // rather than presenting a control that fails on click.
 
 type AttendeeEmail = { name: string; email: string | null; source: "company" | "personal" | "none" };
+type SupervisorGuest = { name: string; email: string; forWhom: string[] };
+type PersonHit = { id: string; name: string; position: string | null; department: string | null; email: string | null };
 
 type Preview = {
   draft: {
@@ -27,6 +29,7 @@ type Preview = {
     warnings: string[];
   };
   attendees: AttendeeEmail[];
+  supervisors: SupervisorGuest[];
   existing:
     | {
         eventId: string;
@@ -79,7 +82,7 @@ export function OrientationCalendarPanel({ sessionId }: { sessionId: string }) {
     void load();
   }, [load]);
 
-  async function act(action: "create" | "add-attendees") {
+  async function act(action: "create" | "add-attendees" | "add-guests", emails?: string[]) {
     setBusy(true);
     setError(null);
     setResult(null);
@@ -87,13 +90,14 @@ export function OrientationCalendarPanel({ sessionId }: { sessionId: string }) {
       const res = await fetch(`/api/orientation/sessions/${sessionId}/calendar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action })
+        body: JSON.stringify(emails ? { action, emails } : { action })
       });
       const data = (await res.json()) as {
         message?: string;
         added?: string[];
         alreadyThere?: string[];
         skipped?: string[];
+        rejected?: string[];
       };
       if (!res.ok) throw new Error(data.message ?? "That didn't work.");
 
@@ -103,6 +107,7 @@ export function OrientationCalendarPanel({ sessionId }: { sessionId: string }) {
         const bits = [`Invited ${data.added?.length ?? 0}.`];
         if (data.alreadyThere?.length) bits.push(`${data.alreadyThere.length} were already on it.`);
         if (data.skipped?.length) bits.push(`Skipped (no email): ${data.skipped.join(", ")}.`);
+        if (data.rejected?.length) bits.push(`Not valid addresses: ${data.rejected.join(", ")}.`);
         setResult(bits.join(" "));
       }
       await load();
@@ -236,6 +241,24 @@ export function OrientationCalendarPanel({ sessionId }: { sessionId: string }) {
             <p className="mt-3 text-[12.5px] font-semibold text-emerald-700 dark:text-emerald-300">{result}</p>
           ) : null}
 
+          {existing && !preview.blocker ? (
+            <GuestPicker
+              supervisors={preview.supervisors}
+              alreadyOn={alreadyOn}
+              busy={busy}
+              onAdd={(emails, names) => {
+                if (
+                  !confirm(
+                    `Add ${emails.length} guest${emails.length === 1 ? "" : "s"} to the calendar invite?\n\n${names.join(", ")}\n\nGoogle emails them immediately. This cannot be undone.`
+                  )
+                ) {
+                  return;
+                }
+                void act("add-guests", emails);
+              }}
+            />
+          ) : null}
+
           <div className="mt-4 flex flex-wrap gap-2">
             <Button onClick={() => void act("create")} disabled={busy || Boolean(existing) || Boolean(preview.blocker)}>
               {busy ? "Working…" : existing ? "Invite created" : "Create calendar invite"}
@@ -257,6 +280,204 @@ export function OrientationCalendarPanel({ sessionId }: { sessionId: string }) {
         </div>
       ) : null}
     </section>
+  );
+}
+
+// --- guest picker -----------------------------------------------------------
+//
+// Supervisors get their own one-click row because they are the common case and the
+// app already knows who they are (linked on each hire). Everyone else comes from a
+// search over the SAME employee list the supervisor picker uses, so "who counts as
+// an employee" has one answer — active, not terminated, tenured people included.
+// Free-typed addresses are allowed too: not everyone who belongs at orientation is
+// on the roster, and refusing them would just push the work back into Google.
+
+function GuestPicker({
+  supervisors,
+  alreadyOn,
+  busy,
+  onAdd
+}: {
+  supervisors: SupervisorGuest[];
+  alreadyOn: Set<string>;
+  busy: boolean;
+  onAdd: (emails: string[], names: string[]) => void;
+}) {
+  const [picked, setPicked] = useState<{ email: string; name: string }[]>([]);
+  const [q, setQ] = useState("");
+  const [hits, setHits] = useState<PersonHit[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  const isPicked = (email: string) => picked.some((p) => p.email.toLowerCase() === email.toLowerCase());
+  const onInvite = (email: string) => alreadyOn.has(email.toLowerCase());
+
+  function toggle(email: string, name: string) {
+    setPicked((cur) =>
+      cur.some((p) => p.email.toLowerCase() === email.toLowerCase())
+        ? cur.filter((p) => p.email.toLowerCase() !== email.toLowerCase())
+        : [...cur, { email, name }]
+    );
+  }
+
+  // Debounced so typing a name isn't one request per keystroke.
+  useEffect(() => {
+    const term = q.trim();
+    if (term.length < 2) {
+      setHits([]);
+      return;
+    }
+    let cancelled = false;
+    setSearching(true);
+    const t = setTimeout(() => {
+      fetch(`/api/new-hires/supervisor-search?q=${encodeURIComponent(term)}`)
+        .then((r) => r.json())
+        .then((d: { people?: PersonHit[] }) => !cancelled && setHits(d.people ?? []))
+        .catch(() => !cancelled && setHits([]))
+        .finally(() => !cancelled && setSearching(false));
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [q]);
+
+  const freeText = q.trim();
+  const canAddTyped = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(freeText) && !isPicked(freeText) && !onInvite(freeText);
+
+  const supervisorsToOffer = supervisors.filter((s) => !onInvite(s.email));
+
+  return (
+    <div className="mt-3 rounded border border-brand-lea/15 p-3 dark:border-white/10">
+      <h3 className="text-sm font-semibold text-brand-lea dark:text-slate-100">Add other guests</h3>
+      <p className="mt-1 text-[11px] text-brand-grey dark:text-slate-400">
+        Supervisors, presenters, anyone else who should be in the room. Adding emails them straight away.
+      </p>
+
+      {supervisorsToOffer.length > 0 ? (
+        <div className="mt-2">
+          <div className="text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">
+            The attendees&apos; supervisors
+          </div>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {supervisorsToOffer.map((s) => (
+              <button
+                key={s.email}
+                onClick={() => toggle(s.email, s.name)}
+                title={`Supervises ${s.forWhom.join(", ")}`}
+                className={
+                  isPicked(s.email)
+                    ? "rounded border border-brand-lea bg-brand-lea px-2 py-1 text-[11px] font-semibold text-white"
+                    : "rounded border border-brand-lea/20 px-2 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-gold/10 dark:border-white/10 dark:text-slate-100"
+                }
+              >
+                {isPicked(s.email) ? "✓ " : "+ "}
+                {s.name}
+                <span className="ml-1 font-normal opacity-70">({s.forWhom.length})</span>
+              </button>
+            ))}
+            <button
+              onClick={() => setPicked((cur) => [
+                ...cur,
+                ...supervisorsToOffer
+                  .filter((s) => !cur.some((p) => p.email.toLowerCase() === s.email.toLowerCase()))
+                  .map((s) => ({ email: s.email, name: s.name }))
+              ])}
+              className="rounded px-2 py-1 text-[11px] font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-slate-300"
+            >
+              Select all {supervisorsToOffer.length}
+            </button>
+          </div>
+        </div>
+      ) : supervisors.length > 0 ? (
+        <p className="mt-2 text-[11px] text-brand-grey dark:text-slate-400">
+          Every attendee&apos;s supervisor is already on the invite.
+        </p>
+      ) : (
+        <p className="mt-2 text-[11px] text-amber-700 dark:text-amber-300">
+          None of the attendees have a supervisor on file, so there are none to suggest.
+        </p>
+      )}
+
+      <div className="mt-3">
+        <div className="text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">
+          Anyone else
+        </div>
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search employees by name, or type an email address"
+          className="mt-1 w-full rounded border border-brand-lea/20 px-2 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500"
+        />
+        {searching ? <p className="mt-1 text-[11px] text-brand-grey dark:text-slate-400">Searching…</p> : null}
+
+        {hits.length > 0 ? (
+          <ul className="mt-1 max-h-44 overflow-y-auto rounded border border-brand-lea/15 dark:border-white/10">
+            {hits.map((p) => {
+              const disabled = !p.email || onInvite(p.email);
+              return (
+                <li key={p.id}>
+                  <button
+                    disabled={disabled}
+                    onClick={() => p.email && toggle(p.email, p.name)}
+                    className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left text-[12px] text-brand-black transition hover:bg-brand-cloudDancer/60 disabled:opacity-45 dark:text-slate-200 dark:hover:bg-white/5"
+                  >
+                    <span className="min-w-0 flex-1 truncate">
+                      {isPicked(p.email ?? "") ? "✓ " : ""}
+                      {p.name}
+                      {p.position ? <span className="text-brand-grey dark:text-slate-400"> · {p.position}</span> : null}
+                    </span>
+                    <span className="shrink-0 text-[10px] text-brand-grey dark:text-slate-400">
+                      {!p.email ? "no email" : onInvite(p.email) ? "already invited" : p.email}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+
+        {canAddTyped ? (
+          <button
+            onClick={() => {
+              toggle(freeText, freeText);
+              setQ("");
+            }}
+            className="mt-1 text-[11px] font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-slate-300"
+          >
+            Add {freeText} as a guest
+          </button>
+        ) : null}
+      </div>
+
+      {picked.length > 0 ? (
+        <>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {picked.map((p) => (
+              <span
+                key={p.email}
+                className="inline-flex items-center gap-1 rounded bg-brand-cloudDancer/70 px-2 py-0.5 text-[11px] text-brand-lea dark:bg-white/5 dark:text-slate-200"
+              >
+                {p.name}
+                <button
+                  onClick={() => toggle(p.email, p.name)}
+                  aria-label={`Remove ${p.name}`}
+                  className="text-red-600 transition hover:text-red-700 dark:text-red-400"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+          <Button
+            className="mt-2"
+            onClick={() => onAdd(picked.map((p) => p.email), picked.map((p) => p.name))}
+            disabled={busy}
+          >
+            {busy ? "Adding…" : `Add ${picked.length} guest${picked.length === 1 ? "" : "s"} to the invite`}
+          </Button>
+        </>
+      ) : null}
+    </div>
   );
 }
 

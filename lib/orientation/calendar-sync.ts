@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { addInviteAttendees, createInviteEvent, getInviteEvent } from "@/lib/google/calendar";
 import { getUserCalendar } from "@/lib/google/user-calendar";
+import { resolveSupervisors } from "@/lib/front/orientation-email";
 import { buildOrientationEvent, type OrientationEventDraft } from "./calendar-event";
 
 // Creating the orientation calendar invite from the app, and adding the session's
@@ -88,11 +89,58 @@ async function sessionAttendeeEmails(sessionId: string): Promise<AttendeeEmail[]
   });
 }
 
+/**
+ * The attendees' supervisors, deduped across the session.
+ *
+ * Reuses resolveSupervisors from the email path rather than re-deriving it, so
+ * "who is X's supervisor" can never mean one thing on the invite and another on
+ * the email — a linked record beats a typed address, and its email is read live.
+ */
+export type SupervisorGuest = { name: string; email: string; forWhom: string[] };
+
+async function sessionSupervisors(sessionId: string): Promise<SupervisorGuest[]> {
+  const rows = await prisma.orientationAttendee.findMany({
+    where: { sessionId },
+    select: {
+      newHire: {
+        select: {
+          name: true,
+          supervisorName: true,
+          supervisorEmail: true,
+          supervisorHire: { select: { name: true, ssEmail: true, personalEmail: true } },
+          supervisor2Name: true,
+          supervisor2Email: true,
+          supervisor2Hire: { select: { name: true, ssEmail: true, personalEmail: true } }
+        }
+      }
+    }
+  });
+
+  // One supervisor usually covers several new hires — collapse to one guest and
+  // remember who they cover, so the UI can say why they are being suggested.
+  const byEmail = new Map<string, SupervisorGuest>();
+  for (const r of rows) {
+    for (const s of resolveSupervisors(r.newHire)) {
+      if (!s.email) continue;
+      const key = s.email.toLowerCase();
+      const found = byEmail.get(key);
+      if (found) {
+        if (!found.forWhom.includes(r.newHire.name)) found.forWhom.push(r.newHire.name);
+      } else {
+        byEmail.set(key, { name: s.name ?? s.email, email: s.email, forWhom: [r.newHire.name] });
+      }
+    }
+  }
+  return [...byEmail.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
 // --- preview ----------------------------------------------------------------
 
 export type OrientationCalendarPreview = {
   draft: OrientationEventDraft;
   attendees: AttendeeEmail[];
+  /** The attendees' own supervisors, offered as one-click guests. */
+  supervisors: SupervisorGuest[];
   /** Already created? Then this holds what is really on the event in Google. */
   existing: (OrientationCalendarRecord & { liveAttendees: string[]; missingInGoogle: boolean }) | null;
   /** Non-null when the app cannot talk to Google at all — shown instead of a dead button. */
@@ -155,7 +203,7 @@ export async function previewOrientationCalendar(
     };
   }
 
-  return { draft, attendees, existing, blocker: access.blocker };
+  return { draft, attendees, supervisors: await sessionSupervisors(sessionId), existing, blocker: access.blocker };
 }
 
 // --- the two actions --------------------------------------------------------
@@ -232,4 +280,45 @@ export async function addOrientationAttendeesToEvent(
 
   const res = await addInviteAttendees(access.client, record.calendarId, record.eventId, emails, "all");
   return { ...res, skipped };
+}
+
+/** Looks like an address. Deliberately loose — Google is the real validator, this
+    only stops obvious typos becoming a silent non-invite. */
+function looksLikeEmail(s: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+}
+
+/**
+ * Add ANY guests to the invite — supervisors, or whoever else needs to be in the
+ * room. Same irreversible send as the attendee path; the caller confirms first.
+ *
+ * Addresses are taken as given rather than restricted to a roster: the people who
+ * belong at orientation are not always employees (a vendor, an exec's assistant),
+ * and refusing them would just push the work back into Google by hand.
+ */
+export async function addGuestsToOrientationEvent(
+  sessionId: string,
+  actingUserEmail: string | null,
+  emails: string[]
+): Promise<{ added: string[]; alreadyThere: string[]; rejected: string[]; total: number }> {
+  const access = await getUserCalendar(actingUserEmail);
+  if (!access.client) throw new Error(access.blocker ?? "Google Calendar is unavailable.");
+
+  const record = await getOrientationCalendarRecord(sessionId);
+  if (!record) throw new Error("No calendar event for this session yet — create the invite first.");
+
+  const cleaned: string[] = [];
+  const rejected: string[] = [];
+  for (const raw of emails) {
+    const e = String(raw ?? "").trim();
+    if (!e) continue;
+    if (looksLikeEmail(e)) cleaned.push(e);
+    else rejected.push(e);
+  }
+  if (cleaned.length === 0) {
+    throw new Error(rejected.length ? `Not a valid email address: ${rejected.join(", ")}` : "No addresses given.");
+  }
+
+  const res = await addInviteAttendees(access.client, record.calendarId, record.eventId, cleaned, "all");
+  return { ...res, rejected };
 }
