@@ -178,3 +178,130 @@ export async function sendOrientationEmail(
     return { ok: false, error: err instanceof Error ? err.message : "Send failed." };
   }
 }
+
+// --- sending to several attendees at once -----------------------------------
+//
+// Sending the invitation one person at a time meant seven dialogs for one
+// session, which is how a step gets skipped. These do the same work in a batch.
+//
+// Each attendee is still built and sent INDIVIDUALLY — a batch is a loop, not a
+// single email with seven recipients. That matters: the templates open "Hi
+// <first name>," and the supervisors template goes to a different person entirely,
+// so one combined message would be wrong for everybody in it.
+
+export type OrientationBatchRow = {
+  attendeeId: string;
+  name: string;
+  /** Where it would go / went. Empty when the row can't be sent. */
+  to: string[];
+  cc: string[];
+  warnings: string[];
+  /** Non-null when this attendee can't be emailed at all (no address, no supervisor). */
+  error?: string;
+  alreadySent: boolean;
+};
+
+export type OrientationBatchPreview = {
+  ok: boolean;
+  error?: string;
+  rows?: OrientationBatchRow[];
+  /** One representative rendering, so the body can be read once rather than N times. */
+  sampleSubject?: string;
+  sampleHtml?: string;
+  sampleFor?: string;
+};
+
+/** Build every email in the batch WITHOUT sending, so the whole run can be
+    approved at once — including who is going to be skipped and why. */
+export async function previewOrientationEmailBatch(
+  attendeeIds: string[],
+  key: OrientationTemplateKey
+): Promise<OrientationBatchPreview> {
+  if (!(await canSend())) return { ok: false, error: "You don't have permission to send this email." };
+  if (!attendeeIds.length) return { ok: false, error: "Nobody selected." };
+
+  const rows: OrientationBatchRow[] = [];
+  let sampleSubject: string | undefined;
+  let sampleHtml: string | undefined;
+  let sampleFor: string | undefined;
+
+  for (const attendeeId of attendeeIds) {
+    const a = await loadAttendee(attendeeId);
+    if (!a) {
+      rows.push({ attendeeId, name: "(not found)", to: [], cc: [], warnings: [], error: "Attendee not found.", alreadySent: false });
+      continue;
+    }
+    const alreadySent = parseKeys(a.sentTemplateKeys).includes(key);
+    try {
+      const preview = await buildOrientationEmail(key, a.newHire, {
+        date: a.session.date.toISOString(),
+        endsAt: a.session.endsAt ? a.session.endsAt.toISOString() : null,
+        location: a.session.location
+      });
+      rows.push({
+        attendeeId,
+        name: a.newHire.name,
+        to: preview.to,
+        cc: preview.cc,
+        warnings: preview.warnings,
+        alreadySent
+      });
+      if (!sampleHtml) {
+        sampleSubject = preview.subject;
+        sampleHtml = preview.html;
+        sampleFor = a.newHire.name;
+      }
+    } catch (err) {
+      // One unsendable person must not sink the batch — show why and carry on.
+      rows.push({
+        attendeeId,
+        name: a.newHire.name,
+        to: [],
+        cc: [],
+        warnings: [],
+        error: err instanceof Error ? err.message : "Couldn't build the email.",
+        alreadySent
+      });
+    }
+  }
+
+  return { ok: true, rows, sampleSubject, sampleHtml, sampleFor };
+}
+
+export type OrientationBatchSendResult = {
+  ok: boolean;
+  error?: string;
+  sent?: { attendeeId: string; name: string; to: string }[];
+  failed?: { attendeeId: string; name: string; error: string }[];
+};
+
+/**
+ * Send to everyone selected, one at a time, continuing past failures.
+ *
+ * Sequential rather than parallel on purpose: Front is rate-limited, and a burst
+ * of sends that trips a 429 halfway would leave the batch in a state nobody can
+ * reason about. Slower and completely legible beats faster and ambiguous when the
+ * side effect is real email.
+ */
+export async function sendOrientationEmailBatch(
+  attendeeIds: string[],
+  key: OrientationTemplateKey
+): Promise<OrientationBatchSendResult> {
+  if (!(await canSend())) return { ok: false, error: "You don't have permission to send this email." };
+  if (!attendeeIds.length) return { ok: false, error: "Nobody selected." };
+
+  const sent: { attendeeId: string; name: string; to: string }[] = [];
+  const failed: { attendeeId: string; name: string; error: string }[] = [];
+
+  for (const attendeeId of attendeeIds) {
+    const a = await loadAttendee(attendeeId);
+    const name = a?.newHire.name ?? "(not found)";
+    // Reuses the single send wholesale, so a batch send and a one-off send are
+    // literally the same code path — including the tick and the send record.
+    const res = await sendOrientationEmail(attendeeId, key);
+    if (res.ok) sent.push({ attendeeId, name, to: res.to ?? "" });
+    else failed.push({ attendeeId, name, error: res.error ?? "Send failed." });
+  }
+
+  return { ok: true, sent, failed };
+}

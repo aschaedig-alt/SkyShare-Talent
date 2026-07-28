@@ -4,7 +4,13 @@ import { useEffect, useState } from "react";
 import { clsx } from "clsx";
 import { Button, Modal } from "@/components/ui";
 import { AUDIENCE_LABEL, ORIENTATION_TEMPLATE_META, type OrientationTemplateKey, type OrientationTemplateMeta } from "@/lib/orientation/email-templates-meta";
-import { previewOrientationEmail, sendOrientationEmail } from "@/app/orientation/actions";
+import {
+  previewOrientationEmail,
+  previewOrientationEmailBatch,
+  sendOrientationEmail,
+  sendOrientationEmailBatch,
+  type OrientationBatchRow
+} from "@/app/orientation/actions";
 import type { OrientationEmailPreview } from "@/lib/front/orientation-email";
 
 // Sending orientation email, and tracking who has had what.
@@ -100,6 +106,20 @@ export function OrientationEmailPanel({
   onSent: (attendeeId: string, key: OrientationTemplateKey) => void;
 }) {
   const [target, setTarget] = useState<{ attendee: AttendeeRow; key: OrientationTemplateKey } | null>(null);
+  // Bulk selection. Sending the invitation one dialog at a time meant seven
+  // dialogs for one session, which is how a person gets missed.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [batchKey, setBatchKey] = useState<OrientationTemplateKey | null>(null);
+
+  const allSelected = attendees.length > 0 && selected.size === attendees.length;
+  function toggleOne(id: string) {
+    setSelected((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   return (
     <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
@@ -118,6 +138,15 @@ export function OrientationEmailPanel({
         <table className="min-w-full text-xs">
           <thead>
             <tr className="text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">
+              <th className="py-2 pr-2">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={() => setSelected(allSelected ? new Set() : new Set(attendees.map((a) => a.id)))}
+                  aria-label={allSelected ? "Clear selection" : "Select every attendee"}
+                  title={allSelected ? "Clear selection" : "Select every attendee"}
+                />
+              </th>
               <th className="py-2 pr-3">Attendee</th>
               {ORIENTATION_TEMPLATE_META.map((t) => (
                 <th key={t.key} className="px-2 py-2 text-center align-bottom" style={{ minWidth: 132 }} title={t.hint}>
@@ -134,6 +163,14 @@ export function OrientationEmailPanel({
           <tbody>
             {attendees.map((a) => (
               <tr key={a.id} className="border-t border-brand-lea/10 dark:border-white/10">
+                <td className="py-2 pr-2">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(a.id)}
+                    onChange={() => toggleOne(a.id)}
+                    aria-label={`Select ${a.name}`}
+                  />
+                </td>
                 <td className="py-2 pr-3 font-medium text-brand-lea dark:text-slate-100">{a.name}</td>
                 {ORIENTATION_TEMPLATE_META.map((t) => {
                   const sent = a.sentTemplateKeys.includes(t.key);
@@ -172,7 +209,46 @@ export function OrientationEmailPanel({
         </table>
       </div>
 
+      {/* Bulk bar. Appears only with a selection, so the default view stays the
+          per-person grid and nothing bulk happens by accident. */}
+      {selected.size > 0 ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded border border-brand-lea/20 bg-brand-cloudDancer/50 p-2.5 dark:border-white/10 dark:bg-white/5">
+          <span className="text-[12.5px] font-semibold text-brand-lea dark:text-slate-100">
+            {selected.size} selected
+          </span>
+          <button
+            onClick={() => setSelected(new Set())}
+            className="text-[11px] font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-slate-300"
+          >
+            Clear
+          </button>
+          <span className="text-[11px] text-brand-grey dark:text-slate-400">Send to all of them:</span>
+          {ORIENTATION_TEMPLATE_META.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setBatchKey(t.key)}
+              className="rounded border border-brand-lea/20 px-2 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-gold/10 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <CcEditor />
+
+      {batchKey ? (
+        <BatchDialog
+          attendees={attendees.filter((a) => selected.has(a.id))}
+          templateKey={batchKey}
+          onClose={() => setBatchKey(null)}
+          onSent={(ids) => {
+            ids.forEach((id) => onSent(id, batchKey));
+            setBatchKey(null);
+            setSelected(new Set());
+          }}
+        />
+      ) : null}
 
       {target ? (
         <SendDialog
@@ -186,6 +262,200 @@ export function OrientationEmailPanel({
         />
       ) : null}
     </section>
+  );
+}
+
+// --- the batch preview + send dialog ----------------------------------------
+//
+// Same rule as the single send: nothing goes out without the exact emails being
+// approved first. What changes is that "the exact email" is now N of them, so the
+// dialog shows every recipient row (including who will be SKIPPED and why) and
+// one representative body — reading the same template seven times proves nothing.
+
+function BatchDialog({
+  attendees,
+  templateKey,
+  onClose,
+  onSent
+}: {
+  attendees: AttendeeRow[];
+  templateKey: OrientationTemplateKey;
+  onClose: () => void;
+  onSent: (attendeeIds: string[]) => void;
+}) {
+  const meta = ORIENTATION_TEMPLATE_META.find((t) => t.key === templateKey)!;
+  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<OrientationBatchRow[] | null>(null);
+  const [sample, setSample] = useState<{ subject?: string; html?: string; for?: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [showBody, setShowBody] = useState(false);
+  const [done, setDone] = useState<{ sent: number; failed: { name: string; error: string }[] } | null>(null);
+  // Re-sending someone who already had this template is opt-in, so a second run
+  // over the same session doesn't quietly email everyone twice.
+  const [includeAlreadySent, setIncludeAlreadySent] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    previewOrientationEmailBatch(attendees.map((a) => a.id), templateKey)
+      .then((res) => {
+        if (cancelled) return;
+        if (!res.ok) {
+          setError(res.error ?? "Couldn't build the emails.");
+          return;
+        }
+        setRows(res.rows ?? []);
+        setSample({ subject: res.sampleSubject, html: res.sampleHtml, for: res.sampleFor });
+      })
+      .catch(() => !cancelled && setError("Couldn't build the emails."))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [attendees, templateKey]);
+
+  const sendable = (rows ?? []).filter((r) => !r.error && (includeAlreadySent || !r.alreadySent));
+  const blocked = (rows ?? []).filter((r) => r.error);
+  const skippedAsSent = (rows ?? []).filter((r) => !r.error && r.alreadySent && !includeAlreadySent);
+
+  async function doSend() {
+    if (!sendable.length) return;
+    if (
+      !confirm(
+        `Send "${meta.label}" to ${sendable.length} ${sendable.length === 1 ? "person" : "people"}?\n\n${sendable.map((r) => `${r.name} → ${r.to.join(", ")}`).join("\n")}\n\nThis sends immediately and cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setSending(true);
+    setError(null);
+    const res = await sendOrientationEmailBatch(sendable.map((r) => r.attendeeId), templateKey);
+    setSending(false);
+    if (!res.ok) {
+      setError(res.error ?? "Send failed.");
+      return;
+    }
+    const ok = res.sent ?? [];
+    const bad = res.failed ?? [];
+    setDone({ sent: ok.length, failed: bad.map((f) => ({ name: f.name, error: f.error })) });
+    // Tick only the ones that really went.
+    if (ok.length) onSent(ok.map((s) => s.attendeeId));
+  }
+
+  return (
+    <Modal open onClose={onClose} busy={sending}>
+      <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">
+        {meta.label} · {attendees.length} selected
+      </h2>
+      <div className={clsx("mt-2 rounded px-2.5 py-2 text-[12.5px] leading-snug", audienceChipClass(meta.audience))}>
+        <span className="font-bold uppercase tracking-wide">Goes to {AUDIENCE_LABEL[meta.audience]}</span>
+        {meta.audience === "supervisor" ? (
+          <span> — one email per attendee, to their own supervisor. The attendees do not receive it.</span>
+        ) : (
+          <span> — one personalised email each, not a single email with everyone on it.</span>
+        )}
+      </div>
+
+      {loading ? (
+        <p className="mt-4 text-sm text-brand-grey dark:text-slate-400">Building {attendees.length} emails from Front…</p>
+      ) : error ? (
+        <div className="mt-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300">
+          {error}
+        </div>
+      ) : done ? (
+        <div className="mt-4 space-y-2">
+          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+            Sent {done.sent}.{done.failed.length ? ` ${done.failed.length} failed.` : ""}
+          </p>
+          {done.failed.length ? (
+            <ul className="space-y-1 rounded border border-red-300 bg-red-50 p-2.5 text-[12px] text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300">
+              {done.failed.map((f, i) => (
+                <li key={i}>
+                  <span className="font-semibold">{f.name}</span> — {f.error}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : rows ? (
+        <div className="mt-4 space-y-2">
+          {blocked.length ? (
+            <ul className="space-y-1 rounded border border-red-300 bg-red-50 p-2.5 text-[12px] text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300">
+              {blocked.map((r) => (
+                <li key={r.attendeeId}>
+                  <span className="font-semibold">{r.name}</span> will be skipped — {r.error}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {skippedAsSent.length ? (
+            <label className="flex items-center gap-2 rounded border border-amber-300 bg-amber-50 p-2.5 text-[12px] text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200">
+              <input
+                type="checkbox"
+                checked={includeAlreadySent}
+                onChange={(e) => setIncludeAlreadySent(e.target.checked)}
+              />
+              <span>
+                {skippedAsSent.map((r) => r.name).join(", ")} already had this one — skipping them. Tick to send again.
+              </span>
+            </label>
+          ) : null}
+
+          <div className="max-h-56 overflow-y-auto rounded border border-brand-lea/15 dark:border-white/10">
+            <table className="min-w-full text-[12px]">
+              <tbody>
+                {sendable.map((r) => (
+                  <tr key={r.attendeeId} className="border-b border-brand-lea/10 last:border-0 dark:border-white/10">
+                    <td className="px-2 py-1.5 font-medium text-brand-lea dark:text-slate-100">{r.name}</td>
+                    <td className="px-2 py-1.5 text-brand-black dark:text-slate-200">{r.to.join(", ")}</td>
+                    <td className="px-2 py-1.5 text-[11px] text-amber-700 dark:text-amber-300">
+                      {r.warnings.length ? r.warnings.join(" ") : ""}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="text-[12px] text-brand-grey dark:text-slate-400">
+            Everyone above is cc&apos;d as normal. {sendable.length} will be sent.
+          </p>
+
+          {sample?.html ? (
+            <>
+              <button
+                onClick={() => setShowBody((v) => !v)}
+                className="text-xs font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-slate-300"
+              >
+                {showBody ? "Hide" : "Show"} the email {sample.for ? `(as ${sample.for} will get it)` : ""}
+              </button>
+              {showBody ? (
+                <div className="max-h-56 overflow-y-auto rounded border border-brand-lea/15 bg-white p-3 dark:border-white/10 dark:bg-[#0f2033]">
+                  <p className="mb-2 text-[12px] font-semibold text-brand-lea dark:text-slate-100">{sample.subject}</p>
+                  <div
+                    className="prose-sm text-[12.5px] text-brand-black dark:text-slate-200"
+                    dangerouslySetInnerHTML={{ __html: sample.html }}
+                  />
+                </div>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="mt-5 flex flex-wrap justify-end gap-2">
+        <Button variant="secondary" onClick={onClose} disabled={sending}>
+          {done ? "Close" : "Cancel"}
+        </Button>
+        {!done ? (
+          <Button onClick={doSend} disabled={sending || loading || sendable.length === 0}>
+            {sending ? `Sending ${sendable.length}…` : `Send to ${sendable.length}`}
+          </Button>
+        ) : null}
+      </div>
+    </Modal>
   );
 }
 

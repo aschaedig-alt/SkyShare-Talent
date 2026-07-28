@@ -14,6 +14,8 @@
 // of them. Building all three from one session in one pass is how that stops
 // being something a human has to remember.
 
+import { ordinalDayLabel } from "@/lib/dates/ordinal";
+
 /** The normal orientation: 9:30-3:00 Mountain at the SLC hangar office. Anything
     that differs is not blocked — it is FLAGGED, because the user's rule is that
     off-normal is allowed but must never pass silently. */
@@ -34,39 +36,11 @@ export const ORIENTATION_NORMAL = {
     invite from now on. */
 export const ORIENTATION_CONTACTS = "Aimee at 863-514-4907 or Kevin at 801-859-3089";
 
-/** 1st, 2nd, 3rd, 4th … 11th/12th/13th are the exceptions. Intl does not do
-    ordinals, and the title format is "August 4th", not "August 4". */
-export function ordinal(day: number): string {
-  const rem100 = day % 100;
-  if (rem100 >= 11 && rem100 <= 13) return `${day}th`;
-  switch (day % 10) {
-    case 1:
-      return `${day}st`;
-    case 2:
-      return `${day}nd`;
-    case 3:
-      return `${day}rd`;
-    default:
-      return `${day}th`;
-  }
-}
-
-function mountainParts(iso: string): { weekday: string; month: string; day: number } {
-  const d = new Date(iso);
-  const get = (opts: Intl.DateTimeFormatOptions) =>
-    new Intl.DateTimeFormat("en-US", { timeZone: ORIENTATION_NORMAL.timeZone, ...opts }).format(d);
-  return {
-    weekday: get({ weekday: "long" }),
-    month: get({ month: "long" }),
-    day: Number(get({ day: "numeric" }))
-  };
-}
-
 /** "Tuesday, August 4th" — always the MOUNTAIN day, so a late-evening UTC
-    instant can't roll the date forward. */
+    instant can't roll the date forward. Shared with the orientation EMAIL via
+    lib/dates/ordinal so the same session cannot read two different ways. */
 export function orientationDayLabel(sessionDate: string): string {
-  const { weekday, month, day } = mountainParts(sessionDate);
-  return `${weekday}, ${month} ${ordinal(day)}`;
+  return ordinalDayLabel(sessionDate, ORIENTATION_NORMAL.timeZone);
 }
 
 /** "9:30 AM" in Mountain. */

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { splitCandidateName } from "@/lib/candidates/normalize";
 import { formatTimeRange } from "@/lib/calendar/format";
+import { ordinalDayLabel } from "@/lib/dates/ordinal";
 import { getOrientationCc } from "@/lib/orientation/email-cc";
 import {
   ORIENTATION_TEMPLATE_META,
@@ -85,16 +86,13 @@ export function stripInstructionBlock(html: string): { body: string; stripped: b
   return { body: (html.slice(0, cutFrom) + html.slice(end)).trim(), stripped: true };
 }
 
-/** "Tuesday, August 4" — how a person writes an event date. Deliberately no year:
+/** "Tuesday, August 4th" — how a person writes an event date. Deliberately no year:
     the templates read "we look forward to seeing you on [Day, Date]!", and a year
-    there is noise. Always the Mountain day, so a late-evening instant can't slip. */
+    there is noise. Always the Mountain day, so a late-evening instant can't slip.
+    The ORDINAL is shared with the calendar invite title so the same session cannot
+    read "August 4th" on the invite and "August 4" in the email. */
 function sessionDayLabel(sessionDate: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Denver",
-    weekday: "long",
-    month: "long",
-    day: "numeric"
-  }).format(new Date(sessionDate));
+  return ordinalDayLabel(sessionDate);
 }
 
 /**
