@@ -2,16 +2,19 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { CircleCheck, Archive, CalendarClock, Building2, Trash2, Settings2 } from "lucide-react";
+import { CircleCheck, Archive, CalendarClock, Building2, Trash2, Settings2, ClipboardCopy } from "lucide-react";
 import type { GridHire, GridTaskStatus, HireStatus } from "@/lib/data/onboarding";
 import type { GridChecklistGroup } from "@/lib/data/onboarding-grid-config";
 import { CUSTOM_GROUP as CUSTOM_GROUP_KEY } from "@/lib/onboarding/tasks";
 import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
+import { copyRich } from "@/lib/business-cards/copy";
+import { buildHireInfoHtml, buildHireInfoText } from "@/lib/onboarding/hire-email-copy";
 import { EmptyState } from "@/components/ui";
 
 const GRID_BULK_ACTIONS: BulkAction[] = [
+  { kind: "run", key: "copy", label: "Copy for email", icon: ClipboardCopy },
   { kind: "patch", key: "onboard", label: "Mark onboarded", icon: CircleCheck, patch: { stage: "POST_ONBOARD" }, tone: "primary" },
   { kind: "patch", key: "archive", label: "Archive", icon: Archive, patch: { stage: "ARCHIVED" }, confirm: true, tone: "danger" },
   { kind: "date", key: "orientation", label: "Set orientation date", icon: CalendarClock },
@@ -65,6 +68,7 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
   const [hires, setHires] = useState(initial);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [copyNote, setCopyNote] = useState<string | null>(null);
 
   // Manage-tasks mode: rename / hide built-ins, add / rename / remove customs.
   const [managing, setManaging] = useState(false);
@@ -74,6 +78,9 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
   const [newTask, setNewTask] = useState("");
   const [mBusy, setMBusy] = useState(false);
   const [mErr, setMErr] = useState<string | null>(null);
+
+  const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (noteTimer.current) clearTimeout(noteTimer.current); }, []);
 
   useEffect(() => {
     setHires(initial);
@@ -119,6 +126,26 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
     setHires((cur) => cur.filter((h) => !selected.has(h.id)));
     setSelected(new Set());
     router.refresh();
+  }
+
+  /**
+   * Copy the selected hires' details for pasting into an email — one person's
+   * fields read top to bottom, which is what actually goes in the message. A
+   * browser selection over this grid copies the other way (a task row across
+   * every column), so this is the only way to get the right shape out.
+   *
+   * Order follows the grid, not the order you happened to tick the boxes.
+   */
+  async function copyForEmail() {
+    // No selection means "everyone on screen" rather than doing nothing — the
+    // button is visible before you tick anybody, so it has to do the obvious
+    // thing when clicked cold.
+    const picked = selected.size > 0 ? hires.filter((h) => selected.has(h.id)) : hires;
+    if (picked.length === 0) return;
+    const ok = await copyRich(buildHireInfoText(picked), buildHireInfoHtml(picked));
+    if (noteTimer.current) clearTimeout(noteTimer.current);
+    setCopyNote(ok ? `Copied ${picked.length} ${picked.length === 1 ? "person" : "people"}` : "Could not copy.");
+    noteTimer.current = setTimeout(() => setCopyNote(null), 3000);
   }
 
   async function cycle(hireId: string, taskId: string, current: GridTaskStatus) {
@@ -192,9 +219,34 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
 
   return (
     <div className="space-y-3">
-      <BulkActionBar count={selected.size} actions={GRID_BULK_ACTIONS} onApply={applyBulk} onDelete={deleteSelected} onClear={() => setSelected(new Set())} busy={bulkBusy} />
+      <BulkActionBar
+        count={selected.size}
+        actions={GRID_BULK_ACTIONS}
+        onApply={applyBulk}
+        onDelete={deleteSelected}
+        onRun={(key) => {
+          if (key === "copy") return copyForEmail();
+        }}
+        onClear={() => setSelected(new Set())}
+        busy={bulkBusy}
+      />
 
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end gap-2">
+        {/* Always visible, not gated behind a selection. Copying is read-only, and
+            hiding it until you had already ticked somebody meant nobody found it. */}
+        <button
+          onClick={copyForEmail}
+          title="Copy the selected people's details (or everyone, if none are ticked) ready to paste into an email"
+          className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 hover:shadow-glow dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/5"
+        >
+          <ClipboardCopy className="h-4 w-4" />
+          {selected.size > 0 ? `Copy ${selected.size} for email` : "Copy all for email"}
+        </button>
+        {copyNote ? (
+          <span aria-live="polite" className="text-sm font-semibold text-brand-eden dark:text-brand-sweet">
+            {copyNote}
+          </span>
+        ) : null}
         <button
           onClick={() => setManaging((m) => !m)}
           className={clsx(
@@ -297,7 +349,8 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
       <div className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
         <p className="text-sm text-brand-grey dark:text-slate-400">
-          Click any cell to cycle <span className="font-semibold text-brand-lea dark:text-slate-100">to-do → done → N/A</span>. Tick a name to select; scroll sideways for more.
+          Click any cell to cycle <span className="font-semibold text-brand-lea dark:text-slate-100">to-do → done → N/A</span>. Tick a name to select; scroll sideways for more.{" "}
+          <span className="font-semibold text-brand-lea dark:text-slate-100">Copy for email</span> puts the ticked people&apos;s details (or everyone) on the clipboard, ready to paste into a message.
         </p>
       </div>
       {/* A bounded box rather than letting the table run the length of the page.

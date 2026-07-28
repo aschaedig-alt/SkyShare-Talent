@@ -33,6 +33,7 @@ export type BulkAction =
   | { kind: "date"; key: string; label: string; icon: LucideIcon } // sets orientationDate
   | { kind: "text"; key: string; label: string; icon: LucideIcon; placeholder: string } // sets department
   | { kind: "choice"; key: string; label: string; icon: LucideIcon; options: Array<{ value: string; label: string }> } // pick one, calls onChoice
+  | { kind: "run"; key: string; label: string; icon: LucideIcon; tone?: "primary" | "default" } // fires onRun, no input and no write
   | { kind: "delete"; key: string; label: string; icon: LucideIcon }; // permanent delete
 
 type Props = {
@@ -43,10 +44,13 @@ type Props = {
   onDelete?: () => Promise<void> | void;
   // Called for a "choice" action with the selected option value (e.g. a check-in key).
   onChoice?: (actionKey: string, value: string) => Promise<void> | void;
+  // Called for a "run" action — the caller does whatever the action means. Used for
+  // things that act on the selection without writing to the database (copy, export).
+  onRun?: (actionKey: string) => Promise<void> | void;
   busy?: boolean;
 };
 
-export function BulkActionBar({ count, actions, onApply, onClear, onDelete, onChoice, busy }: Props) {
+export function BulkActionBar({ count, actions, onApply, onClear, onDelete, onChoice, onRun, busy }: Props) {
   const [openInput, setOpenInput] = useState<BulkAction | null>(null);
   const [value, setValue] = useState("");
 
@@ -137,6 +141,7 @@ export function BulkActionBar({ count, actions, onApply, onClear, onDelete, onCh
                 onClick={() => {
                   if (a.kind === "patch") runPatch(a);
                   else if (a.kind === "delete") runDelete();
+                  else if (a.kind === "run") onRun?.(a.key);
                   else {
                     setOpenInput(a);
                     setValue(a.kind === "choice" ? a.options[0]?.value ?? "" : "");
@@ -144,7 +149,7 @@ export function BulkActionBar({ count, actions, onApply, onClear, onDelete, onCh
                 }}
                 className={clsx(
                   "inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold transition disabled:opacity-60",
-                  a.kind === "patch" && a.tone === "primary"
+                  (a.kind === "patch" || a.kind === "run") && a.tone === "primary"
                     ? "bg-brand-lea text-white hover:bg-brand-eden"
                     : (a.kind === "patch" && a.tone === "danger") || a.kind === "delete"
                       ? "border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300"
