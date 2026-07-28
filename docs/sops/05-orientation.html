@@ -1,0 +1,199 @@
+<title>Orientation SOP — Step by Step</title>
+<style>
+  /* Deliberately light-only: this SOP always renders on a light ground so the
+     flow diagram and chips stay high-contrast regardless of the viewer's theme. */
+  :root {
+    --page: #eaf0f7; --card: #ffffff; --ink: #0d2c43; --ink-soft: #3d5468; --muted: #5f748a;
+    --line: #d5e0ec; --navy: #0d2c43; --gold: #eaaa00; --eden: #466481; --sweet: #a6c9e7;
+    --good: #2f7d5b; --good-bg: #e4f1ea; --warn: #b7791f; --warn-bg: #fbf1dd;
+    --bad: #c23b52; --bad-bg: #fbe6ea; --shadow: 0 1px 2px rgba(13,44,67,.06), 0 8px 24px rgba(13,44,67,.08);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font-family: "Segoe UI", system-ui, -apple-system, sans-serif; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 44px 22px 80px; }
+
+  header { border-bottom: 3px solid var(--gold); padding-bottom: 24px; margin-bottom: 32px; }
+  .eyebrow { text-transform: uppercase; letter-spacing: .16em; font-size: 12px; font-weight: 700; color: var(--eden); margin: 0 0 10px; }
+  h1 { font-size: clamp(28px, 5vw, 38px); line-height: 1.1; margin: 0 0 12px; font-weight: 800; letter-spacing: -.01em; text-wrap: balance; color: var(--navy); }
+  .lede { font-size: 16.5px; color: var(--ink-soft); margin: 0; max-width: 64ch; }
+
+  .prereq { display: flex; gap: 14px; align-items: flex-start; background: var(--warn-bg); border: 1px solid var(--warn); border-radius: 4px; padding: 14px 18px; margin: 24px 0; }
+  .prereq .ic { font-size: 20px; line-height: 1.3; }
+  .prereq p { margin: 0; font-size: 14.5px; color: var(--ink); }
+  .prereq b { color: #8a5a13; }
+
+  h2 { font-size: 15px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--eden); margin: 40px 0 14px; }
+
+  .diagram-card { background: #ffffff; border: 1px solid var(--line); border-radius: 4px; box-shadow: var(--shadow); padding: 16px; overflow-x: auto; }
+  pre.mermaid { margin: 0; text-align: center; min-width: 540px; }
+  /* Force the diagram's label + edge colors so no auto-theme can pale them out. */
+  .mermaid text, .mermaid .nodeLabel, .mermaid span, .mermaid p, .mermaid foreignObject div { fill: #0d2c43 !important; color: #0d2c43 !important; }
+  .mermaid .edgeLabel, .mermaid .edgeLabel p, .mermaid .edgeLabel span { color: #0d2c43 !important; fill: #0d2c43 !important; background-color: #eef4fb !important; }
+  .mermaid .edgeLabel rect { fill: #eef4fb !important; }
+  .mermaid .edgePath .path, .mermaid path.path, .mermaid line, .mermaid .flowchart-link { stroke: #7f97ab !important; }
+  .mermaid marker path, .mermaid .arrowheadPath, .mermaid .arrowMarkerPath { fill: #7f97ab !important; stroke: #7f97ab !important; }
+
+  .steps { display: flex; flex-direction: column; gap: 14px; counter-reset: step; }
+  .step { background: var(--card); border: 1px solid var(--line); border-radius: 4px; box-shadow: var(--shadow); padding: 20px 22px 20px 66px; position: relative; }
+  .step.hot { border-left: 3px solid var(--gold); }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    position: absolute; left: 18px; top: 20px; width: 34px; height: 34px; border-radius: 4px;
+    background: var(--navy); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 16px;
+  }
+  .step .screen { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #fff; background: var(--navy); border-radius: 4px; padding: 2px 9px; margin-bottom: 8px; }
+  .step h3 { margin: 0 0 6px; font-size: 18px; color: var(--navy); font-weight: 800; }
+  .step p { margin: 6px 0 0; font-size: 14.5px; color: var(--ink-soft); }
+  .step .do b, .step p b { color: var(--ink); }
+  .btn { display: inline-block; font-weight: 700; font-size: 13px; border-radius: 4px; padding: 2px 9px; white-space: nowrap; }
+  .btn.gold { background: var(--gold); color: #1a1a1a; }
+  .btn.navy { background: var(--navy); color: #fff; }
+  .btn.ghost { border: 1px solid var(--eden); color: var(--eden); }
+  .btn.tab { background: #eef4fb; border: 1px solid var(--eden); color: var(--eden); }
+
+  .seen { margin-top: 12px; border-left: 3px solid var(--good); background: var(--good-bg); border-radius: 0 4px 4px 0; padding: 9px 14px; font-size: 13.5px; color: #1c3b2c; }
+  .seen b { color: var(--good); }
+  .watch { margin-top: 10px; border-left: 3px solid var(--warn); background: var(--warn-bg); border-radius: 0 4px 4px 0; padding: 9px 14px; font-size: 13.5px; color: #4a3708; }
+  .watch b { color: #8a5a13; }
+
+  .autonote { display: flex; gap: 12px; align-items: flex-start; background: var(--good-bg); border: 1px solid var(--good); border-radius: 4px; padding: 14px 18px; margin: 16px 0; font-size: 14px; color: #1c3b2c; }
+  .autonote b { color: var(--good); }
+
+  .byhand { display: flex; gap: 12px; align-items: flex-start; background: #eef4fb; border: 1px solid var(--eden); border-radius: 4px; padding: 14px 18px; margin: 16px 0; font-size: 14px; color: #23384c; }
+  .byhand b { color: var(--navy); }
+
+  .tag { display:inline-block; font-size: 12px; font-weight: 800; letter-spacing: .05em; background: var(--navy); color:#fff; border-radius: 4px; padding: 1px 7px; }
+  code { font-family: "Cascadia Code", Consolas, monospace; font-size: 12.5px; background: var(--page); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; color: var(--navy); }
+  .fill { background: #fbf1dd; border: 1px dashed #b7791f; border-radius: 4px; padding: 1px 6px; font-weight: 700; color: #8a5a13; font-size: .95em; }
+  footer { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">SkyShare Talent-Ops · Standard Operating Procedure</p>
+    <h1>Running an orientation, start to finish</h1>
+    <p class="lede">Create the session, add the new hires, send the calendar invite and the three emails, then close it out. Two parts stay in your hands — picking a date that works for the execs, and their calendar invite — and the callouts below say exactly where.</p>
+  </header>
+
+  <div class="prereq">
+    <span class="ic">🔑</span>
+    <p><b>Before you start:</b> your account must be <b>Admin</b> or <b>Recruiter</b>. As a Viewer or a Hiring Manager the buttons that create sessions and send email are hidden. If your role is wrong, ask the Recruiting Manager (<b>Aimee Schaedig</b>) to change it under Settings → Team Members.</p>
+  </div>
+
+  <div class="byhand">
+    <span>✋</span>
+    <div><b>You do this part yourself, before anything below.</b> Check the exec team's availability, pick an orientation date that works for them, and pick the time slot they can join. The app does not schedule the execs — you settle the date and time with them first, then build the session around it.</div>
+  </div>
+
+  <h2>The flow at a glance</h2>
+  <div class="diagram-card">
+<pre class="mermaid">
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#dcebf8','primaryBorderColor':'#466481','primaryTextColor':'#0d2c43','lineColor':'#7f97ab','fontFamily':'Segoe UI, system-ui, sans-serif','fontSize':'14px','darkMode':false}}}%%
+flowchart TD
+    a([Onboarding: Orientation]):::nav --> b[Create the session:<br/>date, time, location]:::step
+    b --> c[Add the attendees]:::step
+    c --> d[Create the Google Calendar invite]:::step
+    d --> e[[Copy the Meet link<br/>into the execs invite]]:::manual
+    e --> f[Invite the attendees to the event]:::step
+    f --> g[Send 1. Invitation<br/>then 2. Supervisors]:::step
+    g --> h[Send the internal summary]:::step
+    h --> i[Turn on the reminder]:::auto
+    i --> j[Confirm replies, arrange travel]:::step
+    j --> k([Mark complete]):::done
+
+    classDef nav fill:#bcd6ee,stroke:#0d2c43,stroke-width:2px,color:#0d2c43
+    classDef step fill:#dcebf8,stroke:#466481,color:#0d2c43
+    classDef manual fill:#e7eefb,stroke:#466481,stroke-width:2px,color:#23384c
+    classDef auto fill:#d3ecdf,stroke:#2f7d5b,color:#123a2a
+    classDef done fill:#bfe3cf,stroke:#2f7d5b,stroke-width:2px,color:#123a2a
+</pre>
+  </div>
+
+  <h2>The steps</h2>
+  <div class="steps">
+
+    <div class="step">
+      <span class="screen">Onboarding → Orientation</span>
+      <h3>Open the Orientation page</h3>
+      <p class="do">In the sidebar click <b>Onboarding → Orientation</b>. The top of the page lists anyone the system thinks still needs one, under <b>"N hires still need an orientation."</b> The two tabs below are <span class="btn tab">Sessions</span> (what is scheduled) and <span class="btn tab">Cohorts &amp; calendar</span> (hires grouped by the orientation date on their record).</p>
+    </div>
+
+    <div class="step">
+      <span class="screen">Orientation</span>
+      <h3>Create the session</h3>
+      <p class="do">Click <span class="btn navy">+ New session</span> (top right). Enter the <b>Date</b>, and adjust <b>Start (MT)</b> and <b>End (MT)</b> if this one is not the usual 9:30 AM–3:00 PM. <b>Location</b> is pre-filled as SkyShare HQ, Salt Lake City. Add the <b>Address</b>. Leave <b>Google Meet link</b> blank — the calendar invite in step 4 creates the Meet link for you. Click <span class="btn gold">Create session</span>. You land on the session page.</p>
+      <div class="seen"><b>Faster option:</b> on the <span class="btn tab">Cohorts &amp; calendar</span> tab, a group of hires who share an orientation date shows a <span class="btn navy">Create session + add all</span> button — one click makes the session and adds everyone in that group.</div>
+    </div>
+
+    <div class="step">
+      <span class="screen">Session page → Attendees</span>
+      <h3>Add the attendees</h3>
+      <p class="do">In the <b>Attendees</b> box, open the <b>Add attendee…</b> dropdown and pick a person, then click <span class="btn navy">Add</span>. Repeat for each. The top group, <b>Suggested</b>, is the people who have started or start by this date — normally exactly who you want.</p>
+      <div class="seen"><b>Also here:</b> if you opened the page from the amber "still need an orientation" list, each of those people has an <b>Add to…</b> dropdown that drops them straight onto a session.</div>
+    </div>
+
+    <div class="step">
+      <span class="screen">Session page → Google Calendar invite</span>
+      <h3>Create the calendar invite</h3>
+      <p class="do">Scroll to <b>Google Calendar invite</b> and click <span class="btn gold">Create calendar invite</span>. This builds the event — title, date, address, and the <b>Meet video link</b> — and invites nobody yet. When it is done the panel shows an <b>Open in Google Calendar</b> link and the <b>Meet link</b>.</p>
+      <div class="autonote"><span>🔗</span><div>The Meet link the app just made is the same one used at every orientation. You need it for the execs in the next step.</div></div>
+    </div>
+
+    <div class="step">
+      <span class="screen">Google Calendar (outside the app)</span>
+      <h3>Send the execs their calendar invite</h3>
+      <p class="do"><b>You do this by hand.</b> Create the exec team's calendar invite for the time slot they gave you, and <b>copy the Meet link from step 4 into it</b> so the execs join on the same video link as everyone else. The invitees are <span class="fill">FILL IN: who is on the exec team for orientation, and how you send them the invite (a standing invite, or one per session)</span>.</p>
+    </div>
+
+    <div class="step">
+      <span class="screen">Session page → Google Calendar invite</span>
+      <h3>Invite the attendees to the event</h3>
+      <p class="do">Back in the <b>Google Calendar invite</b> panel, click <span class="btn gold">Add attendees to the invite</span>. Google emails each new hire the calendar invitation. To also invite supervisors or presenters, use <b>Add other guests</b> below it: the attendees' supervisors show as one-click chips (<b>Select all</b> adds every one), and you can search any employee by name or type an email.</p>
+    </div>
+
+    <div class="step">
+      <span class="screen">Session page → Orientation email</span>
+      <h3>Send the invitation email</h3>
+      <p class="do">Scroll to <b>Orientation email</b>. Tick the checkbox in the header row to select everyone, then in the bar that appears click <span class="btn navy">1. Invitation</span>. A preview opens showing the recipients and the exact email; review it and click the <b>Send to…</b> button at the bottom (it shows the count). It goes to each new hire's SkyShare email.</p>
+      <div class="watch"><b>Nobody is cc'd on the invitation.</b> Each new hire gets their own copy and no one else is on it. Supervisors are told separately, in the next step.</div>
+    </div>
+
+    <div class="step">
+      <span class="screen">Session page → Orientation email</span>
+      <h3>Send the supervisors email</h3>
+      <p class="do">With everyone still selected, click <span class="btn gold">2. Supervisors</span> in the same bar. This sends <b>one email per supervisor</b>, naming all of that supervisor's new hires at once. Review the list of supervisors in the preview and send.</p>
+      <div class="watch"><b>Send this from the select-all bar, not person by person.</b> A supervisor with three new hires gets one email this way; sending it one attendee at a time would give them three.</div>
+    </div>
+
+    <div class="step">
+      <span class="screen">Session page → Internal summary</span>
+      <h3>Send the internal summary</h3>
+      <p class="do">In the <b>Internal summary</b> box, click <span class="btn navy">Send the summary</span>. This is one email listing everyone who will attend, sent to the internal list: <b>hrotasks@</b>, Morgan, Ricky, Hannah, Kevin, and Aimee. Check the recipients under <b>Who gets the internal summary?</b> if you need to adjust who is on it.</p>
+    </div>
+
+    <div class="step hot">
+      <span class="screen">Session page → Schedule the reminder</span>
+      <h3>Turn on the reminder</h3>
+      <p class="do">In <b>Schedule the reminder</b>, tick <b>Send it automatically</b>. The reminder email goes out on its own the <b>calendar day before</b> orientation, to every attendee who has not already had it. You do not send it by hand.</p>
+      <div class="autonote"><span>🔄</span><div>It always fires the day before, weekends and holidays included, because the email says orientation is tomorrow. Anyone already sent the reminder is skipped, so nobody gets it twice.</div></div>
+    </div>
+
+    <div class="step">
+      <span class="screen">Session page → Attendees</span>
+      <h3>Track replies and travel as they come in</h3>
+      <p class="do">As new hires respond to the calendar invite, update their <b>Confirm</b> dropdown from <b>Pending</b> to <b>Confirmed</b>. If someone can't attend, click <span class="btn ghost">Move to next →</span> to move them to the next orientation (or the waiting list if none is scheduled). For anyone out of town, set the <b>Travel</b> column to <b>Needed</b>, then arrange it and set it to <b>Arranged</b> — or click <b>+add</b> to book their trip on their record.</p>
+      <div class="seen"><b>Travel varies by who's going.</b> Only out-of-town attendees need it, so handle each as their status lands.</div>
+    </div>
+
+    <div class="step">
+      <span class="screen">Session page (top)</span>
+      <h3>Mark the orientation complete</h3>
+      <p class="do">After orientation has happened, click <span class="btn gold">Mark complete</span> at the top of the session and confirm. This ticks <b>Attended orientation</b> on every attendee's onboarding checklist in one step.</p>
+    </div>
+
+  </div>
+
+  <footer>
+    Created Jul 28, 2026 from the Orientation page as it is built today. Picking the exec date/time and sending the execs their calendar invite are manual by design. If a screen doesn't match this SOP, tell the Recruiting Manager (Aimee Schaedig) what you saw.
+  </footer>
+</div>

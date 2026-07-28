@@ -21,6 +21,7 @@ the published pages are generated *from* these files, never the other way around
 | 2 | `02-offers.html` | The six offer steps; moving people in *before* they sign | https://claude.ai/code/artifact/057d065a-78f7-4033-a3f0-6eeec9dd16d9 |
 | 3 | `03-business-cards.html` | Ordering ahead of orientation + the six after-order steps | https://claude.ai/code/artifact/b52e49c2-bc88-4c4e-a6e3-366fb251261f |
 | 4 | `04-org-charts.html` | Adding someone to a fleet card and linking their profile | https://claude.ai/code/artifact/3feb9260-c4e2-4dff-b888-63e8350e5b6e |
+| 5 | `05-orientation.html` | Running an orientation: create the session, invite everyone, send the emails, close it out | https://claude.ai/code/artifact/51f060eb-2ee2-448f-b745-9a27a87325f5 |
 
 PDFs of each are generated on request into the user's `Downloads` folder.
 
