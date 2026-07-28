@@ -4,6 +4,7 @@ import {
   Activity,
   BarChart3,
   Blocks,
+  BookOpen,
   BriefcaseBusiness,
   CalendarCheck,
   CalendarClock,
@@ -59,6 +60,7 @@ export const moduleIds = [
   "blocks",
   "people",
   "fleet",
+  "handbook",
   "settings"
 ] as const;
 
@@ -228,7 +230,8 @@ export const navigationGroups: readonly NavigationGroup[] = [
           { id: "imports", href: "/imports", label: "Imports / Uploads", icon: Import },
           { id: "duplicate-review", href: "/duplicate-review", label: "Duplicate Review", icon: CheckCircle2 },
           { id: "reports", href: "/reports", label: "Reports", icon: BarChart3 },
-          { id: "archive", href: "/archive", label: "Historical Archive", icon: Database }
+          { id: "archive", href: "/archive", label: "Historical Archive", icon: Database },
+          { id: "handbook", href: "/handbook", label: "Handbook", icon: BookOpen }
         ]
       }
     ]
@@ -279,6 +282,12 @@ const hiddenRule: ModuleAccessRule = {
 function roleDefaultRule(moduleId: ModuleId, role: RoleName): ModuleAccessRule {
   if (moduleId === "settings") {
     return role === "ADMIN" ? defaultRule : hiddenRule;
+  }
+  // The Handbook is documentation — visible to everyone, including Viewers, who
+  // are otherwise hidden from most modules. Read-only for all; there is nothing
+  // to "edit" on it anyway.
+  if (moduleId === "handbook") {
+    return viewRule;
   }
   switch (role) {
     case "ADMIN":

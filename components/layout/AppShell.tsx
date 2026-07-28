@@ -9,6 +9,7 @@ import { getWorkspaceBranding, resolveBrandingLogo } from "@/lib/data/branding";
 import { EnvironmentBanner } from "@/components/layout/EnvironmentBanner";
 import { ModuleAccessShell } from "@/components/layout/ModuleAccessShell";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { SopBookmark } from "@/components/handbook/SopBookmark";
 // Feedback now lives in the sidebar rail (see Sidebar) rather than floating over
 // the page — a floating trigger could be dragged off-screen and sat behind modals.
 
@@ -44,6 +45,8 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
           <ModuleAccessShell role={role} policy={policy}>
             {children}
           </ModuleAccessShell>
+          {/* Route-aware SOP bookmark — appears only on pages that have an SOP. */}
+          <SopBookmark />
         </main>
       </div>
     </div>
