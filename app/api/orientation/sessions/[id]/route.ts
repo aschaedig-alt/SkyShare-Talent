@@ -25,9 +25,24 @@ export async function PATCH(request: Request, ctx: Ctx) {
     }
 
     const data: Record<string, unknown> = {};
-    for (const f of ["location", "address", "meetLink", "notes"]) {
+    for (const f of [
+      "location", "address", "meetLink", "notes",
+      "lunchVendor", "lunchContactName", "lunchContactPhone", "lunchNotes"
+    ]) {
       const v = str(body[f]);
       if (v !== undefined) data[f] = v;
+    }
+    // Lunch arrival: a string sets it, an explicit null clears it. Deliberately
+    // NOT validated against the session start — lunch can legitimately land
+    // before doors open (an early drop-off) and rejecting that would be wrong.
+    if (body.lunchArrivalAt === null) {
+      data.lunchArrivalAt = null;
+    } else if (typeof body.lunchArrivalAt === "string") {
+      const t = new Date(body.lunchArrivalAt);
+      if (Number.isNaN(t.getTime())) {
+        return NextResponse.json({ message: "Invalid lunch arrival time." }, { status: 400 });
+      }
+      data.lunchArrivalAt = t;
     }
     if (typeof body.date === "string") {
       const d = new Date(body.date);

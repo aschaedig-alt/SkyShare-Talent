@@ -115,6 +115,11 @@ export type SessionCandidate = {
   suggested: boolean;
   startDate: string | null;
   startsAfter: boolean;
+  /** ISO date of another session they are ALREADY booked on, if any. They are
+      still addable — someone does get moved between sessions — but they are no
+      longer "suggested", because suggesting a person who is already scheduled
+      is what made this list unreadable. */
+  scheduledOn: string | null;
 };
 
 export type SessionDetail = {
@@ -126,6 +131,18 @@ export type SessionDetail = {
   meetLink: string | null;
   notes: string | null;
   status: SessionStatus;
+  /** Lunch: who is supplying it, when it lands, who to ring, and the order
+      confirmation. The prep checklist has always had an "Order lunch" tick, but
+      ticking it recorded nothing — so on the day nobody could answer any of it. */
+  lunch: {
+    vendor: string | null;
+    arrivalAt: string | null;
+    contactName: string | null;
+    contactPhone: string | null;
+    notes: string | null;
+    fileName: string | null;
+    fileSizeBytes: number | null;
+  };
   attendees: AttendeeView[];
   prepTasks: PrepTaskView[];
   headcount: { total: number; outOfTown: number; pilots: number; confirmed: number };
@@ -236,17 +253,37 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
   // later belongs to the NEXT orientation, and someone with no start date can't
   // be judged at all (no signed offer yet, typically) — neither is suggested,
   // but both stay in the list so they can still be added on purpose.
+  // Who is ALREADY booked on some other session. Without this the picker
+  // suggests people who are plainly handled — two of the nine suggestions for
+  // the Sep 1 session were already on Aug 4 — which is what buried the people
+  // who genuinely still need placing.
+  const otherBookings = await prisma.orientationAttendee.findMany({
+    where: { newHireId: { in: hires.map((h) => h.id) }, sessionId: { not: s.id } },
+    select: { newHireId: true, session: { select: { date: true, status: true } } }
+  });
+  // Only a session that has not happened yet counts as "already scheduled": a
+  // past or completed one means they still need a seat, not that they have one.
+  const scheduledOnByHire = new Map<string, Date>();
+  for (const b of otherBookings) {
+    if (b.session.status === "COMPLETE") continue;
+    const current = scheduledOnByHire.get(b.newHireId);
+    if (!current || b.session.date < current) scheduledOnByHire.set(b.newHireId, b.session.date);
+  }
+
   const sessionDay = officeDayKey(s.date);
   const candidates: SessionCandidate[] = hires.map((h) => {
     const startsAfter = h.startDate ? calendarDayKey(h.startDate) > sessionDay : false;
     const notAttended = (h.tasks[0]?.status ?? "TODO") !== "DONE";
+    const scheduled = scheduledOnByHire.get(h.id) ?? null;
     return {
       id: h.id,
       name: h.name,
       position: h.position,
       startDate: h.startDate ? h.startDate.toISOString() : null,
       startsAfter,
-      suggested: h.stage === "ACTIVE" && notAttended && h.startDate !== null && !startsAfter
+      scheduledOn: scheduled ? scheduled.toISOString() : null,
+      suggested:
+        h.stage === "ACTIVE" && notAttended && h.startDate !== null && !startsAfter && scheduled === null
     };
   });
   // suggested first
@@ -264,6 +301,17 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
     meetLink: s.meetLink,
     notes: s.notes,
     status: s.status as SessionStatus,
+    lunch: {
+      vendor: s.lunchVendor,
+      arrivalAt: iso(s.lunchArrivalAt),
+      contactName: s.lunchContactName,
+      contactPhone: s.lunchContactPhone,
+      notes: s.lunchNotes,
+      // The storage key is deliberately NOT sent to the client — the file is
+      // fetched through the gated route, never by key.
+      fileName: s.lunchFileName,
+      fileSizeBytes: s.lunchFileSizeBytes
+    },
     attendees,
     prepTasks: s.prepTasks.map((t) => ({ id: t.id, label: t.label, owner: t.owner, dueDaysBefore: t.dueDaysBefore, done: t.done })),
     headcount: {

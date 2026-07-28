@@ -27,7 +27,10 @@ function fmtTime(iso: string) {
 function candidateLabel(c: SessionCandidate): string {
   const role = c.position ? ` · ${c.position}` : "";
   const start = c.startDate ? ` · starts ${formatCalendarDayShort(c.startDate)}` : " · no start date";
-  return `${c.name}${role}${start}`;
+  // Naming the session they are already on is what makes this row actionable —
+  // "already scheduled" alone leaves you having to go and look it up.
+  const booked = c.scheduledOn ? ` · already on ${formatCalendarDayShort(c.scheduledOn)}` : "";
+  return `${c.name}${role}${start}${booked}`;
 }
 
 async function patchJson(url: string, body: unknown, method = "PATCH") {
@@ -44,6 +47,74 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
   const [resched, setResched] = useState({ date: "", time: "", endTime: "" });
   const [savingDate, setSavingDate] = useState(false);
   const [reschedErr, setReschedErr] = useState<string | null>(null);
+
+  // ---- lunch ----
+  // The arrival TIME is edited on its own; the date is always the session's own
+  // day, so there is no second date field to keep in step (or get wrong).
+  const [lunch, setLunch] = useState({
+    vendor: session.lunch.vendor ?? "",
+    arrivalTime: session.lunch.arrivalAt ? toMountainDateTimeParts(session.lunch.arrivalAt).time : "",
+    contactName: session.lunch.contactName ?? "",
+    contactPhone: session.lunch.contactPhone ?? "",
+    notes: session.lunch.notes ?? ""
+  });
+  const [lunchFile, setLunchFile] = useState({
+    name: session.lunch.fileName,
+    sizeBytes: session.lunch.fileSizeBytes
+  });
+  const [lunchSaved, setLunchSaved] = useState<string | null>(null);
+  const [lunchErr, setLunchErr] = useState<string | null>(null);
+  const [lunchBusy, setLunchBusy] = useState(false);
+
+  async function saveLunch() {
+    setLunchBusy(true);
+    setLunchErr(null);
+    const sessionDay = toMountainDateTimeParts(session.date).date;
+    const ok = await patchJson(`/api/orientation/sessions/${session.id}`, {
+      lunchVendor: lunch.vendor,
+      lunchContactName: lunch.contactName,
+      lunchContactPhone: lunch.contactPhone,
+      lunchNotes: lunch.notes,
+      // Anchored to the session's own day in Mountain, so a time typed here
+      // means what it says on the day rather than in whatever zone the server
+      // happens to run in.
+      lunchArrivalAt: lunch.arrivalTime ? mountainWallClockToIso(sessionDay, lunch.arrivalTime) : null
+    });
+    setLunchBusy(false);
+    if (ok) {
+      setLunchSaved("Saved");
+      setTimeout(() => setLunchSaved(null), 2000);
+      router.refresh();
+    } else {
+      setLunchErr("Couldn't save the lunch details.");
+    }
+  }
+
+  async function uploadLunchFile(file: File) {
+    setLunchBusy(true);
+    setLunchErr(null);
+    const body = new FormData();
+    body.append("files", file);
+    const res = await fetch(`/api/orientation/sessions/${session.id}/lunch-file`, { method: "POST", body });
+    setLunchBusy(false);
+    if (res.ok) {
+      setLunchFile({ name: file.name, sizeBytes: file.size });
+      router.refresh();
+    } else {
+      const msg = (await res.json().catch(() => null)) as { message?: string } | null;
+      setLunchErr(msg?.message ?? "Couldn't upload the confirmation.");
+    }
+  }
+
+  async function removeLunchFile() {
+    setLunchBusy(true);
+    const res = await fetch(`/api/orientation/sessions/${session.id}/lunch-file`, { method: "DELETE" });
+    setLunchBusy(false);
+    if (res.ok) {
+      setLunchFile({ name: null, sizeBytes: null });
+      router.refresh();
+    }
+  }
 
   function openReschedule() {
     const start = toMountainDateTimeParts(session.date);
@@ -180,12 +251,17 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
   }
   const [notice, setNotice] = useState<string | null>(null);
   const [addId, setAddId] = useState("");
-  // Suggested = the obvious ones. "Later" = starts after this session, so they
-  // normally belong to the next orientation but stay one click away. Everyone
-  // else (no start date, already attended, past onboarding) is still listed.
+  // Suggested = people who still need placing ANYWHERE. "Scheduled" = already
+  // booked on another upcoming session, so they are handled and only need to
+  // appear if you are deliberately moving them. "Later" = starts after this
+  // session, so they normally belong to the next orientation but stay one click
+  // away. Everyone else (no start date, already attended, past onboarding) is
+  // still listed. Scheduled is checked FIRST so a person cannot fall into two
+  // groups.
   const suggestedCands = session.candidates.filter((c) => c.suggested);
-  const laterCands = session.candidates.filter((c) => !c.suggested && c.startsAfter);
-  const otherCands = session.candidates.filter((c) => !c.suggested && !c.startsAfter);
+  const scheduledCands = session.candidates.filter((c) => !c.suggested && c.scheduledOn);
+  const laterCands = session.candidates.filter((c) => !c.suggested && !c.scheduledOn && c.startsAfter);
+  const otherCands = session.candidates.filter((c) => !c.suggested && !c.scheduledOn && !c.startsAfter);
   async function addAttendee() {
     if (!addId) return;
     setBusy(true);
@@ -300,6 +376,104 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
               <span className="text-xs text-brand-grey dark:text-slate-400">Ordered by days before. Editing a task here changes only this session until you save it as the default.</span>
             )}
           </div>
+
+          {/* Lunch — sits under the prep checklist because "Order lunch (use
+              headcount)" is a task there, and ticking it recorded nothing. */}
+          <div className="mt-4 border-t border-brand-lea/10 pt-4 dark:border-white/10">
+            <h3 className="text-sm font-semibold text-brand-lea dark:text-slate-100">Lunch</h3>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Ordering from</span>
+                <input
+                  value={lunch.vendor}
+                  onChange={(e) => setLunch({ ...lunch, vendor: e.target.value })}
+                  placeholder="Restaurant or caterer"
+                  className="mt-1 block w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500"
+                />
+              </label>
+              <label className="block">
+                <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Expected arrival (MT)</span>
+                <input
+                  type="time"
+                  value={lunch.arrivalTime}
+                  onChange={(e) => setLunch({ ...lunch, arrivalTime: e.target.value })}
+                  className="mt-1 block w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
+                />
+              </label>
+              <label className="block">
+                <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Contact</span>
+                <input
+                  value={lunch.contactName}
+                  onChange={(e) => setLunch({ ...lunch, contactName: e.target.value })}
+                  placeholder="Who to ask for"
+                  className="mt-1 block w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500"
+                />
+              </label>
+              <label className="block">
+                <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Contact phone</span>
+                <input
+                  value={lunch.contactPhone}
+                  onChange={(e) => setLunch({ ...lunch, contactPhone: e.target.value })}
+                  placeholder="Phone"
+                  className="mt-1 block w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500"
+                />
+              </label>
+            </div>
+            <label className="mt-3 block">
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Notes</span>
+              <textarea
+                value={lunch.notes}
+                onChange={(e) => setLunch({ ...lunch, notes: e.target.value })}
+                rows={2}
+                placeholder="Dietary requirements, where it gets dropped off, anything worth knowing on the day"
+                className="mt-1 block w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500"
+              />
+            </label>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                onClick={saveLunch}
+                disabled={lunchBusy}
+                className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+              >
+                {lunchBusy ? "Saving…" : "Save lunch details"}
+              </button>
+              {lunchFile.name ? (
+                <>
+                  <a
+                    href={`/api/orientation/sessions/${session.id}/lunch-file`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-eden transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-300"
+                  >
+                    {lunchFile.name}
+                  </a>
+                  <button
+                    onClick={removeLunchFile}
+                    disabled={lunchBusy}
+                    className="rounded px-2 py-1.5 text-xs font-semibold text-brand-grey transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:text-slate-400 dark:hover:bg-red-500/10 dark:hover:text-red-300"
+                  >
+                    Remove
+                  </button>
+                </>
+              ) : (
+                <label className="cursor-pointer rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
+                  Upload confirmation
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void uploadLunchFile(f);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              )}
+              {lunchSaved ? <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">{lunchSaved}</span> : null}
+              {lunchErr ? <span className="text-xs font-semibold text-red-700 dark:text-red-300">{lunchErr}</span> : null}
+            </div>
+          </div>
         </section>
 
         {/* Attendees */}
@@ -406,13 +580,18 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
           <div className="mt-3 flex items-center gap-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
             <select value={addId} onChange={(e) => setAddId(e.target.value)} className="flex-1 rounded border border-brand-lea/15 px-2 py-1.5 text-sm text-brand-lea dark:border-white/10 dark:text-slate-100">
               <option value="">Add attendee…</option>
-              {/* Three groups, but nobody is hidden — who attends is a judgment
-                  call, so a late starter or someone with no start date can still
-                  be added on purpose. The start date is shown because that is
-                  what the decision actually turns on. */}
+              {/* Four groups, but nobody is hidden — who attends is a judgment
+                  call, so a late starter, someone with no start date, or someone
+                  already booked elsewhere can still be added on purpose. The
+                  start date is shown because that is what the decision turns on. */}
               {suggestedCands.length > 0 ? (
-                <optgroup label="Suggested · started or starting by this session">
+                <optgroup label="Suggested · not yet scheduled anywhere">
                   {suggestedCands.map((c) => <option key={c.id} value={c.id}>{candidateLabel(c)}</option>)}
+                </optgroup>
+              ) : null}
+              {scheduledCands.length > 0 ? (
+                <optgroup label="Already scheduled · on another session">
+                  {scheduledCands.map((c) => <option key={c.id} value={c.id}>{candidateLabel(c)}</option>)}
                 </optgroup>
               ) : null}
               {laterCands.length > 0 ? (

@@ -395,6 +395,23 @@ model OrientationSession {
   meetLink  String?
   notes     String?
   status    String   @default("UPCOMING") // UPCOMING | COMPLETE | CANCELED
+
+  // LUNCH. "Order lunch (use headcount)" is already a prep task, but ticking it
+  // recorded nothing — so on the day nobody could answer where it was coming
+  // from or when. These are the questions actually asked in the room.
+  lunchVendor      String?   // where it is being ordered from
+  lunchArrivalAt   DateTime? // when it is expected to ARRIVE, not when it was ordered
+  lunchContactName String?
+  lunchContactPhone String?
+  lunchNotes       String?
+  // The order confirmation, stored through the normal file-storage adapter.
+  // Inline fields rather than a table, following Feedback: there is exactly one
+  // confirmation per session, and a join table for a single file earns nothing.
+  lunchFileKey       String?
+  lunchFileName      String?
+  lunchFileMime      String?
+  lunchFileSizeBytes Int?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -491,6 +508,15 @@ model TravelTrip {
 
   notes       String?
   bookedBy    String?
+
+  // Provenance for a trip imported from a tagged Front email, following the
+  // same pattern as Event. The @unique is the idempotency guard: re-tagging or
+  // a webhook retry finds the existing trip instead of creating a second one.
+  sourceConversationId String? @unique
+  sourceEmailUrl       String?
+  /** Set when the import needs a human to look at it before it is trusted. */
+  needsReview          Boolean @default(false)
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 

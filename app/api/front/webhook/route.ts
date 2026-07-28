@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { processConversationById } from "@/lib/paycom/scan";
+import { processTravelConversation } from "@/lib/travel/from-email";
+import { getConversationTagNames } from "@/lib/front";
 
 export const dynamic = "force-dynamic";
 
@@ -19,11 +21,21 @@ export const dynamic = "force-dynamic";
  * FAILS CLOSED: with no FRONT_WEBHOOK_SECRET configured this refuses everything
  * rather than accepting anything, the same rule the cron routes follow.
  *
- * ONE UNCERTAINTY, stated plainly: Front's exact header name and digest encoding
- * are not documented anywhere we hold, so the accepted forms below are a
- * best-effort superset. A rejected call logs the header NAMES it arrived with
- * (never the secret) so the first real delivery tells us the truth and this can
- * be narrowed to the one correct scheme.
+ * THE SCHEME IS NOW KNOWN (checked against Front's developer documentation on
+ * 28 Jul 2026, https://dev.frontapp.com/docs/rule-webhooks): the header is
+ * X-Front-Signature and the value is the BASE64-ENCODED HMAC-SHA1 of the raw
+ * request body, keyed with the API Secret from the Webhooks app — NOT the API
+ * token, and NOT SHA256, which is what this file computed before and which
+ * would have rejected every genuine delivery with a 401.
+ *
+ * The SHA256 forms are still accepted, because tolerating an extra scheme costs
+ * nothing (each still requires the shared secret) and it means a future change
+ * at Front's end degrades to "works" rather than "silently rejects everything".
+ *
+ * TIMING MATTERS HERE. Front waits 5 SECONDS and does not retry a failed
+ * delivery. Reading an email with an LLM takes longer than that, so the work is
+ * handed to after() and the response goes back immediately — a timeout would
+ * otherwise mean the email is simply lost.
  */
 
 /** Header names Front might use for the signature. */
@@ -45,15 +57,19 @@ function extractSignature(headers: Headers): { header: string; value: string } |
  * is timing-safe so this endpoint never leaks the expected value a byte at a time.
  */
 function signatureMatches(rawBody: string, secret: string, presented: string): boolean {
-  const offered = presented.replace(/^sha256=/i, "").trim();
-  const mac = createHmac("sha256", secret).update(rawBody, "utf8").digest();
-  for (const encoding of ["base64", "hex"] as const) {
-    const expected = mac.toString(encoding);
-    if (expected.length !== offered.length) continue;
-    try {
-      if (timingSafeEqual(Buffer.from(expected), Buffer.from(offered))) return true;
-    } catch {
-      /* length mismatch — try the other encoding */
+  const offered = presented.replace(/^sha(1|256)=/i, "").trim();
+  // sha1 first: it is the documented scheme, so the common case matches on the
+  // first comparison.
+  for (const algorithm of ["sha1", "sha256"] as const) {
+    const mac = createHmac(algorithm, secret).update(rawBody, "utf8").digest();
+    for (const encoding of ["base64", "hex"] as const) {
+      const expected = mac.toString(encoding);
+      if (expected.length !== offered.length) continue;
+      try {
+        if (timingSafeEqual(Buffer.from(expected), Buffer.from(offered))) return true;
+      } catch {
+        /* length mismatch — try the next form */
+      }
     }
   }
   return false;
@@ -99,6 +115,35 @@ function findSenderEmail(payload: unknown): string | null {
 
 /** Same sender test the notice handler uses, applied early to skip cheaply. */
 const PAYCOM_SENDER = /@paycomonline\.com$/i;
+
+/**
+ * Tag names that mean "file this as travel". Matched case-insensitively, and a
+ * few spellings are accepted because the tag is created by hand in Front and
+ * "Travel" / "travel" / "Travel Booking" are all plausible.
+ */
+const TRAVEL_TAGS = ["travel", "travel booking", "travel confirmation"];
+
+/** Any tag name in the payload — a tag-triggered rule usually includes it. */
+function findTagNames(payload: unknown): string[] {
+  const found: string[] = [];
+  const seen = new Set<unknown>();
+  const walk = (node: unknown, depth: number): void => {
+    if (!node || typeof node !== "object" || depth > 6 || seen.has(node)) return;
+    seen.add(node);
+    if (Array.isArray(node)) {
+      for (const v of node) walk(v, depth + 1);
+      return;
+    }
+    const obj = node as Record<string, unknown>;
+    // A Front tag object is {id: "tag_...", name: "..."}.
+    if (typeof obj.name === "string" && typeof obj.id === "string" && obj.id.startsWith("tag_")) {
+      found.push(obj.name.trim().toLowerCase());
+    }
+    for (const v of Object.values(obj)) walk(v, depth + 1);
+  };
+  walk(payload, 0);
+  return found;
+}
 
 /**
  * Front's payload shape varies by trigger, so the conversation id is looked for
@@ -160,21 +205,53 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, message: "Body was not JSON" }, { status: 400 });
   }
 
-  // The rule fires on the whole HR Onboarding inbox, so most deliveries are
-  // ordinary mail. When the payload already names a non-Paycom sender, answer
-  // without spending a Front API request. Anything we can't identify falls
-  // through and gets fetched properly — cheap to be wrong in that direction.
-  const sender = findSenderEmail(payload);
-  if (sender && !PAYCOM_SENDER.test(sender.trim())) {
-    return NextResponse.json({ ok: true, ignored: "not a Paycom sender" });
-  }
-
   const conversationId = findConversationId(payload);
   if (!conversationId) {
     // Acknowledge rather than error: Front retries on failure, and retrying a
     // payload we simply have no interest in would achieve nothing.
     console.warn("Front webhook: no conversation id in payload; ignoring.");
     return NextResponse.json({ ok: true, ignored: "no conversation id" });
+  }
+
+  const sender = findSenderEmail(payload);
+
+  // TRAVEL IS CHECKED FIRST, and deliberately BEFORE the Paycom sender filter
+  // below. A travel email comes from a colleague, so the sender test would
+  // discard it — routing on the TAG is the whole point of this branch.
+  //
+  // The payload is trusted only to say "a tag called Travel is involved"; if it
+  // does not, we ask Front what tags the conversation actually carries rather
+  // than guessing from the trigger.
+  const payloadTags = findTagNames(payload);
+  let isTravel = payloadTags.some((t) => TRAVEL_TAGS.includes(t));
+  if (!isTravel && payloadTags.length === 0) {
+    isTravel = (await getConversationTagNames(conversationId)).some((t) => TRAVEL_TAGS.includes(t));
+  }
+
+  if (isTravel) {
+    // Front gives us 5 seconds and never retries. Reading the email with an LLM
+    // takes longer, so acknowledge NOW and do the work after the response —
+    // otherwise a slow read means the travel email is lost with no second
+    // chance. Errors are logged and reported on the Front thread by the
+    // importer itself, since by this point nobody is listening to the HTTP
+    // status any more.
+    after(async () => {
+      try {
+        const result = await processTravelConversation(conversationId, { apply: true, annotate: true });
+        console.log(`Front webhook (travel): ${conversationId} -> ${result.outcome} — ${result.summary}`);
+      } catch (error) {
+        console.error(`Front webhook travel error on ${conversationId}:`, error);
+      }
+    });
+    return NextResponse.json({ ok: true, conversationId, route: "travel", queued: true });
+  }
+
+  // The rule fires on the whole HR Onboarding inbox, so most deliveries are
+  // ordinary mail. When the payload already names a non-Paycom sender, answer
+  // without spending a Front API request. Anything we can't identify falls
+  // through and gets fetched properly — cheap to be wrong in that direction.
+  if (sender && !PAYCOM_SENDER.test(sender.trim())) {
+    return NextResponse.json({ ok: true, ignored: "not a Paycom sender" });
   }
 
   try {

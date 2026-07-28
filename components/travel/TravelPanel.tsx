@@ -24,7 +24,6 @@ import {
   TRAVEL_STATUSES,
   TRAVEL_ITEM_TYPES,
   TRAVEL_REIMBURSEMENTS,
-  travelPurposeLabel,
   travelItemTypeLabel,
   formatUsd
 } from "@/lib/travel/constants";
@@ -333,7 +332,24 @@ function TripCard({
         </button>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">{travelPurposeLabel(trip.purpose)}</span>
+            {/* Editable in place. The purpose was read-only here, so a trip
+                booked as the wrong type could never be corrected once created
+                — updateTrip already accepted and validated a purpose patch,
+                only the control was missing. Styled to read as the heading it
+                is until you hover it, so the row stays calm. */}
+            <select
+              value={trip.purpose}
+              onChange={(e) => saveField("purpose", e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              aria-label="Trip purpose"
+              className="-ml-1 shrink-0 cursor-pointer rounded border border-transparent bg-transparent px-1 py-0.5 text-sm font-semibold text-brand-lea outline-none transition hover:border-brand-lea/20 hover:shadow-glow focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:text-slate-100 dark:hover:border-white/20"
+            >
+              {TRAVEL_PURPOSES.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
             {route && <span className="text-sm text-brand-grey dark:text-slate-400">· {route}</span>}
             {dateSummary && <span className="text-xs text-brand-grey dark:text-slate-400">· {dateSummary}</span>}
             <TravelGapBadge trip={trip} />

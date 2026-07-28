@@ -30,21 +30,98 @@ function parsePhone(text: string): string | null {
 const NAME_LINE = /^[A-Za-z][A-Za-z.'-]+(?:\s+[A-Za-z][A-Za-z.'-]+){1,2}$/;
 const NOT_A_NAME = /(resume|curriculum|vitae|cv|profile|summary|objective|experience|references|contact)/i;
 
+/**
+ * The name at the head of a line that then runs on into prose.
+ *
+ * The lookahead also accepts an ALL-CAPS word, because a common layout is the
+ * name followed straight into a section heading — "Yaakov Nissenbaum EDUCATION
+ * VOLUNTEER FLIGHT PROFILE". NOT_A_NAME still guards the captured part, so a
+ * line that BEGINS with a heading ("FLIGHT EXPERIENCE KILEY LYNCH...") is
+ * rejected rather than read as a person called Flight Experience.
+ */
+const NAME_HEAD = /^([A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){1,2})\s+(?=[A-Z][a-z]|[A-Z]{3,}|\d|\()/;
+
+/**
+ * Words that open resume prose and are capitalised, so they look like a surname
+ * to any pattern. "Matthew Johnson Active Certified Flight Instructor..." would
+ * otherwise be filed under the surname "Active".
+ */
+const PROSE_OPENERS =
+  /^(active|experienced|certified|commercial|airline|professional|dedicated|motivated|highly|seeking|results|accomplished|skilled|current|total|flight|pilot|captain|first|senior|licensed|qualified|safety)$/i;
+
+/**
+ * Section headings that follow the name directly on the same line. Allowing an
+ * ALL-CAPS word after the name (so "Yaakov Nissenbaum EDUCATION" is found at
+ * all) means the heading itself must be trimmed back off, or it becomes the
+ * surname — which is worse than not matching.
+ */
+const SECTION_HEADINGS =
+  /^(education|experience|employment|skills?|certifications?|qualifications?|objective|summary|profile|training|licenses?|ratings?|volunteer|awards?|references?|contact|military|aviation|career|highlights?)$/i;
+
+/** Trim trailing prose words and section headings, never below two tokens. */
+function trimProse(name: string): string {
+  const parts = name.split(/\s+/);
+  while (
+    parts.length > 2 &&
+    (PROSE_OPENERS.test(parts[parts.length - 1]) || SECTION_HEADINGS.test(parts[parts.length - 1]))
+  ) {
+    parts.pop();
+  }
+  return parts.join(" ");
+}
+
 function nameFromText(text: string): string | null {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(0, 8);
   for (const line of lines) {
     if (NAME_LINE.test(line) && !NOT_A_NAME.test(line)) return line;
   }
+  // A resume whose header is not on its own line: "Matthew Johnson Active
+  // Certified Flight Instructor with a strong focus on safety...". The strict
+  // whole-line test above cannot match that, and every Paycom import fell
+  // through to the filename because of it.
+  for (const line of lines) {
+    const head = NAME_HEAD.exec(line);
+    if (head && !NOT_A_NAME.test(head[1])) {
+      const trimmed = trimProse(head[1]);
+      if (trimmed.split(/\s+/).length >= 2) return trimmed;
+    }
+  }
   return null;
 }
 
+/**
+ * A filename is the LAST resort for a name, and the shapes that arrive here are
+ * hostile. A Paycom export sends "(334021)-Haydn Paffi Resume.docx (1) (1).pdf.pdf":
+ * a person-id prefix, duplicate markers, and a doubled extension. Stripping only
+ * the final extension left a stray "pdf" that became somebody's surname, and the
+ * id prefix became their first name — 11 candidates imported as "(333909) pdf".
+ */
 function nameFromFilename(filename: string): string {
   return filename
-    .replace(/\.[^.]+$/, "")
+    .replace(/^\(\d{4,8}\)[-_\s]*/, "")            // Paycom person-id prefix
+    .replace(/(\.[A-Za-z0-9]{2,5})+$/, "")         // ".pdf.pdf", ".docx (1).pdf"
+    .replace(/\(\d+\)/g, " ")                      // "(1)" duplicate markers
+    .replace(/'s\b/gi, "")                         // "Jared Davis's Resume"
     .replace(/[_\-.]+/g, " ")
-    .replace(/\b(resume|cv|curriculum vitae|application|app|pilot|final|updated|copy|\d{4})\b/gi, " ")
+    .replace(/\b(resume|resumé|cv|curriculum vitae|application|app|pilot|final|current|updated|copy|new|pdf|docx?)\b/gi, " ")
+    .replace(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b/gi, " ")
+    .replace(/\(\s*\)/g, " ")                      // parens emptied by the above
+    .replace(/\d+/g, " ")                          // any leftover digits
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/**
+ * Reject a "name" that is really a fragment of a filename. Without this the
+ * import happily stores "(333909) pdf" as a person and it looks like real data.
+ */
+function looksLikeAName(value: string): boolean {
+  const v = value.trim();
+  if (v.length < 3) return false;
+  if (/^\(?\d+\)?$/.test(v)) return false;                       // bare id
+  if (/\d{3,}/.test(v)) return false;                            // any long number
+  if (/^(pdf|docx?|resume|cv|file|document|scan)$/i.test(v)) return false;
+  return /[A-Za-z]{2,}/.test(v);
 }
 
 // POST /api/resume-intake — multipart: files[] (+ optional jobId).
@@ -101,9 +178,17 @@ export async function POST(request: Request) {
 
       const email = parseEmail(text);
       const phone = parsePhone(text);
-      const rawName = nameFromText(text) || nameFromFilename(originalFilename);
+      // Both sources are filtered through looksLikeAName, so a filename fragment
+      // can never become a person. "Unnamed candidate" is a far better outcome
+      // than "(333909) pdf" — it is obviously wrong, so it gets fixed.
+      const fromText = nameFromText(text);
+      const fromFile = nameFromFilename(originalFilename);
+      const rawName = [fromText, fromFile].find((n) => n && looksLikeAName(n)) ?? "";
       const split = splitCandidateName(rawName);
-      const displayName = split.displayName && split.displayName !== "Unnamed candidate" ? split.displayName : nameFromFilename(originalFilename) || "Unnamed candidate";
+      const displayName =
+        split.displayName && split.displayName !== "Unnamed candidate" && looksLikeAName(split.displayName)
+          ? split.displayName
+          : "Unnamed candidate";
 
       // Create or reuse the candidate (dedupe by email/phone).
       const existing =

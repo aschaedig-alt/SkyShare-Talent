@@ -22,11 +22,24 @@ function parsePhone(text: string): string | null {
   const m = text.match(/(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
   return m ? normalizePhone(m[0]) : null;
 }
+/**
+ * Used here to MATCH an existing candidate, so a bad result costs a missed
+ * match rather than bad data — but a Paycom export names files
+ * "(334021)-Haydn Paffi Resume.docx (1) (1).pdf.pdf", and leaving the id prefix
+ * and the doubled extension in place means the name never matches anybody.
+ * Kept in step with the same function in resume-intake.
+ */
 function nameFromFilename(filename: string): string {
   return filename
-    .replace(/\.[^.]+$/, "")
+    .replace(/^\(\d{4,8}\)[-_\s]*/, "")            // Paycom person-id prefix
+    .replace(/(\.[A-Za-z0-9]{2,5})+$/, "")         // ".pdf.pdf", ".docx (1).pdf"
+    .replace(/\(\d+\)/g, " ")                      // "(1)" duplicate markers
+    .replace(/'s\b/gi, "")                         // "Jared Davis's Resume"
     .replace(/[_\-.]+/g, " ")
-    .replace(/\b(resume|cv|curriculum vitae|application|app|pilot|cover letter|letter|final|updated|copy|signed|\d{4})\b/gi, " ")
+    .replace(/\b(resume|resumé|cv|curriculum vitae|application|app|pilot|cover letter|letter|final|current|updated|copy|signed|new|pdf|docx?)\b/gi, " ")
+    .replace(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b/gi, " ")
+    .replace(/\(\s*\)/g, " ")                      // parens emptied by the above
+    .replace(/\d+/g, " ")                          // any leftover digits
     .replace(/\s+/g, " ")
     .trim();
 }

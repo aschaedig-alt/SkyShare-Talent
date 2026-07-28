@@ -116,6 +116,29 @@ export function CandidateProfileWorkspace({
   const [candidate, setCandidate] = useState<CandidateProfileData>(initialCandidate);
   const [activeTab, setActiveTab] = useState<ProfileTab>("documents");
   const [tagsOpen, setTagsOpen] = useState(false);
+  // Two-click removal rather than a modal: the first click arms the pill, the
+  // second removes it, and blurring cancels — the same pattern the trip delete
+  // button uses. It matters here because there is no way to ADD a tag back from
+  // this screen, so a stray click would be a one-way door.
+  const [armedTag, setArmedTag] = useState<string | null>(null);
+  const [removingTag, setRemovingTag] = useState<string | null>(null);
+
+  async function removeTag(tag: string) {
+    setRemovingTag(tag);
+    try {
+      const res = await fetch(`/api/candidates/${candidate.id}/tags`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: tag })
+      });
+      if (res.ok) {
+        setCandidate({ ...candidate, tags: candidate.tags.filter((t) => t !== tag) });
+      }
+    } finally {
+      setRemovingTag(null);
+      setArmedTag(null);
+    }
+  }
   const [openApp, setOpenApp] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -221,14 +244,38 @@ export function CandidateProfileWorkspace({
             </p>
             {candidate.tags.length > 0 && (
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                {(tagsOpen ? candidate.tags : candidate.tags.slice(0, 4)).map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded border border-brand-sweet/60 bg-brand-sweet/18 px-2.5 py-1 text-[11px] font-semibold text-brand-lea dark:text-slate-100"
-                  >
-                    {tag}
-                  </span>
-                ))}
+                {(tagsOpen ? candidate.tags : candidate.tags.slice(0, 4)).map((tag) => {
+                  const armed = armedTag === tag;
+                  return (
+                    <span
+                      key={tag}
+                      className={clsx(
+                        "inline-flex items-center gap-1.5 rounded border px-2.5 py-1 text-[11px] font-semibold transition",
+                        armed
+                          ? "border-red-400 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300"
+                          : "border-brand-sweet/60 bg-brand-sweet/18 text-brand-lea dark:text-slate-100"
+                      )}
+                    >
+                      {armed ? `Remove "${tag}"?` : tag}
+                      {canEdit && (
+                        <button
+                          onClick={() => (armed ? removeTag(tag) : setArmedTag(tag))}
+                          onBlur={() => setArmedTag((current) => (current === tag ? null : current))}
+                          disabled={removingTag === tag}
+                          aria-label={armed ? `Confirm removing the tag ${tag}` : `Remove the tag ${tag}`}
+                          className={clsx(
+                            "-mr-1 rounded px-1 leading-none transition disabled:opacity-40",
+                            armed
+                              ? "text-red-700 hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-500/20"
+                              : "text-brand-eden hover:bg-brand-lea/10 hover:text-brand-lea dark:text-slate-300 dark:hover:bg-white/10"
+                          )}
+                        >
+                          {armed ? "✓" : "×"}
+                        </button>
+                      )}
+                    </span>
+                  );
+                })}
                 {candidate.tags.length > 4 && (
                   <button
                     onClick={() => setTagsOpen((v) => !v)}

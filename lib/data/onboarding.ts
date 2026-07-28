@@ -880,7 +880,11 @@ export async function getPostOnboardHires(): Promise<PostOnboardHire[]> {
       employmentStatus: true,
       tasks: { where: { group: MAINTENANCE_GROUP }, select: { id: true, key: true, status: true } }
     },
-    orderBy: [{ name: "asc" }]
+    // Newest start date first: this list is worked from the most recent arrivals
+    // backwards, and alphabetical put whoever happened to be called Aaron at the
+    // top forever. "nulls: last" matters — a hire with no start date would
+    // otherwise sort above everyone on a descending sort and lead the page.
+    orderBy: [{ startDate: { sort: "desc", nulls: "last" } }, { name: "asc" }]
   });
 
   return hires.map((h) => {

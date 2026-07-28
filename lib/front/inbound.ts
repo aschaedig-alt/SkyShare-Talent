@@ -49,6 +49,28 @@ export async function getMessages(
   return results;
 }
 
+/**
+ * The tag NAMES currently on a conversation, lower-cased.
+ *
+ * The webhook needs this because a Front rule's payload does not reliably say
+ * WHICH tag fired it, and routing an email to the wrong handler is worse than
+ * one extra API call. Returns an empty list rather than throwing: a thread we
+ * cannot read the tags of is one we should skip, not one that should 500 and
+ * make Front retry forever.
+ */
+export async function getConversationTagNames(conversationId: string): Promise<string[]> {
+  try {
+    const conv = await frontFetch<{ tags?: Array<{ name?: string }> }>(
+      `/conversations/${conversationId}`
+    );
+    return (conv.tags ?? [])
+      .map((t) => (t.name ?? "").trim().toLowerCase())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 /** Tag a thread as processed/routed so it isn't picked up again. */
 export async function addTags(
   conversationId: string,
