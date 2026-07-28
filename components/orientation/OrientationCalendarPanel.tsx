@@ -110,10 +110,14 @@ export function OrientationCalendarPanel({ sessionId }: { sessionId: string }) {
         if (data.rejected?.length) bits.push(`Not valid addresses: ${data.rejected.join(", ")}.`);
         setResult(bits.join(" "));
       }
-      await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "That didn't work.");
     } finally {
+      // Reload on FAILURE too. A rate-limited add leaves the panel showing a guest
+      // count from before the attempt, which reads as "it half worked" when the
+      // truth is usually that nothing changed. Re-reading makes the number honest
+      // either way.
+      await load();
       setBusy(false);
     }
   }

@@ -261,6 +261,97 @@ export async function listHostBusyEvents(hostId: string, timeMin: Date, timeMax:
 // about which identity is calling, and it is what let the app skip domain-wide
 // delegation (and the Workspace admin) entirely.
 
+// --- surviving Google's rate limiting ---------------------------------------
+//
+// Google returns 403 rateLimitExceeded as a TRANSIENT signal and expects the
+// caller to retry with exponential backoff. Without that, one throttle fails the
+// whole action — which is what happened the first time a real user added guests:
+// "Rate Limit Exceeded", nothing added, no way to tell why.
+//
+// Worth being clear about what does NOT cause it, because the instinct is to blame
+// the guest count: adding N guests is always TWO calls (one get, one patch with the
+// whole merged list), so 8 guests and 20 guests are identical work. What triggers
+// it is the RATE of writes to the same event — create, then add, then add again in
+// quick succession, with a re-read after each.
+
+type GoogleErrorInfo = { code: number | null; reason: string | null; message: string };
+
+/** Pull the useful bits out of a Gaxios error. The shape varies by failure mode,
+    so every access is defensive — a parse failure here must not mask the error. */
+function googleErrorInfo(error: unknown): GoogleErrorInfo {
+  const e = error as {
+    code?: number | string;
+    status?: number;
+    message?: string;
+    response?: { status?: number; data?: { error?: { errors?: { reason?: string }[]; message?: string } } };
+  };
+  const rawCode = e?.response?.status ?? e?.status ?? e?.code;
+  const code = typeof rawCode === "number" ? rawCode : Number.isFinite(Number(rawCode)) ? Number(rawCode) : null;
+  const reason = e?.response?.data?.error?.errors?.[0]?.reason ?? null;
+  const message = e?.response?.data?.error?.message ?? e?.message ?? "Google Calendar request failed.";
+  return { code, reason, message };
+}
+
+const RETRYABLE_REASONS = new Set([
+  "rateLimitExceeded",
+  "userRateLimitExceeded",
+  "quotaExceeded",
+  "backendError",
+  "internalError"
+]);
+
+function isRetryable(info: GoogleErrorInfo): boolean {
+  if (info.code === 429) return true;
+  if (info.code !== null && info.code >= 500) return true;
+  // 403 is usually permanent (no permission) — retry ONLY when Google names a rate
+  // limit as the reason, or we would sit in a loop against a real access problem.
+  if (info.code === 403 && info.reason && RETRYABLE_REASONS.has(info.reason)) return true;
+  // Some throttles arrive with no reason but an unmistakable message.
+  if (info.code === 403 && /rate limit/i.test(info.message)) return true;
+  return false;
+}
+
+/**
+ * Run a Google Calendar call, retrying transient throttles with exponential
+ * backoff and jitter. Jitter matters: two people clicking at once would otherwise
+ * retry in lockstep and throttle each other again.
+ *
+ * On final failure the thrown message says what actually happened and what to do,
+ * because "Rate Limit Exceeded" on its own is not something a user can act on.
+ */
+export async function withGoogleRetry<T>(what: string, fn: () => Promise<T>, attempts = 5): Promise<T> {
+  let lastInfo: GoogleErrorInfo | null = null;
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      const info = googleErrorInfo(error);
+      lastInfo = info;
+      if (!isRetryable(info) || attempt === attempts - 1) {
+        break;
+      }
+      // 1s, 2s, 4s, 8s, plus up to a second of jitter.
+      const wait = Math.min(8000, 2 ** attempt * 1000) + Math.floor(Math.random() * 1000);
+      await new Promise((r) => setTimeout(r, wait));
+    }
+  }
+
+  const info = lastInfo ?? { code: null, reason: null, message: "Unknown error." };
+  const thrown = isRetryable(info)
+    ? new Error(
+        `Google is rate-limiting the calendar right now, and kept doing so across ${attempts} attempts with backoff. Nothing was changed — wait a minute and try again. (${what}${info.reason ? `, ${info.reason}` : ""})`
+      )
+    : new Error(`${info.message}${info.reason ? ` (${info.reason})` : ""}${info.code ? ` [HTTP ${info.code}]` : ""}`);
+
+  // Keep the status on the error. Callers branch on it — a 404 means the event was
+  // deleted in Google, which is a different outcome from "the call failed", and
+  // wrapping the message would otherwise have hidden that.
+  (thrown as Error & { code?: number | null; reason?: string | null }).code = info.code;
+  (thrown as Error & { code?: number | null; reason?: string | null }).reason = info.reason;
+  throw thrown;
+}
+
 export type InviteEventInput = {
   summary: string;
   description: string;
@@ -322,12 +413,14 @@ export async function createInviteEvent(
     };
   }
 
-  const res = await client.events.insert({
-    calendarId,
-    sendUpdates,
-    conferenceDataVersion,
-    requestBody
-  });
+  const res = await withGoogleRetry("creating the event", () =>
+    client.events.insert({
+      calendarId,
+      sendUpdates,
+      conferenceDataVersion,
+      requestBody
+    })
+  );
 
   if (!res.data.id) throw new Error("Google created no event id.");
   return {
@@ -352,7 +445,7 @@ export async function addInviteAttendees(
   emails: string[],
   sendUpdates: "all" | "externalOnly" | "none"
 ): Promise<{ added: string[]; alreadyThere: string[]; total: number }> {
-  const existing = await client.events.get({ calendarId, eventId });
+  const existing = await withGoogleRetry("reading the event", () => client.events.get({ calendarId, eventId }));
   const current = existing.data.attendees ?? [];
   const have = new Set(current.map((a) => (a.email ?? "").toLowerCase()).filter(Boolean));
 
@@ -373,12 +466,16 @@ export async function addInviteAttendees(
     return { added, alreadyThere, total: current.length };
   }
 
-  const res = await client.events.patch({
-    calendarId,
-    eventId,
-    sendUpdates,
-    requestBody: { attendees: [...current, ...added.map((email) => ({ email }))] }
-  });
+  // ONE patch carrying the whole merged list, however many guests. This is why
+  // guest count does not affect the rate limit — 8 and 20 are the same single call.
+  const res = await withGoogleRetry(`adding ${added.length} guests`, () =>
+    client.events.patch({
+      calendarId,
+      eventId,
+      sendUpdates,
+      requestBody: { attendees: [...current, ...added.map((email) => ({ email }))] }
+    })
+  );
 
   return { added, alreadyThere, total: res.data.attendees?.length ?? current.length + added.length };
 }
@@ -391,7 +488,7 @@ export async function getInviteEvent(
   eventId: string
 ): Promise<{ summary: string; htmlLink: string | null; hangoutLink: string | null; attendees: string[] } | null> {
   try {
-    const res = await client.events.get({ calendarId, eventId });
+    const res = await withGoogleRetry("reading the event", () => client.events.get({ calendarId, eventId }));
     if (res.data.status === "cancelled") return null;
     return {
       summary: res.data.summary ?? "",
