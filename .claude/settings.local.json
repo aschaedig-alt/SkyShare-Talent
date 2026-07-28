@@ -21,7 +21,14 @@
       "Bash(timeout 60 npx --yes vercel whoami)",
       "mcp__Claude_Preview__preview_start",
       "Bash(git add *)",
-      "Bash(git commit -m 'Roadmap: mark shipped work done, add recent infra items *)"
+      "Bash(git commit -m 'Roadmap: mark shipped work done, add recent infra items *)",
+      "PowerShell(git -C C:\\\\Users\\\\Recruiter\\\\Projects\\\\skyshare-talent-ops log --since=2026-07-21 --date=short --pretty=format:\"%h %ad %s\")",
+      "PowerShell(npx tsx \"C:\\\\Users\\\\RECRUI~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Recruiter-Projects-skyshare-talent-ops\\\\dff469a5-fdc3-48a7-a688-74fd7b353ac9\\\\scratchpad\\\\supervisor-gaps.ts\")",
+      "Bash(cp \"C:/Users/RECRUI~1/AppData/Local/Temp/claude/C--Users-Recruiter-Projects-skyshare-talent-ops/dff469a5-fdc3-48a7-a688-74fd7b353ac9/scratchpad/supervisor-gaps.ts\" \"C:/Users/Recruiter/Projects/skyshare-talent-ops/tmp-supervisor-gaps.ts\" && echo copied)",
+      "PowerShell(npx tsx \"C:\\\\Users\\\\Recruiter\\\\Projects\\\\skyshare-talent-ops\\\\tmp-supervisor-gaps.ts\")",
+      "Bash(grep -c '`' lib/roadmap/roadmap.ts)",
+      "Bash(grep -n '`' lib/roadmap/roadmap.ts)",
+      "PowerShell($env:NODE_OPTIONS=\"--max-old-space-size=8192\"; npx tsc --noEmit -p tsconfig.json)"
     ]
   }
 }
