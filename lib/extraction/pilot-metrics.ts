@@ -27,8 +27,22 @@ export const METRIC_DEFS: MetricDef[] = [
   { key: "jet", label: "Jet", kind: "hours", unit: "hrs" },
   { key: "jet_pic", label: "Jet PIC", kind: "hours", unit: "hrs" },
   { key: "night", label: "Night", kind: "hours", unit: "hrs" },
-  { key: "instrument", label: "Instrument", kind: "hours", unit: "hrs" },
+  { key: "instrument", label: "Total Instrument", kind: "hours", unit: "hrs" },
+  { key: "instrument_actual", label: "Actual Instrument", kind: "hours", unit: "hrs" },
+  { key: "instrument_simulated", label: "Simulated Instrument", kind: "hours", unit: "hrs" },
   { key: "cross_country", label: "Cross-Country", kind: "hours", unit: "hrs" },
+  { key: "single_pilot", label: "Single Pilot", kind: "hours", unit: "hrs" },
+  // Currency. recency_12mo already drives the Recency scoring category but has
+  // never had anything filling it; hours_in_type_applying is the same idea
+  // scoped to the airframe the person applied for.
+  { key: "recency_12mo", label: "Hours (last 12 mo)", kind: "hours", unit: "hrs" },
+  { key: "hours_in_type_applying", label: "Hours in Aircraft Applied For", kind: "hours", unit: "hrs" },
+  // Aircraft-specific. These are NOT extracted as plain scalars — see
+  // pilot-metrics-llm.ts, which pulls a list of (aircraft, hours) pairs and
+  // writes one row per type as "time_in_type:<AIRCRAFT>". The bare keys below
+  // hold the largest single entry so there is something to show in a column.
+  { key: "time_in_type", label: "Time in Type", kind: "hours", unit: "hrs" },
+  { key: "pic_time_in_type", label: "PIC Time in Type", kind: "hours", unit: "hrs" },
   { key: "type_ratings", label: "Type Ratings", kind: "list" },
   { key: "certificates", label: "Certificates", kind: "list" },
   { key: "medical_class", label: "Medical", kind: "text" }

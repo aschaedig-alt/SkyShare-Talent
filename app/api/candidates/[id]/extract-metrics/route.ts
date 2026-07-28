@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
-import { extractPilotMetrics } from "@/lib/extraction/pilot-metrics";
+import { extractPilotMetrics, METRIC_DEFS } from "@/lib/extraction/pilot-metrics";
+import { extractPilotMetricsLlm, dropImpossible } from "@/lib/extraction/pilot-metrics-llm";
+import { normalizeAircraft, timeInTypeKey } from "@/lib/fleet/aircraft-normalize";
+
+const LLM_METRIC_LABEL = new Map(METRIC_DEFS.map((d) => [d.key, d.label]));
 import { extractFileText } from "@/lib/files/pdf-text";
 import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
 import { extractPaycomRegex, extractPaycomApplication, mergePaycomExtract, looksLikePaycomApplication, isPaycomExtractConfigured } from "@/lib/extraction/paycom-application";
@@ -49,11 +53,99 @@ export async function POST(_request: Request, context: RouteContext) {
 
     // Walk files in order; first file to yield a given metric is its source.
     const found = new Map<string, { label: string; valueNumber?: number; valueText?: string; unit?: string; snippet: string; sourceFileId: string }>();
-    for (const file of files) {
-      const metrics = extractPilotMetrics(file.extractedText ?? "");
-      for (const m of metrics) {
-        if (!found.has(m.key)) {
-          found.set(m.key, { ...m, sourceFileId: file.id });
+
+    // Read the documents with the LLM extractor. The old regex could not tell
+    // an hour count from a number that merely sat near the right word — it read
+    // "PREVIOUS PART 91 EXPERIENCE?" as 91 instrument hours for a third of
+    // everyone it touched, and aircraft designators (CE-525, MU-300) as PIC
+    // time. It stays below purely as a fallback when no API key is configured.
+    const llm = await extractPilotMetricsLlm(
+      files.map((f) => f.extractedText ?? "").join("\n\n")
+    );
+    const firstFileId = files[0]?.id ?? "";
+
+    if (llm.metrics) {
+      const { metrics } = dropImpossible(llm.metrics);
+      for (const h of metrics.hours) {
+        found.set(h.key, {
+          label: LLM_METRIC_LABEL.get(h.key) ?? h.key,
+          valueNumber: h.value,
+          unit: "hrs",
+          snippet: h.evidence,
+          sourceFileId: firstFileId
+        });
+      }
+      // One row per aircraft, plus the largest as the bare key so there is
+      // something to show in a single column.
+      const ranked = [...metrics.time_in_type].sort((a, b) => b.hours - a.hours);
+      for (const t of ranked) {
+        // Canonicalise the airframe: scoring looks time-in-type up BY AIRCRAFT,
+        // so "PC12" filed against a "Pilatus PC-12 NG" requirement would miss.
+        const name = normalizeAircraft(t.aircraft).canonical;
+        found.set(timeInTypeKey(t.aircraft), {
+          label: `Time in Type — ${name}`,
+          valueNumber: t.hours,
+          unit: "hrs",
+          snippet: t.evidence,
+          sourceFileId: firstFileId
+        });
+        if (t.pic_hours > 0) {
+          found.set(timeInTypeKey(t.aircraft, true), {
+            label: `PIC Time in Type — ${name}`,
+            valueNumber: t.pic_hours,
+            unit: "hrs",
+            snippet: t.evidence,
+            sourceFileId: firstFileId
+          });
+        }
+      }
+      if (ranked[0]) {
+        const top = normalizeAircraft(ranked[0].aircraft).canonical;
+        found.set("time_in_type", {
+          label: `Time in Type — ${top}`,
+          valueNumber: ranked[0].hours,
+          valueText: top,
+          unit: "hrs",
+          snippet: ranked[0].evidence,
+          sourceFileId: firstFileId
+        });
+        const bestPic = ranked.find((t) => t.pic_hours > 0);
+        if (bestPic) {
+          const pic = normalizeAircraft(bestPic.aircraft).canonical;
+          found.set("pic_time_in_type", {
+            label: `PIC Time in Type — ${pic}`,
+            valueNumber: bestPic.pic_hours,
+            valueText: pic,
+            unit: "hrs",
+            snippet: bestPic.evidence,
+            sourceFileId: firstFileId
+          });
+        }
+      }
+      for (const key of ["type_ratings", "certificates"] as const) {
+        const list = metrics[key];
+        if (list.length) {
+          found.set(key, {
+            label: key === "type_ratings" ? "Type Ratings" : "Certificates",
+            valueText: list.join(", "),
+            snippet: "",
+            sourceFileId: firstFileId
+          });
+        }
+      }
+      if (metrics.medical_class) {
+        found.set("medical_class", {
+          label: "Medical",
+          valueText: metrics.medical_class,
+          snippet: "",
+          sourceFileId: firstFileId
+        });
+      }
+    } else {
+      // No API key, or the call failed — fall back rather than returning nothing.
+      for (const file of files) {
+        for (const m of extractPilotMetrics(file.extractedText ?? "")) {
+          if (!found.has(m.key)) found.set(m.key, { ...m, sourceFileId: file.id });
         }
       }
     }
