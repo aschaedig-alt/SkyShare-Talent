@@ -3,11 +3,13 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Mail, Plane, Truck } from "lucide-react";
 import { Badge, Button, Input } from "@/components/ui";
 import {
+  AIRCRAFT_PLANS,
   ATTENDEE_STATUSES,
   EVENT_STATUSES,
+  aircraftPlanLabel,
   eventStatusLabel,
   eventTypeLabel
 } from "@/lib/events/constants";
@@ -38,7 +40,22 @@ function statusTone(status: string) {
   if (status === "CONFIRMED") return "success" as const;
   if (status === "COMPLETE") return "info" as const;
   if (status === "CANCELED") return "danger" as const;
+  if (status === "PENDING") return "warning" as const;
   return "neutral" as const;
+}
+
+/**
+ * Departments arrive as "|"-separated compounds on the real roster — "FlightOps
+ * | Managed Client", "Sales | Marketing". Splitting them means picking
+ * "FlightOps" catches the managed-client pilots too, instead of hiding fifteen
+ * people behind a label that looks like a different department.
+ */
+function departmentsOf(value: string | null): string[] {
+  if (!value) return [];
+  return value
+    .split("|")
+    .map((p) => p.trim())
+    .filter(Boolean);
 }
 
 export function EventDetailWorkspace({ event }: { event: EventDetail }) {
@@ -51,6 +68,32 @@ export function EventDetailWorkspace({ event }: { event: EventDetail }) {
 
   const [personId, setPersonId] = useState("");
   const [personRole, setPersonRole] = useState("");
+  const [deptFilter, setDeptFilter] = useState("");
+  const [personSearch, setPersonSearch] = useState("");
+
+  const [aircraftPlan, setAircraftPlan] = useState(event.aircraftPlan);
+  const [aircraftTail, setAircraftTail] = useState(event.aircraftTail ?? "");
+  const [aircraftNotes, setAircraftNotes] = useState(event.aircraftNotes ?? "");
+
+  /** Department options built from the roster we actually have, with counts. */
+  const departments = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const person of event.roster) {
+      for (const dept of departmentsOf(person.department)) {
+        counts.set(dept, (counts.get(dept) ?? 0) + 1);
+      }
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }, [event.roster]);
+
+  const filteredRoster = useMemo(() => {
+    const needle = personSearch.trim().toLowerCase();
+    return event.roster.filter((person) => {
+      if (deptFilter && !departmentsOf(person.department).includes(deptFilter)) return false;
+      if (!needle) return true;
+      return `${person.name} ${person.position ?? ""}`.toLowerCase().includes(needle);
+    });
+  }, [event.roster, deptFilter, personSearch]);
   const [supplyId, setSupplyId] = useState("");
   const [supplyLabel, setSupplyLabel] = useState("");
   const [supplyQty, setSupplyQty] = useState("1");
@@ -76,6 +119,27 @@ export function EventDetailWorkspace({ event }: { event: EventDetail }) {
     setStatus(next);
     await send(`/api/events/${event.id}`, { status: next });
     router.refresh();
+  }
+
+  /**
+   * The aircraft decision. Saved on change rather than behind a Save button —
+   * it is three fields on a page where everything else already saves itself,
+   * and a decision that silently failed to stick is the worst outcome here.
+   */
+  async function saveAircraft(next: { plan?: string; tail?: string; notes?: string }) {
+    const plan = next.plan ?? aircraftPlan;
+    const tail = next.tail ?? aircraftTail;
+    const notes = next.notes ?? aircraftNotes;
+    if (next.plan !== undefined) setAircraftPlan(next.plan);
+    if (next.tail !== undefined) setAircraftTail(next.tail);
+    if (next.notes !== undefined) setAircraftNotes(next.notes);
+    const ok = await send(`/api/events/${event.id}`, {
+      aircraftPlan: plan,
+      aircraftTail: tail,
+      aircraftNotes: notes
+    });
+    if (!ok) setError("Could not save the aircraft plan.");
+    else router.refresh();
   }
 
   async function addPerson() {
@@ -303,37 +367,201 @@ export function EventDetailWorkspace({ event }: { event: EventDetail }) {
             </table>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
-            <label className="min-w-[10rem] flex-1">
-              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
-                Add from roster
-              </span>
-              <select className={`mt-1 ${FIELD}`} value={personId} onChange={(e) => setPersonId(e.target.value)}>
-                <option value="">Pick someone…</option>
-                {event.roster.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                    {p.position ? ` — ${p.position}` : ""}
+          {/* Invite employees. The roster is the whole company, so it is filtered
+              by department and searchable rather than being one long dropdown. */}
+          <div className="mt-3 space-y-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
+              Invite an employee
+            </span>
+
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => setDeptFilter("")}
+                className={`rounded px-2 py-1 text-[11px] font-semibold transition ${
+                  deptFilter === ""
+                    ? "bg-brand-lea text-white dark:bg-brand-gold dark:text-brand-lea"
+                    : "bg-brand-cloudDancer/60 text-brand-lea hover:shadow-glow dark:bg-white/10 dark:text-slate-200"
+                }`}
+              >
+                Everyone ({event.roster.length})
+              </button>
+              {departments.map(([dept, count]) => (
+                <button
+                  key={dept}
+                  onClick={() => setDeptFilter(dept === deptFilter ? "" : dept)}
+                  className={`rounded px-2 py-1 text-[11px] font-semibold transition ${
+                    deptFilter === dept
+                      ? "bg-brand-lea text-white dark:bg-brand-gold dark:text-brand-lea"
+                      : "bg-brand-cloudDancer/60 text-brand-lea hover:shadow-glow dark:bg-white/10 dark:text-slate-200"
+                  }`}
+                >
+                  {dept} ({count})
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="min-w-[9rem] flex-1">
+                <span className="sr-only">Search people</span>
+                <Input
+                  value={personSearch}
+                  onChange={(e) => setPersonSearch(e.target.value)}
+                  placeholder="Search by name or job title…"
+                />
+              </label>
+              <label className="min-w-[12rem] flex-[2]">
+                <span className="sr-only">Pick someone</span>
+                <select className={FIELD} value={personId} onChange={(e) => setPersonId(e.target.value)}>
+                  <option value="">
+                    {filteredRoster.length === 0 ? "Nobody matches" : `Pick someone… (${filteredRoster.length})`}
                   </option>
-                ))}
-              </select>
-            </label>
-            <label className="min-w-[8rem] flex-1">
+                  {filteredRoster.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                      {p.position ? ` — ${p.position}` : ""}
+                      {p.location ? ` · ${p.location}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="min-w-[8rem] flex-1">
+                <span className="sr-only">Role at the event</span>
+                <Input
+                  value={personRole}
+                  onChange={(e) => setPersonRole(e.target.value)}
+                  placeholder="Role — e.g. Booth lead"
+                />
+              </label>
+              <Button size="sm" onClick={addPerson} disabled={busy || !personId}>
+                Invite
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* Are we bringing an aircraft? */}
+        <section className={CARD}>
+          <h2 className={`${H2} flex items-center gap-2`}>
+            <Plane className="h-4 w-4" /> Are we bringing an aircraft?
+          </h2>
+          <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
+            Tracked separately from the event itself — a confirmed event can still have an undecided aircraft, and it
+            needs the most lead time: the organizer has to be told, and the FBO needs ramp space, air-stairs and a GPU.
+          </p>
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {AIRCRAFT_PLANS.map((plan) => (
+              <button
+                key={plan.value}
+                onClick={() => saveAircraft({ plan: plan.value })}
+                className={`rounded px-3 py-1.5 text-xs font-semibold transition ${
+                  aircraftPlan === plan.value
+                    ? "bg-brand-lea text-white dark:bg-brand-gold dark:text-brand-lea"
+                    : "bg-brand-cloudDancer/60 text-brand-lea hover:shadow-glow dark:bg-white/10 dark:text-slate-200"
+                }`}
+              >
+                {plan.label}
+              </button>
+            ))}
+          </div>
+
+          {aircraftPlan === "REQUESTED" || aircraftPlan === "CONFIRMED" ? (
+            <label className="mt-3 block">
               <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
-                Role (optional)
+                Tail number
               </span>
               <Input
                 className="mt-1"
-                value={personRole}
-                onChange={(e) => setPersonRole(e.target.value)}
-                placeholder="Booth lead"
+                value={aircraftTail}
+                onChange={(e) => setAircraftTail(e.target.value)}
+                onBlur={() => saveAircraft({ tail: aircraftTail })}
+                placeholder="N366FB"
               />
             </label>
-            <Button size="sm" onClick={addPerson} disabled={busy || !personId}>
-              Add
-            </Button>
-          </div>
+          ) : null}
+
+          <label className="mt-3 block">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
+              Ramp &amp; FBO notes
+            </span>
+            <textarea
+              className={`mt-1 ${FIELD}`}
+              rows={3}
+              value={aircraftNotes}
+              onChange={(e) => setAircraftNotes(e.target.value)}
+              onBlur={() => saveAircraft({ notes: aircraftNotes })}
+              placeholder="Air-stairs, GPU, hangar space, who to call at the FBO…"
+            />
+          </label>
+
+          {aircraftPlan === "UNDECIDED" ? (
+            <p className="mt-2 rounded border border-brand-gold/40 bg-brand-gold/10 px-3 py-2 text-xs text-brand-lea dark:border-brand-gold/30 dark:text-brand-gold">
+              Still open. Decide before the organizer&apos;s deadline — a static display usually needs weeks of notice.
+            </p>
+          ) : null}
         </section>
+
+        {/* Where this event came from */}
+        {event.sourceEmailUrl || event.contactName || event.contactEmail || event.shipToAddress ? (
+          <section className={CARD}>
+            <h2 className={`${H2} flex items-center gap-2`}>
+              <Mail className="h-4 w-4" /> The invitation
+            </h2>
+            {event.sourceSubject ? (
+              <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">“{event.sourceSubject}”</p>
+            ) : null}
+
+            <dl className="mt-3 space-y-1.5 text-xs">
+              {event.contactName ? (
+                <div className="flex gap-2">
+                  <dt className="w-20 shrink-0 text-brand-grey dark:text-slate-500">Organizer</dt>
+                  <dd className="font-medium text-brand-lea dark:text-slate-200">{event.contactName}</dd>
+                </div>
+              ) : null}
+              {event.contactEmail ? (
+                <div className="flex gap-2">
+                  <dt className="w-20 shrink-0 text-brand-grey dark:text-slate-500">Email</dt>
+                  <dd>
+                    <a
+                      href={`mailto:${event.contactEmail}`}
+                      className="font-medium text-brand-eden hover:underline dark:text-brand-sweet"
+                    >
+                      {event.contactEmail}
+                    </a>
+                  </dd>
+                </div>
+              ) : null}
+              {event.contactPhone ? (
+                <div className="flex gap-2">
+                  <dt className="w-20 shrink-0 text-brand-grey dark:text-slate-500">Phone</dt>
+                  <dd className="font-medium text-brand-lea dark:text-slate-200">{event.contactPhone}</dd>
+                </div>
+              ) : null}
+            </dl>
+
+            {event.shipToAddress ? (
+              <div className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/40 p-3 dark:border-white/10 dark:bg-white/5">
+                <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
+                  <Truck className="h-3 w-3" /> Ship materials to
+                </p>
+                <pre className="mt-1 whitespace-pre-wrap font-sans text-xs text-brand-lea dark:text-slate-200">
+                  {event.shipToAddress}
+                </pre>
+              </div>
+            ) : null}
+
+            {event.sourceEmailUrl ? (
+              <a
+                href={event.sourceEmailUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand-eden hover:underline dark:text-brand-sweet"
+              >
+                Open the original email <ExternalLink className="h-3 w-3" />
+              </a>
+            ) : null}
+          </section>
+        ) : null}
 
         {/* What we need */}
         <section className={CARD}>

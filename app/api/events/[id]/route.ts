@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { prisma } from "@/lib/prisma";
-import { isEventStatus, isEventType } from "@/lib/events/constants";
+import { isAircraftPlan, isEventStatus, isEventType } from "@/lib/events/constants";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -32,9 +32,22 @@ export async function PATCH(request: Request, ctx: Ctx) {
         data.endsAt = d;
       }
     }
-    for (const field of ["venue", "city", "state", "website", "notes"]) {
+    for (const field of [
+      "venue",
+      "city",
+      "state",
+      "website",
+      "notes",
+      "aircraftTail",
+      "aircraftNotes",
+      "contactName",
+      "contactEmail",
+      "contactPhone",
+      "shipToAddress"
+    ]) {
       if (typeof body[field] === "string") data[field] = (body[field] as string).trim() || null;
     }
+    if (isAircraftPlan(body.aircraftPlan)) data.aircraftPlan = body.aircraftPlan;
     if (typeof body.ownerId === "string") data.ownerId = body.ownerId || null;
     if (body.budget === null) data.budget = null;
     if (typeof body.budget === "number" && Number.isFinite(body.budget)) data.budget = body.budget;

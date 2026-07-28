@@ -4,14 +4,17 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { CalendarRange, MapPin, Package, Users } from "lucide-react";
+import { CalendarRange, Mail, MapPin, Package, Plane, Users } from "lucide-react";
 import { Badge, Button, EmptyState, Input, Modal } from "@/components/ui";
-import { EVENT_TYPES, eventStatusLabel, eventTypeLabel } from "@/lib/events/constants";
-import type { EventListItem, PersonRef } from "@/lib/data/events";
+import { EVENT_TYPES, aircraftPlanLabel, eventStatusLabel, eventTypeLabel } from "@/lib/events/constants";
+import { EventsCalendar } from "@/components/events/EventsCalendar";
+import { EventFromEmailModal } from "@/components/events/EventFromEmailModal";
+import type { CalendarEvent, EventListItem, PersonRef } from "@/lib/data/events";
 
 type EventsOverviewProps = {
   upcoming: EventListItem[];
   past: EventListItem[];
+  calendar: CalendarEvent[];
   reorderCount: number;
   roster: PersonRef[];
 };
@@ -24,6 +27,7 @@ function statusTone(status: string) {
   if (status === "CONFIRMED") return "success" as const;
   if (status === "COMPLETE") return "info" as const;
   if (status === "CANCELED") return "danger" as const;
+  if (status === "PENDING") return "warning" as const;
   return "neutral" as const;
 }
 
@@ -88,6 +92,25 @@ function EventCard({ event }: { event: EventListItem }) {
             {event.openTaskCount} to do
           </span>
         ) : null}
+        {/* Aircraft only earns a pill when there is something to say. "Not
+            bringing one" is a settled answer and does not need the space. */}
+        {event.aircraftPlan !== "NOT_BRINGING" ? (
+          <span
+            className={clsx(
+              "inline-flex items-center gap-1 rounded px-2 py-0.5 font-semibold",
+              event.aircraftPlan === "CONFIRMED"
+                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+                : event.aircraftPlan === "REQUESTED"
+                  ? "bg-brand-sweet/40 text-brand-lea dark:bg-brand-eden/40 dark:text-slate-100"
+                  : "bg-brand-gold/20 text-brand-lea dark:bg-brand-gold/15 dark:text-brand-gold"
+            )}
+          >
+            <Plane className="h-3 w-3" />
+            {event.aircraftPlan === "UNDECIDED"
+              ? "Aircraft?"
+              : `${aircraftPlanLabel(event.aircraftPlan)}${event.aircraftTail ? ` · ${event.aircraftTail}` : ""}`}
+          </span>
+        ) : null}
       </div>
       {event.ownerName ? (
         <p className="mt-2 text-[11px] text-brand-grey dark:text-slate-400">Owner: {event.ownerName}</p>
@@ -96,10 +119,12 @@ function EventCard({ event }: { event: EventListItem }) {
   );
 }
 
-export function EventsOverview({ upcoming, past, reorderCount, roster }: EventsOverviewProps) {
+export function EventsOverview({ upcoming, past, calendar, reorderCount, roster }: EventsOverviewProps) {
   const router = useRouter();
-  const [view, setView] = useState<"upcoming" | "past">("upcoming");
+  const [view, setView] = useState<"upcoming" | "calendar" | "past">("upcoming");
   const [adding, setAdding] = useState(false);
+  const [fromEmail, setFromEmail] = useState(false);
+  const pendingCount = upcoming.filter((e) => e.status === "PENDING").length;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -112,7 +137,7 @@ export function EventsOverview({ upcoming, past, reorderCount, roster }: EventsO
   const [state, setState] = useState("");
   const [ownerId, setOwnerId] = useState("");
 
-  const list = view === "upcoming" ? upcoming : past;
+  const list = view === "past" ? past : upcoming;
 
   async function create() {
     setSaving(true);
@@ -154,14 +179,28 @@ export function EventsOverview({ upcoming, past, reorderCount, roster }: EventsO
               {reorderCount} to reorder
             </Link>
           ) : null}
+          <Button variant="secondary" onClick={() => setFromEmail(true)}>
+            <Mail className="mr-1.5 h-4 w-4" />
+            From an email
+          </Button>
           <Button onClick={() => setAdding(true)}>+ New event</Button>
         </div>
       </section>
+
+      {pendingCount > 0 ? (
+        <p className="rounded border border-brand-gold/40 bg-brand-gold/10 px-3 py-2 text-sm text-brand-lea dark:border-brand-gold/30 dark:bg-brand-gold/10 dark:text-brand-gold">
+          <span className="font-semibold">
+            {pendingCount} event{pendingCount === 1 ? "" : "s"} waiting on a decision
+          </span>{" "}
+          — open one to say whether we&apos;re going.
+        </p>
+      ) : null}
 
       <div className="border-b border-brand-lea/10 dark:border-white/10">
         <nav className="flex gap-6">
           {([
             ["upcoming", `Upcoming (${upcoming.length})`],
+            ["calendar", "Calendar"],
             ["past", `Past (${past.length})`]
           ] as const).map(([key, label]) => (
             <button
@@ -180,7 +219,9 @@ export function EventsOverview({ upcoming, past, reorderCount, roster }: EventsO
         </nav>
       </div>
 
-      {list.length === 0 ? (
+      {view === "calendar" ? (
+        <EventsCalendar events={calendar} />
+      ) : list.length === 0 ? (
         <EmptyState
           icon={<CalendarRange className="h-6 w-6" />}
           title={view === "upcoming" ? "No events on the calendar" : "No past events yet"}
@@ -198,6 +239,8 @@ export function EventsOverview({ upcoming, past, reorderCount, roster }: EventsO
           ))}
         </div>
       )}
+
+      <EventFromEmailModal open={fromEmail} onClose={() => setFromEmail(false)} />
 
       <Modal open={adding} onClose={() => setAdding(false)} busy={saving} maxWidth="max-w-lg">
         <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">New event</h2>

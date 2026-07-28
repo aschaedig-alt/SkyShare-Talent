@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { OPEN_EVENT_STATUSES, stockState, type StockState } from "@/lib/events/constants";
+import { OPEN_EVENT_STATUSES, isEventType, stockState, type StockState } from "@/lib/events/constants";
+import type { ExtractedEvent } from "@/lib/events/event-email-ai";
 
 function iso(d: Date | null | undefined) {
   return d ? d.toISOString() : null;
@@ -20,6 +21,8 @@ export type EventListItem = {
   confirmedCount: number;
   supplyCount: number;
   openTaskCount: number;
+  aircraftPlan: string;
+  aircraftTail: string | null;
 };
 
 export type AttendeeView = {
@@ -51,7 +54,17 @@ export type TaskView = {
   done: boolean;
 };
 
-export type PersonRef = { id: string; name: string; position: string | null };
+export type PersonRef = {
+  id: string;
+  name: string;
+  position: string | null;
+  /**
+   * Department, for the attendee picker's filter. The roster is 400+ people and
+   * an unfiltered dropdown of that length is unusable — see getEventRoster.
+   */
+  department: string | null;
+  location: string | null;
+};
 
 export type SupplyItemRef = { id: string; name: string; unit: string; onHand: number };
 
@@ -70,6 +83,16 @@ export type EventDetail = {
   ownerName: string | null;
   budget: number | null;
   notes: string | null;
+  aircraftPlan: string;
+  aircraftTail: string | null;
+  aircraftNotes: string | null;
+  sourceConversationId: string | null;
+  sourceEmailUrl: string | null;
+  sourceSubject: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  shipToAddress: string | null;
   attendees: AttendeeView[];
   supplies: SupplyLineView[];
   tasks: TaskView[];
@@ -129,7 +152,9 @@ export async function getEvents(): Promise<{ upcoming: EventListItem[]; past: Ev
     attendeeCount: e.attendees.length,
     confirmedCount: e.attendees.filter((a) => a.status === "CONFIRMED").length,
     supplyCount: e.supplies.length,
-    openTaskCount: e.tasks.filter((t) => !t.done).length
+    openTaskCount: e.tasks.filter((t) => !t.done).length,
+    aircraftPlan: e.aircraftPlan,
+    aircraftTail: e.aircraftTail
   }));
 
   // "Past" is about the calendar, not the status — a canceled future event still
@@ -144,11 +169,27 @@ export async function getEvents(): Promise<{ upcoming: EventListItem[]; past: Ev
   };
 }
 
-/** The people who can own or staff an event: current staff, contractors included. */
+/**
+ * The people who can own or staff an event: current staff, contractors included.
+ *
+ * These are EMPLOYEES, not candidates — the whole current roster, which is why
+ * department and location come along. The people who work an event are a mixed
+ * bag (pilots, maintenance, recruiting, an exec) drawn from several hundred
+ * names, so the picker filters by department rather than scrolling one list.
+ *
+ * ARCHIVED is deliberately included alongside ACTIVE and POST_ONBOARD: archiving
+ * is an onboarding-lifecycle state meaning "we are finished onboarding them",
+ * not "they have left" — leaving is employmentStatus TERMINATED, which is what
+ * is actually excluded here. Filtering on stage alone hid most of the company.
+ */
 export async function getEventRoster(): Promise<PersonRef[]> {
   return prisma.newHire.findMany({
-    where: { stage: { in: ["ACTIVE", "POST_ONBOARD"] }, employmentStatus: { not: "TERMINATED" } },
-    select: { id: true, name: true, position: true },
+    where: {
+      stage: { in: ["ACTIVE", "POST_ONBOARD", "ARCHIVED"] },
+      employmentStatus: { not: "TERMINATED" },
+      canceled: false
+    },
+    select: { id: true, name: true, position: true, department: true, location: true },
     orderBy: { name: "asc" }
   });
 }
@@ -196,6 +237,16 @@ export async function getEventDetail(id: string): Promise<EventDetail | null> {
     ownerName: event.owner ? personName(event.owner) : null,
     budget: event.budget,
     notes: event.notes,
+    aircraftPlan: event.aircraftPlan,
+    aircraftTail: event.aircraftTail,
+    aircraftNotes: event.aircraftNotes,
+    sourceConversationId: event.sourceConversationId,
+    sourceEmailUrl: event.sourceEmailUrl,
+    sourceSubject: event.sourceSubject,
+    contactName: event.contactName,
+    contactEmail: event.contactEmail,
+    contactPhone: event.contactPhone,
+    shipToAddress: event.shipToAddress,
     attendees: event.attendees.map((a) => ({
       id: a.id,
       newHireId: a.newHireId,
@@ -279,4 +330,187 @@ export async function getSupplyItems(): Promise<SupplyItemView[]> {
 export async function getReorderCount(): Promise<number> {
   const items = await getSupplyItems();
   return items.filter((i) => i.active && i.state !== "OK").length;
+}
+
+// ---------------------------------------------------------------------------
+// Events that arrive by email
+// ---------------------------------------------------------------------------
+
+export type EventDraftInput = Pick<
+  ExtractedEvent,
+  | "name"
+  | "type"
+  | "startsAt"
+  | "endsAt"
+  | "venue"
+  | "city"
+  | "state"
+  | "website"
+  | "contactName"
+  | "contactEmail"
+  | "contactPhone"
+  | "shipToAddress"
+  | "notes"
+  | "aircraftMentioned"
+>;
+
+export type LeadSource = {
+  conversationId: string;
+  frontUrl: string;
+  subject: string;
+};
+
+/**
+ * Create an event from a reviewed email draft.
+ *
+ * Always lands as PENDING — an invitation that arrived is not a decision to go,
+ * and the whole point of importing it is to be able to make that decision later
+ * with the details already captured.
+ *
+ * When the email mentioned a static display, the aircraft question is opened
+ * rather than answered: the plan stays UNDECIDED and the organizer's own words
+ * are kept in aircraftNotes, so whoever decides can see what was actually
+ * offered instead of taking our summary on trust.
+ *
+ * The conversation id is stored, which is also what stops a re-scan offering the
+ * same email again. A unique-constraint collision means someone imported it in
+ * the meantime; that returns the existing event rather than failing, since the
+ * user's intent — "this email should be on the calendar" — is already satisfied.
+ */
+export async function importEventFromLead(
+  draft: EventDraftInput,
+  source: LeadSource | null
+): Promise<{ id: string; alreadyExisted: boolean }> {
+  if (source) {
+    const existing = await prisma.event.findFirst({
+      where: { sourceConversationId: source.conversationId },
+      select: { id: true }
+    });
+    if (existing) return { id: existing.id, alreadyExisted: true };
+  }
+
+  const startsAt = draft.startsAt ? new Date(draft.startsAt) : null;
+  if (!startsAt || Number.isNaN(startsAt.getTime())) {
+    throw new Error("An event needs a start date.");
+  }
+  const endsAt = draft.endsAt ? new Date(draft.endsAt) : null;
+
+  const aircraftNotes = draft.aircraftMentioned
+    ? "The invitation mentions a static display / aircraft on the ramp — decide whether we are taking one."
+    : null;
+
+  try {
+    const event = await prisma.event.create({
+      data: {
+        name: draft.name?.trim() || source?.subject?.trim() || "Untitled event",
+        type: isEventType(draft.type) ? draft.type : "CAREER_FAIR",
+        status: "PENDING",
+        startsAt,
+        endsAt: endsAt && !Number.isNaN(endsAt.getTime()) ? endsAt : null,
+        venue: draft.venue?.trim() || null,
+        city: draft.city?.trim() || null,
+        state: draft.state?.trim() || null,
+        website: draft.website?.trim() || null,
+        notes: draft.notes?.trim() || null,
+        aircraftPlan: "UNDECIDED",
+        aircraftNotes,
+        contactName: draft.contactName?.trim() || null,
+        contactEmail: draft.contactEmail?.trim() || null,
+        contactPhone: draft.contactPhone?.trim() || null,
+        shipToAddress: draft.shipToAddress?.trim() || null,
+        sourceConversationId: source?.conversationId ?? null,
+        sourceEmailUrl: source?.frontUrl ?? null,
+        sourceSubject: source?.subject ?? null
+      },
+      select: { id: true }
+    });
+    return { id: event.id, alreadyExisted: false };
+  } catch (error) {
+    // Lost a race on the unique conversation id — treat it as already imported.
+    if (source) {
+      const existing = await prisma.event.findFirst({
+        where: { sourceConversationId: source.conversationId },
+        select: { id: true }
+      });
+      if (existing) return { id: existing.id, alreadyExisted: true };
+    }
+    throw error;
+  }
+}
+
+/** "No thanks" — keep this email out of future scans. Reversible. */
+export async function skipEventLead(
+  conversationId: string,
+  subject: string | null,
+  skippedBy: string | null
+): Promise<void> {
+  await prisma.eventLeadSkip.upsert({
+    where: { conversationId },
+    create: { conversationId, subject, skippedBy },
+    update: { subject, skippedBy }
+  });
+}
+
+/** Put a skipped email back in the scan. */
+export async function unskipEventLead(conversationId: string): Promise<void> {
+  await prisma.eventLeadSkip.deleteMany({ where: { conversationId } });
+}
+
+export type SkippedLead = {
+  conversationId: string;
+  subject: string | null;
+  skippedBy: string | null;
+  createdAt: string;
+  frontUrl: string;
+};
+
+/** Everything you have passed on — the "see it and undo it" half of the skip list. */
+export async function getSkippedLeads(): Promise<SkippedLead[]> {
+  const rows = await prisma.eventLeadSkip.findMany({ orderBy: { createdAt: "desc" } });
+  return rows.map((r) => ({
+    conversationId: r.conversationId,
+    subject: r.subject,
+    skippedBy: r.skippedBy,
+    createdAt: r.createdAt.toISOString(),
+    frontUrl: `https://app.frontapp.com/open/${r.conversationId}`
+  }));
+}
+
+/**
+ * Every event with a date, for the calendar. Deliberately unfiltered by status:
+ * a canceled event still occupied a weekend someone planned around, and hiding
+ * it makes the calendar lie about the past.
+ */
+export type CalendarEvent = {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  startsAt: string;
+  endsAt: string | null;
+  city: string | null;
+  state: string | null;
+  venue: string | null;
+  aircraftPlan: string;
+  attendeeCount: number;
+};
+
+export async function getEventCalendar(): Promise<CalendarEvent[]> {
+  const rows = await prisma.event.findMany({
+    orderBy: { startsAt: "asc" },
+    include: { attendees: { select: { id: true } } }
+  });
+  return rows.map((e) => ({
+    id: e.id,
+    name: e.name,
+    type: e.type,
+    status: e.status,
+    startsAt: e.startsAt.toISOString(),
+    endsAt: iso(e.endsAt),
+    city: e.city,
+    state: e.state,
+    venue: e.venue,
+    aircraftPlan: e.aircraftPlan,
+    attendeeCount: e.attendees.length
+  }));
 }

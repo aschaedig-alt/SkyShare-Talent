@@ -1561,7 +1561,11 @@ model Event {
   name      String
   // CAREER_FAIR | SCHOOL | CONFERENCE | COMMUNITY | AIRSHOW | OTHER
   type      String    @default("CAREER_FAIR")
-  // PLANNED | CONFIRMED | COMPLETE | CANCELED
+  // PENDING | PLANNED | CONFIRMED | COMPLETE | CANCELED
+  //
+  // PENDING is the "an invitation landed, we have not decided yet" state. Events
+  // created from an email start here on purpose: an invite that arrives is not a
+  // commitment, and nothing should look booked until someone says it is.
   status    String    @default("PLANNED")
   startsAt  DateTime
   endsAt    DateTime?
@@ -1575,6 +1579,35 @@ model Event {
   budget    Float?
   currency  String    @default("USD")
   notes     String?
+
+  // --- Are we bringing an aircraft? ---
+  // Kept as its own decision rather than a line in notes because it drives real
+  // lead time: a static display needs the organizer told, ramp space, air-stairs
+  // and a GPU from the FBO, and a crew who are not double-booked. Separate from
+  // the event's own status — a CONFIRMED event can still have an UNDECIDED
+  // aircraft, which is exactly the gap worth seeing.
+  // UNDECIDED | NOT_BRINGING | REQUESTED | CONFIRMED
+  aircraftPlan  String  @default("UNDECIDED")
+  // Tail number, once one is committed (e.g. "N366FB"). Free text: the aircraft
+  // may be a managed tail, a demo, or not-yet-assigned.
+  aircraftTail  String?
+  // Ramp/FBO logistics — air-stairs, GPU, hangar space, who to call.
+  aircraftNotes String?
+
+  // --- Where this event came from ---
+  // Events usually arrive as an email from the organizer, and the thread stays
+  // the source of truth for the details we did not capture. Storing the Front
+  // conversation id (unique) both links back to it AND stops a re-scan offering
+  // the same invitation twice.
+  sourceConversationId String? @unique
+  sourceEmailUrl       String?
+  sourceSubject        String?
+  contactName          String?
+  contactEmail         String?
+  contactPhone         String?
+  // Ship-materials-ahead address from the organizer's instructions.
+  shipToAddress        String?
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -1586,6 +1619,21 @@ model Event {
   @@index([status])
   @@index([startsAt])
   @@index([ownerId])
+}
+
+// "No thanks" for an email the scan offered as an event.
+//
+// Without this the scan is not usable twice: every run would re-surface the same
+// conference invitations you already looked at and passed on. Imported threads are
+// suppressed by Event.sourceConversationId; this table covers the other answer.
+// Reversible on purpose — the row is the record of the decision, and deleting it
+// puts the email back in the next scan.
+model EventLeadSkip {
+  id             String   @id @default(cuid())
+  conversationId String   @unique
+  subject        String?
+  skippedBy      String?
+  createdAt      DateTime @default(now())
 }
 
 model EventAttendee {

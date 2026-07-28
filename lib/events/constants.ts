@@ -12,7 +12,11 @@ export const EVENT_TYPES = [
 
 export type EventType = (typeof EVENT_TYPES)[number]["value"];
 
+// PENDING leads the list because it is where an event begins when it arrives as
+// an invitation: on the calendar so it cannot be forgotten, but explicitly not a
+// commitment. Everything else is unchanged.
 export const EVENT_STATUSES = [
+  { value: "PENDING", label: "Pending decision" },
   { value: "PLANNED", label: "Planned" },
   { value: "CONFIRMED", label: "Confirmed" },
   { value: "COMPLETE", label: "Complete" },
@@ -20,6 +24,21 @@ export const EVENT_STATUSES = [
 ] as const;
 
 export type EventStatus = (typeof EVENT_STATUSES)[number]["value"];
+
+/**
+ * Whether we are taking an aircraft — tracked separately from the event status
+ * because it moves on its own schedule and has its own lead time (organizer
+ * notice, ramp space, air-stairs/GPU, and a crew). UNDECIDED is the default so a
+ * newly-added event honestly reads "nobody has decided yet" rather than "no".
+ */
+export const AIRCRAFT_PLANS = [
+  { value: "UNDECIDED", label: "Not decided" },
+  { value: "NOT_BRINGING", label: "Not bringing one" },
+  { value: "REQUESTED", label: "Requested" },
+  { value: "CONFIRMED", label: "Confirmed" }
+] as const;
+
+export type AircraftPlan = (typeof AIRCRAFT_PLANS)[number]["value"];
 
 export const ATTENDEE_STATUSES = [
   { value: "PENDING", label: "Pending" },
@@ -40,6 +59,11 @@ export const SUPPLY_CATEGORIES = [
 export type SupplyCategory = (typeof SUPPLY_CATEGORIES)[number]["value"];
 
 // An event still on the calendar — the ones that hold supplies and need people.
+//
+// PENDING is deliberately NOT here. An invitation we have not accepted must not
+// reserve stock: if it did, three unanswered conference emails could show the
+// cupboard as empty and trigger a reorder for events we never attend. Accepting
+// one (PENDING -> PLANNED) is what makes its claim real.
 export const OPEN_EVENT_STATUSES: EventStatus[] = ["PLANNED", "CONFIRMED"];
 
 function labelFrom(list: readonly { value: string; label: string }[], value: string | null | undefined) {
@@ -48,6 +72,7 @@ function labelFrom(list: readonly { value: string; label: string }[], value: str
 
 export const eventTypeLabel = (v: string | null | undefined) => labelFrom(EVENT_TYPES, v);
 export const eventStatusLabel = (v: string | null | undefined) => labelFrom(EVENT_STATUSES, v);
+export const aircraftPlanLabel = (v: string | null | undefined) => labelFrom(AIRCRAFT_PLANS, v);
 export const attendeeStatusLabel = (v: string | null | undefined) => labelFrom(ATTENDEE_STATUSES, v);
 export const supplyCategoryLabel = (v: string | null | undefined) => labelFrom(SUPPLY_CATEGORIES, v);
 
@@ -57,6 +82,10 @@ export function isEventType(v: unknown): v is EventType {
 
 export function isEventStatus(v: unknown): v is EventStatus {
   return typeof v === "string" && EVENT_STATUSES.some((o) => o.value === v);
+}
+
+export function isAircraftPlan(v: unknown): v is AircraftPlan {
+  return typeof v === "string" && AIRCRAFT_PLANS.some((o) => o.value === v);
 }
 
 export function isAttendeeStatus(v: unknown): v is AttendeeStatus {
