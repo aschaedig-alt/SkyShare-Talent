@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { clsx } from "clsx";
 import { Button, Modal } from "@/components/ui";
 import { AUDIENCE_LABEL, ORIENTATION_TEMPLATE_META, type OrientationTemplateKey, type OrientationTemplateMeta } from "@/lib/orientation/email-templates-meta";
@@ -11,7 +11,10 @@ import {
   sendOrientationEmail,
   sendOrientationEmailBatch,
   sendOrientationSupervisorBatch,
+  previewOrientationSummary,
+  sendOrientationSummary,
   type OrientationBatchRow,
+  type OrientationSummaryResult,
   type SupervisorDigestRow
 } from "@/app/orientation/actions";
 import type { OrientationEmailPreview } from "@/lib/front/orientation-email";
@@ -326,6 +329,8 @@ export function OrientationEmailPanel({
           ))}
         </div>
       ) : null}
+
+      <InternalSummary sessionId={sessionId} />
 
       <CommunicationHistory attendees={attendees} />
 
@@ -934,6 +939,106 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
+// --- the one internal summary -----------------------------------------------
+//
+// The standing list used to be cc'd on every per-hire email, which on the first
+// real run meant six watchers receiving six copies each. They now get this once.
+
+function InternalSummary({ sessionId }: { sessionId: string }) {
+  const [state, setState] = useState<OrientationSummaryResult | null>(null);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    previewOrientationSummary(sessionId)
+      .then(setState)
+      .catch(() => setState(null));
+  }, [sessionId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function send() {
+    const who = state?.to?.join(", ") ?? "the summary list";
+    if (!confirm(`Send the session summary to ${who}?\n\nOne email, naming everyone attending. This cannot be undone.`)) {
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    const res = await sendOrientationSummary(sessionId);
+    setBusy(false);
+    setMsg(res.ok ? `Sent to ${res.to?.join(", ")}.` : (res.error ?? "Send failed."));
+    load();
+  }
+
+  if (!state) return null;
+  if (!state.ok) {
+    return (
+      <p className="mt-3 text-[11px] text-amber-700 dark:text-amber-300">Internal summary unavailable: {state.error}</p>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded border border-brand-lea/15 p-3 dark:border-white/10">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-brand-lea dark:text-slate-100">Internal summary</h3>
+        <Button onClick={send} disabled={busy}>
+          {busy ? "Sending…" : state.alreadySent ? "Send again" : "Send the summary"}
+        </Button>
+      </div>
+      <p className="mt-1 text-[11.5px] text-brand-grey dark:text-slate-400">
+        One email to {state.to?.join(", ")} naming everyone attending. They are <b>no longer cc&apos;d</b> on the individual
+        emails — that is what produced a copy per new hire.
+      </p>
+
+      {state.alreadySent ? (
+        <p className="mt-1.5 text-[11.5px] text-brand-black dark:text-slate-200">
+          Sent{" "}
+          {new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", dateStyle: "medium", timeStyle: "short" }).format(
+            new Date(state.alreadySent.sentAt)
+          )}{" "}
+          MT, covering {state.alreadySent.attendeeCount} attendee
+          {state.alreadySent.attendeeCount === 1 ? "" : "s"}.
+          {state.stale ? (
+            <span className="font-semibold text-amber-700 dark:text-amber-300">
+              {" "}
+              The attendee list has changed since — send it again if that matters.
+            </span>
+          ) : null}
+        </p>
+      ) : null}
+
+      {state.warnings?.length ? (
+        <ul className="mt-2 space-y-1 rounded border border-amber-300 bg-amber-50 p-2 text-[11.5px] text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200">
+          {state.warnings.map((w, i) => (
+            <li key={i}>{w}</li>
+          ))}
+        </ul>
+      ) : null}
+
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="mt-2 text-xs font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-slate-300"
+      >
+        {open ? "Hide" : "Show"} what it says
+      </button>
+      {open && state.html ? (
+        <div className="mt-2 max-h-64 overflow-y-auto rounded border border-brand-lea/15 bg-white p-3 dark:border-white/10 dark:bg-[#0f2033]">
+          <p className="mb-2 text-[12px] font-semibold text-brand-lea dark:text-slate-100">{state.subject}</p>
+          <div
+            className="prose-sm text-[12.5px] text-brand-black dark:text-slate-200"
+            dangerouslySetInnerHTML={{ __html: state.html }}
+          />
+        </div>
+      ) : null}
+
+      {msg ? <p className="mt-2 text-[11.5px] font-semibold text-brand-eden dark:text-slate-300">{msg}</p> : null}
+    </div>
+  );
+}
+
 // --- communication history --------------------------------------------------
 //
 // Everything the app has actually sent for this session, newest first. The data
@@ -1191,7 +1296,7 @@ function CcEditor() {
         onClick={() => setOpen(true)}
         className="mt-3 text-xs font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-slate-300"
       >
-        Who gets cc&apos;d on these emails?
+        Who gets the internal summary?
       </button>
     );
   }
@@ -1199,13 +1304,15 @@ function CcEditor() {
   return (
     <div className="mt-3 rounded border border-brand-lea/15 p-3 dark:border-white/10">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-brand-lea dark:text-slate-100">Cc&apos;d on every orientation email</h3>
+        <h3 className="text-sm font-semibold text-brand-lea dark:text-slate-100">Who gets the internal summary</h3>
         <button onClick={() => setOpen(false)} className="text-[11px] font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400">
           Hide
         </button>
       </div>
       <p className="mt-1 text-[11px] text-brand-grey dark:text-slate-400">
-        Applies to all orientation sessions, not just this one. The new hire&apos;s own supervisor is added separately, from their profile.
+        These people get ONE summary email per session, not a copy of every individual email — being cc&apos;d on all of
+        them is what produced a copy per new hire. Applies to all orientation sessions. The new hire&apos;s own supervisor
+        is handled separately, from their profile.
         {customized ? "" : " (Currently the original list from the Front template.)"}
       </p>
 

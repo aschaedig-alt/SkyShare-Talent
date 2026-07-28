@@ -17,6 +17,12 @@ import {
   type OrientationTemplateKey,
   type SupervisorDigest
 } from "@/lib/front/orientation-email";
+import {
+  buildOrientationSummaryEmail,
+  getOrientationSummaryRecord,
+  recordOrientationSummary
+} from "@/lib/front/orientation-summary";
+import { ORIENTATION_NORMAL } from "@/lib/orientation/calendar-event";
 
 // Sending an orientation email. Two steps on purpose — preview, then send —
 // because the send is irreversible and lands in a real new hire's (or their
@@ -271,6 +277,123 @@ export async function previewOrientationEmailBatch(
   }
 
   return { ok: true, rows, sampleSubject, sampleHtml, sampleFor };
+}
+
+// --- the one internal summary ------------------------------------------------
+//
+// Replaces the standing list being cc'd on every per-hire email. On the first real
+// run that meant six watchers x six invitations, about forty redundant emails for a
+// seven-person cohort. Now they get one email naming everyone attending.
+
+export type OrientationSummaryResult = {
+  ok: boolean;
+  error?: string;
+  to?: string[];
+  subject?: string;
+  html?: string;
+  warnings?: string[];
+  /** Set when it has already gone, so the UI can offer a resend rather than a send. */
+  alreadySent?: { sentAt: string; to: string; attendeeCount: number } | null;
+  /** True when attendees were added after the summary went — it is now out of date. */
+  stale?: boolean;
+};
+
+async function summaryInputFor(sessionId: string) {
+  const s = await prisma.orientationSession.findUnique({
+    where: { id: sessionId },
+    select: {
+      date: true,
+      endsAt: true,
+      address: true,
+      attendees: {
+        select: {
+          id: true,
+          sentTemplateKeys: true,
+          newHire: {
+            select: {
+              name: true,
+              position: true,
+              supervisorName: true,
+              supervisorEmail: true,
+              supervisorHire: { select: { name: true, ssEmail: true, personalEmail: true } },
+              supervisor2Name: true,
+              supervisor2Email: true,
+              supervisor2Hire: { select: { name: true, ssEmail: true, personalEmail: true } }
+            }
+          }
+        },
+        orderBy: { newHire: { name: "asc" } }
+      }
+    }
+  });
+  if (!s) return null;
+
+  return {
+    sessionDate: s.date.toISOString(),
+    endsAt: s.endsAt ? s.endsAt.toISOString() : null,
+    // Same fallback the calendar invite uses, so the two can't disagree on where it is.
+    address: s.address?.trim() || ORIENTATION_NORMAL.address,
+    attendees: s.attendees.map((a) => ({
+      name: a.newHire.name,
+      position: a.newHire.position,
+      supervisorNames: resolveSupervisors(a.newHire)
+        .map((x) => x.name)
+        .filter((n): n is string => Boolean(n)),
+      invited: parseKeys(a.sentTemplateKeys).includes("invite")
+    }))
+  };
+}
+
+export async function previewOrientationSummary(sessionId: string): Promise<OrientationSummaryResult> {
+  if (!(await canSend())) return { ok: false, error: "You don't have permission to send this email." };
+  const input = await summaryInputFor(sessionId);
+  if (!input) return { ok: false, error: "Session not found." };
+
+  try {
+    const preview = await buildOrientationSummaryEmail(input);
+    const record = await getOrientationSummaryRecord(sessionId);
+    return {
+      ok: true,
+      to: preview.to,
+      subject: preview.subject,
+      html: preview.html,
+      warnings: preview.warnings,
+      alreadySent: record ? { sentAt: record.sentAt, to: record.to, attendeeCount: record.attendeeCount } : null,
+      stale: record ? record.attendeeCount !== input.attendees.length : false
+    };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Couldn't build the summary." };
+  }
+}
+
+export async function sendOrientationSummary(sessionId: string): Promise<OrientationSummaryResult> {
+  if (!(await canSend())) return { ok: false, error: "You don't have permission to send this email." };
+  const input = await summaryInputFor(sessionId);
+  if (!input) return { ok: false, error: "Session not found." };
+
+  try {
+    const email = await buildOrientationSummaryEmail(input);
+    const channelId = await getOrientationChannelId();
+    const sent = await sendEmail(channelId, {
+      to: email.to,
+      cc: [],
+      subject: email.subject,
+      body: email.html,
+      archive: false
+    });
+    await recordOrientationSummary(sessionId, {
+      conversationId: sent.conversationId,
+      messageId: sent.id,
+      sentAt: new Date().toISOString(),
+      to: email.to.join(", "),
+      subject: email.subject,
+      sentBy: await actorLabel(),
+      attendeeCount: input.attendees.length
+    });
+    return { ok: true, to: email.to, subject: email.subject };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Send failed." };
+  }
 }
 
 // --- supervisors, grouped ----------------------------------------------------

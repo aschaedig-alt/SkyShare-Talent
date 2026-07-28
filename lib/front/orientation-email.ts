@@ -2,7 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { splitCandidateName } from "@/lib/candidates/normalize";
 import { formatTimeRange } from "@/lib/calendar/format";
 import { ordinalDayLabel } from "@/lib/dates/ordinal";
-import { getOrientationCc } from "@/lib/orientation/email-cc";
 import {
   ORIENTATION_TEMPLATE_META,
   orientationTemplateMeta,
@@ -268,14 +267,17 @@ export async function buildOrientationEmail(
     }
   }
 
-  // cc: the editable standing list, plus BOTH of this hire's supervisors.
+  // cc: THIS HIRE'S supervisors only.
+  //
+  // The standing internal list used to be cc'd here too, and that was wrong at
+  // scale: one email per hire meant every watcher got one copy PER NEW HIRE. On the
+  // first real run that was six people receiving six copies each, about forty
+  // redundant emails for a seven-person cohort. They now get ONE summary for the
+  // whole session instead — see buildOrientationSummaryEmail.
   const cc: string[] = [];
-  if (!isTest) {
-    cc.push(...(await getOrientationCc()).addresses);
-    if (def.audience === "attendee") {
-      if (supervisorEmails.length) cc.push(...supervisorEmails);
-      else warnings.push(`No supervisor on file for ${attendee.name}, so no supervisor is cc'd.`);
-    }
+  if (!isTest && def.audience === "attendee") {
+    if (supervisorEmails.length) cc.push(...supervisorEmails);
+    else warnings.push(`No supervisor on file for ${attendee.name}, so no supervisor is cc'd.`);
   }
 
   // A test overrides the recipient AFTER the real one has been resolved, so the
@@ -401,7 +403,9 @@ export async function buildSupervisorDigestEmail(
   const warnings: string[] = [];
   const isTest = Boolean(testTo?.trim());
 
-  const cc: string[] = isTest ? [] : [...(await getOrientationCc()).addresses];
+  // No standing cc here either — six supervisor emails would have meant six copies
+  // for every watcher. The session summary covers them once.
+  const cc: string[] = [];
 
   let toList = [digest.supervisorEmail];
   let toSource: OrientationEmailPreview["toSource"] = "supervisor";
