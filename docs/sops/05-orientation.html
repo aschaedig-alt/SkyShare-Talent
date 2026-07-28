@@ -29,9 +29,9 @@
   .key { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 14px; padding: 12px 14px; background: #f6f9fc; border: 1px solid var(--line); border-radius: 4px; }
   .key .item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); }
   .key .sw { width: 20px; height: 20px; border-radius: 4px; flex: 0 0 auto; }
-  .key .sw.app { background: #dcebf8; border: 1px solid #466481; }
-  .key .sw.auto { background: #d3ecdf; border: 1px solid #2f7d5b; }
-  .key .sw.out { background: #faedc4; border: 1px dashed #b7791f; }
+  .key .sw.app { background: #e3eff9; border: 1px solid #466481; }
+  .key .sw.auto { background-color: #f1f9f4; background-image: radial-gradient(#d1e4d9 1px, transparent 1.4px); background-size: 7px 7px; border: 1px solid #bcd9c8; }
+  .key .sw.out { background: #fbf1d0; border: 1px dashed #b7791f; }
   .key b { color: var(--navy); }
   /* Force the diagram's label + edge colors so no auto-theme can pale them out. */
   .mermaid text, .mermaid .nodeLabel, .mermaid span, .mermaid p, .mermaid foreignObject div { fill: #0d2c43 !important; color: #0d2c43 !important; }
@@ -93,6 +93,12 @@
   </div>
 
   <h2>The flow at a glance</h2>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <pattern id="autodot" patternUnits="userSpaceOnUse" width="7" height="7">
+      <rect width="7" height="7" fill="#f1f9f4"/>
+      <circle cx="3.5" cy="3.5" r="1" fill="#d1e4d9"/>
+    </pattern>
+  </defs></svg>
   <div class="key">
     <span class="item"><span class="sw app"></span><b>You do it in the app</b> — a step you click through</span>
     <span class="item"><span class="sw auto"></span><b>The system does it for you</b> — happens on its own</span>
@@ -119,12 +125,12 @@ flowchart TD
     l -. ticks .-> l2([Attended orientation]):::auto
 
     classDef nav fill:#bcd6ee,stroke:#0d2c43,stroke-width:2px,color:#0d2c43
-    classDef app fill:#dcebf8,stroke:#466481,color:#0d2c43
-    classDef out fill:#faedc4,stroke:#b7791f,stroke-width:2px,stroke-dasharray:4 3,color:#4a3708
-    classDef auto fill:#d3ecdf,stroke:#2f7d5b,color:#123a2a
+    classDef app fill:#e3eff9,stroke:#466481,color:#0d2c43
+    classDef out fill:#fbf1d0,stroke:#b7791f,stroke-width:2px,stroke-dasharray:4 3,color:#4a3708
+    classDef auto fill:url(#autodot),stroke:#bcd9c8,color:#123a2a
 </pre>
   </div>
-  <p class="lede" style="font-size:13.5px; margin-top:10px;">The blue spine is what you do in the app, top to bottom. Green branches are things the system does on its own as you go — you don't click them. The two gold boxes are the only parts done by hand outside the app.</p>
+  <p class="lede" style="font-size:13.5px; margin-top:10px;">The blue spine is what you do in the app, top to bottom. The dotted-texture branches are things the system does on its own as you go — you don't click them. The two gold boxes are the only parts done by hand outside the app.</p>
 
   <h2>The steps</h2>
   <div class="steps">

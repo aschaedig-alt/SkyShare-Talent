@@ -25,6 +25,14 @@
   h2 { font-size: 15px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--eden); margin: 40px 0 14px; }
 
   .diagram-card { background: #ffffff; border: 1px solid var(--line); border-radius: 4px; box-shadow: var(--shadow); padding: 16px; overflow-x: auto; }
+  .key { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 14px; padding: 12px 14px; background: #f6f9fc; border: 1px solid var(--line); border-radius: 4px; }
+  .key .item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); }
+  .key .sw { width: 20px; height: 20px; border-radius: 4px; flex: 0 0 auto; }
+  .key .sw.app { background: #e3eff9; border: 1px solid #466481; }
+  .key .sw.auto { background-color: #f1f9f4; background-image: radial-gradient(#d1e4d9 1px, transparent 1.4px); background-size: 7px 7px; border: 1px solid #bcd9c8; }
+  .key .sw.out { background: #fbf1d0; border: 1px dashed #b7791f; }
+  .key b { color: var(--navy); }
+  .caption { font-size: 13.5px; color: var(--ink-soft); margin: 10px 0 0; }
   pre.mermaid { margin: 0; text-align: center; min-width: 540px; }
   /* Force the diagram's label + edge colors so no auto-theme can pale them out. */
   .mermaid text, .mermaid .nodeLabel, .mermaid span, .mermaid p, .mermaid foreignObject div { fill: #0d2c43 !important; color: #0d2c43 !important; }
@@ -86,28 +94,40 @@
   </div>
 
   <h2>The flow at a glance</h2>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <pattern id="autodot" patternUnits="userSpaceOnUse" width="7" height="7">
+      <rect width="7" height="7" fill="#f1f9f4"/>
+      <circle cx="3.5" cy="3.5" r="1" fill="#d1e4d9"/>
+    </pattern>
+  </defs></svg>
+  <div class="key">
+    <span class="item"><span class="sw app"></span><b>You do it in the app</b></span>
+    <span class="item"><span class="sw auto"></span><b>The system does it for you</b></span>
+    <span class="item"><span class="sw out"></span><b>You do it outside the app</b></span>
+  </div>
   <div class="diagram-card">
 <pre class="mermaid">
-%%{init: {'theme':'base','themeVariables':{'primaryColor':'#dcebf8','primaryBorderColor':'#466481','primaryTextColor':'#0d2c43','lineColor':'#7f97ab','fontFamily':'Segoe UI, system-ui, sans-serif','fontSize':'14px','darkMode':false}}}%%
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#e3eff9','primaryBorderColor':'#466481','primaryTextColor':'#0d2c43','lineColor':'#7f97ab','fontFamily':'Segoe UI, system-ui, sans-serif','fontSize':'14px','darkMode':false}}}%%
 flowchart TD
-    a([New hires page]):::nav --> b[Start from a candidate]:::step
-    b --> c[Find or add the candidate]:::step
-    c --> d[Open their profile]:::step
-    d --> e[Applied to tab:<br/>Link to a job<br/>create it inline if new]:::step
-    e --> f[Offers tab:<br/>start the offer, tick the steps]:::step
-    f --> g[[Move to onboarding<br/>EARLY — before signed]]:::move
-    g --> h[Onboarding record:<br/>20-step checklist<br/>offer steps are the first 6<br/>synced both ways]:::step
-    h --> i[Tick Candidate signed offer letter<br/>then set the start date]:::step
-    i --> j[Onboarding email, background check,<br/>orientation and travel steps tick themselves<br/>once you book the session and the trip]:::auto
-    j --> k([Mark onboarded]):::done
+    a([New hires page]):::nav --> b[Start from a candidate]:::app
+    b --> c[Find or add the candidate]:::app
+    c --> d[Open their profile]:::app
+    d --> e[Applied to tab:<br/>Link to a job<br/>create it inline if new]:::app
+    e --> f[Offers tab:<br/>start the offer, tick the steps]:::app
+    f -. in Paycom .-> p([Draft the offer letter<br/>and get it signed]):::out
+    f --> g[Move to onboarding<br/>EARLY — before signed]:::app
+    g --> h[Onboarding record:<br/>20-step checklist<br/>offer steps are the first 6<br/>synced both ways]:::app
+    h --> i[Tick Candidate signed offer letter<br/>then set the start date]:::app
+    i --> j([Onboarding email, background check,<br/>orientation and travel steps tick themselves<br/>once you book the session and the trip]):::auto
+    j --> k([Mark onboarded]):::app
 
     classDef nav fill:#bcd6ee,stroke:#0d2c43,stroke-width:2px,color:#0d2c43
-    classDef step fill:#dcebf8,stroke:#466481,color:#0d2c43
-    classDef move fill:#faedc4,stroke:#b7791f,stroke-width:2px,color:#4a3708
-    classDef auto fill:#d3ecdf,stroke:#2f7d5b,color:#123a2a
-    classDef done fill:#bfe3cf,stroke:#2f7d5b,stroke-width:2px,color:#123a2a
+    classDef app fill:#e3eff9,stroke:#466481,color:#0d2c43
+    classDef auto fill:url(#autodot),stroke:#bcd9c8,color:#123a2a
+    classDef out fill:#fbf1d0,stroke:#b7791f,stroke-width:2px,stroke-dasharray:4 3,color:#4a3708
 </pre>
   </div>
+  <p class="caption">The blue spine is what you do in the app, top to bottom. The dotted-texture box is what the system ticks on its own. The gold box is done by hand outside the app — the offer letter lives in Paycom.</p>
 
   <h2>The eight steps</h2>
   <div class="steps">
