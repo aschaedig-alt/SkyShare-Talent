@@ -160,6 +160,8 @@ export async function sendOrientationEmail(
         messageId: sent.id,
         sentAt,
         to: email.to.join(", "),
+        cc: email.cc.join(", "),
+        subject: email.subject,
         sentBy: await actorLabel()
       });
 
@@ -468,6 +470,8 @@ export async function sendOrientationSupervisorBatch(
           messageId: res.id,
           sentAt,
           to: email.to.join(", "),
+          cc: email.cc.join(", "),
+          subject: email.subject,
           sentBy: actor
         });
         const row = await prisma.orientationAttendee.findUnique({

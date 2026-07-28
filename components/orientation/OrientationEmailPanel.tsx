@@ -32,7 +32,14 @@ import type { OrientationEmailPreview } from "@/lib/front/orientation-email";
 // column header is not enough. Hence the legend below, and the audience chip on
 // every column: the recipient is on the page at all times, never hover-only.
 
-type SendRecord = { sentAt: string; to: string; sentBy?: string | null };
+type SendRecord = {
+  sentAt: string;
+  to: string;
+  cc?: string;
+  subject?: string;
+  sentBy?: string | null;
+  conversationId?: string;
+};
 type AttendeeRow = {
   id: string;
   name: string;
@@ -319,6 +326,8 @@ export function OrientationEmailPanel({
           ))}
         </div>
       ) : null}
+
+      <CommunicationHistory attendees={attendees} />
 
       <ReminderScheduler sessionId={sessionId} />
 
@@ -921,6 +930,116 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     <div className="flex gap-2">
       <dt className="w-16 shrink-0 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">{label}</dt>
       <dd className="min-w-0 flex-1 break-words text-brand-black dark:text-slate-200">{children}</dd>
+    </div>
+  );
+}
+
+// --- communication history --------------------------------------------------
+//
+// Everything the app has actually sent for this session, newest first. The data
+// was always being recorded and never shown — the grid could only express it as a
+// tick and a hover tooltip, which is not something you can hand to somebody asking
+// "who was copied on Axel's invitation in October".
+//
+// Only APP sends appear. A hand-ticked box is somebody's recollection, not a
+// record, and listing the two together would make the weaker one look like
+// evidence.
+
+function CommunicationHistory({ attendees }: { attendees: AttendeeRow[] }) {
+  const [open, setOpen] = useState(false);
+
+  const rows = attendees
+    .flatMap((a) =>
+      Object.entries(a.sends).map(([key, r]) => ({
+        attendee: a.name,
+        template: ORIENTATION_TEMPLATE_META.find((t) => t.key === key)?.label ?? key,
+        ...r
+      }))
+    )
+    .sort((x, y) => (x.sentAt < y.sentAt ? 1 : -1));
+
+  if (rows.length === 0) {
+    return (
+      <p className="mt-3 text-[11px] text-brand-grey dark:text-slate-400">
+        No orientation email has been sent from the app for this session yet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-3">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="text-xs font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-slate-300"
+      >
+        {open ? "Hide" : "Show"} communication history ({rows.length} sent)
+      </button>
+
+      {open ? (
+        <div className="mt-2 overflow-x-auto rounded border border-brand-lea/15 dark:border-white/10">
+          <table className="min-w-full text-[11.5px]">
+            <thead>
+              <tr className="border-b border-brand-lea/10 text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:border-white/10 dark:text-slate-400">
+                <th className="px-2 py-1.5">When</th>
+                <th className="px-2 py-1.5">Who it&apos;s about</th>
+                <th className="px-2 py-1.5">Email</th>
+                <th className="px-2 py-1.5">To</th>
+                <th className="px-2 py-1.5">Cc</th>
+                <th className="px-2 py-1.5">Sent by</th>
+                <th className="px-2 py-1.5">In Front</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={i} className="border-b border-brand-lea/10 last:border-0 align-top dark:border-white/10">
+                  <td className="whitespace-nowrap px-2 py-1.5 text-brand-black dark:text-slate-200">
+                    {new Intl.DateTimeFormat("en-US", {
+                      timeZone: "America/Denver",
+                      dateStyle: "medium",
+                      timeStyle: "short"
+                    }).format(new Date(r.sentAt))}
+                  </td>
+                  <td className="px-2 py-1.5 font-medium text-brand-lea dark:text-slate-100">{r.attendee}</td>
+                  <td className="px-2 py-1.5 text-brand-black dark:text-slate-200">
+                    {r.template}
+                    {r.subject ? (
+                      <div className="text-[10px] text-brand-grey dark:text-slate-400">{r.subject}</div>
+                    ) : null}
+                  </td>
+                  <td className="px-2 py-1.5 text-brand-black dark:text-slate-200">{r.to || "—"}</td>
+                  <td className="px-2 py-1.5 text-brand-black dark:text-slate-200">
+                    {/* An old record genuinely has no cc stored. Saying "not recorded"
+                        rather than showing a blank stops it reading as "nobody". */}
+                    {r.cc === undefined ? (
+                      <span className="text-brand-grey dark:text-slate-500">not recorded</span>
+                    ) : r.cc ? (
+                      r.cc
+                    ) : (
+                      "nobody"
+                    )}
+                  </td>
+                  <td className="px-2 py-1.5 text-brand-grey dark:text-slate-400">{r.sentBy ?? "—"}</td>
+                  <td className="px-2 py-1.5">
+                    {r.conversationId ? (
+                      <a
+                        href={`https://app.frontapp.com/open/${r.conversationId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={`Conversation ${r.conversationId}`}
+                        className="font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-slate-300"
+                      >
+                        Open
+                      </a>
+                    ) : (
+                      <span className="text-brand-grey dark:text-slate-500">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
     </div>
   );
 }

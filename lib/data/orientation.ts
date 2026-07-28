@@ -80,7 +80,17 @@ export type AttendeeView = {
   sentTemplateKeys: string[];
   /** templateKey -> what the APP actually sent. A key in sentTemplateKeys with no
       entry here was ticked by hand, which is a different fact and shows differently. */
-  sends: Record<string, { sentAt: string; to: string; sentBy?: string | null }>;
+  sends: Record<
+    string,
+    {
+      sentAt: string;
+      to: string;
+      cc?: string;
+      subject?: string;
+      sentBy?: string | null;
+      conversationId?: string;
+    }
+  >;
   rescheduleCount: number;
 };
 

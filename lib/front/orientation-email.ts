@@ -459,8 +459,25 @@ export type OrientationSendRecord = {
   messageId?: string;
   sentAt: string;
   to: string;
+  /** Everyone copied. Computed at send time from the standing list plus the hire's
+      supervisors, and previously thrown away — so "was Kevin copied on Axel's
+      invitation?" was unanswerable after the fact. Records written before Jul 27
+      have no cc, which is why the history says "not recorded" rather than "nobody". */
+  cc?: string;
+  /** The subject as actually sent, so history reads without opening Front. */
+  subject?: string;
   sentBy?: string | null;
 };
+
+/** Deep link to the conversation in Front.
+ *
+ * UNVERIFIED FORMAT: this is Front's standard /open/<id> link, but it could not be
+ * checked against a real conversation (nothing had been sent when it was written).
+ * The raw id is always shown next to the link so the record is still usable if the
+ * URL shape is wrong — and if it is, this one function is the only thing to fix. */
+export function frontConversationUrl(conversationId: string): string {
+  return `https://app.frontapp.com/open/${conversationId}`;
+}
 
 /** attendeeId -> templateKey -> record */
 type SendMap = Record<string, Record<string, OrientationSendRecord>>;

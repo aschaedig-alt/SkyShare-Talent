@@ -200,6 +200,8 @@ export async function runDueReminders(): Promise<ReminderRunResult> {
           messageId: res.id,
           sentAt: new Date().toISOString(),
           to: email.to.join(", "),
+          cc: email.cc.join(", "),
+          subject: email.subject,
           sentBy: "scheduled reminder"
         });
         await prisma.orientationAttendee.update({
