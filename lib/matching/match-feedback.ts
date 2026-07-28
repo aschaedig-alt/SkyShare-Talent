@@ -11,9 +11,16 @@ import { prisma } from "@/lib/prisma";
  * when we build the learning loop.
  */
 
-export type MatchVerdict = "up" | "neutral" | "down" | "under";
+/**
+ * "under" and "over" are both a NO, recorded with the reason why: too little
+ * experience for the seat, or too much. They are kept apart from a plain "down"
+ * because the two point in opposite directions when this feeds scoring later —
+ * an overqualified pilot is a retention risk on an SIC seat, not a weak
+ * candidate, and is often the right person for a different opening.
+ */
+export type MatchVerdict = "up" | "neutral" | "down" | "under" | "over";
 
-export const MATCH_VERDICTS: MatchVerdict[] = ["up", "neutral", "down", "under"];
+export const MATCH_VERDICTS: MatchVerdict[] = ["up", "neutral", "down", "under", "over"];
 
 export type MatchFeedbackEntry = {
   verdict: MatchVerdict;

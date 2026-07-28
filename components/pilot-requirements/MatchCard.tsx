@@ -35,7 +35,8 @@ const FIT_TAGS: Array<{ value: MatchVerdict; label: string; Icon: LucideIcon; on
   { value: "up", label: "Good fit", Icon: ThumbsUp, on: "bg-value-teamwork-light text-value-teamwork-dark" },
   { value: "neutral", label: "Maybe", Icon: Minus, on: "bg-value-leadership-light text-value-leadership-dark" },
   { value: "down", label: "Not a fit", Icon: ThumbsDown, on: "bg-value-customerFocus-light text-value-customerFocus-dark" },
-  { value: "under", label: "Underqualified", Icon: TrendingDown, on: "bg-brand-cloudDancer text-brand-eden dark:bg-white/5" }
+  { value: "under", label: "Underqualified", Icon: TrendingDown, on: "bg-brand-cloudDancer text-brand-eden dark:bg-white/5" },
+  { value: "over", label: "Overqualified", Icon: TrendingUp, on: "bg-brand-sweet/40 text-brand-eden dark:bg-white/10 dark:text-slate-300" }
 ];
 
 export const readinessStyles: Record<ReadinessLabel, string> = {

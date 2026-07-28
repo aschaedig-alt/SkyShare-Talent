@@ -11,7 +11,8 @@ const VERDICT_LABEL: Record<MatchVerdict, string> = {
   up: "Tagged: good fit",
   neutral: "Tagged: maybe",
   down: "Tagged: not a fit",
-  under: "Tagged: underqualified"
+  under: "Tagged: underqualified",
+  over: "Tagged: overqualified"
 };
 
 function seatStyle(seat: string | null): { label: string; cls: string } {
