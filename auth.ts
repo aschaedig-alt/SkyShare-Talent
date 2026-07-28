@@ -109,11 +109,64 @@ export const authOptions: NextAuthOptions = {
         GoogleProvider({
           clientId: process.env.AUTH_GOOGLE_ID ?? process.env.GOOGLE_CLIENT_ID ?? "",
           clientSecret: process.env.AUTH_GOOGLE_SECRET ?? process.env.GOOGLE_CLIENT_SECRET ?? "",
-          allowDangerousEmailAccountLinking: false
+          allowDangerousEmailAccountLinking: false,
+          // Sign-in ALSO grants calendar access, so the app can create the
+          // orientation invite as the person clicking the button rather than as a
+          // robot account (which cannot invite guests at all without domain-wide
+          // delegation from a Workspace admin).
+          //
+          // access_type=offline + prompt=consent are what make Google hand over a
+          // REFRESH token. Without both, you get a one-hour access token and no way
+          // to renew it — the button works just after login and is dead by lunchtime.
+          // Every pre-existing account here had refresh_token = null for exactly
+          // this reason, so everyone re-consents once.
+          authorization: {
+            params: {
+              scope:
+                "openid email profile https://www.googleapis.com/auth/calendar.events",
+              access_type: "offline",
+              prompt: "consent"
+            }
+          }
         })
       ]
     : [],
   events: {
+    /**
+     * Persist the Google tokens on EVERY sign-in.
+     *
+     * This is not redundant with the adapter. PrismaAdapter writes tokens via
+     * linkAccount, which fires only the FIRST time an account is linked — so an
+     * existing user signing in again keeps whatever was stored on day one. Every
+     * account in this database was linked before calendar scope existed, which is
+     * why they all had refresh_token = null; without this handler they would stay
+     * that way forever and the calendar button would never work for them.
+     *
+     * refresh_token is only written when Google actually sends one (it omits it on
+     * repeat consents), so a later sign-in can't blank out a good one.
+     */
+    async signIn({ account }) {
+      if (account?.provider !== "google") return;
+      try {
+        const data: Record<string, unknown> = {};
+        if (typeof account.access_token === "string") data.access_token = account.access_token;
+        if (typeof account.refresh_token === "string" && account.refresh_token) {
+          data.refresh_token = account.refresh_token;
+        }
+        if (typeof account.expires_at === "number") data.expires_at = account.expires_at;
+        if (typeof account.scope === "string") data.scope = account.scope;
+        if (Object.keys(data).length === 0) return;
+
+        await prisma.account.updateMany({
+          where: { provider: "google", providerAccountId: account.providerAccountId },
+          data
+        });
+      } catch (error) {
+        // Never block a login over token bookkeeping — worst case the calendar
+        // button reports that access is missing and the user signs in again.
+        console.error("Failed to persist Google tokens on sign-in:", error);
+      }
+    },
     // Successful sign-out — the login side is logged as an attempt in the signIn
     // callback below, so we only record the logout here.
     async signOut({ token }) {

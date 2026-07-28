@@ -23,6 +23,21 @@ export type OrientationTemplateMeta = {
   audience: "attendee" | "supervisor";
   /** One-line explanation shown in the UI. */
   hint: string;
+  /** Short "To" line for the on-page legend — who actually receives this. */
+  toLabel: string;
+  /** Short "Cc" line for the on-page legend. */
+  ccLabel: string;
+  /** What the email is FOR, in the sender's words. Shown on the page so you can
+      tell the three apart without opening one. */
+  purpose: string;
+};
+
+/** Human label for an audience, used wherever the UI has to shout who receives
+    an email. Single source so the legend, the grid header and the send dialog
+    can never describe the same template differently. */
+export const AUDIENCE_LABEL: Record<OrientationTemplateMeta["audience"], string> = {
+  attendee: "the new hire",
+  supervisor: "their supervisor"
 };
 
 export const ORIENTATION_TEMPLATE_META: OrientationTemplateMeta[] = [
@@ -32,7 +47,10 @@ export const ORIENTATION_TEMPLATE_META: OrientationTemplateMeta[] = [
     id: "rsp_qnije",
     frontName: "1. New Hire Orientation",
     audience: "attendee",
-    hint: "To the new hire's company email, cc their supervisor and the standing list."
+    hint: "To the new hire's company email, cc their supervisor and the standing list.",
+    toLabel: "The new hire's SkyShare email",
+    ccLabel: "Their supervisor + the standing cc list",
+    purpose: "The invite itself — tells the new hire the day, time and where to go."
   },
   {
     key: "supervisors",
@@ -40,7 +58,10 @@ export const ORIENTATION_TEMPLATE_META: OrientationTemplateMeta[] = [
     id: "rsp_qnimy",
     frontName: "2. (Supervisors) New Hire Orientation",
     audience: "supervisor",
-    hint: "To the new hire's supervisor. Needs a supervisor linked (or typed) on their profile."
+    hint: "To the new hire's supervisor. Needs a supervisor linked (or typed) on their profile.",
+    toLabel: "Their supervisor — NOT the new hire",
+    ccLabel: "The standing cc list",
+    purpose: "Tells the supervisor their person is out at orientation that day. Needs a supervisor on the profile."
   },
   {
     key: "reminder",
@@ -48,7 +69,10 @@ export const ORIENTATION_TEMPLATE_META: OrientationTemplateMeta[] = [
     id: "rsp_qnioq",
     frontName: "3. REMINDER: New Hire Orientation",
     audience: "attendee",
-    hint: "The closer-to-the-day reminder, to the new hire."
+    hint: "The closer-to-the-day reminder, to the new hire.",
+    toLabel: "The new hire's SkyShare email",
+    ccLabel: "Their supervisor + the standing cc list",
+    purpose: "The closer-to-the-day nudge. Same details, sent again nearer orientation."
   }
 ];
 

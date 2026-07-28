@@ -9,6 +9,7 @@ import type { AttendeeView, ConfirmStatus, PrepTaskView, SessionCandidate, Sessi
 
 import { formatUsd } from "@/lib/travel/constants";
 import { OrientationEmailPanel } from "./OrientationEmailPanel";
+import { OrientationCalendarPanel } from "./OrientationCalendarPanel";
 import { formatDateLong, formatTime, formatTimeRange, zoneLabel, toMountainDateTimeParts, mountainWallClockToIso } from "@/lib/calendar/format";
 import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
 
@@ -429,6 +430,11 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
           </div>
         </section>
       </div>
+
+      {/* The calendar invite comes BEFORE the email panel on purpose: the invitation
+          template tells the new hire a calendar invite went to their company email,
+          so the event has to exist first or the email is ahead of reality. */}
+      <OrientationCalendarPanel sessionId={session.id} />
 
       {/* Sending + who's had what. Replaces the old tick-only tracker: the app can
           now send the team's real Front templates, so the five slots the app had

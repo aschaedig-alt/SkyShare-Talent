@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { clsx } from "clsx";
 import { Button, Modal } from "@/components/ui";
-import { ORIENTATION_TEMPLATE_META, type OrientationTemplateKey } from "@/lib/orientation/email-templates-meta";
+import { AUDIENCE_LABEL, ORIENTATION_TEMPLATE_META, type OrientationTemplateKey, type OrientationTemplateMeta } from "@/lib/orientation/email-templates-meta";
 import { previewOrientationEmail, sendOrientationEmail } from "@/app/orientation/actions";
 import type { OrientationEmailPreview } from "@/lib/front/orientation-email";
 
@@ -16,8 +16,78 @@ import type { OrientationEmailPreview } from "@/lib/front/orientation-email";
 //
 // The tick itself stays hand-toggleable: an email sent from Front directly still
 // needs recording, so the checkbox is not disabled just because a Send button exists.
+//
+// Rule 1 only works if you can see WHICH email a button sends BEFORE clicking it.
+// The three templates are near-identically named and two of the three go to the
+// new hire while the middle one goes to their supervisor, so "2. Supervisors" in a
+// column header is not enough. Hence the legend below, and the audience chip on
+// every column: the recipient is on the page at all times, never hover-only.
 
 type AttendeeRow = { id: string; name: string; sentTemplateKeys: string[] };
+
+/** Colour by WHO RECEIVES IT — the one distinction that makes a misfire expensive.
+    Navy for the new hire, gold for the supervisor; amber stays reserved for
+    warnings elsewhere in this panel so the two never read as the same signal. */
+function audienceChipClass(audience: OrientationTemplateMeta["audience"]): string {
+  return audience === "supervisor"
+    ? "bg-brand-gold/25 text-brand-lea ring-1 ring-brand-gold/40 dark:bg-brand-gold/20 dark:text-brand-gold"
+    : "bg-brand-sweet/40 text-brand-lea ring-1 ring-brand-lea/15 dark:bg-brand-sweet/20 dark:text-brand-sweet";
+}
+
+/** The always-on "who gets this" pill. A rectangle, per the design system. */
+function AudienceChip({ audience, className }: { audience: OrientationTemplateMeta["audience"]; className?: string }) {
+  return (
+    <span
+      className={clsx(
+        "inline-block rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+        audienceChipClass(audience),
+        className
+      )}
+    >
+      → {AUDIENCE_LABEL[audience]}
+    </span>
+  );
+}
+
+/** What each button will send, spelled out on the page. This is the "refresher"
+    surface: three cards you can read at a glance instead of remembering which
+    numbered template is which. */
+function TemplateLegend() {
+  return (
+    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+      {ORIENTATION_TEMPLATE_META.map((t) => (
+        <div
+          key={t.key}
+          className={clsx(
+            "rounded border p-2.5",
+            t.audience === "supervisor"
+              ? "border-brand-gold/40 bg-brand-gold/5 dark:border-brand-gold/30 dark:bg-brand-gold/10"
+              : "border-brand-lea/15 bg-brand-cloudDancer/40 dark:border-white/10 dark:bg-white/5"
+          )}
+        >
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[13px] font-semibold text-brand-lea dark:text-slate-100">{t.label}</span>
+            <AudienceChip audience={t.audience} />
+          </div>
+          <p className="mt-1 text-[11.5px] leading-snug text-brand-black dark:text-slate-300">{t.purpose}</p>
+          <dl className="mt-1.5 space-y-0.5 text-[11px] text-brand-grey dark:text-slate-400">
+            <div className="flex gap-1.5">
+              <dt className="w-5 shrink-0 font-bold uppercase tracking-wide">To</dt>
+              <dd className="min-w-0 flex-1">{t.toLabel}</dd>
+            </div>
+            <div className="flex gap-1.5">
+              <dt className="w-5 shrink-0 font-bold uppercase tracking-wide">Cc</dt>
+              <dd className="min-w-0 flex-1">{t.ccLabel}</dd>
+            </div>
+          </dl>
+          <p className="mt-1.5 border-t border-brand-lea/10 pt-1 text-[10.5px] text-brand-grey dark:border-white/10 dark:text-slate-500">
+            Front template: {t.frontName}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function OrientationEmailPanel({
   attendees,
@@ -36,8 +106,13 @@ export function OrientationEmailPanel({
       <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Orientation email</h2>
       <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
         Sends the team&apos;s own Front templates, from hrotasks@. The wording is whatever the template says in Front right now —
-        the app fills in the date, the recipients, and strips the red &ldquo;delete this part&rdquo; note. Every send is previewed first.
+        the app fills in the date, the recipients, and strips the red &ldquo;delete this part&rdquo; note.
       </p>
+      <p className="mt-1.5 rounded border border-brand-lea/15 bg-brand-cloudDancer/50 px-2.5 py-1.5 text-[12px] font-semibold text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+        Nothing sends on the first click. &ldquo;Send&hellip;&rdquo; opens the full email &mdash; recipients, subject and body &mdash; and you approve it there.
+      </p>
+
+      <TemplateLegend />
 
       <div className="mt-3 overflow-x-auto">
         <table className="min-w-full text-xs">
@@ -45,8 +120,13 @@ export function OrientationEmailPanel({
             <tr className="text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">
               <th className="py-2 pr-3">Attendee</th>
               {ORIENTATION_TEMPLATE_META.map((t) => (
-                <th key={t.key} className="px-2 py-2 text-center" style={{ minWidth: 118 }} title={t.hint}>
-                  {t.label}
+                <th key={t.key} className="px-2 py-2 text-center align-bottom" style={{ minWidth: 132 }} title={t.hint}>
+                  <div className="flex flex-col items-center gap-1">
+                    <span>{t.label}</span>
+                    {/* Repeated from the legend on purpose: when you are scanning
+                        rows, the column header is the only thing in view. */}
+                    <AudienceChip audience={t.audience} className="normal-case" />
+                  </div>
                 </th>
               ))}
             </tr>
@@ -175,7 +255,24 @@ function SendDialog({
       <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">
         {meta.label} · {attendee.name}
       </h2>
-      <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">{meta.hint}</p>
+      {/* The title reads "2. Supervisors · Jane Doe", which on its own looks like
+          it goes TO Jane. This banner renders immediately — before the Front fetch
+          resolves — so the dialog never sits there with a Send button and no clue
+          who is on the other end. */}
+      <div
+        className={clsx(
+          "mt-2 rounded px-2.5 py-2 text-[12.5px] leading-snug",
+          audienceChipClass(meta.audience)
+        )}
+      >
+        <span className="font-bold uppercase tracking-wide">Goes to {AUDIENCE_LABEL[meta.audience]}</span>
+        {meta.audience === "supervisor" ? (
+          <span> — {attendee.name} does not receive this one.</span>
+        ) : (
+          <span> — {attendee.name}, cc their supervisor and the standing list.</span>
+        )}
+      </div>
+      <p className="mt-1.5 text-xs text-brand-grey dark:text-slate-400">{meta.purpose}</p>
 
       {/* Test mode first: it changes who the email goes to, so it belongs above
           the preview it affects rather than buried under it. */}
