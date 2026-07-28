@@ -26,6 +26,13 @@
 
   .diagram-card { background: #ffffff; border: 1px solid var(--line); border-radius: 4px; box-shadow: var(--shadow); padding: 16px; overflow-x: auto; }
   pre.mermaid { margin: 0; text-align: center; min-width: 540px; }
+  .key { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 14px; padding: 12px 14px; background: #f6f9fc; border: 1px solid var(--line); border-radius: 4px; }
+  .key .item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); }
+  .key .sw { width: 20px; height: 20px; border-radius: 4px; flex: 0 0 auto; }
+  .key .sw.app { background: #dcebf8; border: 1px solid #466481; }
+  .key .sw.auto { background: #d3ecdf; border: 1px solid #2f7d5b; }
+  .key .sw.out { background: #faedc4; border: 1px dashed #b7791f; }
+  .key b { color: var(--navy); }
   /* Force the diagram's label + edge colors so no auto-theme can pale them out. */
   .mermaid text, .mermaid .nodeLabel, .mermaid span, .mermaid p, .mermaid foreignObject div { fill: #0d2c43 !important; color: #0d2c43 !important; }
   .mermaid .edgeLabel, .mermaid .edgeLabel p, .mermaid .edgeLabel span { color: #0d2c43 !important; fill: #0d2c43 !important; background-color: #eef4fb !important; }
@@ -86,28 +93,38 @@
   </div>
 
   <h2>The flow at a glance</h2>
+  <div class="key">
+    <span class="item"><span class="sw app"></span><b>You do it in the app</b> — a step you click through</span>
+    <span class="item"><span class="sw auto"></span><b>The system does it for you</b> — happens on its own</span>
+    <span class="item"><span class="sw out"></span><b>You do it outside the app</b> — in Google Calendar, by hand</span>
+  </div>
   <div class="diagram-card">
 <pre class="mermaid">
 %%{init: {'theme':'base','themeVariables':{'primaryColor':'#dcebf8','primaryBorderColor':'#466481','primaryTextColor':'#0d2c43','lineColor':'#7f97ab','fontFamily':'Segoe UI, system-ui, sans-serif','fontSize':'14px','darkMode':false}}}%%
 flowchart TD
-    a([Onboarding: Orientation]):::nav --> b[Create the session:<br/>date, time, location]:::step
-    b --> c[Add the attendees]:::step
-    c --> d[Create the Google Calendar invite]:::step
-    d --> e[[Copy the Meet link<br/>into the execs invite]]:::manual
-    e --> f[Invite the attendees to the event]:::step
-    f --> g[Send 1. Invitation<br/>then 2. Supervisors]:::step
-    g --> h[Send the internal summary]:::step
-    h --> i[Turn on the reminder]:::auto
-    i --> j[Confirm replies, arrange travel]:::step
-    j --> k([Mark complete]):::done
+    x[Settle the date and the<br/>exec time slot]:::out --> a([Onboarding: Orientation]):::nav
+    a --> b[Create the session]:::app
+    b --> c[Add the attendees]:::app
+    c --> d[Create the calendar invite]:::app
+    d -. makes .-> d2([Meet video link]):::auto
+    d --> e[Copy the Meet link into<br/>the execs invite]:::out
+    e --> f[Invite the attendees to the event]:::app
+    f --> g[Send 1. Invitation]:::app
+    g --> h[Re-select all,<br/>send 2. Supervisors]:::app
+    h --> i[Send the internal summary]:::app
+    i --> j[Turn on the reminder]:::app
+    j -. then sends itself<br/>the day before .-> j2([Reminder email]):::auto
+    j --> k[Confirm replies, arrange travel]:::app
+    k --> l[Mark complete]:::app
+    l -. ticks .-> l2([Attended orientation]):::auto
 
     classDef nav fill:#bcd6ee,stroke:#0d2c43,stroke-width:2px,color:#0d2c43
-    classDef step fill:#dcebf8,stroke:#466481,color:#0d2c43
-    classDef manual fill:#e7eefb,stroke:#466481,stroke-width:2px,color:#23384c
+    classDef app fill:#dcebf8,stroke:#466481,color:#0d2c43
+    classDef out fill:#faedc4,stroke:#b7791f,stroke-width:2px,stroke-dasharray:4 3,color:#4a3708
     classDef auto fill:#d3ecdf,stroke:#2f7d5b,color:#123a2a
-    classDef done fill:#bfe3cf,stroke:#2f7d5b,stroke-width:2px,color:#123a2a
 </pre>
   </div>
+  <p class="lede" style="font-size:13.5px; margin-top:10px;">The blue spine is what you do in the app, top to bottom. Green branches are things the system does on its own as you go — you don't click them. The two gold boxes are the only parts done by hand outside the app.</p>
 
   <h2>The steps</h2>
   <div class="steps">
@@ -142,7 +159,7 @@ flowchart TD
     <div class="step">
       <span class="screen">Google Calendar (outside the app)</span>
       <h3>Send the execs their calendar invite</h3>
-      <p class="do"><b>You do this by hand in Google Calendar.</b> Create the exec team's calendar invite for the time slot they gave you, and <b>copy the Meet link from step 4 into it</b> so the execs join on the same video link as everyone else. Invite the <b>Executives</b> group (<span class="fill">FILL IN: confirm the Executives group address — likely level10@skyshare.com</span>), which is the five execs — <b>Cory Bengtzen</b> (CEO), <b>Tommy Aoki</b>, <b>Keith Rabin</b>, <b>Harry Mitchel</b> and <b>Jonathan Schaedig</b>. Then add the same standing guests every time: <b>Mike Newton</b> (SkyOps), <b>Ricky Lee</b> (Safety), <b>Morgan Langholf</b> (EA), and the HR team — <b>Aimee Schaedig</b>, <b>Hannah Byers</b> and <b>Kevin Sherman</b>.</p>
+      <p class="do"><b>You do this by hand in Google Calendar.</b> Create the exec team's calendar invite for the time slot they gave you, and <b>copy the Meet link from step 4 into it</b> so the execs join on the same video link as everyone else. Invite the <b>Executives</b> group (<b>level10@skyshare.com</b>), which is the five execs — <b>Cory Bengtzen</b> (CEO), <b>Tommy Aoki</b>, <b>Keith Rabin</b>, <b>Harry Mitchel</b> and <b>Jonathan Schaedig</b>. Then add the same standing guests every time: <b>Mike Newton</b> (SkyOps), <b>Ricky Lee</b> (Safety), <b>Morgan Langholf</b> (EA), and the HR team — <b>Aimee Schaedig</b>, <b>Hannah Byers</b> and <b>Kevin Sherman</b>.</p>
     </div>
 
     <div class="step">
@@ -161,7 +178,7 @@ flowchart TD
     <div class="step">
       <span class="screen">Session page → Orientation email</span>
       <h3>Send the supervisors email</h3>
-      <p class="do">With everyone still selected, click <span class="btn gold">2. Supervisors</span> in the same bar. This sends <b>one email per supervisor</b>, naming all of that supervisor's new hires at once. Review the list of supervisors in the preview and send.</p>
+      <p class="do">Sending the invitation clears the selection, so <b>tick the header checkbox again</b> to re-select everyone. Then click <span class="btn gold">2. Supervisors</span> in the bar. This sends <b>one email per supervisor</b>, naming all of that supervisor's new hires at once. Review the list of supervisors in the preview and send.</p>
       <div class="watch"><b>Send this from the select-all bar, not person by person.</b> A supervisor with three new hires gets one email this way; sending it one attendee at a time would give them three.</div>
     </div>
 
