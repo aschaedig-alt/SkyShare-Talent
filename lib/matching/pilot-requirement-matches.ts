@@ -113,6 +113,15 @@ export type PilotRequirementCandidateMatch = {
   bonus: number;
   /** True when a HARD requirement is confirmed missing — flagged, never auto-rejected. */
   gated: boolean;
+  /**
+   * True when a HARD requirement has no evidence either way (no hours on file,
+   * resume text never extracted). NOT the same as failing it — this is a data
+   * gap to go close, and it holds the candidate out of the ranked scan results
+   * so unverified records don't crowd out people we can actually assess.
+   */
+  unverified: boolean;
+  /** Which hard requirements are unverified — the cleanup list for this person. */
+  unverifiedRequirements: string[];
   readiness: ReadinessLabel;
   /** True when readiness was set by a recruiter's manual move, not the engine. */
   overridden: boolean;
@@ -189,30 +198,53 @@ function applicationText(candidate: CandidateForMatch) {
   );
 }
 
-function aircraftAliases(aircraft: string) {
-  const normalized = normalize(aircraft);
-  const aliases = new Set<string>();
-  if (normalized) aliases.add(normalized);
-  // Pull out a compact model token (e.g. "g450", "560xl", "pc 12").
-  const compact = normalized.replace(/\b(gulfstream|citation|pilatus|bombardier|cessna|learjet|dassault|falcon|embraer|hawker|beechcraft|king air)\b/g, "").trim();
-  if (compact) aliases.add(compact);
-  if (normalized.includes("gulfstream")) aliases.add("gulfstream");
-  if (normalized.includes("citation")) aliases.add("citation");
-  if (normalized.includes("pilatus") || normalized.includes("pc 12")) {
-    aliases.add("pilatus");
-    aliases.add("pc 12");
-    aliases.add("pc12");
-  }
-  return Array.from(aliases).filter((alias) => alias.length >= 2);
+const MANUFACTURERS =
+  /\b(gulfstream|citation|pilatus|bombardier|cessna|learjet|dassault|falcon|embraer|hawker|beechcraft|king air)\b/g;
+
+/**
+ * Glue a short letter prefix onto a following number so "g 200", "g-200" and
+ * "g200" all become one token. Both the haystack and the aliases go through
+ * this, so model designators compare equal however the source wrote them.
+ */
+function collapseModelTokens(value: string) {
+  return value.replace(/\b([a-z]{1,3})\s+(\d{2,4})\b/g, "$1$2");
 }
 
+/**
+ * Aliases that identify a SPECIFIC aircraft model.
+ *
+ * The bare manufacturer ("gulfstream", "citation") is deliberately NOT an alias.
+ * It used to be, and it meant a G450/G550 cabin-crew resume matched a G200
+ * flight-deck requirement at 60% aircraft fit — the manufacturer is shared by
+ * aircraft with different type ratings, so on its own it says nothing about fit.
+ */
+function aircraftAliases(aircraft: string) {
+  const normalized = collapseModelTokens(normalize(aircraft));
+  const aliases = new Set<string>();
+  if (normalized) aliases.add(normalized);
+  // Pull out a compact model token (e.g. "g450", "560xl", "pc12").
+  const compact = normalized.replace(MANUFACTURERS, "").trim();
+  if (compact) aliases.add(compact);
+  return Array.from(aliases).filter((alias) => alias.length >= 2 && !/^(gulfstream|citation|pilatus|bombardier|cessna|learjet|dassault|falcon|embraer|hawker|beechcraft|king air)$/.test(alias));
+}
+
+/**
+ * Whole-token containment. This used to be a raw `text.includes(token)`, which
+ * matched a two-letter seat alias like "fo" inside "for" / "info" / "before" —
+ * so EVERY candidate, pilot or not, passed seat fit. Both sides are normalized
+ * to lowercase alphanumerics separated by single spaces, so padding with spaces
+ * is an exact word-boundary test.
+ */
 function includesToken(text: string, token: string) {
-  const t = normalize(token);
-  return t.length > 0 && text.includes(t);
+  const t = collapseModelTokens(normalize(token));
+  if (t.length === 0) return false;
+  return ` ${collapseModelTokens(text)} `.includes(` ${t} `);
 }
 
 const HOURS_TEXT_SYNONYMS: Record<string, string[]> = {
-  total_time: ["total time", "total flight time", "total hours", "total"],
+  // No bare "total": it is a common word on any application form and matched
+  // whatever number happened to follow it.
+  total_time: ["total time", "total flight time", "total hours"],
   pic_time: ["pilot in command", "pic"],
   sic_time: ["second in command", "sic"],
   turbine_time: ["turbine"],
@@ -223,13 +255,23 @@ const HOURS_TEXT_SYNONYMS: Record<string, string[]> = {
   cross_country_time: ["cross country", "cross-country", "xc"]
 };
 
+function escapeRe(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * `\b` around the captured number matters more than it looks: without it,
+ * "g450" yields 450 and "ce525" yields 525, because the digits inside a model
+ * designator are reachable. A word boundary can't fall between "g" and "4", so
+ * anchoring the capture rules designators out.
+ */
 function detectHours(text: string, gateKey: string): number | null {
   const terms = HOURS_TEXT_SYNONYMS[gateKey] ?? [];
   for (const term of terms) {
-    const safe = normalize(term).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const safe = escapeRe(normalize(term));
     if (!safe) continue;
-    const after = new RegExp(`${safe}[^0-9]{0,18}(\\d{2,5})`, "i");
-    const before = new RegExp(`(\\d{2,5})\\s*(?:hours|hrs|hr)?[^0-9]{0,12}${safe}`, "i");
+    const after = new RegExp(`\\b${safe}\\b[^0-9]{0,18}\\b(\\d{2,5})\\b`, "i");
+    const before = new RegExp(`\\b(\\d{2,5})\\b\\s*(?:hours|hrs|hr)?[^0-9]{0,12}\\b${safe}\\b`, "i");
     const match = text.match(after) ?? text.match(before);
     if (match?.[1]) {
       const n = Number(match[1]);
@@ -239,14 +281,22 @@ function detectHours(text: string, gateKey: string): number | null {
   return null;
 }
 
-/** Hours near an aircraft token, e.g. "G450 880 hours" — used for time in type. */
+/**
+ * Hours in type, e.g. "G450 880 hours".
+ *
+ * An explicit hours unit is REQUIRED. Without it this read the model number
+ * itself as the hour count — "Gulfstream G450" on a cabin-attendant resume was
+ * scored as 450 hours in type, which against a 25-hour target is full credit.
+ * A number sitting next to an aircraft name is not evidence of time in it.
+ */
 function detectHoursNearAircraft(text: string, aliases: string[]): number | null {
+  const haystack = collapseModelTokens(text);
   for (const alias of aliases) {
-    const safe = normalize(alias).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const safe = escapeRe(collapseModelTokens(normalize(alias)));
     if (!safe) continue;
-    const after = new RegExp(`${safe}[^0-9]{0,18}(\\d{2,5})`, "i");
-    const before = new RegExp(`(\\d{2,5})\\s*(?:hours|hrs|hr)?[^0-9]{0,12}${safe}`, "i");
-    const match = text.match(after) ?? text.match(before);
+    const after = new RegExp(`\\b${safe}\\b[^0-9]{0,18}\\b(\\d{2,5})\\b\\s*(?:hours|hrs|hr)\\b`, "i");
+    const before = new RegExp(`\\b(\\d{2,5})\\b\\s*(?:hours|hrs|hr)\\b[^0-9]{0,12}\\b${safe}\\b`, "i");
+    const match = haystack.match(after) ?? haystack.match(before);
     if (match?.[1]) {
       const n = Number(match[1]);
       if (Number.isFinite(n) && n >= 1 && n <= 40000) return n;
@@ -393,7 +443,15 @@ export function scoreCandidate(
     typeof totalTimeValue === "number" &&
     totalTimeValue >= totalTimeMin * 2;
   if (seat) {
-    const seatAliases = seat === "pic" ? ["pic", "captain"] : seat === "sic" ? ["sic", "first officer", "fo"] : [seat];
+    // No bare "fo" — as a substring it lived inside "for", "info" and "before",
+    // so every candidate cleared seat fit. "f o" is what a normalized "F/O"
+    // becomes, and it only matches as a whole token now.
+    const seatAliases =
+      seat === "pic"
+        ? ["pic", "pilot in command", "captain"]
+        : seat === "sic"
+          ? ["sic", "second in command", "first officer", "f o"]
+          : [seat];
     const seatMetric = seat === "pic" ? metricsByKey.get("pic") : seat === "sic" ? metricsByKey.get("sic") : undefined;
     const hasSeatHours = typeof seatMetric?.valueNumber === "number" && seatMetric.valueNumber > 0;
     const inProfile = seatAliases.some((alias) => includesToken(text, alias));
@@ -405,7 +463,10 @@ export function scoreCandidate(
       status = "met";
       source = "structured";
     } else if (inProfile) {
-      status = "met";
+      // Naming the seat on a resume is weaker than logged hours in it, so it
+      // reads as "near" — it used to be full credit, indistinguishable from a
+      // pilot with the hours actually on file.
+      status = "near";
       source = "profile-text";
     } else if (inApplied) {
       status = "near";
@@ -415,15 +476,15 @@ export function scoreCandidate(
       source = "none";
     }
 
-    let credit = status === "met" ? 1 : status === "near" ? 0.5 : 0;
+    let credit = source === "structured" ? 1 : source === "profile-text" ? 0.6 : source === "application" ? 0.4 : 0;
     let seatDetail =
-      status === "met"
-        ? hasSeatHours
-          ? `${(seatMetric?.valueNumber ?? 0).toLocaleString()} ${seat.toUpperCase()} hrs on file`
-          : `${requirement.pilotSeat} experience referenced`
-        : status === "near"
-          ? "Seat referenced in applications"
-          : `No clear ${requirement.pilotSeat} evidence`;
+      source === "structured"
+        ? `${(seatMetric?.valueNumber ?? 0).toLocaleString()} ${seat.toUpperCase()} hrs on file`
+        : source === "profile-text"
+          ? `${requirement.pilotSeat} referenced in resume / notes (no seat hours on file)`
+          : source === "application"
+            ? "Seat referenced in applications"
+            : `No clear ${requirement.pilotSeat} evidence`;
 
     // Overqualified caps seat fit: a captain-level pilot in an SIC seat is a
     // weaker seat match (retention/flight risk), even with the hours on file.
@@ -678,7 +739,12 @@ export function scoreCandidate(
   // --- Roll category sub-scores --------------------------------------------
   const subScores: SubScore[] = [];
   for (const category of SCORING_CATEGORIES) {
-    const catFactors = perCategory[category].filter((factor) => factor.evaluated || factor.status === "missing" || factor.status === "near");
+    // Every factor the role actually asks for, INCLUDING the ones we have no
+    // data on. Unknowns used to be filtered out here, which collapsed a
+    // category to null and dropped its weight from the roll-up below — so "no
+    // hours on file" scored identically to "hours don't matter". A category is
+    // null only when the role sets nothing in it (genuinely not applicable).
+    const catFactors = perCategory[category];
     const weight = config.weights[category];
 
     if (catFactors.length === 0) {
@@ -715,27 +781,54 @@ export function scoreCandidate(
   const gated = hardGaps.length > 0;
 
   // --- Qualified (gate) + Bonus (add-only) split ---------------------------
-  // Gate factors are the position's minimums (hard/soft). Meeting them all = 100.
-  // Bonus factors are nice-to-haves: anything set to the "bonus" level, plus
-  // time-in-type and recency, which only ever add. Missing data (unknown) is
-  // not held against the gate score.
+  //
+  // Two rules here were wrong and produced 100%-qualified non-pilots:
+  //
+  //  1. Unknown factors were FILTERED OUT of the gate. A candidate with no
+  //     hours on file had nothing left to fail, so the few things that did
+  //     resolve carried the whole score — and when nothing resolved at all the
+  //     fallback handed out a flat 100. Missing evidence is now worth zero and
+  //     still counts in the denominator: you do not clear a minimum by having
+  //     no data about it. Candidates in that position are reported as
+  //     `unverified` so they read as "we don't know yet", not as "qualified".
+  //
+  //  2. The gate ignored config.weights entirely and used a flat hard=2/soft=1
+  //     per factor. Setting hour minimums to 80% of the profile changed nothing
+  //     on screen. Qualified is now the weighted average ACROSS CATEGORIES
+  //     using the configured weights, with hard/soft weighting applied inside
+  //     each category.
   const effStatus = (key: string): ReqStatus => {
     const def = SCORING_REQUIREMENT_MAP[key];
     return def ? config.requirements[def.key] ?? def.defaultStatus : "soft";
   };
-  const bonusCustomCertKeys = new Set(
-    (config.customCerts ?? []).filter((c) => c.status === "bonus").map((c) => `custom_cert_${c.id}`)
-  );
+  const customCertStatus = new Map((config.customCerts ?? []).map((c) => [`custom_cert_${c.id}`, c.status]));
+  // Bonus is now EXACTLY what the recruiter marked "bonus" — nothing else.
+  // time-in-type and recency used to be hardcoded as bonus regardless of how
+  // they were configured, which is where a cabin attendant's +42 came from.
   const isBonusFactor = (factor: WorkingFactor): boolean =>
-    factor.key === "time_in_type" ||
-    factor.key === "recency" ||
-    effStatus(factor.key) === "bonus" ||
-    bonusCustomCertKeys.has(factor.key);
+    (customCertStatus.get(factor.key) ?? effStatus(factor.key)) === "bonus";
 
-  const gateFactors = factors.filter((factor) => !isBonusFactor(factor) && factor.status !== "unknown");
-  const gateWeight = gateFactors.reduce((sum, factor) => sum + statusWeight(factor.requirementStatus), 0);
-  const gateEarned = gateFactors.reduce((sum, factor) => sum + statusWeight(factor.requirementStatus) * factor.credit, 0);
-  const qualified = gateWeight > 0 ? Math.round((gateEarned / gateWeight) * 100) : 100;
+  const gateCategoryScore = (category: CategoryKey): number | null => {
+    const catFactors = perCategory[category].filter((factor) => !isBonusFactor(factor));
+    if (catFactors.length === 0) return null; // role doesn't ask for this at all
+    const totalWeight = catFactors.reduce((sum, factor) => sum + statusWeight(factor.requirementStatus), 0);
+    if (totalWeight === 0) return null;
+    // Unknown contributes 0 credit but still occupies its share of the weight.
+    const earned = catFactors.reduce((sum, factor) => sum + statusWeight(factor.requirementStatus) * factor.credit, 0);
+    return (earned / totalWeight) * 100;
+  };
+
+  let gateWeightSum = 0;
+  let gateScoreSum = 0;
+  for (const category of SCORING_CATEGORIES) {
+    const weight = config.weights[category];
+    if (weight <= 0) continue;
+    const score = gateCategoryScore(category);
+    if (score === null) continue;
+    gateWeightSum += weight;
+    gateScoreSum += weight * score;
+  }
+  const qualified = gateWeightSum > 0 ? Math.round(gateScoreSum / gateWeightSum) : 0;
 
   const BONUS_PER_FACTOR = 20;
   const BONUS_CAP = 50;
@@ -746,10 +839,21 @@ export function scoreCandidate(
     )
   );
 
+  // --- Unverified: a HARD requirement we have no evidence either way on -----
+  // Distinct from `gated` (a hard requirement confirmed NOT met). "No hours on
+  // file" and "not enough hours" are different problems: the first is a data
+  // gap to go fix, the second is a real disqualification.
+  const unverifiedRequirements = factors
+    .filter((factor) => factor.requirementStatus === "hard" && factor.status === "unknown")
+    .map((factor) => factor.label);
+  const unverified = unverifiedRequirements.length > 0;
+
   const total = gated ? 0 : qualified + bonus;
 
-  // Readiness reads off the qualified (gate) score; a hard-requirement gate caps it.
-  let readiness: ReadinessLabel = gated
+  // Readiness reads off the qualified (gate) score; a hard-requirement gate caps
+  // it, and so does an unverified one — nobody is a "strong signal" on evidence
+  // we don't have.
+  let readiness: ReadinessLabel = gated || unverified
     ? "Needs review"
     : qualified >= config.readiness.strong
       ? "Strong signal"
@@ -798,6 +902,8 @@ export function scoreCandidate(
     qualified,
     bonus,
     gated,
+    unverified,
+    unverifiedRequirements,
     readiness,
     overridden,
     excludedReason: isScanExclusionReason(candidate.scanExcludedReason) ? candidate.scanExcludedReason : null,
@@ -891,7 +997,12 @@ export async function getPilotRequirementCandidateMatches(
 
   const scored = candidates
     .map((candidate) => scoreCandidate(requirement, candidate, config, feedback[candidate.id] ?? null, overrides[candidate.id] ?? null))
-    .filter((match) => match.overridden || match.score > 0 || match.factors.some((factor) => factor.status === "met"))
+    // Unverified records are held out of the ranked scan: with only 32 of 341
+    // live candidates carrying structured hours, leaving them in means the
+    // board is mostly people we cannot assess. They are not lost — they are
+    // listed by `getUnverifiedForRequirement` as a data-cleanup queue, and a
+    // recruiter's manual tier override still forces one back onto the board.
+    .filter((match) => match.overridden || (!match.unverified && (match.score > 0 || match.factors.some((factor) => factor.status === "met"))))
     .sort(compareMatches);
 
   // Two budgets, not one list. Archived candidates out-rank live ones often
@@ -901,6 +1012,54 @@ export async function getPilotRequirementCandidateMatches(
     ...scored.filter((match) => !match.fromArchive).slice(0, CURRENT_MATCH_LIMIT),
     ...scored.filter((match) => match.fromArchive).slice(0, ARCHIVE_MATCH_LIMIT)
   ];
+}
+
+export type UnverifiedCandidate = {
+  candidateId: string;
+  candidateName: string;
+  currentTitle: string | null;
+  stage: string | null;
+  fromArchive: boolean;
+  /** Hard requirements with no evidence either way. */
+  missingData: string[];
+  /** True when we hold no extracted document text at all — the usual root cause. */
+  noDocumentText: boolean;
+};
+
+/**
+ * The data-cleanup queue behind the `unverified` flag: everyone the scan had to
+ * hold back because a hard requirement has no evidence either way. Ordered by
+ * fewest gaps first, so the quickest wins are at the top.
+ */
+export async function getUnverifiedForRequirement(
+  requirement: MatchRequirement | null,
+  config: ScoringProfileConfig = defaultProfileConfig(),
+  includeExcluded = false
+): Promise<UnverifiedCandidate[]> {
+  if (!requirement) return [];
+
+  const candidates = await prisma.candidate.findMany({
+    where: scanPoolWhere(includeExcluded),
+    select: candidateMatchSelect
+  });
+
+  return candidates
+    .map((candidate) => ({ candidate, match: scoreCandidate(requirement, candidate, config, null, null) }))
+    .filter((row) => row.match.unverified)
+    .map(({ candidate, match }) => ({
+      candidateId: match.candidateId,
+      candidateName: match.candidateName,
+      currentTitle: match.currentTitle,
+      stage: match.stage,
+      fromArchive: match.fromArchive,
+      missingData: match.unverifiedRequirements,
+      noDocumentText: candidate.files.every((file) => (file.extractedText ?? "").trim().length === 0)
+    }))
+    .sort(
+      (left, right) =>
+        left.missingData.length - right.missingData.length ||
+        left.candidateName.localeCompare(right.candidateName)
+    );
 }
 
 /**

@@ -59,7 +59,7 @@ export function CandidatePreview({
                   </span>
                 </div>
                 <div className="mt-2">
-                  <ScoreSplit qualified={match.qualified} bonus={match.bonus} gated={match.gated} size="sm" />
+                  <ScoreSplit qualified={match.qualified} bonus={match.bonus} gated={match.gated} unverified={match.unverified} size="sm" />
                 </div>
                 <p className="mt-1.5 text-xs leading-5 text-brand-black/75 dark:text-slate-300">{match.summary}</p>
               </div>

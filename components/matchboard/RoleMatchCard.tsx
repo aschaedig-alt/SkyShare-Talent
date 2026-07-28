@@ -57,7 +57,7 @@ export function RoleMatchCard({
       </div>
 
       <div className="mt-2.5">
-        <ScoreSplit qualified={match.qualified} bonus={match.bonus} gated={match.gated} size="sm" />
+        <ScoreSplit qualified={match.qualified} bonus={match.bonus} gated={match.gated} unverified={match.unverified} size="sm" />
       </div>
 
       <div className="mt-2 h-1.5 rounded-full bg-brand-lea/10">
