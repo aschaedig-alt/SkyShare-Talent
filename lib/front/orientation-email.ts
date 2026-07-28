@@ -375,6 +375,27 @@ async function readSends(): Promise<SendMap> {
   }
 }
 
+/**
+ * The send records for these attendees, so the grid can show WHAT REALLY HAPPENED
+ * rather than just a tick.
+ *
+ * The distinction matters: sentTemplateKeys is hand-toggleable (it has to be — an
+ * email sent from Front directly still needs recording), so a tick alone cannot
+ * tell you whether the app sent it or somebody marked it. A record here means the
+ * app sent it and Front confirmed; a tick with no record means marked by hand.
+ */
+export async function getOrientationSends(
+  attendeeIds: string[]
+): Promise<Record<string, Record<string, OrientationSendRecord>>> {
+  if (!attendeeIds.length) return {};
+  const map = await readSends();
+  const out: Record<string, Record<string, OrientationSendRecord>> = {};
+  for (const id of attendeeIds) {
+    if (map[id]) out[id] = map[id];
+  }
+  return out;
+}
+
 export async function recordOrientationSend(
   attendeeId: string,
   key: OrientationTemplateKey,

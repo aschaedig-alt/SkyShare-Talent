@@ -441,16 +441,32 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
           invented (invitation / confirm_request / … ) are gone. */}
       {attendees.length > 0 ? (
         <OrientationEmailPanel
-          attendees={attendees.map((a) => ({ id: a.id, name: a.name, sentTemplateKeys: a.sentTemplateKeys }))}
+          attendees={attendees.map((a) => ({
+            id: a.id,
+            name: a.name,
+            sentTemplateKeys: a.sentTemplateKeys,
+            sends: a.sends
+          }))}
           onToggle={(attendeeId, key) => {
             const a = attendees.find((x) => x.id === attendeeId);
             if (a) void toggleEmail(a, key);
           }}
           onSent={(attendeeId, key) => {
             // A real send ticks the box server-side; mirror it locally so the
-            // grid updates without a full reload.
+            // grid updates without a full reload. The provisional send record
+            // matters as much as the tick — without it the mark would flash as
+            // "ticked by hand" until the refresh lands, which is the opposite of
+            // what just happened.
             setAttendees((cur) =>
-              cur.map((x) => (x.id === attendeeId && !x.sentTemplateKeys.includes(key) ? { ...x, sentTemplateKeys: [...x.sentTemplateKeys, key] } : x))
+              cur.map((x) =>
+                x.id === attendeeId
+                  ? {
+                      ...x,
+                      sentTemplateKeys: x.sentTemplateKeys.includes(key) ? x.sentTemplateKeys : [...x.sentTemplateKeys, key],
+                      sends: { ...x.sends, [key]: x.sends[key] ?? { sentAt: new Date().toISOString(), to: "" } }
+                    }
+                  : x
+              )
             );
             router.refresh();
           }}

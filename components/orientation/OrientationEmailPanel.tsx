@@ -29,7 +29,32 @@ import type { OrientationEmailPreview } from "@/lib/front/orientation-email";
 // column header is not enough. Hence the legend below, and the audience chip on
 // every column: the recipient is on the page at all times, never hover-only.
 
-type AttendeeRow = { id: string; name: string; sentTemplateKeys: string[] };
+type SendRecord = { sentAt: string; to: string; sentBy?: string | null };
+type AttendeeRow = {
+  id: string;
+  name: string;
+  sentTemplateKeys: string[];
+  /** templateKey -> what the APP sent. Absent = ticked by hand. */
+  sends: Record<string, SendRecord>;
+};
+
+/** "Jul 27" — short enough for a grid cell. */
+function shortDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", month: "short", day: "numeric" }).format(d);
+}
+
+function fullSentLabel(r: SendRecord): string {
+  const when = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Denver",
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(new Date(r.sentAt));
+  // `to` is empty for the optimistic record set right after a send, before the
+  // page refetches — say less rather than "to " with nothing after it.
+  return `Sent from the app on ${when} MT${r.to ? ` to ${r.to}` : ""}${r.sentBy ? ` by ${r.sentBy}` : ""}.`;
+}
 
 /** Colour by WHO RECEIVES IT — the one distinction that makes a misfire expensive.
     Navy for the new hire, gold for the supervisor; amber stays reserved for
@@ -174,31 +199,61 @@ export function OrientationEmailPanel({
                 <td className="py-2 pr-3 font-medium text-brand-lea dark:text-slate-100">{a.name}</td>
                 {ORIENTATION_TEMPLATE_META.map((t) => {
                   const sent = a.sentTemplateKeys.includes(t.key);
+                  const record = a.sends[t.key];
+                  // Three states, not two. "The app sent it, here is when" is a
+                  // different fact from "somebody ticked a box", and the grid used
+                  // to render both as the same green tick.
                   return (
-                    <td key={t.key} className="px-2 py-2">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => onToggle(a.id, t.key)}
-                          aria-label={sent ? `Mark ${t.label} as not sent for ${a.name}` : `Mark ${t.label} as sent for ${a.name}`}
-                          title="Tick by hand — for an email you sent from Front directly"
-                          className="inline-flex items-center justify-center rounded p-0.5 transition hover:bg-brand-gold/10"
-                        >
-                          {sent ? (
-                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                              <svg width="11" height="11" viewBox="0 0 12 12">
-                                <path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            </span>
-                          ) : (
-                            <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/30" />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => setTarget({ attendee: a, key: t.key })}
-                          className="rounded border border-brand-lea/20 px-2 py-0.5 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
-                        >
-                          {sent ? "Resend…" : "Send…"}
-                        </button>
+                    <td key={t.key} className="px-2 py-2 align-top">
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => onToggle(a.id, t.key)}
+                            aria-label={sent ? `Mark ${t.label} as not sent for ${a.name}` : `Mark ${t.label} as sent for ${a.name}`}
+                            title={
+                              record
+                                ? fullSentLabel(record)
+                                : sent
+                                  ? "Marked by hand — the app has no record of sending this. Click to un-mark."
+                                  : "Tick by hand — for an email you sent from Front directly"
+                            }
+                            className="inline-flex items-center justify-center rounded p-0.5 transition hover:bg-brand-gold/10"
+                          >
+                            {record ? (
+                              // Sent by the app and confirmed by Front: solid.
+                              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white">
+                                <svg width="11" height="11" viewBox="0 0 12 12">
+                                  <path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              </span>
+                            ) : sent ? (
+                              // Ticked by hand: outlined, deliberately weaker.
+                              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border-2 border-emerald-600 text-emerald-700 dark:text-emerald-400">
+                                <svg width="10" height="10" viewBox="0 0 12 12">
+                                  <path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              </span>
+                            ) : (
+                              <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/30" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => setTarget({ attendee: a, key: t.key })}
+                            className="rounded border border-brand-lea/20 px-2 py-0.5 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+                          >
+                            {sent ? "Resend…" : "Send…"}
+                          </button>
+                        </div>
+                        {record ? (
+                          <span
+                            className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400"
+                            title={fullSentLabel(record)}
+                          >
+                            {shortDate(record.sentAt)}
+                          </span>
+                        ) : sent ? (
+                          <span className="text-[10px] text-brand-grey dark:text-slate-400">by hand</span>
+                        ) : null}
                       </div>
                     </td>
                   );
@@ -207,6 +262,31 @@ export function OrientationEmailPanel({
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* What the two marks mean. Without this the outlined tick just looks like a
+          rendering glitch rather than "nobody has evidence this was sent". */}
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-brand-grey dark:text-slate-400">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-white">
+            <svg width="9" height="9" viewBox="0 0 12 12">
+              <path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          Sent from here — hover for when and to whom
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border-2 border-emerald-600 text-emerald-700 dark:text-emerald-400">
+            <svg width="8" height="8" viewBox="0 0 12 12">
+              <path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          Ticked by hand — no record of the app sending it
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-brand-grey/30" />
+          Not sent
+        </span>
       </div>
 
       {/* Bulk bar. Appears only with a selection, so the default view stays the

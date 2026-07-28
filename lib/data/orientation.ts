@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { isPilotPosition } from "@/lib/orientation/defaults";
 import { getPrepDefaults } from "@/lib/orientation/prep-defaults";
 import { officeDayKey } from "@/lib/dates/display";
+import { getOrientationSends } from "@/lib/front/orientation-email";
 
 /**
  * The day a CALENDAR DATE falls on. A start date is a day someone picked, stored
@@ -77,6 +78,9 @@ export type AttendeeView = {
   cardReady: boolean;
   swagReady: boolean;
   sentTemplateKeys: string[];
+  /** templateKey -> what the APP actually sent. A key in sentTemplateKeys with no
+      entry here was ticked by hand, which is a different fact and shows differently. */
+  sends: Record<string, { sentAt: string; to: string; sentBy?: string | null }>;
   rescheduleCount: number;
 };
 
@@ -160,6 +164,10 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
   });
   if (!s) return null;
 
+  // What the app really sent, per attendee — read once for the whole session
+  // rather than per row.
+  const sendMap = await getOrientationSends(s.attendees.map((a) => a.id));
+
   const attendees: AttendeeView[] = s.attendees.map((a) => {
     const trips = a.newHire.travelTrips;
     const total = trips.reduce((sum, t) => sum + t.items.reduce((x, i) => x + (i.amount ?? 0), 0), 0);
@@ -184,6 +192,7 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
       cardReady: a.cardReady,
       swagReady: a.swagReady,
       sentTemplateKeys: parseKeys(a.sentTemplateKeys),
+      sends: sendMap[a.id] ?? {},
       rescheduleCount: a.newHire.orientationRescheduleCount
     };
   });
