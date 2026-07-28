@@ -373,6 +373,7 @@ export function OrientationEmailPanel({
       {target ? (
         <SendDialog
           attendee={target.attendee}
+          allAttendeeIds={attendees.map((a) => a.id)}
           templateKey={target.key}
           onClose={() => setTarget(null)}
           onSent={(key) => {
@@ -779,11 +780,15 @@ function BatchDialog({
 
 function SendDialog({
   attendee,
+  allAttendeeIds,
   templateKey,
   onClose,
   onSent
 }: {
   attendee: AttendeeRow;
+  /** Everyone on the session, so a single supervisors send can warn when this
+      hire's supervisor also covers others and would collect a copy per hire. */
+  allAttendeeIds: string[];
   templateKey: OrientationTemplateKey;
   onClose: () => void;
   onSent: (key: OrientationTemplateKey) => void;
@@ -797,6 +802,33 @@ function SendDialog({
   // Test mode redirects the whole email to one address and drops every cc.
   const [testMode, setTestMode] = useState(false);
   const [testTo, setTestTo] = useState("hrotasks@skyshare.com");
+  // Sending the supervisors email ONE ATTENDEE AT A TIME is the path that
+  // reintroduces duplicates: the bulk send groups by supervisor, this one does not.
+  // Warn with the real names rather than a generic caution.
+  const [sharedWith, setSharedWith] = useState<{ supervisor: string; others: string[] } | null>(null);
+
+  useEffect(() => {
+    if (templateKey !== "supervisors") {
+      setSharedWith(null);
+      return;
+    }
+    let cancelled = false;
+    previewOrientationSupervisorBatch(allAttendeeIds)
+      .then((res) => {
+        if (cancelled || !res.ok) return;
+        const group = (res.rows ?? []).find((r) => r.attendeeIds.includes(attendee.id) && r.hireNames.length > 1);
+        if (group) {
+          setSharedWith({
+            supervisor: group.supervisorName ?? group.supervisorEmail,
+            others: group.hireNames.filter((n) => n !== attendee.name)
+          });
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [templateKey, allAttendeeIds, attendee.id, attendee.name]);
 
   // Rebuild the preview whenever the mode changes, so what is on screen is always
   // what would actually be sent under the current settings.
@@ -859,6 +891,15 @@ function SendDialog({
         )}
       </div>
       <p className="mt-1.5 text-xs text-brand-grey dark:text-slate-400">{meta.purpose}</p>
+
+      {sharedWith ? (
+        <div className="mt-2 rounded border border-amber-300 bg-amber-50 p-2.5 text-[12px] text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200">
+          <span className="font-bold">{sharedWith.supervisor} also supervises {sharedWith.others.join(", ")}</span> on this
+          session. Sending one at a time gives them a copy per person. Close this, tick everyone in the grid and use{" "}
+          <b>2. Supervisors</b> in the bulk bar instead — that sends each supervisor a single email naming all of their
+          new hires.
+        </div>
+      ) : null}
 
       {/* Test mode first: it changes who the email goes to, so it belongs above
           the preview it affects rather than buried under it. */}
@@ -1184,7 +1225,7 @@ function ReminderScheduler({ sessionId }: { sessionId: string }) {
     if (
       next &&
       !confirm(
-        "Arm the automatic reminder?\n\nThe app will email every attendee who hasn't had the reminder, one business day before orientation, with nobody reviewing it first. Anyone already sent it is skipped."
+        "Arm the automatic reminder?\n\nThe app will email every attendee who hasn't had the reminder, the day before orientation, with nobody reviewing it first. Anyone already sent it is skipped."
       )
     ) {
       return;
@@ -1227,16 +1268,16 @@ function ReminderScheduler({ sessionId }: { sessionId: string }) {
           </>
         ) : status.armed ? (
           <>
-            Goes out <span className="font-semibold text-brand-lea dark:text-slate-200">{status.sendOnLabel}</span> — one
-            business day before — to every attendee who hasn&apos;t had it. Anyone already sent it is skipped, so nobody
-            gets it twice.
+            Goes out <span className="font-semibold text-brand-lea dark:text-slate-200">{status.sendOnLabel}</span> — the
+            day before — to every attendee who hasn&apos;t had it. Anyone already sent it is skipped, so nobody gets it
+            twice.
             {status.dueToday ? " That's today: it fires on the next scheduled run." : ""}
           </>
         ) : (
           <>
-            Off. If you turn it on, it goes out <span className="font-semibold">{status.sendOnLabel}</span> — one business
-            day before orientation — with nobody reviewing it first. Weekends are skipped; public holidays are not, so
-            check the date if one is near.
+            Off. If you turn it on, it goes out <span className="font-semibold">{status.sendOnLabel}</span> — the day
+            before orientation — with nobody reviewing it first. Always the calendar day before, including weekends and
+            holidays, because the email says orientation is tomorrow.
           </>
         )}
       </p>

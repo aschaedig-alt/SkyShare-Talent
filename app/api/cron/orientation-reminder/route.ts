@@ -4,9 +4,13 @@ import { runDueReminders } from "@/lib/orientation/reminder";
 export const dynamic = "force-dynamic";
 
 /**
- * Sends the "3. Reminder" orientation email one business day before each ARMED
+ * Sends the "3. Reminder" orientation email the CALENDAR DAY BEFORE each ARMED
  * session. Triggered by Vercel Cron; Vercel sends
  * `Authorization: Bearer ${CRON_SECRET}`.
+ *
+ * The cron runs EVERY day, not weekdays. That is load-bearing: a Monday orientation
+ * needs its reminder to go on the Sunday, and a weekday-only schedule would simply
+ * never fire for it.
  *
  * THIS IS THE FIRST CRON IN THE APP THAT EMAILS A REAL PERSON. Every other one
  * scans a mailbox and ticks internal state, which is recoverable; this is not.

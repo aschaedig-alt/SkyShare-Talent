@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 
-// Scheduling the "3. Reminder" email for one business day before orientation.
+// Scheduling the "3. Reminder" email for the CALENDAR day before orientation —
+// weekends and holidays included, because the email says "orientation is tomorrow"
+// and that has to be true when it lands.
 //
 // ARMED PER SESSION, deliberately. This is the first thing in the app that would
 // email a real new hire with nobody watching — every existing cron scans and ticks
@@ -28,22 +30,18 @@ export function mountainDayKey(d: Date): string {
 }
 
 /**
- * One BUSINESS day before — Tuesday orientation sends Monday, Monday sends Friday.
+ * The CALENDAR day before — always, including weekends and holidays.
  *
- * Weekends only. Public holidays are NOT handled: the app has no holiday calendar,
- * and silently guessing at one would be worse than the user knowing it doesn't.
- * If orientation falls the day after a holiday, send it by hand.
+ * This used to skip back to the previous business day, which was wrong for what
+ * the email actually says: "REMINDER: orientation is tomorrow". Sent on a Friday
+ * for a Monday orientation, that sentence is simply false. The user's call was
+ * that a reminder landing on a Sunday is fine and being accurate matters more, so
+ * there is no weekday logic left here at all — and no holiday problem either,
+ * since nothing is being skipped.
  */
-export function oneBusinessDayBefore(sessionDate: Date): Date {
+export function dayBefore(sessionDate: Date): Date {
   const d = new Date(sessionDate);
   d.setUTCDate(d.getUTCDate() - 1);
-  // 0 = Sunday, 6 = Saturday, read in Mountain so a UTC-evening instant doesn't
-  // land on the wrong weekday.
-  for (let guard = 0; guard < 7; guard++) {
-    const weekday = new Intl.DateTimeFormat("en-US", { timeZone: ZONE, weekday: "short" }).format(d);
-    if (weekday !== "Sat" && weekday !== "Sun") break;
-    d.setUTCDate(d.getUTCDate() - 1);
-  }
   return d;
 }
 
@@ -89,7 +87,7 @@ export type ReminderStatus = {
 };
 
 export async function getReminderStatus(sessionId: string, sessionDate: Date): Promise<ReminderStatus> {
-  const send = oneBusinessDayBefore(sessionDate);
+  const send = dayBefore(sessionDate);
   const todayKey = mountainDayKey(new Date());
   const sendKey = mountainDayKey(send);
   return {
@@ -235,5 +233,5 @@ export async function sessionsDueForReminder(): Promise<{ id: string; date: Date
   });
 
   const todayKey = mountainDayKey(new Date());
-  return sessions.filter((s) => mountainDayKey(oneBusinessDayBefore(s.date)) === todayKey);
+  return sessions.filter((s) => mountainDayKey(dayBefore(s.date)) === todayKey);
 }
