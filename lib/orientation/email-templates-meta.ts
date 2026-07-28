@@ -47,9 +47,9 @@ export const ORIENTATION_TEMPLATE_META: OrientationTemplateMeta[] = [
     id: "rsp_qnije",
     frontName: "1. New Hire Orientation",
     audience: "attendee",
-    hint: "To the new hire's company email, cc their supervisor and the standing list.",
+    hint: "To the new hire's company email, and nobody else.",
     toLabel: "The new hire's SkyShare email",
-    ccLabel: "Their supervisor + the standing cc list",
+    ccLabel: "Nobody — see below",
     purpose: "The invite itself — tells the new hire the day, time and where to go."
   },
   {
@@ -60,7 +60,7 @@ export const ORIENTATION_TEMPLATE_META: OrientationTemplateMeta[] = [
     audience: "supervisor",
     hint: "To the new hire's supervisor. Needs a supervisor linked (or typed) on their profile.",
     toLabel: "Their supervisor — NOT the new hire",
-    ccLabel: "The standing cc list",
+    ccLabel: "Nobody",
     purpose: "Tells the supervisor their person is out at orientation that day. Needs a supervisor on the profile."
   },
   {
@@ -69,9 +69,9 @@ export const ORIENTATION_TEMPLATE_META: OrientationTemplateMeta[] = [
     id: "rsp_qnioq",
     frontName: "3. REMINDER: New Hire Orientation",
     audience: "attendee",
-    hint: "The closer-to-the-day reminder, to the new hire.",
+    hint: "The closer-to-the-day reminder, to the new hire and nobody else.",
     toLabel: "The new hire's SkyShare email",
-    ccLabel: "Their supervisor + the standing cc list",
+    ccLabel: "Nobody — see below",
     purpose: "The closer-to-the-day nudge. Same details, sent again nearer orientation."
   }
 ];

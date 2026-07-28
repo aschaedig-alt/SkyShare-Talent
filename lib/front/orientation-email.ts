@@ -267,18 +267,21 @@ export async function buildOrientationEmail(
     }
   }
 
-  // cc: THIS HIRE'S supervisors only.
+  // NOBODY is cc'd on an attendee email. It goes to the new hire, and only them.
   //
-  // The standing internal list used to be cc'd here too, and that was wrong at
-  // scale: one email per hire meant every watcher got one copy PER NEW HIRE. On the
-  // first real run that was six people receiving six copies each, about forty
-  // redundant emails for a seven-person cohort. They now get ONE summary for the
-  // whole session instead — see buildOrientationSummaryEmail.
+  // Two rounds of the same lesson, both from the first real send. One personalised
+  // email per hire means ANY fixed cc list produces one copy per hire:
+  //  - The standing internal list got six copies each (~40 redundant emails for a
+  //    six-person cohort). They now get one session summary instead.
+  //  - Then the supervisors: cc'ing each hire's own supervisor looks per-person, but
+  //    a supervisor of four hires still collects four copies. Jonathan Schaedig got
+  //    4, Rich Paden 3. Removed, because template 2 already emails each supervisor
+  //    ONCE, naming every hire they cover — so the information was never lost, only
+  //    the duplication.
+  //
+  // The rule worth keeping: on a per-hire send, a recipient who is not the hire
+  // will be multiplied by the cohort size. Put them on a digest, not a cc.
   const cc: string[] = [];
-  if (!isTest && def.audience === "attendee") {
-    if (supervisorEmails.length) cc.push(...supervisorEmails);
-    else warnings.push(`No supervisor on file for ${attendee.name}, so no supervisor is cc'd.`);
-  }
 
   // A test overrides the recipient AFTER the real one has been resolved, so the
   // preview still proves the real address(es) would have been found.

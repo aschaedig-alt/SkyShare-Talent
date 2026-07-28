@@ -171,6 +171,13 @@ export function OrientationEmailPanel({
       <p className="mt-1.5 rounded border border-brand-lea/15 bg-brand-cloudDancer/50 px-2.5 py-1.5 text-[12px] font-semibold text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
         Nothing sends on the first click. &ldquo;Send&hellip;&rdquo; opens the full email &mdash; recipients, subject and body &mdash; and you approve it there.
       </p>
+      {/* Says the quiet part out loud, because "nobody is cc'd" reads like something
+          is missing unless you know where those people are being reached instead. */}
+      <p className="mt-1.5 text-[11.5px] text-brand-grey dark:text-slate-400">
+        <b>Nobody is cc&apos;d on these.</b> Each one goes to one person. Supervisors are reached once by
+        &ldquo;2. Supervisors&rdquo;, which names every hire they cover, and the internal list gets the session summary
+        below &mdash; a cc here would give each of them one copy per new hire.
+      </p>
 
       <TemplateLegend />
 
@@ -728,7 +735,8 @@ function BatchDialog({
           </div>
 
           <p className="text-[12px] text-brand-grey dark:text-slate-400">
-            Everyone above is cc&apos;d as normal. {sendable.length} will be sent.
+            {sendable.length} will be sent, one each, with nobody cc&apos;d — supervisors get the separate supervisors
+            email and the internal list gets the session summary.
           </p>
 
           {sample?.html ? (
@@ -847,7 +855,7 @@ function SendDialog({
         {meta.audience === "supervisor" ? (
           <span> — {attendee.name} does not receive this one.</span>
         ) : (
-          <span> — {attendee.name}, cc their supervisor and the standing list.</span>
+          <span> — {attendee.name} only. Nobody is cc&apos;d.</span>
         )}
       </div>
       <p className="mt-1.5 text-xs text-brand-grey dark:text-slate-400">{meta.purpose}</p>
