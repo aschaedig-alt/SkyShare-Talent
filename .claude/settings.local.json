@@ -28,7 +28,14 @@
       "PowerShell(npx tsx \"C:\\\\Users\\\\Recruiter\\\\Projects\\\\skyshare-talent-ops\\\\tmp-supervisor-gaps.ts\")",
       "Bash(grep -c '`' lib/roadmap/roadmap.ts)",
       "Bash(grep -n '`' lib/roadmap/roadmap.ts)",
-      "PowerShell($env:NODE_OPTIONS=\"--max-old-space-size=8192\"; npx tsc --noEmit -p tsconfig.json)"
+      "PowerShell($env:NODE_OPTIONS=\"--max-old-space-size=8192\"; npx tsc --noEmit -p tsconfig.json)",
+      "PowerShell(git -C C:\\\\Users\\\\Recruiter\\\\Projects\\\\skyshare-talent-ops log --since=\"2026-07-21\" --pretty=format:\"%ad %s\" --date=short)",
+      "Bash(grep -vE \"^[+-]\\\\s*$\")",
+      "Bash(node -e \"console.log\\(require\\('./package.json'\\).devDependencies?.tsx || require\\('./package.json'\\).dependencies?.tsx\\)\")",
+      "Bash(node --env-file=.env.local --import tsx \"C:/Users/RECRUI~1/AppData/Local/Temp/claude/C--Users-Recruiter-Projects-skyshare-talent-ops/2e029210-a142-424b-b271-606c2f19bae2/scratchpad/send-daily-report.ts\")",
+      "PowerShell(npx tsx \"C:\\\\Users\\\\RECRUI~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Recruiter-Projects-skyshare-talent-ops\\\\263f3a84-f10a-402d-b1f8-6f9bd728fe0d\\\\scratchpad\\\\check-armed.ts\")",
+      "PowerShell(npx tsx tmp-check-armed.ts)",
+      "PowerShell($c = Get-Content \"C:\\\\Users\\\\Recruiter\\\\Projects\\\\skyshare-talent-ops\\\\lib\\\\roadmap\\\\roadmap.ts\" -Raw; \\($c.ToCharArray\\(\\) | Where-Object { $_ -eq [char]96 }\\).Count)"
     ]
   }
 }
