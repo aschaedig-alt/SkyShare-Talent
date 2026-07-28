@@ -345,6 +345,107 @@ export async function buildOrientationEmail(
   };
 }
 
+// --- one email per SUPERVISOR ------------------------------------------------
+//
+// The per-attendee supervisors email is keyed off the new hire, so a supervisor
+// with four new hires got four near-identical emails (on the real Aug 4 session
+// that was Jonathan Schaedig x4 and Rich Paden x3). This builds ONE email per
+// supervisor instead, naming everyone they cover.
+//
+// The template body still comes from Front untouched. What is added is a greeting
+// and a single line saying who this is about — the Front template cannot know the
+// names, and a supervisor reading "your new hire" with no name has to go and ask.
+
+/** "Axel", "Axel and Gavin", "Axel, Gavin and Bryan" — how a person writes a list. */
+export function nameList(names: string[]): string {
+  if (names.length === 0) return "";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+function digestIntroHtml(supervisorFirst: string, hireNames: string[]): string {
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
+  const who = esc(nameList(hireNames));
+  const plural = hireNames.length === 1 ? "is" : "are";
+  const noun = hireNames.length === 1 ? "new hire" : "new hires";
+  return (
+    `<div style="line-height: 1.5;" dir="ltr"><span style="font-family: Verdana, sans-serif;">` +
+    `<span style="background-color: transparent; font-size: 9pt;">Hi ${esc(supervisorFirst)},</span>` +
+    `</span></div><div><br /></div>` +
+    `<div style="line-height: 1.5;" dir="ltr"><span style="font-family: Verdana, sans-serif;">` +
+    `<span style="background-color: transparent; font-size: 9pt;">` +
+    `Your ${noun} ${who} ${plural} attending New Hire Orientation.` +
+    `</span></span></div><div><br /></div>`
+  );
+}
+
+export type SupervisorDigest = {
+  supervisorName: string | null;
+  supervisorEmail: string;
+  /** Every attendee on this session that this supervisor covers. */
+  hireNames: string[];
+  attendeeIds: string[];
+};
+
+/**
+ * One supervisors email, addressed to a single supervisor, covering all of their
+ * new hires on this session.
+ */
+export async function buildSupervisorDigestEmail(
+  digest: SupervisorDigest,
+  session: SessionForEmail,
+  testTo?: string | null
+): Promise<OrientationEmailPreview> {
+  const tpl = await fetchTemplate("supervisors");
+  const warnings: string[] = [];
+  const isTest = Boolean(testTo?.trim());
+
+  const cc: string[] = isTest ? [] : [...(await getOrientationCc()).addresses];
+
+  let toList = [digest.supervisorEmail];
+  let toSource: OrientationEmailPreview["toSource"] = "supervisor";
+  if (isTest) {
+    warnings.unshift(
+      `TEST SEND — going only to ${testTo!.trim()}. Nobody is cc'd. The real recipient would have been ${digest.supervisorEmail}.`
+    );
+    toList = [testTo!.trim()];
+    toSource = "test";
+  }
+
+  const subjectFill = fillSubject(tpl.subject ?? "", session.date, session.location);
+  const cleaned = stripInstructionBlock(tpl.body ?? "");
+  if (!cleaned.stripped) {
+    warnings.push(
+      "Couldn't find the red 'delete this part' block in the template, so nothing was removed — check the preview before sending."
+    );
+  }
+  const bodyFill = fillDatePlaceholders(cleaned.body, session.date);
+  if (subjectFill.count + bodyFill.count === 0) {
+    warnings.push("No [Day, Date] placeholder found to replace — the date in this email may be stale.");
+  }
+
+  const first = digest.supervisorName
+    ? splitCandidateName(digest.supervisorName).firstName || digest.supervisorName.split(/\s+/)[0]
+    : "there";
+
+  const seen = new Set<string>();
+  const finalTo = toList.map((t) => t.trim()).filter((t) => t && !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
+  const finalCc = cc.map((c) => c.trim()).filter((c) => c && !seen.has(c.toLowerCase()) && seen.add(c.toLowerCase()));
+
+  return {
+    templateKey: "supervisors",
+    templateName: tpl.name,
+    to: finalTo,
+    toName: digest.supervisorName ?? digest.supervisorEmail,
+    toSource,
+    cc: finalCc,
+    subject: subjectFill.text,
+    html: digestIntroHtml(first, digest.hireNames) + bodyFill.text,
+    warnings
+  };
+}
+
 // --- send record ------------------------------------------------------------
 // Which orientation emails actually went out, per attendee. The existing
 // sentTemplateKeys column on OrientationAttendee stays the source of truth for the

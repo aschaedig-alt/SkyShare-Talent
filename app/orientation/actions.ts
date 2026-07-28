@@ -9,10 +9,13 @@ import { getOrientationChannelId } from "@/lib/front/config";
 import { sendEmail } from "@/lib/front/messages";
 import {
   buildOrientationEmail,
+  buildSupervisorDigestEmail,
   recordOrientationSend,
+  resolveSupervisors,
   orientationTemplate,
   type OrientationEmailPreview,
-  type OrientationTemplateKey
+  type OrientationTemplateKey,
+  type SupervisorDigest
 } from "@/lib/front/orientation-email";
 
 // Sending an orientation email. Two steps on purpose — preview, then send —
@@ -266,6 +269,226 @@ export async function previewOrientationEmailBatch(
   }
 
   return { ok: true, rows, sampleSubject, sampleHtml, sampleFor };
+}
+
+// --- supervisors, grouped ----------------------------------------------------
+//
+// The per-attendee path sends one email per NEW HIRE, so a supervisor covering
+// four of them got four near-identical emails. These group by supervisor: one
+// email each, naming everyone they cover.
+
+export type SupervisorDigestRow = {
+  supervisorEmail: string;
+  supervisorName: string | null;
+  hireNames: string[];
+  attendeeIds: string[];
+  to: string[];
+  cc: string[];
+  warnings: string[];
+  error?: string;
+  /** True when every attendee this covers already had the supervisors email. */
+  allAlreadySent: boolean;
+};
+
+export type SupervisorBatchPreview = {
+  ok: boolean;
+  error?: string;
+  rows?: SupervisorDigestRow[];
+  /** Attendees with no supervisor at all — they simply have nobody to tell. */
+  noSupervisor?: string[];
+  sampleSubject?: string;
+  sampleHtml?: string;
+  sampleFor?: string;
+};
+
+/** Collapse the selected attendees into one entry per individual supervisor. */
+async function buildDigests(attendeeIds: string[]) {
+  const rows = await prisma.orientationAttendee.findMany({
+    where: { id: { in: attendeeIds } },
+    select: {
+      id: true,
+      sentTemplateKeys: true,
+      newHire: {
+        select: {
+          name: true,
+          supervisorName: true,
+          supervisorEmail: true,
+          supervisorHire: { select: { name: true, ssEmail: true, personalEmail: true } },
+          supervisor2Name: true,
+          supervisor2Email: true,
+          supervisor2Hire: { select: { name: true, ssEmail: true, personalEmail: true } }
+        }
+      },
+      session: { select: { date: true, endsAt: true, location: true } }
+    }
+  });
+
+  const byEmail = new Map<string, SupervisorDigest & { alreadySent: boolean[] }>();
+  const noSupervisor: string[] = [];
+
+  for (const r of rows) {
+    const sups = resolveSupervisors(r.newHire).filter((s) => s.email);
+    if (sups.length === 0) {
+      noSupervisor.push(r.newHire.name);
+      continue;
+    }
+    const already = parseKeys(r.sentTemplateKeys).includes("supervisors");
+    for (const s of sups) {
+      const key = s.email!.toLowerCase();
+      const found = byEmail.get(key);
+      if (found) {
+        if (!found.hireNames.includes(r.newHire.name)) {
+          found.hireNames.push(r.newHire.name);
+          found.attendeeIds.push(r.id);
+          found.alreadySent.push(already);
+        }
+      } else {
+        byEmail.set(key, {
+          supervisorEmail: s.email!,
+          supervisorName: s.name,
+          hireNames: [r.newHire.name],
+          attendeeIds: [r.id],
+          alreadySent: [already]
+        });
+      }
+    }
+  }
+
+  const session = rows[0]?.session;
+  return { digests: [...byEmail.values()], noSupervisor, session };
+}
+
+export async function previewOrientationSupervisorBatch(attendeeIds: string[]): Promise<SupervisorBatchPreview> {
+  if (!(await canSend())) return { ok: false, error: "You don't have permission to send this email." };
+  if (!attendeeIds.length) return { ok: false, error: "Nobody selected." };
+
+  const { digests, noSupervisor, session } = await buildDigests(attendeeIds);
+  if (!session) return { ok: false, error: "Session not found." };
+  if (!digests.length) {
+    return { ok: false, error: "None of the selected attendees have a supervisor on file." };
+  }
+
+  const sessionForEmail = {
+    date: session.date.toISOString(),
+    endsAt: session.endsAt ? session.endsAt.toISOString() : null,
+    location: session.location
+  };
+
+  const out: SupervisorDigestRow[] = [];
+  let sampleSubject: string | undefined;
+  let sampleHtml: string | undefined;
+  let sampleFor: string | undefined;
+
+  for (const d of digests) {
+    try {
+      const preview = await buildSupervisorDigestEmail(d, sessionForEmail);
+      out.push({
+        supervisorEmail: d.supervisorEmail,
+        supervisorName: d.supervisorName,
+        hireNames: d.hireNames,
+        attendeeIds: d.attendeeIds,
+        to: preview.to,
+        cc: preview.cc,
+        warnings: preview.warnings,
+        allAlreadySent: d.alreadySent.every(Boolean)
+      });
+      if (!sampleHtml) {
+        sampleSubject = preview.subject;
+        sampleHtml = preview.html;
+        sampleFor = d.supervisorName ?? d.supervisorEmail;
+      }
+    } catch (err) {
+      out.push({
+        supervisorEmail: d.supervisorEmail,
+        supervisorName: d.supervisorName,
+        hireNames: d.hireNames,
+        attendeeIds: d.attendeeIds,
+        to: [],
+        cc: [],
+        warnings: [],
+        error: err instanceof Error ? err.message : "Couldn't build the email.",
+        allAlreadySent: d.alreadySent.every(Boolean)
+      });
+    }
+  }
+
+  return { ok: true, rows: out, noSupervisor, sampleSubject, sampleHtml, sampleFor };
+}
+
+export type SupervisorBatchSendResult = {
+  ok: boolean;
+  error?: string;
+  sent?: { supervisorEmail: string; hireNames: string[]; attendeeIds: string[] }[];
+  failed?: { supervisorEmail: string; error: string }[];
+};
+
+/**
+ * One email per supervisor. Ticks the supervisors template for EVERY attendee the
+ * email covered — the fact being recorded is "this hire's supervisor was told",
+ * and one email can satisfy that for several hires at once.
+ */
+export async function sendOrientationSupervisorBatch(
+  supervisorEmails: string[],
+  attendeeIds: string[]
+): Promise<SupervisorBatchSendResult> {
+  if (!(await canSend())) return { ok: false, error: "You don't have permission to send this email." };
+  if (!supervisorEmails.length) return { ok: false, error: "Nobody selected." };
+
+  const { digests, session } = await buildDigests(attendeeIds);
+  if (!session) return { ok: false, error: "Session not found." };
+  const wanted = new Set(supervisorEmails.map((e) => e.toLowerCase()));
+  const chosen = digests.filter((d) => wanted.has(d.supervisorEmail.toLowerCase()));
+
+  const sessionForEmail = {
+    date: session.date.toISOString(),
+    endsAt: session.endsAt ? session.endsAt.toISOString() : null,
+    location: session.location
+  };
+
+  const sent: SupervisorBatchSendResult["sent"] = [];
+  const failed: SupervisorBatchSendResult["failed"] = [];
+  const channelId = await getOrientationChannelId();
+  const actor = await actorLabel();
+
+  for (const d of chosen) {
+    try {
+      const email = await buildSupervisorDigestEmail(d, sessionForEmail);
+      const res = await sendEmail(channelId, {
+        to: email.to,
+        cc: email.cc,
+        subject: email.subject,
+        body: email.html,
+        archive: false
+      });
+      const sentAt = new Date().toISOString();
+
+      for (const attendeeId of d.attendeeIds) {
+        await recordOrientationSend(attendeeId, "supervisors", {
+          conversationId: res.conversationId,
+          messageId: res.id,
+          sentAt,
+          to: email.to.join(", "),
+          sentBy: actor
+        });
+        const row = await prisma.orientationAttendee.findUnique({
+          where: { id: attendeeId },
+          select: { sentTemplateKeys: true }
+        });
+        const keys = parseKeys(row?.sentTemplateKeys ?? "[]");
+        if (!keys.includes("supervisors")) {
+          await prisma.orientationAttendee.update({
+            where: { id: attendeeId },
+            data: { sentTemplateKeys: JSON.stringify([...keys, "supervisors"]) }
+          });
+        }
+      }
+      sent.push({ supervisorEmail: d.supervisorEmail, hireNames: d.hireNames, attendeeIds: d.attendeeIds });
+    } catch (err) {
+      failed.push({ supervisorEmail: d.supervisorEmail, error: err instanceof Error ? err.message : "Send failed." });
+    }
+  }
+
+  return { ok: true, sent, failed };
 }
 
 export type OrientationBatchSendResult = {

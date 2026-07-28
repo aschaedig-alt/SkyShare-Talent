@@ -441,6 +441,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
           invented (invitation / confirm_request / … ) are gone. */}
       {attendees.length > 0 ? (
         <OrientationEmailPanel
+          sessionId={session.id}
           attendees={attendees.map((a) => ({
             id: a.id,
             name: a.name,

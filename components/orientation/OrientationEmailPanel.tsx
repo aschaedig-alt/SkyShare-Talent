@@ -7,9 +7,12 @@ import { AUDIENCE_LABEL, ORIENTATION_TEMPLATE_META, type OrientationTemplateKey,
 import {
   previewOrientationEmail,
   previewOrientationEmailBatch,
+  previewOrientationSupervisorBatch,
   sendOrientationEmail,
   sendOrientationEmailBatch,
-  type OrientationBatchRow
+  sendOrientationSupervisorBatch,
+  type OrientationBatchRow,
+  type SupervisorDigestRow
 } from "@/app/orientation/actions";
 import type { OrientationEmailPreview } from "@/lib/front/orientation-email";
 
@@ -121,10 +124,12 @@ function TemplateLegend() {
 }
 
 export function OrientationEmailPanel({
+  sessionId,
   attendees,
   onToggle,
   onSent
 }: {
+  sessionId: string;
   attendees: AttendeeRow[];
   onToggle: (attendeeId: string, key: string) => void;
   /** Called after a real send so the parent can refresh its state. */
@@ -315,9 +320,23 @@ export function OrientationEmailPanel({
         </div>
       ) : null}
 
+      <ReminderScheduler sessionId={sessionId} />
+
       <CcEditor />
 
-      {batchKey ? (
+      {/* Supervisors gets its own dialog: one email per SUPERVISOR rather than one
+          per attendee, so a supervisor with four new hires is emailed once. */}
+      {batchKey === "supervisors" ? (
+        <SupervisorBatchDialog
+          attendees={attendees.filter((a) => selected.has(a.id))}
+          onClose={() => setBatchKey(null)}
+          onSent={(ids) => {
+            ids.forEach((id) => onSent(id, "supervisors"));
+            setBatchKey(null);
+            setSelected(new Set());
+          }}
+        />
+      ) : batchKey ? (
         <BatchDialog
           attendees={attendees.filter((a) => selected.has(a.id))}
           templateKey={batchKey}
@@ -342,6 +361,201 @@ export function OrientationEmailPanel({
         />
       ) : null}
     </section>
+  );
+}
+
+// --- supervisors, grouped ---------------------------------------------------
+//
+// Its own dialog rather than a branch inside BatchDialog, because the unit is
+// different: rows here are SUPERVISORS, not attendees, and one row can cover
+// several new hires. Rendering that through an attendee-shaped table would have
+// meant lying about what a row is.
+
+function SupervisorBatchDialog({
+  attendees,
+  onClose,
+  onSent
+}: {
+  attendees: AttendeeRow[];
+  onClose: () => void;
+  onSent: (attendeeIds: string[]) => void;
+}) {
+  const meta = ORIENTATION_TEMPLATE_META.find((t) => t.key === "supervisors")!;
+  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<SupervisorDigestRow[] | null>(null);
+  const [noSupervisor, setNoSupervisor] = useState<string[]>([]);
+  const [sample, setSample] = useState<{ subject?: string; html?: string; for?: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [showBody, setShowBody] = useState(false);
+  const [includeAlreadySent, setIncludeAlreadySent] = useState(false);
+  const [done, setDone] = useState<{ sent: number; failed: { supervisorEmail: string; error: string }[] } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    previewOrientationSupervisorBatch(attendees.map((a) => a.id))
+      .then((res) => {
+        if (cancelled) return;
+        if (!res.ok) {
+          setError(res.error ?? "Couldn't build the emails.");
+          return;
+        }
+        setRows(res.rows ?? []);
+        setNoSupervisor(res.noSupervisor ?? []);
+        setSample({ subject: res.sampleSubject, html: res.sampleHtml, for: res.sampleFor });
+      })
+      .catch(() => !cancelled && setError("Couldn't build the emails."))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [attendees]);
+
+  const sendable = (rows ?? []).filter((r) => !r.error && (includeAlreadySent || !r.allAlreadySent));
+  const blocked = (rows ?? []).filter((r) => r.error);
+  const skippedAsSent = (rows ?? []).filter((r) => !r.error && r.allAlreadySent && !includeAlreadySent);
+
+  async function doSend() {
+    if (!sendable.length) return;
+    const lines = sendable.map((r) => `${r.supervisorName ?? r.supervisorEmail} → ${r.hireNames.join(", ")}`);
+    if (
+      !confirm(
+        `Send "${meta.label}" to ${sendable.length} supervisor${sendable.length === 1 ? "" : "s"}?\n\n${lines.join("\n")}\n\nOne email each. This sends immediately and cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setSending(true);
+    setError(null);
+    const res = await sendOrientationSupervisorBatch(
+      sendable.map((r) => r.supervisorEmail),
+      attendees.map((a) => a.id)
+    );
+    setSending(false);
+    if (!res.ok) {
+      setError(res.error ?? "Send failed.");
+      return;
+    }
+    const ok = res.sent ?? [];
+    setDone({ sent: ok.length, failed: res.failed ?? [] });
+    const touched = [...new Set(ok.flatMap((s) => s.attendeeIds))];
+    if (touched.length) onSent(touched);
+  }
+
+  return (
+    <Modal open onClose={onClose} busy={sending}>
+      <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">{meta.label}</h2>
+      <div className={clsx("mt-2 rounded px-2.5 py-2 text-[12.5px] leading-snug", audienceChipClass("supervisor"))}>
+        <span className="font-bold uppercase tracking-wide">Goes to {AUDIENCE_LABEL.supervisor}</span>
+        <span> — one email per supervisor, naming every new hire they cover. The attendees do not receive it.</span>
+      </div>
+
+      {loading ? (
+        <p className="mt-4 text-sm text-brand-grey dark:text-slate-400">Building the emails from Front…</p>
+      ) : error ? (
+        <div className="mt-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300">
+          {error}
+        </div>
+      ) : done ? (
+        <div className="mt-4 space-y-2">
+          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+            Sent {done.sent}.{done.failed.length ? ` ${done.failed.length} failed.` : ""}
+          </p>
+          {done.failed.length ? (
+            <ul className="space-y-1 rounded border border-red-300 bg-red-50 p-2.5 text-[12px] text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300">
+              {done.failed.map((f, i) => (
+                <li key={i}>
+                  <span className="font-semibold">{f.supervisorEmail}</span> — {f.error}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : rows ? (
+        <div className="mt-4 space-y-2">
+          {noSupervisor.length ? (
+            <div className="rounded border border-amber-300 bg-amber-50 p-2.5 text-[12px] text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200">
+              No supervisor on file for {noSupervisor.join(", ")} — nobody to tell about them.
+            </div>
+          ) : null}
+          {blocked.length ? (
+            <ul className="space-y-1 rounded border border-red-300 bg-red-50 p-2.5 text-[12px] text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300">
+              {blocked.map((r) => (
+                <li key={r.supervisorEmail}>
+                  <span className="font-semibold">{r.supervisorName ?? r.supervisorEmail}</span> skipped — {r.error}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {skippedAsSent.length ? (
+            <label className="flex items-center gap-2 rounded border border-amber-300 bg-amber-50 p-2.5 text-[12px] text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200">
+              <input type="checkbox" checked={includeAlreadySent} onChange={(e) => setIncludeAlreadySent(e.target.checked)} />
+              <span>
+                {skippedAsSent.map((r) => r.supervisorName ?? r.supervisorEmail).join(", ")} already had this — skipping.
+                Tick to send again.
+              </span>
+            </label>
+          ) : null}
+
+          <div className="max-h-56 overflow-y-auto rounded border border-brand-lea/15 dark:border-white/10">
+            <table className="min-w-full text-[12px]">
+              <tbody>
+                {sendable.map((r) => (
+                  <tr key={r.supervisorEmail} className="border-b border-brand-lea/10 last:border-0 dark:border-white/10">
+                    <td className="px-2 py-1.5 font-medium text-brand-lea dark:text-slate-100">
+                      {r.supervisorName ?? r.supervisorEmail}
+                      <div className="text-[10px] font-normal text-brand-grey dark:text-slate-400">{r.to.join(", ")}</div>
+                    </td>
+                    <td className="px-2 py-1.5 text-brand-black dark:text-slate-200">
+                      {r.hireNames.join(", ")}
+                      <span className="ml-1 text-[10px] text-brand-grey dark:text-slate-400">
+                        ({r.hireNames.length})
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="text-[12px] text-brand-grey dark:text-slate-400">
+            {sendable.length} email{sendable.length === 1 ? "" : "s"} — one per supervisor, instead of one per attendee.
+          </p>
+
+          {sample?.html ? (
+            <>
+              <button
+                onClick={() => setShowBody((v) => !v)}
+                className="text-xs font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-slate-300"
+              >
+                {showBody ? "Hide" : "Show"} the email {sample.for ? `(as ${sample.for} will get it)` : ""}
+              </button>
+              {showBody ? (
+                <div className="max-h-56 overflow-y-auto rounded border border-brand-lea/15 bg-white p-3 dark:border-white/10 dark:bg-[#0f2033]">
+                  <p className="mb-2 text-[12px] font-semibold text-brand-lea dark:text-slate-100">{sample.subject}</p>
+                  <div
+                    className="prose-sm text-[12.5px] text-brand-black dark:text-slate-200"
+                    dangerouslySetInnerHTML={{ __html: sample.html }}
+                  />
+                </div>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="mt-5 flex flex-wrap justify-end gap-2">
+        <Button variant="secondary" onClick={onClose} disabled={sending}>
+          {done ? "Close" : "Cancel"}
+        </Button>
+        {!done ? (
+          <Button onClick={doSend} disabled={sending || loading || sendable.length === 0}>
+            {sending ? `Sending ${sendable.length}…` : `Send to ${sendable.length} supervisor${sendable.length === 1 ? "" : "s"}`}
+          </Button>
+        ) : null}
+      </div>
+    </Modal>
   );
 }
 
@@ -707,6 +921,94 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     <div className="flex gap-2">
       <dt className="w-16 shrink-0 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">{label}</dt>
       <dd className="min-w-0 flex-1 break-words text-brand-black dark:text-slate-200">{children}</dd>
+    </div>
+  );
+}
+
+// --- scheduling the reminder ------------------------------------------------
+//
+// Armed PER SESSION, never globally. This is the only thing in the app that emails
+// a real new hire with nobody watching, so it is opted into one session at a time
+// and the control states plainly what will happen and when.
+
+function ReminderScheduler({ sessionId }: { sessionId: string }) {
+  const [status, setStatus] = useState<{
+    armed: boolean;
+    sendOnLabel: string;
+    dueToday: boolean;
+    passed: boolean;
+  } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/orientation/sessions/${sessionId}/reminder`)
+      .then((r) => r.json())
+      .then((d) => setStatus(d?.sendOnLabel ? d : null))
+      .catch(() => setStatus(null));
+  }, [sessionId]);
+
+  async function toggle(next: boolean) {
+    if (
+      next &&
+      !confirm(
+        "Arm the automatic reminder?\n\nThe app will email every attendee who hasn't had the reminder, one business day before orientation, with nobody reviewing it first. Anyone already sent it is skipped."
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/orientation/sessions/${sessionId}/reminder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ armed: next })
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d?.message ?? "Couldn't save.");
+      setStatus(d);
+      setMsg(next ? "Armed." : "Turned off — send it by hand instead.");
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Couldn't save.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!status) return null;
+
+  return (
+    <div className="mt-3 rounded border border-brand-lea/15 p-3 dark:border-white/10">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-brand-lea dark:text-slate-100">Schedule the reminder</h3>
+        <label className="flex items-center gap-2 text-[12px] font-semibold text-brand-lea dark:text-slate-100">
+          <input type="checkbox" checked={status.armed} disabled={busy || status.passed} onChange={(e) => void toggle(e.target.checked)} />
+          Send it automatically
+        </label>
+      </div>
+      <p className="mt-1 text-[11.5px] text-brand-grey dark:text-slate-400">
+        {status.passed ? (
+          <>
+            The send day ({status.sendOnLabel}) has already passed, so arming it would do nothing. Send &ldquo;3. Reminder&rdquo;
+            by hand from the grid above.
+          </>
+        ) : status.armed ? (
+          <>
+            Goes out <span className="font-semibold text-brand-lea dark:text-slate-200">{status.sendOnLabel}</span> — one
+            business day before — to every attendee who hasn&apos;t had it. Anyone already sent it is skipped, so nobody
+            gets it twice.
+            {status.dueToday ? " That's today: it fires on the next scheduled run." : ""}
+          </>
+        ) : (
+          <>
+            Off. If you turn it on, it goes out <span className="font-semibold">{status.sendOnLabel}</span> — one business
+            day before orientation — with nobody reviewing it first. Weekends are skipped; public holidays are not, so
+            check the date if one is near.
+          </>
+        )}
+      </p>
+      {msg ? <p className="mt-1.5 text-[11px] font-semibold text-brand-eden dark:text-slate-300">{msg}</p> : null}
     </div>
   );
 }
