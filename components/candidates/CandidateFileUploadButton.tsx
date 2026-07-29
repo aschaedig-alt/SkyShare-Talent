@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui";
+import { MAX_UPLOAD_BYTES, tooLargeMessage } from "@/lib/files/upload-limits";
 
 type CandidateFileUploadButtonProps = {
   candidateId: string;
@@ -37,38 +38,69 @@ export function CandidateFileUploadButton({ candidateId }: CandidateFileUploadBu
   const [status, setStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
 
-  async function uploadFiles(files: FileList | null) {
-    if (!files?.length) {
+  async function uploadFiles(fileList: FileList | null) {
+    if (!fileList?.length) {
+      return;
+    }
+    const files = Array.from(fileList);
+
+    // Check sizes BEFORE sending anything. A body over the serverless cap is
+    // rejected by the platform before our handler runs, so the only way the
+    // person finds out what went wrong is if we tell them here.
+    const tooBig = files.find((f) => f.size > MAX_UPLOAD_BYTES);
+    if (tooBig) {
+      setStatus("error");
+      setMessage(tooLargeMessage(tooBig.name, tooBig.size));
+      if (inputRef.current) inputRef.current.value = "";
       return;
     }
 
     setStatus("uploading");
-    setMessage(`Uploading ${files.length} file${files.length === 1 ? "" : "s"}...`);
 
-    const formData = new FormData();
-    Array.from(files).forEach((file) => formData.append("files", file));
-
-    try {
-      const response = await fetch(`/api/candidates/${candidateId}/files`, {
-        method: "POST",
-        body: formData
-      });
-      const payload = (await response.json()) as { message?: string };
-
-      if (!response.ok) {
-        throw new Error(payload.message ?? "Unable to upload file.");
+    // ONE FILE PER REQUEST. Sending them together added their sizes into a
+    // single body and blew the same cap — and made one bad file fail the whole
+    // batch. This is the pattern ResumeIntake already uses.
+    const failures: string[] = [];
+    let uploaded = 0;
+    for (const [index, file] of files.entries()) {
+      setMessage(files.length === 1 ? `Uploading ${file.name}…` : `Uploading ${index + 1} of ${files.length}…`);
+      const formData = new FormData();
+      formData.append("files", file);
+      try {
+        const response = await fetch(`/api/candidates/${candidateId}/files`, {
+          method: "POST",
+          body: formData
+        });
+        // A platform-level rejection is not JSON, so parsing it throws and the
+        // real reason is lost. Read it defensively and fall back to the status.
+        const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+        if (!response.ok) {
+          throw new Error(
+            payload?.message ??
+              (response.status === 413
+                ? tooLargeMessage(file.name, file.size)
+                : `Upload failed (${response.status}).`)
+          );
+        }
+        uploaded += 1;
+      } catch (error) {
+        failures.push(`${file.name}: ${error instanceof Error ? error.message : "upload failed"}`);
       }
+    }
 
+    if (failures.length === 0) {
       setStatus("success");
-      setMessage(payload.message ?? "Upload complete.");
-      router.refresh();
-    } catch (error) {
+      setMessage(`Uploaded ${uploaded} file${uploaded === 1 ? "" : "s"}.`);
+    } else {
       setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Unable to upload file.");
-    } finally {
-      if (inputRef.current) {
-        inputRef.current.value = "";
-      }
+      // Say what DID work as well as what did not, so a partial batch is clear.
+      setMessage(
+        (uploaded > 0 ? `Uploaded ${uploaded}. ` : "") + failures.join(" · ")
+      );
+    }
+    if (uploaded > 0) router.refresh();
+    if (inputRef.current) {
+      inputRef.current.value = "";
     }
   }
 

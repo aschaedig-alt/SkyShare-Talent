@@ -39,6 +39,7 @@ import {
   extractTravelConfirmation
 } from "@/app/travel/actions";
 import type { ParsedTravel } from "@/lib/extraction/travel-confirmation";
+import { buildBookingGroups, bookingLabel, type ItemBookingInfo } from "@/lib/travel/booking-groups";
 import { TravelGaps, TravelGapBadge } from "@/components/travel/TravelGaps";
 import { useDialogClose } from "@/lib/hooks/useDialogClose";
 import {
@@ -644,6 +645,10 @@ function ItemsTable({
   onPatch: (item: TravelItemView) => void;
   onRemove: (id: string) => void;
 }) {
+  // Flight legs sharing a confirmation number are one booking — the rule the
+  // real data already follows. Memoized so the map is not rebuilt on every
+  // keystroke in a sibling field.
+  const bookingInfo = useMemo(() => buildBookingGroups(items), [items]);
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -667,7 +672,13 @@ function ItemsTable({
       {items.length > 0 && (
         <div className="mt-2 space-y-2">
           {items.map((item) => (
-            <ItemRow key={item.id} item={item} onPatch={onPatch} onRemove={onRemove} />
+            <ItemRow
+              key={item.id}
+              item={item}
+              booking={bookingInfo.get(item.id) ?? null}
+              onPatch={onPatch}
+              onRemove={onRemove}
+            />
           ))}
         </div>
       )}
@@ -677,10 +688,12 @@ function ItemsTable({
 
 function ItemRow({
   item,
+  booking,
   onPatch,
   onRemove
 }: {
   item: TravelItemView;
+  booking: ItemBookingInfo | null;
   onPatch: (item: TravelItemView) => void;
   onRemove: (id: string) => void;
 }) {
@@ -715,6 +728,21 @@ function ItemRow({
 
   return (
     <div className="rounded border border-brand-lea/10 bg-white p-2.5 dark:border-white/10 dark:bg-brand-panel">
+      {/* One booking, more than one row. Without this the return leg's empty
+          Cost box reads as missing data every time, when it is simply the other
+          half of a ticket that was paid for once. */}
+      {booking && (
+        <div className="mb-1.5 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wide">
+          <span className="rounded bg-brand-sweet/25 px-1.5 py-0.5 text-brand-lea dark:bg-brand-sweet/15 dark:text-slate-200">
+            {bookingLabel(booking)}
+          </span>
+          <span className="font-semibold normal-case tracking-normal text-brand-grey dark:text-slate-400">
+            {booking.carriesFare
+              ? `One fare for the whole booking · ${booking.group.confirmation}`
+              : `Fare is on leg 1 · ${booking.group.confirmation}`}
+          </span>
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <Icon className="h-4 w-4 shrink-0 text-brand-gold" />
         {/* Autosave, said out loud. Sits first so it is in the same place on
@@ -776,7 +804,10 @@ function ItemRow({
             step="0.01"
             defaultValue={item.amount ?? ""}
             onBlur={(e) => save("amount", e.target.value)}
-            placeholder="Cost"
+            // A return leg with no cost is correct, not blank-because-forgotten.
+            // Saying so in the placeholder stops it reading as missing data,
+            // while still allowing a second fare if it really was two tickets.
+            placeholder={booking && !booking.carriesFare ? "Included in leg 1" : "Cost"}
             className={inputClass}
           />
         </label>

@@ -10,12 +10,17 @@ import { isPrivateFileStorageReady, shouldRequirePrivateFileStorage } from "@/li
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { extractFileText } from "@/lib/files/pdf-text";
 import { detectDocumentType } from "@/lib/files/document-types";
+import { MAX_UPLOAD_BYTES, tooLargeMessage } from "@/lib/files/upload-limits";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-const maxFileSizeBytes = 25 * 1024 * 1024;
+// The 25 MB this used to claim was never real in production: a hosted
+// serverless function rejects the body over ~4.5 MB before this handler runs,
+// so the check never fired and the caller got an unexplained failure. See
+// lib/files/upload-limits.ts.
+const maxFileSizeBytes = MAX_UPLOAD_BYTES;
 
 function isFileLike(value: FormDataEntryValue): value is File {
   return typeof value === "object" && "arrayBuffer" in value && "name" in value;
@@ -77,7 +82,7 @@ export async function POST(request: Request, context: RouteContext) {
 
       if (file.size > maxFileSizeBytes) {
         return NextResponse.json(
-          { message: `${originalFilename} is larger than the 25 MB local upload limit.` },
+          { message: tooLargeMessage(originalFilename, file.size) },
           { status: 400 }
         );
       }
