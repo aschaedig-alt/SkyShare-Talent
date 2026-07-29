@@ -186,7 +186,18 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
                         </span>
                         <div className="min-w-0">
                           <span className="inline-flex items-center gap-1.5">
-                            <Link href={`/candidates/${candidate.id}`} className="font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-100">
+                            {/* prefetch={false}: this table renders up to 100
+                                rows, and the fresh production logs from the
+                                sidebar fix immediately showed the SAME pattern
+                                one level down — ~15 simultaneous
+                                /candidates/[id] prefetches the instant this
+                                page loaded, one for every row in the initial
+                                viewport. A candidate profile is a heavier
+                                fetch than the list itself (interviews, notes,
+                                files, applications, tags, travel), so this was
+                                likely contributing to the slowness at least as
+                                much as the sidebar was. */}
+                            <Link href={`/candidates/${candidate.id}`} prefetch={false} className="font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-100">
                               {candidate.displayName}
                             </Link>
                             {/* Only shown once someone has pasted a real link on the

@@ -26,7 +26,10 @@ const pad = (n: number) => String(n).padStart(2, "0");
 function SessionCard({ s }: { s: SessionListItem }) {
   const soon = new Date(s.date).getTime() - Date.now() <= 7 * 86_400_000 && s.status !== "COMPLETE";
   return (
-    <Link href={`/orientation/${s.id}`} className="block rounded border border-brand-lea/10 bg-white p-4 shadow-panel transition-shadow hover:shadow-glow dark:border-white/10 dark:bg-brand-panel">
+    // prefetch={false} — same fix as the candidates table and the sidebar:
+    // every session card on this page was prefetching its own detail page
+    // (attendees, prep tasks, travel roll-ups) the instant this list loaded.
+    <Link href={`/orientation/${s.id}`} prefetch={false} className="block rounded border border-brand-lea/10 bg-white p-4 shadow-panel transition-shadow hover:shadow-glow dark:border-white/10 dark:bg-brand-panel">
       <div className="flex items-center justify-between gap-2">
         <span className="text-base font-semibold text-brand-lea dark:text-slate-100">
           {s.endsAt ? `${formatDateShort(s.date)} · ${formatTimeRange(s.date, s.endsAt)}` : fmt(s.date)}
@@ -77,7 +80,10 @@ function MiniMonth({ year, month, markers }: { year: number; month: number; mark
               ) : null}
             </div>
           );
-          return m?.sessionId ? <Link key={i} href={`/orientation/${m.sessionId}`} className="block rounded transition-shadow hover:shadow-glow">{content}</Link> : <div key={i}>{content}</div>;
+          // A calendar grid can show up to ~31 of these at once — the worst
+          // case of the same prefetch-storm pattern fixed elsewhere on this
+          // page.
+          return m?.sessionId ? <Link key={i} href={`/orientation/${m.sessionId}`} prefetch={false} className="block rounded transition-shadow hover:shadow-glow">{content}</Link> : <div key={i}>{content}</div>;
         })}
       </div>
     </div>
@@ -101,7 +107,7 @@ function CohortCard({ c, onCreate, onAddMissing, busy }: { c: Cohort; onCreate: 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {c.sessionId ? (
           <>
-            <Link href={`/orientation/${c.sessionId}`} className={buttonClasses({ variant: "primary", size: "sm", className: "hover:shadow-glow" })}>Open session</Link>
+            <Link href={`/orientation/${c.sessionId}`} prefetch={false} className={buttonClasses({ variant: "primary", size: "sm", className: "hover:shadow-glow" })}>Open session</Link>
             {c.missingHireIds.length > 0 ? (
               <Button variant="secondary" size="sm" onClick={() => onAddMissing(c)} disabled={busy}>
                 Add {c.missingHireIds.length} to session
