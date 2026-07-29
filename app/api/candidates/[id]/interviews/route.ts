@@ -4,6 +4,7 @@ import { requireApiPermission } from "@/lib/auth/route-auth";
 import { logActivity } from "@/lib/activity/logger";
 import { sanitizeRichText, richTextToPlain, extractMentions } from "@/lib/richtext/sanitize";
 import { INTERVIEW_OUTCOMES } from "@/lib/interviews/constants";
+import { notifyMentions } from "@/lib/notifications/mentions";
 
 /**
  * Log an interview that ALREADY HAPPENED, with the write-up pasted in.
@@ -82,6 +83,16 @@ export async function POST(request: Request, ctx: Ctx) {
       source: "manual-writeup"
     }
   });
+
+  if (mentions.length) {
+    await notifyMentions({
+      emails: mentions,
+      candidateId: id,
+      candidateName: candidate.displayName,
+      context: "interview",
+      mentionedBy: auth.user?.email ?? null
+    });
+  }
 
   await logActivity({
     userId: auth.user?.id,

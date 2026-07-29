@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { logActivity } from "@/lib/activity/logger";
 import { sanitizeRichText, richTextToPlain, extractMentions } from "@/lib/richtext/sanitize";
+import { notifyMentions } from "@/lib/notifications/mentions";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireApiPermission("candidates:write");
@@ -44,6 +45,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     },
     include: { author: { select: { name: true, email: true } } }
   });
+
+  if (mentions.length) {
+    await notifyMentions({
+      emails: mentions,
+      candidateId: id,
+      candidateName: candidate.displayName,
+      context: "note",
+      mentionedBy: auth.user?.email ?? null
+    });
+  }
 
   await logActivity({
     userId: authorId ?? undefined,

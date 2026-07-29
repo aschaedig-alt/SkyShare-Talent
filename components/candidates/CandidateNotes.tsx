@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Trash2 } from "lucide-react";
+import { Send, Trash2, Pencil } from "lucide-react";
+import { clsx } from "clsx";
 import { Button } from "@/components/ui";
 import { RichTextEditor, RichTextView } from "@/components/richtext/RichTextEditor";
 
@@ -37,6 +38,41 @@ export function CandidateNotes({
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+
+  function isBlank(html: string) {
+    return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length === 0;
+  }
+
+  function startEdit(note: Note) {
+    setEditingId(note.id);
+    setEditDraft(note.bodyHtml ?? note.body);
+  }
+
+  async function saveEdit(noteId: string) {
+    if (isBlank(editDraft)) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/candidates/${candidateId}/notes/${noteId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bodyHtml: editDraft })
+      });
+      if (res.ok) {
+        const { note } = (await res.json()) as { note: Note };
+        setNotes((cur) => cur.map((n) => (n.id === noteId ? note : n)));
+        setEditingId(null);
+        router.refresh();
+      } else {
+        const b = (await res.json().catch(() => ({}))) as { message?: string };
+        setError(b.message ?? "Couldn't save the change.");
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
 
   // An empty editor still holds markup ("<br>", "<p></p>"), so emptiness is
   // judged on the text inside rather than on the HTML string.
@@ -68,7 +104,8 @@ export function CandidateNotes({
   }
 
   async function remove(noteId: string) {
-    if (!window.confirm("Delete this note?")) return;
+    // Two-click confirm on the button itself (arm, then confirm) replaces a
+    // native confirm() dialog, matching the pattern used elsewhere in the app.
     setBusy(true);
     try {
       const res = await fetch(`/api/candidates/${candidateId}/notes/${noteId}`, { method: "DELETE" });
@@ -106,32 +143,64 @@ export function CandidateNotes({
         {notes.length === 0 ? (
           <p className="py-6 text-center text-sm text-brand-grey dark:text-slate-400">No notes yet. Add the first one above.</p>
         ) : (
-          notes.map((note) => (
-            <div key={note.id} className="group rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
-              <div className="flex items-start justify-between gap-2">
-                {/* Formatted when we have it, plain text for older notes. */}
-                {note.bodyHtml ? (
-                  <div className="min-w-0 flex-1">
-                    <RichTextView html={note.bodyHtml} className="leading-6 text-brand-black/80 dark:text-slate-300" />
-                  </div>
-                ) : (
-                  <p className="min-w-0 flex-1 whitespace-pre-wrap text-sm leading-6 text-brand-black/80 dark:text-slate-300">{note.body}</p>
-                )}
-                <button
-                  type="button"
-                  onClick={() => remove(note.id)}
-                  disabled={busy}
-                  aria-label="Delete note"
-                  className="shrink-0 rounded p-1 text-brand-grey/0 transition group-hover:text-brand-grey hover:!text-red-600 dark:text-slate-400"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+          notes.map((note) =>
+            editingId === note.id ? (
+              <div key={note.id} className="rounded border border-brand-lea/15 bg-brand-cloudDancer/40 p-3 dark:border-white/10 dark:bg-white/5">
+                <RichTextEditor value={editDraft} onChange={setEditDraft} people={people} minHeight={100} />
+                <div className="mt-2 flex items-center gap-2">
+                  <Button onClick={() => saveEdit(note.id)} disabled={busy || isBlank(editDraft)}>Save</Button>
+                  <button
+                    onClick={() => setEditingId(null)}
+                    disabled={busy}
+                    className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-300"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
-              <div className="mt-2 text-xs text-brand-grey dark:text-slate-400">
-                {note.author ?? note.source ?? "Unknown"} · {formatWhen(note.createdAt)}
+            ) : (
+              <div key={note.id} className="group rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
+                <div className="flex items-start justify-between gap-2">
+                  {/* Formatted when we have it, plain text for older notes. */}
+                  {note.bodyHtml ? (
+                    <div className="min-w-0 flex-1">
+                      <RichTextView html={note.bodyHtml} className="leading-6 text-brand-black/80 dark:text-slate-300" />
+                    </div>
+                  ) : (
+                    <p className="min-w-0 flex-1 whitespace-pre-wrap text-sm leading-6 text-brand-black/80 dark:text-slate-300">{note.body}</p>
+                  )}
+                  <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+                    <button
+                      type="button"
+                      onClick={() => startEdit(note)}
+                      aria-label="Edit note"
+                      className="rounded p-1 text-brand-grey transition hover:bg-white hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => (confirmingDeleteId === note.id ? remove(note.id) : setConfirmingDeleteId(note.id))}
+                      onBlur={() => setConfirmingDeleteId((cur) => (cur === note.id ? null : cur))}
+                      disabled={busy}
+                      aria-label={confirmingDeleteId === note.id ? "Confirm delete note" : "Delete note"}
+                      className={clsx(
+                        "rounded p-1 transition",
+                        confirmingDeleteId === note.id
+                          ? "bg-red-600 text-white"
+                          : "text-brand-grey hover:bg-white hover:text-red-600 dark:text-slate-400 dark:hover:bg-white/10"
+                      )}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </span>
+                </div>
+                <div className="mt-2 text-xs text-brand-grey dark:text-slate-400">
+                  {note.author ?? note.source ?? "Unknown"} · {formatWhen(note.createdAt)}
+                </div>
               </div>
-            </div>
-          ))
+            )
+          )
         )}
       </div>
     </section>

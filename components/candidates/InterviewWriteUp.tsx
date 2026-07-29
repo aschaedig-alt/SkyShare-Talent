@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clsx } from "clsx";
-import { Star } from "lucide-react";
+import { Star, Pencil, Trash2 } from "lucide-react";
 import { RichTextEditor, RichTextView } from "@/components/richtext/RichTextEditor";
 import { INTERVIEW_OUTCOMES, INTERVIEW_TYPES, interviewOutcomeTone, interviewOutcomeLabel } from "@/lib/interviews/constants";
 import { formatCalendarDayShort } from "@/lib/dates/display";
@@ -221,41 +221,190 @@ export function InterviewWriteUp({
       <div className="mt-3 space-y-2">
         {logged.length > 0 ? (
           logged.map((i) => (
-            <div key={i.id} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold text-brand-lea dark:text-slate-100">{i.title}</span>
-                <span className="text-xs text-brand-grey dark:text-slate-400">
-                  {formatCalendarDayShort(i.startDateTime)}
-                  {i.interviewer ? ` · ${i.interviewer}` : ""}
-                </span>
-                {i.outcome && (
-                  <span className={clsx("rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide", interviewOutcomeTone(i.outcome))}>
-                    {interviewOutcomeLabel(i.outcome)}
-                  </span>
-                )}
-                {i.rating ? (
-                  <span className="inline-flex items-center gap-0.5">
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <Star key={n} className={clsx("h-3 w-3", n <= (i.rating ?? 0) ? "fill-brand-gold text-brand-gold" : "text-brand-lea/20 dark:text-white/20")} />
-                    ))}
-                  </span>
-                ) : null}
-              </div>
-              {i.notesHtml ? (
-                <div className="mt-2 rounded border border-brand-lea/10 bg-white/70 p-2.5 dark:border-white/10 dark:bg-white/5">
-                  <RichTextView html={i.notesHtml} />
-                </div>
-              ) : i.notes?.trim() ? (
-                <p className="mt-2 whitespace-pre-wrap rounded border border-brand-lea/10 bg-white/70 p-2 text-xs text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
-                  {i.notes.trim()}
-                </p>
-              ) : null}
-            </div>
+            <LoggedInterview
+              key={i.id}
+              candidateId={candidateId}
+              interview={i}
+              people={people}
+              canEdit={canEdit}
+            />
           ))
         ) : (
           <EmptyState title="No interviews logged yet" description="Log one to paste your write-up and put this candidate on the Recent interviews list." bare />
         )}
       </div>
     </section>
+  );
+}
+
+function todayInputValueFrom(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function LoggedInterview({
+  candidateId,
+  interview,
+  people,
+  canEdit
+}: {
+  candidateId: string;
+  interview: InterviewView;
+  people: Array<{ name: string; email: string }>;
+  canEdit: boolean;
+}) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [draft, setDraft] = useState(() => ({
+    interviewedAt: todayInputValueFrom(interview.startDateTime),
+    interviewerEmail: interview.interviewerEmail ?? people[0]?.email ?? "",
+    outcome: interview.outcome ?? "",
+    rating: interview.rating ?? 0,
+    notesHtml: interview.notesHtml ?? interview.notes ?? ""
+  }));
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    const chosen = people.find((p) => p.email === draft.interviewerEmail);
+    const res = await fetch(`/api/candidates/${candidateId}/interviews/${interview.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        interviewedAt: `${draft.interviewedAt}T12:00:00`,
+        interviewerEmail: draft.interviewerEmail,
+        interviewerName: chosen?.name ?? "",
+        outcome: draft.outcome || null,
+        rating: draft.rating || null,
+        notesHtml: draft.notesHtml
+      })
+    });
+    setBusy(false);
+    if (res.ok) {
+      setEditing(false);
+      router.refresh();
+    } else {
+      const payload = (await res.json().catch(() => null)) as { message?: string } | null;
+      setError(payload?.message ?? "Could not save the changes.");
+    }
+  }
+
+  async function remove() {
+    setBusy(true);
+    const res = await fetch(`/api/candidates/${candidateId}/interviews/${interview.id}`, { method: "DELETE" });
+    setBusy(false);
+    if (res.ok) router.refresh();
+    else setError("Could not delete this interview.");
+  }
+
+  if (editing) {
+    return (
+      <div className="rounded border border-brand-lea/15 bg-brand-cloudDancer/40 p-3 dark:border-white/10 dark:bg-white/5">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="block">
+            <span className={label}>Date interviewed</span>
+            <input type="date" value={draft.interviewedAt} onChange={(e) => setDraft({ ...draft, interviewedAt: e.target.value })} className={field} />
+          </label>
+          <label className="block">
+            <span className={label}>Interviewer</span>
+            <select value={draft.interviewerEmail} onChange={(e) => setDraft({ ...draft, interviewerEmail: e.target.value })} className={field}>
+              {people.map((p) => <option key={p.email} value={p.email}>{p.name}</option>)}
+            </select>
+          </label>
+          <div>
+            <span className={label}>Rating</span>
+            <div className="mt-1 flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button key={n} onClick={() => setDraft({ ...draft, rating: draft.rating === n ? 0 : n })} aria-label={`${n} star${n === 1 ? "" : "s"}`} className="p-0.5">
+                  <Star className={clsx("h-5 w-5", n <= draft.rating ? "fill-brand-gold text-brand-gold" : "text-brand-lea/25 dark:text-white/25")} />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="mt-3">
+          <RichTextEditor value={draft.notesHtml} onChange={(html) => setDraft({ ...draft, notesHtml: html })} people={people} minHeight={160} />
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="flex gap-1.5">
+            {INTERVIEW_OUTCOMES.map((o) => (
+              <button
+                key={o.value}
+                onClick={() => setDraft({ ...draft, outcome: draft.outcome === o.value ? "" : o.value })}
+                className={clsx(
+                  "rounded border px-2.5 py-1 text-xs font-semibold transition",
+                  draft.outcome === o.value ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-300"
+                )}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <button onClick={save} disabled={busy} className="rounded bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-50">
+            {busy ? "Saving…" : "Save changes"}
+          </button>
+          <button onClick={() => setEditing(false)} disabled={busy} className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-300">
+            Cancel
+          </button>
+          {error && <span className="text-xs font-semibold text-red-700 dark:text-red-300">{error}</span>}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="group rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-semibold text-brand-lea dark:text-slate-100">{interview.title}</span>
+        <span className="text-xs text-brand-grey dark:text-slate-400">
+          {formatCalendarDayShort(interview.startDateTime)}
+          {interview.interviewer ? ` · ${interview.interviewer}` : ""}
+        </span>
+        {interview.outcome && (
+          <span className={clsx("rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide", interviewOutcomeTone(interview.outcome))}>
+            {interviewOutcomeLabel(interview.outcome)}
+          </span>
+        )}
+        {interview.rating ? (
+          <span className="inline-flex items-center gap-0.5">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <Star key={n} className={clsx("h-3 w-3", n <= (interview.rating ?? 0) ? "fill-brand-gold text-brand-gold" : "text-brand-lea/20 dark:text-white/20")} />
+            ))}
+          </span>
+        ) : null}
+        {canEdit && (
+          <span className="ml-auto flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+            <button onClick={() => setEditing(true)} aria-label="Edit this interview" className="rounded p-1 text-brand-grey transition hover:bg-white hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100">
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => (confirmingDelete ? remove() : setConfirmingDelete(true))}
+              onBlur={() => setConfirmingDelete(false)}
+              disabled={busy}
+              aria-label={confirmingDelete ? "Confirm delete" : "Delete this interview"}
+              className={clsx(
+                "rounded p-1 transition",
+                confirmingDelete ? "bg-red-600 text-white" : "text-brand-grey hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-500/10 dark:hover:text-red-300"
+              )}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </span>
+        )}
+      </div>
+      {interview.notesHtml ? (
+        <div className="mt-2 rounded border border-brand-lea/10 bg-white/70 p-2.5 dark:border-white/10 dark:bg-white/5">
+          <RichTextView html={interview.notesHtml} />
+        </div>
+      ) : interview.notes?.trim() ? (
+        <p className="mt-2 whitespace-pre-wrap rounded border border-brand-lea/10 bg-white/70 p-2 text-xs text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+          {interview.notes.trim()}
+        </p>
+      ) : null}
+      {error && !editing && <p className="mt-1 text-xs font-semibold text-red-700 dark:text-red-300">{error}</p>}
+    </div>
   );
 }

@@ -9,7 +9,8 @@ import {
   Phone,
   StickyNote,
   Search,
-  Archive
+  Archive,
+  ArrowRight
 } from "lucide-react";
 import type { CandidateListData } from "@/lib/data/candidates";
 import { NewCandidateButton } from "@/components/candidates/NewCandidateButton";
@@ -110,6 +111,24 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
           </div>
         </div>
       ))}
+      {/* Sits in the stat row but reads as a DOOR, not a number — navy fill
+          instead of the white card, no count, an arrow instead of a value. The
+          other tiles say what IS; this one says where to go. A real Link since
+          it loads a different page. */}
+      <Link
+        href="/candidates/recent-interviews"
+        className="flex items-center gap-3 rounded bg-brand-lea p-4 shadow-panel ring-1 ring-brand-lea transition hover:bg-brand-eden hover:shadow-glow"
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded bg-white/15 text-brand-gold">
+          <CalendarClock className="h-5 w-5" />
+        </span>
+        <div className="min-w-0">
+          <div className="text-sm font-semibold leading-tight text-white">Recent interviews</div>
+          <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-white/70">
+            Who you&apos;re working on <ArrowRight className="h-3 w-3" />
+          </div>
+        </div>
+      </Link>
       {/* Make the archive reachable from the number, so "where did the rest go"
           has an answer on screen rather than needing to be asked. */}
       {data.stats.archived > 0 && (
@@ -257,15 +276,6 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
           </div>
           <div className="flex w-full flex-col items-stretch gap-2 xl:w-[560px]">
             <div className="flex flex-wrap justify-end gap-2">
-              {/* A real Link — this loads another page, so it has to be
-                  ctrl-clickable into a new tab. */}
-              <Link
-                href="/candidates/recent-interviews"
-                className="inline-flex items-center gap-1.5 rounded border border-white/25 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-gold hover:text-brand-lea"
-              >
-                <CalendarClock className="h-4 w-4" />
-                Recent interviews
-              </Link>
               <ResumeIntake variant="solid" />
               <DocumentIntake variant="solid" />
               <NewCandidateButton />
