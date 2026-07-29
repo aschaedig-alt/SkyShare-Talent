@@ -310,17 +310,18 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
       } as const)
     : false;
 
-  // $transaction (array form), not Promise.all. This page was reported as
-  // "loads slowly, the Back button barely reacts" — the cause was never the
-  // Link (a real <Link> was already in place), it was that Promise.all fires
-  // all 7 queries as INDEPENDENT prisma calls, and node-postgres's pool hands
-  // each one its own connection when the pool is cold — up to 7 concurrent
-  // fresh TCP+TLS handshakes to Neon on the first hit after a serverless
-  // function spins up. Measured locally: 893ms cold, 218ms once the pool was
-  // warm — the gap IS the extra connection setups, not the queries themselves.
-  // $transaction runs the same 7 queries over ONE checked-out connection, so a
-  // cold invocation opens one connection instead of up to seven.
-  const [candidateRows, total, active, withFiles, withApplications, scheduledInterviews, archived] = await prisma.$transaction([
+  // BACK TO Promise.all, REVERTED from $transaction. The $transaction attempt
+  // (theory: fewer concurrent cold connections) was never actually proven —
+  // local measurements were noisy and inconclusive, and swapping it in forced
+  // all 7 queries onto ONE connection SEQUENTIALLY (an array-form $transaction
+  // runs each statement one after another inside a single BEGIN/COMMIT), which
+  // trades "up to 7 concurrent connection opens" for "7 round trips back to
+  // back" — plausibly a net loss against a remote database, and it adds a
+  // transaction timeout as a new failure mode that plain Promise.all never
+  // had. Reverting to the known-good behavior and instrumenting it for real
+  // numbers (see queryMs below) rather than guessing a third time.
+  const listQueryStart = Date.now();
+  const [candidateRows, total, active, withFiles, withApplications, scheduledInterviews, archived] = await Promise.all([
     prisma.candidate.findMany({
       where: candidateWhere,
       take: CANDIDATE_LIST_LIMIT,
@@ -348,6 +349,11 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
     prisma.interview.count({ where: { status: "SCHEDULED" } }),
     prisma.candidate.count({ where: { archivedAt: { not: null } } })
   ]);
+  // TEMPORARY diagnostic: the candidates page has been reported slow twice
+  // now on guesses that didn't hold up under real measurement. This puts an
+  // actual production number in the logs on every load, cheap enough to leave
+  // in until the real bottleneck is confirmed and fixed, then remove.
+  console.log(`[perf] getCandidateListData query time: ${Date.now() - listQueryStart}ms (query="${query}")`);
 
   const candidates: CandidateListItem[] = candidateRows.map((candidate) => {
     const matchedFile = hasQuery

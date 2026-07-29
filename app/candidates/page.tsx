@@ -9,10 +9,20 @@ type CandidatesPageProps = {
 };
 
 export default async function CandidatesPage({ searchParams }: CandidatesPageProps) {
+  // TEMPORARY diagnostic — see the matching note in getCandidateListData.
+  // Times the ACCESS CHECK separately from the data fetch, since a slow
+  // getWorkspaceModuleAccessPolicy() lookup would look identical to a slow
+  // candidate query from the outside and has caused a wrong diagnosis once
+  // already on this page.
+  const pageStart = Date.now();
   const access = await requireModulePageAccess("candidates");
+  const afterAccess = Date.now();
   const params = await searchParams;
   const query = params?.q?.trim() ?? "";
   const [data, layout] = await Promise.all([getCandidateListData(query), getPageLayout("candidates")]);
+  console.log(
+    `[perf] /candidates page: access check ${afterAccess - pageStart}ms, data+layout ${Date.now() - afterAccess}ms, total ${Date.now() - pageStart}ms`
+  );
 
   return (
     <CandidatesWorkspace
