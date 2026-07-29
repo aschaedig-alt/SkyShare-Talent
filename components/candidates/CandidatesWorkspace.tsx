@@ -196,7 +196,6 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
                                 href={candidate.paycomLink}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
                                 title="Open in Paycom"
                                 aria-label={`Open ${candidate.displayName} in Paycom`}
                                 className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] text-[8px] font-black leading-none text-white transition hover:brightness-110"
