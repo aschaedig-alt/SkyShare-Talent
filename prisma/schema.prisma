@@ -702,6 +702,10 @@ model CandidateNote {
   candidateId String
   authorId    String?
   body        String
+  // Formatted note. `body` stays the plain-text version so existing notes,
+  // search and anything reading `body` keep working unchanged.
+  bodyHtml    String?
+  mentionsJson String?
   source      String?
   sourceRef   String?
   createdAt   DateTime   @default(now())
@@ -1033,10 +1037,23 @@ model Interview {
   endDateTime          DateTime?
   timezone             String?
   interviewer          String?
+  // Who ran it, as an ADDRESS. "interviewer" above is a free-text name, which
+  // cannot answer "show me the ones I did" — two people typing their own name
+  // differently is enough to break that filter, so identity is the email.
+  interviewerEmail     String?
   attendeesJson        String?
   location             String?
   meetingUrl           String?
   notes                String?
+  // Formatted interview write-up. `notes` above stays as the plain-text
+  // fallback (and is what search reads), so nothing existing breaks.
+  notesHtml            String?
+  // PASS | FAIL | MAYBE — a first-pass verdict, deliberately a String.
+  outcome              String?
+  // 1-5. Null means not scored, which is different from scored badly.
+  rating               Int?
+  // Emails of people @-mentioned in the write-up, so they can be surfaced.
+  mentionsJson         String?
   status               String     @default("SCHEDULED")
   source               String?
   googleCalendarId     String?

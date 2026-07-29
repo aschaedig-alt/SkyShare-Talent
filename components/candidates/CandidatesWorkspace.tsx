@@ -257,6 +257,15 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
           </div>
           <div className="flex w-full flex-col items-stretch gap-2 xl:w-[560px]">
             <div className="flex flex-wrap justify-end gap-2">
+              {/* A real Link — this loads another page, so it has to be
+                  ctrl-clickable into a new tab. */}
+              <Link
+                href="/candidates/recent-interviews"
+                className="inline-flex items-center gap-1.5 rounded border border-white/25 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-gold hover:text-brand-lea"
+              >
+                <CalendarClock className="h-4 w-4" />
+                Recent interviews
+              </Link>
               <ResumeIntake variant="solid" />
               <DocumentIntake variant="solid" />
               <NewCandidateButton />

@@ -28,6 +28,7 @@ import { TravelPanel } from "@/components/travel/TravelPanel";
 import type { WidgetInstance } from "@/lib/data/page-layout";
 import type { CandidateProfileData } from "@/lib/data/candidates";
 import type { TravelTripView, TravelerLoyalty } from "@/lib/data/travel";
+import { InterviewWriteUp } from "@/components/candidates/InterviewWriteUp";
 import { formatMomentDate, formatMomentDateTime } from "@/lib/dates/display";
 
 type CandidateProfileWorkspaceProps = {
@@ -39,6 +40,10 @@ type CandidateProfileWorkspaceProps = {
   savedWidgets?: WidgetInstance[] | null;
   travelTrips?: TravelTripView[];
   travelLoyalty?: TravelerLoyalty;
+  /** Everyone who can be recorded as an interviewer or @-mentioned. */
+  team?: Array<{ name: string; email: string }>;
+  /** The signed-in user, pre-selected as the interviewer. Null in local dev. */
+  me?: { name: string; email: string } | null;
 };
 
 // Default arrangement of the Documents-tab boxes (mirrors the current 240px
@@ -111,7 +116,9 @@ export function CandidateProfileWorkspace({
   savedLayout = null,
   savedWidgets = null,
   travelTrips = [],
-  travelLoyalty
+  travelLoyalty,
+  team = [],
+  me = null
 }: CandidateProfileWorkspaceProps) {
   const [candidate, setCandidate] = useState<CandidateProfileData>(initialCandidate);
   const [activeTab, setActiveTab] = useState<ProfileTab>("documents");
@@ -631,7 +638,7 @@ export function CandidateProfileWorkspace({
           )}
 
           {/* Notes tab */}
-          {activeTab === "notes" && <CandidateNotes candidateId={candidate.id} initialNotes={candidate.notes} />}
+          {activeTab === "notes" && <CandidateNotes candidateId={candidate.id} initialNotes={candidate.notes} people={team} />}
 
           {/* Timeline tab — unified candidate lifecycle (live + historical) */}
           {activeTab === "timeline" && <CandidateTimeline events={candidate.timeline} />}
@@ -654,28 +661,16 @@ export function CandidateProfileWorkspace({
           {/* Activity tab */}
           {activeTab === "activity" && <CandidateActivityTimeline items={candidate.activity} />}
 
-          {/* Interviews tab */}
+          {/* Interviews tab — write-ups pasted in after the fact, since
+              interviews are still run in Paycom. */}
           {activeTab === "interviews" && (
-            <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-              <div className="space-y-2">
-                {candidate.interviews.length > 0 ? (
-                  candidate.interviews.map((interview) => (
-                    <div key={interview.id} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
-                      <div className="font-semibold text-brand-lea dark:text-slate-100">{interview.title}</div>
-                      <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{formatDateTime(interview.startDateTime)} · {interview.status}</div>
-                      <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{[interview.interviewer, interview.location].filter(Boolean).join(" · ")}</div>
-                      {interview.notes && interview.notes.trim() && (
-                        <p className="mt-2 whitespace-pre-wrap rounded border border-brand-lea/10 bg-white/70 p-2 text-xs text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
-                          {interview.notes.trim()}
-                        </p>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <EmptyState title="No interviews scheduled" detail="Scheduled interviews will appear here." />
-                )}
-              </div>
-            </section>
+            <InterviewWriteUp
+              candidateId={candidate.id}
+              interviews={candidate.interviews}
+              people={team}
+              me={me}
+              canEdit={canEdit}
+            />
           )}
         </>
       )}

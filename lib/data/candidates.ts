@@ -198,6 +198,11 @@ export type CandidateProfileData = {
     meetingUrl: string | null;
     status: string;
     notes: string | null;
+    /** Formatted write-up. `notes` stays the plain-text version. */
+    notesHtml: string | null;
+    interviewerEmail: string | null;
+    outcome: string | null;
+    rating: number | null;
   }>;
   // Historical Candidate Archive surfaces. `origin` is internal (PAYCOM | JAZZ |
   // MANUAL); `isHistorical` is true when the profile carries legacy (Jazz) data,
@@ -855,7 +860,11 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
       location: interview.location,
       meetingUrl: interview.meetingUrl,
       status: interview.status,
-      notes: interview.notes
+      notes: interview.notes,
+      notesHtml: interview.notesHtml,
+      interviewerEmail: interview.interviewerEmail,
+      outcome: interview.outcome,
+      rating: interview.rating
     })),
     origin: candidate.origin,
     jazzCandidateNumber: candidate.jazzCandidateNumber,

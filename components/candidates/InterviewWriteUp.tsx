@@ -1,0 +1,261 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { clsx } from "clsx";
+import { Star } from "lucide-react";
+import { RichTextEditor, RichTextView } from "@/components/richtext/RichTextEditor";
+import { INTERVIEW_OUTCOMES, INTERVIEW_TYPES, interviewOutcomeTone, interviewOutcomeLabel } from "@/lib/interviews/constants";
+import { formatCalendarDayShort } from "@/lib/dates/display";
+import { EmptyState } from "@/components/ui";
+
+/**
+ * Record an interview that already happened, with the notes pasted in.
+ *
+ * Interviews are still run in Paycom, so this is a place to put the write-up
+ * afterwards — which is also what makes a candidate show up under "recent
+ * interviews". The DATE is the interview's own date, not today, because that is
+ * what the 30/60/90 windows count from.
+ */
+
+export type InterviewView = {
+  id: string;
+  title: string;
+  startDateTime: string;
+  interviewer: string | null;
+  interviewerEmail: string | null;
+  status: string;
+  notes: string | null;
+  notesHtml: string | null;
+  outcome: string | null;
+  rating: number | null;
+};
+
+const label = "text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400";
+const field =
+  "mt-1 block w-full rounded border border-brand-lea/20 px-3 py-1.5 text-sm text-brand-lea outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100";
+
+function todayInputValue(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+export function InterviewWriteUp({
+  candidateId,
+  interviews,
+  people,
+  me,
+  canEdit
+}: {
+  candidateId: string;
+  interviews: InterviewView[];
+  people: Array<{ name: string; email: string }>;
+  me: { name: string; email: string } | null;
+  canEdit: boolean;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    interviewedAt: todayInputValue(),
+    interviewerEmail: me?.email ?? people[0]?.email ?? "",
+    interviewType: "RECRUITER_SCREEN",
+    outcome: "",
+    rating: 0,
+    notesHtml: ""
+  });
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    const chosen = people.find((p) => p.email === form.interviewerEmail);
+    const res = await fetch(`/api/candidates/${candidateId}/interviews`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        // Midday avoids a date typed here landing on the previous day once the
+        // browser's timezone offset is applied.
+        interviewedAt: `${form.interviewedAt}T12:00:00`,
+        interviewerEmail: form.interviewerEmail,
+        interviewerName: chosen?.name ?? "",
+        interviewType: form.interviewType,
+        title: INTERVIEW_TYPES.find((t) => t.value === form.interviewType)?.label ?? "Interview",
+        outcome: form.outcome || null,
+        rating: form.rating || null,
+        notesHtml: form.notesHtml
+      })
+    });
+    setBusy(false);
+    if (res.ok) {
+      setOpen(false);
+      setForm({ ...form, notesHtml: "", outcome: "", rating: 0 });
+      router.refresh();
+    } else {
+      const payload = (await res.json().catch(() => null)) as { message?: string } | null;
+      setError(payload?.message ?? "Could not save the interview.");
+    }
+  }
+
+  const logged = [...interviews].sort(
+    (a, b) => new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime()
+  );
+
+  return (
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Interviews</h2>
+        {canEdit && (
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="rounded bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden"
+          >
+            {open ? "Cancel" : "Log an interview"}
+          </button>
+        )}
+      </div>
+
+      {open && (
+        <div className="mt-3 rounded border border-brand-lea/15 bg-brand-cloudDancer/40 p-3 dark:border-white/10 dark:bg-white/5">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="block">
+              <span className={label}>Date interviewed</span>
+              <input
+                type="date"
+                value={form.interviewedAt}
+                onChange={(e) => setForm({ ...form, interviewedAt: e.target.value })}
+                className={field}
+              />
+            </label>
+            <label className="block">
+              <span className={label}>Interviewer</span>
+              <select
+                value={form.interviewerEmail}
+                onChange={(e) => setForm({ ...form, interviewerEmail: e.target.value })}
+                className={field}
+              >
+                {people.map((p) => (
+                  <option key={p.email} value={p.email}>{p.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className={label}>Type</span>
+              <select
+                value={form.interviewType}
+                onChange={(e) => setForm({ ...form, interviewType: e.target.value })}
+                className={field}
+              >
+                {INTERVIEW_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="mt-3">
+            <span className={label}>Notes — paste straight from Paycom</span>
+            <div className="mt-1">
+              <RichTextEditor
+                value={form.notesHtml}
+                onChange={(html) => setForm({ ...form, notesHtml: html })}
+                people={people}
+                placeholder="Paste the interview notes here. Formatting is kept."
+                minHeight={200}
+              />
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-end gap-4">
+            <div>
+              <span className={label}>Outcome</span>
+              <div className="mt-1 flex gap-1.5">
+                {INTERVIEW_OUTCOMES.map((o) => (
+                  <button
+                    key={o.value}
+                    onClick={() => setForm({ ...form, outcome: form.outcome === o.value ? "" : o.value })}
+                    className={clsx(
+                      "rounded border px-2.5 py-1 text-xs font-semibold transition",
+                      form.outcome === o.value
+                        ? "border-brand-lea bg-brand-lea text-white"
+                        : "border-brand-lea/20 text-brand-grey hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-300"
+                    )}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <span className={label}>Rating</span>
+              <div className="mt-1 flex items-center gap-0.5">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setForm({ ...form, rating: form.rating === n ? 0 : n })}
+                    aria-label={`${n} star${n === 1 ? "" : "s"}`}
+                    className="p-0.5 transition hover:scale-110"
+                  >
+                    <Star
+                      className={clsx(
+                        "h-5 w-5",
+                        n <= form.rating ? "fill-brand-gold text-brand-gold" : "text-brand-lea/25 dark:text-white/25"
+                      )}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={save}
+              disabled={busy}
+              className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-50"
+            >
+              {busy ? "Saving…" : "Save interview"}
+            </button>
+            {error && <span className="text-xs font-semibold text-red-700 dark:text-red-300">{error}</span>}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-3 space-y-2">
+        {logged.length > 0 ? (
+          logged.map((i) => (
+            <div key={i.id} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold text-brand-lea dark:text-slate-100">{i.title}</span>
+                <span className="text-xs text-brand-grey dark:text-slate-400">
+                  {formatCalendarDayShort(i.startDateTime)}
+                  {i.interviewer ? ` · ${i.interviewer}` : ""}
+                </span>
+                {i.outcome && (
+                  <span className={clsx("rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide", interviewOutcomeTone(i.outcome))}>
+                    {interviewOutcomeLabel(i.outcome)}
+                  </span>
+                )}
+                {i.rating ? (
+                  <span className="inline-flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <Star key={n} className={clsx("h-3 w-3", n <= (i.rating ?? 0) ? "fill-brand-gold text-brand-gold" : "text-brand-lea/20 dark:text-white/20")} />
+                    ))}
+                  </span>
+                ) : null}
+              </div>
+              {i.notesHtml ? (
+                <div className="mt-2 rounded border border-brand-lea/10 bg-white/70 p-2.5 dark:border-white/10 dark:bg-white/5">
+                  <RichTextView html={i.notesHtml} />
+                </div>
+              ) : i.notes?.trim() ? (
+                <p className="mt-2 whitespace-pre-wrap rounded border border-brand-lea/10 bg-white/70 p-2 text-xs text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+                  {i.notes.trim()}
+                </p>
+              ) : null}
+            </div>
+          ))
+        ) : (
+          <EmptyState title="No interviews logged yet" description="Log one to paste your write-up and put this candidate on the Recent interviews list." bare />
+        )}
+      </div>
+    </section>
+  );
+}
