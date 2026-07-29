@@ -110,17 +110,29 @@ export async function processTravelConversation(
     return { ...base, outcome: "no-itinerary", summary: "The thread has no readable messages." };
   }
 
+  // Only the fields this importer reads. Declared rather than reaching for `any`
+  // so the shape is visible and the build's no-explicit-any rule passes.
+  type FrontRecipient = { role?: string; handle?: string };
+  type FrontMessageLike = {
+    subject?: string;
+    body?: string;
+    text?: string;
+    created_at?: number;
+    author?: { email?: string };
+    recipients?: FrontRecipient[];
+  };
+
   // The FIRST message is the booking; later ones are replies and thank-yous.
-  const first = messages[0] as unknown as Record<string, any>;
+  const first = messages[0] as unknown as FrontMessageLike;
   const subject: string = first.subject ?? "";
   const body = stripHtml(first.body ?? first.text ?? "");
   const sentAt = new Date((first.created_at ?? 0) * 1000);
   const senderEmail: string | null =
     first.author?.email ??
-    (first.recipients ?? []).find((r: any) => r.role === "from")?.handle ??
+    (first.recipients ?? []).find((r) => r.role === "from")?.handle ??
     null;
   const addresses: string[] = (first.recipients ?? [])
-    .map((r: any) => String(r.handle ?? ""))
+    .map((r) => String(r.handle ?? ""))
     .filter(Boolean);
 
   const { travel, error } = await extractTravelFromEmail({ subject, body }, sentAt);
