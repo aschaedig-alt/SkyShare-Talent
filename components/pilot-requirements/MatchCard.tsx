@@ -1,6 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import {
+  KEEP_ON_POSITION,
+  POSITION_SKIP_LABELS,
+  POSITION_SKIP_REASONS,
+  type PositionDecisionValue
+} from "@/lib/matching/position-skip";
+import { setCandidatePositionSkip } from "@/app/pilot-requirements/scoring-actions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
@@ -153,6 +160,35 @@ export function MatchCard({
   const [notice, setNotice] = useState<string | null>(null);
   const [exReason, setExReason] = useState<ScanExclusionReason | "">(match.excludedReason ?? "");
   const [exNote, setExNote] = useState(match.excludedNote ?? "");
+  const [skipReason, setSkipReason] = useState<PositionDecisionValue | "">(match.positionSkip?.reason ?? "");
+  const [skipPending, startSkip] = useTransition();
+
+  // Set aside on THIS position only — distinct from the scan-eligibility control
+  // below, which bars the candidate from every position at once.
+  function changePositionSkip(next: PositionDecisionValue | "") {
+    if (!requirementId || !canEdit) return;
+    setSkipReason(next);
+    setNotice(null);
+    startSkip(async () => {
+      const res = await setCandidatePositionSkip({
+        requirementId,
+        candidateId: match.candidateId,
+        reason: next === "" ? null : next
+      });
+      if (res.ok) {
+        setNotice(
+          next === ""
+            ? "Back to the engine's call."
+            : next === KEEP_ON_POSITION
+              ? "Kept on this position."
+              : "Set aside on this position."
+        );
+        router.refresh();
+      } else {
+        setNotice(res.error ?? "Could not save.");
+      }
+    });
+  }
 
   function changeExclusion(next: ScanExclusionReason | "") {
     setExReason(next);
@@ -297,9 +333,31 @@ export function MatchCard({
             </div>
           ) : null}
 
-          {match.overqualified ? (
-            <div className="mt-2 inline-flex items-center gap-1 rounded-element bg-value-leadership-light px-2 py-1 text-[10px] font-semibold text-value-leadership-dark">
-              <TrendingUp className="h-3 w-3" /> Overqualified for SIC — total time is 2&times;+ the minimum, likely wants PIC
+          {match.setAsideReason ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-element bg-value-leadership-light px-2 py-1 text-[10px] font-semibold text-value-leadership-dark">
+              <TrendingUp className="h-3 w-3 shrink-0" />
+              <span className="min-w-0">
+                Set aside on this position — {POSITION_SKIP_LABELS[match.setAsideReason]}
+                {match.positionSkip
+                  ? match.positionSkip.note
+                    ? ` · ${match.positionSkip.note}`
+                    : ""
+                  : " · automatic: total time is 2×+ the minimum for this SIC seat"}
+              </span>
+              {requirementId && canEdit ? (
+                <button
+                  type="button"
+                  onClick={() => changePositionSkip(KEEP_ON_POSITION)}
+                  disabled={skipPending}
+                  className="rounded-element bg-brand-lea px-2 py-0.5 text-[10px] font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60"
+                >
+                  Keep on this position
+                </button>
+              ) : null}
+            </div>
+          ) : match.overqualified && skipReason === KEEP_ON_POSITION ? (
+            <div className="mt-2 inline-flex items-center gap-1 rounded-element bg-brand-cloudDancer px-2 py-1 text-[10px] font-semibold text-brand-grey dark:bg-white/5 dark:text-slate-400">
+              <TrendingUp className="h-3 w-3" /> Overqualified for this seat — kept on the board by you
             </div>
           ) : null}
 
@@ -320,9 +378,37 @@ export function MatchCard({
             ))}
           </div>
 
-          {onExclude && canEdit ? (
+          {requirementId && canEdit ? (
             <div className="mt-3 flex flex-wrap items-center gap-2 rounded-element border border-brand-lea/10 bg-brand-cloudDancer/30 px-2.5 py-1.5 dark:border-white/10 dark:bg-white/5">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">Scan eligibility</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
+                This position only
+              </span>
+              <select
+                value={skipReason}
+                disabled={skipPending}
+                onChange={(event) => changePositionSkip(event.target.value as PositionDecisionValue | "")}
+                aria-label={`Skip ${match.candidateName} on this position`}
+                className="rounded-element border border-brand-lea/20 bg-white px-1.5 py-0.5 text-[11px] font-medium text-brand-lea outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+              >
+                <option value="">Engine&apos;s call</option>
+                <option value={KEEP_ON_POSITION}>Keep on this position</option>
+                {POSITION_SKIP_REASONS.map((entry) => (
+                  <option key={entry.key} value={entry.key}>
+                    Skip — {entry.label}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[10px] text-brand-grey dark:text-slate-400">
+                Stays in the system and on every other position
+              </span>
+            </div>
+          ) : null}
+
+          {onExclude && canEdit ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-element border border-brand-lea/10 bg-brand-cloudDancer/30 px-2.5 py-1.5 dark:border-white/10 dark:bg-white/5">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
+                Every position
+              </span>
               <select
                 value={exReason}
                 disabled={excluding}

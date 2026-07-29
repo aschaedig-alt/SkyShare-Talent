@@ -12,6 +12,7 @@ import {
 } from "@/lib/matching/scoring-config";
 import type { MatchFeedbackEntry, RequirementFeedback } from "@/lib/matching/match-feedback";
 import type { OverrideTier, TierOverrides } from "@/lib/matching/tier-override";
+import { KEEP_ON_POSITION, type PositionSkip, type PositionSkipReason, type RequirementSkips } from "@/lib/matching/position-skip";
 import { isScanExclusionReason, type ScanExclusionReason } from "@/lib/candidates/scan-exclusion";
 import {
   scanPoolWhere,
@@ -132,6 +133,14 @@ export type PilotRequirementCandidateMatch = {
   fromArchive: boolean;
   /** SIC seat where total time is >= 2x the role minimum — likely wants PIC. */
   overqualified: boolean;
+  /**
+   * Set aside for THIS position only (the candidate stays in the system and in
+   * every other position's scan). Either a recruiter's explicit skip or the
+   * engine's automatic overqualified catch. Null = competing normally.
+   */
+  setAsideReason: PositionSkipReason | null;
+  /** The stored skip when a recruiter made the call; null when automatic. */
+  positionSkip: PositionSkip | null;
   summary: string;
   subScores: SubScore[];
   factors: ScoredFactor[];
@@ -339,7 +348,8 @@ export function scoreCandidate(
   candidate: CandidateForMatch,
   config: ScoringProfileConfig,
   feedback: MatchFeedbackEntry | null,
-  override: OverrideTier | null = null
+  override: OverrideTier | null = null,
+  skip: PositionSkip | null = null
 ): PilotRequirementCandidateMatch {
   const text = candidateText(candidate);
   const appliedText = applicationText(candidate);
@@ -868,6 +878,20 @@ export function scoreCandidate(
   }
 
   // `overqualified` is computed up in the seat-fit block (it also lowers seat fit).
+  //
+  // Set-aside: a recruiter's explicit skip wins over the engine's guess, so an
+  // overqualified pilot deliberately restored to the list stays there. The
+  // automatic catch is SIC-only by design — a captain with twice the minimum is
+  // simply an experienced captain, and setting those aside would bury the best
+  // candidates for every PIC opening.
+  const setAsideReason: PositionSkipReason | null =
+    skip?.reason === KEEP_ON_POSITION
+      ? null
+      : skip
+        ? (skip.reason as PositionSkipReason)
+        : overqualified
+          ? "OVERQUALIFIED"
+          : null;
 
   const summary = buildSummary(factors, minsMet, minsTotal, hardGaps, overall);
 
@@ -910,6 +934,8 @@ export function scoreCandidate(
     excludedNote: candidate.scanExcludedNote,
     fromArchive: isArchivedCandidateStatus(candidate.status),
     overqualified,
+    setAsideReason,
+    positionSkip: skip,
     summary,
     subScores,
     factors: cleanFactors,
@@ -977,26 +1003,56 @@ export const candidateMatchSelect = {
   }
 } as const;
 
-export async function getPilotRequirementCandidateMatches(
+/** How many set-aside candidates to carry back for the collapsed group. */
+export const SET_ASIDE_LIMIT = 60;
+
+export type RequirementScanResult = {
+  /** The ranked board. */
+  ranked: PilotRequirementCandidateMatch[];
+  /**
+   * Held out of the ranked board for THIS position only — a recruiter's skip or
+   * the automatic overqualified catch. Returned rather than dropped so a wrong
+   * call stays visible and reversible.
+   */
+  setAside: PilotRequirementCandidateMatch[];
+};
+
+/**
+ * The whole-pool scan, ranked list and set-aside group in one pass.
+ *
+ * Prefer this over `getPilotRequirementCandidateMatches` when you need both —
+ * scoring the pool is the expensive part (~1.4s of query and ~1.3s of scoring
+ * for 3,343 people), so calling twice to get the two halves doubles it.
+ */
+export async function scanRequirementPool(
   requirement: MatchRequirement | null,
   config: ScoringProfileConfig = defaultProfileConfig(),
   feedback: RequirementFeedback = {},
   overrides: TierOverrides = {},
+  skips: RequirementSkips = {},
   includeExcluded = false
-): Promise<PilotRequirementCandidateMatch[]> {
-  if (!requirement) return [];
+): Promise<RequirementScanResult> {
+  if (!requirement) return { ranked: [], setAside: [] };
 
   // No `take` here on purpose. The old 250-row cap ordered by updatedAt meant a
   // scan silently saw only the most recently touched slice of the pool; with the
-  // archive included that would have hidden almost all of it. A whole-pool scan
-  // measures at ~1.4s of query and ~1.3s of scoring for 3,343 people.
+  // archive included that would have hidden almost all of it.
   const candidates = await prisma.candidate.findMany({
     where: scanPoolWhere(includeExcluded),
     select: candidateMatchSelect
   });
 
   const scored = candidates
-    .map((candidate) => scoreCandidate(requirement, candidate, config, feedback[candidate.id] ?? null, overrides[candidate.id] ?? null))
+    .map((candidate) =>
+      scoreCandidate(
+        requirement,
+        candidate,
+        config,
+        feedback[candidate.id] ?? null,
+        overrides[candidate.id] ?? null,
+        skips[candidate.id] ?? null
+      )
+    )
     // Unverified records are held out of the ranked scan: with only 32 of 341
     // live candidates carrying structured hours, leaving them in means the
     // board is mostly people we cannot assess. They are not lost — they are
@@ -1005,13 +1061,34 @@ export async function getPilotRequirementCandidateMatches(
     .filter((match) => match.overridden || (!match.unverified && (match.score > 0 || match.factors.some((factor) => factor.status === "met"))))
     .sort(compareMatches);
 
+  // Set aside BEFORE the budget slice, so a skipped candidate never occupies a
+  // slot that a competing one should have had.
+  const setAside = scored.filter((match) => match.setAsideReason !== null);
+  const ranked = scored.filter((match) => match.setAsideReason === null);
+
   // Two budgets, not one list. Archived candidates out-rank live ones often
   // enough (10 of the top 12 on a real G450 scan) that a single merged cut
   // pushed the working pipeline off the board entirely.
-  return [
-    ...scored.filter((match) => !match.fromArchive).slice(0, CURRENT_MATCH_LIMIT),
-    ...scored.filter((match) => match.fromArchive).slice(0, ARCHIVE_MATCH_LIMIT)
-  ];
+  return {
+    ranked: [
+      ...ranked.filter((match) => !match.fromArchive).slice(0, CURRENT_MATCH_LIMIT),
+      ...ranked.filter((match) => match.fromArchive).slice(0, ARCHIVE_MATCH_LIMIT)
+    ],
+    setAside: setAside.slice(0, SET_ASIDE_LIMIT)
+  };
+}
+
+/** The ranked board only. Thin wrapper over `scanRequirementPool`. */
+export async function getPilotRequirementCandidateMatches(
+  requirement: MatchRequirement | null,
+  config: ScoringProfileConfig = defaultProfileConfig(),
+  feedback: RequirementFeedback = {},
+  overrides: TierOverrides = {},
+  includeExcluded = false,
+  skips: RequirementSkips = {}
+): Promise<PilotRequirementCandidateMatch[]> {
+  const { ranked } = await scanRequirementPool(requirement, config, feedback, overrides, skips, includeExcluded);
+  return ranked;
 }
 
 export type UnverifiedCandidate = {
@@ -1091,7 +1168,8 @@ export async function scoreSpecificCandidates(
   candidateIds: string[],
   config: ScoringProfileConfig = defaultProfileConfig(),
   feedback: RequirementFeedback = {},
-  overrides: TierOverrides = {}
+  overrides: TierOverrides = {},
+  skips: RequirementSkips = {}
 ): Promise<PilotRequirementCandidateMatch[]> {
   if (candidateIds.length === 0) return [];
 
@@ -1100,7 +1178,18 @@ export async function scoreSpecificCandidates(
     select: candidateMatchSelect
   });
 
+  // Applicants are never dropped — someone who actually applied stays on the
+  // list even when set aside; the card shows the reason instead.
   return candidates
-    .map((candidate) => scoreCandidate(requirement, candidate, config, feedback[candidate.id] ?? null, overrides[candidate.id] ?? null))
+    .map((candidate) =>
+      scoreCandidate(
+        requirement,
+        candidate,
+        config,
+        feedback[candidate.id] ?? null,
+        overrides[candidate.id] ?? null,
+        skips[candidate.id] ?? null
+      )
+    )
     .sort((left, right) => right.score - left.score || left.candidateName.localeCompare(right.candidateName));
 }

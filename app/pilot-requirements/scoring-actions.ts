@@ -9,6 +9,8 @@ import { isScanExclusionReason, type ScanExclusionReason } from "@/lib/candidate
 import { fleetPositionBySlug } from "@/lib/fleet/positions";
 import { setMatchFeedback, MATCH_VERDICTS, type MatchVerdict } from "@/lib/matching/match-feedback";
 import { setTierOverride, OVERRIDE_TIERS, type OverrideTier } from "@/lib/matching/tier-override";
+import { setPositionSkip } from "@/lib/matching/position-skip.server";
+import { isPositionDecisionValue, type PositionDecisionValue } from "@/lib/matching/position-skip";
 import { runRequirementScan, type RequirementScan } from "@/lib/matching/run-scan";
 
 export type ActionResult = { ok: boolean; error?: string };
@@ -112,6 +114,53 @@ export async function setCandidateTier(input: {
 
   revalidatePath("/pilot-requirements");
   revalidatePath("/recruiting-jobs");
+  return { ok: true };
+}
+
+/**
+ * Set a candidate aside on ONE position, or pin them back onto it.
+ *
+ * Deliberately separate from setCandidateScanExclusion, which is the
+ * candidate-level bar that hides someone from EVERY scan. Here the candidate
+ * stays in the system and keeps competing for every other opening.
+ *
+ * `reason: KEEP_ON_POSITION` is what overrules the automatic overqualified
+ * catch — clearing the record with null is not enough, because the engine
+ * would simply re-flag them on the next scan.
+ */
+export async function setCandidatePositionSkip(input: {
+  requirementId: string;
+  candidateId: string;
+  reason: PositionDecisionValue | null;
+  note?: string;
+}): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+
+  if (!input?.requirementId || !input?.candidateId) {
+    return { ok: false, error: "Missing candidate or position." };
+  }
+  if (input.reason !== null && !isPositionDecisionValue(input.reason)) {
+    return { ok: false, error: "Invalid skip reason." };
+  }
+
+  try {
+    await setPositionSkip({
+      requirementId: input.requirementId,
+      candidateId: input.candidateId,
+      reason: input.reason,
+      note: input.note,
+      by: await actorLabel(),
+      automatic: false,
+      nowIso: new Date().toISOString()
+    });
+  } catch {
+    return { ok: false, error: "Could not update this position's skip list." };
+  }
+
+  revalidatePath("/pilot-requirements");
+  revalidatePath("/recruiting-jobs");
+  revalidatePath("/matching");
   return { ok: true };
 }
 

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import {
-  getPilotRequirementCandidateMatches,
+  scanRequirementPool,
   scoreSpecificCandidates,
   scoreCandidate,
   candidateMatchSelect,
@@ -11,6 +11,7 @@ import { resolveProfileConfig, profileKey } from "@/lib/matching/scoring-config"
 import { canEditScoring, getProfileScoringConfig, getScoringConfigDoc } from "@/lib/matching/scoring-config.server";
 import { getRequirementFeedback, getCandidateFeedback } from "@/lib/matching/match-feedback";
 import { getRequirementTierOverrides, getCandidateTierOverrides } from "@/lib/matching/tier-override";
+import { getRequirementSkips, getCandidateSkips } from "@/lib/matching/position-skip.server";
 import { FLEET_POSITIONS, resolveFleetPosition, positionFor } from "@/lib/fleet/positions";
 import type { JobScreeningData } from "@/lib/data/job-screening";
 import { parseStringArray } from "@/lib/json";
@@ -206,6 +207,7 @@ export async function getRoleScreening(requirementId: string | null, includeExcl
     requirementTitle: null,
     applicants: [],
     best: [],
+    setAside: [],
     applicantIds: [],
     scannedCount: 0,
     scannedCurrent: 0,
@@ -229,16 +231,17 @@ export async function getRoleScreening(requirementId: string | null, includeExcl
 
   const matchRequirement = toMatchRequirement(requirement);
   const aircraftTypes = parseStringArray(requirement.aircraftTypesJson);
-  const [config, feedback, overrides] = await Promise.all([
+  const [config, feedback, overrides, skips] = await Promise.all([
     getProfileScoringConfig(aircraftTypes[0] ?? null, requirement.pilotSeat),
     getRequirementFeedback(requirement.id),
-    getRequirementTierOverrides(requirement.id)
+    getRequirementTierOverrides(requirement.id),
+    getRequirementSkips(requirement.id)
   ]);
 
   const applicantIds = [...new Set(requirement.applications.map((application) => application.candidateId))];
-  const [applicants, best] = await Promise.all([
-    scoreSpecificCandidates(matchRequirement, applicantIds, config, feedback, overrides),
-    getPilotRequirementCandidateMatches(matchRequirement, config, feedback, overrides, includeExcluded)
+  const [applicants, scan] = await Promise.all([
+    scoreSpecificCandidates(matchRequirement, applicantIds, config, feedback, overrides, skips),
+    scanRequirementPool(matchRequirement, config, feedback, overrides, skips, includeExcluded)
   ]);
 
   return {
@@ -246,7 +249,8 @@ export async function getRoleScreening(requirementId: string | null, includeExcl
     requirementId: requirement.id,
     requirementTitle: resolveFleetPosition(requirement.title)?.title ?? requirement.title,
     applicants,
-    best,
+    best: scan.ranked,
+    setAside: scan.setAside,
     applicantIds,
     ...countFields,
     canEdit
@@ -303,7 +307,7 @@ export async function getCandidateRoleMatches(candidateId: string | null): Promi
   });
   if (!candidate) return null;
 
-  const [requirements, doc, candidateFeedback, candidateOverrides, priorSkips] = await Promise.all([
+  const [requirements, doc, candidateFeedback, candidateOverrides, candidateSkips, priorSkips] = await Promise.all([
     prisma.pilotRequirement.findMany({
       where: { status: "ACTIVE" },
       take: 300,
@@ -312,6 +316,7 @@ export async function getCandidateRoleMatches(candidateId: string | null): Promi
     getScoringConfigDoc(),
     getCandidateFeedback(candidateId),
     getCandidateTierOverrides(candidateId),
+    getCandidateSkips(candidateId),
     findPriorSkips({
       id: candidate.id,
       displayName: candidate.displayName,
@@ -329,7 +334,8 @@ export async function getCandidateRoleMatches(candidateId: string | null): Promi
         candidate,
         config,
         candidateFeedback[requirement.id] ?? null,
-        candidateOverrides[requirement.id] ?? null
+        candidateOverrides[requirement.id] ?? null,
+        candidateSkips[requirement.id] ?? null
       );
       return {
         requirementId: requirement.id,

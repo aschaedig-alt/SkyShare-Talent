@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import {
-  getPilotRequirementCandidateMatches,
+  scanRequirementPool,
   scoreSpecificCandidates,
   type MatchRequirement,
   type PilotRequirementCandidateMatch
@@ -8,6 +8,7 @@ import {
 import { canEditScoring, getProfileScoringConfig } from "@/lib/matching/scoring-config.server";
 import { getRequirementFeedback } from "@/lib/matching/match-feedback";
 import { getRequirementTierOverrides } from "@/lib/matching/tier-override";
+import { getRequirementSkips } from "@/lib/matching/position-skip.server";
 import { parseStringArray } from "@/lib/json";
 import { getScanPoolCounts } from "@/lib/candidates/scan-pool.server";
 
@@ -17,6 +18,12 @@ export type JobScreeningData = {
   requirementTitle: string | null;
   applicants: PilotRequirementCandidateMatch[];
   best: PilotRequirementCandidateMatch[];
+  /**
+   * Held out of `best` for this position only — a recruiter's skip or the
+   * automatic overqualified catch. Rendered as its own collapsed group so the
+   * call stays visible and one click undoes it.
+   */
+  setAside: PilotRequirementCandidateMatch[];
   applicantIds: string[];
   scannedCount: number;
   /** Live pipeline candidates considered in the scan. */
@@ -40,6 +47,7 @@ export async function getJobScreening(jobId: string | null): Promise<JobScreenin
     requirementTitle: null,
     applicants: [],
     best: [],
+    setAside: [],
     applicantIds: [],
     scannedCount: 0,
     scannedCurrent: 0,
@@ -94,16 +102,17 @@ export async function getJobScreening(jobId: string | null): Promise<JobScreenin
   };
 
   const aircraftTypes = parseStringArray(requirement.aircraftTypesJson);
-  const [config, feedback, overrides] = await Promise.all([
+  const [config, feedback, overrides, skips] = await Promise.all([
     getProfileScoringConfig(aircraftTypes[0] ?? null, requirement.pilotSeat),
     getRequirementFeedback(requirement.id),
-    getRequirementTierOverrides(requirement.id)
+    getRequirementTierOverrides(requirement.id),
+    getRequirementSkips(requirement.id)
   ]);
 
   const applicantIds = [...new Set(job.applications.map((application) => application.candidateId))];
-  const [applicants, best] = await Promise.all([
-    scoreSpecificCandidates(matchRequirement, applicantIds, config, feedback, overrides),
-    getPilotRequirementCandidateMatches(matchRequirement, config, feedback, overrides)
+  const [applicants, scan] = await Promise.all([
+    scoreSpecificCandidates(matchRequirement, applicantIds, config, feedback, overrides, skips),
+    scanRequirementPool(matchRequirement, config, feedback, overrides, skips)
   ]);
 
   return {
@@ -111,7 +120,8 @@ export async function getJobScreening(jobId: string | null): Promise<JobScreenin
     requirementId: requirement.id,
     requirementTitle: requirement.title,
     applicants,
-    best,
+    best: scan.ranked,
+    setAside: scan.setAside,
     applicantIds,
     ...countFields,
     canEdit

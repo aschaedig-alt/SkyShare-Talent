@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { SlidersHorizontal, RefreshCw, ChevronDown, Lightbulb, Archive } from "lucide-react";
+import { SlidersHorizontal, RefreshCw, ChevronDown, Lightbulb, Archive, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import {
   scanRequirementMatches,
@@ -42,6 +42,7 @@ export function JobScreeningPanel({
   const [tab, setTab] = useState<Tab>("all");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [archiveOpen, setArchiveOpen] = useState(true);
+  const [setAsideOpen, setSetAsideOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [preview, setPreview] = useState<CandidatePreviewData | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -74,10 +75,23 @@ export function JobScreeningPanel({
   // out-score live candidates, so merging them into a single top-N pushed the
   // working pipeline off the board. The archive is a deliberate rediscovery
   // list sitting underneath the current pool.
-  const currentMatches = useMemo(() => merged.filter((match) => !match.fromArchive), [merged]);
+  // Set aside for THIS position — a recruiter's skip or the automatic
+  // overqualified catch. Pulled out of the ranked lanes but never hidden, so a
+  // wrong call is visible and one click puts them back.
+  const setAsideMatches = useMemo(() => {
+    const byId = new Map<string, PilotRequirementCandidateMatch>();
+    for (const match of merged) if (match.setAsideReason) byId.set(match.candidateId, match);
+    for (const match of data.setAside) if (!byId.has(match.candidateId)) byId.set(match.candidateId, match);
+    return [...byId.values()].sort(
+      (a, b) => b.score - a.score || a.candidateName.localeCompare(b.candidateName)
+    );
+  }, [merged, data.setAside]);
+
+  const ranked = useMemo(() => merged.filter((match) => !match.setAsideReason), [merged]);
+  const currentMatches = useMemo(() => ranked.filter((match) => !match.fromArchive), [ranked]);
   const archiveMatches = useMemo(
-    () => merged.filter((match) => match.fromArchive).sort((a, b) => b.score - a.score || a.candidateName.localeCompare(b.candidateName)),
-    [merged]
+    () => ranked.filter((match) => match.fromArchive).sort((a, b) => b.score - a.score || a.candidateName.localeCompare(b.candidateName)),
+    [ranked]
   );
 
   const grouped = useMemo(() => {
@@ -335,6 +349,56 @@ export function JobScreeningPanel({
                 </div>
               );
             })}
+
+            {/* Set aside on this position only. Deliberately still on the page:
+                the automatic catch fires off self-reported hours, which are
+                known to disagree between a candidate's own documents, so a
+                wrong call has to be visible and reversible. */}
+            {setAsideMatches.length > 0 ? (
+              <div className="overflow-hidden rounded border border-value-leadership-dark/25 dark:border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setSetAsideOpen((value) => !value)}
+                  aria-expanded={setAsideOpen}
+                  className="flex w-full items-center justify-between gap-2 bg-value-leadership-light/60 px-3 py-2 text-left transition hover:bg-value-leadership-light dark:bg-white/5"
+                >
+                  <span className="flex items-center gap-2">
+                    <TrendingUp className="h-3.5 w-3.5 text-value-leadership-dark" />
+                    <span className="text-[11px] font-semibold text-brand-lea dark:text-slate-100">Set aside on this position</span>
+                    <span className="text-xs text-brand-grey dark:text-slate-400">({setAsideMatches.length})</span>
+                  </span>
+                  <ChevronDown
+                    className={clsx("h-4 w-4 text-brand-grey transition-transform dark:text-slate-400", !setAsideOpen && "-rotate-90")}
+                  />
+                </button>
+                {setAsideOpen ? (
+                  <div className="space-y-3 p-3">
+                    <p className="text-[11px] text-brand-grey dark:text-slate-400">
+                      Held out of the ranked lists above for this position only. Everyone here is still in the system
+                      and still competing for every other opening. Overqualified is caught automatically when total
+                      time reaches twice this seat&apos;s minimum — use &quot;Keep on this position&quot; on any card
+                      where that call is wrong.
+                    </p>
+                    {setAsideMatches.map((match) => (
+                      <MatchCard
+                        key={`aside:${match.candidateId}`}
+                        match={match}
+                        requirementId={data.requirementId}
+                        canEdit={data.canEdit}
+                        applied={appliedIds.has(match.candidateId)}
+                        onMoveTier={(next) => moveTo(match.candidateId, match.candidateName, next)}
+                        moving={moving}
+                        onExclude={(reason, note) => excludeCandidate(match.candidateId, match.candidateName, reason, note)}
+                        excluding={moving}
+                        onSelectName={selectCandidate}
+                        selected={selectedId === match.candidateId}
+                        onViewRoles={onViewCandidate}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             {/* The archive lane. Held apart from the tiers above on purpose:
                 these are historical Jazz records, and before this they had
