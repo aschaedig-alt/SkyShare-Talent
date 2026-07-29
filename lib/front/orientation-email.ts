@@ -476,15 +476,10 @@ export type OrientationSendRecord = {
   sentBy?: string | null;
 };
 
-/** Deep link to the conversation in Front.
- *
- * UNVERIFIED FORMAT: this is Front's standard /open/<id> link, but it could not be
- * checked against a real conversation (nothing had been sent when it was written).
- * The raw id is always shown next to the link so the record is still usable if the
- * URL shape is wrong — and if it is, this one function is the only thing to fix. */
-export function frontConversationUrl(conversationId: string): string {
-  return `https://app.frontapp.com/open/${conversationId}`;
-}
+/** Deep link to a Front conversation. Lives in lib/front/links.ts, which is
+    client-safe, so the history table can use the same helper instead of inlining
+    the URL — re-exported here for callers already importing from this module. */
+export { frontConversationUrl } from "./links";
 
 /** attendeeId -> templateKey -> record */
 type SendMap = Record<string, Record<string, OrientationSendRecord>>;

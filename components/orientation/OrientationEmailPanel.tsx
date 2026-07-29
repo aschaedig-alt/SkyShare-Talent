@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { clsx } from "clsx";
 import { Button, Modal } from "@/components/ui";
 import { AUDIENCE_LABEL, ORIENTATION_TEMPLATE_META, type OrientationTemplateKey, type OrientationTemplateMeta } from "@/lib/orientation/email-templates-meta";
+import { frontConversationUrl } from "@/lib/front/links";
 import {
   previewOrientationEmail,
   previewOrientationEmailBatch,
@@ -1176,7 +1177,7 @@ function CommunicationHistory({ attendees }: { attendees: AttendeeRow[] }) {
                   <td className="px-2 py-1.5">
                     {r.conversationId ? (
                       <a
-                        href={`https://app.frontapp.com/open/${r.conversationId}`}
+                        href={frontConversationUrl(r.conversationId)}
                         target="_blank"
                         rel="noreferrer"
                         title={`Conversation ${r.conversationId}`}
