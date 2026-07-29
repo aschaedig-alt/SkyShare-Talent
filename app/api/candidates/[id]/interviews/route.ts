@@ -91,7 +91,8 @@ export async function POST(request: Request, ctx: Ctx) {
       candidateId: id,
       candidateName: candidate.displayName,
       context: "interview",
-      mentionedBy: auth.user?.email ?? null
+      mentionedBy: auth.user?.email ?? null,
+      interviewId: interview.id
     });
   }
 

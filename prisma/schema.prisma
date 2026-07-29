@@ -669,6 +669,7 @@ model Candidate {
   duplicateAsSecondary DuplicateReviewItem[]  @relation("DuplicateCandidateSecondary")
   importRows           ImportRow[]
   travelTrips          TravelTrip[]
+  mentionNotifications MentionNotification[]
   historicalSource     HistoricalSource?      @relation(fields: [historicalSourceId], references: [id], onDelete: SetNull)
   timelineEvents       TimelineEvent[]
   candidateTags        CandidateTag[]
@@ -719,6 +720,28 @@ model CandidateNote {
 
   candidate   Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   author      User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([candidateId])
+}
+
+// Tracks a mention-notification email so a REPLY to it can be routed back to
+// the right candidate. The Front webhook fires on every inbound message in the
+// shared inbox with no other way to know "this reply is about Robert Patrick"
+// — conversationId is the one thing Front gives us that ties a reply to the
+// thread it replies on.
+model MentionNotification {
+  id             String   @id @default(cuid())
+  conversationId String   @unique
+  candidateId    String
+  // Which write-up the mention was made in, if it was an interview rather
+  // than a general note — kept for context even though a reply always lands
+  // as a candidate-level note, never nested on the interview itself.
+  interviewId    String?
+  noteId         String?
+  recipientEmail String
+  createdAt      DateTime @default(now())
+
+  candidate      Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 
   @@index([candidateId])
 }

@@ -1,7 +1,9 @@
 import { NextResponse, after } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { prisma } from "@/lib/prisma";
 import { processConversationById } from "@/lib/paycom/scan";
 import { processTravelConversation } from "@/lib/travel/from-email";
+import { processMentionReply } from "@/lib/notifications/process-mention-reply";
 import { getConversationTagNames } from "@/lib/front";
 
 export const dynamic = "force-dynamic";
@@ -215,7 +217,32 @@ export async function POST(request: Request) {
 
   const sender = findSenderEmail(payload);
 
-  // TRAVEL IS CHECKED FIRST, and deliberately BEFORE the Paycom sender filter
+  // MENTION REPLIES ARE CHECKED FIRST, before travel or Paycom. This is the
+  // cheapest possible check (one indexed exact-match lookup, no Front API
+  // call) and, like travel, the sender is a real teammate replying to their
+  // own inbox — the Paycom-sender filter below would otherwise discard it
+  // exactly the way it would have discarded a travel email.
+  const mentionThread = await prisma.mentionNotification.findUnique({
+    where: { conversationId },
+    select: { id: true }
+  });
+  if (mentionThread) {
+    // Front gives us 5 seconds and never retries. Reading and stripping the
+    // reply, then writing a note, comfortably fits in that window most of the
+    // time, but after() is used anyway for the same reason travel does: a
+    // slow moment must never mean the reply is silently lost.
+    after(async () => {
+      try {
+        const result = await processMentionReply(conversationId);
+        console.log(`Front webhook (mention reply): ${conversationId} -> ${JSON.stringify(result)}`);
+      } catch (error) {
+        console.error(`Front webhook mention-reply error on ${conversationId}:`, error);
+      }
+    });
+    return NextResponse.json({ ok: true, conversationId, route: "mention-reply", queued: true });
+  }
+
+  // TRAVEL IS CHECKED NEXT, and deliberately BEFORE the Paycom sender filter
   // below. A travel email comes from a colleague, so the sender test would
   // discard it — routing on the TAG is the whole point of this branch.
   //

@@ -102,7 +102,8 @@ export async function PATCH(request: Request, ctx: Ctx) {
         candidateId: id,
         candidateName: existing.candidate.displayName,
         context: "interview",
-        mentionedBy: auth.user?.email ?? null
+        mentionedBy: auth.user?.email ?? null,
+        interviewId
       });
     }
   }

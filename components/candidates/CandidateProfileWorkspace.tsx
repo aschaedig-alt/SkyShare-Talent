@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { clsx } from "clsx";
 import { FileText, Briefcase, StickyNote, CalendarClock, History, Plane, Clock, Sparkles, Mail, FileSignature, X } from "lucide-react";
@@ -61,6 +62,17 @@ const PROFILE_DEFAULT_LAYOUT: GridItem[] = [
 ];
 
 type ProfileTab = "documents" | "applications" | "offers" | "notes" | "interviews" | "timeline" | "summary" | "communications" | "activity" | "travel";
+
+const PROFILE_TABS = new Set<string>([
+  "documents", "applications", "offers", "notes", "interviews", "timeline", "summary", "communications", "activity", "travel"
+]);
+
+/** ?tab=interviews opens straight to that tab — how the mention email's
+    "View their interview notes" link lands somewhere useful instead of the
+    default Documents tab. Anything not a real tab id is ignored. */
+function tabFromQuery(value: string | null): ProfileTab | null {
+  return value && PROFILE_TABS.has(value) ? (value as ProfileTab) : null;
+}
 
 type CandidateEditForm = {
   displayName: string;
@@ -123,7 +135,8 @@ export function CandidateProfileWorkspace({
   me = null
 }: CandidateProfileWorkspaceProps) {
   const [candidate, setCandidate] = useState<CandidateProfileData>(initialCandidate);
-  const [activeTab, setActiveTab] = useState<ProfileTab>("documents");
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<ProfileTab>(() => tabFromQuery(searchParams.get("tab")) ?? "documents");
   const [tagsOpen, setTagsOpen] = useState(false);
   // Two-click removal rather than a modal: the first click arms the pill, the
   // second removes it, and blurring cancels — the same pattern the trip delete

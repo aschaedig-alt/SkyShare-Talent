@@ -52,7 +52,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       candidateId: id,
       candidateName: candidate.displayName,
       context: "note",
-      mentionedBy: auth.user?.email ?? null
+      mentionedBy: auth.user?.email ?? null,
+      noteId: note.id
     });
   }
 

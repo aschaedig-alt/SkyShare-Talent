@@ -44,7 +44,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       candidateId: id,
       candidateName: note.candidate.displayName,
       context: "note",
-      mentionedBy: auth.user?.email ?? null
+      mentionedBy: auth.user?.email ?? null,
+      noteId
     });
   }
 
