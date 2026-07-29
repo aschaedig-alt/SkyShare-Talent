@@ -52,6 +52,13 @@ const QUOTE_BOUNDARY_PATTERNS = [
   /-{2,}\s*Original Message\s*-{2,}/i,
   /\bOn\b[\s\S]{0,120}?\bwrote:/i,
   /From:\s*[\s\S]{0,120}?Sent:/i,
+  // Front itself appends a signature block to a reply typed IN Front — not a
+  // quote of the original at all, but a contact card (name, title, phone).
+  // Found on the very first real reply this shipped to: a one-word "received"
+  // followed by a full front-signature table, which the OTHER patterns here
+  // have no reason to catch since there is no quoted original in a Front-native
+  // reply to begin with.
+  /<div[^>]*class="[^"]*front-signature[^"]*"/i,
   // Our own sentence, as a last-resort net — if even the HTML comment marker
   // got stripped, the visible text of the original invite is still almost
   // certainly quoted somewhere below the reply.

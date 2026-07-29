@@ -122,8 +122,11 @@ export async function processTravelConversation(
     recipients?: FrontRecipient[];
   };
 
-  // The FIRST message is the booking; later ones are replies and thank-yous.
-  const first = messages[0] as unknown as FrontMessageLike;
+  // The booking is the OLDEST message; replies and thank-yous come after it.
+  // Front returns messages NEWEST-FIRST (confirmed against real production
+  // data from conversation cnv_1hmu0uhm), so the booking is the LAST entry,
+  // not messages[0].
+  const first = messages[messages.length - 1] as unknown as FrontMessageLike;
   const subject: string = first.subject ?? "";
   const body = stripHtml(first.body ?? first.text ?? "");
   const sentAt = new Date((first.created_at ?? 0) * 1000);

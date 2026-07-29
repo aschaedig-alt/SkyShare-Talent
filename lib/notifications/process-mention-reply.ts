@@ -39,7 +39,9 @@ export async function processMentionReply(conversationId: string): Promise<Menti
   // notification being SENT, not a reply arriving. Nothing to do.
   if (messages.length < 2) return { outcome: "not-a-reply" };
 
-  const latest = messages[messages.length - 1] as unknown as {
+  // Front returns messages NEWEST-FIRST (confirmed against real production
+  // data from conversation cnv_1hmu0uhm) — index 0 is the reply, not the tail.
+  const latest = messages[0] as unknown as {
     body?: string;
     text?: string;
     author?: { email?: string };
