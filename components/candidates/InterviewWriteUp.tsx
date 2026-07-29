@@ -29,6 +29,7 @@ export type InterviewView = {
   notesHtml: string | null;
   outcome: string | null;
   rating: number | null;
+  nextStep: string | null;
 };
 
 const label = "text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400";
@@ -63,6 +64,7 @@ export function InterviewWriteUp({
     interviewType: "RECRUITER_SCREEN",
     outcome: "",
     rating: 0,
+    nextStep: "",
     notesHtml: ""
   });
 
@@ -83,13 +85,14 @@ export function InterviewWriteUp({
         title: INTERVIEW_TYPES.find((t) => t.value === form.interviewType)?.label ?? "Interview",
         outcome: form.outcome || null,
         rating: form.rating || null,
+        nextStep: form.nextStep || null,
         notesHtml: form.notesHtml
       })
     });
     setBusy(false);
     if (res.ok) {
       setOpen(false);
-      setForm({ ...form, notesHtml: "", outcome: "", rating: 0 });
+      setForm({ ...form, notesHtml: "", outcome: "", rating: 0, nextStep: "" });
       router.refresh();
     } else {
       const payload = (await res.json().catch(() => null)) as { message?: string } | null;
@@ -165,6 +168,16 @@ export function InterviewWriteUp({
               />
             </div>
           </div>
+
+          <label className="mt-3 block">
+            <span className={label}>Next step</span>
+            <input
+              value={form.nextStep}
+              onChange={(e) => setForm({ ...form, nextStep: e.target.value })}
+              placeholder="Schedule with hiring manager, waiting on references, …"
+              className={field}
+            />
+          </label>
 
           <div className="mt-3 flex flex-wrap items-end gap-4">
             <div>
@@ -263,6 +276,7 @@ function LoggedInterview({
     interviewerEmail: interview.interviewerEmail ?? people[0]?.email ?? "",
     outcome: interview.outcome ?? "",
     rating: interview.rating ?? 0,
+    nextStep: interview.nextStep ?? "",
     notesHtml: interview.notesHtml ?? interview.notes ?? ""
   }));
 
@@ -279,6 +293,7 @@ function LoggedInterview({
         interviewerName: chosen?.name ?? "",
         outcome: draft.outcome || null,
         rating: draft.rating || null,
+        nextStep: draft.nextStep || null,
         notesHtml: draft.notesHtml
       })
     });
@@ -325,6 +340,15 @@ function LoggedInterview({
             </div>
           </div>
         </div>
+        <label className="mt-3 block">
+          <span className={label}>Next step</span>
+          <input
+            value={draft.nextStep}
+            onChange={(e) => setDraft({ ...draft, nextStep: e.target.value })}
+            placeholder="Schedule with hiring manager, waiting on references, …"
+            className={field}
+          />
+        </label>
         <div className="mt-3">
           <RichTextEditor value={draft.notesHtml} onChange={(html) => setDraft({ ...draft, notesHtml: html })} people={people} minHeight={160} />
         </div>
@@ -395,6 +419,11 @@ function LoggedInterview({
           </span>
         )}
       </div>
+      {interview.nextStep && (
+        <div className="mt-2 text-xs text-brand-lea dark:text-slate-200">
+          <span className="rounded bg-brand-gold/15 px-2 py-1 font-medium">Next: {interview.nextStep}</span>
+        </div>
+      )}
       {interview.notesHtml ? (
         <div className="mt-2 rounded border border-brand-lea/10 bg-white/70 p-2.5 dark:border-white/10 dark:bg-white/5">
           <RichTextView html={interview.notesHtml} />

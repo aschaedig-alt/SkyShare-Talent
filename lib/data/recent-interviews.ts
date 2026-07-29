@@ -25,6 +25,7 @@ export type RecentInterviewRow = {
   interviewerEmail: string | null;
   outcome: string | null;
   rating: number | null;
+  nextStep: string | null;
   excerpt: string;
 };
 
@@ -56,6 +57,7 @@ export async function getRecentInterviews(options: {
       interviewerEmail: true,
       outcome: true,
       rating: true,
+      nextStep: true,
       notes: true,
       candidate: { select: { id: true, displayName: true, currentTitle: true, stage: true } }
     }
@@ -80,6 +82,7 @@ export async function getRecentInterviews(options: {
       interviewerEmail: i.interviewerEmail,
       outcome: i.outcome,
       rating: i.rating,
+      nextStep: i.nextStep,
       excerpt: (i.notes ?? "").replace(/\s+/g, " ").trim().slice(0, 180)
     });
   }

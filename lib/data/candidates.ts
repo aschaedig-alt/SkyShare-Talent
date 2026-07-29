@@ -20,6 +20,8 @@ export type CandidateListItem = {
   fileCount: number;
   applicationCount: number;
   docMatch: { filename: string; snippet: string } | null;
+  /** Direct link to this person's own record in Paycom, if one has been pasted in. */
+  paycomLink: string | null;
 };
 
 /**
@@ -58,6 +60,8 @@ export type CandidateProfileData = {
   source: string | null;
   /** Paycom's person id (e.g. 320080) — the only exact key their emails give us. */
   paycomPersonId: string | null;
+  /** Direct link to this person's own record in Paycom, pasted in by hand. */
+  paycomLink: string | null;
   primaryEmail: string | null;
   primaryPhone: string | null;
   tags: string[];
@@ -203,6 +207,7 @@ export type CandidateProfileData = {
     interviewerEmail: string | null;
     outcome: string | null;
     rating: number | null;
+    nextStep: string | null;
   }>;
   // Historical Candidate Archive surfaces. `origin` is internal (PAYCOM | JAZZ |
   // MANUAL); `isHistorical` is true when the profile carries legacy (Jazz) data,
@@ -305,7 +310,17 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
       } as const)
     : false;
 
-  const [candidateRows, total, active, withFiles, withApplications, scheduledInterviews, archived] = await Promise.all([
+  // $transaction (array form), not Promise.all. This page was reported as
+  // "loads slowly, the Back button barely reacts" — the cause was never the
+  // Link (a real <Link> was already in place), it was that Promise.all fires
+  // all 7 queries as INDEPENDENT prisma calls, and node-postgres's pool hands
+  // each one its own connection when the pool is cold — up to 7 concurrent
+  // fresh TCP+TLS handshakes to Neon on the first hit after a serverless
+  // function spins up. Measured locally: 893ms cold, 218ms once the pool was
+  // warm — the gap IS the extra connection setups, not the queries themselves.
+  // $transaction runs the same 7 queries over ONE checked-out connection, so a
+  // cold invocation opens one connection instead of up to seven.
+  const [candidateRows, total, active, withFiles, withApplications, scheduledInterviews, archived] = await prisma.$transaction([
     prisma.candidate.findMany({
       where: candidateWhere,
       take: CANDIDATE_LIST_LIMIT,
@@ -360,7 +375,8 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
       noteCount: candidate._count.notes,
       fileCount: candidate._count.files,
       applicationCount: candidate._count.applications,
-      docMatch
+      docMatch,
+      paycomLink: candidate.paycomLink
     };
   });
 
@@ -758,6 +774,7 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
     owner: candidate.owner,
     source: candidate.source,
     paycomPersonId: candidate.paycomPersonId,
+    paycomLink: candidate.paycomLink,
     primaryEmail: candidate.primaryEmail,
     primaryPhone: candidate.primaryPhone,
     tags: mergeTags(parseStringArray(candidate.tagsJson), candidate.candidateTags.map((ct) => ct.tag.label)),
@@ -864,7 +881,8 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
       notesHtml: interview.notesHtml,
       interviewerEmail: interview.interviewerEmail,
       outcome: interview.outcome,
-      rating: interview.rating
+      rating: interview.rating,
+      nextStep: interview.nextStep
     })),
     origin: candidate.origin,
     jazzCandidateNumber: candidate.jazzCandidateNumber,

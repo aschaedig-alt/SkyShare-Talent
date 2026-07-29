@@ -637,6 +637,12 @@ model Candidate {
   // and it is the only stable, exact key we get — matching those emails on name
   // alone is what produces duplicate people. Set it and the match is certain.
   paycomPersonId       String?
+  // The direct URL to this person's own record in Paycom, pasted in by hand.
+  // There is no reliable public deep-link FORMULA from paycomPersonId alone —
+  // guessing one would risk silently sending someone to the wrong applicant's
+  // record, or a URL that never worked, which is worse than no link at all. So
+  // this is filled in once, by a person who has the real link open.
+  paycomLink           String?
   historicalSourceId   String?
   tagsJson             String?
   foldersJson          String?
@@ -1054,6 +1060,11 @@ model Interview {
   rating               Int?
   // Emails of people @-mentioned in the write-up, so they can be surfaced.
   mentionsJson         String?
+  // Free text: "Schedule with hiring manager", "Waiting on references", etc.
+  // Lives here (not on the candidate) because the next step is specific to
+  // THIS interview — a later one supersedes it, which the candidate-level
+  // fields have no way to express.
+  nextStep             String?
   status               String     @default("SCHEDULED")
   source               String?
   googleCalendarId     String?

@@ -9,6 +9,7 @@ import type { RoleName } from "@/lib/auth/roles";
 import { FeedbackButton } from "@/components/feedback/FeedbackButton";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { SignOutButton } from "@/components/layout/SignOutButton";
+import { LinkPendingIndicator } from "@/components/navigation/LinkPendingIndicator";
 import {
   getVisibleNavigationGroups,
   type ModuleAccessPolicy,
@@ -348,6 +349,9 @@ function SectionBlock({ section, activeHref, collapsed, onToggle, collapsible = 
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 <span className="truncate">{item.label}</span>
+                {/* Instant feedback that the click registered — see the
+                    component doc for why this exists. */}
+                <LinkPendingIndicator className={active ? "text-brand-lea" : "text-white"} />
               </Link>
             );
           })}

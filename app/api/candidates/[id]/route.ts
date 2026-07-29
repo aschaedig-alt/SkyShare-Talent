@@ -92,6 +92,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     updateData.paycomPersonId = trimmed || null;
   }
 
+  // The direct link to this person's own Paycom record, pasted in by hand —
+  // there is no reliable formula to construct one from paycomPersonId alone.
+  // http(s) only, same rule the rich-text editor's link button uses: never
+  // javascript:, data:, or a bare scheme.
+  if (typeof body.paycomLink === "string") {
+    const trimmed = body.paycomLink.trim();
+    if (trimmed && !/^https?:\/\/\S+$/i.test(trimmed)) {
+      return NextResponse.json({ message: "That doesn't look like a link — it should start with http:// or https://." }, { status: 400 });
+    }
+    updateData.paycomLink = trimmed || null;
+  }
+
   // Pros & cons — structured strengths/concerns tags (recruiter observations).
   // NOTE: a future compliance audit (CA FEHA, NYC Local Law 144) may require
   // disclaimers/access gating; see roadmap "Scoring transparency & compliance".

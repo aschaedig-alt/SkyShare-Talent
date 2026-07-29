@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { clsx } from "clsx";
-import { FileText, Briefcase, StickyNote, CalendarClock, History, Plane, Clock, Sparkles, Mail, FileSignature } from "lucide-react";
+import { FileText, Briefcase, StickyNote, CalendarClock, History, Plane, Clock, Sparkles, Mail, FileSignature, X } from "lucide-react";
 import { Button } from "@/components/ui";
 import { CandidateDocuments } from "@/components/candidates/CandidateDocuments";
 import { DocumentChecklist } from "@/components/candidates/DocumentChecklist";
@@ -29,6 +29,8 @@ import type { WidgetInstance } from "@/lib/data/page-layout";
 import type { CandidateProfileData } from "@/lib/data/candidates";
 import type { TravelTripView, TravelerLoyalty } from "@/lib/data/travel";
 import { InterviewWriteUp } from "@/components/candidates/InterviewWriteUp";
+import { LinkPendingIndicator } from "@/components/navigation/LinkPendingIndicator";
+import { PaycomLinkControl } from "@/components/candidates/PaycomLinkControl";
 import { formatMomentDate, formatMomentDateTime } from "@/lib/dates/display";
 
 type CandidateProfileWorkspaceProps = {
@@ -147,6 +149,30 @@ export function CandidateProfileWorkspace({
     }
   }
   const [openApp, setOpenApp] = useState<string | null>(null);
+  const [armedApplication, setArmedApplication] = useState<string | null>(null);
+  const [removingApplication, setRemovingApplication] = useState<string | null>(null);
+  const [applicationError, setApplicationError] = useState<string | null>(null);
+
+  async function removeApplication(applicationId: string) {
+    setRemovingApplication(applicationId);
+    setApplicationError(null);
+    try {
+      const res = await fetch(`/api/candidate-applications/${applicationId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidateId: candidate.id })
+      });
+      if (res.ok) {
+        setCandidate({ ...candidate, applications: candidate.applications.filter((a) => a.id !== applicationId) });
+      } else {
+        const payload = (await res.json().catch(() => null)) as { message?: string } | null;
+        setApplicationError(payload?.message ?? "Couldn't remove this link.");
+      }
+    } finally {
+      setRemovingApplication(null);
+      setArmedApplication(null);
+    }
+  }
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -237,8 +263,11 @@ export function CandidateProfileWorkspace({
 
       {/* Header */}
       <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-        <Link href="/candidates" className="text-xs font-semibold text-brand-eden hover:text-brand-lea dark:text-slate-100">
+        <Link href="/candidates" className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-eden hover:text-brand-lea dark:text-slate-100">
           ← Back to candidates
+          {/* The click already worked before this existed — what was missing
+              was any sign of it. See the component doc. */}
+          <LinkPendingIndicator />
         </Link>
         <div className="mt-3 flex flex-wrap items-start gap-4">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-sweet/25 text-lg font-semibold text-brand-lea dark:text-slate-100">
@@ -295,6 +324,7 @@ export function CandidateProfileWorkspace({
             )}
           </div>
           <div className="flex items-center gap-2">
+            <PaycomLinkControl candidateId={candidate.id} paycomLink={candidate.paycomLink} canEdit={canEdit} />
             <span
               className={clsx(
                 "rounded px-3 py-1 text-xs font-semibold",
@@ -548,6 +578,11 @@ export function CandidateProfileWorkspace({
                   <AddJobToCandidate candidateId={candidate.id} canCreateJob={canCreateJob} />
                 </div>
               )}
+              {applicationError && (
+                <p className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
+                  {applicationError}
+                </p>
+              )}
               <div className="space-y-2">
                 {candidate.applications.length > 0 ? (
                   candidate.applications.map((application) => (
@@ -565,11 +600,36 @@ export function CandidateProfileWorkspace({
                             {[application.stage, application.status, application.job?.location].filter(Boolean).join(" · ")}
                           </div>
                         </div>
-                        {application.pilotRequirement ? (
-                          <Link href={`/pilot-requirements?id=${application.pilotRequirement.id}`} className="rounded bg-brand-sweet/25 px-2 py-1 text-[11px] font-semibold text-brand-lea dark:text-slate-100">
-                            {application.pilotRequirement.title}
-                          </Link>
-                        ) : null}
+                        <div className="flex shrink-0 items-center gap-2">
+                          {application.pilotRequirement ? (
+                            <Link href={`/pilot-requirements?id=${application.pilotRequirement.id}`} className="rounded bg-brand-sweet/25 px-2 py-1 text-[11px] font-semibold text-brand-lea dark:text-slate-100">
+                              {application.pilotRequirement.title}
+                            </Link>
+                          ) : null}
+                          {/* Undo a job linked by mistake. Not offered once the
+                              application has real offer progress on it — see
+                              the route for why: deleting it would silently
+                              throw that progress away too. */}
+                          {canEdit && (application.offerStatus ?? "NONE") === "NONE" && (
+                            <button
+                              onClick={() =>
+                                armedApplication === application.id ? removeApplication(application.id) : setArmedApplication(application.id)
+                              }
+                              onBlur={() => setArmedApplication((cur) => (cur === application.id ? null : cur))}
+                              disabled={removingApplication === application.id}
+                              aria-label={armedApplication === application.id ? `Confirm removing the link to ${application.job?.title ?? "this job"}` : `Remove the link to ${application.job?.title ?? "this job"}`}
+                              className={clsx(
+                                "shrink-0 rounded p-1 transition disabled:opacity-40",
+                                armedApplication === application.id
+                                  ? "bg-red-600 text-white"
+                                  : "text-brand-grey hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-500/10 dark:hover:text-red-300"
+                              )}
+                              title={armedApplication === application.id ? "Click again to remove" : "Remove this job link"}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       {/* The offer for this application lives on the Offers tab —

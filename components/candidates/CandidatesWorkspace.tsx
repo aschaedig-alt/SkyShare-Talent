@@ -185,9 +185,27 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
                           {initials(candidate.displayName) || "—"}
                         </span>
                         <div className="min-w-0">
-                          <Link href={`/candidates/${candidate.id}`} className="font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-100">
-                            {candidate.displayName}
-                          </Link>
+                          <span className="inline-flex items-center gap-1.5">
+                            <Link href={`/candidates/${candidate.id}`} className="font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-100">
+                              {candidate.displayName}
+                            </Link>
+                            {/* Only shown once someone has pasted a real link on the
+                                profile — nothing to click here otherwise. */}
+                            {candidate.paycomLink && (
+                              <a
+                                href={candidate.paycomLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                title="Open in Paycom"
+                                aria-label={`Open ${candidate.displayName} in Paycom`}
+                                className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] text-[8px] font-black leading-none text-white transition hover:brightness-110"
+                                style={{ backgroundColor: "#2E9E5B" }}
+                              >
+                                P
+                              </a>
+                            )}
+                          </span>
                           <div className="text-xs text-brand-grey dark:text-slate-400">{candidate.currentTitle ?? "No current role"}</div>
                           {candidate.docMatch && (
                             <div className="mt-1.5 max-w-[380px] rounded border border-brand-lea/10 bg-brand-cloudDancer/50 px-2.5 py-1.5 text-[11px] leading-5 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">

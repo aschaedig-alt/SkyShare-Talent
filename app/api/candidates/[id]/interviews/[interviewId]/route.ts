@@ -79,6 +79,11 @@ export async function PATCH(request: Request, ctx: Ctx) {
     data.rating = rating;
   }
 
+  if ("nextStep" in body) {
+    data.nextStep =
+      typeof body.nextStep === "string" && body.nextStep.trim() ? body.nextStep.trim().slice(0, 300) : null;
+  }
+
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ message: "Nothing to update." }, { status: 400 });
   }
@@ -122,7 +127,8 @@ export async function PATCH(request: Request, ctx: Ctx) {
       notes: updated.notes,
       notesHtml: updated.notesHtml,
       outcome: updated.outcome,
-      rating: updated.rating
+      rating: updated.rating,
+      nextStep: updated.nextStep
     }
   });
 }

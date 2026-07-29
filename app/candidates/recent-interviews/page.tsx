@@ -93,6 +93,7 @@ export default async function RecentInterviewsPage({
                 <th className="px-4 py-3">Interviewed</th>
                 <th className="px-4 py-3">By</th>
                 <th className="px-4 py-3">Outcome</th>
+                <th className="px-4 py-3">Next step</th>
                 <th className="px-4 py-3">Notes</th>
               </tr>
             </thead>
@@ -129,6 +130,13 @@ export default async function RecentInterviewsPage({
                       ) : null}
                       {!r.outcome && !r.rating && <span className="text-xs text-brand-grey dark:text-slate-500">—</span>}
                     </span>
+                  </td>
+                  <td className="max-w-xs px-4 py-3 text-xs text-brand-lea dark:text-slate-200">
+                    {r.nextStep ? (
+                      <span className="rounded bg-brand-gold/15 px-2 py-1 font-medium">{r.nextStep}</span>
+                    ) : (
+                      <span className="text-brand-grey dark:text-slate-500">—</span>
+                    )}
                   </td>
                   <td className="max-w-md px-4 py-3 text-xs text-brand-grey dark:text-slate-400">{r.excerpt || "—"}</td>
                 </tr>

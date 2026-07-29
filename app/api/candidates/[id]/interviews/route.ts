@@ -78,6 +78,7 @@ export async function POST(request: Request, ctx: Ctx) {
       outcome,
       rating: clampRating(body.rating),
       mentionsJson: mentions.length ? JSON.stringify(mentions) : null,
+      nextStep: typeof body.nextStep === "string" && body.nextStep.trim() ? body.nextStep.trim().slice(0, 300) : null,
       // Already happened — this is a record, not a booking.
       status: "COMPLETED",
       source: "manual-writeup"

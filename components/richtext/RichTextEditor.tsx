@@ -105,6 +105,26 @@ export function RichTextEditor({
     emit();
   }
 
+  /**
+   * Tab / Shift+Tab indent or outdent a bullet.
+   *
+   * A plain contentEditable does nothing useful with Tab by default — it
+   * either inserts a literal tab character or, worse, moves focus OUT of the
+   * editor onto the next control on the page, which is what was happening
+   * here. This only takes over Tab while the caret sits inside a list item
+   * (indent/outdent has no sensible meaning otherwise); everywhere else Tab
+   * behaves normally, so leaving the editor by keyboard still works.
+   */
+  function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== "Tab") return;
+    const selection = window.getSelection();
+    const node = selection?.anchorNode;
+    const inListItem = !!node && !!(node instanceof Element ? node : node.parentElement)?.closest("li");
+    if (!inListItem) return;
+    e.preventDefault();
+    run(e.shiftKey ? "outdent" : "indent");
+  }
+
   function insertMention(person: { name: string; email: string }) {
     ref.current?.focus();
     document.execCommand(
@@ -204,6 +224,7 @@ export function RichTextEditor({
           aria-multiline="true"
           onInput={emit}
           onBlur={emit}
+          onKeyDown={handleKeyDown}
           style={{ minHeight }}
           className={clsx(
             "prose-notes w-full px-3 py-2.5 text-sm text-brand-lea outline-none dark:text-slate-100",
