@@ -4,6 +4,7 @@ import { hasPermission } from "@/lib/auth/roles";
 import { getNewHireDetail } from "@/lib/data/onboarding";
 import { getTravelTripsForNewHire, getNewHireLoyalty } from "@/lib/data/travel";
 import { getEmployeeJourney } from "@/lib/data/employee-journey";
+import { getOnboardingArchives } from "@/lib/data/onboarding-rounds";
 import { FLEET_POSITIONS } from "@/lib/fleet/positions";
 import { NewHireDetailWorkspace } from "@/components/people/NewHireDetailWorkspace";
 
@@ -19,10 +20,11 @@ export default async function NewHirePage({ params }: { params: Promise<{ id: st
   if (!hire) {
     notFound();
   }
-  const [travelTrips, travelLoyalty, journey] = await Promise.all([
+  const [travelTrips, travelLoyalty, journey, onboardingArchives] = await Promise.all([
     getTravelTripsForNewHire(id),
     getNewHireLoyalty(id),
-    getEmployeeJourney(id)
+    getEmployeeJourney(id),
+    getOnboardingArchives(id)
   ]);
 
   return (
@@ -31,6 +33,7 @@ export default async function NewHirePage({ params }: { params: Promise<{ id: st
       travelTrips={travelTrips}
       travelLoyalty={travelLoyalty}
       journey={journey}
+      onboardingArchives={onboardingArchives}
       roleTitleOptions={ROLE_TITLE_OPTIONS}
       canEdit={hasPermission(access.role, "candidates:write")}
     />

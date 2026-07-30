@@ -14,6 +14,10 @@ import { EmployeeJourney } from "@/components/people/EmployeeJourney";
 import { BusinessCardPanel } from "@/components/people/BusinessCardPanel";
 import { SendOnboardingEmailButton } from "@/components/people/SendOnboardingEmailButton";
 import { SupervisorPicker } from "@/components/people/SupervisorPicker";
+import { StartNewOnboardingButton } from "@/components/people/StartNewOnboardingButton";
+import { OnboardingHistoryPanel } from "@/components/people/OnboardingHistoryPanel";
+import { roundReasonLabel } from "@/lib/onboarding/rounds";
+import type { ArchivedRoundView } from "@/lib/data/onboarding-rounds";
 import type { EmployeeJourney as Journey } from "@/lib/data/employee-journey";
 import { Button, Input, Modal } from "@/components/ui";
 import { EMPLOYEE_TAGS } from "@/lib/employees/columns";
@@ -30,6 +34,8 @@ type Props = {
   travelTrips: TravelTripView[];
   travelLoyalty: TravelerLoyalty;
   journey: Journey;
+  /** Previous trips through onboarding — a rehire or a department move has one or more. */
+  onboardingArchives: ArchivedRoundView[];
   roleTitleOptions: string[];
   canEdit: boolean;
 };
@@ -44,7 +50,7 @@ const STATUS_BTN: Record<TaskView["status"], { label: string; on: string }> = {
   NA: { label: "N/A", on: "bg-brand-grey text-white" }
 };
 
-export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journey, roleTitleOptions, canEdit }: Props) {
+export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journey, onboardingArchives, roleTitleOptions, canEdit }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskView[]>(hire.tasks);
   const [details, setDetails] = useState({
@@ -88,6 +94,10 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
   const [busyEmp, setBusyEmp] = useState(false);
 
   const terminated = hire.employmentStatus === "TERMINATED";
+  // Someone with an archived round has been through onboarding before — the live
+  // checklist is round N+1, and the newest archive says why it was started.
+  const currentRound = onboardingArchives.length + 1;
+  const currentRoundReason = onboardingArchives[0]?.reason ?? null;
 
   async function setEmployment(employmentStatus: "ACTIVE" | "TERMINATED", terminationDate?: string) {
     setBusyEmp(true);
@@ -274,6 +284,12 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
               Former employee{hire.terminationDate ? ` · left ${fmtDay(hire.terminationDate)}` : ""}
             </span>
           ) : null}
+          {currentRound > 1 ? (
+            <span className="mt-2 inline-flex items-center gap-1.5 rounded bg-brand-gold/20 px-2.5 py-0.5 text-xs font-semibold text-brand-lea dark:bg-brand-gold/20 dark:text-slate-100">
+              Onboarding round {currentRound}
+              {currentRoundReason ? ` · ${roundReasonLabel(currentRoundReason).toLowerCase()}` : ""}
+            </span>
+          ) : null}
           <div className="mt-2 flex items-center gap-3">
             <span className="h-2 w-40 overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/5">
               <span className={clsx("block h-full rounded-full", pct === 100 ? "bg-emerald-500" : "bg-brand-gold")} style={{ width: `${pct}%` }} />
@@ -284,6 +300,22 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {/* Onboarding them AGAIN — a rehire, or a move big enough to redo the
+              paperwork. Only offered to someone who is past onboarding already;
+              for a hire still working through their first checklist, the answer
+              is to edit that checklist, not to start a second one. */}
+          {canEdit && hire.stage !== "ACTIVE" ? (
+            <StartNewOnboardingButton
+              hireId={hire.id}
+              hireName={hire.name}
+              position={hire.position}
+              department={hire.department}
+              employmentStatus={hire.employmentStatus}
+              doneCount={doneCount}
+              totalCount={applicable.length}
+              roleTitleOptions={roleTitleOptions}
+            />
+          ) : null}
           {terminated ? (
             <button onClick={() => setEmployment("ACTIVE")} disabled={busyEmp} className="rounded bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60">
               {busyEmp ? "Saving…" : "Mark as active"}
@@ -559,6 +591,8 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
 
         <BusinessCardPanel hireId={hire.id} name={hire.name} position={hire.position} phone={hire.phone} ssEmail={hire.ssEmail} status={hire.businessCardStatus} cardTitle={hire.businessCardTitle} orientationDate={hire.orientationDate} />
       </div>
+
+      <OnboardingHistoryPanel hireId={hire.id} hireName={hire.name} archives={onboardingArchives} canEdit={canEdit} />
 
       <TravelPanel subjectType="newHire" subjectId={hire.id} initialTrips={travelTrips} loyalty={travelLoyalty} />
     </div>

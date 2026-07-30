@@ -285,6 +285,13 @@ model NewHire {
   // Lifecycle: ACTIVE (being onboarded) -> POST_ONBOARD (maintenance) -> ARCHIVED
   stage            String   @default("ACTIVE")
   onboardedAt      DateTime?
+  // Why the CURRENT checklist exists. Null for everyone's first time through (the
+  // normal case). Set when someone is put through onboarding a SECOND time — a
+  // rehire, or an internal move big enough to need the paperwork done again (see
+  // lib/onboarding/rounds.ts). The previous checklist is frozen into an
+  // OnboardingArchive rather than overwritten, so the old record stays readable.
+  onboardingReason         String?
+  onboardingRoundStartedAt DateTime?
   // Employment status once onboarded: ACTIVE | TERMINATED
   employmentStatus String   @default("ACTIVE")
   // How many times this hire has been moved/rescheduled to a later orientation.
@@ -316,6 +323,7 @@ model NewHire {
   pdpGraduate     Boolean  @default(false)
 
   tasks           OnboardingTask[]
+  onboardingArchives OnboardingArchive[]
   orientationAttendances OrientationAttendee[]
   travelTrips     TravelTrip[]
   roleAssignments RoleAssignment[]
@@ -479,6 +487,70 @@ model OnboardingTask {
   newHire     NewHire   @relation(fields: [newHireId], references: [id], onDelete: Cascade)
 
   @@unique([newHireId, key])
+  @@index([newHireId])
+}
+
+// A finished onboarding checklist, frozen. Written when someone is put through
+// onboarding a SECOND time — a rehire, or an internal move big enough that the
+// paperwork has to be done again (base support -> flight ops, say). The live
+// OnboardingTask rows are one-per-key by design, so a fresh checklist would
+// otherwise overwrite the old one and the first pass would simply be gone.
+//
+// The task snapshot is JSON on purpose: it is a historical record that is only
+// ever read back whole (the history panel, or an undo), never queried
+// task-by-task, so a second task table would earn nothing. Everything needed to
+// restore the round exactly as it was is in here — that is what makes starting a
+// new round reversible, which matters because this runs against the live shared
+// database on a real employee's record.
+model OnboardingArchive {
+  id        String  @id @default(cuid())
+  newHireId String
+  newHire   NewHire @relation(fields: [newHireId], references: [id], onDelete: Cascade)
+  // 1 = the original onboarding, 2 = the next one, ...
+  sequence  Int
+  // Why the round AFTER this one was started:
+  // DEPARTMENT_CHANGE | ROLE_CHANGE | REHIRE | OTHER
+  reason    String
+  note      String?
+  // This round's OWN identity — null for the original onboarding, otherwise the
+  // reason it was itself started. Kept so an undo can put the hire's
+  // onboardingReason back exactly, rather than guessing from the neighbours.
+  roundReason    String?
+  roundStartedAt DateTime?
+
+  // Who they were while this checklist was theirs. Restored verbatim on undo.
+  position         String?
+  department       String?
+  stage            String?
+  employmentStatus String?
+  startDate        DateTime?
+  offerSentDate    DateTime?
+  offerSignedDate  DateTime?
+  orientationDate  DateTime?
+  onboardedAt      DateTime?
+  businessCardStatus String?
+
+  // Frozen OnboardingTask rows: [{ key, label, group, order, status, completedAt }].
+  tasksJson  String
+  doneCount  Int @default(0)
+  totalCount Int @default(0)
+
+  // What starting the next round did to the role journey / employment periods, so
+  // an undo is a real inverse rather than a partial one: delete what was created,
+  // reopen what was closed.
+  createdRoleId  String?
+  closedRoleId   String?
+  createdStintId String?
+  closedStintId  String?
+
+  archivedAt DateTime @default(now())
+  archivedBy String?
+  // True only for the archive the CURRENT round replaced — the one undo can put
+  // back. Starting another round clears it on the older ones, so undo can never
+  // silently jump back two rounds.
+  restorable Boolean  @default(true)
+
+  @@unique([newHireId, sequence])
   @@index([newHireId])
 }
 
