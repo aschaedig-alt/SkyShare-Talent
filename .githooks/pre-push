@@ -22,12 +22,25 @@ fi
 
 printf '\n[pre-push] running ESLint before pushing to a branch that auto-deploys...\n'
 
-if npm run --silent lint; then
+# ESLint OOMs on this project under memory pressure (a dev server running is
+# enough to do it) and node then exits 134, which is NOT a lint failure. Same
+# heap bump the build and typecheck already need — see CLAUDE.md.
+NODE_OPTIONS="${NODE_OPTIONS} --max-old-space-size=8192"
+export NODE_OPTIONS
+
+npm run --silent lint
+STATUS=$?
+
+if [ "$STATUS" -eq 0 ]; then
   printf '[pre-push] lint clean — pushing.\n\n'
   exit 0
 fi
 
-cat <<'MSG'
+# ESLint exits 1 when it found lint errors. Anything else means the tool itself
+# fell over, and saying "you have lint errors" would send you hunting for a bug
+# that isn't there.
+if [ "$STATUS" -eq 1 ]; then
+  cat <<'MSG'
 
 ────────────────────────────────────────────────────────────────────────
   PUSH BLOCKED — ESLint reported errors (warnings are fine).
@@ -41,4 +54,21 @@ cat <<'MSG'
 ────────────────────────────────────────────────────────────────────────
 
 MSG
+else
+  cat <<MSG
+
+────────────────────────────────────────────────────────────────────────
+  PUSH BLOCKED — ESLint could not finish (exit ${STATUS}).
+
+  This is the tool failing, not your code. Exit 134 or a "heap out of
+  memory" message means it ran out of memory: stop any dev server and
+  try again. Failing closed on purpose — an unrunnable check is not a
+  passing one.
+
+  Retry with:          npm run lint
+  Deliberate override: git push --no-verify
+────────────────────────────────────────────────────────────────────────
+
+MSG
+fi
 exit 1
