@@ -3,6 +3,8 @@ node_modules
 # Verification builds (npm run build:check) land here so they never corrupt the
 # .next a dev server is using. See scripts/build-check.mjs.
 .next-check
+# Dry-run output from scripts/review-pdf-form-extract.ts — regenerate, don't commit.
+pdf-form-extract-review.md
 out
 *.log
 prisma/dev.db
