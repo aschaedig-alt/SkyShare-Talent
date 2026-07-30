@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireApiPermission } from "@/lib/auth/route-auth";
+import { requireApiUser } from "@/lib/auth/route-auth";
+import { canWriteModule } from "@/lib/auth/module-write-access";
 
 // Permanently delete new hires (and their cascading onboarding data). Destructive
 // and irreversible — the UI gates this behind an explicit confirmation. Separate
 // from the bulk-update route so a delete can never be triggered by an update path.
 export async function POST(request: Request) {
-  const auth = await requireApiPermission("candidates:write");
+  const auth = await requireApiUser();
   if (!auth.ok) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    return (auth as { ok: false; response: NextResponse }).response;
+  }
+  if (!(await canWriteModule(auth.user, "people", "delete"))) {
+    return NextResponse.json({ message: "You do not have permission to delete employees." }, { status: 403 });
   }
 
   try {

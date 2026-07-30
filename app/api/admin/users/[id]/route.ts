@@ -12,22 +12,52 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   const { id } = await params;
-  const body = await request.json() as { role?: string };
-  const { role } = body;
+  const body = await request.json() as {
+    role?: string;
+    department?: string | null;
+    isExecutive?: boolean;
+    restrictCandidatesToDepartment?: boolean;
+  };
 
-  // Validate role
-  if (!role || !VALID_ROLES.includes(role as UserRole)) {
-    return NextResponse.json({ message: "Invalid role" }, { status: 400 });
+  const data: {
+    role?: string;
+    department?: string | null;
+    isExecutive?: boolean;
+    restrictCandidatesToDepartment?: boolean;
+  } = {};
+
+  if (body.role !== undefined) {
+    if (!VALID_ROLES.includes(body.role as UserRole)) {
+      return NextResponse.json({ message: "Invalid role" }, { status: 400 });
+    }
+    data.role = body.role;
+  }
+
+  const DEPARTMENTS = ["crew", "maintenance", "fbo", "support"];
+  if (body.department !== undefined) {
+    if (body.department !== null && !DEPARTMENTS.includes(body.department)) {
+      return NextResponse.json({ message: "Invalid department" }, { status: 400 });
+    }
+    data.department = body.department;
+  }
+  if (typeof body.isExecutive === "boolean") {
+    data.isExecutive = body.isExecutive;
+  }
+  if (typeof body.restrictCandidatesToDepartment === "boolean") {
+    data.restrictCandidatesToDepartment = body.restrictCandidatesToDepartment;
+  }
+
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json({ message: "Nothing to update" }, { status: 400 });
   }
 
   try {
     // Get current user to log activity
     const currentUser = auth.user;
 
-    // Update user role
     const user = await prisma.user.update({
       where: { id },
-      data: { role },
+      data,
     });
 
     // Log the activity
@@ -35,16 +65,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       userId: currentUser?.id,
       userEmail: currentUser?.email || undefined,
       activityType: "PERMISSION_CHANGED",
-      description: `Changed ${user.name || user.email}'s role to ${role}`,
+      description: `Updated access settings for ${user.name || user.email}`,
       entityType: "User",
       entityId: id,
-      metadata: { newRole: role, userId: id },
+      metadata: { ...data, userId: id },
     });
 
     return NextResponse.json(user);
   } catch (error) {
-    console.error("Error updating user role:", error);
-    return NextResponse.json({ message: "Failed to update user role" }, { status: 500 });
+    console.error("Error updating user:", error);
+    return NextResponse.json({ message: "Failed to update user" }, { status: 500 });
   }
 }
 

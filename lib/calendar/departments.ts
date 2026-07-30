@@ -195,9 +195,12 @@ export function resolveDepartmentKey(raw: string | null | undefined): { deptKey:
   const v = (raw ?? "").trim().toLowerCase();
   if (!v) return { deptKey: "unassigned", subKey: null };
 
-  // Crew — cabin first, then pilots / flight ops.
+  // Crew — cabin first, then pilots / flight ops. "flight ?op" (optional space)
+  // catches both "Flight Ops" (candidate/job strings) and "FlightOps" (the
+  // literal NewHire.department value) — without the optional space, the latter
+  // fell through to the Support/Other catch-all instead of Crew.
   if (/(cabin|flight attendant|\battendant\b)/.test(v)) return { deptKey: "crew", subKey: "cabin" };
-  if (/(pilot|first officer|captain|\bsic\b|\bpic\b|flight op|managed aircraft|\bcrew\b|aviator)/.test(v)) {
+  if (/(pilot|first officer|captain|\bsic\b|\bpic\b|flight ?op|managed aircraft|\bcrew\b|aviator)/.test(v)) {
     return { deptKey: "crew", subKey: "pilots" };
   }
 

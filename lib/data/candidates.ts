@@ -4,6 +4,27 @@ import { parseStringArray } from "@/lib/json";
 import { normalizeEmail, normalizeName } from "@/lib/candidates/normalize";
 import { parseOfferSteps } from "@/lib/offers/steps";
 import { suggestCompanyEmail } from "@/lib/people/company-email";
+import { resolveDepartmentKey } from "@/lib/calendar/departments";
+import type { ViewerScope } from "@/lib/auth/viewer-scope";
+
+export type CandidateListViewer = Pick<ViewerScope, "role" | "department" | "restrictCandidatesToDepartment">;
+
+// Candidates have no department column of their own — it's derived through
+// their job applications, same as the calendar does (see
+// lib/calendar/departments.ts resolveDepartmentKey). Prisma can't run that
+// regex classifier in SQL, so resolve which raw Job.department strings bucket
+// into the target DeptKey first, then filter candidates by "applied to a job
+// with one of those raw strings."
+async function jobDepartmentStringsFor(dept: NonNullable<CandidateListViewer["department"]>): Promise<string[]> {
+  const jobs = await prisma.job.findMany({
+    where: { department: { not: null } },
+    select: { department: true },
+    distinct: ["department"]
+  });
+  return jobs
+    .map((j) => j.department)
+    .filter((d): d is string => Boolean(d) && resolveDepartmentKey(d).deptKey === dept);
+}
 
 export type CandidateListItem = {
   id: string;
@@ -274,14 +295,14 @@ function buildSnippet(text: string, query: string): string {
   return `${prefix}${text.slice(start, end).trim()}${suffix}`;
 }
 
-export async function getCandidateListData(query = ""): Promise<CandidateListData> {
+export async function getCandidateListData(query = "", viewer?: CandidateListViewer): Promise<CandidateListData> {
   const normalizedQuery = query.trim().toLowerCase();
   const hasQuery = normalizedQuery.length > 0;
 
   // When searching, span ALL candidates including archived/historical (Jazz)
   // ones so legacy records are findable. With no query, the default list stays
   // active-only (archivedAt: null) so the historical archive doesn't flood it.
-  const candidateWhere = hasQuery
+  const baseWhere = hasQuery
     ? {
         OR: [
           { normalizedName: { contains: normalizedQuery } },
@@ -300,6 +321,18 @@ export async function getCandidateListData(query = ""): Promise<CandidateListDat
         ]
       }
     : { archivedAt: null };
+
+  // Org-wide by default — a HIRING_MANAGER only gets narrowed to their own
+  // department when an admin explicitly turns on restrictCandidatesToDepartment
+  // for them (an exception, not the rule). ADMIN/RECRUITER are never narrowed.
+  let candidateWhere: Record<string, unknown> = baseWhere;
+  if (viewer && viewer.role === "HIRING_MANAGER" && viewer.restrictCandidatesToDepartment) {
+    const deptStrings = viewer.department ? await jobDepartmentStringsFor(viewer.department) : [];
+    candidateWhere = {
+      ...baseWhere,
+      applications: { some: { job: { department: { in: deptStrings } } } }
+    };
+  }
 
   // Only pull document text for matching files when there's a query (keeps the list light).
   const filesInclude = hasQuery
@@ -543,7 +576,9 @@ function formatLocation(city: string | null, state: string | null) {
   return [city, state].filter(Boolean).join(", ") || null;
 }
 
-export async function getCandidateProfileData(id: string): Promise<CandidateProfileData | null> {
+const PRIVATE_NOTE_PLACEHOLDER = "Only visible to the assigned interviewer, their department's hiring managers, and Admin/Recruiter.";
+
+export async function getCandidateProfileData(id: string, viewer?: ViewerScope): Promise<CandidateProfileData | null> {
   const candidate = await prisma.candidate.findUnique({
     where: { id },
     include: {
@@ -610,6 +645,20 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
   const interviewers = [
     ...new Set(candidate.interviews.map((i) => i.interviewer).filter((v): v is string => Boolean(v)))
   ];
+
+  // Interview notes/details and candidate notes are the one place with real
+  // privacy: visible to whoever wrote/conducted it, plus any hiring manager in
+  // this candidate's own department, plus any executive. No viewer passed
+  // (internal/legacy callers) defaults to unrestricted rather than silently
+  // hiding content nobody asked to gate.
+  const candidateDeptRaw = candidate.applications.map((a) => a.job?.department ?? null).find((d): d is string => Boolean(d)) ?? null;
+  const candidateDeptKey = candidateDeptRaw ? resolveDepartmentKey(candidateDeptRaw).deptKey : null;
+  const unrestrictedViewer =
+    !viewer || viewer.role === "ADMIN" || viewer.role === "RECRUITER" || viewer.isExecutive;
+  const departmentMatches = Boolean(viewer?.department && candidateDeptKey && viewer.department === candidateDeptKey);
+  function canSeeContent(authoredByViewer: boolean) {
+    return unrestrictedViewer || departmentMatches || authoredByViewer;
+  }
   const declinedOffer = candidate.applications.some((a) => (a.status ?? "").toLowerCase().includes("declined"));
   const hired = candidate.applications.some((a) => (a.status ?? "").toLowerCase().includes("hired") && !(a.status ?? "").toLowerCase().includes("elsewhere"));
   const resumeArchived = candidate.files.some((f) => (f.documentType ?? "").toLowerCase() === "resume");
@@ -821,14 +870,17 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
       sourceFileId: m.sourceFileId,
       sourceSnippet: m.sourceSnippet
     })),
-    notes: candidate.notes.map((note) => ({
-      id: note.id,
-      body: note.body,
-      source: note.source,
-      author: note.author?.name ?? note.author?.email ?? null,
-      createdAt: note.createdAt.toISOString(),
-      updatedAt: note.updatedAt.toISOString()
-    })),
+    notes: candidate.notes.map((note) => {
+      const visible = canSeeContent(Boolean(viewer?.userId && note.authorId === viewer.userId));
+      return {
+        id: note.id,
+        body: visible ? note.body : PRIVATE_NOTE_PLACEHOLDER,
+        source: note.source,
+        author: note.author?.name ?? note.author?.email ?? null,
+        createdAt: note.createdAt.toISOString(),
+        updatedAt: note.updatedAt.toISOString()
+      };
+    }),
     activity: activityRows.map((row) => ({
       id: row.id,
       activityType: row.activityType,
@@ -873,23 +925,29 @@ export async function getCandidateProfileData(id: string): Promise<CandidateProf
         answer: q.answer
       }))
     })),
-    interviews: candidate.interviews.map((interview) => ({
-      id: interview.id,
-      title: interview.title,
-      startDateTime: interview.startDateTime.toISOString(),
-      endDateTime: interview.endDateTime?.toISOString() ?? null,
-      timezone: interview.timezone,
-      interviewer: interview.interviewer,
-      location: interview.location,
-      meetingUrl: interview.meetingUrl,
-      status: interview.status,
-      notes: interview.notes,
-      notesHtml: interview.notesHtml,
-      interviewerEmail: interview.interviewerEmail,
-      outcome: interview.outcome,
-      rating: interview.rating,
-      nextStep: interview.nextStep
-    })),
+    interviews: candidate.interviews.map((interview) => {
+      const authoredByViewer = Boolean(
+        viewer?.email && interview.interviewerEmail && interview.interviewerEmail.toLowerCase() === viewer.email.toLowerCase()
+      );
+      const visible = canSeeContent(authoredByViewer);
+      return {
+        id: interview.id,
+        title: interview.title,
+        startDateTime: interview.startDateTime.toISOString(),
+        endDateTime: interview.endDateTime?.toISOString() ?? null,
+        timezone: interview.timezone,
+        interviewer: interview.interviewer,
+        location: interview.location,
+        meetingUrl: interview.meetingUrl,
+        status: interview.status,
+        notes: visible ? interview.notes : PRIVATE_NOTE_PLACEHOLDER,
+        notesHtml: visible ? interview.notesHtml : null,
+        interviewerEmail: interview.interviewerEmail,
+        outcome: visible ? interview.outcome : null,
+        rating: visible ? interview.rating : null,
+        nextStep: visible ? interview.nextStep : null
+      };
+    }),
     origin: candidate.origin,
     jazzCandidateNumber: candidate.jazzCandidateNumber,
     isHistorical,

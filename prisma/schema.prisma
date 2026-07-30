@@ -138,6 +138,15 @@ model User {
   emailVerified DateTime?
   image       String?
   role        String       @default("VIEWER")
+  // Scoping for HIRING_MANAGER: their own department (crew | maintenance | fbo | support,
+  // see lib/calendar/departments.ts DeptKey), hand-set by an admin — same spirit as the
+  // hand-applied NewHire.tags. ADMIN/RECRUITER ignore all three; never narrowed by them.
+  department  String?
+  // Sees all employees/candidate interview content company-wide except other executives'.
+  isExecutive Boolean      @default(false)
+  // Off by default: a HIRING_MANAGER sees every candidate's name/record org-wide. Turning
+  // this on scopes their candidate list to their own department (an explicit exception).
+  restrictCandidatesToDepartment Boolean @default(false)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 

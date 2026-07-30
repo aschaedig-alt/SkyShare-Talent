@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireApiPermission } from "@/lib/auth/route-auth";
+import { requireApiUser } from "@/lib/auth/route-auth";
+import { canWriteModule } from "@/lib/auth/module-write-access";
 
 // Merge two employee (NewHire) records into one. The caller picks which record is
 // PRIMARY (survives) and which is SECONDARY (merges in + is deleted). All of the
 // secondary's history moves to the primary; the primary keeps its own identity and
 // only fills in fields it was missing. Irreversible — hence the explicit confirm UI.
 export async function POST(request: Request) {
-  const auth = await requireApiPermission("candidates:write");
-  if (!auth.ok) return (auth as { ok: false; response: Response }).response;
+  const auth = await requireApiUser();
+  if (!auth.ok) return (auth as { ok: false; response: NextResponse }).response;
+  if (!(await canWriteModule(auth.user, "people", "delete"))) {
+    return NextResponse.json({ message: "You do not have permission to merge employee records." }, { status: 403 });
+  }
 
   const body = (await request.json().catch(() => ({}))) as { primaryId?: unknown; secondaryId?: unknown };
   const primaryId = typeof body.primaryId === "string" ? body.primaryId : "";

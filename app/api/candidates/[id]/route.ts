@@ -1,11 +1,13 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireApiPermission } from "@/lib/auth/route-auth";
+import { requireApiPermission, requireApiUser } from "@/lib/auth/route-auth";
+import { canWriteModule } from "@/lib/auth/module-write-access";
 import { normalizeEmail, normalizeName, normalizePhone } from "@/lib/candidates/normalize";
 import { getCandidateProfileData } from "@/lib/data/candidates";
 import { logActivity } from "@/lib/activity/logger";
 import { isTestTagged, TEST_TAG } from "@/lib/testdata/markers";
+import { resolveViewerScope } from "@/lib/auth/viewer-scope";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireApiPermission("candidates:read");
@@ -17,7 +19,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 }
 
   const { id } = await params;
-  const candidate = await getCandidateProfileData(id);
+  const viewer = await resolveViewerScope(auth.user.role, auth.user.id, auth.user.email);
+  const candidate = await getCandidateProfileData(id, viewer);
 
   if (!candidate) {
     return NextResponse.json({ message: "Candidate not found." }, { status: 404 });
@@ -27,13 +30,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireApiPermission("candidates:write");
+  const auth = await requireApiUser();
   if (!auth.ok) {
-  return NextResponse.json(
-    { message: "Unauthorized" },
-    { status: 401 }
-  );
-}
+    return (auth as { ok: false; response: NextResponse }).response;
+  }
+  if (!(await canWriteModule(auth.user, "candidates", "edit"))) {
+    return NextResponse.json({ message: "You do not have permission to edit candidates." }, { status: 403 });
+  }
 
   const { id } = await params;
   const body = await request.json();

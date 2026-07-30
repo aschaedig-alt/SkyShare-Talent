@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireApiPermission } from "@/lib/auth/route-auth";
+import { requireApiUser } from "@/lib/auth/route-auth";
+import { canWriteModule } from "@/lib/auth/module-write-access";
 import { isCardStatus } from "@/lib/business-cards/card";
 import { normalizeTags } from "@/lib/employees/columns";
 import { ensureInitialRole } from "@/lib/data/ensure-initial-role";
@@ -24,9 +25,12 @@ function strOrNull(value: unknown): string | null | undefined {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const auth = await requireApiPermission("candidates:write");
+  const auth = await requireApiUser();
   if (!auth.ok) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    return (auth as { ok: false; response: NextResponse }).response;
+  }
+  if (!(await canWriteModule(auth.user, "people", "edit"))) {
+    return NextResponse.json({ message: "You do not have permission to edit employees." }, { status: 403 });
   }
 
   const { id } = await context.params;
@@ -129,9 +133,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
-  const auth = await requireApiPermission("candidates:write");
+  const auth = await requireApiUser();
   if (!auth.ok) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    return (auth as { ok: false; response: NextResponse }).response;
+  }
+  if (!(await canWriteModule(auth.user, "people", "delete"))) {
+    return NextResponse.json({ message: "You do not have permission to delete employees." }, { status: 403 });
   }
 
   const { id } = await context.params;

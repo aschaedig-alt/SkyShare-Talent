@@ -1,5 +1,27 @@
 import { prisma } from "@/lib/prisma";
 import { computeTenure } from "@/lib/data/tenure";
+import { resolveDepartmentKey } from "@/lib/calendar/departments";
+import type { ViewerScope } from "@/lib/auth/viewer-scope";
+
+// Who's asking — drives the department/tag scoping below. ADMIN/RECRUITER are
+// never narrowed. Everyone else (in practice HIRING_MANAGER) sees only their
+// own department, minus anyone tagged Management/Executive — unless they're
+// themselves tagged Executive, in which case they see everyone except other
+// Executives. See lib/roadmap "Department & tag-based access scoping".
+export type EmployeeViewer = Pick<ViewerScope, "role" | "department" | "isExecutive">;
+
+const EXEMPT_TAGS = ["management", "executive"];
+
+function hasTag(tags: string[], names: string[]) {
+  return tags.some((t) => names.includes(t.trim().toLowerCase()));
+}
+
+function scopeForViewer<T extends { department: string | null; tags: string[] }>(rows: T[], viewer: EmployeeViewer): T[] {
+  if (viewer.role === "ADMIN" || viewer.role === "RECRUITER") return rows;
+  if (viewer.isExecutive) return rows.filter((r) => !hasTag(r.tags, ["executive"]));
+  if (!viewer.department) return [];
+  return rows.filter((r) => resolveDepartmentKey(r.department).deptKey === viewer.department && !hasTag(r.tags, EXEMPT_TAGS));
+}
 
 // The Employees directory: everyone who is or was staff (post-onboarding), with
 // their dates, current role, tenure (summed across employment stints so rehires
@@ -105,7 +127,7 @@ function tenureOf(r: Row, now: number): { days: number | null; start: Date | nul
   return { days: t.tenureDays, start: t.originalStart, end: t.termDate, hasOpen: t.termDate === null };
 }
 
-export async function getEmployees(): Promise<EmployeeRow[]> {
+export async function getEmployees(viewer: EmployeeViewer): Promise<EmployeeRow[]> {
   const now = Date.now();
   const rows = (await prisma.newHire.findMany({
     // Exclude canceled offers (accepted then backed out before day one) — they
@@ -178,14 +200,24 @@ export async function getEmployees(): Promise<EmployeeRow[]> {
     if (a.current !== b.current) return a.current ? -1 : 1;
     return (b.startDate ?? "").localeCompare(a.startDate ?? "");
   });
-  return employees;
+  return scopeForViewer(employees, viewer);
 }
 
-export async function getEmployeeCounts(): Promise<EmployeeCounts> {
-  const [total, active] = await Promise.all([
-    prisma.newHire.count({ where: { stage: { in: ["POST_ONBOARD", "ARCHIVED"] }, canceled: false } }),
-    prisma.newHire.count({ where: { stage: { in: ["POST_ONBOARD", "ARCHIVED"] }, employmentStatus: "ACTIVE", canceled: false } })
-  ]);
-  // Non-active (CONTRACT + TERMINATED) all fall under "past".
-  return { total, current: active, past: total - active };
+export async function getEmployeeCounts(viewer: EmployeeViewer): Promise<EmployeeCounts> {
+  // ADMIN/RECRUITER keep the cheap COUNT-only path. A scoped viewer (in
+  // practice HIRING_MANAGER) needs department + tags to filter, so derive
+  // their counts from the already-scoped row list instead — the roster is a
+  // few hundred rows, cheap either way at this scale.
+  if (viewer.role === "ADMIN" || viewer.role === "RECRUITER") {
+    const [total, active] = await Promise.all([
+      prisma.newHire.count({ where: { stage: { in: ["POST_ONBOARD", "ARCHIVED"] }, canceled: false } }),
+      prisma.newHire.count({ where: { stage: { in: ["POST_ONBOARD", "ARCHIVED"] }, employmentStatus: "ACTIVE", canceled: false } })
+    ]);
+    // Non-active (CONTRACT + TERMINATED) all fall under "past".
+    return { total, current: active, past: total - active };
+  }
+
+  const employees = await getEmployees(viewer);
+  const current = employees.filter((e) => e.current).length;
+  return { total: employees.length, current, past: employees.length - current };
 }

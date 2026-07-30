@@ -9,9 +9,19 @@ interface UserWithPermissions {
   name: string | null;
   email: string | null;
   role: string;
+  department: string | null;
+  isExecutive: boolean;
+  restrictCandidatesToDepartment: boolean;
   permissions: Array<{ id: string; userId: string; permission: string }>;
   accounts: Array<{ id: string }>;
 }
+
+const DEPARTMENT_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "crew", label: "Crew" },
+  { value: "maintenance", label: "Maintenance" },
+  { value: "fbo", label: "FBO" },
+  { value: "support", label: "Support" }
+];
 
 interface UsersManagementWorkspaceProps {
   users: UserWithPermissions[];
@@ -105,6 +115,30 @@ export function UsersManagementWorkspace({ users: initialUsers, currentUserId = 
     }
   };
 
+  // Department / executive / candidate-scope controls only matter for hiring
+  // managers — ADMIN and RECRUITER are never narrowed by them (see
+  // lib/auth/module-write-access.ts and lib/data/employees.ts). Auto-saves on
+  // change, same pattern as the role select.
+  const updateScoping = async (
+    userId: string,
+    patch: Partial<Pick<UserWithPermissions, "department" | "isExecutive" | "restrictCandidatesToDepartment">>
+  ) => {
+    const previous = users;
+    setUsers(users.map((u) => (u.id === userId ? { ...u, ...patch } : u)));
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch)
+      });
+      if (!response.ok) throw new Error("Failed to update");
+      flash("success", "Access settings updated.");
+    } catch {
+      setUsers(previous);
+      flash("error", "Failed to update access settings.");
+    }
+  };
+
   return (
     <div className="space-y-6 px-5 py-5 lg:px-8">
       {message && (
@@ -135,6 +169,7 @@ export function UsersManagementWorkspace({ users: initialUsers, currentUserId = 
                 <th className="px-4 py-3 text-left font-semibold text-brand-lea dark:text-slate-100">Name</th>
                 <th className="px-4 py-3 text-left font-semibold text-brand-lea dark:text-slate-100">Email</th>
                 <th className="px-4 py-3 text-left font-semibold text-brand-lea dark:text-slate-100">Current Role</th>
+                <th className="px-4 py-3 text-left font-semibold text-brand-lea dark:text-slate-100">Department scoping</th>
                 <th className="px-4 py-3 text-left font-semibold text-brand-lea dark:text-slate-100">Actions</th>
               </tr>
             </thead>
@@ -151,6 +186,45 @@ export function UsersManagementWorkspace({ users: initialUsers, currentUserId = 
                     <span className="rounded bg-brand-gold/20 px-2 py-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
                       {user.role}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {user.role === "HIRING_MANAGER" ? (
+                      <div className="flex flex-col gap-1.5">
+                        <select
+                          value={user.department ?? ""}
+                          onChange={(e) => updateScoping(user.id, { department: e.target.value || null })}
+                          disabled={saving}
+                          className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-xs text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
+                        >
+                          <option value="">No department set</option>
+                          {DEPARTMENT_OPTIONS.map((dept) => (
+                            <option key={dept.value} value={dept.value}>
+                              {dept.label}
+                            </option>
+                          ))}
+                        </select>
+                        <label className="flex items-center gap-1.5 text-xs text-brand-grey dark:text-slate-400">
+                          <input
+                            type="checkbox"
+                            checked={user.isExecutive}
+                            disabled={saving}
+                            onChange={(e) => updateScoping(user.id, { isExecutive: e.target.checked })}
+                          />
+                          Executive — sees all employees + interview notes company-wide
+                        </label>
+                        <label className="flex items-center gap-1.5 text-xs text-brand-grey dark:text-slate-400">
+                          <input
+                            type="checkbox"
+                            checked={user.restrictCandidatesToDepartment}
+                            disabled={saving}
+                            onChange={(e) => updateScoping(user.id, { restrictCandidatesToDepartment: e.target.checked })}
+                          />
+                          Restrict candidate list to own department
+                        </label>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-brand-grey dark:text-slate-400">Not narrowed — sees everything</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {editingUserId === user.id ? (

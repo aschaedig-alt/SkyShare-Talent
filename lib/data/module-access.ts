@@ -103,6 +103,7 @@ export async function requireModulePageAccess(moduleId: ModuleId) {
     // Who is signed in, so a page can pre-select them (e.g. as the interviewer
     // on a write-up). Null when auth is bypassed in local dev, which callers
     // must treat as "nobody in particular" rather than assuming a user.
-    email: session?.user?.email ?? null
+    email: session?.user?.email ?? null,
+    userId: session?.user?.id ?? null
   };
 }

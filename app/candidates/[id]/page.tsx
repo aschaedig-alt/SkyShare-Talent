@@ -5,6 +5,7 @@ import { requireModulePageAccess } from "@/lib/data/module-access";
 import { getPageLayout } from "@/lib/data/page-layout";
 import { getTeamMembers } from "@/lib/data/team";
 import { isAdminOrRecruiter, hasPermission } from "@/lib/auth/roles";
+import { resolveViewerScope } from "@/lib/auth/viewer-scope";
 import { notFound } from "next/navigation";
 
 type CandidateDetailPageProps = {
@@ -14,7 +15,8 @@ type CandidateDetailPageProps = {
 export default async function CandidateDetailPage({ params }: CandidateDetailPageProps) {
   const access = await requireModulePageAccess("candidates");
   const { id } = await params;
-  const [candidate, layout] = await Promise.all([getCandidateProfileData(id), getPageLayout("candidate-profile")]);
+  const viewer = await resolveViewerScope(access.role, access.userId, access.email);
+  const [candidate, layout] = await Promise.all([getCandidateProfileData(id, viewer), getPageLayout("candidate-profile")]);
 
   if (!candidate) {
     notFound();

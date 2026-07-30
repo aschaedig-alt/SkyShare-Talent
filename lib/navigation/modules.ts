@@ -37,7 +37,12 @@ import {
   Wrench
 } from "lucide-react";
 
-export const accessLevels = ["HIDDEN", "VIEW_ONLY", "FULL_ACCESS"] as const;
+// EDIT sits between VIEW_ONLY and FULL_ACCESS: normal editing works, but
+// destructive actions (delete, merge, bulk-delete) stay FULL_ACCESS-only.
+// Enforcement lives in lib/auth/module-write-access.ts, currently wired into
+// the Candidates and Employees write/delete routes only — see that file's
+// header comment for the exact scope before assuming it's enforced elsewhere.
+export const accessLevels = ["HIDDEN", "VIEW_ONLY", "EDIT", "FULL_ACCESS"] as const;
 
 export type AccessLevel = (typeof accessLevels)[number];
 

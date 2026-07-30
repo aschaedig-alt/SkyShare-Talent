@@ -3,6 +3,7 @@ import { getCandidateListData } from "@/lib/data/candidates";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { getPageLayout } from "@/lib/data/page-layout";
 import { isAdminOrRecruiter } from "@/lib/auth/roles";
+import { resolveViewerScope } from "@/lib/auth/viewer-scope";
 
 type CandidatesPageProps = {
   searchParams?: Promise<{ q?: string; from?: string }>;
@@ -19,7 +20,8 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
   const afterAccess = Date.now();
   const params = await searchParams;
   const query = params?.q?.trim() ?? "";
-  const [data, layout] = await Promise.all([getCandidateListData(query), getPageLayout("candidates")]);
+  const viewer = await resolveViewerScope(access.role, access.userId, access.email);
+  const [data, layout] = await Promise.all([getCandidateListData(query, viewer), getPageLayout("candidates")]);
   console.log(
     `[perf] /candidates page: access check ${afterAccess - pageStart}ms, data+layout ${Date.now() - afterAccess}ms, total ${Date.now() - pageStart}ms`
   );

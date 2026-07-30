@@ -25,16 +25,18 @@ const ROLE_LABELS: Record<RoleName, string> = {
   VIEWER: "Viewer"
 };
 
-type Access3 = "FULL" | "VIEW" | "HIDDEN";
+type Access4 = "FULL" | "EDIT" | "VIEW" | "HIDDEN";
 
-function ruleToAccess3(accessLevel: AccessLevel): Access3 {
+function ruleToAccess4(accessLevel: AccessLevel): Access4 {
   if (accessLevel === "FULL_ACCESS") return "FULL";
+  if (accessLevel === "EDIT") return "EDIT";
   if (accessLevel === "VIEW_ONLY") return "VIEW";
   return "HIDDEN";
 }
 
-const access3Styles: Record<Access3, string> = {
+const access4Styles: Record<Access4, string> = {
   FULL: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300",
+  EDIT: "border-brand-sweet bg-brand-sweet/20 text-brand-lea dark:border-brand-sweet/40 dark:bg-brand-sweet/10 dark:text-slate-100",
   VIEW: "border-brand-gold/40 bg-brand-gold/15 text-brand-lea dark:text-slate-100",
   HIDDEN: "border-brand-lea/15 bg-brand-cloudDancer text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400"
 };
@@ -45,22 +47,23 @@ function AccessSelect({
   disabled,
   onChange
 }: {
-  value: Access3;
+  value: Access4;
   disabled?: boolean;
-  onChange: (value: Access3) => void;
+  onChange: (value: Access4) => void;
 }) {
   return (
     <select
       value={value}
       disabled={disabled}
-      onChange={(event) => onChange(event.target.value as Access3)}
+      onChange={(event) => onChange(event.target.value as Access4)}
       className={clsx(
         "w-[92px] rounded border px-2 py-1 text-xs font-semibold outline-none transition",
-        access3Styles[value],
+        access4Styles[value],
         disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"
       )}
     >
       <option value="FULL">Full</option>
+      <option value="EDIT">Edit</option>
       <option value="VIEW">View</option>
       <option value="HIDDEN">Hidden</option>
     </select>
@@ -119,15 +122,13 @@ export function ModuleVisibilityAccessPanel({ policy: initialPolicy }: ModuleVis
     }
   }
 
-  function setAccess3(moduleId: ModuleId, role: RoleName, value: Access3) {
+  function setAccess4(moduleId: ModuleId, role: RoleName, value: Access4) {
     if (value === "HIDDEN") {
       updateRule(moduleId, role, { accessLevel: "HIDDEN", showInSidebar: false });
-    } else {
-      updateRule(moduleId, role, {
-        accessLevel: value === "VIEW" ? "VIEW_ONLY" : "FULL_ACCESS",
-        showInSidebar: true
-      });
+      return;
     }
+    const accessLevel: AccessLevel = value === "VIEW" ? "VIEW_ONLY" : value === "EDIT" ? "EDIT" : "FULL_ACCESS";
+    updateRule(moduleId, role, { accessLevel, showInSidebar: true });
   }
 
   function updateRule(moduleId: ModuleId, role: RoleName, patch: Partial<{ showInSidebar: boolean; accessLevel: AccessLevel }>) {
@@ -184,8 +185,10 @@ export function ModuleVisibilityAccessPanel({ policy: initialPolicy }: ModuleVis
           <p className="mt-1 max-w-3xl text-sm leading-6 text-brand-grey dark:text-slate-400">
             One control per role: <span className="font-semibold text-brand-lea dark:text-slate-100">Hidden</span> blocks the page and hides
             it from the sidebar, <span className="font-semibold text-brand-lea dark:text-slate-100">View</span> opens it but mutes write
-            controls, and <span className="font-semibold text-brand-lea dark:text-slate-100">Full</span> behaves normally. New pages appear
-            here automatically.
+            controls, <span className="font-semibold text-brand-lea dark:text-slate-100">Edit</span> allows normal changes but blocks
+            delete/merge, and <span className="font-semibold text-brand-lea dark:text-slate-100">Full</span> behaves normally. New pages
+            appear here automatically. Edit is currently enforced on Candidates and Employees only — other modules treat Edit the same as
+            Full for now.
           </p>
         </div>
 
@@ -252,9 +255,9 @@ export function ModuleVisibilityAccessPanel({ policy: initialPolicy }: ModuleVis
                         return (
                           <td key={role} className="px-2 py-1.5 text-center">
                             <AccessSelect
-                              value={ruleToAccess3(rule.accessLevel)}
+                              value={ruleToAccess4(rule.accessLevel)}
                               disabled={locked}
-                              onChange={(value) => setAccess3(row.id, role, value)}
+                              onChange={(value) => setAccess4(row.id, role, value)}
                             />
                           </td>
                         );
