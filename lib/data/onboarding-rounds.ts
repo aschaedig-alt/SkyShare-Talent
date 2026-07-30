@@ -337,6 +337,85 @@ export async function startOnboardingRound(hireId: string, input: StartRoundInpu
   };
 }
 
+export type UpdateArchiveInput = {
+  /** Per-task corrections, by key. Omitted keys are left alone. */
+  tasks?: Array<{ key: string; status?: string; completedAt?: string | null }>;
+  // What they were DURING this round. The archive takes these from the profile at
+  // the moment the new round starts, which is wrong whenever the new title was
+  // already typed in before anyone pressed the button — the round then labels
+  // itself with the job it was replaced by.
+  position?: string | null;
+  department?: string | null;
+  startDate?: string | null;
+  offerSentDate?: string | null;
+  offerSignedDate?: string | null;
+  orientationDate?: string | null;
+  onboardedAt?: string | null;
+};
+
+const TASK_STATUSES = new Set(["TODO", "DONE", "NA"]);
+
+/** A date-only input ("2026-04-20") becomes UTC midnight, matching every other date here. */
+function parseDayOrNull(value: string | null | undefined): Date | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
+/**
+ * Correct an archived round after the fact.
+ *
+ * An archive is a frozen copy, which is exactly the problem it creates: whatever
+ * the checklist happened to say the moment the new round started is what got
+ * frozen, including anything ticked that day to catch the record up. Reconstructing
+ * "when did this actually happen" is a human job, so the dates have to be editable.
+ *
+ * Only the dates and statuses move. Which tasks the round contained, its sequence,
+ * who archived it and when are the record of what the system did, and stay put.
+ */
+export async function updateArchivedRound(
+  hireId: string,
+  archiveId: string,
+  input: UpdateArchiveInput
+): Promise<{ ok: true; doneCount: number; totalCount: number }> {
+  const archive = await prisma.onboardingArchive.findUnique({ where: { id: archiveId } });
+  if (!archive || archive.newHireId !== hireId) throw new Error("That archived round does not belong to this employee.");
+
+  const tasks = parseArchivedTasks(archive.tasksJson);
+  const edits = new Map((input.tasks ?? []).map((t) => [t.key, t] as const));
+  const next: ArchivedTask[] = tasks.map((t) => {
+    const edit = edits.get(t.key);
+    if (!edit) return t;
+    const status = edit.status && TASK_STATUSES.has(edit.status) ? edit.status : t.status;
+    const completedAt = parseDayOrNull(edit.completedAt);
+    return {
+      ...t,
+      status,
+      // A date on something not marked done is noise, and a done item with no date
+      // is fine (we simply don't know when) — so only DONE keeps a date.
+      completedAt: status === "DONE" ? (completedAt === undefined ? t.completedAt : completedAt?.toISOString() ?? null) : null
+    };
+  });
+
+  const doneCount = next.filter((t) => t.status === "DONE").length;
+  const fields: Record<string, Date | string | null> = {};
+  for (const field of ["startDate", "offerSentDate", "offerSignedDate", "orientationDate", "onboardedAt"] as const) {
+    const parsed = parseDayOrNull(input[field]);
+    if (parsed !== undefined) fields[field] = parsed;
+  }
+  for (const field of ["position", "department"] as const) {
+    if (input[field] !== undefined) fields[field] = clean(input[field]);
+  }
+
+  await prisma.onboardingArchive.update({
+    where: { id: archiveId },
+    data: { tasksJson: JSON.stringify(next), doneCount, totalCount: next.length, ...fields }
+  });
+
+  return { ok: true, doneCount, totalCount: next.length };
+}
+
 /**
  * Undo the most recent round: put the archived checklist and profile back, and
  * unwind the role/employment rows the start created. The current (new) checklist
