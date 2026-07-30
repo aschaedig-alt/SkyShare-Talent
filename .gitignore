@@ -1,5 +1,8 @@
 node_modules
 .next
+# Verification builds (npm run build:check) land here so they never corrupt the
+# .next a dev server is using. See scripts/build-check.mjs.
+.next-check
 out
 *.log
 prisma/dev.db

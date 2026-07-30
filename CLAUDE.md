@@ -106,9 +106,25 @@ storage-backed feature works in prod just because it worked locally.
   errors hid behind a "clean" typecheck this way. Always run it as
   `NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.json`, and
   read the whole output rather than grepping for the file you touched.
-- **Don't run `npm run build` while the dev server is up.** They share `.next`, and
-  the build leaves the running dev server serving an empty page shell. Looks like a
-  broken app; it's a broken dev server. Restart it.
+- **Use `npm run build:check`, never bare `npm run build`.** The build output
+  directory belongs to the DIRECTORY, not the git branch, so a build and a live
+  dev server were writing the same `.next` and corrupting it. The errors point
+  nowhere near the cause — `Failed to collect page data for /api/book/[slug]`,
+  then `Cannot find module for page: /_document` — and the only cure was deleting
+  `.next`. `build:check` sets `NEXT_DIST_DIR=.next-check` so it lands elsewhere
+  and the dev server keeps `.next`. Verified: a `build:check` completes cleanly
+  with a dev server live. Bare `npm run build` still collides — don't use it.
+- **Lint is a push gate now.** `.githooks/pre-push` runs `npm run lint` (~28s) and
+  blocks the push on errors; warnings pass. This exists because three
+  `no-explicit-any` errors reached main on Jul 28 and every Vercel deploy after
+  them failed silently for hours while sessions believed their work was live.
+  Enabled via `git config core.hooksPath .githooks` — already set in this tree,
+  and inherited by worktrees. `--no-verify` is the human's escape hatch; agents
+  must not use it.
+- **Don't start a second dev server just to look at something.** Ports are taken
+  by other sessions' servers; `autoPort` in `.claude/launch.json` will hand you a
+  fresh one, which is fine, but two servers still share `node_modules` and the
+  Prisma client. Prefer verifying over HTTP against whatever is already running.
 - **Secrets are split across TWO env files, and `.env` is the smaller one.**
   `.env` holds only `DATABASE_URL`; `.env.local` holds `NEXTAUTH_URL`,
   `NEXTAUTH_SECRET`, `NEXT_PUBLIC_APP_ENV`, `ANTHROPIC_API_KEY` and

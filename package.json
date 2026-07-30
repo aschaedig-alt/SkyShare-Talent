@@ -8,6 +8,7 @@
     "dev": "prisma generate --schema prisma/schema.prisma && node scripts/vendor-mermaid.mjs && next dev",
     "build": "prisma generate --schema prisma/schema.prisma && node scripts/vendor-mermaid.mjs && next build",
     "build:hosted": "prisma generate --schema prisma/schema.prisma && node scripts/vendor-mermaid.mjs && next build",
+    "build:check": "node scripts/build-check.mjs",
     "vendor:mermaid": "node scripts/vendor-mermaid.mjs",
     "start": "next start",
     "lint": "eslint .",

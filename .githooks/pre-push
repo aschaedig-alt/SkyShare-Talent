@@ -1,0 +1,44 @@
+#!/bin/sh
+#
+# Pre-push gate: ESLint must be clean before anything reaches main.
+#
+# WHY. Pushing to main auto-deploys, and next build runs ESLint and FAILS on
+# errors (next.config.mjs does not set eslint.ignoreDuringBuilds). On 2026-07-28
+# three "Unexpected any" errors reached main and every deploy after them failed
+# silently for hours — production kept serving older code while several sessions
+# believed their work was live. Nobody noticed until Vercel emailed.
+#
+# Lint only, on purpose. It takes ~28s and catches exactly that failure class.
+# Typecheck is another ~21s and has never been the thing that broke a deploy;
+# add it here if that changes.
+#
+# Escape hatch: git push --no-verify. That is for a human making a deliberate
+# call. CLAUDE.md forbids agents from using it.
+
+# Nothing staged for push (e.g. deleting a remote branch) — let it through.
+if [ -z "$(git rev-parse --verify HEAD 2>/dev/null)" ]; then
+  exit 0
+fi
+
+printf '\n[pre-push] running ESLint before pushing to a branch that auto-deploys...\n'
+
+if npm run --silent lint; then
+  printf '[pre-push] lint clean — pushing.\n\n'
+  exit 0
+fi
+
+cat <<'MSG'
+
+────────────────────────────────────────────────────────────────────────
+  PUSH BLOCKED — ESLint reported errors (warnings are fine).
+
+  These would fail the Vercel build, which means production silently
+  keeps serving older code. Fix them, or push with --no-verify if you
+  are deliberately shipping past a known state.
+
+  Reproduce with:      npm run lint
+  Full build check:     npm run build:check
+────────────────────────────────────────────────────────────────────────
+
+MSG
+exit 1
