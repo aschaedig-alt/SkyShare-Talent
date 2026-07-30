@@ -329,7 +329,7 @@ function SectionBlock({ section, activeHref, collapsed, onToggle, collapsible = 
           type="button"
           onClick={onToggle}
           aria-expanded={isOpen}
-          className="flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-brand-gold transition hover:bg-white/5"
+          className="flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-brand-gold transition hover:bg-white/5"
         >
           <span>{section.label}</span>
           {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
