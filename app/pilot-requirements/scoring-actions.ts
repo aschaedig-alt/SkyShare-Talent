@@ -11,7 +11,11 @@ import { setMatchFeedback, MATCH_VERDICTS, type MatchVerdict } from "@/lib/match
 import { setTierOverride, OVERRIDE_TIERS, type OverrideTier } from "@/lib/matching/tier-override";
 import { setPositionSkip } from "@/lib/matching/position-skip.server";
 import { isPositionDecisionValue, type PositionDecisionValue } from "@/lib/matching/position-skip";
-import { runRequirementScan, type RequirementScan } from "@/lib/matching/run-scan";
+import { runRequirementScan, loadScorableRequirement, type RequirementScan } from "@/lib/matching/run-scan";
+import {
+  getUnverifiedForRequirement,
+  type UnverifiedCandidate
+} from "@/lib/matching/pilot-requirement-matches";
 
 export type ActionResult = { ok: boolean; error?: string };
 export type ScanResult = { ok: boolean; data?: RequirementScan; error?: string };
@@ -115,6 +119,38 @@ export async function setCandidateTier(input: {
   revalidatePath("/pilot-requirements");
   revalidatePath("/recruiting-jobs");
   return { ok: true };
+}
+
+export type UnverifiedQueueResult = {
+  ok: boolean;
+  data?: { rows: UnverifiedCandidate[]; scannedAt: string };
+  error?: string;
+};
+
+/**
+ * The data-cleanup queue for one position: everyone the scan had to hold back
+ * because a HARD requirement has no evidence either way.
+ *
+ * On demand rather than part of the page load — it rescores the whole pool
+ * (~3,500 candidates), which is the expensive half of a scan.
+ */
+export async function loadUnverifiedForRequirement(
+  requirementId: string,
+  includeExcluded = false
+): Promise<UnverifiedQueueResult> {
+  if (!(await canEditScoring())) {
+    return { ok: false, error: "Only recruiters and admins can see the cleanup queue." };
+  }
+  if (!requirementId) return { ok: false, error: "Missing position." };
+
+  try {
+    const loaded = await loadScorableRequirement(requirementId);
+    if (!loaded) return { ok: false, error: "That position no longer exists." };
+    const rows = await getUnverifiedForRequirement(loaded.requirement, loaded.config, includeExcluded);
+    return { ok: true, data: { rows, scannedAt: new Date().toISOString() } };
+  } catch {
+    return { ok: false, error: "Could not build the cleanup queue." };
+  }
 }
 
 /**

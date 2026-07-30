@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { SlidersHorizontal, RefreshCw, ChevronDown, Lightbulb, Archive, TrendingUp } from "lucide-react";
+import { UnverifiedQueuePanel } from "@/components/pilot-requirements/UnverifiedQueuePanel";
 import Link from "next/link";
 import {
   scanRequirementMatches,
@@ -43,6 +44,8 @@ export function JobScreeningPanel({
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [archiveOpen, setArchiveOpen] = useState(true);
   const [setAsideOpen, setSetAsideOpen] = useState(false);
+  // A rescan returns its own set-aside group; until then use the server's.
+  const [rescanSetAside, setRescanSetAside] = useState<PilotRequirementCandidateMatch[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [preview, setPreview] = useState<CandidatePreviewData | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -81,11 +84,13 @@ export function JobScreeningPanel({
   const setAsideMatches = useMemo(() => {
     const byId = new Map<string, PilotRequirementCandidateMatch>();
     for (const match of merged) if (match.setAsideReason) byId.set(match.candidateId, match);
-    for (const match of data.setAside) if (!byId.has(match.candidateId)) byId.set(match.candidateId, match);
+    for (const match of rescanSetAside ?? data.setAside) {
+      if (!byId.has(match.candidateId)) byId.set(match.candidateId, match);
+    }
     return [...byId.values()].sort(
       (a, b) => b.score - a.score || a.candidateName.localeCompare(b.candidateName)
     );
-  }, [merged, data.setAside]);
+  }, [merged, rescanSetAside, data.setAside]);
 
   const ranked = useMemo(() => merged.filter((match) => !match.setAsideReason), [merged]);
   const currentMatches = useMemo(() => ranked.filter((match) => !match.fromArchive), [ranked]);
@@ -114,6 +119,7 @@ export function JobScreeningPanel({
       const res = await scanRequirementMatches(data.requirementId!, include);
       if (res.ok && res.data) {
         setBest(res.data.matches);
+        setRescanSetAside(res.data.setAside);
         setScan({
           count: res.data.scannedCount,
           current: res.data.scannedCurrent,
@@ -349,6 +355,8 @@ export function JobScreeningPanel({
                 </div>
               );
             })}
+
+            <UnverifiedQueuePanel requirementId={data.requirementId} includeExcluded={includeExcluded} />
 
             {/* Set aside on this position only. Deliberately still on the page:
                 the automatic catch fires off self-reported hours, which are
