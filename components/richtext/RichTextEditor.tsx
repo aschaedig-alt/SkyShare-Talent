@@ -54,6 +54,192 @@ const SIZES: Array<{ label: string; style: string }> = [
 const btn =
   "inline-flex h-7 w-7 items-center justify-center rounded border border-transparent text-brand-grey transition hover:border-brand-lea/20 hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100";
 
+/**
+ * Normalise pasted HTML (Word, Gmail, Google Docs, Paycom) down to our own
+ * small vocabulary BEFORE it ever reaches the editor.
+ *
+ * THE BUG THIS FIXES. With no paste handling, the browser inserted the
+ * source's raw markup verbatim — arbitrary spans, inline styles, and
+ * `<b>`/`<strong>` wrappers the source used to CANCEL inherited bold rather
+ * than apply it (Google Docs wraps every paste in
+ * `<b style="font-weight:normal" ...>`, a real, well-known artifact of its
+ * copy implementation). The editor rendered that correctly at paste time
+ * (the style cancels the tag), but sanitizeRichText on save keeps `<b>`
+ * outright while dropping any style not on its 5-colour/4-size allowlist —
+ * so the cancelling style vanished and the text came back bold on the next
+ * load. Colours, fonts, and sizes from an external source have the same
+ * problem in miniature: none of them survive the allowlist, so preserving
+ * them here just to have them silently stripped later is pointless.
+ *
+ * So paste-time cleaning does not try to preserve arbitrary source styling
+ * at all. It reads actual emphasis — from both the tag (`<b>`, `<em>`, ...)
+ * and any inline style that overrides it (`font-weight: normal` cancels a
+ * `<b>` ancestor, `font-weight: 700` applies bold with no tag at all, same
+ * idea for italic/underline/strike) — and re-emits ONLY the tags this editor
+ * itself produces. What you see the instant you paste is therefore exactly
+ * what a save will keep: no more surprise reformatting on the next load.
+ */
+type PasteEmphasis = { bold: boolean; italic: boolean; underline: boolean; strike: boolean };
+
+const BLOCK_TAGS = new Set(["P", "DIV", "SECTION", "ARTICLE", "TR", "TD", "TBODY", "THEAD", "LI"]);
+
+function escapePasteText(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** Fold a tag's own semantics with any inline style that overrides it. */
+function nextEmphasis(el: HTMLElement, state: PasteEmphasis): PasteEmphasis {
+  const next = { ...state };
+  switch (el.tagName) {
+    case "B":
+    case "STRONG":
+      next.bold = true;
+      break;
+    case "I":
+    case "EM":
+      next.italic = true;
+      break;
+    case "U":
+      next.underline = true;
+      break;
+    case "S":
+    case "STRIKE":
+    case "DEL":
+      next.strike = true;
+      break;
+  }
+  const style = el.style;
+  const weight = style.fontWeight;
+  if (weight) {
+    const n = Number.parseInt(weight, 10);
+    if (weight === "bold" || (!Number.isNaN(n) && n >= 600)) next.bold = true;
+    else if (weight === "normal" || (!Number.isNaN(n) && n < 600)) next.bold = false;
+  }
+  if (style.fontStyle === "italic" || style.fontStyle === "oblique") next.italic = true;
+  else if (style.fontStyle === "normal") next.italic = false;
+  const decoration = style.textDecorationLine || style.textDecoration;
+  if (decoration) {
+    if (decoration === "none") {
+      next.underline = false;
+      next.strike = false;
+    } else {
+      if (/underline/.test(decoration)) next.underline = true;
+      if (/line-through/.test(decoration)) next.strike = true;
+    }
+  }
+  return next;
+}
+
+function wrapPasteEmphasis(text: string, state: PasteEmphasis): string {
+  let out = escapePasteText(text);
+  if (!out) return out;
+  if (state.strike) out = `<s>${out}</s>`;
+  if (state.underline) out = `<u>${out}</u>`;
+  if (state.italic) out = `<em>${out}</em>`;
+  if (state.bold) out = `<strong>${out}</strong>`;
+  return out;
+}
+
+/** Flatten a subtree to inline content — text runs and links only. */
+function walkPasteInline(node: Node, state: PasteEmphasis): string {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return wrapPasteEmphasis(node.textContent ?? "", state);
+  }
+  if (node.nodeType !== Node.ELEMENT_NODE) return "";
+  const el = node as HTMLElement;
+  if (el.tagName === "SCRIPT" || el.tagName === "STYLE" || el.tagName === "IMG" || el.tagName === "TABLE") return "";
+  if (el.tagName === "BR") return "<br />";
+  if (el.tagName === "A") {
+    const href = (el.getAttribute("href") ?? "").trim();
+    const inner = Array.from(el.childNodes)
+      .map((c) => walkPasteInline(c, state))
+      .join("");
+    if (/^(https?:\/\/|mailto:)/i.test(href) && !/[ -]/.test(href)) {
+      return `<a href="${escapePasteText(href)}">${inner}</a>`;
+    }
+    return inner;
+  }
+  const next = nextEmphasis(el, state);
+  return Array.from(el.childNodes)
+    .map((c) => walkPasteInline(c, next))
+    .join("");
+}
+
+function walkPasteListItem(li: Element, state: PasteEmphasis): string {
+  const parts: string[] = [];
+  for (const child of Array.from(li.childNodes)) {
+    if (child.nodeType === Node.ELEMENT_NODE && ((child as Element).tagName === "UL" || (child as Element).tagName === "OL")) {
+      parts.push(walkPasteBlock(child, state));
+    } else {
+      parts.push(walkPasteInline(child, state));
+    }
+  }
+  return parts.join("");
+}
+
+/** Walk block-level structure — paragraphs, lists, headings, quotes. */
+function walkPasteBlock(node: Node, state: PasteEmphasis): string {
+  if (node.nodeType === Node.TEXT_NODE) {
+    const text = node.textContent ?? "";
+    return text.trim() ? `<p>${wrapPasteEmphasis(text, state)}</p>` : "";
+  }
+  if (node.nodeType !== Node.ELEMENT_NODE) return "";
+  const el = node as HTMLElement;
+  const tag = el.tagName;
+
+  if (tag === "SCRIPT" || tag === "STYLE" || tag === "HEAD" || tag === "TABLE" || tag === "IMG") return "";
+  if (tag === "BR") return "";
+
+  if (tag === "UL" || tag === "OL") {
+    const wrapper = tag === "UL" ? "ul" : "ol";
+    const items = Array.from(el.children)
+      .filter((c) => c.tagName === "LI")
+      .map((li) => `<li>${walkPasteListItem(li, state)}</li>`)
+      .join("");
+    return items ? `<${wrapper}>${items}</${wrapper}>` : "";
+  }
+
+  if (tag === "BLOCKQUOTE") {
+    const inner = Array.from(el.childNodes)
+      .map((c) => walkPasteBlock(c, state))
+      .join("");
+    return inner ? `<blockquote>${inner}</blockquote>` : "";
+  }
+
+  // Every heading level collapses to h3 — the only heading the toolbar itself produces.
+  if (/^H[1-6]$/.test(tag)) {
+    const inner = walkPasteInline(el, state);
+    return inner.trim() ? `<h3>${inner}</h3>` : "";
+  }
+
+  if (BLOCK_TAGS.has(tag)) {
+    const hasBlockChild = Array.from(el.children).some(
+      (c) => BLOCK_TAGS.has(c.tagName) || c.tagName === "UL" || c.tagName === "OL" || /^H[1-6]$/.test(c.tagName) || c.tagName === "BLOCKQUOTE"
+    );
+    if (hasBlockChild) {
+      return Array.from(el.childNodes)
+        .map((c) => walkPasteBlock(c, state))
+        .join("");
+    }
+    const inner = walkPasteInline(el, state);
+    return inner.trim() ? `<p>${inner}</p>` : "";
+  }
+
+  // An inline tag encountered at block position (e.g. a bare <span> or <a>
+  // wrapping the whole clipboard) — its content becomes one paragraph.
+  const inner = walkPasteInline(el, state);
+  return inner.trim() ? `<p>${inner}</p>` : "";
+}
+
+function cleanPastedHtml(rawHtml: string): string {
+  const doc = new DOMParser().parseFromString(rawHtml, "text/html");
+  const base: PasteEmphasis = { bold: false, italic: false, underline: false, strike: false };
+  const cleaned = Array.from(doc.body.childNodes)
+    .map((c) => walkPasteBlock(c, base))
+    .join("");
+  return cleaned || escapePasteText(doc.body.textContent ?? "");
+}
+
 export function RichTextEditor({
   value,
   onChange,
@@ -123,6 +309,26 @@ export function RichTextEditor({
     if (!inListItem) return;
     e.preventDefault();
     run(e.shiftKey ? "outdent" : "indent");
+  }
+
+  /**
+   * Intercept paste so what lands in the editor is already OUR markup, not
+   * whatever Word/Gmail/Google Docs sent — see cleanPastedHtml for why.
+   */
+  function handlePaste(e: React.ClipboardEvent<HTMLDivElement>) {
+    e.preventDefault();
+    ref.current?.focus();
+    const html = e.clipboardData.getData("text/html");
+    const cleaned = html
+      ? cleanPastedHtml(html)
+      : e.clipboardData
+          .getData("text/plain")
+          .split(/\r?\n/)
+          .map((line) => `<p>${line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`)
+          .join("");
+    if (!cleaned) return;
+    document.execCommand("insertHTML", false, cleaned);
+    emit();
   }
 
   function insertMention(person: { name: string; email: string }) {
@@ -225,6 +431,7 @@ export function RichTextEditor({
           onInput={emit}
           onBlur={emit}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           style={{ minHeight }}
           className={clsx(
             "prose-notes w-full px-3 py-2.5 text-sm text-brand-lea outline-none dark:text-slate-100",
