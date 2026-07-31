@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { SlidersHorizontal, RefreshCw, ChevronDown, Lightbulb, Archive, TrendingUp } from "lucide-react";
@@ -202,6 +202,48 @@ export function JobScreeningPanel({
 
   const selectedMatch = selectedId ? merged.find((match) => match.candidateId === selectedId) : undefined;
 
+  /**
+   * Keep the detail pane beside the card you actually clicked.
+   *
+   * The candidate list scrolls inside its own column, so the pane — a sibling
+   * column whose content is top-aligned — always opened at the top of the
+   * screen no matter how far down the list you were. Scroll to someone, click
+   * them, and their details appeared somewhere you were not looking.
+   *
+   * Offset is measured from the card, re-measured while the list scrolls, and
+   * clamped so the pane can never be pushed off the bottom.
+   */
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const paneRef = useRef<HTMLDivElement | null>(null);
+  const [paneOffset, setPaneOffset] = useState(0);
+
+  useEffect(() => {
+    if (!selectedId) {
+      setPaneOffset(0);
+      return;
+    }
+    const list = listRef.current;
+    if (!list) return;
+
+    const align = () => {
+      const card = list.querySelector<HTMLElement>(`[data-candidate-card="${CSS.escape(selectedId)}"]`);
+      if (!card) return;
+      const offset = card.getBoundingClientRect().top - list.getBoundingClientRect().top;
+      const room = list.clientHeight - (paneRef.current?.offsetHeight ?? 0);
+      setPaneOffset(Math.max(0, Math.min(offset, Math.max(0, room))));
+    };
+
+    align();
+    // The card moves under the pointer while the list scrolls; follow it.
+    list.addEventListener("scroll", align, { passive: true });
+    const observer = new ResizeObserver(align);
+    if (paneRef.current) observer.observe(paneRef.current);
+    return () => {
+      list.removeEventListener("scroll", align);
+      observer.disconnect();
+    };
+  }, [selectedId, preview, previewLoading]);
+
   const tabs: Array<{ key: Tab; label: string; count: number }> = [
     { key: "all", label: "All", count: currentMatches.length },
     ...TIER_ORDER.map((tier) => ({ key: tier, label: tier, count: grouped[tier].length }))
@@ -303,7 +345,10 @@ export function JobScreeningPanel({
           ) : null}
 
           <div className="mt-3 flex min-h-0 flex-1 gap-3">
-          <div className={clsx("min-h-0 space-y-2 overflow-y-auto pr-1", selectedId ? "w-1/2 shrink-0" : "w-full flex-1")}>
+          <div
+            ref={listRef}
+            className={clsx("min-h-0 space-y-2 overflow-y-auto pr-1", selectedId ? "w-1/2 shrink-0" : "w-full flex-1")}
+          >
             {TIER_ORDER.map((tier) => {
               if (tab !== "all" && tab !== tier) return null;
               const list = grouped[tier];
@@ -457,7 +502,11 @@ export function JobScreeningPanel({
             ) : null}
           </div>
             {selectedId ? (
-              <div className="min-h-0 w-1/2 flex-1">
+              <div
+                ref={paneRef}
+                className="min-h-0 w-1/2 flex-1 self-start transition-[margin] duration-150"
+                style={{ marginTop: paneOffset }}
+              >
                 <CandidatePreview
                   preview={preview}
                   loading={previewLoading}

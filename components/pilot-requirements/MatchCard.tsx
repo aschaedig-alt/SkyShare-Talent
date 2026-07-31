@@ -228,6 +228,10 @@ export function MatchCard({
 
   return (
     <article
+      // Lets the screening panel find this card in the DOM and line the detail
+      // pane up with it — the list scrolls in its own column, so without this
+      // the pane always opened at the top however far down you had scrolled.
+      data-candidate-card={match.candidateId}
       className={clsx(
         "rounded border bg-brand-cloudDancer/40 p-3 transition dark:bg-white/5",
         selected ? "border-brand-gold ring-1 ring-brand-gold/40" : "border-brand-lea/10 dark:border-white/10"

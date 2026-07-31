@@ -27,7 +27,7 @@
  * SERVER ONLY — dynamically imports unpdf.
  */
 
-export type FormCell = { text: string; x: number };
+export type FormCell = { text: string; x: number; /** Rendered font size, for header detection. */ size: number };
 export type FormRow = { page: number; y: number; cells: FormCell[] };
 
 /** Rows within this many points of each other are the same visual line. */
@@ -65,19 +65,22 @@ export async function readPdfRows(bytes: Uint8Array): Promise<FormRow[]> {
 
   for (let page = 1; page <= pdf.numPages; page += 1) {
     const content = await (await pdf.getPage(page)).getTextContent();
-    const items = (content.items as Array<{ str?: string; transform?: number[] }>)
+    const items = (content.items as Array<{ str?: string; transform?: number[]; height?: number }>)
       .map((item) => ({
         text: (item.str ?? "").trim(),
         x: Math.round(item.transform?.[4] ?? 0),
-        y: Math.round(item.transform?.[5] ?? 0)
+        y: Math.round(item.transform?.[5] ?? 0),
+        // transform[0] is the horizontal scale, which is the rendered font size
+        // for ordinary text; `height` is the fallback when it is zero.
+        size: Math.round((item.transform?.[0] || item.height || 0) * 10) / 10
       }))
       .filter((item) => item.text.length > 0);
 
-    const buckets: Array<{ y: number; cells: Array<{ text: string; x: number }> }> = [];
+    const buckets: Array<{ y: number; cells: FormCell[] }> = [];
     for (const item of items) {
       const bucket = buckets.find((b) => Math.abs(b.y - item.y) <= ROW_TOLERANCE);
-      if (bucket) bucket.cells.push({ text: item.text, x: item.x });
-      else buckets.push({ y: item.y, cells: [{ text: item.text, x: item.x }] });
+      if (bucket) bucket.cells.push({ text: item.text, x: item.x, size: item.size });
+      else buckets.push({ y: item.y, cells: [{ text: item.text, x: item.x, size: item.size }] });
     }
 
     for (const bucket of buckets.sort((a, b) => b.y - a.y)) {
@@ -93,6 +96,104 @@ export async function readPdfRows(bytes: Uint8Array): Promise<FormRow[]> {
 /** The verbatim line a value was read from, for a human to audit against the PDF. */
 export function rowText(row: FormRow): string {
   return row.cells.map((cell) => cell.text).join(" ");
+}
+
+// ---------------------------------------------------------------------------
+// The name at the top of a resume
+// ---------------------------------------------------------------------------
+
+/**
+ * Read the candidate's name off the top of a resume by TYPOGRAPHY rather than
+ * by guessing at prose.
+ *
+ * The text-based readers in app/api/resume-intake could never do this reliably,
+ * for a reason that is easy to miss: extractFileText collapses ALL whitespace to
+ * single spaces, so `text.split("\n")` returns one line containing the entire
+ * document. Every line-oriented rule was therefore running against a single
+ * enormous string, which is how a name ends up fused to whatever follows it -
+ * "TARA WARD VIP AVIATION", "Alexander Julian Warren 726 SOUTH 68TH STREET".
+ *
+ * A resume always puts the name at the top and always sets it larger than the
+ * body. That is a far stronger signal than any wording heuristic, and it comes
+ * free once the text items carry their position and size.
+ */
+
+/** Words that mean a big top-of-page line is a letterhead, not a person. */
+const NOT_A_PERSON =
+  /\b(resume|resum|curriculum|vitae|cv|profile|summary|objective|experience|education|employment|history|aviation|airlines?|airways|pilot|captain|first officer|flight|technician|mechanic|maintenance|engineer|manager|specialist|llc|inc|ltd|corp|company|university|college|address|phone|email|contact|information|skills|references?|licen[sc]es?|certificates?|ratings?|qualifications?|box|p\.?o\.?|street|avenue|road|drive|suite|apt|apartment|academy|military|institute|confidential|page)\b/i;
+
+/** A plausible person: 2-4 capitalised words, no digits, no punctuation soup. */
+function looksLikePersonName(value: string): boolean {
+  const v = value.trim().replace(/\s+/g, " ");
+  if (v.length < 4 || v.length > 60) return false;
+  if (/\d/.test(v)) return false;
+  if (/[@/\\|•·:;()]/.test(v)) return false;
+  if (NOT_A_PERSON.test(v)) return false;
+  const words = v.split(" ").filter(Boolean);
+  if (words.length < 2 || words.length > 5) return false;
+  // A bare single letter means pdf.js split letter-spaced glyphs and the words
+  // are not really words ("A Aron W Right" for Aaron Wright). A middle initial
+  // is written "S." and keeps its period, so it survives this.
+  if (words.some((w) => /^[A-Za-z]$/.test(w))) return false;
+  // Every word starts with a capital (ALL CAPS headers are common and fine).
+  return words.every((w) => /^[A-Z][A-Za-z'’.\-]*$/.test(w) || /^[A-Z'’.\-]+$/.test(w));
+}
+
+/** Title-case an ALL CAPS header so "TARA WARD" stores as "Tara Ward". */
+function tidyName(value: string): string {
+  const v = value.trim().replace(/\s+/g, " ");
+  if (v !== v.toUpperCase()) return v;
+  return v
+    .toLowerCase()
+    .split(" ")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/**
+ * The name from the top of page 1, or null when nothing is convincing.
+ *
+ * Only the top third of the page is considered, and only lines set at or near
+ * the largest size found there — so body text can never win, however early it
+ * appears. Candidates are tried largest-first, then highest-on-the-page.
+ */
+export async function readHeaderName(bytes: Uint8Array): Promise<string | null> {
+  const rows = (await readPdfRows(bytes)).filter((row) => row.page === 1);
+  if (rows.length === 0) return null;
+
+  const ys = rows.map((row) => row.y);
+  const top = Math.max(...ys);
+  const bottom = Math.min(...ys);
+  const cutoff = bottom + (top - bottom) * 0.66; // top third of the page
+
+  const header = rows.filter((row) => row.y >= cutoff);
+  if (header.length === 0) return null;
+
+  const biggest = Math.max(...header.flatMap((row) => row.cells.map((cell) => cell.size)));
+  if (biggest <= 0) return null;
+
+  const candidates = header
+    .map((row) => ({
+      y: row.y,
+      size: Math.max(...row.cells.map((cell) => cell.size)),
+      // A name split across cells ("TARA" "WARD") rejoins here.
+      text: row.cells.map((cell) => cell.text).join(" ")
+    }))
+    // Within 15% of the largest text on the page counts as "the big line".
+    .filter((row) => row.size >= biggest * 0.85)
+    .sort((a, b) => b.size - a.size || b.y - a.y);
+
+  for (const candidate of candidates) {
+    if (looksLikePersonName(candidate.text)) return tidyName(candidate.text);
+    // "ALEXANDER WARREN Airline Transport Pilot" — keep the leading capitalised
+    // run and drop the trailing title.
+    const words = candidate.text.trim().split(/\s+/);
+    for (let take = Math.min(4, words.length); take >= 2; take -= 1) {
+      const head = words.slice(0, take).join(" ");
+      if (looksLikePersonName(head)) return tidyName(head);
+    }
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------

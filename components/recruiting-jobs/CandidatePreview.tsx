@@ -125,14 +125,36 @@ export function CandidatePreview({
             {preview.metrics.length > 0 ? (
               <div>
                 <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Flight profile</div>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                  {preview.metrics.map((metric) => (
-                    <div key={metric.key} className="flex items-center justify-between gap-2 text-xs">
-                      <span className="min-w-0 truncate text-brand-grey dark:text-slate-400">{metric.label}</span>
-                      <span className="shrink-0 font-semibold text-brand-lea dark:text-slate-100">{metric.value}</span>
-                    </div>
-                  ))}
-                </div>
+                {/* Total time is the figure being skimmed for — it carries most
+                    of the scoring weight — so it is pulled out of the grid and
+                    set larger rather than sitting as one cell among a dozen
+                    lookalike rows. */}
+                {(() => {
+                  const total = preview.metrics.find((metric) => metric.key === "total_time");
+                  const rest = preview.metrics.filter((metric) => metric.key !== "total_time");
+                  return (
+                    <>
+                      {total ? (
+                        <div className="mb-1.5 flex items-baseline justify-between gap-2 rounded-element bg-brand-cloudDancer/60 px-2 py-1.5 dark:bg-white/5">
+                          <span className="text-[11px] font-bold uppercase tracking-wide text-brand-lea dark:text-slate-100">
+                            {total.label}
+                          </span>
+                          <span className="shrink-0 text-base font-bold leading-none text-brand-lea dark:text-slate-100">
+                            {total.value}
+                          </span>
+                        </div>
+                      ) : null}
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                        {rest.map((metric) => (
+                          <div key={metric.key} className="flex items-center justify-between gap-2 text-xs">
+                            <span className="min-w-0 truncate text-brand-grey dark:text-slate-400">{metric.label}</span>
+                            <span className="shrink-0 font-semibold text-brand-lea dark:text-slate-100">{metric.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             ) : (
               <p className="text-xs text-brand-grey dark:text-slate-400">No structured flight data extracted yet.</p>
