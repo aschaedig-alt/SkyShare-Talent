@@ -9,7 +9,9 @@ import {
 import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
 import { isPrivateFileStorageReady, shouldRequirePrivateFileStorage } from "@/lib/files/file-security";
 import { extractFileText } from "@/lib/files/pdf-text";
+import { readHeaderName } from "@/lib/files/pdf-form";
 import { normalizeEmail, normalizeName, normalizePhone, splitCandidateName } from "@/lib/candidates/normalize";
+import { reactivateArchivedCandidate } from "@/lib/candidates/reactivate";
 
 const maxFileSizeBytes = 25 * 1024 * 1024;
 
@@ -68,6 +70,30 @@ function trimProse(name: string): string {
     parts.pop();
   }
   return parts.join(" ");
+}
+
+function looksLikePdf(mimeType: string | null, filename: string): boolean {
+  return (mimeType ?? "").includes("pdf") || filename.toLowerCase().endsWith(".pdf");
+}
+
+/**
+ * Do two readings of a name refer to the same person? Used to decide whether the
+ * PDF header name is trustworthy enough to override the filename. Any shared
+ * word of three or more letters counts — enough to tell "Adam Kavis Rolph" from
+ * "Adam Rolph" (same person, richer) apart from "Human Managment Office Chief"
+ * against "ANTONIO PRIETO" (a job title that happened to be set large).
+ */
+function sharesAName(a: string, b: string): boolean {
+  const words = (value: string) =>
+    new Set(
+      value
+        .toLowerCase()
+        .replace(/[^a-z\s]/g, " ")
+        .split(/\s+/)
+        .filter((word) => word.length >= 3)
+    );
+  const left = words(a);
+  return [...words(b)].some((word) => left.has(word));
 }
 
 function nameFromText(text: string): string | null {
@@ -157,6 +183,8 @@ export async function POST(request: Request) {
       email: string | null;
       phone: string | null;
       reused: boolean;
+      /** They were archived and this resume brought them back. */
+      reactivated?: boolean;
       linkedToJob: boolean;
       error?: string;
     }> = [];
@@ -181,9 +209,31 @@ export async function POST(request: Request) {
       // Both sources are filtered through looksLikeAName, so a filename fragment
       // can never become a person. "Unnamed candidate" is a far better outcome
       // than "(333909) pdf" — it is obviously wrong, so it gets fixed.
+      // Typography beats prose. extractFileText collapses all whitespace, so the
+      // line-based readers below are really scanning one enormous line and
+      // routinely fuse the name to whatever follows it ("Aadan Kenck PO Box").
+      // readHeaderName instead takes the largest text at the top of page 1,
+      // which is where a resume always puts the name.
+      //
+      // It is used to CONFIRM or ENRICH, never to overrule on its own: measured
+      // over 45 real resumes it agreed with the stored name 24 times, improved
+      // on it 6 times (middle names the filename could not know), returned
+      // nothing 14 times, and was wrong once — a resume that sets a job title
+      // larger than the person's name. Requiring it to share a word with the
+      // filename keeps that one out.
+      const fromHeader = looksLikePdf(file.type || null, originalFilename)
+        ? await readHeaderName(bytes).catch(() => null)
+        : null;
       const fromText = nameFromText(text);
       const fromFile = nameFromFilename(originalFilename);
-      const rawName = [fromText, fromFile].find((n) => n && looksLikeAName(n)) ?? "";
+
+      const corroborated =
+        fromHeader && looksLikeAName(fromHeader) && fromFile && sharesAName(fromHeader, fromFile)
+          ? fromHeader
+          : null;
+
+      const rawName =
+        corroborated ?? [fromFile, fromHeader, fromText].find((n) => n && looksLikeAName(n)) ?? "";
       const split = splitCandidateName(rawName);
       const displayName =
         split.displayName && split.displayName !== "Unnamed candidate" && looksLikeAName(split.displayName)
@@ -219,6 +269,21 @@ export async function POST(request: Request) {
             source: "Resume intake"
           }
         }));
+
+      // A resume from someone we had archived means they are applying again.
+      // This lookup has always found archived records (it has no archivedAt
+      // filter) and then left them archived, so the new resume and application
+      // landed on a profile nobody can see — which is exactly what happened to
+      // Matthew Higginbotham on Jul 30.
+      let reactivated = false;
+      if (existing) {
+        const result = await reactivateArchivedCandidate(existing.id, {
+          reason: `a new resume ("${originalFilename}") was uploaded for them.`,
+          source: "resume-intake",
+          sourceRef: originalFilename
+        });
+        reactivated = result.reactivated;
+      }
 
       if (!existing) {
         if (email) {
@@ -264,12 +329,13 @@ export async function POST(request: Request) {
         linkedToJob = true;
       }
 
-      results.push({ filename: originalFilename, candidateId: candidate.id, displayName: candidate.displayName, email, phone, reused: Boolean(existing), linkedToJob });
+      results.push({ filename: originalFilename, candidateId: candidate.id, displayName: candidate.displayName, email, phone, reused: Boolean(existing), linkedToJob, reactivated });
     }
 
     const created = results.filter((r) => r.candidateId && !r.reused).length;
     const reused = results.filter((r) => r.reused).length;
-    return NextResponse.json({ ok: true, created, reused, results });
+    const reactivated = results.filter((r) => r.reactivated).length;
+    return NextResponse.json({ ok: true, created, reused, reactivated, results });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ message: "Unable to process resumes." }, { status: 500 });

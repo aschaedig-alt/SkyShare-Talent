@@ -13,6 +13,7 @@ type DocResult = {
   displayName: string | null;
   basis: string | null;
   linkedToJob: boolean;
+  reactivated?: boolean;
   error?: string;
 };
 
@@ -137,7 +138,12 @@ export function DocumentIntake({
                         {r.error ? (
                           <div className="text-red-600 dark:text-red-300">{r.error}</div>
                         ) : r.matched ? (
-                          <div className="text-brand-grey dark:text-slate-400">→ {r.displayName} <span className="text-brand-grey/70 dark:text-slate-500">(matched by {r.basis})</span>{r.linkedToJob ? " · added to job" : ""}</div>
+                          <>
+                            <div className="text-brand-grey dark:text-slate-400">→ {r.displayName} <span className="text-brand-grey/70 dark:text-slate-500">(matched by {r.basis})</span>{r.linkedToJob ? " · added to job" : ""}</div>
+                            {r.reactivated && (
+                              <div className="font-semibold text-brand-eden dark:text-brand-sweet">Brought back from the archive — they are a current applicant again</div>
+                            )}
+                          </>
                         ) : (
                           <div className="text-amber-700 dark:text-amber-300">{r.basis === "ambiguous" ? "Multiple candidates share that name" : "No matching candidate"} — left in the Link queue</div>
                         )}

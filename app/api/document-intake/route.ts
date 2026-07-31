@@ -6,6 +6,7 @@ import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
 import { isPrivateFileStorageReady, shouldRequirePrivateFileStorage } from "@/lib/files/file-security";
 import { extractFileText } from "@/lib/files/pdf-text";
 import { normalizeEmail, normalizeName, normalizePhone } from "@/lib/candidates/normalize";
+import { reactivateArchivedCandidate } from "@/lib/candidates/reactivate";
 import { detectDocumentType } from "@/lib/files/document-types";
 
 const maxFileSizeBytes = 25 * 1024 * 1024;
@@ -75,6 +76,8 @@ export async function POST(request: Request) {
       displayName: string | null;
       basis: string | null;
       linkedToJob: boolean;
+      /** They were in the archive and this document brought them back. */
+      reactivated?: boolean;
       error?: string;
     }> = [];
 
@@ -114,6 +117,57 @@ export async function POST(request: Request) {
         }
       }
 
+      // Nobody ACTIVE matched — now try the archive, because people re-apply and a
+      // new application makes them a current applicant again. Deliberately a
+      // fallback rather than a change to the tiers above: an archived namesake
+      // must never turn somebody's clean live match into an ambiguous one.
+      // MERGED records are excluded — that person lives under another id now.
+      let reactivated = false;
+      if (!candidate && basis !== "ambiguous") {
+        let archived: { id: string; displayName: string } | null = null;
+        if (email) {
+          archived = await prisma.candidate.findFirst({
+            where: { normalizedEmail: email, archivedAt: { not: null }, status: { not: "MERGED" } },
+            select: { id: true, displayName: true }
+          });
+          if (archived) basis = "email (archived)";
+        }
+        if (!archived && phone) {
+          archived = await prisma.candidate.findFirst({
+            where: { normalizedPhone: phone, archivedAt: { not: null }, status: { not: "MERGED" } },
+            select: { id: true, displayName: true }
+          });
+          if (archived) basis = "phone (archived)";
+        }
+        if (!archived) {
+          const nn = normalizeName(nameFromFilename(originalFilename));
+          if (nn) {
+            const byName = await prisma.candidate.findMany({
+              where: { normalizedName: nn, archivedAt: { not: null }, status: { not: "MERGED" } },
+              take: 2,
+              select: { id: true, displayName: true }
+            });
+            // One archived namesake is a returning applicant; two is a guess.
+            if (byName.length === 1) {
+              archived = byName[0];
+              basis = "name (archived)";
+            } else if (byName.length > 1) {
+              basis = "ambiguous";
+            }
+          }
+        }
+
+        if (archived) {
+          const result = await reactivateArchivedCandidate(archived.id, {
+            reason: `a new document ("${originalFilename}") arrived for them and matched by ${basis?.replace(" (archived)", "") ?? "name"}.`,
+            source: "document-intake",
+            sourceRef: originalFilename
+          });
+          reactivated = result.reactivated;
+          candidate = archived;
+        }
+      }
+
       if (candidate) {
         const storageKey = createCandidateStorageKey(candidate.id, originalFilename);
         await storage.write({ storageKey, bytes, contentType: file.type || null, metadata: { candidateId: candidate.id, source: "document-intake", uploadedByEmail: auth.user.email ?? "" } });
@@ -129,7 +183,7 @@ export async function POST(request: Request) {
             documentType: detectDocumentType(originalFilename),
             extractedText: text || null,
             textExtractedAt: text ? new Date() : null,
-            metadataJson: JSON.stringify({ linkedBy: "document-intake", matchedBy: basis, storageProvider: storage.provider, uploadedByEmail: auth.user.email })
+            metadataJson: JSON.stringify({ linkedBy: "document-intake", matchedBy: basis, reactivatedFromArchive: reactivated || undefined, storageProvider: storage.provider, uploadedByEmail: auth.user.email })
           }
         });
 
@@ -142,7 +196,7 @@ export async function POST(request: Request) {
           linkedToJob = true;
         }
 
-        results.push({ filename: originalFilename, matched: true, candidateId: candidate.id, displayName: candidate.displayName, basis, linkedToJob });
+        results.push({ filename: originalFilename, matched: true, candidateId: candidate.id, displayName: candidate.displayName, basis, linkedToJob, reactivated });
       } else {
         // No confident match — store unassigned so it shows in the Documents "Link" queue.
         const storageKey = createCandidateStorageKey("unassigned", originalFilename);
@@ -168,7 +222,8 @@ export async function POST(request: Request) {
 
     const matched = results.filter((r) => r.matched).length;
     const unmatched = results.filter((r) => !r.matched && !r.error).length;
-    return NextResponse.json({ ok: true, matched, unmatched, results });
+    const reactivated = results.filter((r) => r.reactivated).length;
+    return NextResponse.json({ ok: true, matched, unmatched, reactivated, results });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ message: "Unable to process documents." }, { status: 500 });
