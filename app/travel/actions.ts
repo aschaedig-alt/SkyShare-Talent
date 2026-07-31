@@ -12,6 +12,8 @@ import {
   isTravelStatus
 } from "@/lib/travel/constants";
 import { parseTravelConfirmation, type ParsedTravel } from "@/lib/extraction/travel-confirmation";
+import { isReimbursementStage, isVisitField, type TripChecklistState } from "@/lib/travel/checklist";
+import { clearTripChecklist, getTripChecklist, saveTripChecklist } from "@/lib/travel/checklist-store";
 import {
   getTravelTripView,
   getNewHireLoyalty,
@@ -238,7 +240,47 @@ export async function updateTrip(tripId: string, patch: Record<string, unknown>)
 export async function deleteTrip(tripId: string): Promise<SimpleResult> {
   if (!(await canEditTravel())) return { ok: false, error: "You do not have permission to edit travel." };
   await prisma.travelTrip.delete({ where: { id: tripId } });
+  // Checklist state is not a database relation, so nothing cascades it — clear
+  // it here or a new trip could inherit a dead trip's ticks if an id repeated.
+  await clearTripChecklist(tripId);
   return { ok: true };
+}
+
+// --- the checklist ----------------------------------------------------------
+
+export type ChecklistResult = { ok: boolean; error?: string; state?: TripChecklistState };
+
+export async function loadChecklist(tripId: string): Promise<ChecklistResult> {
+  if (!(await canEditTravel())) return { ok: false, error: "You do not have permission to view travel." };
+  return { ok: true, state: await getTripChecklist(tripId) };
+}
+
+/**
+ * Tick or untick one item. Records WHO and WHEN, because "did anyone actually
+ * tell the supervisor" is the question this checklist exists to answer, and a
+ * bare checkmark cannot answer it.
+ */
+export async function setChecklistTick(tripId: string, key: string, done: boolean): Promise<ChecklistResult> {
+  if (!(await canEditTravel())) return { ok: false, error: "You do not have permission to edit travel." };
+  if (typeof key !== "string" || !key.trim()) return { ok: false, error: "Missing item." };
+  const state = await saveTripChecklist(tripId, {
+    ticks: { [key]: { done, at: new Date().toISOString(), by: await actorLabel() } }
+  });
+  return { ok: true, state };
+}
+
+export async function setVisitField(tripId: string, field: string, value: string): Promise<ChecklistResult> {
+  if (!(await canEditTravel())) return { ok: false, error: "You do not have permission to edit travel." };
+  if (!isVisitField(field)) return { ok: false, error: "Unknown field." };
+  const state = await saveTripChecklist(tripId, { visit: { [field]: value.trim() } });
+  return { ok: true, state };
+}
+
+export async function setReimbursementStage(tripId: string, stage: string): Promise<ChecklistResult> {
+  if (!(await canEditTravel())) return { ok: false, error: "You do not have permission to edit travel." };
+  if (!isReimbursementStage(stage)) return { ok: false, error: "Unknown stage." };
+  const state = await saveTripChecklist(tripId, { reimbursement: stage });
+  return { ok: true, state };
 }
 
 export async function addItem(tripId: string, input: { type?: string }): Promise<ItemResult> {

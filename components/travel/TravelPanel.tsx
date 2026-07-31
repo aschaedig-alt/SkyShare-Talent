@@ -41,6 +41,7 @@ import {
 import type { ParsedTravel } from "@/lib/extraction/travel-confirmation";
 import { buildBookingGroups, bookingLabel, type ItemBookingInfo } from "@/lib/travel/booking-groups";
 import { TravelGaps, TravelGapBadge } from "@/components/travel/TravelGaps";
+import { TravelChecklist } from "@/components/travel/TravelChecklist";
 import { useDialogClose } from "@/lib/hooks/useDialogClose";
 import {
   formatMomentDate,
@@ -391,6 +392,9 @@ function TripCard({
         <div className="space-y-4 border-t border-brand-lea/10 px-3 py-3 dark:border-white/10">
           {/* What this trip still looks like it is missing — derived, not stored. */}
           <TravelGaps trip={trip} />
+          {/* ...and what still has to be DONE and SAID. The gaps answer "is it
+              booked"; the checklist answers "has anyone been told". */}
+          <TravelChecklist trip={trip} />
           <RequestDetails trip={trip} onSave={saveField} />
           <ConfirmationImport trip={trip} onApplied={onChange} />
           <ItemsTable

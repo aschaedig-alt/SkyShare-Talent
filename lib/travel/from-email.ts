@@ -7,6 +7,7 @@ import {
   type LlmTravelEmail
 } from "@/lib/extraction/travel-email-llm";
 import { matchTraveler, type TravelerMatch } from "@/lib/travel/match-traveler";
+import { normalizeTravelPurpose } from "@/lib/travel/constants";
 
 /**
  * Turn a Front email tagged "Travel" into a trip on the traveller's record.
@@ -67,9 +68,16 @@ function stripHtml(html: string): string {
     .trim();
 }
 
-/** ORIENTATION and INDOC are both real purposes on the trip; the rest map across. */
+/**
+ * ORIENTATION and INDOC are both real purposes on the trip; the rest map across.
+ *
+ * The parser can still return INTERVIEW — it is left in the model's enum on
+ * purpose, because an email really can say "interview" and forcing the model to
+ * call it something else would cost accuracy. It is folded onto RECRUITING_VISIT
+ * here instead, at the one point where an outside purpose enters the system.
+ */
 function tripPurpose(purpose: LlmTravelEmail["purpose"]): string {
-  return purpose;
+  return normalizeTravelPurpose(purpose);
 }
 
 /** A short human line describing the itinerary, for the Front comment. */
