@@ -17,6 +17,7 @@ export type RequirementScan = {
   matches: PilotRequirementCandidateMatch[];
   /** Held out of `matches` for this position — a skip or the automatic 2x catch. */
   setAside: PilotRequirementCandidateMatch[];
+  likelyOverqualified: PilotRequirementCandidateMatch[];
   scannedCount: number; // everyone considered in this scan (current + archive)
   scannedCurrent: number;
   scannedArchive: number;
@@ -94,7 +95,7 @@ export async function runRequirementScan(requirementId: string, includeExcluded 
 
   const loaded = await loadScorableRequirement(requirementId);
   if (!loaded) {
-    return { matches: [], setAside: [], ...countFields, scannedAt: nowIso };
+    return { matches: [], setAside: [], likelyOverqualified: [], ...countFields, scannedAt: nowIso };
   }
 
   const [feedback, overrides, skips] = await Promise.all([
@@ -105,7 +106,7 @@ export async function runRequirementScan(requirementId: string, includeExcluded 
     getRequirementSkips(loaded.requirement.id)
   ]);
 
-  const { ranked, setAside } = await scanRequirementPool(
+  const { ranked, setAside, likelyOverqualified } = await scanRequirementPool(
     loaded.requirement,
     loaded.config,
     feedback,
@@ -114,5 +115,5 @@ export async function runRequirementScan(requirementId: string, includeExcluded 
     includeExcluded
   );
 
-  return { matches: ranked, setAside, ...countFields, scannedAt: nowIso };
+  return { matches: ranked, setAside, likelyOverqualified, ...countFields, scannedAt: nowIso };
 }

@@ -134,6 +134,16 @@ export type PilotRequirementCandidateMatch = {
   /** SIC seat where total time is >= 2x the role minimum — likely wants PIC. */
   overqualified: boolean;
   /**
+   * CAPTAIN seat where total time is >= 2x the role minimum. Unlike
+   * `overqualified` this never removes anyone — high hours are usually what a
+   * captain seat wants. It ranks them last and says why, because on a low-
+   * minimum seat (a 1,500-hour single-pilot PC-12) a 5,000-hour pilot is still
+   * a flight risk even with every minimum cleared.
+   */
+  likelyOverqualified: boolean;
+  /** Total time as a multiple of the role's minimum, when both are known. */
+  overqualifiedRatio: number | null;
+  /**
    * Set aside for THIS position only (the candidate stays in the system and in
    * every other position's scan). Either a recruiter's explicit skip or the
    * engine's automatic overqualified catch. Null = competing normally.
@@ -446,12 +456,30 @@ export function scoreCandidate(
   // PIC seats are never penalized for more hours.
   const totalTimeMin = gatesByKey.get("total_time")?.numericValue ?? null;
   const totalTimeValue = metricsByKey.get("total_time")?.valueNumber ?? null;
-  const overqualified =
-    seat === "sic" &&
-    typeof totalTimeMin === "number" &&
-    totalTimeMin > 0 &&
-    typeof totalTimeValue === "number" &&
-    totalTimeValue >= totalTimeMin * 2;
+  //
+  // The same 2x test now runs on BOTH seats, because the consequence differs
+  // rather than the measurement. On an SIC seat it sets the candidate aside:
+  // a captain-level pilot in the right seat is a retention risk. On a PIC seat
+  // it does NOT — high hours are usually what you want in a captain — but it is
+  // still worth knowing, because a 5,000-hour pilot against a 1,500-hour
+  // single-pilot PC-12 seat is a flight risk even though every minimum is
+  // cleared. That case was being handled by hand: the PC-12 Captain position
+  // already carries ten manual OVERQUALIFIED skips, every one of them made by a
+  // recruiter rather than the engine.
+  const overqualifiedRatio =
+    typeof totalTimeMin === "number" && totalTimeMin > 0 && typeof totalTimeValue === "number"
+      ? totalTimeValue / totalTimeMin
+      : null;
+  const atLeastDoubleTheMinimum = overqualifiedRatio !== null && overqualifiedRatio >= 2;
+
+  // "Lead PIC" is a captain seat too, so match on the seat containing "pic"
+  // rather than equalling it; "sic" never contains "pic".
+  const isCaptainSeat = seat.includes("pic");
+
+  /** SIC only — this is the one that removes them from the ranked list. */
+  const overqualified = seat === "sic" && atLeastDoubleTheMinimum;
+  /** PIC only — a flag and a sort, never a removal. */
+  const likelyOverqualified = isCaptainSeat && atLeastDoubleTheMinimum;
   if (seat) {
     // No bare "fo" — as a substring it lived inside "for", "info" and "before",
     // so every candidate cleared seat fit. "f o" is what a normalized "F/O"
@@ -934,6 +962,8 @@ export function scoreCandidate(
     excludedNote: candidate.scanExcludedNote,
     fromArchive: isArchivedCandidateStatus(candidate.status),
     overqualified,
+    likelyOverqualified,
+    overqualifiedRatio: overqualifiedRatio === null ? null : Math.round(overqualifiedRatio * 10) / 10,
     setAsideReason,
     positionSkip: skip,
     summary,
@@ -1006,9 +1036,19 @@ export const candidateMatchSelect = {
 /** How many set-aside candidates to carry back for the collapsed group. */
 export const SET_ASIDE_LIMIT = 60;
 
+/** How many likely-overqualified captains to carry back for their group. */
+export const LIKELY_OVERQUALIFIED_LIMIT = 40;
+
 export type RequirementScanResult = {
   /** The ranked board. */
   ranked: PilotRequirementCandidateMatch[];
+  /**
+   * Captain seats where total time is 2x+ the minimum. Their OWN list with its
+   * own budget, not merely sorted last: sorting them to the bottom of `ranked`
+   * put them past the CURRENT_MATCH_LIMIT slice, so the group came back empty
+   * every time. They are candidates, just not ahead of people who fit the seat.
+   */
+  likelyOverqualified: PilotRequirementCandidateMatch[];
   /**
    * Held out of the ranked board for THIS position only — a recruiter's skip or
    * the automatic overqualified catch. Returned rather than dropped so a wrong
@@ -1032,7 +1072,7 @@ export async function scanRequirementPool(
   skips: RequirementSkips = {},
   includeExcluded = false
 ): Promise<RequirementScanResult> {
-  if (!requirement) return { ranked: [], setAside: [] };
+  if (!requirement) return { ranked: [], likelyOverqualified: [], setAside: [] };
 
   // No `take` here on purpose. The old 250-row cap ordered by updatedAt meant a
   // scan silently saw only the most recently touched slice of the pool; with the
@@ -1064,7 +1104,10 @@ export async function scanRequirementPool(
   // Set aside BEFORE the budget slice, so a skipped candidate never occupies a
   // slot that a competing one should have had.
   const setAside = scored.filter((match) => match.setAsideReason !== null);
-  const ranked = scored.filter((match) => match.setAsideReason === null);
+  const remaining = scored.filter((match) => match.setAsideReason === null);
+  // Partitioned rather than sorted last, for the reason on the type above.
+  const overqualifiedCaptains = remaining.filter((match) => match.likelyOverqualified);
+  const ranked = remaining.filter((match) => !match.likelyOverqualified);
 
   // Two budgets, not one list. Archived candidates out-rank live ones often
   // enough (10 of the top 12 on a real G450 scan) that a single merged cut
@@ -1074,6 +1117,7 @@ export async function scanRequirementPool(
       ...ranked.filter((match) => !match.fromArchive).slice(0, CURRENT_MATCH_LIMIT),
       ...ranked.filter((match) => match.fromArchive).slice(0, ARCHIVE_MATCH_LIMIT)
     ],
+    likelyOverqualified: overqualifiedCaptains.slice(0, LIKELY_OVERQUALIFIED_LIMIT),
     setAside: setAside.slice(0, SET_ASIDE_LIMIT)
   };
 }

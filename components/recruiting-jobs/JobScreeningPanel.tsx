@@ -44,8 +44,10 @@ export function JobScreeningPanel({
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [archiveOpen, setArchiveOpen] = useState(true);
   const [setAsideOpen, setSetAsideOpen] = useState(false);
+  const [overqualifiedOpen, setOverqualifiedOpen] = useState(false);
   // A rescan returns its own set-aside group; until then use the server's.
   const [rescanSetAside, setRescanSetAside] = useState<PilotRequirementCandidateMatch[] | null>(null);
+  const [rescanOverqualified, setRescanOverqualified] = useState<PilotRequirementCandidateMatch[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [preview, setPreview] = useState<CandidatePreviewData | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -93,7 +95,27 @@ export function JobScreeningPanel({
   }, [merged, rescanSetAside, data.setAside]);
 
   const ranked = useMemo(() => merged.filter((match) => !match.setAsideReason), [merged]);
-  const currentMatches = useMemo(() => ranked.filter((match) => !match.fromArchive), [ranked]);
+
+  // Captain seats only. Held out of the readiness tiers so they do not sit above
+  // people who fit the seat, but NOT set aside — they are still candidates, and
+  // on a high-minimum seat plenty of hours is exactly what you want.
+  // Comes from the server as its own list with its own budget. Filtering it out
+  // of `ranked` client-side would find nothing: the scan already partitions
+  // them, precisely so they are not cut off by the ranked slice.
+  const likelyOverqualified = useMemo(() => {
+    const byId = new Map<string, PilotRequirementCandidateMatch>();
+    for (const match of merged) if (match.likelyOverqualified) byId.set(match.candidateId, match);
+    for (const match of rescanOverqualified ?? data.likelyOverqualified) {
+      if (!byId.has(match.candidateId)) byId.set(match.candidateId, match);
+    }
+    return [...byId.values()].sort(
+      (a, b) => b.score - a.score || a.candidateName.localeCompare(b.candidateName)
+    );
+  }, [merged, rescanOverqualified, data.likelyOverqualified]);
+  const currentMatches = useMemo(
+    () => ranked.filter((match) => !match.fromArchive && !match.likelyOverqualified),
+    [ranked]
+  );
   const archiveMatches = useMemo(
     () => ranked.filter((match) => match.fromArchive).sort((a, b) => b.score - a.score || a.candidateName.localeCompare(b.candidateName)),
     [ranked]
@@ -120,6 +142,7 @@ export function JobScreeningPanel({
       if (res.ok && res.data) {
         setBest(res.data.matches);
         setRescanSetAside(res.data.setAside);
+        setRescanOverqualified(res.data.likelyOverqualified);
         setScan({
           count: res.data.scannedCount,
           current: res.data.scannedCurrent,
@@ -402,6 +425,55 @@ export function JobScreeningPanel({
             })}
 
             <UnverifiedQueuePanel requirementId={data.requirementId} includeExcluded={includeExcluded} />
+
+            {/* Captain seats where total time is 2x+ the minimum. Its own group
+                at the bottom rather than a skip: on a high-minimum seat plenty
+                of hours is exactly what you want, so these stay candidates. */}
+            {likelyOverqualified.length > 0 ? (
+              <div className="overflow-hidden rounded border border-value-leadership-dark/20 dark:border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setOverqualifiedOpen((value) => !value)}
+                  aria-expanded={overqualifiedOpen}
+                  className="flex w-full items-center justify-between gap-2 bg-value-leadership-light/40 px-3 py-2 text-left transition hover:bg-value-leadership-light/70 dark:bg-white/5"
+                >
+                  <span className="flex items-center gap-2">
+                    <TrendingUp className="h-3.5 w-3.5 text-value-leadership-dark" />
+                    <span className="text-[11px] font-semibold text-brand-lea dark:text-slate-100">Likely overqualified</span>
+                    <span className="text-xs text-brand-grey dark:text-slate-400">({likelyOverqualified.length})</span>
+                  </span>
+                  <ChevronDown
+                    className={clsx("h-4 w-4 text-brand-grey transition-transform dark:text-slate-400", !overqualifiedOpen && "-rotate-90")}
+                  />
+                </button>
+                {overqualifiedOpen ? (
+                  <div className="space-y-3 p-3">
+                    <p className="text-[11px] text-brand-grey dark:text-slate-400">
+                      Captains whose total time is at least twice this seat&apos;s minimum. They are still candidates and
+                      still scored — just ranked below people who fit the seat, because on a low-minimum seat this much
+                      experience is often a flight risk. Use &quot;Skip — Overqualified&quot; on a card to set one aside
+                      properly.
+                    </p>
+                    {likelyOverqualified.map((match) => (
+                      <MatchCard
+                        key={`over:${match.candidateId}`}
+                        match={match}
+                        requirementId={data.requirementId}
+                        canEdit={data.canEdit}
+                        applied={appliedIds.has(match.candidateId)}
+                        onMoveTier={(next) => moveTo(match.candidateId, match.candidateName, next)}
+                        moving={moving}
+                        onExclude={(reason, note) => excludeCandidate(match.candidateId, match.candidateName, reason, note)}
+                        excluding={moving}
+                        onSelectName={selectCandidate}
+                        selected={selectedId === match.candidateId}
+                        onViewRoles={onViewCandidate}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             {/* Set aside on this position only. Deliberately still on the page:
                 the automatic catch fires off self-reported hours, which are

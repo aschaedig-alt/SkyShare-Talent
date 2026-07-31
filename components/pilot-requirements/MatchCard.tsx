@@ -363,6 +363,15 @@ export function MatchCard({
             <div className="mt-2 inline-flex items-center gap-1 rounded-element bg-brand-cloudDancer px-2 py-1 text-[10px] font-semibold text-brand-grey dark:bg-white/5 dark:text-slate-400">
               <TrendingUp className="h-3 w-3" /> Overqualified for this seat — kept on the board by you
             </div>
+          ) : match.likelyOverqualified ? (
+            // A captain seat. Never removed — high hours are usually what you
+            // want in a captain — but flagged and ranked last, because on a
+            // low-minimum seat this can still be a flight risk.
+            <div className="mt-2 inline-flex items-center gap-1 rounded-element bg-value-leadership-light/70 px-2 py-1 text-[10px] font-semibold text-value-leadership-dark">
+              <TrendingUp className="h-3 w-3" />
+              Likely overqualified — {match.overqualifiedRatio}× this seat&apos;s total-time minimum. Still in the running,
+              ranked last.
+            </div>
           ) : null}
 
           <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
