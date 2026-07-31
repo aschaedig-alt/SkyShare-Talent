@@ -1205,13 +1205,46 @@ function CommunicationHistory({ attendees }: { attendees: AttendeeRow[] }) {
 // a real new hire with nobody watching, so it is opted into one session at a time
 // and the control states plainly what will happen and when.
 
+type ReminderHealth = {
+  ranToday: boolean;
+  overdueToday: boolean;
+  problems: string[];
+  lastRun: {
+    at: string;
+    outcome: "sent" | "nothing-due" | "failed" | "crashed";
+    sent: { name: string; to: string }[];
+    failed: { name: string; error: string }[];
+    error?: string;
+  } | null;
+};
+
+type ReminderPreview = {
+  wouldSend: number;
+  wouldSkip: number;
+  sessions: {
+    sessionId: string;
+    recipients: {
+      attendeeId: string;
+      name: string;
+      action: "would-send" | "would-skip";
+      reason?: string;
+      to: string[];
+      warnings: string[];
+    }[];
+  }[];
+};
+
 function ReminderScheduler({ sessionId }: { sessionId: string }) {
   const [status, setStatus] = useState<{
     armed: boolean;
     sendOnLabel: string;
+    sendOnKey: string;
     dueToday: boolean;
     passed: boolean;
   } | null>(null);
+  const [health, setHealth] = useState<ReminderHealth | null>(null);
+  const [preview, setPreview] = useState<ReminderPreview | null>(null);
+  const [previewBusy, setPreviewBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -1221,6 +1254,30 @@ function ReminderScheduler({ sessionId }: { sessionId: string }) {
       .then((d) => setStatus(d?.sendOnLabel ? d : null))
       .catch(() => setStatus(null));
   }, [sessionId]);
+
+  // Health is about the CRON, not this one session, so it loads regardless of
+  // whether this session happens to be armed — a stopped cron is worth seeing
+  // from wherever you are looking.
+  useEffect(() => {
+    fetch("/api/orientation/reminder-health")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setHealth(d && Array.isArray(d.problems) ? d : null))
+      .catch(() => setHealth(null));
+  }, [sessionId]);
+
+  async function loadPreview() {
+    if (!status) return;
+    setPreviewBusy(true);
+    try {
+      const res = await fetch(`/api/orientation/reminder-health?preview=${status.sendOnKey}`);
+      const d = await res.json();
+      setPreview(d?.preview ?? null);
+    } catch {
+      setPreview(null);
+    } finally {
+      setPreviewBusy(false);
+    }
+  }
 
   async function toggle(next: boolean) {
     if (
@@ -1250,7 +1307,18 @@ function ReminderScheduler({ sessionId }: { sessionId: string }) {
     }
   }
 
-  if (!status) return null;
+  // A problem with the CRON is not session-scoped, so it must survive this
+  // session's own status failing to load — otherwise the one thing worth seeing
+  // disappears exactly when something is already wrong.
+  const problemBox = health?.problems.length ? (
+    <ul className="mt-2 space-y-1 rounded border border-red-300 bg-red-50 p-2.5 text-[11.5px] text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300">
+      {health.problems.map((p) => (
+        <li key={p}>{p}</li>
+      ))}
+    </ul>
+  ) : null;
+
+  if (!status) return problemBox;
 
   return (
     <div className="mt-3 rounded border border-brand-lea/15 p-3 dark:border-white/10">
@@ -1282,6 +1350,77 @@ function ReminderScheduler({ sessionId }: { sessionId: string }) {
           </>
         )}
       </p>
+
+      {/* Whether the cron is actually alive. This is the only send in the app with
+          nobody watching it, and its failure mode is silence — so "it didn't run"
+          has to be as visible here as "it ran and failed". */}
+      {problemBox}
+
+      {health ? (
+        <p className="mt-1.5 text-[11px] text-brand-grey dark:text-slate-400">
+          {health.lastRun ? (
+            <>
+              Last automatic run{" "}
+              <span className="font-semibold text-brand-lea dark:text-slate-200">
+                {new Date(health.lastRun.at).toLocaleString("en-US", { timeZone: "America/Denver" })}
+              </span>{" "}
+              —{" "}
+              {health.lastRun.outcome === "sent"
+                ? `sent ${health.lastRun.sent.length}`
+                : health.lastRun.outcome === "nothing-due"
+                  ? "nothing was due"
+                  : health.lastRun.outcome === "failed"
+                    ? `${health.lastRun.failed.length} failed`
+                    : `crashed (${health.lastRun.error ?? "no detail"})`}
+              .
+            </>
+          ) : (
+            <>No automatic run has ever been recorded.</>
+          )}
+        </p>
+      ) : null}
+
+      {/* A dry run, because the first unattended send is not the moment to find out
+          who it resolves to. Builds the real emails and sends nothing. */}
+      {status.armed && !status.passed ? (
+        <div className="mt-2">
+          <button
+            onClick={() => (preview ? setPreview(null) : void loadPreview())}
+            disabled={previewBusy}
+            className="rounded border border-brand-lea/20 px-2 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-gold/10 disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+          >
+            {previewBusy ? "Checking…" : preview ? "Hide what will go out" : "Show exactly what will go out"}
+          </button>
+
+          {preview ? (
+            <div className="mt-2 rounded border border-brand-lea/15 p-2.5 dark:border-white/10">
+              <p className="text-[11.5px] font-semibold text-brand-lea dark:text-slate-100">
+                {preview.wouldSend} would be emailed
+                {preview.wouldSkip ? `, ${preview.wouldSkip} skipped` : ""} on {status.sendOnLabel}. Nothing was sent
+                just now.
+              </p>
+              <ul className="mt-1.5 space-y-1">
+                {preview.sessions
+                  .flatMap((s) => s.recipients)
+                  .map((r) => (
+                    <li key={r.attendeeId} className="text-[11px] text-brand-grey dark:text-slate-400">
+                      <span className="font-semibold text-brand-lea dark:text-slate-200">{r.name}</span>{" "}
+                      {r.action === "would-send" ? (
+                        <>→ {r.to.join(", ") || "no address"}</>
+                      ) : (
+                        <span className="text-amber-700 dark:text-amber-300">skipped — {r.reason}</span>
+                      )}
+                      {r.warnings.length ? (
+                        <span className="text-amber-700 dark:text-amber-300"> · {r.warnings.join("; ")}</span>
+                      ) : null}
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {msg ? <p className="mt-1.5 text-[11px] font-semibold text-brand-eden dark:text-slate-300">{msg}</p> : null}
     </div>
   );

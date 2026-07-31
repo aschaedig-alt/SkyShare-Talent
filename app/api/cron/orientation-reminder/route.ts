@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { runDueReminders } from "@/lib/orientation/reminder";
+import { mountainDayKey, recordReminderRun, runDueReminders } from "@/lib/orientation/reminder";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +39,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     console.error("Orientation reminder cron failed:", error);
+    // Recorded as well as logged. A console line in Vercel is only ever read by
+    // somebody who already suspects a problem, and the whole point here is that
+    // nobody would know to look.
+    await recordReminderRun({
+      at: new Date().toISOString(),
+      dayKey: mountainDayKey(new Date()),
+      outcome: "crashed",
+      sessionsChecked: 0,
+      sent: [],
+      failed: [],
+      skipped: [],
+      error: error instanceof Error ? error.message : "Reminder run failed."
+    });
     return NextResponse.json(
       { ok: false, message: error instanceof Error ? error.message : "Reminder run failed." },
       { status: 500 }
