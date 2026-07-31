@@ -7,8 +7,9 @@ import { scanPilotApplications, resolveLimit } from "@/lib/pilotapp/scan";
  *
  * SAFE BY DEFAULT: dry run unless ?apply=1 — so this can always be used to see
  * exactly which candidate each notice would be filed against BEFORE anything is
- * downloaded, commented on, or archived. The nightly run lives at
- * /api/cron/pilot-app-scan; both call the same scanPilotApplications().
+ * downloaded or commented on. Nothing is ever archived: threads stay open in
+ * Front so the application can still be added to Paycom by hand. The nightly run
+ * lives at /api/cron/pilot-app-scan; both call the same scanPilotApplications().
  *
  * Query params: apply=1 to write · limit=N (max 300) · q=<front search>.
  */

@@ -8,11 +8,14 @@ export const dynamic = "force-dynamic";
  * Vercel Cron. Vercel sends `Authorization: Bearer ${CRON_SECRET}`.
  *
  * This one APPLIES: it downloads each signed PDF, files it against the matching
- * candidate, and only then archives the thread. Safe to run unattended because
- * the handler is idempotent (a PDF already filed is skipped by Front message id),
- * never guesses when a name matches two people, and leaves anything it could not
- * file OPEN with a comment saying why. Use POST /api/front/scan-pilot-apps (dry
- * run by default) to see what it would do first.
+ * candidate, and tags the thread. It does NOT archive anything — every thread is
+ * left open, filed or not, because adding the application to Paycom is still a
+ * manual step and the open thread is the only queue for it. Safe to run
+ * unattended because the handler is idempotent (a PDF already filed is skipped by
+ * Front message id, so re-seeing the same open thread every night costs a lookup
+ * and nothing else), and it never guesses when a name matches two people. Use
+ * POST /api/front/scan-pilot-apps (dry run by default) to see what it would do
+ * first.
  */
 export async function GET(request: Request) {
   // FAIL CLOSED — this route writes to the live database and to Front, and the
@@ -35,7 +38,7 @@ export async function GET(request: Request) {
   try {
     const report = await scanPilotApplications({ apply: true });
     console.log(
-      `Pilot app cron: ${report.conversationsScanned} threads, ${report.noticesFound} notices, ${report.attached} filed, ${report.archived} archived`,
+      `Pilot app cron: ${report.conversationsScanned} threads, ${report.noticesFound} notices, ${report.attached} filed (threads left open for Paycom)`,
       report.tally
     );
     return NextResponse.json({
@@ -43,7 +46,6 @@ export async function GET(request: Request) {
       conversationsScanned: report.conversationsScanned,
       noticesFound: report.noticesFound,
       attached: report.attached,
-      archived: report.archived,
       tally: report.tally
     });
   } catch (error) {

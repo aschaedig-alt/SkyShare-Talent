@@ -57,7 +57,6 @@ type PilotAppResponse = {
   conversationsScanned: number;
   noticesFound: number;
   attached: number;
-  archived: number;
   results: PilotAppRow[];
   missingTags?: string[];
 };
@@ -276,7 +275,8 @@ function PilotAppResults({ pilot }: { pilot: PilotAppResponse }) {
             ))}
           </ul>
           <p className="mt-1.5 text-xs text-emerald-800/80 dark:text-emerald-300/80">
-            Each PDF is on the candidate&apos;s Documents tab, and its Front thread has been archived.
+            Each PDF is on the candidate&apos;s Documents tab. The Front threads are left OPEN on purpose — the
+            application still needs adding to Paycom by hand. Archive the thread in Front once that&apos;s done.
           </p>
         </div>
       ) : (

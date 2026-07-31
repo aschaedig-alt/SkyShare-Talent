@@ -5,7 +5,6 @@ import {
   addTags,
   resolveTagIdByNames,
   downloadAttachment,
-  archiveConversation,
   listComments
 } from "@/lib/front";
 import { prisma } from "@/lib/prisma";
@@ -24,13 +23,17 @@ import { readPilotApplication, signedPdf, type PilotAppResult } from "./notices"
  * downloads the signed PDF, finds the candidate, and uploads it.
  *
  * The rules, straight from how the team wants it to behave:
- *   - candidate found  -> download, attach, THEN archive the thread in Front
+ *   - candidate found  -> download, attach, tag the thread, LEAVE IT OPEN
  *   - candidate not found -> do NOT download; comment "could not find the
  *     candidate" on the thread and leave it open for a human
  *
- * Archiving strictly after a successful upload is the important ordering: an
- * archived thread is out of sight, so it must never be archived on a run that
- * did not actually file the document.
+ * NOTHING IS ARCHIVED HERE (changed Jul 30). Filing the PDF onto the candidate
+ * is only half the job: Hannah still adds each application to Paycom by hand, so
+ * archiving on our side hid threads she had not finished with. The thread is the
+ * only queue she has for that step, so it stays open and she archives it herself
+ * once it is in Paycom. Re-runs are cheap and silent — a PDF already filed is
+ * recognised by Front message id and skipped, so an open thread costs one lookup,
+ * not a duplicate document.
  */
 
 /** Marker on every note this scanner leaves, so a repeat run can recognise its
@@ -47,8 +50,9 @@ export const TAGS = {
   automated: ["[Automated]", "automated"],
   /** What this thread is. */
   pilotApp: ["Pilot App", "pilot app"],
-  /** The team's existing "this is in the ATS now" marker — the one that tells a
-      human the filing is genuinely done, which is why it's applied on success. */
+  /** The team's existing "this is in the ATS now" marker, applied on success.
+      Means the PDF is on the candidate here — NOT that it's in Paycom; that step
+      is still Hannah's, and the open thread is what tells her it's outstanding. */
   addedToAts: ["Manually Added to ATS", "manually added to ats"],
   /** Seen but NOT actioned — no candidate, or two candidates. */
   needsReview: ["Needs Review", "needs review"]
@@ -77,7 +81,6 @@ export type PilotAppReport = {
   noticesFound: number;
   /** Documents actually attached — 0 on a dry run, by definition. */
   attached: number;
-  archived: number;
   commented: number;
   tally: Record<string, number>;
   results: PilotAppRow[];
@@ -87,7 +90,7 @@ export type PilotAppReport = {
 };
 
 export type PilotAppScanOptions = {
-  /** Write. Leave false and nothing is downloaded, attached, commented or archived. */
+  /** Write. Leave false and nothing is downloaded, attached or commented on. */
   apply?: boolean;
   query?: string;
   maxConversations?: number;
@@ -96,9 +99,8 @@ export type PilotAppScanOptions = {
    *
    * Files anything that matches, but stays silent otherwise: these threads are
    * already archived and nobody is watching them, so commenting on the ones we
-   * cannot place would post dozens of notes into old history for no one, and
-   * re-archiving an archived thread is pointless. Tags still go on, because a
-   * tag is how you find them afterwards.
+   * cannot place would post dozens of notes into old history for no one. Tags
+   * still go on, because a tag is how you find them afterwards.
    */
   backfill?: boolean;
   /**
@@ -328,15 +330,15 @@ export async function processPilotAppConversation(
         if (!backfill) try {
           await addComment(
             conversationId,
-            `SkyShare Talent-Ops: filed "${pdf.filename}" to ${result.candidateName}'s documents (${via}). Archiving this thread.`
+            `SkyShare Talent-Ops: filed "${pdf.filename}" to ${result.candidateName}'s documents (${via}). ` +
+              `Leaving this thread OPEN — the application still needs adding to Paycom by hand. Archive it once that's done.`
           );
         } catch {
           /* the document is filed — a failed note must not undo that */
         }
         await tag(conversationId, [TAGS.automated, TAGS.pilotApp, TAGS.addedToAts], missing);
-        // ONLY now, with the document really attached. Skipped on a backfill:
-        // those threads are already archived.
-        if (!backfill) await archiveConversation(conversationId);
+        // Deliberately NOT archived: Paycom is still a manual step and this thread
+        // is the queue for it. See the note at the top of the file.
         out.push({ conversationId, ...result, outcome: "attached", candidateFileId: fileId });
       } catch (err) {
         const why = err instanceof Error ? err.message : "Unknown error";
@@ -422,11 +424,9 @@ export async function scanPilotApplications(opts: PilotAppScanOptions = {}): Pro
     conversationsScanned,
     noticesFound: results.length,
     attached: results.filter((r) => r.outcome === "attached" && r.candidateFileId).length,
-    // A backfill neither archives nor comments (those threads are already
-    // archived history nobody is watching), so counting them here reported 30
-    // archived threads on a run that archived none. Derived counts have to know
-    // about the flag that suppresses the thing they are counting.
-    archived: apply && !backfill ? results.filter((r) => r.outcome === "attached" && r.candidateFileId).length : 0,
+    // A backfill doesn't comment (those threads are archived history nobody is
+    // watching), so this has to know about the flag that suppresses the thing it
+    // counts — otherwise it reports notes that were never posted.
     commented:
       apply && !backfill ? results.filter((r) => r.outcome !== "attached" && r.outcome !== "already-attached").length : 0,
     tally,
