@@ -22,48 +22,133 @@ Read-only exploration is free. Writes are not. When in doubt, ask.
 
 ## Multiple agents work in this repo at the same time
 
-Other Claude sessions edit this same working tree concurrently.
+Other Claude sessions edit this same working tree concurrently. There is ONE repo,
+ONE branch, one checkout — no worktrees. Everything below exists because that is
+the constraint.
 
-- **NEVER `git add -A`, `git add .`, or `git commit -a`.** Stage only the exact
-  paths you touched: `git add path/to/file`.
-- A previous session **clobbered a sibling's uncommitted work** doing exactly this.
-- Run `git status` before staging. If you see changes you did not make, leave them
-  alone — do not commit another session's half-finished work.
-- **Do not let a subagent run git.**
+**There are two roles. You are almost always the first one.**
+
+### If you are a working agent (the default)
+
+- **Do not commit. Do not push.** Not even when the work is finished and verified.
+  You hand off instead — see "The handoff block" below.
+- **Do not edit `lib/roadmap/roadmap.ts`.** Every session used to edit it, which
+  made it the one file guaranteed to collide, and it let roadmap text reach the
+  live site hours before the code it described. You write roadmap lines into your
+  handoff block instead; the commit-and-push agent applies them.
 - **Do not switch branches.** You share this working tree; changing the checked-out
   branch yanks it out from under whoever else is working.
-- Commit or push only when the user asks. Pushing to `main` auto-deploys to the
-  live site.
+- **Do not let a subagent run git.**
+- Run `git status` before you finish. If you see changes you did not make, leave
+  them alone and name them in your handoff so they are not staged by mistake.
 
-## Keep the roadmap current. Every time. Without being asked.
+### If you are the commit-and-push agent
+
+You only have this role when the user pastes handoff blocks and asks you to commit
+and push. Then, and only then, see "The commit-and-push agent" below.
+
+### The handoff block
+
+End any turn that produced committable work by printing this, ready to copy. Keep
+it in one fenced block so it survives a copy-paste, and **use no backtick
+characters inside the ROADMAP lines** — they end up in a template literal that a
+stray backtick will break.
+
+```
+[label — what this work was]
+
+paths:
+  <exact paths you touched, one per line>
+
+do NOT stage:
+  <paths modified by other sessions, or your own scratch files>
+
+message:
+  <commit subject>
+
+  <commit body>
+
+ROADMAP: <exact ## Section name from roadmap.ts>
+- [x] <entry, in the format described under "The roadmap" below>
+
+verified: lint <pass/fail>, tsc <pass/fail>, <anything you could not verify>
+```
+
+If you found something worth recording but produced **no** committable code — a
+bug, a data problem, an idea — still emit a handoff block with `paths: none` and
+just the `ROADMAP:` section. Findings must not evaporate because no code
+accompanied them.
+
+## The roadmap
 
 The development roadmap lives in `lib/roadmap/roadmap.ts` (the `ROADMAP_MARKDOWN`
 string) and renders as the checklist on the **Command Center** page. It is how the
 team sees what is done versus what is left, so it is only useful if it is true.
 
-**Updating it is part of finishing the work — not a follow-up task, not something to
-wait to be asked for.** If you ship, change, or drop anything that is on the roadmap
-(or that should be), update `lib/roadmap/roadmap.ts` in the same change as the work.
+**Keeping it current is still part of finishing work — but you do not edit the
+file.** You write the entry into your handoff block; the commit-and-push agent
+writes it into `roadmap.ts` as the last commit before the push. The entry therefore
+ships in the same push as the code it describes, which is the point: the roadmap can
+no longer claim something is live before it is.
 
-In practice:
+**Not every thought belongs on it.** A passing idea, a maybe-someday, a preference —
+leave those out. It records work: shipped, in progress, genuinely queued, or a real
+problem found. If it would not change what somebody does next, it is noise.
 
-- **Shipped it** → mark `[x]` with a short `(MonDD)` note of what actually shipped —
+Write entries in this form:
+
+- **Shipped it** → `[x]` with a short `(MonDD)` note of what actually shipped —
   including the honest caveats (what is untested, what was skipped, what is still open).
-- **Started it** → flip to `[~]`.
-- **Something new surfaced** → add it as `[ ]`.
-- **Dropped / turned out stale** → remove it, or say plainly that it is dead. Do not
-  leave finished or abandoned work sitting as an open item.
-- The same feature is sometimes listed in more than one section — update every copy.
-
-Before you say a task is done, check whether the roadmap still tells the truth.
+- **Started but not finished** → `[~]`.
+- **Something real surfaced** → `[ ]`.
+- **Dropped / turned out stale** → say plainly that it is dead, or have it removed.
+  Do not leave finished or abandoned work sitting as an open item.
+- The same feature is sometimes listed in more than one section — say so in the
+  handoff so every copy gets updated.
 
 **Syntax rule — do not break this:** no backtick characters anywhere inside the
-`ROADMAP_MARKDOWN` string. A stray backtick terminates the template literal and
-breaks the build. (This has already happened once; see commit e609977.)
+`ROADMAP_MARKDOWN` string, which means none in the ROADMAP lines of your handoff
+either. A stray backtick terminates the template literal and breaks the build.
+(This has already happened once; see commit e609977.)
 
 The format is documented in the comment block at the top of the file: `## Section`,
 then `- [x]` done / `- [~]` in progress / `- [ ]` to do, and text after ` — ` renders
 as a small note.
+
+## The commit-and-push agent
+
+One session commits and pushes. It is the only one that touches git history or
+`lib/roadmap/roadmap.ts`. You are in this role **only** when the user pastes handoff
+blocks and asks for it.
+
+Work through them one at a time, in the order given:
+
+1. `git status` first. Anything modified that no handoff block claims belongs to a
+   session still working — **leave it alone**, and say so rather than guessing.
+2. For each block, stage **only** its listed paths — `git add path/to/file`, one
+   path at a time. **NEVER `git add -A`, `git add .`, or `git commit -a`.** A
+   previous session clobbered a sibling's uncommitted work doing exactly that.
+3. `git diff --cached --stat` before each commit. If the shape does not match what
+   the block described, stop and report.
+4. Commit that block with its own message. **One commit per handoff block** — a
+   single mixed commit cannot be reviewed or reverted per-agent.
+5. Repeat for the next block. Do not batch.
+
+Then, once all the work is committed:
+
+6. Apply every `ROADMAP:` section into `lib/roadmap/roadmap.ts` — into the named
+   section, in the stated format, **no backticks**. Flip any existing `[~]` whose
+   only remaining step was shipping. Commit that on its own.
+7. Verify the COMBINED tree, because what gets pushed is everyone's work merged and
+   no single agent tested that state: `npm run lint` and
+   `NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.json`
+   (unpiped — piping hides an OOM crash as a false pass).
+8. Push once, only if both are clean.
+
+Pushing to `main` auto-deploys to the live site, so one push is one deploy. If the
+batch is large, that is a reason to split it across pushes, not to trust it.
+
+**Do not let a subagent run git**, in this role either.
 
 ## The design system is locked
 
