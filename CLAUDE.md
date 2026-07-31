@@ -173,10 +173,25 @@ The user's rule: if a click changes the **whole screen** to another page, use a 
 
 ## Local dev is not production
 
-Local dev **bypasses auth** and writes files to **local disk**. Production uses real
-auth and **S3** (`FILE_STORAGE_PROVIDER=s3`). `canEdit`/admin is role-gated in prod,
-so a control you can click locally may be hidden for a real user. Never assume a
-storage-backed feature works in prod just because it worked locally.
+Local dev **bypasses auth**. `canEdit`/admin is role-gated in prod, so a control you
+can click locally may be hidden for a real user.
+
+**File storage is no longer local (changed Jul 30).** `.env.local` now sets
+`FILE_STORAGE_PROVIDER=s3` with real AWS keys, so **a file written from `npm run dev`
+lands in the live production bucket**. Together with the shared database above, that
+means localhost is live on *both* axes — a test upload is a real object next to real
+candidate documents.
+
+It was changed deliberately, to fix this: the Jul 27 Adobe Sign backfill was run from
+the laptop, and local-disk storage against a shared database wrote **411 rows into the
+live database pointing at S3 keys that were never uploaded**. Every one showed on a
+profile, failed to open, and still counted as satisfying the document checklist — so a
+recruiter believed a signed application was on file when it could not be produced. 308
+were on active candidates; one was already Hired. All were repaired Jul 30 (the bytes
+were still on the dev machine). See `scripts/candidate-file-audit.ts`.
+
+Because `.env.local` is gitignored, none of this is visible in the repo — do not infer
+storage behaviour from the code alone.
 
 ## Tooling gotchas that will waste your time
 
