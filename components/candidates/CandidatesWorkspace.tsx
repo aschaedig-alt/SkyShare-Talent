@@ -12,7 +12,9 @@ import {
   Archive,
   ArrowRight
 } from "lucide-react";
-import type { CandidateListData } from "@/lib/data/candidates";
+import type { CandidateListData, CandidateTagOption } from "@/lib/data/candidates";
+import { CandidateTagCell } from "@/components/candidates/CandidateTagCell";
+import { CandidateTagFilter } from "@/components/candidates/CandidateTagFilter";
 import { NewCandidateButton } from "@/components/candidates/NewCandidateButton";
 import { ResumeIntake } from "@/components/candidates/ResumeIntake";
 import { DocumentIntake } from "@/components/candidates/DocumentIntake";
@@ -23,6 +25,10 @@ import type { WidgetInstance } from "@/lib/data/page-layout";
 type CandidatesWorkspaceProps = {
   data: CandidateListData;
   query: string;
+  /** Every tag that exists, most-used-on-live-people first. */
+  tagOptions?: CandidateTagOption[];
+  /** Tags currently narrowing the list, from ?tags= in the URL. */
+  activeTags?: string[];
   canEdit?: boolean;
   savedLayout?: GridItem[] | null;
   savedWidgets?: WidgetInstance[] | null;
@@ -97,7 +103,16 @@ function initials(name: string) {
     .join("");
 }
 
-export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout = null, savedWidgets = null, onboardingIntent = false }: CandidatesWorkspaceProps) {
+export function CandidatesWorkspace({
+  data,
+  query,
+  tagOptions = [],
+  activeTags = [],
+  canEdit = false,
+  savedLayout = null,
+  savedWidgets = null,
+  onboardingIntent = false
+}: CandidatesWorkspaceProps) {
   const statsPanel = (
     <section className="grid h-full content-start gap-3 grid-cols-[repeat(auto-fit,minmax(150px,1fr))]">
       {statConfig.map(({ key, label, icon: Icon, accent }) => (
@@ -146,7 +161,7 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
 
   const recordsPanel = (
     <section className="flex h-full flex-col overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-      <div className="flex shrink-0 items-center justify-between border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
+      <div className="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
         <div>
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Candidate records</h2>
           {/* Say plainly when the list is a subset. "Showing up to 100" left you
@@ -158,9 +173,12 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
               : `Showing all ${data.candidates.length}${query ? ` matching "${query}"` : ""}.`}
           </p>
         </div>
-        <span className="rounded bg-brand-cloudDancer/70 px-3 py-1 text-xs font-semibold text-brand-lea dark:bg-white/5 dark:text-slate-100">
-          {data.candidates.length} shown
-        </span>
+        <div className="flex items-center gap-2">
+          <CandidateTagFilter options={tagOptions} active={activeTags} query={query} />
+          <span className="rounded bg-brand-cloudDancer/70 px-3 py-1 text-xs font-semibold text-brand-lea dark:bg-white/5 dark:text-slate-100">
+            {data.candidates.length} shown
+          </span>
+        </div>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         {data.candidates.length > 0 ? (
@@ -244,17 +262,7 @@ export function CandidatesWorkspace({ data, query, canEdit = false, savedLayout 
                       </div>
                     </td>
                     <td className="px-4 py-4">
-                      <div className="flex max-w-[240px] flex-wrap gap-1">
-                        {candidate.tags.length > 0 ? (
-                          candidate.tags.map((tag) => (
-                            <span key={tag} className="rounded bg-brand-sweet/25 px-2 py-0.5 text-[11px] font-semibold text-brand-lea dark:text-slate-100">
-                              {tag}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-xs text-brand-grey dark:text-slate-400">No tags</span>
-                        )}
-                      </div>
+                      <CandidateTagCell chips={candidate.tagChips} />
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex flex-wrap gap-1.5 text-[11px] font-medium text-brand-grey dark:text-slate-400">

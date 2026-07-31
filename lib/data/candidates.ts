@@ -6,6 +6,7 @@ import { parseOfferSteps } from "@/lib/offers/steps";
 import { suggestCompanyEmail } from "@/lib/people/company-email";
 import { resolveDepartmentKey } from "@/lib/calendar/departments";
 import type { ViewerScope } from "@/lib/auth/viewer-scope";
+import type { TagChip } from "@/lib/tags/colors";
 
 export type CandidateListViewer = Pick<ViewerScope, "role" | "department" | "restrictCandidatesToDepartment">;
 
@@ -36,6 +37,14 @@ export type CandidateListItem = {
   primaryEmail: string | null;
   primaryPhone: string | null;
   tags: string[];
+  /**
+   * The same tags carrying their colour, for the Tags column.
+   *
+   * Kept ALONGSIDE the plain string list rather than replacing it: `tags` is
+   * still what isTestTagged() and the search paths read, and widening those to
+   * objects would ripple a long way for no gain.
+   */
+  tagChips: TagChip[];
   updatedAt: string;
   noteCount: number;
   fileCount: number;
@@ -86,6 +95,8 @@ export type CandidateProfileData = {
   primaryEmail: string | null;
   primaryPhone: string | null;
   tags: string[];
+  /** The same tags with their colour, for the pills under the name. */
+  tagChips: TagChip[];
   folders: string[];
   pros: string[];
   cons: string[];
@@ -267,6 +278,38 @@ export type CandidateProfileData = {
 
 
 /** Merge legacy tagsJson tags with normalized CandidateTag labels (case-insensitive dedupe). */
+/**
+ * Tags with colour, in the same merged order as mergeTags produces.
+ *
+ * Legacy tagsJson entries have no colour of their own — nothing ever stored one
+ * for them — so they come through as null and the UI derives a stable colour
+ * from the label instead.
+ */
+function mergeTagChips(
+  jsonTags: string[],
+  normalized: Array<{ label: string; color: string | null; source: string | null }>
+): TagChip[] {
+  const seen = new Set<string>();
+  const out: TagChip[] = [];
+  const all: TagChip[] = [
+    // Legacy tagsJson entries are historical by definition — they only exist on
+    // records written by an importer, and nothing has added to that column since.
+    ...jsonTags.map((label) => ({ label, color: null, historical: true })),
+    ...normalized.map((n) => ({ label: n.label, color: n.color, historical: n.source !== "MANUAL" }))
+  ];
+  for (const chip of all) {
+    const trimmed = chip.label.trim();
+    const key = trimmed.toLowerCase();
+    if (trimmed && !seen.has(key)) {
+      seen.add(key);
+      out.push({ ...chip, label: trimmed });
+    }
+  }
+  // Current tags first, then historical — so the colour is what you see and the
+  // grey is what you scroll past.
+  return out.sort((a, b) => Number(a.historical) - Number(b.historical) || a.label.localeCompare(b.label));
+}
+
 function mergeTags(jsonTags: string[], normalizedTags: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
@@ -295,9 +338,77 @@ function buildSnippet(text: string, query: string): string {
   return `${prefix}${text.slice(start, end).trim()}${suffix}`;
 }
 
-export async function getCandidateListData(query = "", viewer?: CandidateListViewer): Promise<CandidateListData> {
+/**
+ * Every tag that exists, with how many candidates carry it.
+ *
+ * `live` counts only non-archived people. That split matters: 38 tags arrived
+ * from the Jazz import carrying 1,648 links, but they sit almost entirely on
+ * archived historical records — so ordering the filter by raw total would put
+ * tags describing a process we no longer run above the ones actually in use.
+ */
+export type CandidateTagOption = {
+  label: string;
+  color: string | null;
+  live: number;
+  total: number;
+  /**
+   * True when NOBODY has applied this tag by hand — every link came from the
+   * import. Those are shown separately in the filter so the vocabulary somebody
+   * actually chose is not buried under 38 imported workflow labels.
+   */
+  historical: boolean;
+};
+
+export async function getCandidateTagOptions(): Promise<CandidateTagOption[]> {
+  const tags = await prisma.tag.findMany({
+    select: {
+      label: true,
+      color: true,
+      _count: { select: { candidates: true } },
+      candidates: {
+        where: { candidate: { archivedAt: null } },
+        select: { candidateId: true }
+      }
+    }
+  });
+
+  // One extra query rather than pulling every link: which tags have at least one
+  // hand-applied use.
+  const manual = await prisma.candidateTag.findMany({
+    where: { source: "MANUAL" },
+    select: { tag: { select: { label: true } } },
+    distinct: ["tagId"]
+  });
+  const manualLabels = new Set(manual.map((m) => m.tag.label));
+
+  return tags
+    .map((t) => ({
+      label: t.label,
+      color: t.color,
+      live: t.candidates.length,
+      total: t._count.candidates,
+      historical: !manualLabels.has(t.label)
+    }))
+    .sort(
+      (a, b) =>
+        Number(a.historical) - Number(b.historical) || b.live - a.live || a.label.localeCompare(b.label)
+    );
+}
+
+export async function getCandidateListData(
+  query = "",
+  viewer?: CandidateListViewer,
+  /**
+   * Tag labels to narrow to. Filtering happens in the DATABASE, not in the
+   * component: the list is capped at CANDIDATE_LIST_LIMIT, so filtering the
+   * returned page client-side would search only the first 100 rows and quietly
+   * miss anyone past the cap.
+   */
+  tagFilter: string[] = []
+): Promise<CandidateListData> {
   const normalizedQuery = query.trim().toLowerCase();
   const hasQuery = normalizedQuery.length > 0;
+  const tags = tagFilter.map((t) => t.trim()).filter(Boolean);
 
   // When searching, span ALL candidates including archived/historical (Jazz)
   // ones so legacy records are findable. With no query, the default list stays
@@ -334,6 +445,21 @@ export async function getCandidateListData(query = "", viewer?: CandidateListVie
     };
   }
 
+  // Tag filter. AND across tags — picking two means "carries both", which is
+  // what narrowing is for; OR would widen the list as you added tags, which is
+  // the opposite of what clicking another filter looks like it should do.
+  //
+  // Matched case-insensitively through `normalized`, since the legacy importer
+  // and hand-typed tags do not agree on casing.
+  if (tags.length) {
+    candidateWhere = {
+      ...candidateWhere,
+      AND: tags.map((label) => ({
+        candidateTags: { some: { tag: { normalized: label.toLowerCase() } } }
+      }))
+    };
+  }
+
   // Only pull document text for matching files when there's a query (keeps the list light).
   const filesInclude = hasQuery
     ? ({
@@ -361,7 +487,9 @@ export async function getCandidateListData(query = "", viewer?: CandidateListVie
       orderBy: [{ updatedAt: "desc" }, { displayName: "asc" }],
       include: {
         files: filesInclude,
-        candidateTags: { include: { tag: { select: { label: true } } } },
+        candidateTags: { include: { tag: { select: { label: true, color: true } } } },
+      // `source` is what separates a tag somebody chose from one the importer
+      // left behind; see mergeTagChips.
         _count: {
           select: {
             notes: true,
@@ -409,6 +537,14 @@ export async function getCandidateListData(query = "", viewer?: CandidateListVie
       tags: mergeTags(
         parseStringArray(candidate.tagsJson),
         (candidate as typeof candidate & { candidateTags?: Array<{ tag: { label: string } }> }).candidateTags?.map((ct) => ct.tag.label) ?? []
+      ),
+      tagChips: mergeTagChips(
+        parseStringArray(candidate.tagsJson),
+        (
+          candidate as typeof candidate & {
+            candidateTags?: Array<{ source: string | null; tag: { label: string; color: string | null } }>;
+          }
+        ).candidateTags?.map((ct) => ({ label: ct.tag.label, color: ct.tag.color, source: ct.source })) ?? []
       ),
       updatedAt: candidate.updatedAt.toISOString(),
       noteCount: candidate._count.notes,
@@ -626,7 +762,9 @@ export async function getCandidateProfileData(id: string, viewer?: ViewerScope):
         orderBy: { startDateTime: "asc" }
       },
       aiSummary: true,
-      candidateTags: { include: { tag: { select: { label: true } } } },
+      candidateTags: { include: { tag: { select: { label: true, color: true } } } },
+      // `source` is what separates a tag somebody chose from one the importer
+      // left behind; see mergeTagChips.
       communications: {
         orderBy: { sentAt: "desc" },
         take: 100
@@ -833,6 +971,10 @@ export async function getCandidateProfileData(id: string, viewer?: ViewerScope):
     primaryEmail: candidate.primaryEmail,
     primaryPhone: candidate.primaryPhone,
     tags: mergeTags(parseStringArray(candidate.tagsJson), candidate.candidateTags.map((ct) => ct.tag.label)),
+    tagChips: mergeTagChips(
+      parseStringArray(candidate.tagsJson),
+      candidate.candidateTags.map((ct) => ({ label: ct.tag.label, color: ct.tag.color ?? null, source: ct.source }))
+    ),
     folders: parseStringArray(candidate.foldersJson),
     pros: parseStringArray(candidate.prosJson),
     cons: parseStringArray(candidate.consJson),

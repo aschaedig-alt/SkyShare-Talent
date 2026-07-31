@@ -17,6 +17,7 @@ import { LinkedHistoricalPanel } from "@/components/candidates/LinkedHistoricalP
 import { MoveToPreOnboardingPanel } from "@/components/candidates/MoveToPreOnboardingPanel";
 import { AddJobToCandidate } from "@/components/candidates/AddJobToCandidate";
 import { DeleteCandidateButton } from "@/components/candidates/DeleteCandidateButton";
+import { CandidateTagEditor } from "@/components/candidates/CandidateTagEditor";
 import { OfferControl } from "@/components/candidates/OfferControl";
 import { isTestTagged } from "@/lib/testdata/markers";
 import { offerStatusLabel } from "@/lib/offers/constants";
@@ -137,30 +138,10 @@ export function CandidateProfileWorkspace({
   const [candidate, setCandidate] = useState<CandidateProfileData>(initialCandidate);
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<ProfileTab>(() => tabFromQuery(searchParams.get("tab")) ?? "documents");
-  const [tagsOpen, setTagsOpen] = useState(false);
-  // Two-click removal rather than a modal: the first click arms the pill, the
-  // second removes it, and blurring cancels — the same pattern the trip delete
-  // button uses. It matters here because there is no way to ADD a tag back from
-  // this screen, so a stray click would be a one-way door.
-  const [armedTag, setArmedTag] = useState<string | null>(null);
-  const [removingTag, setRemovingTag] = useState<string | null>(null);
-
-  async function removeTag(tag: string) {
-    setRemovingTag(tag);
-    try {
-      const res = await fetch(`/api/candidates/${candidate.id}/tags`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: tag })
-      });
-      if (res.ok) {
-        setCandidate({ ...candidate, tags: candidate.tags.filter((t) => t !== tag) });
-      }
-    } finally {
-      setRemovingTag(null);
-      setArmedTag(null);
-    }
-  }
+  // Adding, removing, recolouring and the historical group all live in
+  // CandidateTagEditor now. The two-click removal it uses is the same pattern
+  // that was here before — but it is no longer a one-way door, since a tag taken
+  // off by mistake can now be added straight back.
   const [openApp, setOpenApp] = useState<string | null>(null);
   const [armedApplication, setArmedApplication] = useState<string | null>(null);
   const [removingApplication, setRemovingApplication] = useState<string | null>(null);
@@ -291,50 +272,14 @@ export function CandidateProfileWorkspace({
             <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
               {[candidate.currentTitle, candidate.stage].filter(Boolean).join(" · ") || "No title recorded"}
             </p>
-            {candidate.tags.length > 0 && (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                {(tagsOpen ? candidate.tags : candidate.tags.slice(0, 4)).map((tag) => {
-                  const armed = armedTag === tag;
-                  return (
-                    <span
-                      key={tag}
-                      className={clsx(
-                        "inline-flex items-center gap-1.5 rounded border px-2.5 py-1 text-[11px] font-semibold transition",
-                        armed
-                          ? "border-red-400 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300"
-                          : "border-brand-sweet/60 bg-brand-sweet/18 text-brand-lea dark:text-slate-100"
-                      )}
-                    >
-                      {armed ? `Remove "${tag}"?` : tag}
-                      {canEdit && (
-                        <button
-                          onClick={() => (armed ? removeTag(tag) : setArmedTag(tag))}
-                          onBlur={() => setArmedTag((current) => (current === tag ? null : current))}
-                          disabled={removingTag === tag}
-                          aria-label={armed ? `Confirm removing the tag ${tag}` : `Remove the tag ${tag}`}
-                          className={clsx(
-                            "-mr-1 rounded px-1 leading-none transition disabled:opacity-40",
-                            armed
-                              ? "text-red-700 hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-500/20"
-                              : "text-brand-eden hover:bg-brand-lea/10 hover:text-brand-lea dark:text-slate-300 dark:hover:bg-white/10"
-                          )}
-                        >
-                          {armed ? "✓" : "×"}
-                        </button>
-                      )}
-                    </span>
-                  );
-                })}
-                {candidate.tags.length > 4 && (
-                  <button
-                    onClick={() => setTagsOpen((v) => !v)}
-                    className="rounded border border-brand-lea/20 px-2 py-1 text-[11px] font-semibold text-brand-eden transition hover:bg-brand-cloudDancer/40 dark:border-white/10 dark:text-slate-300"
-                  >
-                    {tagsOpen ? "Show less" : `+${candidate.tags.length - 4} more`}
-                  </button>
-                )}
-              </div>
-            )}
+            <CandidateTagEditor
+              candidateId={candidate.id}
+              chips={candidate.tagChips}
+              canEdit={canEdit}
+              onChange={(chips) =>
+                setCandidate({ ...candidate, tagChips: chips, tags: chips.map((c) => c.label) })
+              }
+            />
           </div>
           <div className="flex items-center gap-2">
             <PaycomLinkControl candidateId={candidate.id} paycomLink={candidate.paycomLink} canEdit={canEdit} />
