@@ -157,8 +157,10 @@ export function TravelChecklist({ trip }: { trip: TravelTripView }) {
                 ))}
               </select>
               <p className="mt-1 text-[10.5px] leading-snug text-brand-grey dark:text-slate-400">
-                Accounting has not confirmed the reimbursement process yet, so the steps after &ldquo;Sent to
-                accounting&rdquo; are here to be tracked by hand rather than driven by the app.
+                To reimburse: HR emails payables@skyshare.com with the receipts attached and the trip details
+                &mdash; traveler name, dates, and the purpose of the trip and expenses. HR sends it, not the
+                traveler. Approval and payment timeline were not specified, so the steps after &ldquo;Sent to
+                accounting&rdquo; are tracked by hand rather than driven by the app.
               </p>
             </div>
           </div>
