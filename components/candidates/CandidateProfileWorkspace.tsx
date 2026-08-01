@@ -257,7 +257,17 @@ export function CandidateProfileWorkspace({
 
       {/* Header */}
       <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-        <Link href="/candidates" className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-eden hover:text-brand-lea dark:text-slate-100">
+        {/* A real target, not bare words. As a plain text link the clickable area
+            was exactly the width of the letters, so a near-miss did nothing and
+            read as the link being broken — the last open piece of the "Back to
+            candidates feels broken" report. Now it is a padded, bordered box
+            that highlights on hover, so where to click is visible before you
+            click and anywhere inside it works. The negative margin cancels the
+            new padding so the text still lines up with the content below. */}
+        <Link
+          href="/candidates"
+          className="-ml-2.5 inline-flex items-center gap-1.5 rounded border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-eden transition hover:border-brand-gold hover:bg-brand-gold/10 hover:text-brand-lea hover:shadow-glow dark:border-white/10 dark:text-slate-300 dark:hover:bg-brand-gold/15 dark:hover:text-slate-100"
+        >
           ← Back to candidates
           {/* The click already worked before this existed — what was missing
               was any sign of it. See the component doc. */}

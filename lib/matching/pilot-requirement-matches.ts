@@ -1033,11 +1033,30 @@ export const candidateMatchSelect = {
   }
 } as const;
 
+// Both groups were capped low enough that real scans hit the ceiling EXACTLY —
+// 60 set aside on the live G200 scan, 40 likely-overqualified on PC-12 Captain —
+// and a list that stops at its cap with no count reads as the complete list.
+// Raised well clear of the observed ceilings, and the totals below make a future
+// truncation say so instead of hiding.
+//
+// Slicing more is cheap: the pool is already scored in memory by this point, so
+// the cost is payload size, not scan time.
+
+// Measured across the eight live requirements after raising these: the largest
+// real groups are 455 set aside (Citation CJ2 First Officer) and 237
+// overqualified (Citation CJ2 Captain). The old 60/40 were therefore showing
+// between a ninth and a quarter of each group while looking complete.
+//
+// Set to clear the observed maxima with headroom. Both groups render COLLAPSED,
+// so the cost is payload rather than anything on screen; if the page gets heavy
+// the answer is paging, not a quieter cap — the counts above make a truncation
+// visible either way.
+
 /** How many set-aside candidates to carry back for the collapsed group. */
-export const SET_ASIDE_LIMIT = 60;
+export const SET_ASIDE_LIMIT = 600;
 
 /** How many likely-overqualified captains to carry back for their group. */
-export const LIKELY_OVERQUALIFIED_LIMIT = 40;
+export const LIKELY_OVERQUALIFIED_LIMIT = 400;
 
 export type RequirementScanResult = {
   /** The ranked board. */
@@ -1055,6 +1074,16 @@ export type RequirementScanResult = {
    * call stays visible and reversible.
    */
   setAside: PilotRequirementCandidateMatch[];
+  /**
+   * How many there ACTUALLY are, before the limits above cut the list.
+   *
+   * Carried separately so the UI can say "200 of 431" rather than "200" — a
+   * capped group that shows only its own length is indistinguishable from a
+   * complete one, which is exactly how the old 40- and 60-row ceilings went
+   * unnoticed while sitting on them exactly.
+   */
+  likelyOverqualifiedTotal: number;
+  setAsideTotal: number;
 };
 
 /**
@@ -1072,7 +1101,9 @@ export async function scanRequirementPool(
   skips: RequirementSkips = {},
   includeExcluded = false
 ): Promise<RequirementScanResult> {
-  if (!requirement) return { ranked: [], likelyOverqualified: [], setAside: [] };
+  if (!requirement) {
+    return { ranked: [], likelyOverqualified: [], setAside: [], likelyOverqualifiedTotal: 0, setAsideTotal: 0 };
+  }
 
   // No `take` here on purpose. The old 250-row cap ordered by updatedAt meant a
   // scan silently saw only the most recently touched slice of the pool; with the
@@ -1118,7 +1149,10 @@ export async function scanRequirementPool(
       ...ranked.filter((match) => match.fromArchive).slice(0, ARCHIVE_MATCH_LIMIT)
     ],
     likelyOverqualified: overqualifiedCaptains.slice(0, LIKELY_OVERQUALIFIED_LIMIT),
-    setAside: setAside.slice(0, SET_ASIDE_LIMIT)
+    setAside: setAside.slice(0, SET_ASIDE_LIMIT),
+    // Counted before the slice, on purpose.
+    likelyOverqualifiedTotal: overqualifiedCaptains.length,
+    setAsideTotal: setAside.length
   };
 }
 

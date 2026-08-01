@@ -209,6 +209,8 @@ export async function getRoleScreening(requirementId: string | null, includeExcl
     best: [],
     setAside: [],
     likelyOverqualified: [],
+    setAsideTotal: 0,
+    likelyOverqualifiedTotal: 0,
     applicantIds: [],
     scannedCount: 0,
     scannedCurrent: 0,
@@ -253,6 +255,8 @@ export async function getRoleScreening(requirementId: string | null, includeExcl
     best: scan.ranked,
     setAside: scan.setAside,
     likelyOverqualified: scan.likelyOverqualified,
+    setAsideTotal: scan.setAsideTotal,
+    likelyOverqualifiedTotal: scan.likelyOverqualifiedTotal,
     applicantIds,
     ...countFields,
     canEdit

@@ -26,6 +26,9 @@ export type JobScreeningData = {
   setAside: PilotRequirementCandidateMatch[];
   /** Captain seats at 2x+ the total-time minimum. Still candidates, ranked apart. */
   likelyOverqualified: PilotRequirementCandidateMatch[];
+  /** True counts before the display caps, so a truncated group can say so. */
+  setAsideTotal: number;
+  likelyOverqualifiedTotal: number;
   applicantIds: string[];
   scannedCount: number;
   /** Live pipeline candidates considered in the scan. */
@@ -51,6 +54,8 @@ export async function getJobScreening(jobId: string | null): Promise<JobScreenin
     best: [],
     setAside: [],
     likelyOverqualified: [],
+    setAsideTotal: 0,
+    likelyOverqualifiedTotal: 0,
     applicantIds: [],
     scannedCount: 0,
     scannedCurrent: 0,
@@ -126,6 +131,8 @@ export async function getJobScreening(jobId: string | null): Promise<JobScreenin
     best: scan.ranked,
     setAside: scan.setAside,
     likelyOverqualified: scan.likelyOverqualified,
+    setAsideTotal: scan.setAsideTotal,
+    likelyOverqualifiedTotal: scan.likelyOverqualifiedTotal,
     applicantIds,
     ...countFields,
     canEdit

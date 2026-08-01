@@ -440,7 +440,7 @@ export function JobScreeningPanel({
                   <span className="flex items-center gap-2">
                     <TrendingUp className="h-3.5 w-3.5 text-value-leadership-dark" />
                     <span className="text-[11px] font-semibold text-brand-lea dark:text-slate-100">Likely overqualified</span>
-                    <span className="text-xs text-brand-grey dark:text-slate-400">({likelyOverqualified.length})</span>
+                    <GroupCount shown={likelyOverqualified.length} total={data.likelyOverqualifiedTotal} />
                   </span>
                   <ChevronDown
                     className={clsx("h-4 w-4 text-brand-grey transition-transform dark:text-slate-400", !overqualifiedOpen && "-rotate-90")}
@@ -490,7 +490,7 @@ export function JobScreeningPanel({
                   <span className="flex items-center gap-2">
                     <TrendingUp className="h-3.5 w-3.5 text-value-leadership-dark" />
                     <span className="text-[11px] font-semibold text-brand-lea dark:text-slate-100">Set aside on this position</span>
-                    <span className="text-xs text-brand-grey dark:text-slate-400">({setAsideMatches.length})</span>
+                    <GroupCount shown={setAsideMatches.length} total={data.setAsideTotal} />
                   </span>
                   <ChevronDown
                     className={clsx("h-4 w-4 text-brand-grey transition-transform dark:text-slate-400", !setAsideOpen && "-rotate-90")}
@@ -594,5 +594,32 @@ export function JobScreeningPanel({
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * A group's size, and the true total when the list has been cut to a cap.
+ *
+ * "(40)" on a group capped at 40 is indistinguishable from a group that really
+ * holds 40 — which is how the old 40- and 60-row ceilings sat unnoticed while
+ * being hit exactly. When nothing was cut this renders as before; when something
+ * was, it says so and colours gold rather than quietly under-reporting.
+ *
+ * The shown count can legitimately exceed the server total — a rescan or an
+ * in-session skip adds rows client-side — so the "of" only appears when the
+ * server actually truncated.
+ */
+function GroupCount({ shown, total }: { shown: number; total: number }) {
+  const truncated = total > shown;
+  return (
+    <span
+      className={clsx(
+        "text-xs",
+        truncated ? "font-semibold text-brand-gold" : "text-brand-grey dark:text-slate-400"
+      )}
+      title={truncated ? `Showing the first ${shown} of ${total} — the rest are not on this list` : undefined}
+    >
+      ({truncated ? `${shown} of ${total}` : shown})
+    </span>
   );
 }
