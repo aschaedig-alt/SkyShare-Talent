@@ -1,10 +1,17 @@
 import { frontFetch } from "./client";
+import { guardRecipients } from "./send-guard";
 
-// Sending vs. drafting. There is no test inbox and recipients are real new hires /
-// candidates, so the exported default is *drafting* — a teammate reviews and hits
-// send inside Front. A true auto-send exists (sendEmail) but is deliberately named
-// to make its use a conscious choice, and callers should confirm intent before using
-// it. See .claude/skills/front-api/SKILL.md ("the environment is live and shared").
+// Sending vs. drafting. Recipients are real new hires / candidates, so the exported
+// default is *drafting* — a teammate reviews and hits send inside Front. A true
+// auto-send exists (sendEmail) but is deliberately named to make its use a conscious
+// choice, and callers should confirm intent before using it. See
+// .claude/skills/front-api/SKILL.md ("the environment is live and shared").
+//
+// THERE IS A TEST INBOX NOW, and it is enforced here rather than left to callers:
+// payload() below is the single point every draft and every send passes through, so
+// guardRecipients() cannot be forgotten by a new caller. Outside production it
+// redirects to FRONT_TEST_INBOX, or refuses if that is not set. In production it
+// changes nothing.
 
 export type EmailInput = {
   to: string | string[];
@@ -28,18 +35,18 @@ export type EmailInput = {
 /** What a send became in Front, so callers can record the thread against a hire. */
 export type SentMessage = { id?: string; conversationId?: string };
 
-function toArray(v: string | string[]): string[] {
-  return Array.isArray(v) ? v : [v];
-}
-
 function payload(input: EmailInput, extra: Record<string, unknown> = {}) {
+  // Recipients and subject come from the guard, never straight from the caller —
+  // in production it hands them back untouched, and everywhere else it redirects
+  // to the test inbox or throws.
+  const safe = guardRecipients({ to: input.to, cc: input.cc, bcc: input.bcc, subject: input.subject });
   return JSON.stringify({
-    to: toArray(input.to),
-    subject: input.subject,
+    to: safe.to,
+    subject: safe.subject,
     body: input.body,
     ...(input.text ? { text: input.text } : {}),
-    ...(input.cc ? { cc: input.cc } : {}),
-    ...(input.bcc ? { bcc: input.bcc } : {}),
+    ...(safe.cc ? { cc: safe.cc } : {}),
+    ...(safe.bcc ? { bcc: safe.bcc } : {}),
     ...(input.authorId ? { author_id: input.authorId } : {}),
     ...extra,
   });

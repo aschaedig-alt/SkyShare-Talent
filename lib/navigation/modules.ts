@@ -218,7 +218,13 @@ export const navigationGroups: readonly NavigationGroup[] = [
         label: "Fleet",
         items: [
           { id: "fleet", href: "/fleet/crew", label: "Crew Org Chart", icon: Plane },
-          { id: "fleet", href: "/fleet/maintenance", label: "Maintenance Org Chart", icon: Wrench }
+          { id: "fleet", href: "/fleet/maintenance", label: "Maintenance Org Chart", icon: Wrench },
+          // Moved out of Admin > Settings (the Jul admin audit): the canonical
+          // list of pilot positions is recruiting reference data that Jobs,
+          // Pilot Requirements and Matchboard all resolve against, not an
+          // administrative setting. Gated on "fleet" now rather than "settings",
+          // which only widens who can READ it — the view is read-only.
+          { id: "fleet", href: "/fleet/positions", label: "Fleet positions", icon: Layers }
         ]
       }
     ]
@@ -257,7 +263,6 @@ export const navigationGroups: readonly NavigationGroup[] = [
           { id: "settings", href: "/settings/templates", label: "Templates", icon: FileText },
           { id: "settings", href: "/settings/content-blocks", label: "Block management", icon: Blocks },
           { id: "settings", href: "/settings/layout-lab", label: "Layout Lab", icon: LayoutGrid },
-          { id: "settings", href: "/settings/fleet", label: "Fleet positions", icon: Layers },
           { id: "settings", href: "/settings/new-hire-contacts", label: "New hire contacts", icon: Contact }
         ]
       }

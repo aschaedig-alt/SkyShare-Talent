@@ -15,6 +15,20 @@ const nextConfig = {
   // or they won't exist on Vercel.
   outputFileTracingIncludes: {
     "/handbook/[slug]": ["./docs/sops/*.html"]
+  },
+  async redirects() {
+    return [
+      // Fleet positions moved out of Admin > Settings to /fleet/positions — it
+      // is recruiting reference data, not an admin setting. The old path was in
+      // the sidebar for months, so it is bookmarked and linked to.
+      //
+      // Done HERE rather than with redirect() in a page: a redirect() thrown
+      // from a Server Component under /settings was caught by a parent error
+      // boundary and rendered as an error page (NEXT_REDIRECT in the payload,
+      // HTTP 200, no Location header) instead of redirecting. A config redirect
+      // is a real 308 that never reaches React and cannot be swallowed.
+      { source: "/settings/fleet", destination: "/fleet/positions", permanent: true }
+    ];
   }
 };
 

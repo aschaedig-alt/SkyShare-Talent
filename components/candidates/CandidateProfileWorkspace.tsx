@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { clsx } from "clsx";
-import { FileText, Briefcase, StickyNote, CalendarClock, History, Plane, Clock, Sparkles, Mail, FileSignature, X } from "lucide-react";
+import { FileText, Briefcase, StickyNote, CalendarClock, History, Plane, Clock, Sparkles, Mail, FileSignature, ClipboardList, X } from "lucide-react";
 import { Button } from "@/components/ui";
 import { CandidateDocuments } from "@/components/candidates/CandidateDocuments";
 import { DocumentChecklist } from "@/components/candidates/DocumentChecklist";
@@ -31,6 +31,8 @@ import { TravelPanel } from "@/components/travel/TravelPanel";
 import type { WidgetInstance } from "@/lib/data/page-layout";
 import type { CandidateProfileData } from "@/lib/data/candidates";
 import type { TravelTripView, TravelerLoyalty } from "@/lib/data/travel";
+import type { TravelChecklistRollup } from "@/lib/travel/rollup";
+import { TravelChecklistRollup as TravelChecklistRollupPanel } from "@/components/travel/TravelChecklistRollup";
 import { InterviewWriteUp } from "@/components/candidates/InterviewWriteUp";
 import { LinkPendingIndicator } from "@/components/navigation/LinkPendingIndicator";
 import { PaycomLinkControl } from "@/components/candidates/PaycomLinkControl";
@@ -44,6 +46,7 @@ type CandidateProfileWorkspaceProps = {
   savedLayout?: GridItem[] | null;
   savedWidgets?: WidgetInstance[] | null;
   travelTrips?: TravelTripView[];
+  travelRollup?: TravelChecklistRollup;
   travelLoyalty?: TravelerLoyalty;
   /** Everyone who can be recorded as an interviewer or @-mentioned. */
   team?: Array<{ name: string; email: string }>;
@@ -63,10 +66,10 @@ const PROFILE_DEFAULT_LAYOUT: GridItem[] = [
   { i: "record", x: 0, y: 32, w: 3, h: 5 }
 ];
 
-type ProfileTab = "documents" | "applications" | "offers" | "notes" | "interviews" | "timeline" | "summary" | "communications" | "activity" | "travel";
+type ProfileTab = "documents" | "applications" | "offers" | "notes" | "interviews" | "timeline" | "summary" | "communications" | "activity" | "travel" | "checklists";
 
 const PROFILE_TABS = new Set<string>([
-  "documents", "applications", "offers", "notes", "interviews", "timeline", "summary", "communications", "activity", "travel"
+  "documents", "applications", "offers", "notes", "interviews", "timeline", "summary", "communications", "activity", "travel", "checklists"
 ]);
 
 /** ?tab=interviews opens straight to that tab — how the mention email's
@@ -132,6 +135,7 @@ export function CandidateProfileWorkspace({
   savedLayout = null,
   savedWidgets = null,
   travelTrips = [],
+  travelRollup,
   travelLoyalty,
   team = [],
   me = null
@@ -246,6 +250,10 @@ export function CandidateProfileWorkspace({
     { id: "communications", label: "Communication", icon: Mail, count: candidate.communicationCount },
     { id: "summary", label: "AI summary", icon: Sparkles, count: candidate.aiSummary ? 1 : 0 },
     { id: "travel", label: "Travel", icon: Plane, count: travelTrips.length },
+    // Sits next to Travel because that is what it summarises. The count is what
+    // is OUTSTANDING, not how many trips exist — a tab reading 3 when everything
+    // is done would be noise, and this one is meant to be a nudge.
+    { id: "checklists", label: "Checklists", icon: ClipboardList, count: travelRollup?.totals.outstanding ?? 0 },
     { id: "activity", label: "Activity", icon: History, count: candidate.activity.length }
   ];
 
@@ -708,6 +716,21 @@ export function CandidateProfileWorkspace({
           )}
 
           {/* Activity tab */}
+          {/* Checklists — what is still outstanding on this person's trips.
+              The same information existed only inside each trip's own panel on
+              the Travel tab, so answering "is anything left for them?" meant
+              expanding every trip. Shares the Travel page's roll-up component,
+              so the two can never disagree. */}
+          {activeTab === "checklists" &&
+            (travelRollup && travelRollup.totals.trips > 0 ? (
+              <TravelChecklistRollupPanel rollup={travelRollup} />
+            ) : (
+              <EmptyState
+                title="No trips to check off"
+                detail="Checklists come from this candidate's travel. Add a trip on the Travel tab and its checklist will show up here."
+              />
+            ))}
+
           {activeTab === "activity" && <CandidateActivityTimeline items={candidate.activity} />}
 
           {/* Interviews tab — write-ups pasted in after the fact, since

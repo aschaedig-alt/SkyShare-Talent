@@ -892,7 +892,12 @@ export default function MaintenanceOrgChart({
           Crew org chart →
         </Link>
       </div>
-      <span className="mockflag">Seed data · current MX roster + active candidates · candidates count as open until start date</span>
+      {/* It said "Seed data", which stopped being true when this chart became
+          admin-editable — edits are stored in a WorkspaceSetting (fleet/mx-roster),
+          exactly like the crew chart, which has always said "Live data". Calling
+          real, editable data a mockup tells people not to trust it, which is the
+          opposite of what a chart nobody has adopted yet needs. */}
+      <span className="mockflag">Live data · current MX roster + active candidates · admin-edited on this page · candidates count as open until start date</span>
 
       <div className={`backdrop${active ? " open" : ""}`} onClick={closeModal} />
       <div className={`modal${active ? " open" : ""}`} role="dialog" aria-modal="true">

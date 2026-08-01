@@ -27,9 +27,11 @@ export const orgLinkBtnStyle: React.CSSProperties = {
   whiteSpace: "nowrap"
 };
 
-/** Search for a person to link a chart name to. Pre-seeds with the chart name,
-    though it often won't match — a last-name search is the reliable move. Calls
-    onPick with the resolved candidate id. */
+/** Search for a person to link a chart name to. Pre-seeds with the chart name;
+    the search matches on any WORD of a name and ranks current employees and live
+    candidates first, so the seeded full name is now a reasonable opening query
+    rather than something you have to delete. Calls onPick with the resolved
+    candidate id. */
 export function LinkPicker({
   initialQuery,
   onPick,
@@ -108,8 +110,12 @@ export function LinkPicker({
       />
       <div style={{ maxHeight: 160, overflowY: "auto", marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
         {loading ? <div style={{ fontSize: 11, opacity: 0.6, padding: 4 }}>Searching…</div> : null}
+        {/* This used to say "try a last name", which was a workaround for a
+            search that only matched the whole query as one string. That was
+            fixed — any word of the name matches now — so the old advice was not
+            just stale, it implied the search was still broken. */}
         {!loading && q.trim().length >= 2 && results.length === 0 ? (
-          <div style={{ fontSize: 11, opacity: 0.6, padding: 4 }}>No matches — try a last name.</div>
+          <div style={{ fontSize: 11, opacity: 0.6, padding: 4 }}>Nobody found. Check the spelling, or search a different part of the name.</div>
         ) : null}
         {results.map((p) => (
           <button

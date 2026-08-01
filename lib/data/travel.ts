@@ -6,6 +6,8 @@ import {
   type TravelAwaySpan,
   type TravelCalendarEvent
 } from "@/lib/travel/schedule";
+import { getAllChecklists } from "@/lib/travel/checklist-store";
+import { buildTravelChecklistRollup, type TravelChecklistRollup } from "@/lib/travel/rollup";
 
 // ---- View types (serializable; dates as ISO strings) ------------------------
 
@@ -662,4 +664,55 @@ export async function getTravelSpendSummary(): Promise<TravelSpendSummary> {
       .sort((a, b) => b.spend - a.spend),
     trips: tripRows
   };
+}
+
+// ---- Checklist roll-up ------------------------------------------------------
+
+/**
+ * Every trip's checklist, rolled into one list — the answer to "is anything
+ * about to be missed?" without opening trips one at a time.
+ *
+ * CANCELED trips are excluded (nothing about a cancelled trip is outstanding);
+ * COMPLETED ones are kept, because the after-the-trip items — the day-after
+ * check-in and reimbursement — only come due once a trip is over, and those are
+ * precisely the steps that get forgotten.
+ */
+export async function getTravelChecklistRollup(): Promise<TravelChecklistRollup> {
+  const [trips, all] = await Promise.all([
+    prisma.travelTrip.findMany({
+      where: { status: { not: "CANCELED" } },
+      include: {
+        ...tripInclude,
+        newHire: { select: { id: true, name: true } },
+        candidate: { select: { id: true, displayName: true } }
+      }
+    }),
+    getAllChecklists()
+  ]);
+
+  return buildTravelChecklistRollup(
+    trips.map((t) => ({
+      trip: toTravelTripView(t as TripWithRelations),
+      travelerName: t.newHire?.name ?? t.candidate?.displayName ?? "Unknown traveller",
+      travelerHref: t.newHire ? `/people/${t.newHire.id}` : `/candidates/${t.candidate?.id ?? ""}`
+    })),
+    all
+  );
+}
+
+/**
+ * The same roll-up for ONE person's trips, for the Checklists tab on their
+ * profile. Reuses the shared builder so the profile and the Travel page can
+ * never disagree about what is outstanding.
+ */
+export async function getChecklistRollupForTrips(
+  trips: TravelTripView[],
+  travelerName: string,
+  travelerHref: string
+): Promise<TravelChecklistRollup> {
+  const all = await getAllChecklists();
+  return buildTravelChecklistRollup(
+    trips.filter((t) => t.status !== "CANCELED").map((trip) => ({ trip, travelerName, travelerHref })),
+    all
+  );
 }

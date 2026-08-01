@@ -1,6 +1,6 @@
 ﻿import { CandidateProfileWorkspace } from "@/components/candidates/CandidateProfileWorkspace";
 import { getCandidateProfileData } from "@/lib/data/candidates";
-import { getTravelTripsForCandidate, getCandidateLoyalty } from "@/lib/data/travel";
+import { getTravelTripsForCandidate, getCandidateLoyalty, getChecklistRollupForTrips } from "@/lib/data/travel";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { getPageLayout } from "@/lib/data/page-layout";
 import { getTeamMembers } from "@/lib/data/team";
@@ -31,6 +31,13 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
   // work without anyone having to remember to set it.
   const me = access.email ? team.find((t) => t.email === access.email.toLowerCase()) ?? null : null;
 
+  // Checklists tab. Loaded after the trips because it needs them; skipped
+  // entirely when there is no travel, so a candidate who has never flown out
+  // does not pay for a WorkspaceSetting read.
+  const travelRollup = travelTrips.length
+    ? await getChecklistRollupForTrips(travelTrips, candidate.displayName, `/candidates/${id}`)
+    : undefined;
+
   return (
     <CandidateProfileWorkspace
       candidate={candidate}
@@ -47,6 +54,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
       savedLayout={layout.layout}
       savedWidgets={layout.widgets}
       travelTrips={travelTrips}
+      travelRollup={travelRollup}
       travelLoyalty={travelLoyalty}
     />
   );

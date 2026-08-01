@@ -15,6 +15,8 @@ import {
 import { loadTravelerDetail } from "@/app/travel/actions";
 import { TravelerWorkspace, TravelerLoading } from "@/components/travel/TravelerInline";
 import type { TravelCalendarData, TravelHubData, TravelTravelerOption, TravelerDetail } from "@/lib/data/travel";
+import type { TravelChecklistRollup as TravelChecklistRollupData } from "@/lib/travel/rollup";
+import { TravelChecklistRollup } from "@/components/travel/TravelChecklistRollup";
 import { TravelHubCalendar } from "@/components/travel/TravelHubCalendar";
 import { useDialogClose } from "@/lib/hooks/useDialogClose";
 import { formatMomentDate } from "@/lib/dates/display";
@@ -151,10 +153,12 @@ function NewTripButton({
 
 export function TravelHubWorkspace({
   data,
-  calendar
+  calendar,
+  rollup
 }: {
   data: TravelHubData;
   calendar?: TravelCalendarData;
+  rollup?: TravelChecklistRollupData;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState<string>("ALL");
@@ -229,6 +233,11 @@ export function TravelHubWorkspace({
           per-trip calendar inside a panel can only answer "when is this person
           away" — this is the one that answers "who else is here that week". */}
       {calendar ? <TravelHubCalendar data={calendar} onOpenTraveler={openTraveler} /> : null}
+
+      {/* What is outstanding across every trip. Above the table on purpose: the
+          table says what EXISTS, this says what still needs doing, and the
+          second question is the one somebody opens this page to answer. */}
+      {rollup ? <TravelChecklistRollup rollup={rollup} /> : null}
 
       {travelerError && (
         <p className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">

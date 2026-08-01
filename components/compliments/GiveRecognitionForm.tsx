@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -141,13 +142,16 @@ export function GiveRecognitionForm({ roster, values, strengthPoints, defaultRec
         ) : null}
 
         <div className="flex gap-3 border-t border-brand-lea/10 pt-5 dark:border-white/10">
-          <button
-            type="button"
-            onClick={() => router.push("/compliments")}
-            className="flex-1 rounded-element border-[0.5px] border-brand-lea/20 px-4 py-2.5 text-sm font-medium text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/5"
+          {/* A real Link, not router.push: this goes to another PAGE, so it has
+              to be ctrl/right-clickable into a new tab. The router.push calls
+              that remain in this file are post-submit redirects, which is the
+              case the rule does not cover. */}
+          <Link
+            href="/compliments"
+            className="flex-1 rounded-element border-[0.5px] border-brand-lea/20 px-4 py-2.5 text-center text-sm font-medium text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/5"
           >
             Cancel
-          </button>
+          </Link>
           <button
             type="submit"
             disabled={pending}
