@@ -14,7 +14,8 @@ import {
 } from "@/lib/travel/constants";
 import { loadTravelerDetail } from "@/app/travel/actions";
 import { TravelerWorkspace, TravelerLoading } from "@/components/travel/TravelerInline";
-import type { TravelHubData, TravelTravelerOption, TravelerDetail } from "@/lib/data/travel";
+import type { TravelCalendarData, TravelHubData, TravelTravelerOption, TravelerDetail } from "@/lib/data/travel";
+import { TravelHubCalendar } from "@/components/travel/TravelHubCalendar";
 import { useDialogClose } from "@/lib/hooks/useDialogClose";
 import { formatMomentDate } from "@/lib/dates/display";
 
@@ -148,7 +149,13 @@ function NewTripButton({
   );
 }
 
-export function TravelHubWorkspace({ data }: { data: TravelHubData }) {
+export function TravelHubWorkspace({
+  data,
+  calendar
+}: {
+  data: TravelHubData;
+  calendar?: TravelCalendarData;
+}) {
   const router = useRouter();
   const [status, setStatus] = useState<string>("ALL");
   const [purpose, setPurpose] = useState<string>("ALL");
@@ -217,6 +224,11 @@ export function TravelHubWorkspace({ data }: { data: TravelHubData }) {
           ))}
         </div>
       </section>
+
+      {/* Front of the page, above the table: who is travelling and when. The
+          per-trip calendar inside a panel can only answer "when is this person
+          away" — this is the one that answers "who else is here that week". */}
+      {calendar ? <TravelHubCalendar data={calendar} onOpenTraveler={openTraveler} /> : null}
 
       {travelerError && (
         <p className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">

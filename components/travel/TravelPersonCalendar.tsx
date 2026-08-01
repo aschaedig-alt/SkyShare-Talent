@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Plane, Building2, Car, Bus, Receipt, Calenda
 import { buildTravelCalendar, spanDays, type TravelEventKind } from "@/lib/travel/schedule";
 import { travelPurposeLabel } from "@/lib/travel/constants";
 import type { TravelTripView } from "@/lib/data/travel";
-import { formatMomentTime, hasTimeOfDay } from "@/lib/dates/display";
+import { clockTimeOf } from "@/lib/dates/display";
 
 const KIND_ICON: Record<TravelEventKind, typeof Plane> = {
   FLIGHT: Plane,
@@ -30,7 +30,10 @@ const monthLabel = (y: number, m: number) =>
 // displayed as 3:37.
 // A date recorded with no time is stored at midnight Mountain; showing that as
 // "12:00 AM" would invent a departure time nobody entered. Blank means unknown.
-const fmtTime = (iso: string) => (hasTimeOfDay(iso) ? formatMomentTime(iso) : "");
+// A date with no time is stored at midnight; showing that as "12:00 AM" would
+// invent a departure nobody entered, and reading a UTC midnight in Mountain time
+// invented a 6:00 PM instead. clockTimeOf returns nothing for both.
+const fmtTime = (iso: string) => clockTimeOf(iso) ?? "";
 
 /**
  * One person's travel on a month grid — when they are away, and where.

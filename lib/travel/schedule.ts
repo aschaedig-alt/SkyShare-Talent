@@ -15,7 +15,7 @@
 // labels it so nobody mistakes a guess for a confirmed booking.
 
 import type { TravelItemView, TravelTripView } from "@/lib/data/travel";
-import { officeDayKey } from "@/lib/dates/display";
+import { dayKeyOf } from "@/lib/dates/display";
 
 export type DateSource = "field" | "detail";
 
@@ -191,9 +191,16 @@ export type TravelAwaySpan = {
   inferred: boolean;
 };
 
-// Which DAY an item sits on, seen from Mountain. Using the UTC date here put an
-// evening departure (8pm MT = 02:00Z the next day) on the wrong calendar square.
-export const dayKey = (iso: string) => officeDayKey(iso);
+// Which DAY an item sits on.
+//
+// Two fixes live in this one line. Reading everything in UTC put an evening
+// departure (8pm MT = 02:00Z the next day) on the wrong square — that was fixed
+// Jul 21. Reading everything in Mountain then broke the OTHER kind: a date
+// recovered from booking text, and orientationDate, are calendar days stored at
+// midnight UTC, and midnight UTC is 6pm the previous day in Mountain — so a
+// Jul 16 flight drew on Jul 15 and an Aug 4 orientation drew on Aug 3.
+// dayKeyOf picks per value: UTC for calendar days, office time for moments.
+export const dayKey = (iso: string) => dayKeyOf(iso);
 
 /** Does this ISO carry a meaningful clock time, or is it just a date? */
 function hasTime(iso: string): boolean {

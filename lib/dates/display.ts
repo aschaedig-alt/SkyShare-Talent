@@ -61,6 +61,29 @@ export function formatMomentTime(value: string | Date | null | undefined): strin
   }).format(d);
 }
 
+/**
+ * "9:37a" — the office-local time, as short as it can be and still unambiguous.
+ *
+ * For calendar chips, where the whole label has to fit inside one day cell next
+ * to a route like DEN→SLC. The am/pm marker is a single letter rather than " AM"
+ * because dropping it entirely makes a 9:37 departure and a 9:37 arrival
+ * indistinguishable, and an eight-character time does not fit.
+ */
+export function formatMomentTimeCompact(value: string | Date | null | undefined): string {
+  const d = toDate(value);
+  if (!d) return "";
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: OFFICE_TZ,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
+  }).formatToParts(d);
+  const hour = parts.find((p) => p.type === "hour")?.value ?? "";
+  const minute = parts.find((p) => p.type === "minute")?.value ?? "";
+  const period = (parts.find((p) => p.type === "dayPeriod")?.value ?? "").toLowerCase().slice(0, 1);
+  return `${hour}:${minute}${period}`;
+}
+
 /** "Jul 20, 6:10 PM" — both, for when the day alone is ambiguous. */
 export function formatMomentDateTime(value: string | Date | null | undefined): string {
   const d = toDate(value);
@@ -152,6 +175,51 @@ export function hasTimeOfDay(value: string | Date | null | undefined): boolean {
     minute: "2-digit"
   }).format(d);
   return hm !== "00:00" && hm !== "24:00";
+}
+
+/**
+ * Is this value a CALENDAR DAY rather than a moment — i.e. stored at midnight UTC?
+ *
+ * The two kinds documented at the top of this file are indistinguishable by type,
+ * and travel holds BOTH in the same column: a flight's startsAt is a real moment,
+ * but a date recovered from booking text ("Thu 16Jul2026") and orientationDate are
+ * calendar days written at midnight UTC. Reading one of those in Mountain time
+ * lands at 6pm the PREVIOUS day — which drew a Jul 16 flight on Jul 15 and gave it
+ * a departure time of 6:00 PM that nobody ever entered.
+ *
+ * Caveat, same one hasTimeOfDay already accepts: a genuine departure at exactly
+ * midnight UTC (6pm Mountain) reads as a calendar day. Vanishingly rare, and far
+ * cheaper than a schema column to disambiguate.
+ */
+export function isStoredCalendarDay(value: string | Date | null | undefined): boolean {
+  const d = toDate(value);
+  if (!d) return false;
+  return d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0 && d.getUTCMilliseconds() === 0;
+}
+
+/**
+ * "2026-07-16" — the day this belongs on, whichever kind of value it is.
+ *
+ * Calendar days are read in UTC where they were written; moments are read in the
+ * office timezone. Use this for anything placed on a calendar grid, where getting
+ * it wrong moves the item to the wrong square.
+ */
+export function dayKeyOf(value: string | Date | null | undefined): string {
+  const d = toDate(value);
+  if (!d) return "";
+  return isStoredCalendarDay(d) ? d.toISOString().slice(0, 10) : officeDayKey(d);
+}
+
+/**
+ * The clock time to show, or null when the value carries none.
+ *
+ * Returns null for a calendar day rather than "12:00 AM" or, worse, the 6:00 PM
+ * that a UTC midnight becomes in Mountain time.
+ */
+export function clockTimeOf(value: string | Date | null | undefined): string | null {
+  const d = toDate(value);
+  if (!d || isStoredCalendarDay(d) || !hasTimeOfDay(d)) return null;
+  return formatMomentTimeCompact(d);
 }
 
 /** "09:37" — the 24-hour office-local time, shaped for an <input type="time">. */

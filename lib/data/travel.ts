@@ -1,4 +1,11 @@
 import { prisma } from "@/lib/prisma";
+// Value import, but not a cycle: schedule.ts only imports TYPES from this file,
+// and those are erased at build time.
+import {
+  buildTravelCalendar,
+  type TravelAwaySpan,
+  type TravelCalendarEvent
+} from "@/lib/travel/schedule";
 
 // ---- View types (serializable; dates as ISO strings) ------------------------
 
@@ -349,6 +356,102 @@ export type TravelHubData = {
   stats: { tripCount: number; needsBooking: number; booked: number; totalSpend: number };
   travelers: TravelTravelerOption[];
 };
+
+// ---- Hub calendar ----------------------------------------------------------
+
+/** One traveller and the trips the grid will draw for them. */
+export type TravelCalendarTraveler = {
+  /** Stable identity for colour assignment: type + id, since a NewHire and a
+      Candidate could in principle share an id space. */
+  key: string;
+  travelerId: string;
+  name: string;
+  type: "newHire" | "candidate";
+  href: string;
+  /**
+   * The trips themselves rather than pre-flattened events.
+   *
+   * The grid needs the route text and per-item times to work out which end of a
+   * flight touches home, and the rail needs the hotel and the rental car — none
+   * of which survives being reduced to day-keyed events first.
+   */
+  trips: TravelTripView[];
+  /** Kept for the away-day shading and any caller that just wants the dates. */
+  events: TravelCalendarEvent[];
+  spans: TravelAwaySpan[];
+};
+
+export type TravelCalendarData = {
+  travelers: TravelCalendarTraveler[];
+  /** Travellers whose trips carry no readable date anywhere — they cannot be
+      drawn, and silently omitting them is how a missing trip goes unnoticed. */
+  undated: { name: string; href: string; tripCount: number }[];
+};
+
+/**
+ * Everything the hub calendar needs.
+ *
+ * Separate from getTravelOverview because the hub rows deliberately carry no
+ * item detail, and a calendar needs the items themselves — most real TravelItem
+ * rows have startsAt = null with the date sitting in the confirmation text, so
+ * buildTravelCalendar has to read `detail` to place anything at all.
+ *
+ * Loads every non-canceled trip. Fine at the current scale (5 trips); if travel
+ * grows this should take a date window, since the calendar only ever draws one
+ * month.
+ */
+export async function getTravelCalendarData(): Promise<TravelCalendarData> {
+  const trips = await prisma.travelTrip.findMany({
+    where: { status: { not: "CANCELED" } },
+    include: {
+      ...tripInclude,
+      newHire: { select: { id: true, name: true } },
+      candidate: { select: { id: true, displayName: true } }
+    }
+  });
+
+  const byTraveler = new Map<string, { name: string; type: "newHire" | "candidate"; id: string; href: string; trips: TravelTripView[] }>();
+
+  for (const raw of trips) {
+    const trip = toTravelTripView(raw as TripWithRelations);
+    const t = raw as TripWithRelations & {
+      newHire?: { id: string; name: string } | null;
+      candidate?: { id: string; displayName: string } | null;
+    };
+    const isHire = Boolean(t.newHire);
+    const id = (isHire ? t.newHire?.id : t.candidate?.id) ?? "";
+    if (!id) continue;
+    const key = `${isHire ? "newHire" : "candidate"}:${id}`;
+    const existing = byTraveler.get(key);
+    if (existing) {
+      existing.trips.push(trip);
+    } else {
+      byTraveler.set(key, {
+        id,
+        name: t.newHire?.name ?? t.candidate?.displayName ?? "Unknown",
+        type: isHire ? "newHire" : "candidate",
+        href: isHire ? `/people/${id}` : `/candidates/${id}`,
+        trips: [trip]
+      });
+    }
+  }
+
+  const travelers: TravelCalendarTraveler[] = [];
+  const undated: TravelCalendarData["undated"] = [];
+
+  for (const [key, v] of byTraveler) {
+    const { events, spans } = buildTravelCalendar(v.trips);
+    if (events.length === 0 && spans.length === 0) {
+      undated.push({ name: v.name, href: v.href, tripCount: v.trips.length });
+      continue;
+    }
+    travelers.push({ key, travelerId: v.id, name: v.name, type: v.type, href: v.href, trips: v.trips, events, spans });
+  }
+
+  travelers.sort((a, b) => a.name.localeCompare(b.name));
+  undated.sort((a, b) => a.name.localeCompare(b.name));
+  return { travelers, undated };
+}
 
 export async function getTravelOverview(): Promise<TravelHubData> {
   const trips = await prisma.travelTrip.findMany({
