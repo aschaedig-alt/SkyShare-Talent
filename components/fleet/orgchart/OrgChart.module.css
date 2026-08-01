@@ -738,7 +738,36 @@
 .wrap :global(.modal)::after {
   content: "";
   display: block;
-  flex: 0 0 16px;
+  flex: 0 0 22px;
+}
+/* Full-width sections BELOW the seat columns: transitioning out, the edit hints,
+   and every row of card actions (Edit Crew / Save / Duplicate / Remove).
+
+   They are direct children of the scrolling modal, which carries no padding of
+   its own — the seat columns bring their own and the header brings its own. So
+   without this the text in these sections runs flush into both edges and reads
+   as clipped. 20px matches the header's gutter, which is the frame the eye
+   actually follows down the dialog. */
+.wrap :global(.m-sect) {
+  padding: 12px 20px 0;
+  margin-top: 14px;
+  border-top: 1px solid var(--n200);
+}
+.wrap :global(.m-sect.acts) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+/* The last section still needs its own floor: the modal's flex spacer sits
+   after it, but a bare 22px under a button row reads tight next to the 20px
+   sides. */
+.wrap :global(.m-sect:last-of-type) {
+  padding-bottom: 6px;
+}
+.wrap :global(.m-sect .m-sect-note) {
+  font: 500 11.5px/1.4 var(--fh);
+  color: var(--n500);
 }
 .wrap :global(.m-h) {
   position: sticky;
@@ -1329,7 +1358,9 @@
 .wrap :global(.ec-out) {
   margin-top: 14px;
   border-top: 1px solid var(--n200);
-  padding-top: 10px;
+  /* Full-width section: same 20px side gutter as every other one, or the names
+     and the date pickers sit flush against the dialog edges. */
+  padding: 10px 20px 0;
 }
 .wrap :global(.ec-out-h) {
   font: 800 8.5px/1 var(--fh);
@@ -1456,6 +1487,7 @@
 }
 .wrap :global(.m-edithint) {
   margin-top: 12px;
+  padding: 0 20px;
   font: 500 11.5px/1.5 var(--fh);
   color: var(--n500);
 }

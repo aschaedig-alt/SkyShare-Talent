@@ -18,6 +18,7 @@ import { MoveToPreOnboardingPanel } from "@/components/candidates/MoveToPreOnboa
 import { AddJobToCandidate } from "@/components/candidates/AddJobToCandidate";
 import { DeleteCandidateButton } from "@/components/candidates/DeleteCandidateButton";
 import { CandidateTagEditor } from "@/components/candidates/CandidateTagEditor";
+import { stageOptionsFor } from "@/lib/candidates/stages";
 import { OfferControl } from "@/components/candidates/OfferControl";
 import { isTestTagged } from "@/lib/testdata/markers";
 import { offerStatusLabel } from "@/lib/offers/constants";
@@ -380,7 +381,27 @@ export function CandidateProfileWorkspace({
             </div>
             <div>
               <label className={labelClass}>Stage</label>
-              <input value={formData.stage ?? ""} onChange={(e) => setFormData({ ...formData, stage: e.target.value || null })} className={inputClass} />
+              {/* A picked list, not a free-text box — typing this field is how
+                  the pipeline ended up with one-off stages nothing can filter
+                  on. The candidate's existing stage is always among the options
+                  (stageOptionsFor adds it under "Current" when it is not one of
+                  ours), so opening this can never rewrite an imported value. */}
+              <select
+                value={formData.stage ?? ""}
+                onChange={(e) => setFormData({ ...formData, stage: e.target.value || null })}
+                className={inputClass}
+              >
+                <option value="">No stage</option>
+                {stageOptionsFor(formData.stage).map((group) => (
+                  <optgroup key={group.group} label={group.group}>
+                    {group.values.map((v) => (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
             </div>
             <div>
               <label className={labelClass}>Owner</label>

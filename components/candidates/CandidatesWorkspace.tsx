@@ -13,6 +13,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import type { CandidateListData, CandidateTagOption } from "@/lib/data/candidates";
+import { CandidateStageCell } from "@/components/candidates/CandidateStageCell";
 import { CandidateTagCell } from "@/components/candidates/CandidateTagCell";
 import { CandidateTagFilter } from "@/components/candidates/CandidateTagFilter";
 import { NewCandidateButton } from "@/components/candidates/NewCandidateButton";
@@ -245,9 +246,13 @@ export function CandidatesWorkspace({
                       </div>
                     </td>
                     <td className="px-4 py-4">
-                      <span className={`inline-block rounded border px-2.5 py-1 text-xs font-semibold ${stagePill(candidate.stage)}`}>
-                        {candidate.stage ?? "No stage"}
-                      </span>
+                      <CandidateStageCell
+                        candidateId={candidate.id}
+                        candidateName={candidate.displayName}
+                        stage={candidate.stage}
+                        pillClass={stagePill(candidate.stage)}
+                        canEdit={canEdit}
+                      />
                     </td>
                     <td className="px-4 py-4">
                       <div className="space-y-1 text-xs text-brand-grey dark:text-slate-400">

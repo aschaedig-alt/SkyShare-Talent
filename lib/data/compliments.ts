@@ -102,8 +102,23 @@ export async function getUpcomingCelebrations(windowDays = 45): Promise<Celebrat
   const now = new Date();
   const today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
+  // EVERY CURRENT EMPLOYEE, not just the ones still in an onboarding stage.
+  //
+  // This used to also require stage IN (ACTIVE, POST_ONBOARD), which sounds like
+  // "currently employed" and is not: `stage` tracks where someone is in
+  // ONBOARDING, and it goes to ARCHIVED once they finish it. So the filter kept
+  // only the most recent arrivals — 28 of 173 current employees — and dropped
+  // everyone who has been here a while, which is exactly who has the long
+  // anniversaries worth celebrating.
+  //
+  // It was worse than a short list: measured against the live database, ZERO of
+  // those 28 had a birthday on file, while 63 of the wider group did. The
+  // Birthdays half of this page could not have shown anybody, ever.
+  //
+  // `employmentStatus: "ACTIVE"` is the field that actually means current
+  // employee — the same one the Employees directory counts on.
   const hires = await prisma.newHire.findMany({
-    where: { stage: { in: ROSTER_STAGES }, employmentStatus: "ACTIVE" },
+    where: { employmentStatus: "ACTIVE", canceled: false },
     select: {
       id: true,
       name: true,

@@ -907,17 +907,29 @@ export default function MaintenanceOrgChart({
                 {active.sub} · {at.f}/{at.at} staffed · reports to {active.mgr}
               </div>
               {/* Edit at the TOP, matching the crew chart — it used to sit below
-                  every section and the hiring pipeline. */}
+                  every section and the hiring pipeline. Gold on the navy header
+                  for the same reason: a navy button on a navy bar disappears. */}
               {canEdit && !isEditing ? (
-                <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginTop: 10 }}>
+                <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginTop: 12 }}>
                   <button
                     type="button"
                     onClick={() => startCardEdit(openIdx as number)}
-                    style={{ background: "var(--navy, #0d2c43)", color: "#fff", border: "none", borderRadius: 4, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                    style={{
+                      background: "var(--gold, #eaaa00)",
+                      color: "var(--navy, #0d2c43)",
+                      border: "none",
+                      borderRadius: 4,
+                      padding: "8px 16px",
+                      fontSize: 13,
+                      fontWeight: 800,
+                      letterSpacing: "0.02em",
+                      cursor: "pointer",
+                      boxShadow: "0 1px 3px rgba(0,0,0,.25)"
+                    }}
                   >
                     Edit Team
                   </button>
-                  <span style={{ fontSize: 11.5, opacity: 0.65 }}>Changes here affect only {active.name}.</span>
+                  <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.7)" }}>Changes here affect only {active.name}.</span>
                 </div>
               ) : null}
             </div>
@@ -976,7 +988,7 @@ export default function MaintenanceOrgChart({
             off-screen while you are down in a card. Repeat it here so edits can
             be banked without hunting for it. */}
         {active && editMode ? (
-          <div style={{ borderTop: "1px solid var(--line, #cdd7e2)", marginTop: 14, paddingTop: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div className="m-sect acts">
             <button
               type="button"
               onClick={save}
@@ -998,7 +1010,7 @@ export default function MaintenanceOrgChart({
         ) : null}
 
         {active && cardEditing ? (
-          <div style={{ borderTop: "1px solid var(--line, #cdd7e2)", marginTop: 14, paddingTop: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div className="m-sect acts">
             <button
               type="button"
               onClick={() => void saveCardEdit()}

@@ -30,7 +30,12 @@ function CelebrationRow({ c, highlight = false }: { c: Celebration; highlight?: 
           : "border-brand-lea/15 hover:border-brand-gold/40 hover:shadow-glow dark:border-white/10"
       )}
     >
-      <div className="relative shrink-0">
+      {/* The avatar and the name both go to the person's employee profile.
+          Every celebration is a CURRENT EMPLOYEE, so there is always a record to
+          open — and "who is this and what do they do" is the first thing you
+          want before writing them a recognition. A real Link, because it
+          changes the whole screen. */}
+      <Link href={`/people/${c.personId}`} className="relative shrink-0" title={`Open ${c.name}'s profile`}>
         <Avatar name={c.name} initials={c.initials} size="md" />
         <span
           aria-hidden
@@ -41,10 +46,15 @@ function CelebrationRow({ c, highlight = false }: { c: Celebration; highlight?: 
         >
           {isBirthday ? <Cake className="h-3 w-3 text-value-customerFocus-dark" /> : <Gift className="h-3 w-3 text-brand-lea dark:text-brand-gold" />}
         </span>
-      </div>
+      </Link>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-brand-lea dark:text-slate-100">{c.name}</p>
+        <Link
+          href={`/people/${c.personId}`}
+          className="block truncate font-medium text-brand-lea hover:underline dark:text-slate-100"
+        >
+          {c.name}
+        </Link>
         <p className="truncate text-[13px] text-brand-grey dark:text-slate-400">
           <span className="font-medium text-brand-lea/80 dark:text-slate-300">{badge}</span>
           {subtitle ? <span> · {subtitle}</span> : null}
@@ -122,7 +132,11 @@ export function CelebrationsWorkspace({ data }: { data: CelebrationsData }) {
       {total === 0 ? (
         <Card padding="lg">
           <p className="py-6 text-center text-sm text-brand-grey dark:text-slate-400">
-            Nothing on the calendar just yet. Birthdays and start dates come from each person&apos;s employee record.
+            Nothing on the calendar just yet. Birthdays and start dates come from each person&apos;s{" "}
+            <Link href="/employees" className="font-medium text-brand-lea underline dark:text-slate-200">
+              employee record
+            </Link>
+            , so a missing date there is a missing celebration here.
           </p>
         </Card>
       ) : (

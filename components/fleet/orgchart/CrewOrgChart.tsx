@@ -1541,7 +1541,7 @@ export default function CrewOrgChart({
           its own Save — the chart-wide edit bar only appears during an "Edit
           all" session, and nobody enters one to type a date. */}
       {tab === "training" && canEdit ? (
-        <div style={{ borderTop: "1px solid var(--line, #cdd7e2)", marginTop: 14, paddingTop: 12, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <div className="m-sect acts">
           <button
             type="button"
             onClick={save}
@@ -1591,17 +1591,33 @@ export default function CrewOrgChart({
               </div>
               {/* Edit sits at the TOP now. It used to live below the seat lists,
                   the photo and the movement panel — on a full aircraft that is a
-                  long scroll past everything you came to change. */}
+                  long scroll past everything you came to change.
+
+                  GOLD, not navy: this header is navy, so a navy button on it was
+                  invisible — it read as a line of text rather than the primary
+                  action on the card. Gold on navy is the brand's own emphasis
+                  pairing and is the one thing here that has to be found. */}
               {canEdit && !isEditing ? (
-                <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginTop: 10 }}>
+                <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginTop: 12 }}>
                   <button
                     type="button"
                     onClick={() => startCardEdit(openIdx as number)}
-                    style={{ background: "var(--navy, #0d2c43)", color: "#fff", border: "none", borderRadius: 4, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                    style={{
+                      background: "var(--gold, #eaaa00)",
+                      color: "var(--navy, #0d2c43)",
+                      border: "none",
+                      borderRadius: 4,
+                      padding: "8px 16px",
+                      fontSize: 13,
+                      fontWeight: 800,
+                      letterSpacing: "0.02em",
+                      cursor: "pointer",
+                      boxShadow: "0 1px 3px rgba(0,0,0,.25)"
+                    }}
                   >
                     Edit Crew
                   </button>
-                  <span style={{ fontSize: 11.5, opacity: 0.65 }}>Changes here affect only {active.sub}.</span>
+                  <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.7)" }}>Changes here affect only {active.sub}.</span>
                 </div>
               ) : null}
             </div>
@@ -1776,7 +1792,7 @@ export default function CrewOrgChart({
             — this is how a pool tail gets duplicated or removed — so it keeps
             the bottom-of-card placement it always had. */}
         {active && active.poolFlown && canEdit && !isEditing ? (
-          <div style={{ borderTop: "1px solid var(--line, #cdd7e2)", marginTop: 14, paddingTop: 12, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <div className="m-sect acts">
             <button
               type="button"
               onClick={() => startCardEdit(openIdx as number)}
@@ -1793,7 +1809,7 @@ export default function CrewOrgChart({
             edits can be banked without hunting for it — the reported loss was
             exactly this: card after card edited, then away without saving. */}
         {active && editMode ? (
-          <div style={{ borderTop: "1px solid var(--line, #cdd7e2)", marginTop: 14, paddingTop: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div className="m-sect acts">
             <button
               type="button"
               onClick={save}
@@ -1817,7 +1833,7 @@ export default function CrewOrgChart({
         {/* Save / Cancel for a single card. Absent during an "Edit all" session,
             where the chart-wide edit bar owns saving. */}
         {active && cardEditing ? (
-          <div style={{ borderTop: "1px solid var(--line, #cdd7e2)", marginTop: 14, paddingTop: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div className="m-sect acts">
             <button
               type="button"
               onClick={() => void saveCardEdit()}
@@ -1845,7 +1861,7 @@ export default function CrewOrgChart({
         ) : null}
 
         {active && isEditing ? (
-          <div style={{ borderTop: "1px solid var(--line, #cdd7e2)", marginTop: 14, paddingTop: 12 }}>
+          <div className="m-sect">
             {dupFrom === openIdx ? (
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700 }}>Copy this aircraft to a new tail</div>
