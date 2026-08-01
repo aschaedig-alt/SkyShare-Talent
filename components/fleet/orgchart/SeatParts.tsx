@@ -37,7 +37,8 @@ export function PersonRow({
   rp,
   lead,
   tags,
-  href
+  href,
+  highlight
 }: {
   name: string;
   cls: string;
@@ -46,9 +47,16 @@ export function PersonRow({
   tags?: string[];
   /** When set, the person's name links to their candidate profile. */
   href?: string;
+  /** Ring this row — set when the user arrived here by picking this person out
+      of the find-a-person list, so the answer to "where is he?" is not a card
+      full of names they now have to scan again. */
+  highlight?: boolean;
 }) {
   return (
-    <div className={`prow ${cls}`}>
+    <div
+      className={`prow ${cls}`}
+      style={highlight ? { outline: "2px solid var(--gold, #eaaa00)", outlineOffset: 1, borderRadius: 4 } : undefined}
+    >
       <span className="av">{initials(name)}</span>
       <span className="pn">
         {href ? (

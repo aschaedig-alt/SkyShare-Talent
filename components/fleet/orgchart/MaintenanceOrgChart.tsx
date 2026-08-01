@@ -8,6 +8,7 @@ import { normSeat, cntSeat } from "@/lib/fleet/staffing/compute";
 import { MX_DIRECTOR, MX_TURNOVER } from "@/lib/fleet/staffing/maintenance-data";
 import { SeatSquares, PersonRow, SlotRow } from "./SeatParts";
 import { LinkPicker, orgLinkBtnStyle as linkBtnStyle } from "./LinkPicker";
+import { PeopleIndex, type IndexEntry } from "./PeopleIndex";
 import { useUnsavedGuard } from "./useUnsavedGuard";
 import styles from "./OrgChart.module.css";
 
@@ -265,16 +266,17 @@ function groupTotals(d: MxGroup) {
   return { f, tr, o, at, p };
 }
 
-function SectionCol({ sec, links = {} }: { sec: MxSection; links?: Record<string, string> }) {
+function SectionCol({ sec, links = {}, highlight }: { sec: MxSection; links?: Record<string, string>; highlight?: string | null }) {
   const o = normSeat(sec);
   const c = cntSeat(o);
   const href = (n: string) => (links[n] ? `/candidates/${links[n]}` : undefined);
+  const hl = (n: string) => Boolean(highlight && n.toLowerCase() === highlight.toLowerCase());
   const rows: ReactNode[] = [];
-  o.line.forEach((n, i) => rows.push(<PersonRow key={`l${i}`} name={n} cls="g" rp="On staff" href={href(n)} />));
-  o.train.forEach((n, i) => rows.push(<PersonRow key={`t${i}`} name={n} cls="t" rp="In training" href={href(n)} />));
-  o.offered.forEach((n, i) => rows.push(<PersonRow key={`of${i}`} name={n} cls="of" rp="Offered" href={href(n)} />));
-  o.cand.forEach((n, i) => rows.push(<PersonRow key={`c${i}`} name={n} cls="r" rp="Candidate" href={href(n)} />));
-  o.candInt.forEach((n, i) => rows.push(<PersonRow key={`ci${i}`} name={n} cls="i" rp="Candidate · internal" href={href(n)} />));
+  o.line.forEach((n, i) => rows.push(<PersonRow key={`l${i}`} name={n} cls="g" rp="On staff" href={href(n)} highlight={hl(n)} />));
+  o.train.forEach((n, i) => rows.push(<PersonRow key={`t${i}`} name={n} cls="t" rp="In training" href={href(n)} highlight={hl(n)} />));
+  o.offered.forEach((n, i) => rows.push(<PersonRow key={`of${i}`} name={n} cls="of" rp="Offered" href={href(n)} highlight={hl(n)} />));
+  o.cand.forEach((n, i) => rows.push(<PersonRow key={`c${i}`} name={n} cls="r" rp="Candidate" href={href(n)} highlight={hl(n)} />));
+  o.candInt.forEach((n, i) => rows.push(<PersonRow key={`ci${i}`} name={n} cls="i" rp="Candidate · internal" href={href(n)} highlight={hl(n)} />));
   o.openNamed.forEach((lbl, i) => rows.push(<SlotRow key={`on${i}`} label={lbl} cls="o" rp="To fill" />));
   for (let i = 0; i < o.open; i++) rows.push(<SlotRow key={`o${i}`} label="Open position" cls="o" rp="Sourcing" />);
   return (
@@ -341,6 +343,11 @@ export default function MaintenanceOrgChart({
   const [sort, setSort] = useState<SortKey>("Team size");
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  // "Find a person" — same need as the crew chart: this chart is organised by
+  // LOCATION, so finding a named technician means opening cards until they turn
+  // up. See PeopleIndex.
+  const [findOpen, setFindOpen] = useState(false);
+  const [highlight, setHighlight] = useState<string | null>(null);
 
   const [mxData, setMxData] = useState<MxGroup[]>(() => initialGroups ?? []);
   const [savedGroups, setSavedGroups] = useState<MxGroup[]>(() => initialGroups ?? []);
@@ -537,6 +544,44 @@ export default function MaintenanceOrgChart({
       cancelCardEdit();
     }
     setOpenIdx(null);
+    setHighlight(null);
+  };
+
+  /** Everyone on the chart, flattened, for the "Find a person" panel. Built
+      from mxData so it is independent of the card sort and of any filtering. */
+  const indexEntries = useMemo<IndexEntry[]>(() => {
+    const out: IndexEntry[] = [];
+    const BUCKETS: { key: FillBucket; tone: IndexEntry["tone"]; word: string }[] = [
+      { key: "line", tone: "g", word: "on staff" },
+      { key: "train", tone: "t", word: "in training" },
+      { key: "offered", tone: "of", word: "offered" },
+      { key: "cand", tone: "r", word: "candidate · external" },
+      { key: "candInt", tone: "i", word: "candidate · internal" }
+    ];
+    mxData.forEach((g, gIdx) => {
+      g.sections.forEach((sec) => {
+        const seat = normSeat(sec);
+        BUCKETS.forEach(({ key, tone, word }) => {
+          seat[key].forEach((name) => {
+            out.push({
+              name,
+              where: g.name,
+              role: `${sec.label} · ${word}`,
+              tone,
+              cardIdx: gIdx,
+              ...(links[name] ? { candidateId: links[name] } : {})
+            });
+          });
+        });
+      });
+    });
+    return out;
+  }, [mxData, links]);
+
+  const showPerson = (entry: IndexEntry) => {
+    setFindOpen(false);
+    setHighlight(entry.name);
+    openCard(entry.cardIdx);
   };
 
   const groups = mxData.map((d, idx) => {
@@ -699,6 +744,12 @@ export default function MaintenanceOrgChart({
           </div>
           <div className="ctrls">
             <div className="seg">
+              <span className="lbl">People</span>
+              <button className={findOpen ? "on" : ""} onClick={() => setFindOpen((v) => !v)}>
+                {findOpen ? "Close list" : "Find a person"}
+              </button>
+            </div>
+            <div className="seg">
               <span className="lbl">Sort</span>
               <button className={sort === "Team size" ? "on" : ""} onClick={() => setSort("Team size")}>
                 Team size
@@ -742,6 +793,10 @@ export default function MaintenanceOrgChart({
           </div>
         </div>
       </div>
+
+      {findOpen ? (
+        <PeopleIndex entries={indexEntries} unit="location" onPick={showPerson} onClose={() => setFindOpen(false)} />
+      ) : null}
 
       {editMode ? (
         <div className="editbar">
@@ -851,6 +906,20 @@ export default function MaintenanceOrgChart({
               <div className="m-sub">
                 {active.sub} · {at.f}/{at.at} staffed · reports to {active.mgr}
               </div>
+              {/* Edit at the TOP, matching the crew chart — it used to sit below
+                  every section and the hiring pipeline. */}
+              {canEdit && !isEditing ? (
+                <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginTop: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => startCardEdit(openIdx as number)}
+                    style={{ background: "var(--navy, #0d2c43)", color: "#fff", border: "none", borderRadius: 4, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                  >
+                    Edit Team
+                  </button>
+                  <span style={{ fontSize: 11.5, opacity: 0.65 }}>Changes here affect only {active.name}.</span>
+                </div>
+              ) : null}
             </div>
             {isEditing ? (
               <>
@@ -879,7 +948,7 @@ export default function MaintenanceOrgChart({
               <>
                 <div className="m-cols">
                   {active.sections.map((sec, i) => (
-                    <SectionCol key={i} sec={sec} links={links} />
+                    <SectionCol key={i} sec={sec} links={links} highlight={highlight} />
                   ))}
                 </div>
                 <Pipeline d={active} />
@@ -896,19 +965,12 @@ export default function MaintenanceOrgChart({
             new maintenance line station is not. It is a decision, not a gap, so
             please don't add it purely to make the two charts match the standing
             "every chart ships the same capabilities" rule. If maintenance ever
-            genuinely needs a new location, build it then. */}
-        {active && canEdit && !isEditing ? (
-          <div style={{ borderTop: "1px solid var(--line, #cdd7e2)", marginTop: 14, paddingTop: 12, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              onClick={() => startCardEdit(openIdx as number)}
-              style={{ background: "var(--navy, #0d2c43)", color: "#fff", border: "none", borderRadius: 4, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
-            >
-              Edit this location
-            </button>
-            <span style={{ fontSize: 11.5, opacity: 0.65 }}>Changes here affect only {active.name}.</span>
-          </div>
-        ) : null}
+            genuinely needs a new location, build it then.
+
+            The Edit entry point itself now lives in the card HEADER (above),
+            not here — it was below every section and the hiring pipeline, which
+            on a full location is a long scroll past the thing you came to
+            change. */}
 
         {/* During an "Edit all" session the Save button lives in the header bar,
             off-screen while you are down in a card. Repeat it here so edits can

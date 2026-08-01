@@ -35,6 +35,11 @@ export interface Departure {
   name: string;
   to?: string;
   reason?: string;
+  /** The date they actually left, yyyy-mm-dd. Drives the automatic archiving of
+      old "transitioning out" lines (see lib/fleet/staffing/labels.ts). Optional
+      because a TENTATIVE move is recorded as a departure and has not happened
+      yet — and an undated departure deliberately never ages out. */
+  date?: string;
 }
 
 /** A crew group = an aircraft type (fractional) or a single managed tail. */

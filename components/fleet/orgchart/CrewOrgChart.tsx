@@ -3,16 +3,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import type { CrewGroup, Seat } from "@/lib/fleet/staffing/types";
+import type { CrewGroup, Departure, Seat } from "@/lib/fleet/staffing/types";
 import { normSeat, cntSeat } from "@/lib/fleet/staffing/compute";
 import { CREW_GROUPS, CREW_LEADERSHIP, CREW_TRAINING, CREW_PILOT_TURNOVER, turnoverFor } from "@/lib/fleet/staffing/crew-data";
+import { aircraftLabel, positionLabel, isoToday, splitDepartures, isDepartureArchived, DEPARTURE_ARCHIVE_DAYS } from "@/lib/fleet/staffing/labels";
+import type { TrainingRecord } from "@/lib/fleet/staffing/training";
+import { completedTraining } from "@/lib/fleet/staffing/training";
 import { SeatSquares, PersonRow, SlotRow } from "./SeatParts";
 import { LinkPicker, orgLinkBtnStyle } from "./LinkPicker";
+import { PeopleIndex, type IndexEntry } from "./PeopleIndex";
+import { TrainingTab } from "./TrainingTab";
 import { useUnsavedGuard } from "./useUnsavedGuard";
 import styles from "./OrgChart.module.css";
 
 type SortKey = "Fleet size" | "Open seats";
 type ParkedKey = "hide" | "show";
+type TabKey = "chart" | "training";
 
 // --- edit-mode roster mutation (pure, operate on a cloned draft) ------------
 type SeatKey = "pic" | "sic" | "cabin";
@@ -58,41 +64,82 @@ function ColBody({
   leadName,
   showParked,
   tags,
-  links = {}
+  links = {},
+  highlight,
+  trainingEnd
 }: {
   seat?: Seat | null;
   leadName?: string;
   showParked: boolean;
   tags?: Record<string, string[]>;
   links?: Record<string, string>;
+  /** Name to ring, when the user got here from the find-a-person list. */
+  highlight?: string | null;
+  /** name -> training end date, shown against the person in training. */
+  trainingEnd?: Record<string, string>;
 }) {
   if (!seat) return <div className="m-empty">Single-pilot / two-captain aircraft — no first-officer seat.</div>;
   const o = normSeat(seat);
   const href = (n: string) => (links[n] ? `/candidates/${links[n]}` : undefined);
+  const hl = (n: string) => Boolean(highlight && n.toLowerCase() === highlight.toLowerCase());
   const rows: ReactNode[] = [];
-  o.line.forEach((n, i) => rows.push(<PersonRow key={`l${i}`} name={n} cls="g" rp="On line" lead={n === leadName} tags={tags?.[n]} href={href(n)} />));
-  o.train.forEach((n, i) => rows.push(<PersonRow key={`t${i}`} name={n} cls="t" rp="In training" tags={tags?.[n]} href={href(n)} />));
-  o.offered.forEach((n, i) => rows.push(<PersonRow key={`of${i}`} name={n} cls="of" rp="Offered" tags={tags?.[n]} href={href(n)} />));
-  o.cand.forEach((n, i) => rows.push(<PersonRow key={`c${i}`} name={n} cls="r" rp="Tentative · external" tags={tags?.[n]} href={href(n)} />));
-  o.candInt.forEach((n, i) => rows.push(<PersonRow key={`ci${i}`} name={n} cls="i" rp="Tentative · internal" tags={tags?.[n]} href={href(n)} />));
+  o.line.forEach((n, i) => rows.push(<PersonRow key={`l${i}`} name={n} cls="g" rp="On line" lead={n === leadName} tags={tags?.[n]} href={href(n)} highlight={hl(n)} />));
+  o.train.forEach((n, i) =>
+    rows.push(
+      <PersonRow
+        key={`t${i}`}
+        name={n}
+        cls="t"
+        // The end date is the whole point of tracking training, so it belongs
+        // where the person is, not only on the Training tab.
+        rp={trainingEnd?.[n] ? `Training ends ${trainingEnd[n]}` : "In training"}
+        tags={tags?.[n]}
+        href={href(n)}
+        highlight={hl(n)}
+      />
+    )
+  );
+  o.offered.forEach((n, i) => rows.push(<PersonRow key={`of${i}`} name={n} cls="of" rp="Offered" tags={tags?.[n]} href={href(n)} highlight={hl(n)} />));
+  o.cand.forEach((n, i) => rows.push(<PersonRow key={`c${i}`} name={n} cls="r" rp="Tentative · external" tags={tags?.[n]} href={href(n)} highlight={hl(n)} />));
+  o.candInt.forEach((n, i) => rows.push(<PersonRow key={`ci${i}`} name={n} cls="i" rp="Tentative · internal" tags={tags?.[n]} href={href(n)} highlight={hl(n)} />));
   for (let i = 0; i < o.open; i++) rows.push(<SlotRow key={`o${i}`} label="Open seat" cls="o" rp="Sourcing" />);
   if (showParked) for (let i = 0; i < o.parked; i++) rows.push(<SlotRow key={`p${i}`} label="On hold (parked)" cls="p" rp="Not counted" />);
   if (rows.length === 0) return <div className="m-empty">No crew listed.</div>;
   return <>{rows}</>;
 }
 
-/** Move-target options: every non-pool aircraft/seat except the source seat. */
+/**
+ * Move-target options: every non-pool aircraft/seat except the source seat,
+ * split into the same two groups the chart itself uses.
+ *
+ * THE BUG THIS FIXES: the label used to be the aircraft TYPE alone, so the six
+ * managed PC-12s produced six identical "PC-12 — First Officer" entries with
+ * nothing to tell them apart. A pilot was moved onto a managed tail when a
+ * fractional seat was meant, and it was only noticed after the save. Managed
+ * entries now carry their tail, and the optgroups mean a fractional seat can no
+ * longer be confused for a dedicated one even at a glance.
+ */
 function moveOptions(allGroups: CrewGroup[], exclude: { gIdx: number; seatKey: SeatKey }) {
-  const opts: { value: string; label: string }[] = [];
+  const fractional: { value: string; label: string }[] = [];
+  const managed: { value: string; label: string }[] = [];
   allGroups.forEach((g, i) => {
     if (g.poolFlown) return;
     (["pic", "sic", "cabin"] as SeatKey[]).forEach((sk) => {
       if (sk === "cabin" && !g.cabin) return; // can't retarget cabin on a no-cabin aircraft
       if (i === exclude.gIdx && sk === exclude.seatKey) return;
-      opts.push({ value: `${i}|${sk}`, label: `${g.name} — ${SEAT_LABEL[sk]}` });
+      // A seat the aircraft does not have yet is still a valid destination —
+      // moving someone there creates it — but say so, because "PC-12 First
+      // Officer (N418T)" on a single-pilot tail otherwise looks like an
+      // existing seat sitting empty.
+      const isNew = !g[sk];
+      const label = `${positionLabel(g, SEAT_LABEL[sk])}${isNew ? " · adds a seat" : ""}`;
+      (g.pool === "Managed" ? managed : fractional).push({ value: `${i}|${sk}`, label });
     });
   });
-  return opts;
+  return [
+    { group: "Fractional / Charter", options: fractional },
+    { group: "Managed / Dedicated", options: managed }
+  ].filter((g) => g.options.length > 0);
 }
 
 /** One editable seat column in the edit-mode modal. Module-scoped so its
@@ -225,10 +272,14 @@ function EditCol({
               <option value="" disabled>
                 Move to…
               </option>
-              {moveOptions(allGroups, { gIdx, seatKey }).map((op) => (
-                <option key={op.value} value={op.value}>
-                  {op.label}
-                </option>
+              {moveOptions(allGroups, { gIdx, seatKey }).map((grp) => (
+                <optgroup key={grp.group} label={grp.group}>
+                  {grp.options.map((op) => (
+                    <option key={op.value} value={op.value}>
+                      {op.label}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
             <select value={moveStatus} onChange={(e) => setMoveStatus(e.target.value as FillBucket)} aria-label="Arrival status">
@@ -323,20 +374,36 @@ function EditCol({
   );
 }
 
-function Transitions({ d }: { d: CrewGroup }) {
+const depNote = (x: Departure) => (x.to ? `to ${x.to}${x.reason ? ` · ${x.reason}` : ""}` : x.reason || "departing");
+
+function Transitions({ d, training, today }: { d: CrewGroup; training: TrainingRecord[]; today: string | null }) {
+  const [showOld, setShowOld] = useState(false);
+  // A pilot's own training record beats the static CREW_TRAINING seed — the
+  // record is what someone can actually edit, so it has to be what shows.
+  const byName = new Map(training.map((r) => [r.name.toLowerCase(), r]));
+  const trainNote = (n: string) => {
+    const rec = byName.get(n.toLowerCase());
+    if (rec?.end) return `in training · ends ${rec.end}${rec.vendor ? ` · ${rec.vendor}` : ""}`;
+    return CREW_TRAINING[n] || "arriving · in training";
+  };
+
   const inn: { name: string; note: string }[] = [];
   [d.pic, d.sic, d.cabin].forEach((seat) => {
     if (!seat) return;
-    (seat.train || []).forEach((n) => inn.push({ name: n, note: CREW_TRAINING[n] || "arriving · in training" }));
+    (seat.train || []).forEach((n) => inn.push({ name: n, note: trainNote(n) }));
     (seat.offered || []).forEach((n) => inn.push({ name: n, note: "offered" }));
     (seat.cand || []).forEach((n) => inn.push({ name: n, note: "tentative · external" }));
     (seat.candInt || []).forEach((n) => inn.push({ name: n, note: "tentative · internal" }));
   });
-  const out = (d.out || []).map((x) => ({
-    name: x.name,
-    note: x.to ? `to ${x.to}${x.reason ? ` · ${x.reason}` : ""}` : x.reason || "departing"
-  }));
-  const block = (title: string, cls: string, arr: { name: string; note: string }[]) => (
+
+  // Departures older than a month drop out of the default view. See
+  // isDepartureArchived — it is DERIVED from the date, nothing is written, and
+  // an undated departure (a tentative move, which has not happened yet) is
+  // never archived.
+  const { current, archived } = splitDepartures(d.out, today);
+  const out = (showOld ? [...current, ...archived] : current).map((x) => ({ name: x.name, note: depNote(x) }));
+
+  const block = (title: string, cls: string, arr: { name: string; note: string }[], extra?: ReactNode) => (
     <div className={`tcard ${cls}`}>
       <div className="th">
         {title} ({arr.length})
@@ -351,14 +418,29 @@ function Transitions({ d }: { d: CrewGroup }) {
       ) : (
         <div className="tnone">None recorded</div>
       )}
+      {extra}
     </div>
   );
+
   return (
     <div className="m-move">
       <div className="mh4">Pilot movement</div>
       <div className="mgrid">
         {block("Transitioning in", "inn", inn)}
-        {block("Transitioning out", "outt", out)}
+        {block(
+          "Transitioning out",
+          "outt",
+          out,
+          archived.length ? (
+            <button
+              type="button"
+              onClick={() => setShowOld((v) => !v)}
+              style={{ background: "none", border: "none", padding: "4px 0 0", font: "inherit", fontSize: 11, opacity: 0.7, cursor: "pointer", color: "inherit", textDecoration: "underline", textUnderlineOffset: 2 }}
+            >
+              {showOld ? "Hide" : "Show"} {archived.length} archived · left over {DEPARTURE_ARCHIVE_DAYS} days ago
+            </button>
+          ) : null
+        )}
       </div>
     </div>
   );
@@ -367,23 +449,44 @@ function Transitions({ d }: { d: CrewGroup }) {
 export default function CrewOrgChart({
   initialGroups,
   initialLinks,
+  initialTraining,
   canEdit = false
 }: {
   initialGroups?: CrewGroup[];
   initialLinks?: Record<string, string>;
+  initialTraining?: TrainingRecord[];
   canEdit?: boolean;
 } = {}) {
   const [sort, setSort] = useState<SortKey>("Fleet size");
   const [parked, setParked] = useState<ParkedKey>("hide");
+  const [tab, setTab] = useState<TabKey>("chart");
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const showParked = parked === "show";
+
+  // Today's date, read AFTER mount. Reading the clock during render would make
+  // the server and the client disagree about which departures are archived and
+  // who has finished training, which is a hydration error. Null until mounted =
+  // "no date yet", and every date-dependent view is written to show the safe,
+  // unfiltered thing in that state.
+  const [today, setToday] = useState<string | null>(null);
+  useEffect(() => setToday(isoToday()), []);
 
   const [groupsData, setGroupsData] = useState<CrewGroup[]>(() => initialGroups ?? CREW_GROUPS);
   const [savedGroups, setSavedGroups] = useState<CrewGroup[]>(() => initialGroups ?? CREW_GROUPS);
   // name -> candidateId, edited alongside the roster and saved with it.
   const [links, setLinks] = useState<Record<string, string>>(() => initialLinks ?? {});
   const [savedLinks, setSavedLinks] = useState<Record<string, string>>(() => initialLinks ?? {});
+  // Training records, edited and saved alongside the roster in the same blob.
+  const [training, setTraining] = useState<TrainingRecord[]>(() => initialTraining ?? []);
+  const [savedTraining, setSavedTraining] = useState<TrainingRecord[]>(() => initialTraining ?? []);
+  // "Find a person" panel, and who to highlight once their card opens.
+  const [findOpen, setFindOpen] = useState(false);
+  const [highlight, setHighlight] = useState<string | null>(null);
+  // Which finished-training pilots have been dismissed for this visit. Local
+  // only: dismissing is "not now", not a decision worth writing to a shared
+  // database, and it should come back tomorrow if nobody acted on it.
+  const [dismissedTraining, setDismissedTraining] = useState<string[]>([]);
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState<string | null>(null);
@@ -416,8 +519,11 @@ export default function CrewOrgChart({
   const [cardSnapshot, setCardSnapshot] = useState<{ groups: CrewGroup[]; links: Record<string, string> } | null>(null);
 
   const dirty = useMemo(
-    () => JSON.stringify(groupsData) !== JSON.stringify(savedGroups) || JSON.stringify(links) !== JSON.stringify(savedLinks),
-    [groupsData, savedGroups, links, savedLinks]
+    () =>
+      JSON.stringify(groupsData) !== JSON.stringify(savedGroups) ||
+      JSON.stringify(links) !== JSON.stringify(savedLinks) ||
+      JSON.stringify(training) !== JSON.stringify(savedTraining),
+    [groupsData, savedGroups, links, savedLinks, training, savedTraining]
   );
   /** Has anything changed since THIS card editor opened? Drives its Save button
       and the discard prompt — separate from `dirty`, which is chart-wide. */
@@ -529,7 +635,7 @@ export default function CrewOrgChart({
     if (cardMode) {
       setCardEdit(null);
       setCardSnapshot(null);
-      void postRoster({ groups: next, links });
+      void postRoster({ groups: next, links, training });
     }
   };
 
@@ -608,7 +714,9 @@ export default function CrewOrgChart({
       // A tentative transfer is "in progress": record it as transitioning-out on
       // the source so the pilot shows leaving the old aircraft.
       if (tentative) {
-        const destLabel = `${destGroup.name} · ${SEAT_LABEL[toSeat]}`;
+        // Carries the tail for a managed destination — "to PC-12 First Officer"
+        // does not tell anyone which of the six PC-12s he is going to.
+        const destLabel = positionLabel(destGroup, SEAT_LABEL[toSeat]);
         srcGroup.out = [...(srcGroup.out ?? []), { name: from.name, to: destLabel, reason: "tentative move" }];
       }
       tidySeat(srcGroup, from.seatKey);
@@ -698,6 +806,42 @@ export default function CrewOrgChart({
         if (!g.out.length) delete g.out;
       }
     });
+  /** Date a departure. This is what lets it age out of the default view a month
+      later; clearing the date brings it back and keeps it there. */
+  const setOutDate = (gIdx: number, index: number, date: string) =>
+    applyEdit((d) => {
+      const dep = d[gIdx].out?.[index];
+      if (!dep) return;
+      if (date) dep.date = date;
+      else delete dep.date;
+    });
+
+  /**
+   * Move a pilot whose training has ended onto the line — the confirm half of
+   * the "training is over" prompt.
+   *
+   * Deliberately NOT automatic. Training slips, gets rescheduled and is
+   * sometimes failed, so a date passing is a reason to ASK, never a reason to
+   * mark somebody line-ready. This also marks their training record complete,
+   * so the same pilot cannot be offered again.
+   *
+   * Saves immediately: the prompt is reachable without any editor open, so
+   * leaving the change local would strand it somewhere with no Save button.
+   */
+  const moveTrainedToLine = async (person: { name: string; gIdx: number; seatKey: SeatKey; aircraft: string }) => {
+    if (!window.confirm(`Move ${person.name} from training onto the line on the ${person.aircraft}? This saves straight away.`)) return;
+    const nextGroups = structuredClone(groupsData);
+    const seat = ensureSeat(nextGroups[person.gIdx], person.seatKey);
+    pull(seat, "train", person.name);
+    push(seat, "line", person.name);
+    const nextTraining = training.map((r) => (r.name.toLowerCase() === person.name.toLowerCase() ? { ...r, status: "complete" as const } : r));
+    setGroupsData(nextGroups);
+    setTraining(nextTraining);
+    const ok = await postRoster({ groups: nextGroups, links, training: nextTraining });
+    // The chart move and the employee's journey are separate records, so offer
+    // the role change too — the same offer a manual move makes.
+    if (ok) void offerRoleChange(person.name, person.gIdx, person.seatKey);
+  };
 
   const postRoster = async (body: unknown): Promise<boolean> => {
     setSaving(true);
@@ -709,12 +853,15 @@ export default function CrewOrgChart({
         body: JSON.stringify(body)
       });
       if (!res.ok) throw new Error(String(res.status));
-      const data = (await res.json()) as { groups: CrewGroup[]; links?: Record<string, string> };
+      const data = (await res.json()) as { groups: CrewGroup[]; links?: Record<string, string>; training?: TrainingRecord[] };
       setGroupsData(data.groups);
       setSavedGroups(data.groups);
       const nextLinks = data.links ?? {};
       setLinks(nextLinks);
       setSavedLinks(nextLinks);
+      const nextTraining = data.training ?? [];
+      setTraining(nextTraining);
+      setSavedTraining(nextTraining);
       return true;
     } catch {
       setSaveErr("Couldn't save — check your connection or that you're signed in as an admin.");
@@ -723,7 +870,7 @@ export default function CrewOrgChart({
       setSaving(false);
     }
   };
-  const save = () => void postRoster({ groups: groupsData, links });
+  const save = () => void postRoster({ groups: groupsData, links, training });
   const resetSeed = () => {
     if (typeof window !== "undefined" && !window.confirm("Reset the crew chart to the original source data? This discards all saved manual edits.")) return;
     void postRoster({ reset: true });
@@ -735,6 +882,7 @@ export default function CrewOrgChart({
     if (dirty && !window.confirm("Discard your unsaved changes to this chart? Everything you have edited since the last save will be lost.")) return;
     setGroupsData(savedGroups);
     setLinks(savedLinks);
+    setTraining(savedTraining);
     setMovePick(null);
     setSaveErr(null);
     setEditMode(false);
@@ -766,7 +914,7 @@ export default function CrewOrgChart({
     setSaveErr(null);
   };
   const saveCardEdit = async () => {
-    const ok = await postRoster({ groups: groupsData, links });
+    const ok = await postRoster({ groups: groupsData, links, training });
     if (!ok) return; // leave the editor open so the changes aren't lost
     setCardSnapshot(null);
     setCardEdit(null);
@@ -793,6 +941,7 @@ export default function CrewOrgChart({
       cancelCardEdit();
     }
     setOpenIdx(null);
+    setHighlight(null);
   };
 
   const groups = groupsData.map((d, idx) => {
@@ -819,6 +968,67 @@ export default function CrewOrgChart({
     }
     return { d, idx, cp, cs, o, tr, status, bBg, bFg, rule };
   });
+
+  /**
+   * Everyone on the chart, flattened, for the "Find a person" panel.
+   *
+   * Built from groupsData rather than the sorted display list so a person's
+   * entry does not move when the cards are re-sorted, and so it includes people
+   * on cards the current filters would hide.
+   */
+  const indexEntries = useMemo<IndexEntry[]>(() => {
+    const out: IndexEntry[] = [];
+    const BUCKETS: { key: FillBucket; tone: IndexEntry["tone"]; word: string }[] = [
+      { key: "line", tone: "g", word: "on line" },
+      { key: "train", tone: "t", word: "in training" },
+      { key: "offered", tone: "of", word: "offered" },
+      { key: "cand", tone: "r", word: "tentative · external" },
+      { key: "candInt", tone: "i", word: "tentative · internal" }
+    ];
+    groupsData.forEach((g, gIdx) => {
+      (["pic", "sic", "cabin"] as SeatKey[]).forEach((sk) => {
+        const seat = normSeat(g[sk]);
+        BUCKETS.forEach(({ key, tone, word }) => {
+          seat[key].forEach((name) => {
+            out.push({
+              name,
+              where: aircraftLabel(g),
+              role: `${SEAT_LABEL[sk]} · ${word}`,
+              tone,
+              cardIdx: gIdx,
+              ...(links[name] ? { candidateId: links[name] } : {})
+            });
+          });
+        });
+      });
+    });
+    return out;
+  }, [groupsData, links]);
+
+  /** Open the card a person sits on and mark them, from the find panel or the
+      training tab. Both are "show me where this is", not navigation. */
+  const showPerson = (name: string, cardIdx?: number) => {
+    const idx = cardIdx ?? indexEntries.find((e) => e.name.toLowerCase() === name.toLowerCase())?.cardIdx;
+    if (idx == null) return;
+    setTab("chart");
+    setFindOpen(false);
+    setHighlight(name);
+    openCard(idx);
+  };
+
+  /** name -> training end date, for the person rows on an aircraft card. */
+  const trainingEnds = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const r of training) if (r.end) out[r.name] = r.end;
+    return out;
+  }, [training]);
+
+  // Finished training and still sitting in a training seat — the people the
+  // banner asks about. Dismissals are per-visit, so nobody is silently dropped.
+  const finished = useMemo(
+    () => completedTraining(groupsData, training, today).filter((p) => !dismissedTraining.includes(p.name)),
+    [groupsData, training, today, dismissedTraining]
+  );
 
   const counted = groups.filter((g) => !g.d.noCount);
   // filled includes in-training (a signed pilot fills the seat, even pre-line)
@@ -903,7 +1113,10 @@ export default function CrewOrgChart({
       return s.train.length + s.offered.length + s.cand.length + s.candInt.length;
     };
     const inN = arrivals(g.d.pic) + arrivals(g.d.sic) + arrivals(g.d.cabin);
-    const outN = g.d.out ? g.d.out.length : 0;
+    // Archived departures are out of the count too, not just out of the list —
+    // a card reading "3 out" for people who left in the spring is the same
+    // stale signal, one level up.
+    const outN = splitDepartures(g.d.out, today).current.length;
     const tn = turnoverFor(g.d);
     const turnEl = (
       <>
@@ -1060,6 +1273,24 @@ export default function CrewOrgChart({
           </div>
           <div className="ctrls">
             <div className="seg">
+              <span className="lbl">View</span>
+              <button className={tab === "chart" ? "on" : ""} onClick={() => setTab("chart")}>
+                Chart
+              </button>
+              <button className={tab === "training" ? "on" : ""} onClick={() => setTab("training")}>
+                Training{finished.length ? ` (${finished.length})` : ""}
+              </button>
+            </div>
+            {/* Finding a person by NAME. The chart is organised by aircraft,
+                which is right for staffing and useless for "where is he?" —
+                with 26 tails you open cards until you find them. */}
+            <div className="seg">
+              <span className="lbl">People</span>
+              <button className={findOpen ? "on" : ""} onClick={() => setFindOpen((v) => !v)}>
+                {findOpen ? "Close list" : "Find a person"}
+              </button>
+            </div>
+            <div className="seg">
               <span className="lbl">Sort</span>
               <button className={sort === "Fleet size" ? "on" : ""} onClick={() => setSort("Fleet size")}>
                 Fleet size
@@ -1113,6 +1344,69 @@ export default function CrewOrgChart({
         </div>
       </div>
 
+      {findOpen ? (
+        <PeopleIndex entries={indexEntries} unit="aircraft" onPick={(e) => showPerson(e.name, e.cardIdx)} onClose={() => setFindOpen(false)} />
+      ) : null}
+
+      {/* TRAINING IS OVER — ASK, DO NOT ACT. A pilot whose training end date has
+          passed is still sitting in a training seat until somebody says
+          otherwise, because training slips, is rescheduled, and is sometimes
+          failed. This is the notification; the move is one confirmed click. */}
+      {finished.length > 0 ? (
+        <div
+          style={{
+            marginTop: 12,
+            border: "1px solid var(--gold, #eaaa00)",
+            borderLeft: "4px solid var(--gold, #eaaa00)",
+            borderRadius: 4,
+            background: "var(--train-bg, rgba(234,170,0,.12))",
+            padding: "10px 12px"
+          }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 700 }}>
+            {finished.length === 1 ? "1 pilot has finished training" : `${finished.length} pilots have finished training`}
+          </div>
+          <div style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>
+            Their training end date has passed but the chart still counts them as in training. Nobody is moved automatically.
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+            {finished.map((p) => (
+              <div key={`${p.name}-${p.gIdx}-${p.seatKey}`} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", fontSize: 12.5 }}>
+                <b>{p.name}</b>
+                <span style={{ opacity: 0.8 }}>
+                  {aircraftLabel(groupsData[p.gIdx])} · {SEAT_LABEL[p.seatKey]} · ended {p.end}
+                </span>
+                {canEdit ? (
+                  <button
+                    type="button"
+                    onClick={() => void moveTrainedToLine({ name: p.name, gIdx: p.gIdx, seatKey: p.seatKey, aircraft: aircraftLabel(groupsData[p.gIdx]) })}
+                    disabled={saving}
+                    style={{ background: "var(--navy, #0d2c43)", color: "#fff", border: "none", borderRadius: 4, padding: "4px 10px", fontSize: 12, fontWeight: 600, cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}
+                  >
+                    Move to the line
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => showPerson(p.name, p.gIdx)}
+                  style={{ ...orgLinkBtnStyle, fontSize: 11.5 }}
+                >
+                  show on chart
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDismissedTraining((prev) => [...prev, p.name])}
+                  style={{ background: "none", border: "none", opacity: 0.65, fontSize: 11.5, cursor: "pointer", color: "inherit" }}
+                  title="Hide until the next time this page is loaded"
+                >
+                  not yet
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {editMode ? (
         <div className="editbar">
           <div className="eb-msg">
@@ -1138,6 +1432,19 @@ export default function CrewOrgChart({
         </div>
       ) : null}
 
+      {tab === "training" ? (
+        <TrainingTab
+          groups={groupsData}
+          records={training}
+          links={links}
+          today={today}
+          canEdit={canEdit}
+          onChange={setTraining}
+          onShowPerson={(name) => showPerson(name)}
+        />
+      ) : null}
+
+      <div style={{ display: tab === "chart" ? undefined : "none" }}>
       <div className="toptree">
         <div className="mgmt">
           <div className="mbox">
@@ -1228,6 +1535,30 @@ export default function CrewOrgChart({
         </Link>
       </div>
       <span className="mockflag">Live data · Paycom + fleet summary + Recruiting Status Tracking (Master + Training) + turnover dashboard — Jul 2026 · roster, open reqs, training, time-to-fill &amp; department turnover all sourced</span>
+      </div>
+
+      {/* The Training tab edits the SAME stored blob as the roster, so it needs
+          its own Save — the chart-wide edit bar only appears during an "Edit
+          all" session, and nobody enters one to type a date. */}
+      {tab === "training" && canEdit ? (
+        <div style={{ borderTop: "1px solid var(--line, #cdd7e2)", marginTop: 14, paddingTop: 12, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving || !dirty}
+            style={{ background: dirty ? "var(--navy, #0d2c43)" : "transparent", color: dirty ? "#fff" : "var(--ink, #1a2b3c)", border: dirty ? "none" : "1px solid var(--line, #cdd7e2)", borderRadius: 4, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: saving || !dirty ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}
+          >
+            {saving ? "Saving…" : "Save training"}
+          </button>
+          {saveErr ? (
+            <span style={{ color: "#c0392b", fontSize: 12 }}>{saveErr}</span>
+          ) : dirty ? (
+            <span style={{ color: "#b0670e", fontSize: 12, fontWeight: 600 }}>Unsaved — nothing is stored until you save.</span>
+          ) : (
+            <span style={{ fontSize: 11.5, opacity: 0.65 }}>All changes saved.</span>
+          )}
+        </div>
+      ) : null}
 
       <div className={`backdrop${active ? " open" : ""}`} onClick={closeModal} />
       <div className={`modal${active ? " open" : ""}`} role="dialog" aria-modal="true">
@@ -1258,6 +1589,21 @@ export default function CrewOrgChart({
                 {active.sub} · {acp.f}/{acp.at} captains
                 {as && acs ? ` · ${acs.f}/${acs.at} first officers` : ""}
               </div>
+              {/* Edit sits at the TOP now. It used to live below the seat lists,
+                  the photo and the movement panel — on a full aircraft that is a
+                  long scroll past everything you came to change. */}
+              {canEdit && !isEditing ? (
+                <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginTop: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => startCardEdit(openIdx as number)}
+                    style={{ background: "var(--navy, #0d2c43)", color: "#fff", border: "none", borderRadius: 4, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                  >
+                    Edit Crew
+                  </button>
+                  <span style={{ fontSize: 11.5, opacity: 0.65 }}>Changes here affect only {active.sub}.</span>
+                </div>
+              ) : null}
             </div>
             {isEditing ? (
               <>
@@ -1319,18 +1665,42 @@ export default function CrewOrgChart({
                     />
                   ) : null}
                 </div>
+                {/* Edit mode shows EVERY departure, archived ones included —
+                    this is the only place an archived row can be corrected or
+                    deleted, so hiding them here would make archiving a one-way
+                    door. */}
                 {active.out && active.out.length ? (
                   <div className="ec-out">
                     <div className="ec-out-h">Transitioning out</div>
-                    {active.out.map((o, i) => (
-                      <div className="ec-out-row" key={`${o.name}-${i}`}>
-                        <span className="ec-out-nm">{o.name}</span>
-                        <span className="ec-out-note">{o.to ? `to ${o.to}` : ""}{o.reason ? `${o.to ? " · " : ""}${o.reason}` : ""}</span>
-                        <button type="button" className="del" onClick={() => removeOut(openIdx as number, i)} title="Remove departure">
-                          ✕
-                        </button>
-                      </div>
-                    ))}
+                    {active.out.map((o, i) => {
+                      const gone = isDepartureArchived(o, today);
+                      return (
+                        <div className="ec-out-row" key={`${o.name}-${i}`} style={gone ? { opacity: 0.6 } : undefined}>
+                          <span className="ec-out-nm">{o.name}</span>
+                          <span className="ec-out-note">
+                            {o.to ? `to ${o.to}` : ""}
+                            {o.reason ? `${o.to ? " · " : ""}${o.reason}` : ""}
+                            {gone ? " · archived" : ""}
+                          </span>
+                          <label style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11 }}>
+                            <span style={{ opacity: 0.7 }}>left</span>
+                            <input
+                              type="date"
+                              value={o.date ?? ""}
+                              onChange={(e) => setOutDate(openIdx as number, i, e.target.value)}
+                              title={`Date ${o.name} left. Departures drop out of the default view ${DEPARTURE_ARCHIVE_DAYS} days after this date; leave it blank and the row stays.`}
+                              style={{ fontSize: 11, padding: "2px 4px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)", background: "transparent", color: "inherit" }}
+                            />
+                          </label>
+                          <button type="button" className="del" onClick={() => removeOut(openIdx as number, i)} title="Remove departure">
+                            ✕
+                          </button>
+                        </div>
+                      );
+                    })}
+                    <div style={{ fontSize: 11, opacity: 0.65, marginTop: 4 }}>
+                      A dated departure archives itself {DEPARTURE_ARCHIVE_DAYS} days later and stops showing on the card. Undated rows — including a tentative move — stay put.
+                    </div>
                   </div>
                 ) : null}
                 <div className="m-edithint">
@@ -1347,14 +1717,14 @@ export default function CrewOrgChart({
                         {acp.f}/{acp.at}
                       </span>
                     </div>
-                    <ColBody seat={active.pic} leadName={active.lead} showParked={showParked} tags={active.tags} links={links} />
+                    <ColBody seat={active.pic} leadName={active.lead} showParked={showParked} tags={active.tags} links={links} highlight={highlight} trainingEnd={trainingEnds} />
                   </div>
                   <div className="m-col">
                     <div className="colh">
                       <span>First Officers</span>
                       <span>{as && acs ? `${acs.f}/${acs.at}` : "—"}</span>
                     </div>
-                    <ColBody seat={active.sic} showParked={showParked} tags={active.tags} links={links} />
+                    <ColBody seat={active.sic} showParked={showParked} tags={active.tags} links={links} highlight={highlight} trainingEnd={trainingEnds} />
                   </div>
                   {acab && acabc ? (
                     <div className="m-cab">
@@ -1365,7 +1735,14 @@ export default function CrewOrgChart({
                         </span>
                       </div>
                       {acab.line.map((n, i) => (
-                        <PersonRow key={`cl${i}`} name={n} cls="g" rp="On board" href={links[n] ? `/candidates/${links[n]}` : undefined} />
+                        <PersonRow
+                          key={`cl${i}`}
+                          name={n}
+                          cls="g"
+                          rp="On board"
+                          href={links[n] ? `/candidates/${links[n]}` : undefined}
+                          highlight={Boolean(highlight && n.toLowerCase() === highlight.toLowerCase())}
+                        />
                       ))}
                       {acab.openNamed.map((l, i) => (
                         <SlotRow key={`co${i}`} label={l} cls="o" rp="To fill" />
@@ -1373,7 +1750,7 @@ export default function CrewOrgChart({
                     </div>
                   ) : null}
                 </div>
-                <Transitions d={active} />
+                <Transitions d={active} training={training} today={today} />
                 <div className="m-photo">
                   {active.photo ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -1394,17 +1771,18 @@ export default function CrewOrgChart({
           </>
         ) : null}
 
-        {/* Card-level actions. Deliberately outside the branches above so they
-            are there for every kind of card — including a shared-pool tail,
-            which renders none of the seat columns. */}
-        {active && canEdit && !isEditing ? (
+        {/* A SHARED-POOL tail renders none of the seat columns, so it never
+            reaches the Edit Crew button in the header above. It still needs one
+            — this is how a pool tail gets duplicated or removed — so it keeps
+            the bottom-of-card placement it always had. */}
+        {active && active.poolFlown && canEdit && !isEditing ? (
           <div style={{ borderTop: "1px solid var(--line, #cdd7e2)", marginTop: 14, paddingTop: 12, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <button
               type="button"
               onClick={() => startCardEdit(openIdx as number)}
               style={{ background: "var(--navy, #0d2c43)", color: "#fff", border: "none", borderRadius: 4, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
             >
-              Edit this aircraft
+              Edit Crew
             </button>
             <span style={{ fontSize: 11.5, opacity: 0.65 }}>Changes here affect only {active.sub}.</span>
           </div>

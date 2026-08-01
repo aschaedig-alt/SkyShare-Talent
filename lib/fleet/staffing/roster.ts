@@ -14,6 +14,7 @@
 
 import type { CrewGroup, CrewPool, Departure, Seat } from "./types";
 import { CREW_GROUPS } from "./crew-data";
+import type { TrainingRecord } from "./training";
 
 /**
  * Links a pilot on the chart to their Candidate record, keyed by the EXACT name
@@ -23,7 +24,10 @@ import { CREW_GROUPS } from "./crew-data";
  * Same shape and rationale as the maintenance chart's links.
  */
 export type CrewLinks = Record<string, string>;
-export type CrewRoster = { groups: CrewGroup[]; links: CrewLinks };
+/** Roster + candidate links + training records, all in the ONE stored blob.
+    Training rides along here rather than in new database columns — see the note
+    at the top of training.ts for why that matters on a shared live database. */
+export type CrewRoster = { groups: CrewGroup[]; links: CrewLinks; training: TrainingRecord[] };
 
 /** Coerce a stored/posted links blob into a safe { name: candidateId } map. */
 export function normalizeCrewLinks(input: unknown): CrewLinks {
@@ -102,8 +106,13 @@ function normalizeOut(value: unknown): Departure[] | undefined {
       const dep: Departure = { name };
       const to = str(raw.to);
       const reason = str(raw.reason);
+      const date = str(raw.date);
       if (to) dep.to = to;
       if (reason) dep.reason = reason;
+      // Only a real yyyy-mm-dd is kept — a half-parsed date here would archive
+      // the wrong departures, so anything else is dropped and the row simply
+      // stays visible.
+      if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) dep.date = date;
       return dep;
     })
     .filter((d): d is Departure => d !== null);

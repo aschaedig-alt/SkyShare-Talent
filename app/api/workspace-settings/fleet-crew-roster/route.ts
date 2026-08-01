@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       const roster = await resetCrewRoster();
       return NextResponse.json(roster);
     }
-    const roster = await saveCrewRoster((payload as { groups?: unknown; links?: unknown }) ?? {});
+    const roster = await saveCrewRoster((payload as { groups?: unknown; links?: unknown; training?: unknown }) ?? {});
     return NextResponse.json(roster);
   } catch {
     return NextResponse.json({ message: "Unable to save the crew roster." }, { status: 500 });
