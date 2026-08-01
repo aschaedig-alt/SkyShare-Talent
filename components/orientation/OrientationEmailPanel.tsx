@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { clsx } from "clsx";
+import { Clock } from "lucide-react";
 import { Button, Modal } from "@/components/ui";
 import { AUDIENCE_LABEL, ORIENTATION_TEMPLATE_META, type OrientationTemplateKey, type OrientationTemplateMeta } from "@/lib/orientation/email-templates-meta";
 import { frontConversationUrl } from "@/lib/front/links";
@@ -57,6 +58,20 @@ function shortDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   return new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", month: "short", day: "numeric" }).format(d);
+}
+
+/**
+ * "Mon, Aug 3" from a YYYY-MM-DD send day, for the column chip.
+ *
+ * UTC, NOT the office zone — unlike shortDate above, which formats a real
+ * moment. sendOnKey is a calendar day, so it parses to midnight UTC, and
+ * reading midnight UTC in Mountain lands at 6pm the PREVIOUS day. Formatting
+ * this one in America/Denver would label the Aug 3 send as Aug 2.
+ */
+function shortSendDay(dayKey: string): string {
+  const d = new Date(`${dayKey}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" }).format(d);
 }
 
 function fullSentLabel(r: SendRecord): string {
@@ -152,6 +167,26 @@ export function OrientationEmailPanel({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [batchKey, setBatchKey] = useState<OrientationTemplateKey | null>(null);
 
+  // Armed state lives HERE rather than inside the scheduler, because the grid
+  // needs it too. With it hidden below, an armed session showed a column of
+  // empty "not sent" circles — which is the same thing the grid shows when
+  // nothing is going to happen at all. Six people were queued and the column
+  // said nothing about it.
+  const [reminder, setReminder] = useState<ReminderStatusView | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetch(`/api/orientation/sessions/${sessionId}/reminder`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => live && setReminder(d?.sendOnLabel ? d : null))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [sessionId]);
+
+  /** The reminder is queued to go out and this person has not had it yet. */
+  const reminderQueued = Boolean(reminder?.armed && !reminder.passed);
+
   const allSelected = attendees.length > 0 && selected.size === attendees.length;
   function toggleOne(id: string) {
     setSelected((cur) => {
@@ -203,6 +238,18 @@ export function OrientationEmailPanel({
                     {/* Repeated from the legend on purpose: when you are scanning
                         rows, the column header is the only thing in view. */}
                     <AudienceChip audience={t.audience} className="normal-case" />
+                    {/* Same reasoning, one step further: the fact that this
+                        column is going to fill itself in belongs AT the column,
+                        not in a box below two other sections. */}
+                    {t.key === "reminder" && reminderQueued && reminder ? (
+                      <span
+                        className="inline-flex items-center gap-1 rounded bg-brand-gold/20 px-1.5 py-0.5 text-[9.5px] font-bold normal-case tracking-normal text-brand-lea dark:text-slate-100"
+                        title={`Queued — the app sends this automatically on ${reminder.sendOnLabel}, to everyone who has not had it`}
+                      >
+                        <Clock className="h-2.5 w-2.5" />
+                        Auto · {shortSendDay(reminder.sendOnKey)}
+                      </span>
+                    ) : null}
                   </div>
                 </th>
               ))}
@@ -256,6 +303,13 @@ export function OrientationEmailPanel({
                                   <path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                 </svg>
                               </span>
+                            ) : t.key === "reminder" && reminderQueued ? (
+                              // Queued, not idle. An empty grey ring here says
+                              // "nothing is happening", which was the opposite
+                              // of the truth for six people.
+                              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border-2 border-dashed border-brand-gold text-brand-gold">
+                                <Clock className="h-2.5 w-2.5" />
+                              </span>
                             ) : (
                               <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/30" />
                             )}
@@ -276,6 +330,13 @@ export function OrientationEmailPanel({
                           </span>
                         ) : sent ? (
                           <span className="text-[10px] text-brand-grey dark:text-slate-400">by hand</span>
+                        ) : t.key === "reminder" && reminderQueued && reminder ? (
+                          <span
+                            className="text-[10px] font-semibold text-brand-gold"
+                            title={`Sends automatically on ${reminder.sendOnLabel}`}
+                          >
+                            queued
+                          </span>
                         ) : null}
                       </div>
                     </td>
@@ -310,7 +371,21 @@ export function OrientationEmailPanel({
           <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-brand-grey/30" />
           Not sent
         </span>
+        {reminderQueued && reminder ? (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-dashed border-brand-gold text-brand-gold">
+              <Clock className="h-2 w-2" />
+            </span>
+            Queued — the app sends this on {reminder.sendOnLabel}
+          </span>
+        ) : null}
       </div>
+
+      {/* Directly under the grid, because it is what the Reminder column above
+          is doing. It used to sit two sections down, past the internal summary
+          and the communication history, so the control and the column it
+          governs were never on screen together. */}
+      <ReminderScheduler sessionId={sessionId} status={reminder} onStatusChange={setReminder} />
 
       {/* Bulk bar. Appears only with a selection, so the default view stays the
           per-person grid and nothing bulk happens by accident. */}
@@ -341,8 +416,6 @@ export function OrientationEmailPanel({
       <InternalSummary sessionId={sessionId} />
 
       <CommunicationHistory attendees={attendees} />
-
-      <ReminderScheduler sessionId={sessionId} />
 
       <CcEditor />
 
@@ -1234,26 +1307,35 @@ type ReminderPreview = {
   }[];
 };
 
-function ReminderScheduler({ sessionId }: { sessionId: string }) {
-  const [status, setStatus] = useState<{
-    armed: boolean;
-    sendOnLabel: string;
-    sendOnKey: string;
-    dueToday: boolean;
-    passed: boolean;
-  } | null>(null);
+/**
+ * Whether this session's reminder is armed, and when it would go.
+ *
+ * Owned by the panel rather than the scheduler: the grid's "3. Reminder" column
+ * has to show the queued state too, and two components fetching it separately
+ * would let them disagree the moment somebody toggles the checkbox.
+ */
+type ReminderStatusView = {
+  armed: boolean;
+  sendOnLabel: string;
+  sendOnKey: string;
+  dueToday: boolean;
+  passed: boolean;
+};
+
+function ReminderScheduler({
+  sessionId,
+  status,
+  onStatusChange
+}: {
+  sessionId: string;
+  status: ReminderStatusView | null;
+  onStatusChange: (next: ReminderStatusView) => void;
+}) {
   const [health, setHealth] = useState<ReminderHealth | null>(null);
   const [preview, setPreview] = useState<ReminderPreview | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch(`/api/orientation/sessions/${sessionId}/reminder`)
-      .then((r) => r.json())
-      .then((d) => setStatus(d?.sendOnLabel ? d : null))
-      .catch(() => setStatus(null));
-  }, [sessionId]);
 
   // Health is about the CRON, not this one session, so it loads regardless of
   // whether this session happens to be armed — a stopped cron is worth seeing
@@ -1298,7 +1380,9 @@ function ReminderScheduler({ sessionId }: { sessionId: string }) {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d?.message ?? "Couldn't save.");
-      setStatus(d);
+      // Straight back up to the panel, so the grid's Reminder column flips in
+      // the same moment the checkbox does.
+      onStatusChange(d);
       setMsg(next ? "Armed." : "Turned off — send it by hand instead.");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Couldn't save.");
