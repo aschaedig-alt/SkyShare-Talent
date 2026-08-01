@@ -1,11 +1,12 @@
 // "New Hire Contacts" — the admin-curated set of SkyShare contacts a new hire
 // can load onto their phone. This is deliberately NOT the whole employee
-// directory: an admin picks a handful of people per department, and can add a
-// synthetic shared "SkyShare Recruiting"-style contact above them.
+// directory: an admin picks people per department and can add contacts that
+// aren't employee records at all (a department line, or someone not yet in the
+// app).
 //
 // The curation lives in a single WorkspaceSetting (scope/key/valueJson) — see
 // config.server.ts — so there's no schema migration. This file holds the shape,
-// the default (the five departments as empty groups), and a normalize() guard so
+// the default (the main departments as empty groups), and a normalize() guard so
 // a malformed stored blob can never crash the public page.
 
 // A real employee exposed to new hires. `personId` points at a NewHire record;
@@ -13,26 +14,37 @@
 // overrides let an admin fix thin data or blank a personal cell they don't want
 // shared — an empty string means "share nothing for this field", whereas
 // undefined/null means "fall back to the record".
+//
+// `enabled` is the master-list switch: false keeps the person curated (so they
+// stay one click from being restored) but hides them from /welcome.
 export type ContactMember = {
   personId: string;
   title?: string | null;
   phone?: string | null;
   email?: string | null;
+  enabled: boolean;
 };
 
-// A synthetic, non-person contact — e.g. "SkyShare Recruiting" with the main
-// line + shared inbox. Entirely admin-entered; not tied to any record.
-export type SharedContact = {
+// A contact with no employee record behind it. Two flavours, distinguished by
+// `kind` because they read differently to a new hire:
+//   department — a shared line/inbox ("SkyShare Marketing"); shows an SS badge
+//   person     — a real individual who isn't in the app yet; shows their initials
+// Both are entirely admin-entered. `id` is stable within the group and forms the
+// vCard key, so renaming a contact never breaks an in-flight download.
+export type ManualContact = {
+  id: string;
+  kind: "department" | "person";
   name: string;
   title?: string | null;
   phone?: string | null;
   email?: string | null;
+  enabled: boolean;
 };
 
 export type ContactGroup = {
   id: string; // stable slug, used in vCard download keys
   label: string; // "Recruiting"
-  shared: SharedContact | null; // optional department-level contact
+  manual: ManualContact[];
   members: ContactMember[];
 };
 
@@ -41,15 +53,20 @@ export type NewHireContactsConfig = {
   groups: ContactGroup[];
 };
 
-// The five functional departments the user named. These are the app's public
+// The main departments a new hire is introduced to. These are the app's public
 // grouping for onboarding and intentionally do NOT match the internal
-// Crew/Maintenance/FBO/Support taxonomy in lib/calendar/departments.ts.
+// Crew/Maintenance/FBO/Support taxonomy in lib/calendar/departments.ts. They
+// only seed a workspace that has never been curated — an existing stored config
+// always wins.
 export const DEFAULT_GROUPS: { id: string; label: string }[] = [
+  { id: "executives", label: "Executives" },
   { id: "recruiting", label: "Recruiting" },
   { id: "hr", label: "HR" },
   { id: "operations", label: "Operations" },
-  { id: "chief-pilot", label: "Chief Pilot" },
-  { id: "accounting", label: "Accounting" }
+  { id: "maintenance", label: "Maintenance" },
+  { id: "safety-compliance", label: "Safety & Compliance" },
+  { id: "accounting", label: "Accounting" },
+  { id: "marketing", label: "Marketing" }
 ];
 
 export const DEFAULT_INTRO =
@@ -58,7 +75,7 @@ export const DEFAULT_INTRO =
 export function defaultNewHireContactsConfig(): NewHireContactsConfig {
   return {
     intro: DEFAULT_INTRO,
-    groups: DEFAULT_GROUPS.map((g) => ({ id: g.id, label: g.label, shared: null, members: [] }))
+    groups: DEFAULT_GROUPS.map((g) => ({ id: g.id, label: g.label, manual: [], members: [] }))
   };
 }
 
@@ -74,20 +91,39 @@ function optStr(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
 
-function slug(label: string, index: number): string {
+// Absent means shown. Every contact curated before the show/hide switch existed
+// was, by definition, visible — so a missing flag must not hide anyone.
+function enabledFlag(value: unknown): boolean {
+  return value === false ? false : true;
+}
+
+export function slugify(label: string, fallback: string): string {
   const base = label
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  return base || `group-${index + 1}`;
+  return base || fallback;
 }
 
-function normalizeShared(value: unknown): SharedContact | null {
+function normalizeManual(value: unknown, index: number, usedIds: Set<string>): ManualContact | null {
   if (!value || typeof value !== "object") return null;
   const raw = value as Record<string, unknown>;
   const name = (str(raw.name) ?? "").trim();
-  if (!name) return null; // a shared contact with no name is meaningless
-  return { name, title: optStr(raw.title), phone: optStr(raw.phone), email: optStr(raw.email) };
+  if (!name) return null; // a contact with no name is meaningless
+
+  let id = (str(raw.id) ?? "").trim() || slugify(name, `contact-${index + 1}`);
+  while (usedIds.has(id)) id = `${id}-${index + 1}`;
+  usedIds.add(id);
+
+  return {
+    id,
+    kind: raw.kind === "person" ? "person" : "department",
+    name,
+    title: optStr(raw.title),
+    phone: optStr(raw.phone),
+    email: optStr(raw.email),
+    enabled: enabledFlag(raw.enabled)
+  };
 }
 
 function normalizeMember(value: unknown): ContactMember | null {
@@ -95,7 +131,13 @@ function normalizeMember(value: unknown): ContactMember | null {
   const raw = value as Record<string, unknown>;
   const personId = (str(raw.personId) ?? "").trim();
   if (!personId) return null;
-  return { personId, title: optStr(raw.title), phone: optStr(raw.phone), email: optStr(raw.email) };
+  return {
+    personId,
+    title: optStr(raw.title),
+    phone: optStr(raw.phone),
+    email: optStr(raw.email),
+    enabled: enabledFlag(raw.enabled)
+  };
 }
 
 function normalizeGroup(value: unknown, index: number, usedIds: Set<string>): ContactGroup | null {
@@ -104,7 +146,7 @@ function normalizeGroup(value: unknown, index: number, usedIds: Set<string>): Co
   const label = (str(raw.label) ?? "").trim();
   if (!label) return null;
 
-  let id = (str(raw.id) ?? "").trim() || slug(label, index);
+  let id = (str(raw.id) ?? "").trim() || slugify(label, `group-${index + 1}`);
   // Guarantee uniqueness — ids are used as vCard download keys.
   while (usedIds.has(id)) id = `${id}-${index + 1}`;
   usedIds.add(id);
@@ -113,7 +155,19 @@ function normalizeGroup(value: unknown, index: number, usedIds: Set<string>): Co
     ? raw.members.map(normalizeMember).filter((m): m is ContactMember => m !== null)
     : [];
 
-  return { id, label, shared: normalizeShared(raw.shared), members };
+  // Manual contacts used to be a single optional `shared` slot per group. Fold a
+  // legacy blob into the list so a config written before this change keeps its
+  // department contact — and keep the id "shared" so nothing else has to care.
+  const manualIds = new Set<string>();
+  const manual = Array.isArray(raw.manual)
+    ? raw.manual.map((m, i) => normalizeManual(m, i, manualIds)).filter((m): m is ManualContact => m !== null)
+    : [];
+  if (!manual.length && raw.shared) {
+    const legacy = normalizeManual({ ...(raw.shared as object), id: "shared", kind: "department" }, 0, manualIds);
+    if (legacy) manual.push(legacy);
+  }
+
+  return { id, label, manual, members };
 }
 
 /** Coerce an arbitrary stored/posted blob into a safe config. Never throws. */

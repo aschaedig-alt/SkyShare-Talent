@@ -34,7 +34,13 @@ function resolveField(override: string | null | undefined, fallback: string | nu
   return trimmed === "" ? null : trimmed;
 }
 
-async function resolveFromConfig(config: NewHireContactsConfig): Promise<ResolvedNewHireContacts> {
+/**
+ * Resolve an arbitrary config against current employee records. Exported (rather
+ * than only reachable via the stored setting) so the show/hide and override rules
+ * can be exercised against a synthetic config without writing to the live shared
+ * WorkspaceSetting.
+ */
+export async function resolveNewHireContacts(config: NewHireContactsConfig): Promise<ResolvedNewHireContacts> {
   const personIds = Array.from(
     new Set(config.groups.flatMap((g) => g.members.map((m) => m.personId)))
   );
@@ -50,18 +56,22 @@ async function resolveFromConfig(config: NewHireContactsConfig): Promise<Resolve
   const groups: ResolvedGroup[] = config.groups.map((group) => {
     const contacts: ResolvedContact[] = [];
 
-    if (group.shared) {
+    // Manual contacts lead the group — a department line reads as the group's
+    // "front door" before the named people under it.
+    for (const entry of group.manual) {
+      if (!entry.enabled) continue;
       contacts.push({
-        key: `shared:${group.id}`,
-        fullName: group.shared.name,
-        title: resolveField(group.shared.title, null),
-        phone: resolveField(group.shared.phone, null),
-        email: resolveField(group.shared.email, null),
-        isShared: true
+        key: `manual:${group.id}:${entry.id}`,
+        fullName: entry.name,
+        title: resolveField(entry.title, null),
+        phone: resolveField(entry.phone, null),
+        email: resolveField(entry.email, null),
+        isShared: entry.kind === "department"
       });
     }
 
     for (const member of group.members) {
+      if (!member.enabled) continue;
       const record = byId.get(member.personId);
       if (!record) continue; // employee removed since curation — skip silently
       contacts.push({
@@ -77,12 +87,13 @@ async function resolveFromConfig(config: NewHireContactsConfig): Promise<Resolve
     return { id: group.id, label: group.label, contacts };
   });
 
-  return { intro: config.intro, groups };
+  // A group whose every contact is switched off would render as a bare heading.
+  return { intro: config.intro, groups: groups.filter((g) => g.contacts.length > 0) };
 }
 
 /** The curated contacts, resolved against current employee records. */
 export async function getResolvedNewHireContacts(): Promise<ResolvedNewHireContacts> {
-  return resolveFromConfig(await getNewHireContactsConfig());
+  return resolveNewHireContacts(await getNewHireContactsConfig());
 }
 
 /** Flat lookup of every resolvable contact by key — used by the vCard endpoint. */
@@ -100,14 +111,41 @@ export type ContactCandidate = {
   department: string | null;
   phone: string | null;
   ssEmail: string | null;
+  /** False for someone already curated who has since left — badged, not hidden. */
+  isCurrent: boolean;
 };
 
-// Active staff (including those still onboarding), mirroring the business-cards
-// roster — the pool an admin picks department contacts from.
-export async function getContactCandidates(): Promise<ContactCandidate[]> {
-  return prisma.newHire.findMany({
-    where: { stage: { in: ["ACTIVE", "POST_ONBOARD"] }, employmentStatus: "ACTIVE" },
-    select: { id: true, name: true, position: true, department: true, phone: true, ssEmail: true },
+// Everyone currently on staff, which is what an admin needs to pick from.
+//
+// This used to filter on `stage IN (ACTIVE, POST_ONBOARD)`, and that was the bug
+// behind both "Unknown employee" and the near-empty picker: stage tracks the
+// ONBOARDING lifecycle, and a hire auto-archives to ARCHIVED once onboarding
+// finishes while staying employmentStatus ACTIVE. So the old pool held only the
+// ~28 people mid-onboarding and excluded every settled employee — which is to
+// say, every person you'd actually name as a department contact. Employment
+// status, not stage, is the question being asked here.
+//
+// `alwaysInclude` pins ids that are already curated so a contact can never
+// silently drop out of the admin again — if they've left, they come back badged
+// as a former employee instead of rendering as "Unknown".
+export async function getContactCandidates(alwaysInclude: string[] = []): Promise<ContactCandidate[]> {
+  const current = { employmentStatus: { in: ["ACTIVE", "CONTRACT"] } };
+  const rows = await prisma.newHire.findMany({
+    where: alwaysInclude.length ? { OR: [current, { id: { in: alwaysInclude } }] } : current,
+    select: {
+      id: true,
+      name: true,
+      position: true,
+      department: true,
+      phone: true,
+      ssEmail: true,
+      employmentStatus: true
+    },
     orderBy: { name: "asc" }
   });
+
+  return rows.map(({ employmentStatus, ...rest }) => ({
+    ...rest,
+    isCurrent: employmentStatus === "ACTIVE" || employmentStatus === "CONTRACT"
+  }));
 }

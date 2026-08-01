@@ -9,11 +9,12 @@ export const dynamic = "force-dynamic";
 export default async function NewHireContactsSettingsPage() {
   await requireModulePageAccess("settings");
 
-  const [config, candidates, headerList] = await Promise.all([
-    getNewHireContactsConfig(),
-    getContactCandidates(),
-    headers()
-  ]);
+  // The curated ids are read first so the picker pool can pin them: someone who
+  // has left is still shown (badged) rather than collapsing to "Unknown employee".
+  const config = await getNewHireContactsConfig();
+  const curatedIds = Array.from(new Set(config.groups.flatMap((g) => g.members.map((m) => m.personId))));
+
+  const [candidates, headerList] = await Promise.all([getContactCandidates(curatedIds), headers()]);
 
   const host = headerList.get("host") ?? "";
   const proto = headerList.get("x-forwarded-proto") ?? "https";

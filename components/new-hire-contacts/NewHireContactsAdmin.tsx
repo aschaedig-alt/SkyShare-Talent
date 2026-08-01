@@ -1,9 +1,12 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, ChevronUp, Copy, ExternalLink, Plus, Trash2, UserPlus } from "lucide-react";
-import { Button, Input, Textarea } from "@/components/ui";
-import type { ContactGroup, ContactMember, NewHireContactsConfig, SharedContact } from "@/lib/new-hire-contacts/config";
+import { Building2, Check, ChevronDown, ChevronUp, Copy, ExternalLink, Eye, EyeOff, Plus, Trash2, UserPlus } from "lucide-react";
+import { clsx } from "clsx";
+import { Badge, Button, Input, Textarea } from "@/components/ui";
+import { ContactPicker } from "@/components/new-hire-contacts/ContactPicker";
+import { slugify } from "@/lib/new-hire-contacts/config";
+import type { ContactGroup, ContactMember, ManualContact, NewHireContactsConfig } from "@/lib/new-hire-contacts/config";
 import type { ContactCandidate } from "@/lib/data/new-hire-contacts";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -17,6 +20,26 @@ function fieldText(value: string | null | undefined): string {
 }
 function isHidden(value: string | null | undefined): boolean {
   return value === "";
+}
+
+/** Show/hide switch. Off keeps the contact curated but drops them from /welcome. */
+function VisibilityToggle({ enabled, onChange }: { enabled: boolean; onChange: (next: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!enabled)}
+      title={enabled ? "Shown to new hires — click to hide" : "Hidden from new hires — click to show"}
+      className={clsx(
+        "inline-flex flex-none items-center gap-1 rounded px-2 py-1 text-xs font-semibold transition",
+        enabled
+          ? "bg-brand-gold/15 text-brand-lea hover:bg-brand-gold/25 dark:text-slate-100"
+          : "bg-brand-cloudDancer text-brand-grey hover:bg-brand-cloudDancer/70 dark:bg-white/5 dark:text-slate-400"
+      )}
+    >
+      {enabled ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+      {enabled ? "Shown" : "Hidden"}
+    </button>
+  );
 }
 
 export function NewHireContactsAdmin({
@@ -33,8 +56,23 @@ export function NewHireContactsAdmin({
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const newGroupCounter = useRef(0);
+  const manualCounter = useRef(0);
 
   const candidateById = useMemo(() => new Map(candidates.map((c) => [c.id, c])), [candidates]);
+
+  const shownCount = useMemo(
+    () =>
+      config.groups.reduce(
+        (sum, g) =>
+          sum + g.members.filter((m) => m.enabled).length + g.manual.filter((m) => m.enabled).length,
+        0
+      ),
+    [config]
+  );
+  const totalCount = useMemo(
+    () => config.groups.reduce((sum, g) => sum + g.members.length + g.manual.length, 0),
+    [config]
+  );
 
   // --- mutation helpers ---------------------------------------------------
   const updateGroup = (index: number, patch: Partial<ContactGroup>) =>
@@ -53,11 +91,24 @@ export function NewHireContactsAdmin({
       )
     }));
 
+  const updateManual = (groupIndex: number, manualIndex: number, patch: Partial<ManualContact>) =>
+    setConfig((prev) => ({
+      ...prev,
+      groups: prev.groups.map((g, i) =>
+        i === groupIndex
+          ? { ...g, manual: g.manual.map((m, mi) => (mi === manualIndex ? { ...m, ...patch } : m)) }
+          : g
+      )
+    }));
+
   const addGroup = () => {
     newGroupCounter.current += 1;
     setConfig((prev) => ({
       ...prev,
-      groups: [...prev.groups, { id: `new-${newGroupCounter.current}`, label: "New department", shared: null, members: [] }]
+      groups: [
+        ...prev.groups,
+        { id: `new-${newGroupCounter.current}`, label: "New department", manual: [], members: [] }
+      ]
     }));
   };
 
@@ -82,7 +133,7 @@ export function NewHireContactsAdmin({
       ...prev,
       groups: prev.groups.map((g, i) =>
         i === groupIndex && !g.members.some((m) => m.personId === personId)
-          ? { ...g, members: [...g.members, { personId, title: null, phone: null, email: null }] }
+          ? { ...g, members: [...g.members, { personId, title: null, phone: null, email: null, enabled: true }] }
           : g
       )
     }));
@@ -96,12 +147,26 @@ export function NewHireContactsAdmin({
       )
     }));
 
-  const setShared = (groupIndex: number, shared: SharedContact | null) => updateGroup(groupIndex, { shared });
-  const updateShared = (groupIndex: number, patch: Partial<SharedContact>) =>
+  // A contact with no employee record: either a department line, or a person the
+  // app doesn't know yet. The id only has to be unique within the group.
+  const addManual = (groupIndex: number, kind: ManualContact["kind"], name: string) => {
+    manualCounter.current += 1;
+    const id = `${slugify(name, "contact")}-${manualCounter.current}`;
     setConfig((prev) => ({
       ...prev,
       groups: prev.groups.map((g, i) =>
-        i === groupIndex && g.shared ? { ...g, shared: { ...g.shared, ...patch } } : g
+        i === groupIndex
+          ? { ...g, manual: [...g.manual, { id, kind, name, title: null, phone: null, email: null, enabled: true }] }
+          : g
+      )
+    }));
+  };
+
+  const removeManual = (groupIndex: number, manualIndex: number) =>
+    setConfig((prev) => ({
+      ...prev,
+      groups: prev.groups.map((g, i) =>
+        i === groupIndex ? { ...g, manual: g.manual.filter((_, mi) => mi !== manualIndex) } : g
       )
     }));
 
@@ -151,8 +216,8 @@ export function NewHireContactsAdmin({
           New hire contacts
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-brand-grey dark:text-slate-400">
-          Pick which people a new hire can add to their phone, grouped by department. Only these people are shared —
-          never the whole directory. Send new hires the link below.
+          This is your master list of department contacts. Keep anyone you like on it, then use the Shown/Hidden switch to
+          choose who this round of new hires actually sees. Only shown contacts appear on the link — never the whole directory.
         </p>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -167,6 +232,9 @@ export function NewHireContactsAdmin({
             <ExternalLink className="h-3.5 w-3.5" />
             Preview
           </a>
+          <Badge tone={shownCount ? "brand" : "warning"} className="ml-auto">
+            {shownCount} of {totalCount} shown to new hires
+          </Badge>
         </div>
       </section>
 
@@ -183,6 +251,8 @@ export function NewHireContactsAdmin({
       <div className="mt-6 space-y-5">
         {config.groups.map((group, groupIndex) => {
           const available = candidates.filter((c) => !group.members.some((m) => m.personId === c.id));
+          const groupShown =
+            group.members.filter((m) => m.enabled).length + group.manual.filter((m) => m.enabled).length;
           return (
             <section
               key={group.id}
@@ -216,6 +286,9 @@ export function NewHireContactsAdmin({
                   value={group.label}
                   onChange={(e) => updateGroup(groupIndex, { label: e.target.value })}
                 />
+                <span className="text-xs text-brand-grey dark:text-slate-400">
+                  {groupShown} shown
+                </span>
                 <button
                   type="button"
                   onClick={() => removeGroup(groupIndex)}
@@ -226,79 +299,119 @@ export function NewHireContactsAdmin({
                 </button>
               </div>
 
-              {/* Shared department contact */}
-              <div className="mt-4 rounded border border-dashed border-brand-lea/20 p-3 dark:border-white/10">
-                {group.shared ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
-                        Shared department contact
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setShared(groupIndex, null)}
-                        className="text-xs font-semibold text-brand-grey hover:text-red-600 dark:hover:text-red-300 dark:text-slate-400"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <Input
-                        placeholder={`SkyShare ${group.label}`}
-                        value={group.shared.name}
-                        onChange={(e) => updateShared(groupIndex, { name: e.target.value })}
-                      />
-                      <Input
-                        placeholder="Title (optional)"
-                        value={fieldText(group.shared.title)}
-                        onChange={(e) => updateShared(groupIndex, { title: e.target.value || null })}
-                      />
-                      <Input
-                        placeholder="Phone"
-                        value={fieldText(group.shared.phone)}
-                        onChange={(e) => updateShared(groupIndex, { phone: e.target.value || null })}
-                      />
-                      <Input
-                        placeholder="Email"
-                        value={fieldText(group.shared.email)}
-                        onChange={(e) => updateShared(groupIndex, { email: e.target.value || null })}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShared(groupIndex, { name: `SkyShare ${group.label}`, title: null, phone: null, email: null })}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-200"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Add a shared “SkyShare {group.label}” contact
-                  </button>
-                )}
-              </div>
+              {/* Contacts with no employee record — department lines and ad-hoc people */}
+              {group.manual.length ? (
+                <ul className="mt-4 space-y-3">
+                  {group.manual.map((entry, manualIndex) => (
+                    <li
+                      key={entry.id}
+                      className={clsx(
+                        "rounded border border-dashed p-3 transition",
+                        entry.enabled
+                          ? "border-brand-lea/20 dark:border-white/10"
+                          : "border-brand-lea/10 bg-brand-cloudDancer/20 dark:border-white/5 dark:bg-white/[0.02]"
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
+                          {entry.kind === "department" ? (
+                            <Building2 className="h-3.5 w-3.5" />
+                          ) : (
+                            <UserPlus className="h-3.5 w-3.5" />
+                          )}
+                          {entry.kind === "department" ? "Shared department contact" : "Added manually"}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <VisibilityToggle
+                            enabled={entry.enabled}
+                            onChange={(next) => updateManual(groupIndex, manualIndex, { enabled: next })}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeManual(groupIndex, manualIndex)}
+                            aria-label={`Remove ${entry.name}`}
+                            className="text-xs font-semibold text-brand-grey hover:text-red-600 dark:hover:text-red-300 dark:text-slate-400"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                        <Input
+                          placeholder={entry.kind === "department" ? `SkyShare ${group.label}` : "Full name"}
+                          value={entry.name}
+                          onChange={(e) => updateManual(groupIndex, manualIndex, { name: e.target.value })}
+                        />
+                        <Input
+                          placeholder="Title (optional)"
+                          value={fieldText(entry.title)}
+                          onChange={(e) => updateManual(groupIndex, manualIndex, { title: e.target.value || null })}
+                        />
+                        <Input
+                          placeholder="Phone"
+                          value={fieldText(entry.phone)}
+                          onChange={(e) => updateManual(groupIndex, manualIndex, { phone: e.target.value || null })}
+                        />
+                        <Input
+                          placeholder="Email"
+                          value={fieldText(entry.email)}
+                          onChange={(e) => updateManual(groupIndex, manualIndex, { email: e.target.value || null })}
+                        />
+                      </div>
+                      {!entry.name.trim() ? (
+                        <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-300">
+                          Give this contact a name — unnamed contacts are dropped when you save.
+                        </p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
 
-              {/* Members */}
+              {/* Members drawn from the employee roster */}
               <ul className="mt-4 space-y-3">
                 {group.members.map((member, memberIndex) => {
                   const record = candidateById.get(member.personId);
                   return (
-                    <li key={member.personId} className="rounded border border-brand-lea/10 p-3 dark:border-white/10">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">
-                            {record?.name ?? "Unknown employee"}
+                    <li
+                      key={member.personId}
+                      className={clsx(
+                        "rounded border p-3 transition",
+                        member.enabled
+                          ? "border-brand-lea/10 dark:border-white/10"
+                          : "border-brand-lea/5 bg-brand-cloudDancer/20 dark:border-white/5 dark:bg-white/[0.02]"
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="flex items-center gap-2 text-sm font-semibold text-brand-lea dark:text-slate-100">
+                            <span className="truncate">{record?.name ?? "Employee no longer on file"}</span>
+                            {record && !record.isCurrent ? <Badge tone="neutral">Former employee</Badge> : null}
+                            {!record ? <Badge tone="danger">Record deleted</Badge> : null}
                           </p>
                           {record?.position ? (
-                            <p className="text-xs text-brand-grey dark:text-slate-400">{record.position}</p>
+                            <p className="truncate text-xs text-brand-grey dark:text-slate-400">{record.position}</p>
+                          ) : null}
+                          {!record ? (
+                            <p className="text-xs text-brand-grey dark:text-slate-400">
+                              This person’s employee record is gone, so they no longer appear to new hires. Remove them here.
+                            </p>
                           ) : null}
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => removeMember(groupIndex, memberIndex)}
-                          className="text-xs font-semibold text-brand-grey hover:text-red-600 dark:hover:text-red-300 dark:text-slate-400"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        <div className="flex flex-none items-center gap-2">
+                          <VisibilityToggle
+                            enabled={member.enabled}
+                            onChange={(next) => updateMember(groupIndex, memberIndex, { enabled: next })}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeMember(groupIndex, memberIndex)}
+                            aria-label={`Remove ${record?.name ?? "contact"}`}
+                            className="text-xs font-semibold text-brand-grey hover:text-red-600 dark:hover:text-red-300 dark:text-slate-400"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="mt-2 grid gap-2 sm:grid-cols-3">
@@ -354,23 +467,20 @@ export function NewHireContactsAdmin({
               </ul>
 
               {/* Add person */}
-              <div className="mt-3">
-                <select
-                  className="w-full max-w-sm rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-lea outline-none focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
-                  value=""
-                  onChange={(e) => {
-                    addMember(groupIndex, e.target.value);
-                    e.target.value = "";
-                  }}
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <ContactPicker
+                  candidates={available}
+                  onPick={(personId) => addMember(groupIndex, personId)}
+                  onAddManual={(name) => addManual(groupIndex, "person", name)}
+                />
+                <button
+                  type="button"
+                  onClick={() => addManual(groupIndex, "department", `SkyShare ${group.label}`)}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-200"
                 >
-                  <option value="">+ Add a person…</option>
-                  {available.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                      {c.position ? ` — ${c.position}` : ""}
-                    </option>
-                  ))}
-                </select>
+                  <Plus className="h-3.5 w-3.5" />
+                  Add a shared “SkyShare {group.label}” contact
+                </button>
               </div>
             </section>
           );
@@ -378,8 +488,9 @@ export function NewHireContactsAdmin({
       </div>
 
       <p className="mt-6 text-xs text-brand-grey dark:text-slate-400">
-        Tip: a phone or email you type here is also saved to that person’s employee profile when you hit Save. Leaving a field
-        blank keeps their profile value; “Don’t share” only hides it here and never changes their profile.
+        Tip: a phone or email you type on a roster person is also saved to their employee profile when you hit Save. Leaving a
+        field blank keeps their profile value; “Don’t share” only hides it here and never changes their profile. Manually added
+        contacts are stored on this page only and never touch an employee record.
       </p>
 
       <div className="mt-2 flex items-center gap-3">
