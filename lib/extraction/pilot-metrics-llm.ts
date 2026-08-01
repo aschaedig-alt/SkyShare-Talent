@@ -18,7 +18,22 @@ import { METRIC_DEFS } from "@/lib/extraction/pilot-metrics";
  * SUGGESTED rather than confirmed.
  */
 
-export const DEFAULT_MODEL = "claude-opus-5";
+/**
+ * The model this extractor runs on, overridable without a deploy.
+ *
+ * The sibling extractors all read an env var with a default
+ * (PAYCOM_EXTRACT_MODEL, ARCHIVE_SUMMARY_MODEL, EVENT_EXTRACTION_MODEL); this
+ * one was the only hardcoded value, so switching it meant editing code.
+ *
+ * THE DEFAULT DELIBERATELY DOES NOT CHANGE. Pilot hours are the highest-stakes
+ * extraction in the app — they feed matching, and a wrong number is worse than
+ * no number — so quietly dropping to a cheaper model to save money is not a
+ * call to make on somebody's behalf. Setting PILOT_METRICS_MODEL=claude-haiku-4-5
+ * cuts the cost of the 270-candidate backfill from roughly $5 to $1; make that
+ * trade deliberately, and check a sample of the results against the source
+ * documents before trusting a whole run on it.
+ */
+export const DEFAULT_MODEL = process.env.PILOT_METRICS_MODEL || "claude-opus-5";
 
 /**
  * Scalar hour metrics the model returns by name. The two aircraft-specific

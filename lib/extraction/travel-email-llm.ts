@@ -33,7 +33,12 @@ import { DEFAULT_TIMEZONE } from "@/lib/calendar/timezones";
  * Nothing here writes. It returns a proposal for review.
  */
 
-export const DEFAULT_MODEL = "claude-opus-5";
+/**
+ * Overridable without a deploy, same as the sibling extractors. The default is
+ * unchanged on purpose — a misread flight time strands somebody at an airport,
+ * so the cheaper model is a deliberate choice, not a silent default.
+ */
+export const DEFAULT_MODEL = process.env.TRAVEL_EXTRACT_MODEL || "claude-opus-5";
 
 /** Airports we actually fly crew through. Anything else falls back to the office zone. */
 const AIRPORT_TZ: Record<string, string> = {
