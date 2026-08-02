@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/auth";
+import { CURRENT_EMPLOYEE_WHERE } from "@/lib/data/current-employee";
 import { RecognitionStrength } from "@/lib/compliments/constants";
 import { getComplimentsSettings } from "@/lib/compliments/settings";
 
@@ -32,13 +33,16 @@ export async function createRecognition(input: unknown): Promise<ActionResult> {
   }
   const { giverId, recipientId, message, valueIds, strength } = parsed.data;
 
-  // Both people must be on the active/post-onboard roster.
+  // Both people must be CURRENT EMPLOYEES. This used to require stage IN
+  // (ACTIVE, POST_ONBOARD), which is an onboarding stage rather than an
+  // employment check, so a compliment addressed to any of the 145 employees
+  // past onboarding was rejected at send time.
   const people = await prisma.newHire.findMany({
-    where: { id: { in: [giverId, recipientId] }, stage: { in: ["ACTIVE", "POST_ONBOARD"] } },
+    where: { id: { in: [giverId, recipientId] }, ...CURRENT_EMPLOYEE_WHERE },
     select: { id: true }
   });
   if (people.length !== 2) {
-    return { ok: false, error: "Both people must be active or post-onboard new hires." };
+    return { ok: false, error: "Both people must be current employees." };
   }
 
   const settings = await getComplimentsSettings();

@@ -3,7 +3,7 @@ import { dollarsFromPoints } from "@/lib/compliments/constants";
 import { REWARD_CATEGORY_LABELS, type RewardCategory } from "@/lib/compliments/constants";
 import type { ComplimentsSettings } from "@/lib/compliments/settings";
 
-const ROSTER_STAGES = ["ACTIVE", "POST_ONBOARD"];
+import { CURRENT_EMPLOYEE_WHERE } from "@/lib/data/current-employee";
 const DAY = 24 * 60 * 60 * 1000;
 
 export type CategoryCost = {
@@ -75,8 +75,8 @@ export async function getBudgetData(settings: ComplimentsSettings): Promise<Budg
       select: { pointsSpent: true, createdAt: true, rewardId: true, reward: { select: { name: true, category: true } } }
     }),
     prisma.recognition.findMany({ select: { pointsAwarded: true, createdAt: true } }),
-    prisma.newHire.aggregate({ where: { stage: { in: ROSTER_STAGES } }, _sum: { pointsBalance: true } }),
-    prisma.newHire.count({ where: { stage: { in: ROSTER_STAGES } } }),
+    prisma.newHire.aggregate({ where: CURRENT_EMPLOYEE_WHERE, _sum: { pointsBalance: true } }),
+    prisma.newHire.count({ where: CURRENT_EMPLOYEE_WHERE }),
     prisma.reward.findMany({ orderBy: { pointCost: "desc" }, include: { _count: { select: { redemptions: true } } } })
   ]);
 

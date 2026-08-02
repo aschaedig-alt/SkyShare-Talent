@@ -2,8 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { initialsFromName } from "@/lib/compliments/format";
 import type { RecognitionView, RewardView, RosterPerson } from "@/lib/compliments/types";
 
-// Employees in the Compliments program = active (Milestones) + post-onboard hires.
-const ROSTER_STAGES = ["ACTIVE", "POST_ONBOARD"];
+import { CURRENT_EMPLOYEE_WHERE } from "@/lib/data/current-employee";
 
 type RecognitionWithRelations = {
   id: string;
@@ -45,7 +44,7 @@ function toRecognitionView(r: RecognitionWithRelations): RecognitionView {
 
 export async function getComplimentsRoster(): Promise<RosterPerson[]> {
   const hires = await prisma.newHire.findMany({
-    where: { stage: { in: ROSTER_STAGES } },
+    where: CURRENT_EMPLOYEE_WHERE,
     select: {
       id: true,
       name: true,
@@ -118,7 +117,7 @@ export async function getUpcomingCelebrations(windowDays = 45): Promise<Celebrat
   // `employmentStatus: "ACTIVE"` is the field that actually means current
   // employee — the same one the Employees directory counts on.
   const hires = await prisma.newHire.findMany({
-    where: { employmentStatus: "ACTIVE", canceled: false },
+    where: CURRENT_EMPLOYEE_WHERE,
     select: {
       id: true,
       name: true,
@@ -259,7 +258,7 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   const [rosterSize, thisMonthRecs, lastMonthRecs, allTimeRecognitions, streakRows, mostLovedRaw] =
     await Promise.all([
-      prisma.newHire.count({ where: { stage: { in: ROSTER_STAGES } } }),
+      prisma.newHire.count({ where: CURRENT_EMPLOYEE_WHERE }),
       // This month powers the metrics, leaderboards and values breakdown.
       prisma.recognition.findMany({
         where: { createdAt: { gte: thisMonth } },
@@ -393,7 +392,7 @@ export async function getAnalyticsData(range: AnalyticsRange): Promise<Analytics
   const prevSince = new Date(since.getTime() - days * 24 * 60 * 60 * 1000);
 
   const [rosterSize, current, previous, values] = await Promise.all([
-    prisma.newHire.count({ where: { stage: { in: ROSTER_STAGES } } }),
+    prisma.newHire.count({ where: CURRENT_EMPLOYEE_WHERE }),
     prisma.recognition.findMany({
       where: { createdAt: { gte: since } },
       select: {
@@ -453,7 +452,7 @@ export async function getAnalyticsData(range: AnalyticsRange): Promise<Analytics
   // Recognition equity by department (people = roster size per department).
   const rosterByDept = await prisma.newHire.groupBy({
     by: ["department"],
-    where: { stage: { in: ROSTER_STAGES } },
+    where: CURRENT_EMPLOYEE_WHERE,
     _count: true
   });
   const deptPeople = new Map<string, number>();
