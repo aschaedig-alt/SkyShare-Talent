@@ -73,6 +73,10 @@ ROADMAP: <exact ## Section name from roadmap.ts>
       <the commit-and-push agent stamps (MonDD) when it applies this>
       <do not touch the dates on entries that are already there>
 
+RECORD: <facts the user told you that are not in the code — a decision they
+made, a process they confirmed, a name, an address, a number. One line each.
+Omit this section entirely if there are none.>
+
 verified: lint <pass/fail>, tsc <pass/fail>, <anything you could not verify>
 ```
 
@@ -80,6 +84,15 @@ If you found something worth recording but produced **no** committable code — 
 bug, a data problem, an idea — still emit a handoff block with `paths: none` and
 just the `ROADMAP:` section. Findings must not evaporate because no code
 accompanied them.
+
+**`RECORD:` is for what the user told you, not what you built.** Answers arrive
+in chat and die there: a decision ("contractors stay excluded"), a confirmed
+process ("HR emails payables@ with the receipts"), a name, an address, a number.
+None of it is in the code, none of it is in git, and the next session has no way
+to reach your conversation. Put each one on its own line and the commit-and-push
+agent writes it into the roadmap alongside the work. If a question you asked got
+answered, that answer belongs here — including "no" and "leave it as it is",
+which are the ones most often lost and most often re-asked.
 
 ## The roadmap
 
@@ -160,6 +173,10 @@ Then, once all the work is committed:
      commit, check it — `git log -1 --format=%ad <hash>` settles it — and correct
      only that entry, saying so. Two separate passes have collapsed a week of real
      dates onto "today"; both were caught only because the hashes disproved them.
+   - **Write every `RECORD:` line into the roadmap too**, in the section the work
+     belongs to. These are the user's own answers — a decision, a confirmed
+     process, a name or a number — and the roadmap is the only place they survive
+     the session that heard them.
 7. Verify the COMBINED tree, because what gets pushed is everyone's work merged and
    no single agent tested that state: `npm run lint` and
    `NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.json`
