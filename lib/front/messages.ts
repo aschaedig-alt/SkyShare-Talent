@@ -1,5 +1,6 @@
 import { frontFetch } from "./client";
-import { guardRecipients } from "./send-guard";
+import { guardDecision, guardRecipients } from "./send-guard";
+import { recordGuardDecision } from "./send-log";
 
 // Sending vs. drafting. Recipients are real new hires / candidates, so the exported
 // default is *drafting* — a teammate reviews and hits send inside Front. A true
@@ -52,6 +53,25 @@ function payload(input: EmailInput, extra: Record<string, unknown> = {}) {
   });
 }
 
+/**
+ * Decide once, record it, and hand back the request body.
+ *
+ * Every send and draft goes through here, so a message cannot be diverted to the
+ * test inbox without leaving a record — the record is what stops a test quietly
+ * standing in for a real send months later.
+ *
+ * The decision is taken BEFORE the request and recorded regardless of whether
+ * Front then accepts it: what matters is that a real recipient was expected and
+ * did not get it, which is already true at this point.
+ */
+function guardedBody(input: EmailInput, kind: "send" | "draft", extra: Record<string, unknown> = {}): string {
+  const decision = guardDecision({ to: input.to, cc: input.cc, bcc: input.bcc, subject: input.subject });
+  // Fire-and-forget: awaiting a log write would put the database on the critical
+  // path of every email. recordGuardDecision never throws.
+  void recordGuardDecision(decision, { subject: input.subject, kind });
+  return payload(input, extra);
+}
+
 type Draft = { id: string; [k: string]: unknown };
 
 /**
@@ -65,7 +85,7 @@ export async function draftEmail(
 ): Promise<Draft> {
   return frontFetch<Draft>(`/channels/${channelId}/drafts`, {
     method: "POST",
-    body: payload(input, { mode: "shared" }),
+    body: guardedBody(input, "draft", { mode: "shared" }),
   });
 }
 
@@ -76,7 +96,7 @@ export async function draftReply(
 ): Promise<Draft> {
   return frontFetch<Draft>(`/conversations/${conversationId}/drafts`, {
     method: "POST",
-    body: payload(input, { mode: "shared" }),
+    body: guardedBody(input, "draft", { mode: "shared" }),
   });
 }
 
@@ -109,7 +129,7 @@ export async function sendEmail(
 ): Promise<SentMessage> {
   const res = await frontFetch<SendResponse>(`/channels/${channelId}/messages`, {
     method: "POST",
-    body: payload(input, sendOptions(input)),
+    body: guardedBody(input, "send", sendOptions(input)),
   });
   return toSent(res);
 }
@@ -121,7 +141,7 @@ export async function sendReply(
 ): Promise<SentMessage> {
   const res = await frontFetch<SendResponse>(
     `/conversations/${conversationId}/messages`,
-    { method: "POST", body: payload(input, sendOptions(input)) }
+    { method: "POST", body: guardedBody(input, "send", sendOptions(input)) }
   );
   return toSent(res);
 }

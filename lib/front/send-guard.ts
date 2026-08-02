@@ -97,41 +97,80 @@ const list = (v: string | string[] | undefined): string[] => (v == null ? [] : A
  *
  * @throws FrontSendBlockedError outside production when FRONT_TEST_INBOX is unset.
  */
-export function guardRecipients(input: { to: string | string[]; cc?: string[]; bcc?: string[]; subject: string }): GuardedRecipients {
-  const to = list(input.to);
-  if (isProductionEmailEnv()) {
-    return { to, ...(input.cc ? { cc: input.cc } : {}), ...(input.bcc ? { bcc: input.bcc } : {}), subject: input.subject };
-  }
+/**
+ * What the guard DECIDED about a message, so callers can record it.
+ *
+ * This exists because a redirected send is invisible by design: it succeeds, it
+ * looks normal in the logs, and the only person who learns about it is whoever
+ * happens to read the test inbox. The user's own words for the risk are "two
+ * months from now something that is supposed to go to the actual user goes in
+ * as a test and I just don't realize it." So every decision is reportable, and
+ * lib/front/messages.ts writes the interesting ones to the activity log.
+ *
+ *  - "production": went to the real recipients, unchanged.
+ *  - "internal":   all recipients are automation mailboxes, passed through.
+ *  - "redirected": NON-PRODUCTION. Real people were replaced by the test inbox.
+ *  - "blocked":    NON-PRODUCTION and no test inbox set. Nothing was sent.
+ */
+export type GuardMode = "production" | "internal" | "redirected" | "blocked";
 
-  const testInbox = process.env.FRONT_TEST_INBOX?.trim();
+export type GuardDecision = {
+  mode: GuardMode;
+  /** Who the message was actually addressed to, before any redirect. */
+  intended: string[];
+  /** Where it went instead, when redirected. */
+  testInbox?: string;
+  /** The recipients/subject to actually send with. Absent when blocked. */
+  result?: GuardedRecipients;
+};
+
+/**
+ * The single decision point. guardRecipients() is a thin wrapper over this, so
+ * there is exactly one place that decides what happens to a message and no way
+ * for the reported mode to disagree with what was actually sent.
+ */
+export function guardDecision(input: { to: string | string[]; cc?: string[]; bcc?: string[]; subject: string }): GuardDecision {
+  const to = list(input.to);
+  const passThrough: GuardedRecipients = {
+    to,
+    ...(input.cc ? { cc: input.cc } : {}),
+    ...(input.bcc ? { bcc: input.bcc } : {}),
+    subject: input.subject,
+  };
   const intended = [...to, ...list(input.cc), ...list(input.bcc)];
+
+  if (isProductionEmailEnv()) return { mode: "production", intended, result: passThrough };
 
   // Every recipient is an automation mailbox: nobody real is reachable, so let it
   // through unchanged. Requires ALL of them — a single person in cc means this is
   // mail to a human that merely copies a mailbox, and it stays guarded.
   if (intended.length > 0 && intended.every(isInternalAutomation)) {
-    return {
-      to,
-      ...(input.cc ? { cc: input.cc } : {}),
-      ...(input.bcc ? { bcc: input.bcc } : {}),
-      subject: input.subject,
-    };
+    return { mode: "internal", intended, result: passThrough };
   }
 
-  if (!testInbox) {
+  const testInbox = process.env.FRONT_TEST_INBOX?.trim();
+  if (!testInbox) return { mode: "blocked", intended };
+
+  return {
+    mode: "redirected",
+    intended,
+    testInbox,
+    result: {
+      to: [testInbox],
+      subject: `[TEST → ${intended.join(", ") || "no recipients"}] ${input.subject}`,
+    },
+  };
+}
+
+export function guardRecipients(input: { to: string | string[]; cc?: string[]; bcc?: string[]; subject: string }): GuardedRecipients {
+  const decision = guardDecision(input);
+  if (decision.mode === "blocked") {
+    const { intended } = decision;
     throw new FrontSendBlockedError(
       `Refusing to email ${intended.length} real recipient${intended.length === 1 ? "" : "s"} (${intended.join(", ") || "none"}) from a non-production environment. ` +
         `This app's Front token points at the live hrotasks@ mailbox, so this would have reached them for real. ` +
         `Set FRONT_TEST_INBOX in .env.local to an address you own and everything will be redirected there instead.`
     );
   }
-
-  // Everyone collapses to the one test address, and the subject carries the real
-  // recipients so the message is still readable as "this was for Tara Ward".
-  // cc/bcc are dropped rather than redirected — three copies to the same inbox
-  // tells you nothing the subject line does not.
-  return {
-    to: [testInbox],
-    subject: `[TEST → ${intended.join(", ") || "no recipients"}] ${input.subject}`
-  };
+  return decision.result as GuardedRecipients;
 }

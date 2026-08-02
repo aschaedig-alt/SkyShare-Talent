@@ -21,7 +21,12 @@ export type ActivityType =
   | "USER_LOGIN"
   | "USER_LOGOUT"
   | "AUTH_SIGN_IN_ATTEMPT"
-  | "USER_DELETED";
+  | "USER_DELETED"
+  // An email that did NOT reach its real recipient. Written from whichever
+  // machine sent it — and because local dev and production share one database,
+  // a redirect that happened on a laptop shows up on the live Activity page.
+  | "EMAIL_REDIRECTED_TO_TEST"
+  | "EMAIL_SEND_BLOCKED";
 
 export interface ActivityLogPayload {
   userId?: string;
@@ -30,7 +35,11 @@ export interface ActivityLogPayload {
   description: string;
   entityType?: string;
   entityId?: string;
-  metadata?: Record<string, string | number | boolean | null>;
+  // string[] is allowed because this is JSON.stringify'd on the way in — a list
+  // of recipients is the natural shape for an email log entry, and flattening it
+  // to a joined string would mean re-splitting on a delimiter that can legally
+  // appear inside a display name.
+  metadata?: Record<string, string | number | boolean | null | string[]>;
 }
 
 export async function logActivity(payload: ActivityLogPayload) {
