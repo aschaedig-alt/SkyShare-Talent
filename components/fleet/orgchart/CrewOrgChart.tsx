@@ -1274,7 +1274,10 @@ export default function CrewOrgChart({
   const acabc = acab ? cntSeat(acab) : null;
 
   return (
-    <div className={styles.wrap} ref={wrapRef}>
+    // The Training tab is a wide table rather than the card grid the 1320px cap
+    // was sized for, so the shell widens to the viewport while that tab is open
+    // and snaps back for the chart.
+    <div className={`${styles.wrap}${tab === "training" ? ` ${styles.wide}` : ""}`} ref={wrapRef}>
       <div className="hd">
         <div>
           <div className="kk" style={{ color: "var(--gold)" }}>

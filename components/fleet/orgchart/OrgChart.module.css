@@ -44,6 +44,7 @@
   max-width: 1320px;
   margin: 0 auto;
   padding: 26px 28px 30px;
+  /* declared here so .wide can override it without repeating the whole block */
   background: var(--color-bg);
   color: var(--ink);
   border: 1px solid var(--n200);
@@ -51,6 +52,84 @@
   box-shadow: 0 18px 45px rgba(13, 44, 67, 0.1);
   font-family: var(--fh);
   -webkit-font-smoothing: antialiased;
+}
+
+/* The Training tab is a wide TABLE, not the card grid the 1320px cap was
+   chosen for. Thirteen columns - five of them native date inputs, which Chrome
+   will not render narrower than about 110px - simply do not fit, and the result
+   was horizontal scrolling to read a pilot's own training dates. On the training
+   tab the shell widens to the viewport instead. */
+.wide {
+  max-width: min(1800px, 96vw);
+}
+
+/* ---- Training table -------------------------------------------------- */
+/* Zebra rows and real column rules: at thirteen columns of mostly dates, an
+   unruled grid makes it genuinely hard to keep your eye on one pilot across
+   the row. */
+.wrap :global(.trtable) {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.wrap :global(.trtable th),
+.wrap :global(.trtable td) {
+  border-right: 1px solid var(--n200);
+  border-bottom: 1px solid var(--n200);
+}
+.wrap :global(.trtable th:last-child),
+.wrap :global(.trtable td:last-child) {
+  border-right: none;
+}
+.wrap :global(.trtable thead th) {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--n100);
+  border-bottom: 2px solid var(--n300);
+}
+/* The onboarding dates (start / orientation / indoc) are a different KIND of
+   date from the training window, so they get their own tint and read as one
+   block rather than five undifferentiated date columns. */
+.wrap :global(.trtable .pre) {
+  background: color-mix(in srgb, var(--int-bg) 30%, transparent);
+}
+.wrap :global(.trtable thead th.pre) {
+  background: color-mix(in srgb, var(--int-bg) 62%, var(--n100));
+}
+.wrap :global(.trtable tbody tr:nth-child(even) td) {
+  background: color-mix(in srgb, var(--n100) 55%, transparent);
+}
+.wrap :global(.trtable tbody tr:nth-child(even) td.pre) {
+  background: color-mix(in srgb, var(--int-bg) 42%, transparent);
+}
+.wrap :global(.trtable tbody tr:hover td) {
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+}
+/* Row states beat striping - a finished course and an archived row have to stay
+   legible whichever stripe they land on. */
+.wrap :global(.trtable tbody tr.due td),
+.wrap :global(.trtable tbody tr.due td.pre) {
+  background: var(--train-bg);
+}
+.wrap :global(.trtable tbody tr.arch td),
+.wrap :global(.trtable tbody tr.arch td.pre) {
+  background: color-mix(in srgb, var(--park-bg) 55%, transparent);
+  color: var(--n600);
+}
+.wrap :global(.trtable input),
+.wrap :global(.trtable select) {
+  width: 100%;
+  min-width: 0;
+  font: 500 11.5px/1.25 var(--fh);
+  padding: 3px 4px;
+  border-radius: 4px;
+  border: 1px solid var(--n300);
+  background: var(--color-bg);
+  color: var(--ink);
+}
+.wrap :global(.trtable input[type="date"]) {
+  padding: 2px 3px;
 }
 
 :global(html.dark) .wrap {

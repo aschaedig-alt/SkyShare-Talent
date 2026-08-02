@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { CrewGroup } from "@/lib/fleet/staffing/types";
-import type { TrainingRecord, TrainingRow, TrainingConfirmation } from "@/lib/fleet/staffing/training";
-import { PROGRESS_LABEL, trainingRows, parseTrainingPaste } from "@/lib/fleet/staffing/training";
+import type { TrainingRecord, TrainingRow, TrainingConfirmation, TrainingHireType, TrainingPool } from "@/lib/fleet/staffing/training";
+import { PROGRESS_LABEL, trainingRows, parseTrainingPaste, trainingRecordId } from "@/lib/fleet/staffing/training";
 
 // The Training tab on the Crew Org Chart.
 //
@@ -36,26 +36,25 @@ const inputStyle: React.CSSProperties = {
 };
 
 const cellStyle: React.CSSProperties = {
-  padding: "5px 7px",
-  borderBottom: "1px solid var(--line, #cdd7e2)",
+  padding: "4px 6px",
   verticalAlign: "middle",
-  fontSize: 12,
+  fontSize: 11.5,
   whiteSpace: "nowrap"
 };
 
 const headStyle: React.CSSProperties = {
-  padding: "6px 7px",
-  borderBottom: "2px solid var(--line, #cdd7e2)",
+  padding: "6px 6px",
   textAlign: "left",
-  fontSize: 10,
-  fontWeight: 700,
+  fontSize: 9.5,
+  fontWeight: 800,
   textTransform: "uppercase",
   letterSpacing: "0.05em",
-  opacity: 0.7,
   whiteSpace: "nowrap"
 };
 
 const CONFIRMATIONS: TrainingConfirmation[] = ["Confirmed", "Tentative", "Canceled", "Unknown"];
+const HIRE_TYPES: TrainingHireType[] = ["External", "Internal"];
+const POOLS: TrainingPool[] = ["SS", "M", "PDP"];
 
 /** yyyy-mm-dd -> "Jul 19" / "Jul 19 2025", without a Date object (an ISO date
     parsed as UTC and printed locally can land a day early). */
@@ -92,6 +91,11 @@ export function TrainingTab({
   const [importMsg, setImportMsg] = useState<{ ok: boolean; lines: string[] } | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [query, setQuery] = useState("");
+  // The onboarding dates cost ~340px of table. On by default because the point
+  // of widening this tab was to SEE everything; the toggle is the escape hatch
+  // on a laptop rather than a default that hides data.
+  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [addName, setAddName] = useState("");
 
   const rows = useMemo(() => trainingRows(groups, records, today), [groups, records, today]);
 
@@ -122,7 +126,7 @@ export function TrainingTab({
 
   /** Write one field of one RECORD, creating it if the row is a chart-derived
       placeholder. Keyed by record id, because one pilot can have several. */
-  const setField = (row: TrainingRow, field: TextField | "confirmation" | "archived", value: string | boolean) => {
+  const setField = (row: TrainingRow, field: TextField | "confirmation" | "hireType" | "pool" | "archived", value: string | boolean) => {
     const existing = records.find((r) => r.id === row.id);
     const base: TrainingRecord = existing ?? {
       id: row.id,
@@ -135,6 +139,13 @@ export function TrainingTab({
 
     if (field === "archived") next.archived = Boolean(value);
     else if (field === "confirmation") next.confirmation = value as TrainingConfirmation;
+    else if (field === "hireType") {
+      if (value) next.hireType = value as TrainingHireType;
+      else delete next.hireType;
+    } else if (field === "pool") {
+      if (value) next.pool = value as TrainingPool;
+      else delete next.pool;
+    }
     else {
       const clean = String(value).trim();
       if (clean) next[field] = clean;
@@ -145,6 +156,24 @@ export function TrainingTab({
   };
 
   const removeRecord = (id: string) => onChange(records.filter((r) => r.id !== id));
+
+  /** Add a blank training record by hand. There was NO way to do this before —
+      records only arrived by import or as a chart-derived placeholder — so a
+      course somebody booked outside the sheet could not be entered at all.
+      Created undated, which puts it in the "no training end date" warning until
+      the dates are filled in. */
+  const addRecord = () => {
+    const name = addName.trim();
+    if (!name) return;
+    const id = trainingRecordId(name, undefined, "");
+    if (records.some((r) => r.id === id)) {
+      setImportMsg({ ok: false, lines: [`${name} already has an undated record — fill that one in rather than adding a second.`] });
+      return;
+    }
+    onChange([...records, { id, name, confirmation: "Tentative", archived: false }]);
+    setAddName("");
+    setQuery("");
+  };
 
   const runImport = () => {
     const year = today ? Number(today.slice(0, 4)) : new Date().getFullYear();
@@ -213,6 +242,14 @@ export function TrainingTab({
           style={{ fontSize: 12, fontWeight: 600, padding: "4px 9px", borderRadius: 4, cursor: "pointer", border: "1px solid var(--line, #cdd7e2)", background: showArchived ? "var(--navy, #0d2c43)" : "transparent", color: showArchived ? "#fff" : "inherit" }}
         >
           {showArchived ? "Hide" : "Show"} archived ({archivedCount})
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowOnboarding((v) => !v)}
+          title="Start date, orientation and indoc. Hide them to fit the training columns on a narrower screen."
+          style={{ fontSize: 12, fontWeight: 600, padding: "4px 9px", borderRadius: 4, cursor: "pointer", border: "1px solid var(--line, #cdd7e2)", background: showOnboarding ? "var(--navy, #0d2c43)" : "transparent", color: showOnboarding ? "#fff" : "inherit" }}
+        >
+          Onboarding dates
         </button>
         {canEdit ? (
           <button
@@ -283,16 +320,23 @@ export function TrainingTab({
       ) : null}
 
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1180 }}>
+        <table className="trtable" style={{ minWidth: showOnboarding ? 1240 : 900 }}>
           <thead>
             <tr>
               <th style={headStyle}>Pilot</th>
               <th style={headStyle}>Type</th>
               <th style={headStyle}>Pool</th>
               <th style={headStyle}>Position</th>
-              <th style={headStyle}>Start date</th>
-              <th style={headStyle}>Orientation</th>
-              <th style={headStyle}>Indoc</th>
+              {/* The onboarding trio is a different KIND of date from the
+                  training window. Tinted as one block, and droppable entirely
+                  on a narrow screen so the training columns never scroll. */}
+              {showOnboarding ? (
+                <>
+                  <th style={headStyle} className="pre">Start date</th>
+                  <th style={headStyle} className="pre">Orientation</th>
+                  <th style={headStyle} className="pre">Indoc</th>
+                </>
+              ) : null}
               <th style={headStyle}>Training start</th>
               <th style={headStyle}>Training end</th>
               <th style={headStyle}>Location</th>
@@ -305,7 +349,7 @@ export function TrainingTab({
           <tbody>
             {visible.length === 0 ? (
               <tr>
-                <td style={{ ...cellStyle, opacity: 0.7 }} colSpan={canEdit ? 14 : 13}>
+                <td style={{ ...cellStyle, opacity: 0.7 }} colSpan={(canEdit ? 11 : 10) + (showOnboarding ? 3 : 0)}>
                   {rows.length === 0 ? "No training records yet — import the tracking sheet above." : "Nothing matches that search."}
                 </td>
               </tr>
@@ -319,7 +363,7 @@ export function TrainingTab({
                   pretty(row[field], today)
                 );
               return (
-                <tr key={row.id} style={due ? { background: "var(--train-bg, rgba(234,170,0,.12))" } : row.archived ? { opacity: 0.65 } : undefined}>
+                <tr key={row.id} className={due ? "due" : row.archived ? "arch" : undefined}>
                   <td style={cellStyle}>
                     <button
                       type="button"
@@ -339,14 +383,50 @@ export function TrainingTab({
                       </>
                     ) : null}
                   </td>
-                  <td style={cellStyle}>{row.hireType ? pill(row.hireType, row.hireType === "Internal" ? "green" : "grey") : "—"}</td>
-                  <td style={cellStyle}>{row.pool ?? "—"}</td>
+                  {/* Type and Pool were READ-ONLY until now, which is what made
+                      them look locked — they were displayed but never given a
+                      control. Both are pickers, with a blank option so a wrong
+                      value can be cleared rather than only changed. */}
+                  <td style={cellStyle}>
+                    {canEdit ? (
+                      <select value={row.hireType ?? ""} onChange={(e) => setField(row, "hireType", e.target.value)} aria-label={"Hire type for " + row.name}>
+                        <option value="">—</option>
+                        {HIRE_TYPES.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                    ) : row.hireType ? (
+                      pill(row.hireType, row.hireType === "Internal" ? "green" : "grey")
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td style={cellStyle}>
+                    {canEdit ? (
+                      <select value={row.pool ?? ""} onChange={(e) => setField(row, "pool", e.target.value)} aria-label={"Pool for " + row.name}>
+                        <option value="">—</option>
+                        {POOLS.map((p) => (
+                          <option key={p} value={p}>
+                            {p}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      row.pool ?? "—"
+                    )}
+                  </td>
                   <td style={{ ...cellStyle, whiteSpace: "normal", minWidth: 130 }}>
                     {canEdit ? <input value={row.position ?? ""} onChange={(e) => setField(row, "position", e.target.value)} style={inputStyle} /> : row.position || "—"}
                   </td>
-                  <td style={cellStyle}>{dateCell("startDate")}</td>
-                  <td style={cellStyle}>{dateCell("orientationDate")}</td>
-                  <td style={cellStyle}>{dateCell("indocDate")}</td>
+                  {showOnboarding ? (
+                    <>
+                      <td style={cellStyle} className="pre">{dateCell("startDate")}</td>
+                      <td style={cellStyle} className="pre">{dateCell("orientationDate")}</td>
+                      <td style={cellStyle} className="pre">{dateCell("indocDate")}</td>
+                    </>
+                  ) : null}
                   <td style={cellStyle}>{dateCell("start")}</td>
                   <td style={cellStyle}>
                     {dateCell("end")}
@@ -405,8 +485,34 @@ export function TrainingTab({
         </table>
       </div>
 
+      {canEdit ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            addRecord();
+          }}
+          style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 12 }}
+        >
+          <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.7 }}>Add a record</span>
+          <input
+            value={addName}
+            onChange={(e) => setAddName(e.target.value)}
+            placeholder="Pilot name…"
+            style={{ ...inputStyle, width: 200, fontSize: 12.5, padding: "5px 8px" }}
+          />
+          <button
+            type="submit"
+            disabled={!addName.trim()}
+            style={{ background: "var(--navy, #0d2c43)", color: "#fff", border: "none", borderRadius: 4, padding: "5px 12px", fontSize: 12.5, fontWeight: 600, cursor: addName.trim() ? "pointer" : "default", opacity: addName.trim() ? 1 : 0.5 }}
+          >
+            Add
+          </button>
+          <span style={{ fontSize: 11.5, opacity: 0.65 }}>Adds a blank row you fill in — for a course that never went on the sheet.</span>
+        </form>
+      ) : null}
+
       <div style={{ fontSize: 11.5, opacity: 0.65, marginTop: 10 }}>
-        One row per TRAINING EVENT, not per person — a pilot going back for a new seat, a new aircraft or recurrent training gets another row, and their
+        Every column except <b>Progress</b> is editable — Progress is worked out from the dates and the status, so change those instead. One row per TRAINING EVENT, not per person — a pilot going back for a new seat, a new aircraft or recurrent training gets another row, and their
         history is kept. Rows marked <b>from chart</b> are pilots the chart shows in a training seat with no record entered yet. <b>Archive</b> keeps a
         record and drops it out of the active list; the ✕ deletes it.
       </div>
