@@ -3,29 +3,32 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { CrewGroup } from "@/lib/fleet/staffing/types";
-import type { TrainingRecord, TrainingStatus } from "@/lib/fleet/staffing/training";
-import { TRAINING_STATUS_LABEL, trainingRows, parseTrainingPaste } from "@/lib/fleet/staffing/training";
+import type { TrainingRecord, TrainingRow, TrainingConfirmation } from "@/lib/fleet/staffing/training";
+import { PROGRESS_LABEL, trainingRows, parseTrainingPaste } from "@/lib/fleet/staffing/training";
 
-// The Training tab on the Crew Org Chart: who is in training, on what, where,
-// and — the column everything else hangs off — WHEN IT ENDS.
+// The Training tab on the Crew Org Chart.
 //
-// The end date is what turns training from a label into something that can be
-// acted on: once it passes, the chart can say "this pilot has finished, do you
-// want them on the line?" instead of leaving them sitting in a training seat
-// until somebody notices. That prompt lives on the chart itself (the banner in
-// CrewOrgChart); this tab is where the dates come from.
+// The columns mirror the Recruiting Status Tracking "Training Info" sheet this
+// data comes from — name, external/internal, pool, position, start, orientation,
+// indoc, training start, training END, location, status — so a recruiter reading
+// the sheet and a recruiter reading this see the same row in the same order.
 //
-// IMPORTING: training is tracked in a spreadsheet today, so the fastest honest
-// path from there to here is paste. Copy the rows out of the sheet, paste, and
-// the columns are matched by their headers. Nothing is written until the chart
-// is saved, same as every other edit on this page.
+// The end date is what turns training from a label into something actionable:
+// once it passes, the chart offers to move that pilot onto the line instead of
+// leaving them in a training seat until somebody notices. That prompt lives on
+// the chart; this tab is where its dates come from.
+//
+// ARCHIVED rows are the sheet's own history — everything under its ARCHIVED
+// divider. Kept in full and hidden by default: "we still want the info, just not
+// active."
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  fontSize: 12.5,
-  padding: "4px 6px",
+  minWidth: 78,
+  fontSize: 12,
+  padding: "3px 5px",
   borderRadius: 4,
   border: "1px solid var(--line, #cdd7e2)",
   background: "transparent",
@@ -33,17 +36,18 @@ const inputStyle: React.CSSProperties = {
 };
 
 const cellStyle: React.CSSProperties = {
-  padding: "6px 8px",
+  padding: "5px 7px",
   borderBottom: "1px solid var(--line, #cdd7e2)",
   verticalAlign: "middle",
-  fontSize: 12.5
+  fontSize: 12,
+  whiteSpace: "nowrap"
 };
 
 const headStyle: React.CSSProperties = {
-  padding: "6px 8px",
+  padding: "6px 7px",
   borderBottom: "2px solid var(--line, #cdd7e2)",
   textAlign: "left",
-  fontSize: 11,
+  fontSize: 10,
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.05em",
@@ -51,8 +55,10 @@ const headStyle: React.CSSProperties = {
   whiteSpace: "nowrap"
 };
 
-/** yyyy-mm-dd -> "Jul 19" / "Jul 19 2025", without a Date object (no timezone
-    shift — an ISO date parsed as UTC and printed locally can land a day early). */
+const CONFIRMATIONS: TrainingConfirmation[] = ["Confirmed", "Tentative", "Canceled", "Unknown"];
+
+/** yyyy-mm-dd -> "Jul 19" / "Jul 19 2025", without a Date object (an ISO date
+    parsed as UTC and printed locally can land a day early). */
 function pretty(iso: string | undefined, today: string | null): string {
   if (!iso || !ISO.test(iso)) return "—";
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -60,6 +66,8 @@ function pretty(iso: string | undefined, today: string | null): string {
   const label = `${MONTHS[Number(m) - 1]} ${Number(d)}`;
   return today && today.slice(0, 4) === y ? label : `${label} ${y}`;
 }
+
+type TextField = "name" | "position" | "vendor" | "note" | "startDate" | "orientationDate" | "indocDate" | "start" | "end";
 
 export function TrainingTab({
   groups,
@@ -77,61 +85,66 @@ export function TrainingTab({
   today: string | null;
   canEdit: boolean;
   onChange: (next: TrainingRecord[]) => void;
-  /** Open the aircraft card this person sits on, and highlight them. */
   onShowPerson: (name: string) => void;
 }) {
   const [importOpen, setImportOpen] = useState(false);
   const [paste, setPaste] = useState("");
   const [importMsg, setImportMsg] = useState<{ ok: boolean; lines: string[] } | null>(null);
-  const [showComplete, setShowComplete] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [query, setQuery] = useState("");
 
-  const rows = useMemo(() => trainingRows(groups, records), [groups, records]);
+  const rows = useMemo(() => trainingRows(groups, records, today), [groups, records, today]);
+
   const visible = useMemo(() => {
-    const list = showComplete ? rows : rows.filter((r) => r.status !== "complete");
-    // Soonest end date first — the ones about to need a decision at the top.
-    // Undated rows sink, because they are the ones needing DATA, not a decision,
-    // and they would otherwise sit above the pilot finishing tomorrow.
-    return list.slice().sort((a, b) => {
-      if (Boolean(a.end) !== Boolean(b.end)) return a.end ? -1 : 1;
-      return (a.end ?? "").localeCompare(b.end ?? "") || a.name.localeCompare(b.name);
+    const q = query.trim().toLowerCase();
+    const list = rows.filter((r) => {
+      if (!showArchived && r.archived) return false;
+      if (!q) return true;
+      return `${r.name} ${r.position ?? ""} ${r.vendor ?? ""} ${r.note ?? ""}`.toLowerCase().includes(q);
     });
-  }, [rows, showComplete]);
+    // Soonest END first — the decisions that are due. Undated rows sink,
+    // because those need DATA rather than a decision and would otherwise sit
+    // above the pilot finishing tomorrow. Archived history sorts newest-first.
+    return list.slice().sort((a, b) => {
+      if (a.archived !== b.archived) return a.archived ? 1 : -1;
+      const ax = a.end ?? a.start;
+      const bx = b.end ?? b.start;
+      if (Boolean(ax) !== Boolean(bx)) return ax ? -1 : 1;
+      if (a.archived) return (bx ?? "").localeCompare(ax ?? "") || a.name.localeCompare(b.name);
+      return (ax ?? "").localeCompare(bx ?? "") || a.name.localeCompare(b.name);
+    });
+  }, [rows, showArchived, query]);
 
-  const completeCount = rows.filter((r) => r.status === "complete").length;
-  const missingDates = rows.filter((r) => !r.end && r.status !== "complete").length;
+  const liveRows = rows.filter((r) => !r.archived);
+  const archivedCount = rows.length - liveRows.length;
+  const missingEnd = liveRows.filter((r) => !r.end && r.confirmation !== "Canceled").length;
+  const offChart = liveRows.filter((r) => !r.onChart && r.progress !== "complete" && r.confirmation !== "Canceled").length;
 
-  /** The optional text fields, i.e. everything except `name` (the key) and
-      `status` (which is required and never blank). */
-  type TextField = "aircraft" | "seat" | "start" | "end" | "vendor" | "note";
+  /** Write one field of one RECORD, creating it if the row is a chart-derived
+      placeholder. Keyed by record id, because one pilot can have several. */
+  const setField = (row: TrainingRow, field: TextField | "confirmation" | "archived", value: string | boolean) => {
+    const existing = records.find((r) => r.id === row.id);
+    const base: TrainingRecord = existing ?? {
+      id: row.id,
+      name: row.name,
+      confirmation: row.confirmation,
+      archived: row.archived,
+      ...(row.position ? { position: row.position } : {})
+    };
+    const next: TrainingRecord = { ...base };
 
-  /** Write one field of one person's record, creating the record if this row is
-      still a chart-derived placeholder. A blank value CLEARS the field rather
-      than storing an empty string — an empty end date has to mean "no date", or
-      the completion prompt would compare against "". */
-  const setField = (name: string, field: TextField | "status", value: string) => {
-    const existing = records.find((r) => r.name.toLowerCase() === name.toLowerCase());
-    const seed = rows.find((r) => r.name.toLowerCase() === name.toLowerCase());
-    const next: TrainingRecord = existing
-      ? { ...existing }
-      : {
-          name,
-          status: "in-training",
-          ...(seed?.aircraft ? { aircraft: seed.aircraft } : {}),
-          ...(seed?.seat ? { seat: seed.seat } : {})
-        };
-
-    if (field === "status") {
-      next.status = value as TrainingStatus;
-    } else {
-      const clean = value.trim();
+    if (field === "archived") next.archived = Boolean(value);
+    else if (field === "confirmation") next.confirmation = value as TrainingConfirmation;
+    else {
+      const clean = String(value).trim();
       if (clean) next[field] = clean;
       else delete next[field];
     }
 
-    onChange(existing ? records.map((r) => (r === existing ? next : r)) : [...records, next]);
+    onChange(existing ? records.map((r) => (r.id === existing.id ? next : r)) : [...records, next]);
   };
 
-  const removeRecord = (name: string) => onChange(records.filter((r) => r.name.toLowerCase() !== name.toLowerCase()));
+  const removeRecord = (id: string) => onChange(records.filter((r) => r.id !== id));
 
   const runImport = () => {
     const year = today ? Number(today.slice(0, 4)) : new Date().getFullYear();
@@ -140,33 +153,66 @@ export function TrainingTab({
       setImportMsg({ ok: false, lines: result.problems.length ? result.problems : ["Nothing to import from that paste."] });
       return;
     }
-    // MERGE, don't replace: a paste is usually a subset (this month's courses),
-    // and replacing would quietly delete everyone the sheet no longer lists.
-    // Matching is by name, so re-pasting a corrected sheet updates in place.
-    const byName = new Map(records.map((r) => [r.name.toLowerCase(), r]));
-    for (const rec of result.records) byName.set(rec.name.toLowerCase(), { ...byName.get(rec.name.toLowerCase()), ...rec });
-    onChange([...byName.values()]);
+    // MERGE by record id, never replace: a paste is often a subset, and
+    // replacing would delete everyone the sheet no longer lists. Ids are
+    // derived from name + training start + position, so re-pasting a corrected
+    // sheet updates rows in place instead of doubling them.
+    const byId = new Map(records.map((r) => [r.id, r]));
+    for (const rec of result.records) {
+      const prev = byId.get(rec.id);
+      // completedAt is ours, not the sheet's — a re-import must not undo
+      // somebody having already moved that pilot onto the line.
+      byId.set(rec.id, prev?.completedAt ? { ...rec, completedAt: prev.completedAt } : rec);
+    }
+    onChange([...byId.values()]);
 
-    const lines = [`Imported ${result.records.length} training record${result.records.length === 1 ? "" : "s"}. Nothing is stored until you press Save below.`];
-    if (result.skipped) lines.push(`${result.skipped} row${result.skipped === 1 ? "" : "s"} had no name and were skipped.`);
+    const added = result.records.filter((r) => !records.some((e) => e.id === r.id)).length;
+    const lines = [
+      `Read ${result.records.length} training records — ${added} new, ${result.records.length - added} updated. ${result.archived} are archived history.`,
+      `${result.skipped} rows had no name and were skipped (blank spacers and the ARCHIVED divider).`,
+      "Nothing is stored until you press Save training below."
+    ];
     lines.push(...result.problems);
     setImportMsg({ ok: true, lines });
     setPaste("");
   };
 
+  const pill = (text: string, tone: "gold" | "green" | "grey") => (
+    <span
+      style={{
+        fontSize: 10,
+        fontWeight: 700,
+        padding: "1px 5px",
+        borderRadius: 4,
+        whiteSpace: "nowrap",
+        border: `1px solid ${tone === "gold" ? "var(--gold, #eaaa00)" : tone === "green" ? "var(--green, #2e7d32)" : "var(--line, #cdd7e2)"}`,
+        color: tone === "green" ? "var(--green, #2e7d32)" : "inherit",
+        opacity: tone === "grey" ? 0.7 : 1
+      }}
+    >
+      {text}
+    </span>
+  );
+
   return (
     <div style={{ marginTop: 14 }}>
-      <div style={{ display: "flex", gap: 12, alignItems: "baseline", flexWrap: "wrap", marginBottom: 10 }}>
+      <div style={{ display: "flex", gap: 10, alignItems: "baseline", flexWrap: "wrap", marginBottom: 10 }}>
         <div style={{ fontSize: 15, fontWeight: 700 }}>Training</div>
-        <div style={{ fontSize: 12.5, opacity: 0.75, flex: "1 1 240px" }}>
-          Every pilot in training, and when it ends. Once an end date passes, the chart offers to move them to the line — it never moves anyone on its own.
+        <div style={{ fontSize: 12.5, opacity: 0.75, flex: "1 1 220px" }}>
+          {liveRows.length} active · {archivedCount} archived. Once a training end date passes, the chart offers to move that pilot to the line — it never moves anyone on its own.
         </div>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search name, seat, location…"
+          style={{ ...inputStyle, width: 190, minWidth: 140, fontSize: 12.5, padding: "5px 8px" }}
+        />
         <button
           type="button"
-          onClick={() => setShowComplete((v) => !v)}
-          style={{ fontSize: 12, fontWeight: 600, padding: "4px 9px", borderRadius: 4, cursor: "pointer", border: "1px solid var(--line, #cdd7e2)", background: "transparent", color: "inherit" }}
+          onClick={() => setShowArchived((v) => !v)}
+          style={{ fontSize: 12, fontWeight: 600, padding: "4px 9px", borderRadius: 4, cursor: "pointer", border: "1px solid var(--line, #cdd7e2)", background: showArchived ? "var(--navy, #0d2c43)" : "transparent", color: showArchived ? "#fff" : "inherit" }}
         >
-          {showComplete ? "Hide" : "Show"} completed ({completeCount})
+          {showArchived ? "Hide" : "Show"} archived ({archivedCount})
         </button>
         {canEdit ? (
           <button
@@ -177,25 +223,27 @@ export function TrainingTab({
             }}
             style={{ fontSize: 12, fontWeight: 600, padding: "4px 9px", borderRadius: 4, cursor: "pointer", border: "1px solid var(--line, #cdd7e2)", background: "transparent", color: "inherit" }}
           >
-            {importOpen ? "Close import" : "Import from a spreadsheet"}
+            {importOpen ? "Close import" : "Import from the tracking sheet"}
           </button>
         ) : null}
       </div>
 
       {importOpen && canEdit ? (
         <div style={{ border: "1px solid var(--line, #cdd7e2)", borderRadius: 4, padding: 12, marginBottom: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 700 }}>Paste the training rows</div>
+          <div style={{ fontSize: 13, fontWeight: 700 }}>Paste the Training Info sheet</div>
           <div style={{ fontSize: 12, opacity: 0.75, marginTop: 3 }}>
-            Copy the rows out of the tracking sheet, header row included, and paste them here. Recognised headers:{" "}
-            <b>Name</b> (required), Aircraft, Seat, Start, End, Vendor/Location, Status, Notes. Dates can be 7/13/2026, 07-13-26 or 2026-07-13. Existing
-            people are updated by name; nobody is deleted.
+            Select the whole sheet including the header row and paste it here. It reads the columns by name — <b>Name</b>, Position, Start Date, Orientation
+            Date, Basic Indoc Date, Training Start/End Date, Training Location, Training Status, Open Training Dates — and works out the two unlabelled
+            columns (External/Internal and SS/M/PDP) from their contents. Everything under the <b>ARCHIVED</b> divider is imported and marked archived.
+            People are matched by name plus seat plus training start, so re-pasting a corrected sheet updates rows rather than duplicating them, and nobody
+            is ever deleted.
           </div>
           <textarea
             value={paste}
             onChange={(e) => setPaste(e.target.value)}
             rows={6}
-            placeholder={"Name\tAircraft\tSeat\tStart\tEnd\tVendor\tStatus\nBrett Moreland\tG450 / GV\tCaptain\t7/13/2026\t7/19/2026\tCAE\tin-training"}
-            style={{ ...inputStyle, marginTop: 8, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12, resize: "vertical" }}
+            placeholder={"Name,,,Position,Start Date,Orientation Date,Basic Indoc Date,Training Start Date,Training End Date,Training Location,Training Status\nJonathan Siswick,External,M,Phenom 100 Captain,6/22/2026,6/29/2026,6/30/2026,07/07/2026,07/22/2026,CAE LAS,Tentative"}
+            style={{ ...inputStyle, marginTop: 8, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 11.5, resize: "vertical" }}
           />
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
             <button
@@ -206,10 +254,10 @@ export function TrainingTab({
             >
               Import
             </button>
-            <span style={{ fontSize: 11.5, opacity: 0.65 }}>Review the table, then press Save below to store it.</span>
+            <span style={{ fontSize: 11.5, opacity: 0.65 }}>Review the table, then press Save training to store it.</span>
           </div>
           {importMsg ? (
-            <div style={{ marginTop: 8, fontSize: 12, color: importMsg.ok ? "inherit" : "#c0392b" }}>
+            <div style={{ marginTop: 8, fontSize: 12, color: importMsg.ok ? "inherit" : "#c0392b", maxHeight: 160, overflowY: "auto" }}>
               {importMsg.lines.map((line, i) => (
                 <div key={i}>{line}</div>
               ))}
@@ -218,112 +266,135 @@ export function TrainingTab({
         </div>
       ) : null}
 
-      {missingDates > 0 ? (
+      {missingEnd > 0 || offChart > 0 ? (
         <div style={{ fontSize: 12.5, padding: "8px 10px", marginBottom: 10, borderRadius: 4, border: "1px solid var(--gold, #eaaa00)", background: "var(--train-bg, rgba(234,170,0,.12))" }}>
-          {missingDates} {missingDates === 1 ? "pilot has" : "pilots have"} no training end date, so nothing can tell you when they finish. Add the dates below or import them.
+          {missingEnd > 0 ? (
+            <div>
+              {missingEnd} active {missingEnd === 1 ? "record has" : "records have"} no training end date, so nothing can tell you when they finish.
+            </div>
+          ) : null}
+          {offChart > 0 ? (
+            <div>
+              {offChart} {offChart === 1 ? "person is" : "people are"} training for a seat the chart does not show them in — either they have not been added
+              to that aircraft yet, or the name is spelled differently here.
+            </div>
+          ) : null}
         </div>
       ) : null}
 
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 780 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1180 }}>
           <thead>
             <tr>
               <th style={headStyle}>Pilot</th>
-              <th style={headStyle}>Aircraft</th>
-              <th style={headStyle}>Seat</th>
-              <th style={headStyle}>Start</th>
-              <th style={headStyle}>End</th>
-              <th style={headStyle}>Where</th>
+              <th style={headStyle}>Type</th>
+              <th style={headStyle}>Pool</th>
+              <th style={headStyle}>Position</th>
+              <th style={headStyle}>Start date</th>
+              <th style={headStyle}>Orientation</th>
+              <th style={headStyle}>Indoc</th>
+              <th style={headStyle}>Training start</th>
+              <th style={headStyle}>Training end</th>
+              <th style={headStyle}>Location</th>
               <th style={headStyle}>Status</th>
+              <th style={headStyle}>Progress</th>
+              <th style={headStyle}>Notes</th>
               {canEdit ? <th style={headStyle} /> : null}
             </tr>
           </thead>
           <tbody>
             {visible.length === 0 ? (
               <tr>
-                <td style={{ ...cellStyle, opacity: 0.7 }} colSpan={canEdit ? 8 : 7}>
-                  Nobody is in training right now.
+                <td style={{ ...cellStyle, opacity: 0.7 }} colSpan={canEdit ? 14 : 13}>
+                  {rows.length === 0 ? "No training records yet — import the tracking sheet above." : "Nothing matches that search."}
                 </td>
               </tr>
             ) : null}
             {visible.map((row) => {
-              const done = Boolean(row.end && today && row.end <= today && row.status !== "complete" && row.onChart);
+              const due = row.progress === "complete" && row.onChart && !row.completedAt && !row.archived;
+              const dateCell = (field: "startDate" | "orientationDate" | "indocDate" | "start" | "end") =>
+                canEdit ? (
+                  <input type="date" value={row[field] ?? ""} onChange={(e) => setField(row, field, e.target.value)} style={inputStyle} />
+                ) : (
+                  pretty(row[field], today)
+                );
               return (
-                <tr key={row.name} style={done ? { background: "var(--train-bg, rgba(234,170,0,.12))" } : undefined}>
+                <tr key={row.id} style={due ? { background: "var(--train-bg, rgba(234,170,0,.12))" } : row.archived ? { opacity: 0.65 } : undefined}>
                   <td style={cellStyle}>
                     <button
                       type="button"
                       onClick={() => onShowPerson(row.name)}
                       disabled={!row.onChart}
                       title={row.onChart ? "Show this pilot on the chart" : "Not currently in a training seat on the chart"}
-                      style={{ background: "none", border: "none", padding: 0, font: "inherit", fontWeight: 700, color: "inherit", cursor: row.onChart ? "pointer" : "default", textAlign: "left", opacity: row.onChart ? 1 : 0.7 }}
+                      style={{ background: "none", border: "none", padding: 0, font: "inherit", fontWeight: 700, color: "inherit", cursor: row.onChart ? "pointer" : "default", textAlign: "left", opacity: row.onChart ? 1 : 0.75 }}
                     >
                       {row.name}
                     </button>
                     {links[row.name] ? (
                       <>
                         {" "}
-                        <Link href={`/candidates/${links[row.name]}`} style={{ fontSize: 11, opacity: 0.7, color: "inherit" }}>
+                        <Link href={`/candidates/${links[row.name]}`} style={{ fontSize: 10.5, opacity: 0.7, color: "inherit" }}>
                           profile
                         </Link>
                       </>
                     ) : null}
-                    {!row.onChart ? <span style={{ fontSize: 11, opacity: 0.6 }}> · not in a training seat</span> : null}
+                  </td>
+                  <td style={cellStyle}>{row.hireType ? pill(row.hireType, row.hireType === "Internal" ? "green" : "grey") : "—"}</td>
+                  <td style={cellStyle}>{row.pool ?? "—"}</td>
+                  <td style={{ ...cellStyle, whiteSpace: "normal", minWidth: 130 }}>
+                    {canEdit ? <input value={row.position ?? ""} onChange={(e) => setField(row, "position", e.target.value)} style={inputStyle} /> : row.position || "—"}
+                  </td>
+                  <td style={cellStyle}>{dateCell("startDate")}</td>
+                  <td style={cellStyle}>{dateCell("orientationDate")}</td>
+                  <td style={cellStyle}>{dateCell("indocDate")}</td>
+                  <td style={cellStyle}>{dateCell("start")}</td>
+                  <td style={cellStyle}>
+                    {dateCell("end")}
+                    {due ? <div style={{ fontSize: 10, fontWeight: 700, color: "#b0670e" }}>finished — move to line</div> : null}
+                  </td>
+                  <td style={{ ...cellStyle, whiteSpace: "normal", minWidth: 110 }}>
+                    {canEdit ? <input value={row.vendor ?? ""} onChange={(e) => setField(row, "vendor", e.target.value)} style={inputStyle} /> : row.vendor || "—"}
                   </td>
                   <td style={cellStyle}>
                     {canEdit ? (
-                      <input value={row.aircraft ?? ""} onChange={(e) => setField(row.name, "aircraft", e.target.value)} style={inputStyle} />
-                    ) : (
-                      row.aircraft || "—"
-                    )}
-                  </td>
-                  <td style={cellStyle}>
-                    {canEdit ? <input value={row.seat ?? ""} onChange={(e) => setField(row.name, "seat", e.target.value)} style={inputStyle} /> : row.seat || "—"}
-                  </td>
-                  <td style={cellStyle}>
-                    {canEdit ? (
-                      <input type="date" value={row.start ?? ""} onChange={(e) => setField(row.name, "start", e.target.value)} style={inputStyle} />
-                    ) : (
-                      pretty(row.start, today)
-                    )}
-                  </td>
-                  <td style={cellStyle}>
-                    {canEdit ? (
-                      <input type="date" value={row.end ?? ""} onChange={(e) => setField(row.name, "end", e.target.value)} style={inputStyle} />
-                    ) : (
-                      pretty(row.end, today)
-                    )}
-                    {done ? <div style={{ fontSize: 11, fontWeight: 700, color: "var(--gold, #b0670e)" }}>finished</div> : null}
-                  </td>
-                  <td style={cellStyle}>
-                    {canEdit ? <input value={row.vendor ?? ""} onChange={(e) => setField(row.name, "vendor", e.target.value)} style={inputStyle} /> : row.vendor || "—"}
-                  </td>
-                  <td style={cellStyle}>
-                    {canEdit ? (
-                      <select value={row.status} onChange={(e) => setField(row.name, "status", e.target.value)} style={inputStyle}>
-                        {(Object.keys(TRAINING_STATUS_LABEL) as TrainingStatus[]).map((s) => (
-                          <option key={s} value={s}>
-                            {TRAINING_STATUS_LABEL[s]}
+                      <select value={row.confirmation} onChange={(e) => setField(row, "confirmation", e.target.value)} style={inputStyle}>
+                        {CONFIRMATIONS.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
                           </option>
                         ))}
                       </select>
                     ) : (
-                      TRAINING_STATUS_LABEL[row.status]
+                      row.confirmation
                     )}
+                  </td>
+                  <td style={cellStyle}>{PROGRESS_LABEL[row.progress]}</td>
+                  <td style={{ ...cellStyle, whiteSpace: "normal", minWidth: 170, maxWidth: 280, fontSize: 11, opacity: 0.85 }}>
+                    {canEdit ? <input value={row.note ?? ""} onChange={(e) => setField(row, "note", e.target.value)} style={inputStyle} /> : row.note || ""}
                   </td>
                   {canEdit ? (
                     <td style={cellStyle}>
                       {row.missing ? (
-                        <span style={{ fontSize: 11, opacity: 0.6 }}>from chart</span>
+                        <span style={{ fontSize: 10, opacity: 0.6 }}>from chart</span>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => removeRecord(row.name)}
-                          title="Remove this training record"
-                          style={{ background: "none", border: "none", color: "#c0392b", cursor: "pointer", fontSize: 13, padding: 2 }}
-                        >
-                          ✕
-                        </button>
+                        <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <button
+                            type="button"
+                            onClick={() => setField(row, "archived", !row.archived)}
+                            title={row.archived ? "Make this active again" : "Archive — keeps the record, drops it out of the active list"}
+                            style={{ background: "none", border: "1px solid var(--line, #cdd7e2)", borderRadius: 4, cursor: "pointer", fontSize: 10, fontWeight: 700, padding: "1px 5px", color: "inherit" }}
+                          >
+                            {row.archived ? "restore" : "archive"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeRecord(row.id)}
+                            title="Delete this training record outright"
+                            style={{ background: "none", border: "none", color: "#c0392b", cursor: "pointer", fontSize: 12, padding: 2 }}
+                          >
+                            ✕
+                          </button>
+                        </span>
                       )}
                     </td>
                   ) : null}
@@ -335,8 +406,9 @@ export function TrainingTab({
       </div>
 
       <div style={{ fontSize: 11.5, opacity: 0.65, marginTop: 10 }}>
-        Rows marked <b>from chart</b> are pilots the chart shows in a training seat with no record entered yet — fill in their dates and they become records. Removing a
-        record does not move anyone; use the aircraft card for that.
+        One row per TRAINING EVENT, not per person — a pilot going back for a new seat, a new aircraft or recurrent training gets another row, and their
+        history is kept. Rows marked <b>from chart</b> are pilots the chart shows in a training seat with no record entered yet. <b>Archive</b> keeps a
+        record and drops it out of the active list; the ✕ deletes it.
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ import { normSeat, cntSeat } from "@/lib/fleet/staffing/compute";
 import { CREW_GROUPS, CREW_LEADERSHIP, CREW_TRAINING, CREW_PILOT_TURNOVER, turnoverFor } from "@/lib/fleet/staffing/crew-data";
 import { aircraftLabel, positionLabel, isoToday, splitDepartures, isDepartureArchived, DEPARTURE_ARCHIVE_DAYS } from "@/lib/fleet/staffing/labels";
 import type { TrainingRecord } from "@/lib/fleet/staffing/training";
-import { completedTraining } from "@/lib/fleet/staffing/training";
+import { completedTraining, matchKey } from "@/lib/fleet/staffing/training";
 import { SeatSquares, PersonRow, SlotRow } from "./SeatParts";
 import { LinkPicker, orgLinkBtnStyle } from "./LinkPicker";
 import { PeopleIndex, type IndexEntry } from "./PeopleIndex";
@@ -92,7 +92,7 @@ function ColBody({
         cls="t"
         // The end date is the whole point of tracking training, so it belongs
         // where the person is, not only on the Training tab.
-        rp={trainingEnd?.[n] ? `Training ends ${trainingEnd[n]}` : "In training"}
+        rp={trainingEnd?.[matchKey(n)] ? `Training ends ${trainingEnd[matchKey(n)]}` : "In training"}
         tags={tags?.[n]}
         href={href(n)}
         highlight={hl(n)}
@@ -380,9 +380,12 @@ function Transitions({ d, training, today }: { d: CrewGroup; training: TrainingR
   const [showOld, setShowOld] = useState(false);
   // A pilot's own training record beats the static CREW_TRAINING seed — the
   // record is what someone can actually edit, so it has to be what shows.
-  const byName = new Map(training.map((r) => [r.name.toLowerCase(), r]));
+  // Tolerant name matching (chart "Brock Tyler" vs sheet "Joshua (Brock) Tyler"),
+  // and only LIVE records — an archived 2024 course does not describe what
+  // somebody is doing now.
+  const byName = new Map(training.filter((r) => !r.archived).map((r) => [matchKey(r.name), r]));
   const trainNote = (n: string) => {
-    const rec = byName.get(n.toLowerCase());
+    const rec = byName.get(matchKey(n));
     if (rec?.end) return `in training · ends ${rec.end}${rec.vendor ? ` · ${rec.vendor}` : ""}`;
     return CREW_TRAINING[n] || "arriving · in training";
   };
@@ -828,13 +831,16 @@ export default function CrewOrgChart({
    * Saves immediately: the prompt is reachable without any editor open, so
    * leaving the change local would strand it somewhere with no Save button.
    */
-  const moveTrainedToLine = async (person: { name: string; gIdx: number; seatKey: SeatKey; aircraft: string }) => {
+  const moveTrainedToLine = async (person: { name: string; recordId: string; gIdx: number; seatKey: SeatKey; aircraft: string }) => {
     if (!window.confirm(`Move ${person.name} from training onto the line on the ${person.aircraft}? This saves straight away.`)) return;
     const nextGroups = structuredClone(groupsData);
     const seat = ensureSeat(nextGroups[person.gIdx], person.seatKey);
     pull(seat, "train", person.name);
     push(seat, "line", person.name);
-    const nextTraining = training.map((r) => (r.name.toLowerCase() === person.name.toLowerCase() ? { ...r, status: "complete" as const } : r));
+    // Stamp the SPECIFIC record by id, not every record for that name - a pilot
+    // can have several courses, and marking their 2024 history complete because
+    // they finished a 2026 course would be nonsense.
+    const nextTraining = training.map((r) => (r.id === person.recordId ? { ...r, completedAt: today ?? undefined } : r));
     setGroupsData(nextGroups);
     setTraining(nextTraining);
     const ok = await postRoster({ groups: nextGroups, links, training: nextTraining });
@@ -1019,7 +1025,15 @@ export default function CrewOrgChart({
   /** name -> training end date, for the person rows on an aircraft card. */
   const trainingEnds = useMemo(() => {
     const out: Record<string, string> = {};
-    for (const r of training) if (r.end) out[r.name] = r.end;
+    // Keyed by the CHART name via the tolerant match, and only from live
+    // records - an archived course from two years ago is not what the person
+    // sitting in a training seat today is waiting on. Latest end date wins when
+    // somebody has more than one open course.
+    for (const r of training) {
+      if (!r.end || r.archived || r.confirmation === "Canceled") continue;
+      const key = matchKey(r.name);
+      if (!out[key] || r.end > out[key]) out[key] = r.end;
+    }
     return out;
   }, [training]);
 
@@ -1379,7 +1393,7 @@ export default function CrewOrgChart({
                 {canEdit ? (
                   <button
                     type="button"
-                    onClick={() => void moveTrainedToLine({ name: p.name, gIdx: p.gIdx, seatKey: p.seatKey, aircraft: aircraftLabel(groupsData[p.gIdx]) })}
+                    onClick={() => void moveTrainedToLine({ name: p.name, recordId: p.recordId, gIdx: p.gIdx, seatKey: p.seatKey, aircraft: aircraftLabel(groupsData[p.gIdx]) })}
                     disabled={saving}
                     style={{ background: "var(--navy, #0d2c43)", color: "#fff", border: "none", borderRadius: 4, padding: "4px 10px", fontSize: 12, fontWeight: 600, cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}
                   >
