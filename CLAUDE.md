@@ -69,7 +69,9 @@ message:
   <commit body>
 
 ROADMAP: <exact ## Section name from roadmap.ts>
-- [x] <entry, in the format described under "The roadmap" below>
+- [x] <entry, in the format described under "The roadmap" below — NO DATE>
+      <the commit-and-push agent stamps (MonDD) when it applies this>
+      <do not touch the dates on entries that are already there>
 
 verified: lint <pass/fail>, tsc <pass/fail>, <anything you could not verify>
 ```
@@ -95,10 +97,20 @@ no longer claim something is live before it is.
 leave those out. It records work: shipped, in progress, genuinely queued, or a real
 problem found. If it would not change what somebody does next, it is noise.
 
+**Do NOT put a date in your handoff's ROADMAP lines.** Write the entry with no
+`(MonDD)` at all; the commit-and-push agent stamps it at commit time. A working
+session cannot know the date the entry actually ships — it may sit in a handoff
+for hours, or overnight, and a session that computes "today" in UTC gets it wrong
+after 6pm Mountain. This has now gone wrong in both directions: correct dates were
+"corrected" to the day before, and a later pass rewrote a week of Jul 28–30 entries
+to Aug 2, on lines that cited their own commit hashes. Leave the date out and it
+cannot drift.
+
 Write entries in this form:
 
-- **Shipped it** → `[x]` with a short `(MonDD)` note of what actually shipped —
-  including the honest caveats (what is untested, what was skipped, what is still open).
+- **Shipped it** → `[x]` and what actually shipped — including the honest caveats
+  (what is untested, what was skipped, what is still open). No date; it is added
+  for you.
 - **Started but not finished** → `[~]`.
 - **Something real surfaced** → `[ ]`.
 - **Dropped / turned out stale** → say plainly that it is dead, or have it removed.
@@ -139,6 +151,15 @@ Then, once all the work is committed:
 6. Apply every `ROADMAP:` section into `lib/roadmap/roadmap.ts` — into the named
    section, in the stated format, **no backticks**. Flip any existing `[~]` whose
    only remaining step was shipping. Commit that on its own.
+   - **You add the date, and only you.** Handoff blocks arrive without one. Take
+     it from the system clock in **Mountain time** (`Get-Date`), not from a UTC
+     timestamp and not from memory — after 6pm Mountain, UTC is already tomorrow.
+     Stamp `(MonDD)` on each `[x]` as you write it in.
+   - **Never bulk-rewrite existing dates.** A dated entry is a record of when
+     something shipped, not a field to refresh. If one looks wrong and it cites a
+     commit, check it — `git log -1 --format=%ad <hash>` settles it — and correct
+     only that entry, saying so. Two separate passes have collapsed a week of real
+     dates onto "today"; both were caught only because the hashes disproved them.
 7. Verify the COMBINED tree, because what gets pushed is everyone's work merged and
    no single agent tested that state: `npm run lint` and
    `NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.json`
