@@ -20,6 +20,18 @@
  *
  * It guards drafts as well as sends. A draft emails nobody, but it still lands in the
  * shared hrotasks@ mailbox the team works out of, where a teammate could send it.
+ *
+ * THE ONE EXCEPTION. Some mail this app sends is not addressed to a person at all —
+ * the daily "what changed" report goes to an internal automation mailbox, and it is
+ * SUPPOSED to run from a laptop on a schedule. Redirecting that to a tester's inbox
+ * means the team silently stops receiving it. So a message whose recipients are ALL
+ * on INTERNAL_AUTOMATION_RECIPIENTS passes through untouched.
+ *
+ * NOT A DOMAIN CHECK, and this is the whole point: new hires are issued
+ * @skyshare.com addresses and the orientation template mails them there, so
+ * "internal domain" would disarm the guard for the exact flow it exists to protect.
+ * The list is explicit addresses, and ONE real person anywhere in to/cc/bcc sends the
+ * whole message back down the guarded path.
  */
 
 export type GuardedRecipients = {
@@ -46,6 +58,28 @@ export function isProductionEmailEnv(): boolean {
   return process.env.NEXT_PUBLIC_APP_ENV?.toLowerCase() === "production";
 }
 
+/**
+ * Mailboxes that are automation endpoints rather than people — safe to reach from a
+ * non-production run because nothing here is a candidate, a new hire or an outside
+ * party, and the mail sent to them (the daily report) is worthless if it is diverted.
+ *
+ * ADDING TO THIS LIST WIDENS WHAT A LAPTOP CAN EMAIL. Only add an address that is a
+ * shared internal mailbox the team already owns. Never add a person's address, and
+ * never relax this to a domain test — new hires hold @skyshare.com addresses.
+ */
+export const INTERNAL_AUTOMATION_RECIPIENTS: readonly string[] = [
+  "hrotasks@skyshare.com",
+];
+
+/** Pull the bare address out of either "a@b.com" or "Name <a@b.com>". */
+function bareAddress(recipient: string): string {
+  const angled = recipient.match(/<([^>]+)>/);
+  return (angled ? angled[1] : recipient).trim().toLowerCase();
+}
+
+const isInternalAutomation = (recipient: string): boolean =>
+  INTERNAL_AUTOMATION_RECIPIENTS.includes(bareAddress(recipient));
+
 export class FrontSendBlockedError extends Error {
   constructor(message: string) {
     super(message);
@@ -71,6 +105,19 @@ export function guardRecipients(input: { to: string | string[]; cc?: string[]; b
 
   const testInbox = process.env.FRONT_TEST_INBOX?.trim();
   const intended = [...to, ...list(input.cc), ...list(input.bcc)];
+
+  // Every recipient is an automation mailbox: nobody real is reachable, so let it
+  // through unchanged. Requires ALL of them — a single person in cc means this is
+  // mail to a human that merely copies a mailbox, and it stays guarded.
+  if (intended.length > 0 && intended.every(isInternalAutomation)) {
+    return {
+      to,
+      ...(input.cc ? { cc: input.cc } : {}),
+      ...(input.bcc ? { bcc: input.bcc } : {}),
+      subject: input.subject,
+    };
+  }
+
   if (!testInbox) {
     throw new FrontSendBlockedError(
       `Refusing to email ${intended.length} real recipient${intended.length === 1 ? "" : "s"} (${intended.join(", ") || "none"}) from a non-production environment. ` +
