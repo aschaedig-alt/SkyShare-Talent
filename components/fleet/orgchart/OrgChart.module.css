@@ -97,14 +97,66 @@
 .wrap :global(.trtable thead th.pre) {
   background: color-mix(in srgb, var(--int-bg) 62%, var(--n100));
 }
-.wrap :global(.trtable tbody tr:nth-child(even) td) {
+/* Each RECORD is its own tbody holding two rows (the data line and the notes
+   line), so striping has to alternate by tbody. Striping by tr would shade the
+   notes line of one pilot and the data line of the next, which reads as the
+   rows being misaligned. */
+.wrap :global(.trtable tbody:nth-of-type(even) td) {
   background: color-mix(in srgb, var(--n100) 55%, transparent);
 }
-.wrap :global(.trtable tbody tr:nth-child(even) td.pre) {
+.wrap :global(.trtable tbody:nth-of-type(even) td.pre) {
   background: color-mix(in srgb, var(--int-bg) 42%, transparent);
 }
-.wrap :global(.trtable tbody tr:hover td) {
+.wrap :global(.trtable tbody:hover td) {
   background: color-mix(in srgb, var(--gold) 12%, transparent);
+}
+/* The notes line: no column rules, tucked under its own record, and separated
+   from the NEXT record by the only heavy border in the table. */
+.wrap :global(.trtable tr.sub td) {
+  border-right: none;
+  border-bottom: 2px solid var(--n200);
+  padding: 2px 8px 4px 10px;
+}
+.wrap :global(.trtable tr.main td) {
+  border-bottom: 1px dotted var(--n200);
+}
+.wrap :global(.trtable .subwrap) {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.wrap :global(.trtable .subnote) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* A date reads as short text and only becomes a real picker when clicked, so a
+   column costs ~58px instead of the ~110px Chrome insists on for a date input. */
+.wrap :global(.trtable .dbtn) {
+  width: 100%;
+  min-width: 54px;
+  font: 500 11px/1.5 var(--fh);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  padding: 2px 3px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+  cursor: text;
+}
+.wrap :global(.trtable .dbtn:hover) {
+  border-color: var(--n300);
+  background: var(--color-bg);
+}
+.wrap :global(.trtable .dbtn.empty) {
+  color: var(--n400);
+}
+.wrap :global(.trtable th.sortable) {
+  cursor: pointer;
+  user-select: none;
+}
+.wrap :global(.trtable th.sortable:hover) {
+  color: var(--ink);
 }
 /* Row states beat striping - a finished course and an archived row have to stay
    legible whichever stripe they land on. */

@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { CrewGroup } from "@/lib/fleet/staffing/types";
 import type { TrainingRecord, TrainingRow, TrainingConfirmation, TrainingHireType, TrainingPool } from "@/lib/fleet/staffing/training";
 import { PROGRESS_LABEL, trainingRows, parseTrainingPaste, trainingRecordId } from "@/lib/fleet/staffing/training";
+import { DateCell, TonedSelect, hireTypeTone, poolTone, confirmationTone } from "./TrainingCells";
 
 // The Training tab on the Crew Org Chart.
 //
@@ -21,8 +22,6 @@ import { PROGRESS_LABEL, trainingRows, parseTrainingPaste, trainingRecordId } fr
 // ARCHIVED rows are the sheet's own history — everything under its ARCHIVED
 // divider. Kept in full and hidden by default: "we still want the info, just not
 // active."
-
-const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -56,17 +55,22 @@ const CONFIRMATIONS: TrainingConfirmation[] = ["Confirmed", "Tentative", "Cancel
 const HIRE_TYPES: TrainingHireType[] = ["External", "Internal"];
 const POOLS: TrainingPool[] = ["SS", "M", "PDP"];
 
-/** yyyy-mm-dd -> "Jul 19" / "Jul 19 2025", without a Date object (an ISO date
-    parsed as UTC and printed locally can land a day early). */
-function pretty(iso: string | undefined, today: string | null): string {
-  if (!iso || !ISO.test(iso)) return "—";
-  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const [y, m, d] = iso.split("-");
-  const label = `${MONTHS[Number(m) - 1]} ${Number(d)}`;
-  return today && today.slice(0, 4) === y ? label : `${label} ${y}`;
-}
-
 type TextField = "name" | "position" | "vendor" | "note" | "startDate" | "orientationDate" | "indocDate" | "start" | "end";
+
+/** The main line, in order. Every one of these sorts; `pre` marks the three
+    onboarding dates that the Onboarding dates toggle hides. */
+type SortKey = "name" | "position" | "startDate" | "orientationDate" | "indocDate" | "start" | "end" | "vendor" | "confirmation";
+const SORTABLE: { key: SortKey; label: string; pre?: boolean }[] = [
+  { key: "name", label: "Pilot" },
+  { key: "position", label: "Position" },
+  { key: "startDate", label: "Start", pre: true },
+  { key: "orientationDate", label: "Orient.", pre: true },
+  { key: "indocDate", label: "Indoc", pre: true },
+  { key: "start", label: "Trn start" },
+  { key: "end", label: "Trn end" },
+  { key: "vendor", label: "Location" },
+  { key: "confirmation", label: "Status" }
+];
 
 export function TrainingTab({
   groups,
@@ -96,6 +100,18 @@ export function TrainingTab({
   // on a laptop rather than a default that hides data.
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [addName, setAddName] = useState("");
+  // null = the default order (soonest training end first). Clicking a header
+  // takes over; clicking the same one again reverses it.
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<1 | -1>(1);
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === 1 ? -1 : 1));
+    else {
+      setSortKey(key);
+      setSortDir(1);
+    }
+  };
+  const mainColumns = SORTABLE.filter((c) => !c.pre || showOnboarding).length;
 
   const rows = useMemo(() => trainingRows(groups, records, today), [groups, records, today]);
 
@@ -106,18 +122,34 @@ export function TrainingTab({
       if (!q) return true;
       return `${r.name} ${r.position ?? ""} ${r.vendor ?? ""} ${r.note ?? ""}`.toLowerCase().includes(q);
     });
-    // Soonest END first — the decisions that are due. Undated rows sink,
-    // because those need DATA rather than a decision and would otherwise sit
-    // above the pilot finishing tomorrow. Archived history sorts newest-first.
     return list.slice().sort((a, b) => {
+      // ACTIVE ALWAYS ABOVE ARCHIVED, whatever the sort. Archived records are
+      // history; letting a 2024 course sort above a pilot finishing this week
+      // would bury the only rows anybody has to act on.
       if (a.archived !== b.archived) return a.archived ? 1 : -1;
+
+      if (sortKey) {
+        const av = (a[sortKey] ?? "").toString();
+        const bv = (b[sortKey] ?? "").toString();
+        // Blanks last in BOTH directions — reversing the sort should not
+        // promote a column of empty cells to the top.
+        if (Boolean(av) !== Boolean(bv)) return av ? -1 : 1;
+        const cmp = sortKey === "name" ? av.localeCompare(bv) : av.localeCompare(bv, undefined, { numeric: true });
+        if (cmp !== 0) return cmp * sortDir;
+        return a.name.localeCompare(b.name);
+      }
+
+      // Default: soonest END first — the decisions that are due. Undated rows
+      // sink, because those need DATA rather than a decision and would
+      // otherwise sit above the pilot finishing tomorrow. Archived history
+      // reads newest-first, since old courses matter less the older they get.
       const ax = a.end ?? a.start;
       const bx = b.end ?? b.start;
       if (Boolean(ax) !== Boolean(bx)) return ax ? -1 : 1;
       if (a.archived) return (bx ?? "").localeCompare(ax ?? "") || a.name.localeCompare(b.name);
       return (ax ?? "").localeCompare(bx ?? "") || a.name.localeCompare(b.name);
     });
-  }, [rows, showArchived, query]);
+  }, [rows, showArchived, query, sortKey, sortDir]);
 
   const liveRows = rows.filter((r) => !r.archived);
   const archivedCount = rows.length - liveRows.length;
@@ -206,22 +238,8 @@ export function TrainingTab({
     setPaste("");
   };
 
-  const pill = (text: string, tone: "gold" | "green" | "grey") => (
-    <span
-      style={{
-        fontSize: 10,
-        fontWeight: 700,
-        padding: "1px 5px",
-        borderRadius: 4,
-        whiteSpace: "nowrap",
-        border: `1px solid ${tone === "gold" ? "var(--gold, #eaaa00)" : tone === "green" ? "var(--green, #2e7d32)" : "var(--line, #cdd7e2)"}`,
-        color: tone === "green" ? "var(--green, #2e7d32)" : "inherit",
-        opacity: tone === "grey" ? 0.7 : 1
-      }}
-    >
-      {text}
-    </span>
-  );
+  // (the old hand-rolled pill helper lived here — superseded by TonedSelect,
+  // which colours by the value itself and works in both read and edit mode)
 
   return (
     <div style={{ marginTop: 14 }}>
@@ -320,168 +338,194 @@ export function TrainingTab({
       ) : null}
 
       <div style={{ overflowX: "auto" }}>
-        <table className="trtable" style={{ minWidth: showOnboarding ? 1240 : 900 }}>
+        <table className="trtable" style={{ minWidth: showOnboarding ? 980 : 720 }}>
           <thead>
             <tr>
-              <th style={headStyle}>Pilot</th>
-              <th style={headStyle}>Type</th>
-              <th style={headStyle}>Pool</th>
-              <th style={headStyle}>Position</th>
-              {/* The onboarding trio is a different KIND of date from the
-                  training window. Tinted as one block, and droppable entirely
-                  on a narrow screen so the training columns never scroll. */}
-              {showOnboarding ? (
-                <>
-                  <th style={headStyle} className="pre">Start date</th>
-                  <th style={headStyle} className="pre">Orientation</th>
-                  <th style={headStyle} className="pre">Indoc</th>
-                </>
-              ) : null}
-              <th style={headStyle}>Training start</th>
-              <th style={headStyle}>Training end</th>
-              <th style={headStyle}>Location</th>
-              <th style={headStyle}>Status</th>
+              {SORTABLE.filter((c) => c.pre !== true || showOnboarding).map((c) => (
+                <th
+                  key={c.key}
+                  style={headStyle}
+                  className={`sortable${c.pre ? " pre" : ""}`}
+                  onClick={() => toggleSort(c.key)}
+                  title={`Sort by ${c.label}`}
+                >
+                  {c.label}
+                  {sortKey === c.key ? (sortDir > 0 ? " ▲" : " ▼") : ""}
+                </th>
+              ))}
               <th style={headStyle}>Progress</th>
-              <th style={headStyle}>Notes</th>
-              {canEdit ? <th style={headStyle} /> : null}
             </tr>
           </thead>
-          <tbody>
-            {visible.length === 0 ? (
+
+          {visible.length === 0 ? (
+            <tbody>
               <tr>
-                <td style={{ ...cellStyle, opacity: 0.7 }} colSpan={(canEdit ? 11 : 10) + (showOnboarding ? 3 : 0)}>
+                <td style={{ ...cellStyle, opacity: 0.7 }} colSpan={mainColumns + 1}>
                   {rows.length === 0 ? "No training records yet — import the tracking sheet above." : "Nothing matches that search."}
                 </td>
               </tr>
-            ) : null}
-            {visible.map((row) => {
-              const due = row.progress === "complete" && row.onChart && !row.completedAt && !row.archived;
-              const dateCell = (field: "startDate" | "orientationDate" | "indocDate" | "start" | "end") =>
-                canEdit ? (
-                  <input type="date" value={row[field] ?? ""} onChange={(e) => setField(row, field, e.target.value)} style={inputStyle} />
-                ) : (
-                  pretty(row[field], today)
-                );
-              return (
-                <tr key={row.id} className={due ? "due" : row.archived ? "arch" : undefined}>
-                  <td style={cellStyle}>
-                    <button
-                      type="button"
-                      onClick={() => onShowPerson(row.name)}
-                      disabled={!row.onChart}
-                      title={row.onChart ? "Show this pilot on the chart" : "Not currently in a training seat on the chart"}
-                      style={{ background: "none", border: "none", padding: 0, font: "inherit", fontWeight: 700, color: "inherit", cursor: row.onChart ? "pointer" : "default", textAlign: "left", opacity: row.onChart ? 1 : 0.75 }}
-                    >
-                      {row.name}
-                    </button>
-                    {links[row.name] ? (
-                      <>
-                        {" "}
-                        <Link href={`/candidates/${links[row.name]}`} style={{ fontSize: 10.5, opacity: 0.7, color: "inherit" }}>
+            </tbody>
+          ) : null}
+
+          {/* One tbody PER RECORD, holding its data line and its notes line.
+              That is what lets the zebra striping alternate by record instead of
+              by row — striping by row would shade one pilot's notes line and the
+              next pilot's data line together. */}
+          {visible.map((row) => {
+            const due = row.progress === "complete" && row.onChart && !row.completedAt && !row.archived;
+            const rowCls = due ? "due" : row.archived ? "arch" : undefined;
+            const date = (field: "startDate" | "orientationDate" | "indocDate" | "start" | "end", label: string) => (
+              <DateCell value={row[field]} canEdit={canEdit} label={`${label} for ${row.name}`} onChange={(v) => setField(row, field, v)} />
+            );
+
+            return (
+              <tbody key={row.id}>
+                <tr className={`main${rowCls ? ` ${rowCls}` : ""}`}>
+                  <td style={{ ...cellStyle, minWidth: 150 }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      {/* EDITABLE in active and archived alike — the sheet carries
+                          "Alvaro Martin (Was Nick Smout)", "Gavin Wulderlich" and
+                          "Jermey McGraw", and there was no way to correct any of
+                          them. The jump-to-chart moved to its own icon so typing
+                          no longer competes with clicking. */}
+                      {canEdit ? (
+                        <input
+                          value={row.name}
+                          aria-label={`Name for ${row.name}`}
+                          onChange={(e) => setField(row, "name", e.target.value)}
+                          style={{ fontWeight: 700 }}
+                        />
+                      ) : (
+                        <b>{row.name}</b>
+                      )}
+                      {row.onChart ? (
+                        <button
+                          type="button"
+                          onClick={() => onShowPerson(row.name)}
+                          title={`Show ${row.name} on the chart`}
+                          style={{ flex: "0 0 auto", background: "none", border: "none", cursor: "pointer", fontSize: 11, opacity: 0.6, padding: "0 2px", color: "inherit" }}
+                        >
+                          ◎
+                        </button>
+                      ) : null}
+                      {links[row.name] ? (
+                        <Link href={`/candidates/${links[row.name]}`} title="Open profile" style={{ flex: "0 0 auto", fontSize: 10.5, opacity: 0.7, color: "inherit" }}>
                           profile
                         </Link>
-                      </>
-                    ) : null}
+                      ) : null}
+                    </span>
                   </td>
-                  {/* Type and Pool were READ-ONLY until now, which is what made
-                      them look locked — they were displayed but never given a
-                      control. Both are pickers, with a blank option so a wrong
-                      value can be cleared rather than only changed. */}
-                  <td style={cellStyle}>
+
+                  <td style={{ ...cellStyle, whiteSpace: "normal", minWidth: 120 }}>
                     {canEdit ? (
-                      <select value={row.hireType ?? ""} onChange={(e) => setField(row, "hireType", e.target.value)} aria-label={"Hire type for " + row.name}>
-                        <option value="">—</option>
-                        {HIRE_TYPES.map((t) => (
-                          <option key={t} value={t}>
-                            {t}
-                          </option>
-                        ))}
-                      </select>
-                    ) : row.hireType ? (
-                      pill(row.hireType, row.hireType === "Internal" ? "green" : "grey")
+                      <input value={row.position ?? ""} aria-label={`Position for ${row.name}`} onChange={(e) => setField(row, "position", e.target.value)} />
                     ) : (
-                      "—"
+                      row.position || "—"
                     )}
                   </td>
-                  <td style={cellStyle}>
-                    {canEdit ? (
-                      <select value={row.pool ?? ""} onChange={(e) => setField(row, "pool", e.target.value)} aria-label={"Pool for " + row.name}>
-                        <option value="">—</option>
-                        {POOLS.map((p) => (
-                          <option key={p} value={p}>
-                            {p}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      row.pool ?? "—"
-                    )}
-                  </td>
-                  <td style={{ ...cellStyle, whiteSpace: "normal", minWidth: 130 }}>
-                    {canEdit ? <input value={row.position ?? ""} onChange={(e) => setField(row, "position", e.target.value)} style={inputStyle} /> : row.position || "—"}
-                  </td>
+
                   {showOnboarding ? (
                     <>
-                      <td style={cellStyle} className="pre">{dateCell("startDate")}</td>
-                      <td style={cellStyle} className="pre">{dateCell("orientationDate")}</td>
-                      <td style={cellStyle} className="pre">{dateCell("indocDate")}</td>
+                      <td style={cellStyle} className="pre">{date("startDate", "Start date")}</td>
+                      <td style={cellStyle} className="pre">{date("orientationDate", "Orientation")}</td>
+                      <td style={cellStyle} className="pre">{date("indocDate", "Indoc")}</td>
                     </>
                   ) : null}
-                  <td style={cellStyle}>{dateCell("start")}</td>
+
+                  <td style={cellStyle}>{date("start", "Training start")}</td>
                   <td style={cellStyle}>
-                    {dateCell("end")}
-                    {due ? <div style={{ fontSize: 10, fontWeight: 700, color: "#b0670e" }}>finished — move to line</div> : null}
+                    {date("end", "Training end")}
+                    {due ? <div style={{ fontSize: 9.5, fontWeight: 800, color: "#b0670e" }}>move to line</div> : null}
                   </td>
-                  <td style={{ ...cellStyle, whiteSpace: "normal", minWidth: 110 }}>
-                    {canEdit ? <input value={row.vendor ?? ""} onChange={(e) => setField(row, "vendor", e.target.value)} style={inputStyle} /> : row.vendor || "—"}
-                  </td>
-                  <td style={cellStyle}>
+
+                  <td style={{ ...cellStyle, whiteSpace: "normal", minWidth: 92 }}>
                     {canEdit ? (
-                      <select value={row.confirmation} onChange={(e) => setField(row, "confirmation", e.target.value)} style={inputStyle}>
-                        {CONFIRMATIONS.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                      </select>
+                      <input value={row.vendor ?? ""} aria-label={`Location for ${row.name}`} onChange={(e) => setField(row, "vendor", e.target.value)} />
                     ) : (
-                      row.confirmation
+                      row.vendor || "—"
                     )}
                   </td>
-                  <td style={cellStyle}>{PROGRESS_LABEL[row.progress]}</td>
-                  <td style={{ ...cellStyle, whiteSpace: "normal", minWidth: 170, maxWidth: 280, fontSize: 11, opacity: 0.85 }}>
-                    {canEdit ? <input value={row.note ?? ""} onChange={(e) => setField(row, "note", e.target.value)} style={inputStyle} /> : row.note || ""}
+
+                  <td style={cellStyle}>
+                    <TonedSelect
+                      value={row.confirmation}
+                      tone={confirmationTone(row.confirmation)}
+                      options={CONFIRMATIONS}
+                      allowBlank={false}
+                      canEdit={canEdit}
+                      label={`Status for ${row.name}`}
+                      onChange={(v) => setField(row, "confirmation", v)}
+                    />
                   </td>
-                  {canEdit ? (
-                    <td style={cellStyle}>
-                      {row.missing ? (
-                        <span style={{ fontSize: 10, opacity: 0.6 }}>from chart</span>
-                      ) : (
-                        <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                          <button
-                            type="button"
-                            onClick={() => setField(row, "archived", !row.archived)}
-                            title={row.archived ? "Make this active again" : "Archive — keeps the record, drops it out of the active list"}
-                            style={{ background: "none", border: "1px solid var(--line, #cdd7e2)", borderRadius: 4, cursor: "pointer", fontSize: 10, fontWeight: 700, padding: "1px 5px", color: "inherit" }}
-                          >
-                            {row.archived ? "restore" : "archive"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => removeRecord(row.id)}
-                            title="Delete this training record outright"
-                            style={{ background: "none", border: "none", color: "#c0392b", cursor: "pointer", fontSize: 12, padding: 2 }}
-                          >
-                            ✕
-                          </button>
-                        </span>
-                      )}
-                    </td>
-                  ) : null}
+
+                  <td style={{ ...cellStyle, fontWeight: 700, color: due ? "#b0670e" : undefined }}>{PROGRESS_LABEL[row.progress]}</td>
                 </tr>
-              );
-            })}
-          </tbody>
+
+                {/* The second line. Type and Pool lead it, then the note, then
+                    the actions pushed right. Always rendered, so every record is
+                    the same height and the eye can run straight down the table. */}
+                <tr className={`sub${rowCls ? ` ${rowCls}` : ""}`}>
+                  <td colSpan={mainColumns + 1}>
+                    <div className="subwrap">
+                      <TonedSelect
+                        value={row.hireType ?? ""}
+                        tone={hireTypeTone(row.hireType)}
+                        options={HIRE_TYPES}
+                        canEdit={canEdit}
+                        label={`Hire type for ${row.name}`}
+                        onChange={(v) => setField(row, "hireType", v)}
+                      />
+                      <TonedSelect
+                        value={row.pool ?? ""}
+                        tone={poolTone(row.pool)}
+                        options={POOLS}
+                        canEdit={canEdit}
+                        label={`Pool for ${row.name}`}
+                        onChange={(v) => setField(row, "pool", v)}
+                      />
+                      <span className="subnote">
+                        {canEdit ? (
+                          <input
+                            value={row.note ?? ""}
+                            placeholder="Notes…"
+                            aria-label={`Notes for ${row.name}`}
+                            onChange={(e) => setField(row, "note", e.target.value)}
+                            style={{ fontSize: 11, opacity: row.note ? 1 : 0.75 }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: 11, opacity: 0.85 }}>{row.note || ""}</span>
+                        )}
+                      </span>
+                      {canEdit ? (
+                        row.missing ? (
+                          <span style={{ flex: "0 0 auto", fontSize: 10, opacity: 0.6 }}>from chart</span>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setField(row, "archived", !row.archived)}
+                              title={row.archived ? "Make this active again" : "Archive — keeps the record, drops it out of the active list"}
+                              style={{ flex: "0 0 auto", background: "none", border: "1px solid var(--line, #cdd7e2)", borderRadius: 4, cursor: "pointer", fontSize: 10, fontWeight: 700, padding: "1px 6px", color: "inherit", width: "auto" }}
+                            >
+                              {row.archived ? "restore" : "archive"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeRecord(row.id)}
+                              title="Delete this training record outright"
+                              style={{ flex: "0 0 auto", background: "none", border: "none", color: "#c0392b", cursor: "pointer", fontSize: 12, padding: "0 2px", width: "auto" }}
+                            >
+                              ✕
+                            </button>
+                          </>
+                        )
+                      ) : null}
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            );
+          })}
         </table>
       </div>
 
