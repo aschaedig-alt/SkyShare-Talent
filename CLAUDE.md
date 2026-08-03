@@ -78,12 +78,47 @@ made, a process they confirmed, a name, an address, a number. One line each.
 Omit this section entirely if there are none.>
 
 verified: lint <pass/fail>, tsc <pass/fail>, <anything you could not verify>
+  <for any claim about LIVE DATA or scheduled behaviour: the query you ran and
+   the raw output it returned, not your conclusion from it>
 ```
 
 If you found something worth recording but produced **no** committable code — a
 bug, a data problem, an idea — still emit a handoff block with `paths: none` and
 just the `ROADMAP:` section. Findings must not evaporate because no code
 accompanied them.
+
+## Claims about live data: show the evidence, not the conclusion
+
+Two sessions on Aug 2 wrote confident, false claims into handoffs. One rewrote 28
+roadmap dates onto "today" — on lines citing their own commit hashes, which
+disproved it in one command. The other announced that the next morning's
+orientation reminder WOULD NOT SEND because the armed-sessions row "does not
+exist". The row existed, held both upcoming sessions, and the cron's own log
+showed it running daily. Both would have reached the team as fact.
+
+**Both were ABSENCE claims, and that is the pattern to distrust.** A query that
+returns nothing looks identical whether the thing is absent or your query was
+wrong — wrong scope, wrong key, wrong table, wrong spelling. Empty is not proof.
+
+Three rules:
+
+1. **Paste the command and its raw output**, not your reading of it. "Checked
+   read-only against the live database — the row does not exist" is unfalsifiable
+   prose. The query plus what it returned is checkable by whoever reads it.
+2. **A negative claim needs a positive control.** If you are asserting something
+   is missing, show something from the SAME query that IS there. Do not ask "is
+   `reminder-armed` present" — list every row in that scope and show the four you
+   got back. That one habit would have caught the Aug 2 false alarm before it was
+   written.
+3. **If your claim would change what somebody does today** — a send will not
+   happen, data is missing, a deploy is broken — say so explicitly in the handoff
+   so the commit-and-push agent re-checks it against the live source before it
+   reaches `roadmap.ts`. Being wrong in that direction is expensive: it sends
+   somebody to fix what is not broken and teaches them to distrust the instrument.
+
+This applies to the commit-and-push agent too: verify any load-bearing claim about
+live data or scheduled behaviour before writing it into the roadmap, and say in
+the commit message that you did.
 
 **`RECORD:` is for what the user told you, not what you built.** Answers arrive
 in chat and die there: a decision ("contractors stay excluded"), a confirmed
