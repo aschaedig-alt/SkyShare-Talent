@@ -4,7 +4,7 @@
 **Name:** SkyShare Journey  
 **Purpose:** Unified recruiting operations workspace for managing candidates, jobs, pilot requirements, publishing, and interview scheduling.  
 **Status:** Active development (v0.1.0). Phase 1 critical fixes completed (candidate editing, CSV import reliability, UI cleanup).  
-**Live Deployment:** https://skyshare-talent.vercel.app
+**Live Deployment:** https://skyshare-journey.vercel.app
 
 ---
 
@@ -112,7 +112,7 @@
 - Git initialized locally, all Phase 1 + Phase 4 files committed to `master` branch
 - Pushed to GitHub: `aschaedig-alt/SkyShare-Talent` (synced to `main` for production)
 - All Vercel environment variables set (PostgreSQL, AWS S3, Google OAuth, NextAuth)
-- Build status: ✅ **Live** - Full RBAC + Activity system deployed to https://skyshare-talent.vercel.app
+- Build status: ✅ **Live** - Full RBAC + Activity system deployed to https://skyshare-journey.vercel.app
 
 **New Admin Features Available:**
 - `/app/settings/users` - Manage team roles and permissions
@@ -271,7 +271,7 @@ DATABASE_URL=postgresql://neondb_owner:...@ep-....us-west-2.aws.neon.tech/neondb
 
 # NextAuth
 NEXTAUTH_SECRET=<random_secret_key>
-NEXTAUTH_URL=http://localhost:3000 (local) or https://skyshare-talent.vercel.app (prod)
+NEXTAUTH_URL=http://localhost:3000 (local) or https://skyshare-journey.vercel.app (prod)
 
 # AWS S3
 AWS_ACCESS_KEY_ID=<aws_key>
@@ -306,7 +306,7 @@ FILE_STORAGE_PROVIDER=s3
 ## Quick Reference
 
 **⚠️ PRODUCTION BRANCH:** Push to `main` (NOT master) for production deployments  
-- `main` branch → Vercel production (https://skyshare-talent.vercel.app)
+- `main` branch → Vercel production (https://skyshare-journey.vercel.app)
 - Auto-deploys when commits pushed to `main`
 - Database: PostgreSQL (Neon) for both local and production - unified setup  
 - Build script: `npm run build` (same for local and Vercel)  
