@@ -29,26 +29,23 @@
  * offers that never started — both are needed, since employmentStatus alone
  * would keep a cancelled hire on the list.
  *
- * NOT INCLUDED: employmentStatus "CONTRACT" (17 people as of 2026-08-01).
- * Whether a contractor belongs on a given list is a per-feature decision — see
- * CURRENT_OR_CONTRACT_WHERE below — so this constant deliberately means
- * permanent staff only, and anything wanting contractors has to say so.
+ * CONTRACTORS ARE EXCLUDED, AND THAT IS A DECISION, NOT AN OVERSIGHT.
+ * employmentStatus "CONTRACT" covers 17 people as of 2026-08-02. The user was
+ * asked directly whether they belong in the recognition programme and answered
+ * no, so they receive no compliments, no birthday and no work anniversary.
  *
- * IF YOU ARE WRITING A NEW "who works here" QUERY, use one of these. If you
- * genuinely need something else, say why at the call site — lib/data/events.ts:180
- * is the example to follow, and deliberately does not use either.
+ * A variant constant covering ACTIVE + CONTRACT briefly lived here while the
+ * question was open. It was removed once the answer came back: an unused
+ * constant with an inviting name is how a settled decision gets quietly
+ * reversed by somebody tidying up. DO NOT ADD CONTRACTORS WITHOUT ASKING.
  *
- * Plain object literals, not Prisma imports, so anything can read them.
+ * IF YOU ARE WRITING A NEW "who works here" QUERY, use this. If you genuinely
+ * need something else, say why at the call site — lib/data/events.ts:180 is the
+ * example to follow, and deliberately does not use it.
+ *
+ * A plain object literal, not a Prisma import, so anything can read it.
  */
 export const CURRENT_EMPLOYEE_WHERE = {
   employmentStatus: "ACTIVE",
-  canceled: false
-} as const;
-
-/** Current staff PLUS active contractors. Use where a contractor is a
-    participant rather than an employee — they are on site and doing the work,
-    they are just not on payroll the same way. */
-export const CURRENT_OR_CONTRACT_WHERE = {
-  employmentStatus: { in: ["ACTIVE", "CONTRACT"] },
   canceled: false
 } as const;
