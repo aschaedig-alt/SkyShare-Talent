@@ -1,4 +1,4 @@
-# SkyShare Talent Ops
+# SkyShare Journey
 
 Unified SkyShare recruiting operations app. This folder started from the stronger SkyShare Job Builder codebase and is being expanded into one long-term platform for candidates, jobs, pilot requirements, imports, scheduling, reports, and publishing.
 

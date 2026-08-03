@@ -87,7 +87,7 @@ const checks: Check[] = [
   }
 ];
 
-console.log("SkyShare Talent production readiness");
+console.log("SkyShare Journey production readiness");
 console.log("=====================================");
 
 for (const check of checks) {

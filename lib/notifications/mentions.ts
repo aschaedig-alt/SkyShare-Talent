@@ -138,7 +138,15 @@ export async function notifyMentions(input: {
     const mentionerFirst = firstName(mentioner?.name, input.mentionedBy ?? "someone");
     const jobTitle = application?.job?.title ?? null;
 
-    const base = process.env.NEXTAUTH_URL ?? "https://skyshare-talent.vercel.app";
+    // NEXTAUTH_URL is the source of truth. The fallback used to be a hard-coded
+    // host, which went stale the moment the Vercel project was renamed and would
+    // have put a dead link in every mention email. Prefer the domain Vercel itself
+    // reports for the production deployment — it follows a rename automatically —
+    // and keep a literal only as a last resort.
+    const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+    const base =
+      process.env.NEXTAUTH_URL ??
+      (productionHost ? `https://${productionHost}` : "https://skyshare-journey.vercel.app");
     const profileUrl = `${base}/candidates/${input.candidateId}`;
     const detailUrl = `${profileUrl}?tab=${input.context === "interview" ? "interviews" : "notes"}`;
     const detailLabel = input.context === "interview" ? "View their interview notes" : "View their notes";

@@ -10,7 +10,7 @@ import { PasteableDates } from "@/components/shared/PasteableDates";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "SkyShare Talent",
+  title: "SkyShare Journey",
   description: "Unified SkyShare recruiting workspace for candidates, jobs, pilot requirements, publishing, and scheduling."
 };
 

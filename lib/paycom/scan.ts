@@ -112,7 +112,7 @@ export async function processConversationById(
         const via = result.matchedBy === "nickname" ? ` (Paycom addressed them as "${result.personName}")` : "";
         await addComment(
           conversationId,
-          `SkyShare Talent-Ops: marked "${result.detail}" complete for ${result.hireName}${via} from this Paycom notice.`
+          `SkyShare Journey: marked "${result.detail}" complete for ${result.hireName}${via} from this Paycom notice.`
         );
       } catch {
         /* the checklist is already updated — a failed note must not fail this */
@@ -200,7 +200,7 @@ export async function scanPaycomInbox(opts: ScanOptions = {}): Promise<ScanRepor
             result.matchedBy === "nickname" ? ` (Paycom addressed them as "${result.personName}")` : "";
           await addComment(
             conversation.id,
-            `SkyShare Talent-Ops: marked "${result.detail}" complete for ${result.hireName}${via} from this Paycom notice.`
+            `SkyShare Journey: marked "${result.detail}" complete for ${result.hireName}${via} from this Paycom notice.`
           );
         } catch {
           /* the checklist is already updated — a failed note must not fail the scan */

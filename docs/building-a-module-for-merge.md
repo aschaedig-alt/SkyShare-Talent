@@ -1,4 +1,4 @@
-# Building a module that will merge into SkyShare Talent-Ops
+# Building a module that will merge into SkyShare Journey
 
 Read this before writing any code. Following it means your app drops in as a
 pull request that touches almost nothing anyone else owns. Ignoring it means

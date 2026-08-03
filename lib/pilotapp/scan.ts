@@ -38,7 +38,13 @@ import { readPilotApplication, signedPdf, type PilotAppResult } from "./notices"
 
 /** Marker on every note this scanner leaves, so a repeat run can recognise its
     own handiwork and stay quiet instead of commenting again. */
-const COMMENT_MARKER = "SkyShare Talent-Ops:";
+const COMMENT_MARKER = "SkyShare Journey:";
+
+/** What the marker said before the Aug 2026 rename. Threads handled under the old
+    name still carry it, so the "have I already commented here?" test below has to
+    match either. THIS STAYS FOREVER — drop it and every conversation the app
+    already handled looks unhandled, and it comments on all of them a second time. */
+const LEGACY_COMMENT_MARKER = "SkyShare Talent-Ops:";
 
 /**
  * Tag names as they REALLY exist in Front (read from the account, not guessed).
@@ -330,7 +336,7 @@ export async function processPilotAppConversation(
         if (!backfill) try {
           await addComment(
             conversationId,
-            `SkyShare Talent-Ops: filed "${pdf.filename}" to ${result.candidateName}'s documents (${via}). ` +
+            `SkyShare Journey: filed "${pdf.filename}" to ${result.candidateName}'s documents (${via}). ` +
               `Leaving this thread OPEN — the application still needs adding to Paycom by hand. Archive it once that's done.`
           );
         } catch {
@@ -345,7 +351,7 @@ export async function processPilotAppConversation(
         try {
           await addComment(
             conversationId,
-            `SkyShare Talent-Ops: found ${result.candidateName} but could NOT file the application — ${why}. Left open for a human.`
+            `SkyShare Journey: found ${result.candidateName} but could NOT file the application — ${why}. Left open for a human.`
           );
         } catch {
           /* nothing more we can do here */
@@ -362,12 +368,12 @@ export async function processPilotAppConversation(
     const who = result.signerName ?? result.signerEmail ?? "the signer";
     const note =
       result.outcome === "no-match"
-        ? `SkyShare Talent-Ops: could not find the candidate for this pilot application (${who}). The PDF was not downloaded — please file it by hand, or add the candidate and re-run.`
+        ? `SkyShare Journey: could not find the candidate for this pilot application (${who}). The PDF was not downloaded — please file it by hand, or add the candidate and re-run.`
         : result.outcome === "ambiguous-match"
-          ? `SkyShare Talent-Ops: could not file this pilot application — ${result.detail} Nothing was downloaded; please pick the right person by hand.`
+          ? `SkyShare Journey: could not file this pilot application — ${result.detail} Nothing was downloaded; please pick the right person by hand.`
           : result.outcome === "no-identifier"
-            ? "SkyShare Talent-Ops: could not read a signer name or email from this notice, so the pilot application was not filed."
-            : "SkyShare Talent-Ops: this notice had no PDF attached, so nothing was filed.";
+            ? "SkyShare Journey: could not read a signer name or email from this notice, so the pilot application was not filed."
+            : "SkyShare Journey: this notice had no PDF attached, so nothing was filed.";
     // These threads stay OPEN on purpose, so the nightly sweep sees them again.
     // Say it once: without this guard an unresolvable notice collects the same
     // note every night until a human gets to it.
@@ -376,7 +382,10 @@ export async function processPilotAppConversation(
     let alreadySaid = backfill;
     if (!backfill) try {
       const comments = await listComments(conversationId);
-      alreadySaid = comments.some((c) => (c.body ?? "").includes(COMMENT_MARKER));
+      alreadySaid = comments.some((c) => {
+        const body = c.body ?? "";
+        return body.includes(COMMENT_MARKER) || body.includes(LEGACY_COMMENT_MARKER);
+      });
     } catch {
       /* if we can't read comments, prefer saying it twice to saying it never */
     }

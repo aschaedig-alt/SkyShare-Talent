@@ -187,7 +187,7 @@ export function PublicBooking({ slug, host }: Props) {
         )}
       </div>
 
-      <p className="mt-4 text-center text-xs text-brand-grey dark:text-slate-400">Powered by SkyShare Talent scheduling</p>
+      <p className="mt-4 text-center text-xs text-brand-grey dark:text-slate-400">Powered by SkyShare Journey scheduling</p>
     </main>
   );
 }

@@ -1,4 +1,4 @@
-// Front Core API client for SkyShare Talent-Ops. See .claude/skills/front-api for
+// Front Core API client for SkyShare Journey. See .claude/skills/front-api for
 // the endpoint reference, scope decisions, and the draft-first safety rationale.
 //
 // Not wired into any route yet — this is the ready-to-use client for when the

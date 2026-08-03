@@ -32,7 +32,7 @@ export function SharedFleetProgression({
       <main className="mx-auto max-w-5xl px-4 py-6">
         <PilotProgressions upgrades={upgrades} />
         <p className="mt-4 text-center text-xs text-brand-grey dark:text-slate-400">
-          Shared from SkyShare Talent Ops. This is a read-only snapshot of live data; the link can be revoked at any time.
+          Shared from SkyShare Journey. This is a read-only snapshot of live data; the link can be revoked at any time.
         </p>
       </main>
     </div>

@@ -4,7 +4,7 @@ type PageStatusProps = {
   detail: string;
 };
 
-export function PageStatus({ eyebrow = "SkyShare Talent", title, detail }: PageStatusProps) {
+export function PageStatus({ eyebrow = "SkyShare Journey", title, detail }: PageStatusProps) {
   return (
     <div className="flex min-h-[calc(100vh-42px)] items-center justify-center px-5 py-8">
       <section className="w-full max-w-xl rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">

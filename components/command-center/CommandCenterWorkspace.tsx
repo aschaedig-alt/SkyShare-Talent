@@ -25,7 +25,7 @@ export function CommandCenterWorkspace({ data }: CommandCenterWorkspaceProps) {
           </p>
           <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Command Center</h1>
           <p className="mt-1 max-w-3xl text-sm text-brand-grey dark:text-slate-400">
-          Operational overview for SkyShare Talent: candidates, roles, requirements, imports, and scheduling signals.
+          Operational overview for SkyShare Journey: candidates, roles, requirements, imports, and scheduling signals.
           </p>
         </section>
 

@@ -170,7 +170,7 @@ export async function processTravelConversation(
     if (annotate) {
       await comment(
         conversationId,
-        `SkyShare Talent-Ops read this as travel (${summaryLine}) but did NOT file it: ${summary} Tagged for review.`
+        `SkyShare Journey read this as travel (${summaryLine}) but did NOT file it: ${summary} Tagged for review.`
       );
       await tag(conversationId, TAGS.needsReview);
     }
@@ -277,7 +277,7 @@ export async function processTravelConversation(
   if (annotate) {
     await comment(
       conversationId,
-      `SkyShare Talent-Ops filed this under Travel for ${hire.name}: ${summaryLine}.` +
+      `SkyShare Journey filed this under Travel for ${hire.name}: ${summaryLine}.` +
         (audit.observations.length ? ` ${audit.observations.join(" ")}` : "") +
         (flagged ? ` FLAGGED FOR REVIEW — ${audit.problems.join(" ")}` : "")
     );

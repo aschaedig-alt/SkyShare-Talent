@@ -48,7 +48,7 @@ export function SettingsWorkspace({ data, currentRole }: SettingsWorkspaceProps)
         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Admin foundation</p>
         <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Settings</h1>
         <p className="mt-1 max-w-3xl text-sm text-brand-grey dark:text-slate-400">
-          Operational controls for SkyShare Talent. This page now tracks environment,
+          Operational controls for SkyShare Journey. This page now tracks environment,
           deployment readiness, storage, and Google Calendar configuration.
         </p>
       </section>

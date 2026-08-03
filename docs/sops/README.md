@@ -1,4 +1,4 @@
-# SkyShare Talent-Ops SOPs
+# SkyShare Journey SOPs
 
 **This folder is the source of truth for every SOP.** Edit the HTML here, then republish —
 the published pages are generated *from* these files, never the other way around.

@@ -1,7 +1,7 @@
-# SkyShare Talent Ops - Codebase Context
+# SkyShare Journey - Codebase Context
 
 ## 1. Project Overview
-**Name:** SkyShare Talent Ops  
+**Name:** SkyShare Journey  
 **Purpose:** Unified recruiting operations workspace for managing candidates, jobs, pilot requirements, publishing, and interview scheduling.  
 **Status:** Active development (v0.1.0). Phase 1 critical fixes completed (candidate editing, CSV import reliability, UI cleanup).  
 **Live Deployment:** https://skyshare-talent.vercel.app

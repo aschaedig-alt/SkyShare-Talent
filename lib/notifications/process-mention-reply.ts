@@ -72,7 +72,7 @@ export async function processMentionReply(conversationId: string): Promise<Menti
 
   // Courtesy confirmation on the thread — never blocks or fails the note.
   try {
-    await addComment(conversationId, `SkyShare Talent-Ops added this reply to ${tracked.candidate.displayName}'s profile.`);
+    await addComment(conversationId, `SkyShare Journey added this reply to ${tracked.candidate.displayName}'s profile.`);
   } catch {
     /* the note is already saved; a failed comment is not worth retrying */
   }

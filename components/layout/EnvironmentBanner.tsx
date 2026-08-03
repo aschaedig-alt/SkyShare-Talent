@@ -28,7 +28,7 @@ export function EnvironmentBanner() {
           <span className="font-semibold text-brand-lea dark:text-slate-100">{label}</span>
           <span className="hidden text-brand-grey sm:inline dark:text-slate-400">- {detail}</span>
         </div>
-        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">SkyShare Talent</span>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">SkyShare Journey</span>
       </div>
     </div>
   );

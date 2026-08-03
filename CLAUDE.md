@@ -1,4 +1,4 @@
-# SkyShare Talent-Ops — working agreements
+# SkyShare Journey — working agreements
 
 Read this before changing anything. Most of these are here because ignoring them
 has already caused real damage.

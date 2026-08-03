@@ -38,7 +38,7 @@ function buildEventInput(interview: InterviewForSync) {
     interview.job ? `Role: ${interview.job.title}` : null,
     interview.candidate.primaryEmail ? `Candidate email: ${interview.candidate.primaryEmail}` : null,
     interview.notes ? `\nNotes:\n${interview.notes}` : null,
-    `\n— Synced from SkyShare Talent (id: ${interview.id})`
+    `\n— Synced from SkyShare Journey (id: ${interview.id})`
   ].filter(Boolean);
 
   return {

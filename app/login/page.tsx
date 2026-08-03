@@ -26,7 +26,7 @@ function messageForReason(reason: string | undefined, authReady: boolean) {
     return "Use your approved SkyShare Google Workspace account to access this recruiting workspace.";
   }
 
-  return "Authentication setup is required before using protected SkyShare Talent pages.";
+  return "Authentication setup is required before using protected SkyShare Journey pages.";
 }
 
 function isGoogleAuthReady() {
@@ -45,7 +45,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   // "next" (the page they were bounced from) still wins.
   const callbackUrl = params.next || "/";
   const authReady = isGoogleAuthReady();
-  const title = authReady ? "Sign in to SkyShare Talent" : "Authentication setup required";
+  const title = authReady ? "Sign in to SkyShare Journey" : "Authentication setup required";
 
   let loginLogo: string | null = null;
   try {

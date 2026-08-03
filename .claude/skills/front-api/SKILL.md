@@ -2,7 +2,7 @@
 name: front-api
 description: >-
   Working with Front (the email/inbox platform behind SkyShare's hro@/recruiting@
-  mailboxes — NOT front-end/UI work) in the Talent-Ops app: sending and drafting
+  mailboxes — NOT front-end/UI work) in the Journey app: sending and drafting
   messages, reading and ingesting inbound mail (orientation, travel confirmations,
   sourcing, Paycom), plus auth, token scopes, and rate limits. Use this whenever the
   task touches Front, the Front API, api2.frontapp.com, a Front
@@ -13,11 +13,11 @@ description: >-
   so the right scopes (and no Delete) get chosen.
 ---
 
-# Front API — SkyShare Talent-Ops
+# Front API — SkyShare Journey
 
 Front is the email platform behind SkyShare's recruiting/HR mailboxes. This app
 talks to it over the **Core API** to send orientation email, create human-approved
-drafts, and pull inbound mail into the Talent-Ops pipeline. This skill is the
+drafts, and pull inbound mail into the Journey pipeline. This skill is the
 memory of how that integration works and the guardrails around it.
 
 ## Read this first — the environment is live and shared
