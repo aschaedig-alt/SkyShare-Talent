@@ -8,7 +8,7 @@ import { normSeat, cntSeat } from "@/lib/fleet/staffing/compute";
 import { CREW_GROUPS, CREW_LEADERSHIP, CREW_TRAINING, CREW_PILOT_TURNOVER, turnoverFor } from "@/lib/fleet/staffing/crew-data";
 import { aircraftLabel, positionLabel, isoToday, splitDepartures, isDepartureArchived, DEPARTURE_ARCHIVE_DAYS } from "@/lib/fleet/staffing/labels";
 import type { TrainingRecord } from "@/lib/fleet/staffing/training";
-import { completedTraining, matchKey } from "@/lib/fleet/staffing/training";
+import { completedTraining, matchKey, trainingRows } from "@/lib/fleet/staffing/training";
 import { SeatSquares, PersonRow, SlotRow } from "./SeatParts";
 import { LinkPicker, orgLinkBtnStyle } from "./LinkPicker";
 import { PeopleIndex, type IndexEntry } from "./PeopleIndex";
@@ -1037,6 +1037,17 @@ export default function CrewOrgChart({
     return out;
   }, [training]);
 
+  const isTraining = tab === "training";
+
+  /** Counts for the Training header. Derived from trainingRows so the header and
+      the table can never disagree — the table adds chart-derived placeholders
+      for pilots in a training seat with no record, and those count as active. */
+  const trainingCounts = useMemo(() => {
+    const rows = trainingRows(groupsData, training, today);
+    const archived = rows.filter((r) => r.archived).length;
+    return { active: rows.length - archived, archived };
+  }, [groupsData, training, today]);
+
   // Finished training and still sitting in a training seat — the people the
   // banner asks about. Dismissals are per-visit, so nobody is silently dropped.
   const finished = useMemo(
@@ -1277,27 +1288,53 @@ export default function CrewOrgChart({
     // The Training tab is a wide table rather than the card grid the 1320px cap
     // was sized for, so the shell widens to the viewport while that tab is open
     // and snaps back for the chart.
-    <div className={`${styles.wrap}${tab === "training" ? ` ${styles.wide}` : ""}`} ref={wrapRef}>
-      <div className="hd">
+    <div className={`${styles.wrap}${isTraining ? ` ${styles.wide}` : ""}`} ref={wrapRef}>
+      {/* The header BELONGS TO THE ACTIVE TAB. Training is a different screen —
+          its own blue rule, its own eyebrow and title, its own description and
+          its own headline number — because the chart identity sitting above a
+          training table told people the chart controls applied to it. */}
+      <div className={`hd${isTraining ? " trn" : ""}`}>
         <div>
-          <div className="kk" style={{ color: "var(--gold)" }}>
-            SkyShare · Flight Operations
+          <div className="kk" style={{ color: isTraining ? "var(--int-bd)" : "var(--gold)" }}>
+            SkyShare · Flight Operations{isTraining ? " · Training" : ""}
           </div>
-          <div className="ttl">Crew Org Chart</div>
-          <div className="desc">
-            Flight Operations by aircraft group — fractional/charter aircraft plus each managed tail.{" "}
-            <b>Click any aircraft to see its pilots{canEdit ? " — and to edit that aircraft" : ""}.</b> In-training pilots count as filled; turnover &amp; parked seats live under Additional info.
+          <div className="ttl">{isTraining ? "Crew Training" : "Crew Org Chart"}</div>
+
+          <div className="tabstrip" role="tablist" aria-label="Crew views">
+            <button role="tab" aria-selected={!isTraining} className={!isTraining ? "on" : ""} onClick={() => setTab("chart")}>
+              Chart
+            </button>
+            <button
+              role="tab"
+              aria-selected={isTraining}
+              className={isTraining ? "on trn" : ""}
+              onClick={() => setTab("training")}
+            >
+              Training{finished.length ? ` (${finished.length})` : ""}
+            </button>
           </div>
+
+          <div className="desc" style={{ marginTop: 12 }}>
+            {isTraining ? (
+              <>
+                Every pilot in training and when it ends. <b>Once a training end date passes, the chart offers to move that pilot to the line</b> — it
+                never moves anyone on its own.
+              </>
+            ) : (
+              <>
+                Flight Operations by aircraft group — fractional/charter aircraft plus each managed tail.{" "}
+                <b>Click any aircraft to see its pilots{canEdit ? " — and to edit that aircraft" : ""}.</b> In-training pilots count as filled; turnover &amp; parked seats live under Additional info.
+              </>
+            )}
+          </div>
+
+          {/* Chart-only controls. They are not merely hidden on the Training tab
+              — they are not rendered, so there is nothing to click that quietly
+              does nothing. Training brings its own toolbar inside TrainingTab,
+              including a search that already covers names, seats and locations,
+              which is why Find a person is not repeated here. */}
+          {!isTraining ? (
           <div className="ctrls">
-            <div className="seg">
-              <span className="lbl">View</span>
-              <button className={tab === "chart" ? "on" : ""} onClick={() => setTab("chart")}>
-                Chart
-              </button>
-              <button className={tab === "training" ? "on" : ""} onClick={() => setTab("training")}>
-                Training{finished.length ? ` (${finished.length})` : ""}
-              </button>
-            </div>
             {/* Finding a person by NAME. The chart is organised by aircraft,
                 which is right for staffing and useless for "where is he?" —
                 with 26 tails you open cards until you find them. */}
@@ -1349,19 +1386,39 @@ export default function CrewOrgChart({
               </div>
             ) : null}
           </div>
+          ) : null}
         </div>
+
+        {/* The headline number belongs to the view too. A big "6 open reqs" is a
+            STAFFING number; above a training table it answers a question nobody
+            on that tab asked. Training reports what it is actually about — how
+            many are finished and waiting on a decision. */}
         <div className="right">
-          <div className="kk" style={{ color: "var(--gold)" }}>
-            Open reqs
-          </div>
-          <div className="big">{open}</div>
-          <div className="kk" style={{ marginTop: 8 }}>
-            {hiring} groups hiring
-          </div>
+          {isTraining ? (
+            <>
+              <div className="kk" style={{ color: "var(--int-bd)" }}>
+                Finished training
+              </div>
+              <div className="big">{finished.length}</div>
+              <div className="kk" style={{ marginTop: 8 }}>
+                {trainingCounts.active} active · {trainingCounts.archived} archived
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="kk" style={{ color: "var(--gold)" }}>
+                Open reqs
+              </div>
+              <div className="big">{open}</div>
+              <div className="kk" style={{ marginTop: 8 }}>
+                {hiring} groups hiring
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      {findOpen ? (
+      {findOpen && !isTraining ? (
         <PeopleIndex entries={indexEntries} unit="aircraft" onPick={(e) => showPerson(e.name, e.cardIdx)} onClose={() => setFindOpen(false)} />
       ) : null}
 
@@ -1449,7 +1506,7 @@ export default function CrewOrgChart({
         </div>
       ) : null}
 
-      {tab === "training" ? (
+      {isTraining ? (
         <TrainingTab
           groups={groupsData}
           records={training}
@@ -1461,7 +1518,7 @@ export default function CrewOrgChart({
         />
       ) : null}
 
-      <div style={{ display: tab === "chart" ? undefined : "none" }}>
+      <div style={{ display: isTraining ? "none" : undefined }}>
       <div className="toptree">
         <div className="mgmt">
           <div className="mbox">
@@ -1557,7 +1614,7 @@ export default function CrewOrgChart({
       {/* The Training tab edits the SAME stored blob as the roster, so it needs
           its own Save — the chart-wide edit bar only appears during an "Edit
           all" session, and nobody enters one to type a date. */}
-      {tab === "training" && canEdit ? (
+      {isTraining && canEdit ? (
         <div className="m-sect acts">
           <button
             type="button"

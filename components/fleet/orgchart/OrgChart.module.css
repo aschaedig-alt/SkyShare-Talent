@@ -63,6 +63,55 @@
   max-width: min(1800px, 96vw);
 }
 
+/* ---- View tabs (Chart / Training) ------------------------------------- */
+/* A real tab strip rather than another pill in the control row. The two views
+   share a page but not a toolbar: the chart controls (sort, additional info,
+   edit all) do nothing on the Training tab, and leaving them on screen made
+   people think they applied to the training list. Tabs make "these controls
+   belong to THIS view" structural instead of a rule somebody has to know. */
+.wrap :global(.tabstrip) {
+  display: flex;
+  gap: 2px;
+  margin-top: 16px;
+  border-bottom: 2px solid var(--n300);
+}
+.wrap :global(.tabstrip button) {
+  all: unset;
+  cursor: pointer;
+  font: 800 11px/1 var(--fh);
+  letter-spacing: 0.03em;
+  padding: 9px 16px;
+  margin-bottom: -2px;
+  border: 1px solid var(--n200);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  background: var(--n100);
+  color: var(--n500);
+}
+.wrap :global(.tabstrip button:hover) {
+  color: var(--ink);
+}
+.wrap :global(.tabstrip button.on) {
+  background: var(--color-bg);
+  color: var(--ink);
+  border-color: var(--n300);
+  border-bottom: 2px solid var(--color-bg);
+}
+/* The selected TRAINING tab carries the same blue the training header uses, so
+   the tab and the page identity agree. */
+.wrap :global(.tabstrip button.on.trn) {
+  box-shadow: inset 0 3px 0 var(--int-bd);
+}
+.wrap :global(.tabstrip button:focus-visible) {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
+/* Training is a different screen, and says so: the gold rule that marks the
+   crew chart turns blue. Cheap, and it is the first thing the eye reads. */
+.wrap :global(.hd.trn) {
+  border-top-color: var(--int-bd);
+}
+
 /* ---- Training table -------------------------------------------------- */
 /* Zebra rows and real column rules: at thirteen columns of mostly dates, an
    unruled grid makes it genuinely hard to keep your eye on one pilot across
