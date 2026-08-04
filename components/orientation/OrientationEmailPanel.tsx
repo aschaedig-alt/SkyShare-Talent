@@ -157,7 +157,8 @@ export function OrientationEmailPanel({
 }: {
   sessionId: string;
   attendees: AttendeeRow[];
-  onToggle: (attendeeId: string, key: string) => void;
+  /** Resolves once the tick is SAVED — see markCount below for why that matters. */
+  onToggle: (attendeeId: string, key: string) => void | Promise<void>;
   /** Called after a real send so the parent can refresh its state. */
   onSent: (attendeeId: string, key: OrientationTemplateKey) => void;
 }) {
@@ -186,6 +187,32 @@ export function OrientationEmailPanel({
 
   /** The reminder is queued to go out and this person has not had it yet. */
   const reminderQueued = Boolean(reminder?.armed && !reminder.passed);
+
+  // Bumped every time a box is ticked BY HAND, and threaded into the two panels
+  // below the grid so they re-read the server.
+  //
+  // Both of them conclude things FROM sentTemplateKeys — "X has not been sent the
+  // invitation yet", "the send day passed with N still unsent" — and both used to
+  // load once on mount and never again. So ticking a box left them asserting the
+  // exact opposite of the grid directly above them, with a page reload as the only
+  // cure and nothing on screen suggesting one was needed.
+  //
+  // That bites hardest in the case the hand-tick exists for: somebody added to a
+  // session late, after the send day, who was already contacted outside the app.
+  // You tick all three boxes to say "she is covered" and the page keeps insisting
+  // she is not — which is the one situation where a false "unsent" costs a real
+  // duplicate email to a new hire.
+  //
+  // Awaited, not fire-and-forget: refetching before the PATCH commits reads the
+  // pre-tick row back and re-renders the stale warning as if it were fresh.
+  const [markCount, setMarkCount] = useState(0);
+  const handleToggle = useCallback(
+    async (attendeeId: string, key: string) => {
+      await onToggle(attendeeId, key);
+      setMarkCount((n) => n + 1);
+    },
+    [onToggle]
+  );
 
   const allSelected = attendees.length > 0 && selected.size === attendees.length;
   function toggleOne(id: string) {
@@ -278,7 +305,7 @@ export function OrientationEmailPanel({
                       <div className="flex flex-col items-center gap-1">
                         <div className="flex items-center justify-center gap-1.5">
                           <button
-                            onClick={() => onToggle(a.id, t.key)}
+                            onClick={() => void handleToggle(a.id, t.key)}
                             aria-label={sent ? `Mark ${t.label} as not sent for ${a.name}` : `Mark ${t.label} as sent for ${a.name}`}
                             title={
                               record
@@ -385,7 +412,7 @@ export function OrientationEmailPanel({
           is doing. It used to sit two sections down, past the internal summary
           and the communication history, so the control and the column it
           governs were never on screen together. */}
-      <ReminderScheduler sessionId={sessionId} status={reminder} onStatusChange={setReminder} />
+      <ReminderScheduler sessionId={sessionId} status={reminder} onStatusChange={setReminder} refreshKey={markCount} />
 
       {/* Bulk bar. Appears only with a selection, so the default view stays the
           per-person grid and nothing bulk happens by accident. */}
@@ -413,7 +440,7 @@ export function OrientationEmailPanel({
         </div>
       ) : null}
 
-      <InternalSummary sessionId={sessionId} />
+      <InternalSummary sessionId={sessionId} refreshKey={markCount} />
 
       <CommunicationHistory attendees={attendees} />
 
@@ -1067,7 +1094,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 // The standing list used to be cc'd on every per-hire email, which on the first
 // real run meant six watchers receiving six copies each. They now get this once.
 
-function InternalSummary({ sessionId }: { sessionId: string }) {
+function InternalSummary({ sessionId, refreshKey }: { sessionId: string; refreshKey: number }) {
   const [state, setState] = useState<OrientationSummaryResult | null>(null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -1079,9 +1106,11 @@ function InternalSummary({ sessionId }: { sessionId: string }) {
       .catch(() => setState(null));
   }, [sessionId]);
 
+  // refreshKey, because the "has not been sent the invitation yet" warning below
+  // is computed from sentTemplateKeys — ticking that box has to re-ask.
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, refreshKey]);
 
   async function send() {
     const who = state?.to?.join(", ") ?? "the summary list";
@@ -1325,11 +1354,13 @@ type ReminderStatusView = {
 function ReminderScheduler({
   sessionId,
   status,
-  onStatusChange
+  onStatusChange,
+  refreshKey
 }: {
   sessionId: string;
   status: ReminderStatusView | null;
   onStatusChange: (next: ReminderStatusView) => void;
+  refreshKey: number;
 }) {
   const [health, setHealth] = useState<ReminderHealth | null>(null);
   const [preview, setPreview] = useState<ReminderPreview | null>(null);
@@ -1340,12 +1371,15 @@ function ReminderScheduler({
   // Health is about the CRON, not this one session, so it loads regardless of
   // whether this session happens to be armed — a stopped cron is worth seeing
   // from wherever you are looking.
+  //
+  // refreshKey: its "N still unsent" count is derived from sentTemplateKeys, so a
+  // hand-tick can clear the problem outright and this has to re-ask to notice.
   useEffect(() => {
     fetch("/api/orientation/reminder-health")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setHealth(d && Array.isArray(d.problems) ? d : null))
       .catch(() => setHealth(null));
-  }, [sessionId]);
+  }, [sessionId, refreshKey]);
 
   async function loadPreview() {
     if (!status) return;

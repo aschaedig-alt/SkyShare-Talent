@@ -629,7 +629,10 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
           }))}
           onToggle={(attendeeId, key) => {
             const a = attendees.find((x) => x.id === attendeeId);
-            if (a) void toggleEmail(a, key);
+            // Returned, not fired and forgotten: the panel refetches the summary
+            // and the reminder health off the back of this, and both read the row
+            // this PATCH is still writing.
+            return a ? toggleEmail(a, key) : Promise.resolve();
           }}
           onSent={(attendeeId, key) => {
             // A real send ticks the box server-side; mirror it locally so the
