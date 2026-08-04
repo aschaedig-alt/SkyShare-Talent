@@ -118,7 +118,18 @@ export function Sidebar({ role, policy, logoDataUrl, userEmail, homeHref = "/com
           <span className="text-[9px] font-medium leading-none">{group.label}</span>
         </Link>
 
-        {collapsed && (
+        {/*
+          The flyout used to render only when the sidebar was COLLAPSED, which
+          made the collapsed rail faster to navigate than the expanded one: the
+          expanded panel shows just the group you are already in, so reaching
+          anything in another group cost two clicks and a page load you did not
+          want (only 7 of 36 destinations were one click from the landing page).
+          It now renders for any group that is not the one already open, so a
+          cross-group jump is one hover and one click in either mode. The active
+          group is excluded because its items are already listed in the panel
+          beside it.
+        */}
+        {(collapsed || !groupActive) && (
           <div className="invisible absolute left-full top-0 z-50 ml-1 w-56 opacity-0 transition group-hover:visible group-hover:opacity-100">
             <div className="rounded border border-white/10 bg-brand-lea p-2 shadow-2xl">
               {group.sections.map((section) => (

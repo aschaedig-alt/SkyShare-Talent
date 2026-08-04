@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 
@@ -144,16 +145,22 @@ export function NewJobButton() {
             requisition that was filled last year.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <button
+            {/*
+              A real Link, not router.push. This navigates to a job that already
+              exists and mutates nothing, and it is exactly the case where you
+              want a new tab — to read the clashing requisition side by side with
+              the one you are about to create.
+            */}
+            <Link
+              href={`/recruiting-jobs?id=${clash.id}`}
               onClick={() => {
                 setOpen(false);
                 reset();
-                router.push(`/recruiting-jobs?id=${clash.id}`);
               }}
               className="rounded bg-brand-gold px-2.5 py-1 text-[11px] font-semibold text-brand-black transition hover:bg-brand-gold/90 dark:text-slate-100"
             >
               Use “{clash.title}”
-            </button>
+            </Link>
             <button
               onClick={() => void create(true)}
               disabled={busy}
