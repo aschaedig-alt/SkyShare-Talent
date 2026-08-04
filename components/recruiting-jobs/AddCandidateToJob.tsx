@@ -17,7 +17,12 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
   const [error, setError] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Found[]>([]);
+  // null = the search for the current query hasn't resolved yet; [] = it did and
+  // nobody matched. Kept apart so the panel stops saying "No matches. Try a
+  // different search" over a request that is still in flight — which reads as an
+  // answer about the candidate, not about the request.
+  const [results, setResults] = useState<Found[] | null>(null);
+  const [searching, setSearching] = useState(false);
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", currentTitle: "" });
 
   // Anything typed into the form counts as work worth confirming before we bin it.
@@ -33,6 +38,10 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
   useEffect(() => {
     if (!open || mode !== "existing") return;
     const ctrl = new AbortController();
+    // Set BEFORE the debounce timer: inside it, the first 200ms of every
+    // keystroke render as a finished search that found nothing.
+    setSearching(true);
+    setResults(null);
     const t = setTimeout(async () => {
       try {
         // includeArchived: a candidate you archived can still be linked to a new
@@ -41,9 +50,15 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
         if (res.ok) {
           const body = (await res.json()) as { candidates: Found[] };
           setResults(body.candidates);
+        } else {
+          setError("Could not search candidates.");
         }
       } catch {
-        /* aborted */
+        /* aborted, or the request failed — results stay null so the panel says
+           so instead of claiming nobody matched. */
+      } finally {
+        // A newer effect run has already set this true; don't undo it.
+        if (!ctrl.signal.aborted) setSearching(false);
       }
     }, 200);
     return () => {
@@ -127,7 +142,7 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
   function finish() {
     setOpen(false);
     setQuery("");
-    setResults([]);
+    setResults(null);
     setForm({ firstName: "", lastName: "", email: "", phone: "", currentTitle: "" });
     setMode("existing");
     setNotice(null);
@@ -176,7 +191,11 @@ export function AddCandidateToJob({ jobId, jobTitle }: { jobId: string; jobTitle
                   <input className={`${FIELD} pl-9`} placeholder="Search candidates by name or email" value={query} onChange={(e) => setQuery(e.target.value)} />
                 </div>
                 <div className="max-h-64 space-y-1.5 overflow-y-auto">
-                  {results.length > 0 ? (
+                  {searching || results === null ? (
+                    <p className="px-1 py-3 text-xs text-brand-grey dark:text-slate-400">
+                      {searching ? "Searching candidates…" : "Couldn't search candidates. Edit the search to try again."}
+                    </p>
+                  ) : results.length > 0 ? (
                     results.map((c) => (
                       <button
                         key={c.id}

@@ -129,7 +129,13 @@ export function PaycomScanButton() {
         Check Front mail
       </Button>
 
-      <Modal open={open} onClose={() => !running && setOpen(false)} busy={running}>
+      {/*
+        onClose is no longer gated on `running`. A sweep in flight is a reason to
+        keep the button disabled, not a reason to hold the user inside the
+        dialog — the scan carries on server-side either way, and trapping
+        somebody behind a spinner is how a slow request reads as a frozen app.
+      */}
+      <Modal open={open} onClose={() => setOpen(false)} busy={running}>
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Front mail</h2>
         <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
           Two sweeps in one: Paycom&apos;s background-check notices, and completed pilot applications waiting in pilotapp@.
@@ -232,9 +238,14 @@ export function PaycomScanButton() {
         {!running && pilot ? <PilotAppResults pilot={pilot} /> : null}
 
         <div className="mt-5 flex justify-end">
-          <Button onClick={() => setOpen(false)} disabled={running}>
-            Done
-          </Button>
+          {/*
+            Done stays enabled while the sweep runs, so it agrees with Escape and
+            the dialog's close button rather than being the one greyed way out.
+            Leaving early is safe: the sweep is server-side and idempotent (it
+            only ticks forward and skips what it has already handled), which is
+            the same property that lets the nightly cron re-run it.
+          */}
+          <Button onClick={() => setOpen(false)}>Done</Button>
         </div>
       </Modal>
     </>

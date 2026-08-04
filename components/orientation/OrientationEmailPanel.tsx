@@ -1516,24 +1516,45 @@ function CcEditor() {
   const [open, setOpen] = useState(false);
   const [addresses, setAddresses] = useState<string[]>([]);
   const [customized, setCustomized] = useState(false);
-  const [loaded, setLoaded] = useState(false);
+  // Loading, loaded, and FAILED TO LOAD are three different states and have to
+  // stay three. They used to collapse into one boolean that a failed request set
+  // to "loaded" — so a GET that never returned a list rendered as "Nobody is
+  // cc'd", which is a claim about the data, not about the request. Since the save
+  // below POSTS THE WHOLE REPLACEMENT LIST, adding one address on top of that
+  // screen would have wiped everyone who was actually configured.
+  const [load, setLoad] = useState<"idle" | "loading" | "ok" | "failed">("idle");
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
+  const loadList = useCallback(async () => {
+    setLoad("loading");
+    try {
+      const res = await fetch("/api/orientation/email-cc");
+      // A non-2xx that still parses as JSON is the trap here: without this check
+      // an error body reads as "no addresses" rather than as a failure.
+      if (!res.ok) throw new Error("cc list request failed");
+      const d = (await res.json()) as { addresses?: string[]; customized?: boolean };
+      setAddresses(d.addresses ?? []);
+      setCustomized(Boolean(d.customized));
+      setLoad("ok");
+    } catch {
+      setAddresses([]);
+      setLoad("failed");
+    }
+  }, []);
+
   useEffect(() => {
-    if (!open || loaded) return;
-    fetch("/api/orientation/email-cc")
-      .then((r) => r.json())
-      .then((d: { addresses?: string[]; customized?: boolean }) => {
-        setAddresses(d.addresses ?? []);
-        setCustomized(Boolean(d.customized));
-        setLoaded(true);
-      })
-      .catch(() => setLoaded(true));
-  }, [open, loaded]);
+    if (open && load === "idle") void loadList();
+  }, [open, load, loadList]);
 
   async function save(next: string[]) {
+    // A write must never be computed from a read that failed. What is on screen
+    // after a failed load is an empty list for want of data, not the real one.
+    if (load !== "ok") {
+      setMsg("Not saved — the current cc list hasn't loaded, so saving would replace it with what you see here. Reload it first.");
+      return;
+    }
     setBusy(true);
     setMsg(null);
     try {
@@ -1559,6 +1580,12 @@ function CcEditor() {
   function add() {
     const e = draft.trim();
     if (!e) return;
+    // Checked here as well as in save() so the typed address is kept rather than
+    // cleared into a save that is about to be refused.
+    if (load !== "ok") {
+      setMsg("Not saved — the current cc list hasn't loaded, so we don't know who adding this would replace. Reload it first.");
+      return;
+    }
     setDraft("");
     void save([...addresses, e]);
   }
@@ -1589,8 +1616,25 @@ function CcEditor() {
         {customized ? "" : " (Currently the original list from the Front template.)"}
       </p>
 
-      {!loaded ? (
+      {load !== "ok" && load !== "failed" ? (
         <p className="mt-2 text-xs text-brand-grey dark:text-slate-400">Loading…</p>
+      ) : load === "failed" ? (
+        // Say the list is unknown, and offer only the action that can make it
+        // known again. No input, no Add button: there is nothing safe to save on
+        // top of a list we could not read.
+        <div className="mt-2 rounded border border-amber-300/60 bg-amber-50 p-2.5 text-xs text-amber-800 dark:border-amber-400/30 dark:bg-amber-500/10 dark:text-amber-200">
+          <p className="font-semibold">Couldn&apos;t load the cc list.</p>
+          <p className="mt-1">
+            This is not the same as nobody being cc&apos;d — we don&apos;t know who is on it right now. Editing is off until
+            it loads, because saving replaces the whole list and would drop anyone it couldn&apos;t read.
+          </p>
+          <button
+            onClick={() => void loadList()}
+            className="mt-2 rounded border border-amber-500/40 px-2 py-1 text-[11px] font-semibold transition hover:bg-amber-100 dark:hover:bg-amber-500/20"
+          >
+            Try again
+          </button>
+        </div>
       ) : (
         <>
           <div className="mt-2 flex flex-wrap gap-1.5">

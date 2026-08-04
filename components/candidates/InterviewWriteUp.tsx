@@ -68,35 +68,47 @@ export function InterviewWriteUp({
     notesHtml: ""
   });
 
+  // The write-up is long-form typing that exists nowhere else yet, so every exit
+  // from this function has to clear `busy` and say what happened. A rejected
+  // fetch (offline, DNS, the dev server restarting) used to skip the setBusy(false)
+  // below it entirely: the button stayed on "Saving…" and disabled forever, with
+  // no error, and the notes were only recoverable by not touching the page.
   async function save() {
     setBusy(true);
     setError(null);
     const chosen = people.find((p) => p.email === form.interviewerEmail);
-    const res = await fetch(`/api/candidates/${candidateId}/interviews`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        // Midday avoids a date typed here landing on the previous day once the
-        // browser's timezone offset is applied.
-        interviewedAt: `${form.interviewedAt}T12:00:00`,
-        interviewerEmail: form.interviewerEmail,
-        interviewerName: chosen?.name ?? "",
-        interviewType: form.interviewType,
-        title: INTERVIEW_TYPES.find((t) => t.value === form.interviewType)?.label ?? "Interview",
-        outcome: form.outcome || null,
-        rating: form.rating || null,
-        nextStep: form.nextStep || null,
-        notesHtml: form.notesHtml
-      })
-    });
-    setBusy(false);
-    if (res.ok) {
-      setOpen(false);
-      setForm({ ...form, notesHtml: "", outcome: "", rating: 0, nextStep: "" });
-      router.refresh();
-    } else {
-      const payload = (await res.json().catch(() => null)) as { message?: string } | null;
-      setError(payload?.message ?? "Could not save the interview.");
+    try {
+      const res = await fetch(`/api/candidates/${candidateId}/interviews`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          // Midday avoids a date typed here landing on the previous day once the
+          // browser's timezone offset is applied.
+          interviewedAt: `${form.interviewedAt}T12:00:00`,
+          interviewerEmail: form.interviewerEmail,
+          interviewerName: chosen?.name ?? "",
+          interviewType: form.interviewType,
+          title: INTERVIEW_TYPES.find((t) => t.value === form.interviewType)?.label ?? "Interview",
+          outcome: form.outcome || null,
+          rating: form.rating || null,
+          nextStep: form.nextStep || null,
+          notesHtml: form.notesHtml
+        })
+      });
+      if (res.ok) {
+        setOpen(false);
+        // Only cleared once the server has it — on any failure the typed notes
+        // stay in the form so the same click can be retried.
+        setForm({ ...form, notesHtml: "", outcome: "", rating: 0, nextStep: "" });
+        router.refresh();
+      } else {
+        const payload = (await res.json().catch(() => null)) as { message?: string } | null;
+        setError(payload?.message ?? "Could not save the interview. Your notes are still here — try again.");
+      }
+    } catch {
+      setError("Could not reach the server. Your notes are still here — check your connection and try again.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -280,39 +292,53 @@ function LoggedInterview({
     notesHtml: interview.notesHtml ?? interview.notes ?? ""
   }));
 
+  // Same rule as the new-interview form above: an edit holds re-typed notes, so
+  // busy always clears and a failure always says so. Staying in edit mode on
+  // failure is deliberate — leaving it would discard the draft.
   async function save() {
     setBusy(true);
     setError(null);
     const chosen = people.find((p) => p.email === draft.interviewerEmail);
-    const res = await fetch(`/api/candidates/${candidateId}/interviews/${interview.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        interviewedAt: `${draft.interviewedAt}T12:00:00`,
-        interviewerEmail: draft.interviewerEmail,
-        interviewerName: chosen?.name ?? "",
-        outcome: draft.outcome || null,
-        rating: draft.rating || null,
-        nextStep: draft.nextStep || null,
-        notesHtml: draft.notesHtml
-      })
-    });
-    setBusy(false);
-    if (res.ok) {
-      setEditing(false);
-      router.refresh();
-    } else {
-      const payload = (await res.json().catch(() => null)) as { message?: string } | null;
-      setError(payload?.message ?? "Could not save the changes.");
+    try {
+      const res = await fetch(`/api/candidates/${candidateId}/interviews/${interview.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          interviewedAt: `${draft.interviewedAt}T12:00:00`,
+          interviewerEmail: draft.interviewerEmail,
+          interviewerName: chosen?.name ?? "",
+          outcome: draft.outcome || null,
+          rating: draft.rating || null,
+          nextStep: draft.nextStep || null,
+          notesHtml: draft.notesHtml
+        })
+      });
+      if (res.ok) {
+        setEditing(false);
+        router.refresh();
+      } else {
+        const payload = (await res.json().catch(() => null)) as { message?: string } | null;
+        setError(payload?.message ?? "Could not save the changes. Your edits are still here — try again.");
+      }
+    } catch {
+      setError("Could not reach the server. Your edits are still here — check your connection and try again.");
+    } finally {
+      setBusy(false);
     }
   }
 
   async function remove() {
     setBusy(true);
-    const res = await fetch(`/api/candidates/${candidateId}/interviews/${interview.id}`, { method: "DELETE" });
-    setBusy(false);
-    if (res.ok) router.refresh();
-    else setError("Could not delete this interview.");
+    setError(null);
+    try {
+      const res = await fetch(`/api/candidates/${candidateId}/interviews/${interview.id}`, { method: "DELETE" });
+      if (res.ok) router.refresh();
+      else setError("Could not delete this interview.");
+    } catch {
+      setError("Could not reach the server to delete this interview.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (editing) {

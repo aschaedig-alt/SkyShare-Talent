@@ -41,8 +41,13 @@ function groupByLocalDate(days: DaySlots[], tz: string): LocalDay[] {
 export function PublicBooking({ slug, host }: Props) {
   const [tz, setTz] = useState<string>(host.timezone);
   const [type, setType] = useState<PublicBookingType | null>(host.bookingTypes.length === 1 ? host.bookingTypes[0] : null);
-  const [days, setDays] = useState<DaySlots[]>([]);
+  // null = not fetched yet, [] = fetched and there genuinely are no open times.
+  // Collapsing the two is how an invitee's very first paint of this PUBLIC page
+  // told them "No open times in the booking window" before the request had even
+  // been made.
+  const [days, setDays] = useState<DaySlots[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [slotsFailed, setSlotsFailed] = useState(false);
   const [slot, setSlot] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -67,20 +72,29 @@ export function PublicBooking({ slug, host }: Props) {
     if (!type) return;
     let active = true;
     setLoading(true);
+    setSlotsFailed(false);
+    setDays(null);
     setSlot(null);
     fetch(`/api/book/${slug}/slots?typeId=${encodeURIComponent(type.id)}`)
       .then((r) => r.json())
       .then((data) => {
         if (active) setDays(Array.isArray(data.days) ? data.days : []);
       })
-      .catch(() => active && setDays([]))
+      .catch(() => {
+        // A failed request is not an empty calendar — say so, rather than
+        // telling an outside invitee the host has no availability.
+        if (active) {
+          setDays(null);
+          setSlotsFailed(true);
+        }
+      })
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
   }, [type, slug]);
 
-  const localDays = useMemo(() => groupByLocalDate(days, tz), [days, tz]);
+  const localDays = useMemo(() => (days === null ? null : groupByLocalDate(days, tz)), [days, tz]);
 
   const selectedLabel = useMemo(() => (slot ? formatDateTimeLongWithZone(slot, tz) : null), [slot, tz]);
 
@@ -160,6 +174,7 @@ export function PublicBooking({ slug, host }: Props) {
             onTzChange={setTz}
             days={localDays}
             loading={loading}
+            failed={slotsFailed}
             multiType={host.bookingTypes.length > 1}
             onBack={() => setType(null)}
             onPick={setSlot}
@@ -242,6 +257,7 @@ function SlotPicker({
   onTzChange,
   days,
   loading,
+  failed,
   multiType,
   onBack,
   onPick
@@ -250,8 +266,10 @@ function SlotPicker({
   tz: string;
   tzOptions: TzOption[];
   onTzChange: (tz: string) => void;
-  days: LocalDay[];
+  /** null until the slots request has come back. */
+  days: LocalDay[] | null;
   loading: boolean;
+  failed: boolean;
   multiType: boolean;
   onBack: () => void;
   onPick: (iso: string) => void;
@@ -271,11 +289,15 @@ function SlotPicker({
         <label className="inline-flex shrink-0 items-center gap-1.5 rounded bg-brand-cloudDancer/60 py-1 pl-2.5 pr-1 text-[11px] font-medium text-brand-grey dark:bg-white/5 dark:text-slate-400">
           <Globe className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">Times in</span>
+          {/* No focus:outline-none on this select: it was the only focusable
+              control on this whole public page and killing its outline left an
+              invitee tabbing through with no visible focus at all. The gold
+              :focus-visible ring in globals.css is the app-wide indicator. */}
           <select
             value={tz}
             onChange={(e) => onTzChange(e.target.value)}
             aria-label="Display timezone"
-            className="max-w-[10rem] truncate rounded bg-transparent py-0.5 pr-1 text-[11px] font-semibold text-brand-lea focus:outline-none dark:text-slate-100"
+            className="max-w-[10rem] truncate rounded bg-transparent py-0.5 pr-1 text-[11px] font-semibold text-brand-lea dark:text-slate-100"
           >
             {tzOptions.map((z) => (
               <option key={z.value} value={z.value}>
@@ -286,7 +308,11 @@ function SlotPicker({
         </label>
       </div>
 
-      {loading ? (
+      {failed ? (
+        <p className="py-10 text-center text-sm text-brand-grey dark:text-slate-400">
+          We couldn&apos;t load the available times just now. Please refresh the page and try again.
+        </p>
+      ) : loading || days === null ? (
         <p className="py-10 text-center text-sm text-brand-grey dark:text-slate-400">Loading available times…</p>
       ) : days.length === 0 ? (
         <p className="py-10 text-center text-sm text-brand-grey dark:text-slate-400">No open times in the booking window. Please check back later.</p>

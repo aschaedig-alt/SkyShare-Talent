@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 // Pick the person a new hire reports to.
 //
@@ -37,31 +37,47 @@ export function SupervisorPicker({
   const [q, setQ] = useState("");
   const [results, setResults] = useState<SupervisorResult[]>([]);
   const [searching, setSearching] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     if (q.trim().length < 2) {
       setResults([]);
+      setFailed(false);
       return;
     }
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(async () => {
-      setSearching(true);
+    // `cancelled` is the in-flight guard. Without it, only the TIMER was
+    // cancelled between keystrokes, never the request already in the air: a slow
+    // response for "smi" could land after a fast one for "smith" and repaint the
+    // wrong people under the query the user is actually looking at. Every
+    // keystroke replaces this effect, and its cleanup retires the older request's
+    // results rather than racing them.
+    let cancelled = false;
+    // Set before the timer — the 250ms debounce is time spent searching, and
+    // saying otherwise renders "No match" over a search that hasn't run.
+    setSearching(true);
+    setFailed(false);
+    const t = setTimeout(async () => {
       try {
         const res = await fetch(
           `/api/new-hires/supervisor-search?q=${encodeURIComponent(q.trim())}&exclude=${encodeURIComponent(hireId)}`
         );
+        if (!res.ok) throw new Error("supervisor search failed");
         const data = (await res.json()) as { people?: SupervisorResult[] };
-        setResults(data.people ?? []);
+        if (!cancelled) setResults(data.people ?? []);
       } catch {
-        setResults([]);
+        // A failed request is not "nobody by that name" — say which it was.
+        if (!cancelled) {
+          setResults([]);
+          setFailed(true);
+        }
       } finally {
-        setSearching(false);
+        if (!cancelled) setSearching(false);
       }
     }, 250);
     return () => {
-      if (timer.current) clearTimeout(timer.current);
+      cancelled = true;
+      clearTimeout(t);
     };
   }, [q, open, hireId]);
 
@@ -109,6 +125,10 @@ export function SupervisorPicker({
           <p className="px-1 py-2 text-[11px] text-brand-grey dark:text-slate-400">Searching…</p>
         ) : q.trim().length < 2 ? (
           <p className="px-1 py-2 text-[11px] text-brand-grey dark:text-slate-400">Type at least two characters.</p>
+        ) : failed ? (
+          <p className="px-1 py-2 text-[11px] text-brand-grey dark:text-slate-400">
+            Couldn&apos;t run the search just now. Edit the name to try again.
+          </p>
         ) : results.length === 0 ? (
           <p className="px-1 py-2 text-[11px] text-brand-grey dark:text-slate-400">
             No match. If they aren&apos;t in the app yet, type their name and email in the fields below instead.

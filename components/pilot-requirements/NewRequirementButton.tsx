@@ -72,7 +72,12 @@ export function NewRequirementButton() {
         New requirement
       </Button>
 
-      <Modal open={open} onClose={() => !saving && setOpen(false)} busy={saving} maxWidth="max-w-lg">
+      {/*
+        onClose is no longer gated on `saving`. The double-submit guard lives on
+        the submit button's disabled state; "saving" must not also mean "you
+        cannot leave", which is what made a slow save feel like a hang.
+      */}
+      <Modal open={open} onClose={() => setOpen(false)} busy={saving} maxWidth="max-w-lg">
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">New pilot requirement</h2>
         <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
           Pick the fleet position. The standard requirement gates are added automatically so you can start setting

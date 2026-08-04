@@ -42,25 +42,39 @@ export function LinkPicker({
   onCancel: () => void;
 }) {
   const [q, setQ] = useState(initialQuery);
-  const [results, setResults] = useState<OrgPerson[]>([]);
+  // null = we have not searched this query yet. The picker opens PRE-SEEDED with
+  // a name the app itself put on the chart, so with results defaulting to [] and
+  // setLoading(true) living inside the debounce timer, every single open flashed
+  // "Nobody found. Check the spelling" for 250ms — accusing the user of mistyping
+  // a name they never typed.
+  const [results, setResults] = useState<OrgPerson[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [searchFailed, setSearchFailed] = useState(false);
   const [linkingId, setLinkingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
+    if (q.trim().length < 2) {
+      setResults(null);
+      setLoading(false);
+      setSearchFailed(false);
+      return;
+    }
+    // Both of these belong OUTSIDE the timer — during the debounce we are already
+    // searching, and whatever is on screen belongs to the previous query.
+    setLoading(true);
+    setSearchFailed(false);
+    setResults(null);
     const t = setTimeout(async () => {
-      if (q.trim().length < 2) {
-        setResults([]);
-        return;
-      }
-      setLoading(true);
       try {
         const res = await fetch(`/api/fleet/people-search?q=${encodeURIComponent(q.trim())}`);
+        if (!res.ok) throw new Error("people search failed");
         const data = (await res.json()) as { people?: OrgPerson[] };
         if (alive) setResults(data.people ?? []);
       } catch {
-        if (alive) setResults([]);
+        // A failed search is not an empty roster; keep results unknown.
+        if (alive) setSearchFailed(true);
       } finally {
         if (alive) setLoading(false);
       }
@@ -114,10 +128,15 @@ export function LinkPicker({
             search that only matched the whole query as one string. That was
             fixed — any word of the name matches now — so the old advice was not
             just stale, it implied the search was still broken. */}
-        {!loading && q.trim().length >= 2 && results.length === 0 ? (
+        {!loading && searchFailed ? (
+          <div style={{ fontSize: 11, opacity: 0.6, padding: 4 }}>Couldn&apos;t run the search. Edit the name to try again.</div>
+        ) : null}
+        {/* results === null means "not searched yet", so this only ever fires on a
+            search that actually came back with nothing. */}
+        {!loading && !searchFailed && q.trim().length >= 2 && results !== null && results.length === 0 ? (
           <div style={{ fontSize: 11, opacity: 0.6, padding: 4 }}>Nobody found. Check the spelling, or search a different part of the name.</div>
         ) : null}
-        {results.map((p) => (
+        {(results ?? []).map((p) => (
           <button
             key={`${p.kind}:${p.id}`}
             type="button"

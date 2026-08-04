@@ -28,20 +28,37 @@ export function AddJobToCandidate({ candidateId, canCreateJob = false }: { candi
   const [notice, setNotice] = useState<string | null>(null);
   const [noticeJob, setNoticeJob] = useState<{ id: string; title: string } | null>(null);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<FoundJob[]>([]);
+  // null = the search for the CURRENT query hasn't resolved. Distinct from [],
+  // which means the server really has no match — and the difference matters here
+  // because "no match" is what unlocks the create-a-job button below. While the
+  // debounce was running this rendered "No matching jobs" AND the create button
+  // together, so a fast click created a near-duplicate of a job that existed.
+  const [results, setResults] = useState<FoundJob[] | null>(null);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     if (!open || notice) return;
     const ctrl = new AbortController();
+    // Set BEFORE the timer, not inside it. Inside, the 200ms debounce window is
+    // spent with searching=false over results that belong to the previous query.
+    setSearching(true);
+    setResults(null);
     const t = setTimeout(async () => {
       try {
         const res = await fetch(`/api/recruiting-jobs?q=${encodeURIComponent(query)}`, { signal: ctrl.signal });
         if (res.ok) {
           const body = (await res.json()) as { jobs: FoundJob[] };
           setResults(body.jobs);
+        } else {
+          setError("Could not search jobs.");
         }
       } catch {
-        /* aborted */
+        /* aborted, or the request failed — results stay null, which keeps the
+           create-a-new-job affordance locked rather than offering it off a search
+           that never happened. */
+      } finally {
+        // A newer effect has already set this true; don't undo it.
+        if (!ctrl.signal.aborted) setSearching(false);
       }
     }, 200);
     return () => {
@@ -53,7 +70,7 @@ export function AddJobToCandidate({ candidateId, canCreateJob = false }: { candi
   function finish() {
     setOpen(false);
     setQuery("");
-    setResults([]);
+    setResults(null);
     setNotice(null);
     setNoticeJob(null);
     setError(null);
@@ -193,7 +210,11 @@ export function AddJobToCandidate({ candidateId, canCreateJob = false }: { candi
                   <input autoFocus className={`${FIELD} pl-9`} placeholder="Search jobs by title or department" value={query} onChange={(e) => setQuery(e.target.value)} />
                 </div>
                 <div className="max-h-64 space-y-1.5 overflow-y-auto">
-                  {results.length > 0 ? (
+                  {searching || results === null ? (
+                    <p className="px-1 py-3 text-xs text-brand-grey dark:text-slate-400">
+                      {searching ? "Searching jobs…" : "Couldn't search jobs. Edit the search to try again."}
+                    </p>
+                  ) : results.length > 0 ? (
                     results.map((j) => (
                       <button
                         key={j.id}
