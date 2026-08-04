@@ -196,6 +196,10 @@ export function EventsCalendar({ events }: { events: CalendarEvent[] }) {
                   <Link
                     key={event.id}
                     href={`/events/${event.id}`}
+                    // A month grid shows up to two chips a day across ~31 days, so the
+                    // default prefetch fires dozens of /events/[id] requests just for
+                    // rendering the month. Same reason the sidebar's links opt out.
+                    prefetch={false}
                     title={`${event.name} — ${eventStatusLabel(event.status)}${event.venue ? ` · ${event.venue}` : ""}`}
                     className={clsx(
                       "flex w-full items-center gap-1 truncate rounded px-1.5 py-0.5 text-left text-[10px] font-medium transition hover:brightness-105",
@@ -230,6 +234,9 @@ export function EventsCalendar({ events }: { events: CalendarEvent[] }) {
                         <Link
                           key={event.id}
                           href={`/events/${event.id}`}
+                          // Same reasoning as the day chips above — this "+N more"
+                          // popover can hold every event on a busy day at once.
+                          prefetch={false}
                           className={clsx(
                             "block truncate rounded px-2 py-1 text-[11px] font-medium transition hover:brightness-105",
                             chipClasses(event.status)

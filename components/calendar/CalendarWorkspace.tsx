@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, CalendarRange, Square, GanttChartSquare, Building2, Palette } from "lucide-react";
 import { clsx } from "clsx";
 import type { CalendarData } from "@/lib/data/calendar";
 import { DEPARTMENTS, resolveDepartmentKey, DEFAULT_DEPARTMENT_COLOR_META, type ColorMeta, type DeptKey } from "@/lib/calendar/departments";
 import { DepartmentColorEditor } from "@/components/calendar/DepartmentColorEditor";
-import { ScheduleInterviewForm } from "@/components/calendar/ScheduleInterviewForm";
+import { ScheduleInterviewForm, interviewStatusLabel } from "@/components/calendar/ScheduleInterviewForm";
 import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import { TimeGridCalendar } from "@/components/calendar/TimeGridCalendar";
 import { ScheduleTimeline } from "@/components/calendar/ScheduleTimeline";
@@ -103,7 +103,7 @@ function CompactInterviewList({
                   {formatDateTimeWithZone(interview.startDateTime, interview.timezone)}
                 </span>
                 <span className={clsx("shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold", statusBadgeColor(interview.status))}>
-                  {interview.status}
+                  {interviewStatusLabel(interview.status)}
                 </span>
               </div>
             </button>
@@ -131,6 +131,26 @@ export function CalendarWorkspace({
   const [colorEditorOpen, setColorEditorOpen] = useState(false);
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
   const [prefilledDate, setPrefilledDate] = useState<Date | null>(null);
+  // Optimistic drag-to-reschedule: the new times we have asked the server for but
+  // not yet had confirmed, keyed by interview id. Rendering these immediately is
+  // what makes a drop stick where it was dropped instead of snapping back while
+  // the PATCH is in flight.
+  const [pendingMoves, setPendingMoves] = useState<Record<string, { startDateTime: string; endDateTime: string | null }>>({});
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null);
+
+  // Fresh server data supersedes anything we were showing optimistically (the
+  // edit modal refreshes the route after a save). Bails out when there is
+  // nothing pending so this does not cause a render on mount.
+  useEffect(() => {
+    setPendingMoves((current) => (Object.keys(current).length > 0 ? {} : current));
+  }, [data.interviews]);
+
+  // Every panel reads interviews through here, so a moved card is consistent
+  // across the calendar, the upcoming rail and the manifest list at once.
+  const interviews = useMemo(
+    () => data.interviews.map((interview) => (pendingMoves[interview.id] ? { ...interview, ...pendingMoves[interview.id] } : interview)),
+    [data.interviews, pendingMoves]
+  );
 
   // Build the filter options from the interviews actually on the calendar rather
   // than from the full DEPARTMENTS taxonomy. The taxonomy is a deliberate superset
@@ -167,8 +187,8 @@ export function CalendarWorkspace({
 
   // Filter values: "all" | "dept:<key>" | "sub:<dept>:<sub>" | "unassigned".
   const filteredInterviews = useMemo(() => {
-    if (department === "all") return data.interviews;
-    return data.interviews.filter((interview) => {
+    if (department === "all") return interviews;
+    return interviews.filter((interview) => {
       const { deptKey, subKey } = resolveDepartmentKey(interview.department);
       if (department === "unassigned") return deptKey === "unassigned";
       if (department.startsWith("dept:")) return deptKey === department.slice(5);
@@ -178,55 +198,94 @@ export function CalendarWorkspace({
       }
       return true;
     });
-  }, [data.interviews, department]);
+  }, [interviews, department]);
 
-  function handleDayClick(date: Date) {
+  const handleDayClick = useCallback((date: Date) => {
     setPrefilledDate(date);
     document.getElementById("schedule-form")?.scrollIntoView({ behavior: "smooth" });
-  }
+  }, []);
 
-  function handleInterviewClick(interview: Interview) {
+  const handleInterviewClick = useCallback((interview: Interview) => {
     setEditingInterview(interview);
-  }
+  }, []);
 
   // Drag-to-reschedule. Month drops keep the original time-of-day; week/day drops
   // use the exact dropped slot (date + hour).
-  async function handleReschedule(
-    interviewId: string,
-    newDate: Date,
-    options?: { keepOriginalTime?: boolean }
-  ) {
-    const interview = data.interviews.find((i) => i.id === interviewId);
-    if (!interview) return;
+  //
+  // This used to move nothing until the PATCH came back, and did nothing at all
+  // when it failed: the card snapped back to where it started, which is EXACTLY
+  // what a missed drop looks like. A rejected reschedule therefore read as a
+  // clumsy drag and got retried instead of reported. It is now optimistic — the
+  // card moves on drop — and a failure rolls it back with the reason on screen.
+  const handleReschedule = useCallback(
+    async (interviewId: string, newDate: Date, options?: { keepOriginalTime?: boolean }) => {
+      const interview = interviews.find((i) => i.id === interviewId);
+      if (!interview) return;
 
-    const oldStart = new Date(interview.startDateTime);
-    const newStart = new Date(newDate);
-    if (options?.keepOriginalTime) {
-      newStart.setHours(oldStart.getHours(), oldStart.getMinutes(), 0, 0);
-    }
-
-    // Compute duration to preserve it
-    const oldEnd = interview.endDateTime ? new Date(interview.endDateTime) : null;
-    const durationMinutes = oldEnd ? Math.round((oldEnd.getTime() - oldStart.getTime()) / 60000) : 60;
-
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const startDateTime = `${newStart.getFullYear()}-${pad(newStart.getMonth() + 1)}-${pad(newStart.getDate())}T${pad(newStart.getHours())}:${pad(newStart.getMinutes())}`;
-
-    try {
-      const response = await fetch(`/api/interviews/${interviewId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ startDateTime, durationMinutes })
-      });
-      if (response.ok) {
-        router.refresh();
+      const oldStart = new Date(interview.startDateTime);
+      const newStart = new Date(newDate);
+      if (options?.keepOriginalTime) {
+        newStart.setHours(oldStart.getHours(), oldStart.getMinutes(), 0, 0);
       }
-    } catch {
-      // silently fail; user can retry
-    }
-  }
 
-  const headerPanel = (
+      // Compute duration to preserve it
+      const oldEnd = interview.endDateTime ? new Date(interview.endDateTime) : null;
+      const durationMinutes = oldEnd ? Math.round((oldEnd.getTime() - oldStart.getTime()) / 60000) : 60;
+      const newEnd = new Date(newStart.getTime() + durationMinutes * 60000);
+
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const startDateTime = `${newStart.getFullYear()}-${pad(newStart.getMonth() + 1)}-${pad(newStart.getDate())}T${pad(newStart.getHours())}:${pad(newStart.getMinutes())}`;
+
+      // What to put back if the server says no. Usually "no override at all",
+      // but a second drag before the first settles has one to restore.
+      const previous = pendingMoves[interviewId] ?? null;
+      setRescheduleError(null);
+      setPendingMoves((current) => ({
+        ...current,
+        [interviewId]: { startDateTime: newStart.toISOString(), endDateTime: newEnd.toISOString() }
+      }));
+
+      try {
+        const response = await fetch(`/api/interviews/${interviewId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ startDateTime, durationMinutes })
+        });
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+          throw new Error(payload?.message ?? "That interview couldn't be moved. It's back where it was.");
+        }
+        // The refresh stays, but it is no longer what MOVES the card — the card
+        // is already where it was dropped, so nobody waits on this. It is here
+        // because the server does not necessarily store the instant the browser
+        // computed: the PATCH body carries a naive local string that the API
+        // parses with new Date() in the SERVER's timezone. Dropping the refresh
+        // would hide any such normalisation until the next full page load. The
+        // optimistic entry is held until the fresh props land (see the effect
+        // above), so this does not flash the card back on the way.
+        router.refresh();
+      } catch (error) {
+        setPendingMoves((current) => {
+          const next = { ...current };
+          if (previous) {
+            next[interviewId] = previous;
+          } else {
+            delete next[interviewId];
+          }
+          return next;
+        });
+        setRescheduleError(
+          error instanceof Error ? error.message : "That interview couldn't be moved. It's back where it was."
+        );
+      }
+    },
+    [interviews, pendingMoves, router]
+  );
+
+  // Memoized (along with the two panels below it) so the panels array handed to
+  // EditableGrid is stable across re-renders that do not change what is on it.
+  const headerPanel = useMemo(
+    () => (
     <section className="flex h-full flex-col rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -235,6 +294,24 @@ export function CalendarWorkspace({
           <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
             Schedule and manage candidate interviews. Click a day or time to schedule, click an interview to edit, or drag to reschedule.
           </p>
+          {/* A rejected reschedule has to say so — the card rolling back on its
+              own is indistinguishable from a drag that missed. */}
+          {rescheduleError && (
+            <div
+              role="alert"
+              className="mt-2 flex items-start justify-between gap-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
+            >
+              <span>{rescheduleError}</span>
+              <button
+                type="button"
+                onClick={() => setRescheduleError(null)}
+                aria-label="Dismiss"
+                className="shrink-0 rounded px-1 text-red-700/70 transition hover:text-red-700 dark:text-red-300/70 dark:hover:text-red-300"
+              >
+                ×
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -322,23 +399,30 @@ export function CalendarWorkspace({
         </div>
       </div>
     </section>
+    ),
+    [data.interviews.length, departmentOptions, department, colorMode, canEdit, view, rescheduleError]
   );
 
-  const statsPanel = (
-    <section className="grid h-full content-start gap-3 grid-cols-[repeat(auto-fit,minmax(120px,1fr))]">
-      {statLabels.map(([key, label]) => (
-        <div key={key} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey dark:text-slate-400">{label}</div>
-          <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{data.stats[key]}</div>
-          <div className="mt-2 h-1 rounded-full bg-brand-gold/25">
-            <div className="h-1 w-2/3 rounded-full bg-brand-sweet" />
+  // The meter that used to sit under each number is gone. It was a hardcoded
+  // w-2/3 bar inside the .map(), so all four tiles read 67% whatever the counts
+  // were — decoration shaped like data, which is worse than no chart at all.
+  // The tile is now just its label and its number.
+  const statsPanel = useMemo(
+    () => (
+      <section className="grid h-full content-start gap-3 grid-cols-[repeat(auto-fit,minmax(120px,1fr))]">
+        {statLabels.map(([key, label]) => (
+          <div key={key} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey dark:text-slate-400">{label}</div>
+            <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{data.stats[key]}</div>
           </div>
-        </div>
-      ))}
-    </section>
+        ))}
+      </section>
+    ),
+    [data.stats]
   );
 
-  const calendarPanel = (
+  const calendarPanel = useMemo(
+    () => (
     <div className="h-full min-w-0">
       {view === "month" && (
         <MonthCalendar
@@ -383,25 +467,45 @@ export function CalendarWorkspace({
         />
       )}
     </div>
+    ),
+    [view, filteredInterviews, colorMode, departmentColors, data.teamHosts, handleDayClick, handleInterviewClick, handleReschedule]
   );
 
-  const panels: EditablePanel[] = [
-    { id: "cal-header", title: "Interview operations", node: headerPanel },
-    { id: "cal-stats", title: "Interview statistics", node: statsPanel },
-    { id: "cal-upcoming", title: "Upcoming interviews", node: <UpcomingInterviews interviews={filteredInterviews} onInterviewClick={handleInterviewClick} /> },
-    { id: "cal-list", title: "All interviews", node: <CompactInterviewList interviews={filteredInterviews} onInterviewClick={handleInterviewClick} /> },
-    { id: "cal-google", title: "Google sync", node: <GoogleSyncCard sync={data.sync} /> },
-    {
-      id: "cal-schedule",
-      title: "Schedule interview",
-      node: (
-        <div id="schedule-form" className="h-full">
-          <ScheduleInterviewForm candidates={data.candidates} jobs={data.jobs} interviewers={data.interviewers} prefilledDate={prefilledDate} />
-        </div>
-      )
-    },
-    { id: "cal-calendar", title: "Calendar", node: calendarPanel }
-  ];
+  // Memoized so EditableGrid gets a stable array. This component holds eight
+  // pieces of state (view, department, colour mode, the reschedule error…), and a
+  // fresh panels array on every one of those re-renders used to reset the saved
+  // grid layout. See the matching note in EditableGrid.
+  const panels: EditablePanel[] = useMemo(
+    () => [
+      { id: "cal-header", title: "Interview operations", node: headerPanel },
+      { id: "cal-stats", title: "Interview statistics", node: statsPanel },
+      { id: "cal-upcoming", title: "Upcoming interviews", node: <UpcomingInterviews interviews={filteredInterviews} onInterviewClick={handleInterviewClick} /> },
+      { id: "cal-list", title: "All interviews", node: <CompactInterviewList interviews={filteredInterviews} onInterviewClick={handleInterviewClick} /> },
+      { id: "cal-google", title: "Google sync", node: <GoogleSyncCard sync={data.sync} /> },
+      {
+        id: "cal-schedule",
+        title: "Schedule interview",
+        node: (
+          <div id="schedule-form" className="h-full">
+            <ScheduleInterviewForm candidates={data.candidates} jobs={data.jobs} interviewers={data.interviewers} prefilledDate={prefilledDate} />
+          </div>
+        )
+      },
+      { id: "cal-calendar", title: "Calendar", node: calendarPanel }
+    ],
+    [
+      headerPanel,
+      statsPanel,
+      calendarPanel,
+      filteredInterviews,
+      handleInterviewClick,
+      data.sync,
+      data.candidates,
+      data.jobs,
+      data.interviewers,
+      prefilledDate
+    ]
+  );
 
   return (
     <div className="px-5 py-5 lg:px-8">

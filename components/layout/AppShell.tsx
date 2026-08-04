@@ -24,12 +24,22 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const authRequired = isAuthRequired();
-  const session = authRequired ? await getServerSession(authOptions) : null;
+
+  // The root layout renders AppShell on EVERY route, so anything sequential here
+  // is a tax on every page load. The session (JWT cookie) and the two settings
+  // rows (Neon) depend on nothing, so they run concurrently instead of as three
+  // back-to-back round trips.
+  const [session, policy, branding] = await Promise.all([
+    authRequired ? getServerSession(authOptions) : Promise.resolve(null),
+    getWorkspaceModuleAccessPolicy(),
+    getWorkspaceBranding()
+  ]);
+
   const role: RoleName | null = authRequired ? (isRoleName(session?.user?.role) ? session.user.role : null) : "ADMIN";
-  const policy = await getWorkspaceModuleAccessPolicy();
-  const branding = await getWorkspaceBranding();
   const sidebarLogo = resolveBrandingLogo(branding, "sidebar");
   const showSidebar = Boolean(role);
+  // This one genuinely depends on both the session and the policy above, so it
+  // stays sequential — it cannot start until they have landed.
   const homeHref = role ? await resolveUserHome(session?.user?.id, policy, role) : "/command-center";
 
   return (

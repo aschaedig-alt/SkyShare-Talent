@@ -337,6 +337,13 @@ model NewHire {
   eventsOwned          Event[]
 
   @@index([stage])
+  // The centralized "who actually works here" filter (employmentStatus ACTIVE and
+  // not canceled), used at 10+ call sites. Neither column was indexed, so every
+  // one of those was a full scan of the roster.
+  @@index([employmentStatus, canceled])
+  // Foreign key to the candidate this hire came from. Read on every candidate
+  // profile render to show the linked hire, and it had no index of its own.
+  @@index([candidateId])
 }
 
 // A secondary business card for an employee (e.g. a recruiting card with its own
@@ -765,6 +772,9 @@ model Candidate {
   @@index([origin])
   @@index([jazzCandidateNumber])
   @@index([historicalSourceId])
+  // Backs the /candidates list: filter out the archived, then sort by most
+  // recently touched. Composite so the sort is served by the same index.
+  @@index([archivedAt, updatedAt])
 }
 
 model CandidateContact {
@@ -1185,6 +1195,10 @@ model Interview {
   @@index([candidateId])
   @@index([jobId])
   @@index([startDateTime])
+  // "Scheduled interviews in this window" — the shape the calendar and the
+  // upcoming-interview panels ask for. Only startDateTime was indexed, so the
+  // status filter was applied after the fact on every matching row.
+  @@index([status, startDateTime])
 }
 
 // One interviewer's independent scorecard for an interview. Multiple per

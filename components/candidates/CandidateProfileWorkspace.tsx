@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { clsx } from "clsx";
 import { FileText, Briefcase, StickyNote, CalendarClock, History, Plane, Clock, Sparkles, Mail, FileSignature, ClipboardList, X } from "lucide-react";
 import { Button } from "@/components/ui";
@@ -26,7 +26,7 @@ import { CandidateTimeline } from "@/components/candidates/CandidateTimeline";
 import { AiSummaryCard } from "@/components/candidates/AiSummaryCard";
 import { CandidateCommunications } from "@/components/candidates/CandidateCommunications";
 import { FlightProfilePanel } from "@/components/candidates/FlightProfilePanel";
-import { EditableGrid, type GridItem } from "@/components/shared/EditableGrid";
+import { EditableGrid, type EditablePanel, type GridItem } from "@/components/shared/EditableGrid";
 import { TravelPanel } from "@/components/travel/TravelPanel";
 import type { WidgetInstance } from "@/lib/data/page-layout";
 import type { CandidateProfileData } from "@/lib/data/candidates";
@@ -259,6 +259,96 @@ export function CandidateProfileWorkspace({
 
   const statusActive = candidate.status === "ACTIVE";
 
+  // Hoisted out of the JSX and memoized so EditableGrid receives a stable array.
+  // As an inline literal it was a brand-new array on every re-render, and this
+  // component re-renders on a TIMER — the save/error toasts clear themselves via
+  // setTimeout — so an admin's saved Documents layout used to rearrange itself a
+  // few seconds after every save. It only depends on the candidate record.
+  const documentPanels: EditablePanel[] = useMemo(
+    () => [
+      {
+        id: "doc-viewer",
+        title: "Documents",
+        node: (
+          <div className="h-full overflow-auto [&>*]:min-h-full">
+            <CandidateDocuments candidateId={candidate.id} files={candidate.files} />
+          </div>
+        )
+      },
+      {
+        id: "flight",
+        title: "Flight profile",
+        node: (
+          <div className="h-full overflow-auto [&>*]:min-h-full">
+            <FlightProfilePanel candidateId={candidate.id} metrics={candidate.metrics} hasDocuments={candidate.files.length > 0} />
+          </div>
+        )
+      },
+      {
+        id: "checklist",
+        title: "Document checklist",
+        node: (
+          <div className="h-full overflow-auto [&>*]:min-h-full">
+            <DocumentChecklist files={candidate.files} />
+          </div>
+        )
+      },
+      {
+        id: "currency",
+        title: "Currency",
+        node: (
+          <div className="h-full overflow-auto [&>*]:min-h-full">
+            <CurrencyPanel files={candidate.files} />
+          </div>
+        )
+      },
+      {
+        id: "proscons",
+        title: "Pros & cons",
+        node: (
+          <div className="h-full overflow-auto [&>*]:min-h-full">
+            <ProConPanel candidateId={candidate.id} initialPros={candidate.pros} initialCons={candidate.cons} />
+          </div>
+        )
+      },
+      {
+        id: "contact",
+        title: "Contact",
+        node: (
+          <div className="h-full overflow-auto rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Contact</p>
+            <div className="mt-3 space-y-2 text-sm">
+              <div>
+                <div className={labelClass}>Email</div>
+                <div className="mt-0.5 break-words text-brand-lea dark:text-slate-100">{candidate.primaryEmail ?? "No email"}</div>
+              </div>
+              <div>
+                <div className={labelClass}>Phone</div>
+                <div className="mt-0.5 text-brand-lea dark:text-slate-100">{candidate.primaryPhone ?? "No phone"}</div>
+              </div>
+            </div>
+          </div>
+        )
+      },
+      {
+        id: "record",
+        title: "Record",
+        node: (
+          <div className="h-full overflow-auto rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Record</p>
+            <div className="mt-3 space-y-1.5 text-sm text-brand-grey dark:text-slate-400">
+              <div>Owner: {candidate.owner ?? "Unassigned"}</div>
+              <div>Source: {candidate.source ?? "Not recorded"}</div>
+              <div>Created: {formatDate(candidate.createdAt)}</div>
+              <div>Updated: {formatDate(candidate.updatedAt)}</div>
+            </div>
+          </div>
+        )
+      }
+    ],
+    [candidate]
+  );
+
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
       {error && <div className="rounded border border-red-500/30 bg-red-50 dark:bg-red-500/15 p-3 text-sm text-red-700 dark:text-red-300">{error}</div>}
@@ -480,87 +570,7 @@ export function CandidateProfileWorkspace({
               savedLayout={savedLayout}
               savedWidgets={savedWidgets}
               defaultLayout={PROFILE_DEFAULT_LAYOUT}
-              panels={[
-                {
-                  id: "doc-viewer",
-                  title: "Documents",
-                  node: (
-                    <div className="h-full overflow-auto [&>*]:min-h-full">
-                      <CandidateDocuments candidateId={candidate.id} files={candidate.files} />
-                    </div>
-                  )
-                },
-                {
-                  id: "flight",
-                  title: "Flight profile",
-                  node: (
-                    <div className="h-full overflow-auto [&>*]:min-h-full">
-                      <FlightProfilePanel candidateId={candidate.id} metrics={candidate.metrics} hasDocuments={candidate.files.length > 0} />
-                    </div>
-                  )
-                },
-                {
-                  id: "checklist",
-                  title: "Document checklist",
-                  node: (
-                    <div className="h-full overflow-auto [&>*]:min-h-full">
-                      <DocumentChecklist files={candidate.files} />
-                    </div>
-                  )
-                },
-                {
-                  id: "currency",
-                  title: "Currency",
-                  node: (
-                    <div className="h-full overflow-auto [&>*]:min-h-full">
-                      <CurrencyPanel files={candidate.files} />
-                    </div>
-                  )
-                },
-                {
-                  id: "proscons",
-                  title: "Pros & cons",
-                  node: (
-                    <div className="h-full overflow-auto [&>*]:min-h-full">
-                      <ProConPanel candidateId={candidate.id} initialPros={candidate.pros} initialCons={candidate.cons} />
-                    </div>
-                  )
-                },
-                {
-                  id: "contact",
-                  title: "Contact",
-                  node: (
-                    <div className="h-full overflow-auto rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-                      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Contact</p>
-                      <div className="mt-3 space-y-2 text-sm">
-                        <div>
-                          <div className={labelClass}>Email</div>
-                          <div className="mt-0.5 break-words text-brand-lea dark:text-slate-100">{candidate.primaryEmail ?? "No email"}</div>
-                        </div>
-                        <div>
-                          <div className={labelClass}>Phone</div>
-                          <div className="mt-0.5 text-brand-lea dark:text-slate-100">{candidate.primaryPhone ?? "No phone"}</div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                },
-                {
-                  id: "record",
-                  title: "Record",
-                  node: (
-                    <div className="h-full overflow-auto rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-                      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Record</p>
-                      <div className="mt-3 space-y-1.5 text-sm text-brand-grey dark:text-slate-400">
-                        <div>Owner: {candidate.owner ?? "Unassigned"}</div>
-                        <div>Source: {candidate.source ?? "Not recorded"}</div>
-                        <div>Created: {formatDate(candidate.createdAt)}</div>
-                        <div>Updated: {formatDate(candidate.updatedAt)}</div>
-                      </div>
-                    </div>
-                  )
-                }
-              ]}
+              panels={documentPanels}
             />
           )}
 

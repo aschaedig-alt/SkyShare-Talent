@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import type { RoleName } from "@/lib/auth/roles";
 import { authOptions } from "@/auth";
@@ -21,7 +22,19 @@ function coerceRole(sessionRole: string | null | undefined): RoleName | null {
   return isRoleName(sessionRole) ? sessionRole : null;
 }
 
-export async function getWorkspaceModuleAccessPolicy(): Promise<ModuleAccessPolicy> {
+// Wrapped in React's cache() because this single row is read at least TWICE on
+// every page: once by AppShell (which the root layout renders on every route)
+// and again by each page's own requireModulePageAccess(). cache() is per-request
+// and per-argument, so the second and later calls in a request reuse the first
+// one's promise instead of making another Neon round trip. Every caller is
+// server-side (server components, route handlers, server-only lib modules) —
+// verified before wrapping. Outside a React request scope (an ad-hoc tsx script)
+// cache() degrades to a plain call, so scripts still work, just uncached.
+//
+// The corollary: a save inside the same request will NOT be visible to a later
+// read in that same request. No caller does that today — the settings POST route
+// returns the normalized policy it just saved rather than re-reading it.
+export const getWorkspaceModuleAccessPolicy = cache(async (): Promise<ModuleAccessPolicy> => {
   const setting = await prisma.workspaceSetting.findFirst({
     where: {
       scope: workspaceSettingScope,
@@ -41,7 +54,7 @@ export async function getWorkspaceModuleAccessPolicy(): Promise<ModuleAccessPoli
   } catch {
     return createDefaultModuleAccessPolicy();
   }
-}
+});
 
 export async function saveWorkspaceModuleAccessPolicy(policy: ModuleAccessPolicy) {
   const normalized = normalizeModuleAccessPolicy(policy);

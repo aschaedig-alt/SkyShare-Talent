@@ -45,7 +45,21 @@ export function EditableGrid({
 
   const [widgets, setWidgets] = useState<WidgetInstance[]>(savedWidgets ?? []);
 
-  const itemIds = useMemo(() => [...panels.map((p) => p.id), ...widgets.map((w) => w.i)], [panels, widgets]);
+  // The layout is derived from the SET of panel/widget ids, so that set — BY VALUE —
+  // is what this memo must depend on. It used to depend on the panels ARRAY IDENTITY,
+  // which meant any parent re-render that rebuilt the array (even with the exact same
+  // panels) churned itemIds, re-ran buildInitial, and fired the effect below that
+  // replaces the layout — collapsing the arrangement the user was working in. It was
+  // worst where a re-render arrives on a timer: a toast that clears itself after a
+  // save reset the grid seconds later, with nothing on screen to explain why.
+  // Joining the ids makes the dependency value-stable, so every caller is protected
+  // whether or not it memoizes its own panels array.
+  const itemIdsKey = [...panels.map((p) => p.id), ...widgets.map((w) => w.i)].join("|");
+  const itemIds = useMemo(
+    () => [...panels.map((p) => p.id), ...widgets.map((w) => w.i)],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [itemIdsKey]
+  );
 
   const buildInitial = useMemo(
     () => (): GridItem[] => {
