@@ -217,7 +217,7 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
                       className="inline-flex items-center justify-center rounded transition hover:bg-brand-gold/10"
                     >
                       {c.status === "DONE" ? (
-                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
                           <svg width="13" height="13" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                         </span>
                       ) : c.dueSoon ? (

@@ -41,7 +41,7 @@ function fmtDate(iso: string | null) {
 function Glyph({ status }: { status: GridTaskStatus }) {
   if (status === "DONE")
     return (
-      <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+      <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
         <svg width="11" height="11" viewBox="0 0 12 12">
           <path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>

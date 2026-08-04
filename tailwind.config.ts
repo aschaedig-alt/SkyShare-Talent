@@ -23,7 +23,19 @@ const config: Config = {
           black: "#302f31",
           // Dark-mode card/panel surface (single source of truth — was a
           // hardcoded #10243a literal repeated ~440x across components).
-          panel: "#10243a"
+          panel: "#10243a",
+          // Dark-mode FIELD surface — inputs, textareas and selects, one step
+          // darker than `panel` so a field reads as recessed against the card it
+          // sits on. Tokenized for the same reason `panel` was: the raw #0f2033
+          // literal had re-accumulated to ~97 uses across 39 files, and 33 of
+          // those also use `panel`, so the two dark surfaces render side by side
+          // with no name to tell them apart. Use `dark:bg-brand-field`.
+          field: "#0f2033",
+          // Dark-mode counterpart to `eden` — the same secondary/label text role,
+          // lightened so it stays legible on `panel`/`field`. `eden` itself is far
+          // too dark to read on a dark surface. Use `dark:text-brand-edenOnDark`
+          // wherever light mode uses `text-brand-eden`.
+          edenOnDark: "#8fb3d6"
         },
         // Compliments by SkyShare — company value colors (handoff §3).
         // Each value has a DEFAULT (accent bars / bar fills), a `light` tint

@@ -226,7 +226,7 @@ export function EmployeeJourney({ hireId, journey, roleTitleOptions }: Props) {
         </div>
         <button
           onClick={() => setAdding(true)}
-          className="inline-flex items-center gap-1.5 rounded bg-white/95 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:bg-white hover:shadow-glow"
+          className="inline-flex items-center gap-1.5 rounded bg-white/95 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:bg-white hover:shadow-glow dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/20"
         >
           <Plus className="h-4 w-4" /> Record role change
         </button>

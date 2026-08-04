@@ -113,8 +113,8 @@ export function ProjectChecklistWorkspace() {
                     <div key={item.id} className="flex items-start gap-3 text-sm">
                       <div className="mt-0.5 flex-shrink-0">
                         {item.status === "completed" ? (
-                          <div className="flex h-5 w-5 items-center justify-center rounded bg-emerald-100">
-                            <Check className="h-3 w-3 text-emerald-700" />
+                          <div className="flex h-5 w-5 items-center justify-center rounded bg-emerald-100 dark:bg-emerald-500/15">
+                            <Check className="h-3 w-3 text-emerald-700 dark:text-emerald-300" />
                           </div>
                         ) : item.status === "in-progress" ? (
                           <div className="h-5 w-5 rounded border-2 border-dashed border-amber-400" />
@@ -127,9 +127,9 @@ export function ProjectChecklistWorkspace() {
                           <span
                             className={clsx(
                               "font-medium",
-                              item.status === "completed" && "text-emerald-700",
-                              item.status === "in-progress" && "text-amber-700",
-                              item.status === "upcoming" && "text-slate-600"
+                              item.status === "completed" && "text-emerald-700 dark:text-emerald-300",
+                              item.status === "in-progress" && "text-amber-700 dark:text-amber-300",
+                              item.status === "upcoming" && "text-slate-600 dark:text-slate-400"
                             )}
                           >
                             {item.label}

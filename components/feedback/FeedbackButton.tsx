@@ -248,8 +248,8 @@ export function FeedbackButton() {
 
           {done ? (
             <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
-                <Check className="h-5 w-5 text-emerald-700" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/15">
+                <Check className="h-5 w-5 text-emerald-700 dark:text-emerald-300" />
               </div>
               <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">Thanks for the feedback!</p>
               <p className="text-xs text-brand-grey dark:text-slate-400">We&apos;ll take a look.</p>

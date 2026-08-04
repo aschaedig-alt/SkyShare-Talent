@@ -17,7 +17,33 @@ type ScheduleInterviewFormProps = {
   prefilledDate?: Date | null;
 };
 
-const statusOptions = ["SCHEDULED", "COMPLETED", "CANCELLED"];
+/**
+ * Interview status options — friendly LABEL for display, raw enum `value` for the
+ * database. The stored strings keep the legacy British "CANCELLED" spelling that
+ * lib/validation/interview.ts and the Google sync both expect; only the label is
+ * Americanised, so Calendar now says "Canceled" like the Events module rather than
+ * putting both spellings on screen at once.
+ *
+ * Shared with EditInterviewModal so the two screens cannot drift apart. It would
+ * belong in lib/interviews/constants.ts alongside INTERVIEW_OUTCOMES/INTERVIEW_TYPES;
+ * moving it there is a follow-up.
+ */
+export const INTERVIEW_STATUSES = [
+  { value: "SCHEDULED", label: "Scheduled" },
+  { value: "COMPLETED", label: "Completed" },
+  // "Canceled", one L, to match the spelling the Events and Travel modules
+  // already use. The STORED value keeps the database's two-L enum.
+  { value: "CANCELLED", label: "Canceled" }
+] as const;
+
+/**
+ * The display label for a stored interview status, for the places that show a
+ * status as text rather than as a dropdown. Falls back to the raw value so an
+ * enum added later shows something rather than nothing.
+ */
+export function interviewStatusLabel(status: string): string {
+  return INTERVIEW_STATUSES.find((s) => s.value === status)?.label ?? status;
+}
 
 export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], prefilledDate }: ScheduleInterviewFormProps) {
   const router = useRouter();
@@ -244,9 +270,9 @@ export function ScheduleInterviewForm({ candidates, jobs, interviewers = [], pre
           <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
             Status
             <select name="status" className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel dark:text-slate-100 dark:[color-scheme:dark]">
-              {statusOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
+              {INTERVIEW_STATUSES.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>

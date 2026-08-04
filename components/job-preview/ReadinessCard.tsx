@@ -31,7 +31,7 @@ export function ReadinessCard({ job, warnings, compact = false }: ReadinessCardP
             ? `${warnings.length} validation warning${warnings.length === 1 ? "" : "s"}`
             : "Ready check clean"}
         </div>
-        <div className="ml-auto rounded bg-white/70 px-2 py-1 text-xs font-bold text-brand-eden">
+        <div className="ml-auto rounded bg-white/70 px-2 py-1 text-xs font-bold text-brand-eden dark:bg-white/10 dark:text-brand-edenOnDark">
           {completeCount}/{checklist.length}
         </div>
       </div>

@@ -659,7 +659,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
 function Flag({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick} className="inline-flex items-center justify-center rounded p-0.5 transition hover:bg-brand-gold/10" title={on ? "Ready — click to unset" : "Not ready"}>
-      {on ? <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><svg width="11" height="11" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></span> : <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/30" />}
+      {on ? <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"><svg width="11" height="11" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></span> : <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/30" />}
     </button>
   );
 }
@@ -682,7 +682,12 @@ function PrepRow({
   return (
     <div className="group flex items-center gap-2 border-b border-brand-lea/5 py-1.5 dark:border-white/10">
       <button onClick={() => onToggle(t.id, !t.done)} aria-label={t.done ? "Mark not done" : "Mark done"} className="shrink-0">
-        {t.done ? <span className="text-emerald-600"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#d1fae5" /><path d="M5 8.5 L7 10.5 L11 6" fill="none" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span> : <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/40" />}
+        {/* The tick's two colours were SVG presentation attributes, which no dark:
+            class can reach — so they stayed at the light-mode hexes and glared on
+            the dark page. Tailwind fill- and stroke- utilities emit the identical
+            values (fill-emerald-100 is #d1fae5, stroke-emerald-600 is #059669), so
+            light mode is unchanged and dark mode now has a variant. */}
+        {t.done ? <span><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" className="fill-emerald-100 dark:fill-emerald-500/20" /><path d="M5 8.5 L7 10.5 L11 6" fill="none" className="stroke-emerald-600 dark:stroke-emerald-300" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span> : <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/40" />}
       </button>
       <span className={clsx("flex-1 text-[12.5px]", t.done ? "text-brand-grey line-through dark:text-slate-400" : "text-brand-black dark:text-slate-100")}>{t.label}</span>
 

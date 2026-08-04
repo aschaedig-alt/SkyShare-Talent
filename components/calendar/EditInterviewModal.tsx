@@ -8,6 +8,7 @@ import type { CalendarData } from "@/lib/data/calendar";
 import { interviewTypes, INTERVIEW_TYPE_META, DEFAULT_INTERVIEW_TYPE } from "@/lib/calendar/interview-types";
 import { resolveDepartmentKey } from "@/lib/calendar/departments";
 import { InterviewerPicker } from "@/components/calendar/InterviewerPicker";
+import { INTERVIEW_STATUSES } from "@/components/calendar/ScheduleInterviewForm";
 import { useDialogClose } from "@/lib/hooks/useDialogClose";
 
 type Interview = CalendarData["interviews"][number];
@@ -19,8 +20,6 @@ interface EditInterviewModalProps {
   onClose: () => void;
   onSaved: () => void;
 }
-
-const statusOptions = ["SCHEDULED", "COMPLETED", "CANCELLED"];
 
 // Convert ISO to datetime-local input value (local time)
 function toDateTimeLocal(iso: string): string {
@@ -169,9 +168,9 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
                 defaultValue={interview.status}
                 className="rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-brand-panel dark:text-slate-100 dark:[color-scheme:dark]"
               >
-                {statusOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
+                {INTERVIEW_STATUSES.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>
