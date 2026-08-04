@@ -3,12 +3,18 @@ import { ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getContentBlockById } from "@/lib/data/jobs";
 import { blockApplyToJobsSchema } from "@/lib/validation/blocks";
+import { requireApiPermission } from "@/lib/auth/route-auth";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
 export async function POST(request: Request, context: RouteContext) {
+  const authResult = await requireApiPermission("jobs:write");
+  if (!authResult.ok) {
+    return (authResult as { ok: false; response: Response }).response;
+  }
+
   try {
     const { id } = await context.params;
     const payload = blockApplyToJobsSchema.parse(await request.json());

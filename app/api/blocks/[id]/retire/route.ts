@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getContentBlockById } from "@/lib/data/jobs";
 import { blockRetireSchema } from "@/lib/validation/blocks";
+import { requireApiPermission } from "@/lib/auth/route-auth";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -67,6 +68,11 @@ async function migrateUsages(blockId: string, replacementBlockId: string | null 
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const authResult = await requireApiPermission("jobs:write");
+  if (!authResult.ok) {
+    return (authResult as { ok: false; response: Response }).response;
+  }
+
   try {
     const { id } = await context.params;
     const payload = blockRetireSchema.parse(await request.json());
@@ -94,6 +100,11 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
+  const authResult = await requireApiPermission("jobs:write");
+  if (!authResult.ok) {
+    return (authResult as { ok: false; response: Response }).response;
+  }
+
   try {
     const { id } = await context.params;
     const payload = blockRetireSchema.parse(await request.json().catch(() => ({})));

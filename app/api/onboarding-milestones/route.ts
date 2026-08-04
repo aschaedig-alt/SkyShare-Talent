@@ -5,6 +5,10 @@ import { addMilestone, editMilestone, removeMilestone, reorderMilestones, getMil
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const auth = await requireApiPermission("candidates:read");
+  if (!auth.ok) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
   return NextResponse.json({ milestones: await getMilestoneCatalog() });
 }
 

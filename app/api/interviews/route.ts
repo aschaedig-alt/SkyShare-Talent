@@ -3,8 +3,14 @@ import { ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
 import { interviewCreateSchema } from "@/lib/validation/interview";
 import { pushInterviewToGoogle } from "@/lib/google/interview-sync";
+import { requireApiPermission } from "@/lib/auth/route-auth";
 
 export async function POST(request: Request) {
+  const authResult = await requireApiPermission("calendar:write");
+  if (!authResult.ok) {
+    return (authResult as { ok: false; response: Response }).response;
+  }
+
   try {
     const payload = interviewCreateSchema.parse(await request.json());
 

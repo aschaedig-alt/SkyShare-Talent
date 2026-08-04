@@ -21,11 +21,34 @@ export async function getBlockedEmails(): Promise<string[]> {
     select: { valueJson: true }
   });
   if (!row?.valueJson) return [];
+
+  // A stored blocklist we cannot read FAILS OPEN — it returns an empty list, so
+  // isEmailBlocked() answers false for everyone and nobody is revoked. That is a
+  // deliberate choice, not an oversight: this runs on the sign-in path and on every
+  // access gate, so failing closed on a corrupt setting would lock the ENTIRE
+  // company out of the app to keep out the handful of people on the list. The
+  // blast radius of the safe-looking option is much larger than the risk it covers.
+  //
+  // The trade-off is only acceptable if the corruption is noticed, hence the loud
+  // logs below — a silent empty return is what made this dangerous. If one of these
+  // fires, a revoked person may still have access: fix the WorkspaceSetting row
+  // (scope "workspace", key "auth-blocklist") and treat it as urgent.
   try {
     const parsed = JSON.parse(row.valueJson) as unknown;
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed)) {
+      console.error(
+        `[auth/blocklist] WorkspaceSetting ${SCOPE}/${KEY} parsed as ${typeof parsed}, expected an array. ` +
+          `Failing OPEN — nobody is blocked until this is fixed. Stored value: ${row.valueJson.slice(0, 200)}`
+      );
+      return [];
+    }
     return parsed.map((e) => norm(String(e))).filter(Boolean);
-  } catch {
+  } catch (error) {
+    console.error(
+      `[auth/blocklist] WorkspaceSetting ${SCOPE}/${KEY} is not valid JSON. ` +
+        `Failing OPEN — nobody is blocked until this is fixed. Stored value: ${row.valueJson.slice(0, 200)}`,
+      error
+    );
     return [];
   }
 }

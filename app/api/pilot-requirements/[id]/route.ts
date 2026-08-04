@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
 import { pilotRequirementUpdateSchema } from "@/lib/validation/pilot-requirement";
+import { requireApiPermission } from "@/lib/auth/route-auth";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -45,6 +46,9 @@ function summarizeGateChanges(
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const auth = await requireApiPermission("requirements:write");
+  if (!auth.ok) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+
   try {
     const { id } = await context.params;
     const payload = pilotRequirementUpdateSchema.parse(await request.json());

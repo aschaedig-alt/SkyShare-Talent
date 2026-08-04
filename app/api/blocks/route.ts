@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getContentBlockById } from "@/lib/data/jobs";
 import { blockCreateSchema } from "@/lib/validation/blocks";
+import { requireApiPermission } from "@/lib/auth/route-auth";
 
 function clean(value: string | null | undefined) {
   const trimmed = value?.trim();
@@ -10,6 +11,11 @@ function clean(value: string | null | undefined) {
 }
 
 export async function POST(request: Request) {
+  const authResult = await requireApiPermission("jobs:write");
+  if (!authResult.ok) {
+    return (authResult as { ok: false; response: Response }).response;
+  }
+
   try {
     const payload = blockCreateSchema.parse(await request.json());
 

@@ -47,6 +47,8 @@ const protectedApiPrefixes = [
   "/api/interviews",
   "/api/job-block-instances",
   "/api/jobs",
+  "/api/onboarding-milestones",
+  "/api/orientation",
   "/api/pilot-requirements",
   "/api/workspace-settings"
 ];

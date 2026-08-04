@@ -3,6 +3,7 @@ import { z, ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
 import { serializeJob } from "@/lib/data/jobs";
 import { jobStatusSchema } from "@/lib/validation/job";
+import { requireApiPermission } from "@/lib/auth/route-auth";
 
 const bulkStatusSchema = z.object({
   jobIds: z.array(z.string().min(1)).min(1, "Choose at least one job."),
@@ -25,6 +26,11 @@ const jobInclude = {
 };
 
 export async function PATCH(request: Request) {
+  const authResult = await requireApiPermission("jobs:write");
+  if (!authResult.ok) {
+    return (authResult as { ok: false; response: Response }).response;
+  }
+
   try {
     const payload = bulkStatusSchema.parse(await request.json());
     const uniqueJobIds = Array.from(new Set(payload.jobIds));
