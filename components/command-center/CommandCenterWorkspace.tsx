@@ -34,9 +34,13 @@ export function CommandCenterWorkspace({ data }: CommandCenterWorkspaceProps) {
             <Link key={key} href={href} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 transition-shadow hover:shadow-glow dark:bg-brand-panel dark:ring-white/10">
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-grey dark:text-slate-400">{label}</div>
               <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{data.stats[key]}</div>
-              <div className="mt-2 h-1 rounded-full bg-brand-gold/25">
-                <div className="h-1 w-2/3 rounded-full bg-brand-sweet" />
-              </div>
+              {/*
+                A hardcoded w-2/3 meter used to sit here, inside the map, so
+                every tile showed a bar reading two thirds regardless of its
+                number. No dynamic width was ever computed. It read as data and
+                was not, so it is gone rather than reworked — the number is the
+                information on this tile.
+              */}
             </Link>
           ))}
         </section>

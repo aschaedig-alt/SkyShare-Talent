@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { getVisibleNavigationGroups, type ModuleAccessPolicy } from "@/lib/navigation/modules";
 import type { RoleName } from "@/lib/auth/roles";
@@ -8,9 +9,22 @@ import type { RoleName } from "@/lib/auth/roles";
 const SCOPE = "user-pref";
 const keyFor = (userId: string) => `home:${userId}`;
 
-export const DEFAULT_HOME = "/command-center";
+// The Command Center's home. It moved to /settings/command-center on Aug 3 and
+// is now ADMIN-ONLY, which is why the landing page below can no longer be a
+// single hardcoded href: pointing every role at a page most of them are
+// forbidden would have walled them at login with a 404.
+export const DEFAULT_HOME = "/settings/command-center";
 
-export async function getUserHome(userId: string | null | undefined): Promise<string | null> {
+// Where somebody goes when they can see nothing else at all. /account is the
+// preferences page and is deliberately NOT module-gated, so it is reachable by
+// any signed-in user and cannot itself bounce them onwards.
+const FALLBACK_HOME = "/account";
+
+// Per-request cache, keyed by userId: on "/" and on /account both the AppShell
+// and the page itself resolve the same user's home, which was two identical
+// round trips for one row. A save is not visible to a read later in the SAME
+// request; the user-home POST route returns the href it saved, so nothing does.
+export const getUserHome = cache(async (userId: string | null | undefined): Promise<string | null> => {
   if (!userId) return null;
   const row = await prisma.workspaceSetting.findFirst({ where: { scope: SCOPE, key: keyFor(userId) }, select: { valueJson: true } });
   if (!row?.valueJson) return null;
@@ -20,7 +34,7 @@ export async function getUserHome(userId: string | null | undefined): Promise<st
   } catch {
     return null;
   }
-}
+});
 
 export async function setUserHome(userId: string, href: string | null): Promise<void> {
   const key = keyFor(userId);
@@ -52,10 +66,27 @@ export function visibleHomeChoices(policy: ModuleAccessPolicy, role: RoleName): 
   return choices;
 }
 
+// Where a role lands when they have expressed no preference — and, just as
+// importantly, where they land when the preference they DID express points at a
+// page they can no longer see.
+//
+// This has to be computed per role rather than read from a constant. Admins keep
+// the Command Center, which is where everybody landed before it moved, so nothing
+// changes for them. Everyone else gets the first nav item they can actually see,
+// which is derived from the same visibility rules the sidebar uses — so it can
+// never name a page the user is forbidden.
+function defaultHomeFor(choices: HomeChoice[]): string {
+  if (choices.some((c) => c.href === DEFAULT_HOME)) return DEFAULT_HOME;
+  return choices[0]?.href ?? FALLBACK_HOME;
+}
+
 // The effective landing href: the user's choice if it's still a page they can see,
-// otherwise the default. Used by the root redirect and the sidebar Home button.
+// otherwise the default for their role. Used by the root redirect and the sidebar
+// Home button.
 export async function resolveUserHome(userId: string | null | undefined, policy: ModuleAccessPolicy, role: RoleName): Promise<string> {
+  const choices = visibleHomeChoices(policy, role);
+  const fallback = defaultHomeFor(choices);
   const chosen = await getUserHome(userId);
-  if (!chosen) return DEFAULT_HOME;
-  return visibleHomeChoices(policy, role).some((c) => c.href === chosen) ? chosen : DEFAULT_HOME;
+  if (!chosen) return fallback;
+  return choices.some((c) => c.href === chosen) ? chosen : fallback;
 }

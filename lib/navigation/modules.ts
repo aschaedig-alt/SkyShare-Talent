@@ -100,21 +100,14 @@ export type NavigationGroup = {
   sections: NavigationSection[];
 };
 
+// The Home group used to sit here holding a single item, the Command Center.
+// On Aug 3 the Command Center moved under Admin > Settings and became
+// admin-only, which left the group empty, so it is gone rather than kept as an
+// empty tile. Note the nav item below carries id "settings", NOT
+// "command-center": the id is what the access policy is keyed on, and using
+// "settings" is what makes it appear and disappear with the rest of the Admin
+// section instead of needing its own visibility rule.
 export const navigationGroups: readonly NavigationGroup[] = [
-  {
-    id: "home",
-    label: "Home",
-    icon: LayoutDashboard,
-    sections: [
-      {
-        id: "home",
-        label: "Home",
-        items: [
-          { id: "command-center", href: "/command-center", label: "Command Center", icon: LayoutDashboard }
-        ]
-      }
-    ]
-  },
   {
     id: "recruiting",
     label: "Recruiting",
@@ -257,6 +250,7 @@ export const navigationGroups: readonly NavigationGroup[] = [
         label: "Settings",
         items: [
           { id: "settings", href: "/settings", label: "General", icon: SlidersHorizontal },
+          { id: "settings", href: "/settings/command-center", label: "Command Center", icon: LayoutDashboard },
           { id: "settings", href: "/settings/users", label: "Team Members", icon: Users },
           { id: "settings", href: "/settings/activity", label: "Activity", icon: Activity },
           { id: "settings", href: "/settings/feedback", label: "Feedback", icon: MessageSquare },
