@@ -81,9 +81,6 @@ function StatsPanel({ stats }: { stats: RecruitingJobsData["stats"] }) {
         <div key={key} className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">{label}</div>
           <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{stats[key]}</div>
-          <div className="mt-2 h-1 rounded-full bg-brand-gold/25">
-            <div className="h-1 w-2/3 rounded-full bg-brand-sweet" />
-          </div>
         </div>
       ))}
     </section>

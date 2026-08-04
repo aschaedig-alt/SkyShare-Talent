@@ -59,9 +59,6 @@ export function ImportsWorkspace({ data }: ImportsWorkspaceProps) {
               {label}
             </div>
             <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{data.stats[key]}</div>
-            <div className="mt-2 h-1 rounded-full bg-brand-gold/25">
-              <div className="h-1 w-2/3 rounded-full bg-brand-sweet" />
-            </div>
           </div>
         ))}
       </section>

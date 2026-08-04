@@ -7,6 +7,7 @@ import { canEditScoring, getProfileScoringConfig } from "@/lib/matching/scoring-
 import { getRequirementFeedback } from "@/lib/matching/match-feedback";
 import { positionFor, fleetOrderIndex, fleetSeatRank, fleetPositionBySlug, aircraftForSlugs } from "@/lib/fleet/positions";
 import { parseStringArray } from "@/lib/json";
+import { getScanPoolCounts } from "@/lib/candidates/scan-pool.server";
 
 /** SkyShare roles first, then Managed, then anything unspecified. */
 function operatorRank(operatorType: string | null): number {
@@ -260,7 +261,14 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
     status: { in: ["ACTIVE", "INACTIVE", "EVERGREEN"] }
   };
 
-  const [rows, total, active, needsReview, catalogItems, scannedCount] = await Promise.all([
+  // The "N active candidates in system" line has to be the SAME number before and
+  // after somebody presses Scan. It used to be its own inline
+  // count({ status: "ACTIVE" }) here — about 200 — while the scan itself reported
+  // the canonical pool of ~3,343, so the sentence changed by 16x on a button press
+  // that changed no data. Read the count from getScanPoolCounts, the same helper
+  // the scan uses (see lib/candidates/scan-pool.ts for what the pool IS); never
+  // re-state the predicate here, because that duplication is what drifted.
+  const [rows, total, active, needsReview, catalogItems, scanPoolCounts] = await Promise.all([
     prisma.pilotRequirement.findMany({
       where: onlyCurrent,
       orderBy: [{ status: "asc" }, { title: "asc" }],
@@ -283,7 +291,7 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
     prisma.pilotRequirement.count({ where: { ...onlyCurrent, status: "ACTIVE" } }),
     prisma.pilotRequirement.count({ where: { ...onlyCurrent, reviewStatus: { not: "APPROVED" } } }),
     prisma.requirementCatalogItem.count({ where: { archivedAt: null } }),
-    prisma.candidate.count({ where: { status: "ACTIVE" } })
+    getScanPoolCounts()
   ]);
 
   const allListItems = rows.map(toListItem);
@@ -385,7 +393,7 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
     selectedRequirement,
     candidateMatches,
     canEditScoring: await canEditScoring(),
-    scannedCount,
+    scannedCount: scanPoolCounts.total,
     stats: {
       total,
       active,
