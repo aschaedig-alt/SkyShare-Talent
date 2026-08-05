@@ -15,6 +15,7 @@ import {
   checklistFor,
   checklistProgress,
   derivedState,
+  statusOf,
   tripNeedsReimbursement,
   REIMBURSEMENT_STAGES,
   EMPTY_STATE,
@@ -79,7 +80,10 @@ export function outstandingFor(trip: TravelTripView, state: TripChecklistState):
         if (!d?.done) outstanding.push({ key: item.key, label: item.label, ...(d?.note ? { note: d.note } : {}) });
         continue;
       }
-      if (!state.ticks[item.key]?.done) outstanding.push({ key: item.key, label: item.label });
+      // Only TODO is outstanding. N/A was a decision that the item does not
+      // apply to this trip, so listing it as "still to do" would be arguing
+      // with somebody who already answered the question.
+      if (statusOf(state, item.key) === "TODO") outstanding.push({ key: item.key, label: item.label });
     }
   }
 

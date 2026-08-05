@@ -2,19 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { clsx } from "clsx";
-import { Check, Lock, CircleDashed } from "lucide-react";
+import { Check, Lock, CircleDashed, MinusCircle } from "lucide-react";
 import {
   checklistFor,
   checklistProgress,
   derivedState,
   tripNeedsReimbursement,
+  CHECKLIST_STATUSES,
   REIMBURSEMENT_STAGES,
   VISIT_FIELDS,
   EMPTY_STATE,
   type TripChecklistState,
-  type ChecklistItem
+  type ChecklistItem,
+  type ChecklistStatus,
+  type ChecklistTick
 } from "@/lib/travel/checklist";
-import { loadChecklist, setChecklistTick, setVisitField, setReimbursementStage } from "@/app/travel/actions";
+import { loadChecklist, setChecklistStatus, setVisitField, setReimbursementStage } from "@/app/travel/actions";
 import type { TravelTripView } from "@/lib/data/travel";
 
 /**
@@ -50,9 +53,9 @@ export function TravelChecklist({ trip }: { trip: TravelTripView }) {
     if (ok) setTimeout(() => setSaveState((s) => (s === "saved" ? "idle" : s)), 1600);
   }
 
-  async function toggle(key: string, done: boolean) {
+  async function setStatus(key: string, status: ChecklistStatus) {
     setSaveState("saving");
-    const res = await setChecklistTick(trip.id, key, done);
+    const res = await setChecklistStatus(trip.id, key, status);
     if (res.ok && res.state) setState(res.state);
     flash(Boolean(res.ok));
   }
@@ -95,6 +98,7 @@ export function TravelChecklist({ trip }: { trip: TravelTripView }) {
           ) : null}
           <span className="text-[11px] font-semibold text-brand-lea dark:text-slate-200">
             {progress.done} of {progress.total}
+            {progress.na ? ` · ${progress.na} n/a` : ""}
             {progress.blocked ? ` · ${progress.blocked} waiting` : ""}
           </span>
         </div>
@@ -111,7 +115,7 @@ export function TravelChecklist({ trip }: { trip: TravelTripView }) {
                   item={item}
                   trip={trip}
                   tick={state.ticks[item.key]}
-                  onToggle={(done) => void toggle(item.key, done)}
+                  onStatus={(status) => void setStatus(item.key, status)}
                 />
               ))}
             </ul>
@@ -170,19 +174,68 @@ export function TravelChecklist({ trip }: { trip: TravelTripView }) {
   );
 }
 
+/**
+ * To do / Done / N/A, as three buttons rather than a checkbox.
+ *
+ * Segmented rather than a <select> because there are only three options and the
+ * current one has to be readable at a glance down a list of six rows — a select
+ * hides the state behind a control that all look identical. Selected is
+ * navy + gold and hover is a gold glow, per the locked design system; the
+ * corners are the global 4px, and it is a rectangle, not a pill.
+ */
+function StatusPicker({
+  label,
+  value,
+  onChange
+}: {
+  label: string;
+  value: ChecklistStatus;
+  onChange: (status: ChecklistStatus) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={`${label} — status`}
+      className="flex shrink-0 overflow-hidden rounded border border-brand-lea/20 dark:border-white/15"
+    >
+      {CHECKLIST_STATUSES.map((s) => {
+        const active = value === s.value;
+        return (
+          <button
+            key={s.value}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange(s.value)}
+            className={clsx(
+              "px-2 py-0.5 text-[10.5px] font-semibold transition",
+              active
+                ? "bg-brand-lea text-brand-gold"
+                : "text-brand-grey hover:bg-brand-gold/20 hover:text-brand-lea dark:text-slate-400 dark:hover:bg-brand-gold/25 dark:hover:text-slate-100"
+            )}
+          >
+            {s.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function ChecklistRow({
   item,
   trip,
   tick,
-  onToggle
+  onStatus
 }: {
   item: ChecklistItem;
   trip: TravelTripView;
-  tick?: { done: boolean; at: string; by: string | null };
-  onToggle: (done: boolean) => void;
+  tick?: ChecklistTick;
+  onStatus: (status: ChecklistStatus) => void;
 }) {
   const derived = item.derived ? derivedState(trip, item.key) : null;
-  const done = item.derived ? Boolean(derived?.done) : Boolean(tick?.done);
+  const status: ChecklistStatus = tick?.status ?? "TODO";
+  const done = item.derived ? Boolean(derived?.done) : status === "DONE";
+  const notApplicable = !item.derived && status === "NA";
   const blocked = Boolean(item.waitingOn);
 
   return (
@@ -191,9 +244,11 @@ function ChecklistRow({
         "flex items-start gap-2 rounded border px-2.5 py-1.5",
         blocked
           ? "border-brand-lea/10 bg-brand-lea/[0.03] dark:border-white/5 dark:bg-white/[0.02]"
-          : done
-            ? "border-emerald-300/60 bg-emerald-50/60 dark:border-emerald-500/25 dark:bg-emerald-500/10"
-            : "border-brand-lea/12 bg-white/60 dark:border-white/10 dark:bg-white/5"
+          : notApplicable
+            ? "border-brand-lea/10 bg-brand-lea/[0.03] dark:border-white/5 dark:bg-white/[0.02]"
+            : done
+              ? "border-emerald-300/60 bg-emerald-50/60 dark:border-emerald-500/25 dark:bg-emerald-500/10"
+              : "border-brand-lea/12 bg-white/60 dark:border-white/10 dark:bg-white/5"
       )}
     >
       {blocked ? (
@@ -204,21 +259,19 @@ function ChecklistRow({
         ) : (
           <CircleDashed className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-grey dark:text-slate-500" />
         )
+      ) : notApplicable ? (
+        <MinusCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-grey dark:text-slate-500" />
+      ) : done ? (
+        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
       ) : (
-        <input
-          type="checkbox"
-          checked={done}
-          onChange={(e) => onToggle(e.target.checked)}
-          aria-label={item.label}
-          className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-brand-gold"
-        />
+        <CircleDashed className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-grey dark:text-slate-500" />
       )}
 
       <div className="min-w-0 flex-1">
         <p
           className={clsx(
             "text-[12px] font-medium",
-            blocked ? "text-brand-grey dark:text-slate-400" : "text-brand-lea dark:text-slate-100"
+            blocked || notApplicable ? "text-brand-grey dark:text-slate-400" : "text-brand-lea dark:text-slate-100"
           )}
         >
           {item.label}
@@ -234,15 +287,23 @@ function ChecklistRow({
           <p className="mt-0.5 text-[10.5px] font-medium text-brand-eden dark:text-slate-300">{derived.note}</p>
         ) : null}
 
-        {/* Who and when, because "has anyone told the supervisor" is exactly the
-            question a bare checkmark cannot answer. */}
-        {!item.derived && tick?.done ? (
+        {/* Who and when — for N/A as well as Done, because "who decided this trip
+            did not need it" is the same question as "did anyone actually tell
+            the supervisor", and a bare mark answers neither. */}
+        {!item.derived && status !== "TODO" && tick?.at ? (
           <p className="mt-0.5 text-[10.5px] text-brand-grey dark:text-slate-500">
+            {status === "NA" ? "Marked N/A · " : ""}
             {tick.by ? `${tick.by} · ` : ""}
             {new Date(tick.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
           </p>
         ) : null}
       </div>
+
+      {/* Derived and waiting-on items have no status to set: one is read from the
+          trip, the other is not ours to finish. */}
+      {!item.derived && !blocked ? (
+        <StatusPicker label={item.label} value={status} onChange={onStatus} />
+      ) : null}
     </li>
   );
 }

@@ -12,7 +12,7 @@ import {
   isTravelStatus
 } from "@/lib/travel/constants";
 import { parseTravelConfirmation, type ParsedTravel } from "@/lib/extraction/travel-confirmation";
-import { isReimbursementStage, isVisitField, type TripChecklistState } from "@/lib/travel/checklist";
+import { isChecklistStatus, isReimbursementStage, isVisitField, type TripChecklistState } from "@/lib/travel/checklist";
 import { clearTripChecklist, getTripChecklist, saveTripChecklist } from "@/lib/travel/checklist-store";
 import {
   getTravelTripView,
@@ -256,15 +256,20 @@ export async function loadChecklist(tripId: string): Promise<ChecklistResult> {
 }
 
 /**
- * Tick or untick one item. Records WHO and WHEN, because "did anyone actually
- * tell the supervisor" is the question this checklist exists to answer, and a
- * bare checkmark cannot answer it.
+ * Move one item to To do, Done or N/A. Records WHO and WHEN, because "did
+ * anyone actually tell the supervisor" is the question this checklist exists to
+ * answer, and a bare checkmark cannot answer it.
+ *
+ * N/A is stamped with the same who-and-when as a completion on purpose: deciding
+ * an item does not apply to a trip is a call somebody made, and the next person
+ * looking at it deserves to know who made it.
  */
-export async function setChecklistTick(tripId: string, key: string, done: boolean): Promise<ChecklistResult> {
+export async function setChecklistStatus(tripId: string, key: string, status: string): Promise<ChecklistResult> {
   if (!(await canEditTravel())) return { ok: false, error: "You do not have permission to edit travel." };
   if (typeof key !== "string" || !key.trim()) return { ok: false, error: "Missing item." };
+  if (!isChecklistStatus(status)) return { ok: false, error: "Unknown status." };
   const state = await saveTripChecklist(tripId, {
-    ticks: { [key]: { done, at: new Date().toISOString(), by: await actorLabel() } }
+    ticks: { [key]: { status, at: new Date().toISOString(), by: await actorLabel() } }
   });
   return { ok: true, state };
 }

@@ -216,7 +216,37 @@ export function derivedState(trip: TravelTripView, key: string): { done: boolean
 
 // --- stored state -----------------------------------------------------------
 
-export type ChecklistTick = { done: boolean; at: string; by: string | null };
+/**
+ * Three states, not a checkbox.
+ *
+ * A tick could only ever say "done" or "not done yet", so an item that simply
+ * does not apply to a trip — a local traveler who needs no itinerary, a visit
+ * with nobody to brief — sat unticked forever and made a fully-handled trip
+ * read as incomplete. N/A is a DECISION somebody made, and it is recorded with
+ * the same who-and-when as a completion.
+ *
+ * The vocabulary is deliberately identical to OnboardingTask.status
+ * (TODO | DONE | NA, prisma/schema.prisma). Travel and onboarding checklists
+ * sit on the same profiles, and two different words for the same three states
+ * is how people stop trusting either one.
+ */
+export const CHECKLIST_STATUSES = [
+  { value: "TODO", label: "To do" },
+  { value: "DONE", label: "Done" },
+  { value: "NA", label: "N/A" }
+] as const;
+
+export type ChecklistStatus = (typeof CHECKLIST_STATUSES)[number]["value"];
+
+export function isChecklistStatus(v: unknown): v is ChecklistStatus {
+  return typeof v === "string" && CHECKLIST_STATUSES.some((s) => s.value === v);
+}
+
+export function checklistStatusLabel(v: string | null | undefined): string {
+  return CHECKLIST_STATUSES.find((s) => s.value === v)?.label ?? "To do";
+}
+
+export type ChecklistTick = { status: ChecklistStatus; at: string; by: string | null };
 
 export type TripChecklistState = {
   ticks: Record<string, ChecklistTick>;
@@ -228,14 +258,56 @@ export const EMPTY_STATE: TripChecklistState = { ticks: {}, visit: {}, reimburse
 
 export type AllChecklistState = Record<string, TripChecklistState>;
 
+/**
+ * Read one stored tick, accepting the pre-tri-state shape.
+ *
+ * Ticks used to be { done: boolean }. The live blob is NOT migrated: it is one
+ * shared WorkspaceSetting row holding every trip's state, both dev and prod
+ * point at the same database, and rewriting it to change a field name is the
+ * most expensive kind of change to get wrong for the least benefit. So the old
+ * shape is read in place — done:true becomes DONE, anything else TODO — and a
+ * row is only ever rewritten when somebody next touches that item.
+ *
+ * Each tick is validated individually rather than trusting the object wholesale.
+ * A malformed `at` used to reach new Date(tick.at) in the UI and render the
+ * literal words "Invalid Date" next to somebody's name.
+ */
+function coerceTick(raw: unknown): ChecklistTick | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as { status?: unknown; done?: unknown; at?: unknown; by?: unknown };
+
+  const status: ChecklistStatus = isChecklistStatus(o.status)
+    ? o.status
+    : o.done === true
+      ? "DONE"
+      : "TODO";
+
+  const at = typeof o.at === "string" && !Number.isNaN(new Date(o.at).getTime()) ? o.at : "";
+  return { status, at, by: typeof o.by === "string" ? o.by : null };
+}
+
 /** Shape-check one trip's stored blob. Pure, so the store and the UI agree. */
 export function coerceChecklistState(raw: unknown): TripChecklistState {
   const o = (raw ?? {}) as Partial<TripChecklistState>;
+
+  const ticks: Record<string, ChecklistTick> = {};
+  if (o.ticks && typeof o.ticks === "object") {
+    for (const [key, value] of Object.entries(o.ticks as Record<string, unknown>)) {
+      const tick = coerceTick(value);
+      if (tick) ticks[key] = tick;
+    }
+  }
+
   return {
-    ticks: o.ticks && typeof o.ticks === "object" ? o.ticks : {},
+    ticks,
     visit: o.visit && typeof o.visit === "object" ? o.visit : {},
     reimbursement: isReimbursementStage(o.reimbursement) ? o.reimbursement : "NOT_STARTED"
   };
+}
+
+/** What state an item is in, with TODO as the default for anything untouched. */
+export function statusOf(state: TripChecklistState, key: string): ChecklistStatus {
+  return state.ticks[key]?.status ?? "TODO";
 }
 
 // --- roll-up ----------------------------------------------------------------
@@ -245,17 +317,27 @@ export type ChecklistProgress = {
   total: number;
   /** Items that are waiting on somebody else and cannot be finished yet. */
   blocked: number;
+  /** Items marked as not applying to this trip. */
+  na: number;
 };
 
 /**
- * How far along a trip is. Derived items count, waiting-on items do NOT — they
- * are not the user's to finish, and counting them would leave every indoc trip
- * permanently short of complete through no fault of the person doing the work.
+ * How far along a trip is.
+ *
+ * Derived items count. Waiting-on items do NOT — they are not the user's to
+ * finish, and counting them would leave every indoc trip permanently short of
+ * complete through no fault of the person doing the work.
+ *
+ * N/A items leave the DENOMINATOR rather than counting as done. Marking
+ * something not applicable is a statement that it was never part of this trip,
+ * so a trip with two N/A items reads "4 of 4", not "6 of 6" — the second would
+ * quietly inflate how much work a trip took.
  */
 export function checklistProgress(trip: TravelTripView, state: TripChecklistState): ChecklistProgress {
   let done = 0;
   let total = 0;
   let blocked = 0;
+  let na = 0;
 
   for (const section of checklistFor(trip)) {
     for (const item of section.items) {
@@ -263,12 +345,21 @@ export function checklistProgress(trip: TravelTripView, state: TripChecklistStat
         blocked += 1;
         continue;
       }
-      total += 1;
+      // Derived items are read from the trip, so they have no N/A state — the
+      // way to change one is to change the trip.
       if (item.derived) {
+        total += 1;
         if (derivedState(trip, item.key)?.done) done += 1;
-      } else if (state.ticks[item.key]?.done) {
-        done += 1;
+        continue;
       }
+
+      const status = statusOf(state, item.key);
+      if (status === "NA") {
+        na += 1;
+        continue;
+      }
+      total += 1;
+      if (status === "DONE") done += 1;
     }
   }
 
@@ -277,5 +368,5 @@ export function checklistProgress(trip: TravelTripView, state: TripChecklistStat
     if (state.reimbursement === "TRAVELER_CONFIRMED") done += 1;
   }
 
-  return { done, total, blocked };
+  return { done, total, blocked, na };
 }
