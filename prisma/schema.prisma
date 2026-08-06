@@ -731,6 +731,14 @@ model Candidate {
   // record, or a URL that never worked, which is worse than no link at all. So
   // this is filled in once, by a person who has the real link open.
   paycomLink           String?
+  // MANUAL OVERRIDE ONLY — not the source of truth, and deliberately not
+  // backfilled. A candidate's department is DERIVED from the job they applied
+  // to, then from their pilot-application document, source, or current title
+  // (see lib/candidates/departments.ts): 3,167 of 3,598 resolve from the
+  // application alone and a stored copy of that would go stale the moment an
+  // application moved. This column exists for the handful no signal reaches,
+  // and to correct a wrong inference. NULL means "use the derived value".
+  departmentOverride   String?
   historicalSourceId   String?
   tagsJson             String?
   foldersJson          String?

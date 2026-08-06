@@ -104,6 +104,99 @@ export function candidateDepartmentsFrom(rawDepartments: Array<string | null | u
 }
 
 /**
+ * A candidate's departments, with a hand-set override winning outright.
+ *
+ * The override is the ONLY stored department (Candidate.departmentOverride);
+ * everything else is derived at read time. An unrecognised stored value is
+ * ignored rather than shown, so a bad hand-edit degrades to the derived answer
+ * instead of putting a person in a department that does not exist.
+ */
+export function resolveCandidateDepartments(
+  override: string | null | undefined,
+  rawJobDepartments: Array<string | null | undefined>
+): CandidateDepartmentKey[] {
+  if (override && isCandidateDepartmentKey(override)) return [override];
+  return candidateDepartmentsFrom(rawJobDepartments);
+}
+
+/** Where a proposed department came from, so the screen can show its reasoning. */
+export type DepartmentBasis =
+  | "job-title"
+  | "pilot-application"
+  | "source"
+  | "current-title"
+  | "none";
+
+export type DepartmentProposal = {
+  key: CandidateDepartmentKey | null;
+  basis: DepartmentBasis;
+  /** Human-readable evidence, shown next to the proposal so it can be judged. */
+  evidence: string | null;
+};
+
+/**
+ * "FILLED - " is a pipeline artifact meaning the REQ was filled; it says nothing
+ * about the person and would otherwise block the title from resolving.
+ * (getCandidateProfileData has its own copy for display; this one is for matching.)
+ */
+function stripFilledPrefix(title: string | null): string | null {
+  if (!title) return null;
+  return title.replace(/^\s*FILLED\s*-\s*/i, "").trim() || null;
+}
+
+/**
+ * Propose a department for somebody no application can place.
+ *
+ * ONLY for the review screen — nothing here writes itself anywhere. Each rule is
+ * a STRUCTURED field, never resume prose, and that is deliberate: a keyword scan
+ * of extractedText looked like it classified 269 of 271 perfectly, and was in
+ * fact matching the blank form labels of the Adobe Sign pilot application
+ * template ("TOTAL FLIGHT TIME:", "TOTAL SIC TIME:"). Right answer, no reasoning
+ * — it would have called a mechanic a pilot the moment one filled in that form.
+ * documentType gives the same answer as a fact.
+ *
+ * Measured over the 305 live candidates with no department: document 268,
+ * source 12, current title 20, leaving 5 for a person.
+ */
+export function proposeDepartment(input: {
+  jobTitles: Array<string | null | undefined>;
+  hasPilotApplication: boolean;
+  source: string | null;
+  currentTitle: string | null;
+}): DepartmentProposal {
+  // A job title is the strongest of these — it is the role they applied to,
+  // just on a job whose department was never filled in.
+  for (const title of input.jobTitles) {
+    if (!title) continue;
+    const key = candidateDepartmentFromRaw(title);
+    if (key !== "unassigned" && key !== "other") {
+      return { key, basis: "job-title", evidence: `Applied to "${title}"` };
+    }
+  }
+
+  // You do not fill out a pilot application unless you are applying to fly.
+  if (input.hasPilotApplication) {
+    return { key: "flight-ops", basis: "pilot-application", evidence: "Has a signed Pilot Application on file" };
+  }
+
+  const source = input.source ?? "";
+  if (/pilot application/i.test(source) || /PIC applicants|captain applicants/i.test(source)) {
+    return { key: "flight-ops", basis: "source", evidence: `Came in via "${source}"` };
+  }
+
+  const title = stripFilledPrefix(input.currentTitle);
+  if (title) {
+    const key = candidateDepartmentFromRaw(title);
+    if (key !== "unassigned" && key !== "other") {
+      return { key, basis: "current-title", evidence: `Current title "${title}"` };
+    }
+    return { key: null, basis: "none", evidence: `Current title "${title}" does not map to a department` };
+  }
+
+  return { key: null, basis: "none", evidence: null };
+}
+
+/**
  * The raw Job.department strings that bucket into the given recruiting
  * departments — so the filter runs in the DATABASE.
  *

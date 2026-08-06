@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { Building2, X, Check } from "lucide-react";
@@ -120,10 +121,19 @@ export function CandidateDepartmentFilter({
               );
             })}
 
-            <p className="mt-1.5 border-t border-brand-lea/10 pt-1.5 text-[10px] leading-snug text-brand-grey dark:border-white/10 dark:text-slate-500">
-              Read from the job each person applied to. Unassigned means no application, or a job with no
-              department set.
-            </p>
+            <div className="mt-1.5 border-t border-brand-lea/10 pt-1.5 dark:border-white/10">
+              <p className="text-[10px] leading-snug text-brand-grey dark:text-slate-500">
+                Read from the job each person applied to, unless one was set by hand. Unassigned means no
+                application, or a job with no department set.
+              </p>
+              {/* A real link — this loads another page. */}
+              <Link
+                href="/candidates/departments"
+                className="mt-1 inline-block text-[11px] font-semibold text-brand-lea underline transition hover:text-brand-gold dark:text-slate-100"
+              >
+                Place the unassigned →
+              </Link>
+            </div>
           </div>
         </>
       ) : null}

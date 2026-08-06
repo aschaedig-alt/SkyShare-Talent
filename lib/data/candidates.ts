@@ -6,8 +6,8 @@ import { parseOfferSteps } from "@/lib/offers/steps";
 import { suggestCompanyEmail } from "@/lib/people/company-email";
 import { resolveDepartmentKey } from "@/lib/calendar/departments";
 import {
-  candidateDepartmentsFrom,
   rawJobDepartmentsFor,
+  resolveCandidateDepartments,
   type CandidateDepartmentKey
 } from "@/lib/candidates/departments";
 import { CANDIDATE_LIST_LIMIT, CANDIDATE_LIST_MAX } from "@/lib/candidates/list-config";
@@ -495,18 +495,31 @@ export async function getCandidateListData(
     const named = departmentFilter.filter((key) => key !== "unassigned");
     const wantsUnassigned = departmentFilter.includes("unassigned");
 
+    // A hand-set departmentOverride WINS over the derived value, so every branch
+    // below has to respect it in both directions: an override puts somebody IN
+    // its department, and equally keeps them OUT of the one their application
+    // would otherwise have implied. Without the `departmentOverride: null` guard
+    // on the derived branches, correcting somebody would leave them showing up
+    // under both departments.
     const branches: Array<Record<string, unknown>> = [];
     if (named.length) {
       const rawStrings = await rawJobDepartmentsFor(
         named,
         allJobDepartments.map((j) => j.department)
       );
+      branches.push({ departmentOverride: { in: named } });
       // An empty rawStrings would make `in: []` match nobody, which is the
       // correct answer: no job carries a department in those buckets.
-      branches.push({ applications: { some: { job: { department: { in: rawStrings } } } } });
+      branches.push({
+        departmentOverride: null,
+        applications: { some: { job: { department: { in: rawStrings } } } }
+      });
     }
     if (wantsUnassigned) {
-      branches.push({ NOT: { applications: { some: { job: { department: { not: null } } } } } });
+      branches.push({
+        departmentOverride: null,
+        NOT: { applications: { some: { job: { department: { not: null } } } } }
+      });
     }
 
     candidateWhere = {
@@ -610,7 +623,9 @@ export async function getCandidateListData(
       noteCount: candidate._count.notes,
       fileCount: candidate._count.files,
       applicationCount: candidate._count.applications,
-      departments: candidateDepartmentsFrom(
+      // A hand-set override wins outright — see Candidate.departmentOverride.
+      departments: resolveCandidateDepartments(
+        candidate.departmentOverride,
         (candidate as typeof candidate & { applications?: Array<{ job: { department: string | null } | null }> })
           .applications?.map((a) => a.job?.department) ?? []
       ),
@@ -729,7 +744,10 @@ export async function getCandidatesByIds(ids: string[]): Promise<CandidateListIt
       noteCount: candidate._count.notes,
       fileCount: candidate._count.files,
       applicationCount: candidate._count.applications,
-      departments: candidateDepartmentsFrom(candidate.applications.map((a) => a.job?.department)),
+      departments: resolveCandidateDepartments(
+        candidate.departmentOverride,
+        candidate.applications.map((a) => a.job?.department)
+      ),
       docMatch: null,
       paycomLink: candidate.paycomLink
     }));
