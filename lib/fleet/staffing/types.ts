@@ -85,6 +85,27 @@ export type MxPool = "Line" | "Admin";
 /** A labeled block of seats inside a maintenance group (a shift or a role). */
 export interface MxSection extends Seat {
   label: string;
+  /**
+   * Who this section reports to, when that is NOT the group's own mgr.
+   *
+   * A maintenance group carries one mgr for the whole card, which cannot
+   * express a card holding two levels — the department lead reporting to the
+   * Director, and the base leads under him reporting to the department lead.
+   * Optional and additive: a section without it inherits the group's mgr, so
+   * every existing card is unchanged.
+   */
+  reportsTo?: string;
+  /**
+   * Per-person role note, keyed by the EXACT name string as it appears on the
+   * chart — same keying rule as MxLinks, and for the same reason: the name
+   * string is the only stable identifier a section has for a person.
+   *
+   * For a seat whose occupants hold distinct named roles that the section label
+   * cannot carry, e.g. two dedicated Gulfstream leads at different bases inside
+   * one "Dedicated techs" section. Rendered through PersonRow's existing tag
+   * pills, so there is no new row markup.
+   */
+  roles?: Record<string, string>;
 }
 
 /** A maintenance group = a line station, flex pool, or admin function. */

@@ -38,6 +38,13 @@ function push(seat: Seat, bucket: FillBucket, name: string) {
   if (!arr.includes(name)) arr.push(name);
 }
 
+/** Forget one person's role note, dropping the map once it is empty. */
+function dropRole(sec: MxSection, name: string) {
+  if (!sec.roles?.[name]) return;
+  delete sec.roles[name];
+  if (Object.keys(sec.roles).length === 0) delete sec.roles;
+}
+
 type MoveDest = { gIdx: number; sIdx: number; label: string };
 
 /** One editable maintenance section in the edit-mode modal. Module-scoped so the
@@ -48,6 +55,8 @@ function MxEditSection({
   onRemove,
   onSetStatus,
   onAdjustOpen,
+  onSetReportsTo,
+  onSetRole,
   moveDests,
   onMove,
   links,
@@ -59,6 +68,8 @@ function MxEditSection({
   onRemove: (bucket: FillBucket, name: string) => void;
   onSetStatus: (from: FillBucket, to: FillBucket, name: string) => void;
   onAdjustOpen: (delta: number) => void;
+  onSetReportsTo: (value: string) => void;
+  onSetRole: (name: string, value: string) => void;
   /** Every other section this person could move to. */
   moveDests: MoveDest[];
   onMove: (bucket: FillBucket, name: string, dest: { gIdx: number; sIdx: number }, arrive: FillBucket) => void;
@@ -69,7 +80,7 @@ function MxEditSection({
   const [draftName, setDraftName] = useState("");
   const [draftBucket, setDraftBucket] = useState<FillBucket>("cand");
   // Which person has an action panel open, and which one.
-  const [action, setAction] = useState<{ name: string; kind: "move" | "link" } | null>(null);
+  const [action, setAction] = useState<{ name: string; kind: "move" | "link" | "role" } | null>(null);
   const [moveDest, setMoveDest] = useState("");
   const [moveArrive, setMoveArrive] = useState<FillBucket>("cand");
   const o = normSeat(sec);
@@ -90,10 +101,28 @@ function MxEditSection({
           {filled}/{total}
         </span>
       </div>
+      {/* Left blank, the section just inherits the card's own manager — which is
+          the right answer for every section that is not its own reporting line. */}
+      <input
+        value={sec.reportsTo ?? ""}
+        onChange={(e) => onSetReportsTo(e.target.value)}
+        placeholder="Reports to… (blank = the card's manager)"
+        aria-label={`Who ${sec.label} reports to`}
+        style={{
+          width: "100%",
+          fontSize: 11,
+          padding: "3px 6px",
+          margin: "-4px 0 8px",
+          borderRadius: 4,
+          border: "1px solid var(--line, #cdd7e2)"
+        }}
+      />
       {rows.map((r) => {
         const linkedId = links[r.name];
         const isMove = action?.name === r.name && action.kind === "move";
         const isLink = action?.name === r.name && action.kind === "link";
+        const isRole = action?.name === r.name && action.kind === "role";
+        const role = sec.roles?.[r.name] ?? "";
         return (
           <div className={`ec-row ${r.bucket === "offered" ? "of" : ""}`} key={`${r.bucket}-${r.name}`}>
             <div className="ec-line">
@@ -142,11 +171,34 @@ function MxEditSection({
                 >
                   {linkedId ? "linked" : "link"}
                 </button>
+                <button
+                  type="button"
+                  style={{ ...linkBtnStyle, borderColor: role ? "var(--gold, #eaaa00)" : undefined }}
+                  title={role ? `Role: ${role}` : "Give this person a named role"}
+                  onClick={() => setAction(isRole ? null : { name: r.name, kind: "role" })}
+                >
+                  role
+                </button>
                 <button type="button" className="del" onClick={() => onRemove(r.bucket, r.name)} title="Remove">
                   ✕
                 </button>
               </span>
             </div>
+
+            {isRole && (
+              <div style={{ display: "flex", gap: 4, marginTop: 4, alignItems: "center" }}>
+                <input
+                  value={role}
+                  onChange={(e) => onSetRole(r.name, e.target.value)}
+                  placeholder="e.g. Gulfstream lead · HND"
+                  aria-label={`Role for ${r.name}`}
+                  style={{ flex: 1, fontSize: 11, padding: "2px 4px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)" }}
+                />
+                <button type="button" style={linkBtnStyle} onClick={() => setAction(null)}>
+                  done
+                </button>
+              </div>
+            )}
 
             {isMove && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4, alignItems: "center" }}>
@@ -271,12 +323,16 @@ function SectionCol({ sec, links = {}, highlight }: { sec: MxSection; links?: Re
   const c = cntSeat(o);
   const href = (n: string) => (links[n] ? `/candidates/${links[n]}` : undefined);
   const hl = (n: string) => Boolean(highlight && n.toLowerCase() === highlight.toLowerCase());
+  // A person's role note rides PersonRow's existing tag pills, so a named role
+  // inside a shared section (two Gulfstream leads at different bases) needs no
+  // new row markup.
+  const roleTags = (n: string) => (sec.roles?.[n] ? [sec.roles[n]] : undefined);
   const rows: ReactNode[] = [];
-  o.line.forEach((n, i) => rows.push(<PersonRow key={`l${i}`} name={n} cls="g" rp="On staff" href={href(n)} highlight={hl(n)} />));
-  o.train.forEach((n, i) => rows.push(<PersonRow key={`t${i}`} name={n} cls="t" rp="In training" href={href(n)} highlight={hl(n)} />));
-  o.offered.forEach((n, i) => rows.push(<PersonRow key={`of${i}`} name={n} cls="of" rp="Offered" href={href(n)} highlight={hl(n)} />));
-  o.cand.forEach((n, i) => rows.push(<PersonRow key={`c${i}`} name={n} cls="r" rp="Candidate" href={href(n)} highlight={hl(n)} />));
-  o.candInt.forEach((n, i) => rows.push(<PersonRow key={`ci${i}`} name={n} cls="i" rp="Candidate · internal" href={href(n)} highlight={hl(n)} />));
+  o.line.forEach((n, i) => rows.push(<PersonRow key={`l${i}`} name={n} cls="g" rp="On staff" tags={roleTags(n)} href={href(n)} highlight={hl(n)} />));
+  o.train.forEach((n, i) => rows.push(<PersonRow key={`t${i}`} name={n} cls="t" rp="In training" tags={roleTags(n)} href={href(n)} highlight={hl(n)} />));
+  o.offered.forEach((n, i) => rows.push(<PersonRow key={`of${i}`} name={n} cls="of" rp="Offered" tags={roleTags(n)} href={href(n)} highlight={hl(n)} />));
+  o.cand.forEach((n, i) => rows.push(<PersonRow key={`c${i}`} name={n} cls="r" rp="Candidate" tags={roleTags(n)} href={href(n)} highlight={hl(n)} />));
+  o.candInt.forEach((n, i) => rows.push(<PersonRow key={`ci${i}`} name={n} cls="i" rp="Candidate · internal" tags={roleTags(n)} href={href(n)} highlight={hl(n)} />));
   o.openNamed.forEach((lbl, i) => rows.push(<SlotRow key={`on${i}`} label={lbl} cls="o" rp="To fill" />));
   for (let i = 0; i < o.open; i++) rows.push(<SlotRow key={`o${i}`} label="Open position" cls="o" rp="Sourcing" />);
   return (
@@ -287,6 +343,9 @@ function SectionCol({ sec, links = {}, highlight }: { sec: MxSection; links?: Re
           {c.f + c.tr}/{c.at}
         </span>
       </div>
+      {/* Only shown when it DIFFERS from the group's mgr, which the card header
+          already states — repeating it on every section would be noise. */}
+      {sec.reportsTo ? <div className="colsub">Reports to {sec.reportsTo}</div> : null}
       {rows}
     </div>
   );
@@ -399,6 +458,9 @@ export default function MaintenanceOrgChart({
     applyEdit((d) => {
       const s = sectionOf(d, gIdx, sIdx);
       pull(s, bucket, name);
+      // Their role note goes with them. Leaving it behind would silently
+      // re-attach to the next person who happens to have the same name.
+      dropRole(s, name);
       // removing a person reopens the position (a backfill req)
       s.open = (s.open ?? 0) + 1;
     });
@@ -419,6 +481,25 @@ export default function MaintenanceOrgChart({
       if (n === 0) delete s.open;
       else s.open = n;
     });
+  /** Who this section reports to. Blank clears it, so it falls back to the card's mgr. */
+  const setSectionReportsTo = (gIdx: number, sIdx: number, value: string) =>
+    applyEdit((d) => {
+      const s = sectionOf(d, gIdx, sIdx);
+      const clean = value.trim();
+      if (clean) s.reportsTo = clean;
+      else delete s.reportsTo;
+    });
+  /** A named role for one person inside a shared section. Blank clears it. */
+  const setPersonRole = (gIdx: number, sIdx: number, name: string, value: string) =>
+    applyEdit((d) => {
+      const s = sectionOf(d, gIdx, sIdx);
+      const clean = value.trim();
+      if (!clean) {
+        dropRole(s, name);
+        return;
+      }
+      s.roles = { ...(s.roles ?? {}), [name]: clean };
+    });
 
   // Move a person from one section to another: pull them from the source (which
   // reopens the seat they left, a backfill req), and drop them into the
@@ -434,10 +515,15 @@ export default function MaintenanceOrgChart({
   ) =>
     applyEdit((d) => {
       const src = sectionOf(d, fromGIdx, fromSIdx);
+      // Read the role BEFORE the pull, then carry it across — a named role is a
+      // fact about the person, not about the seat they happened to sit in.
+      const role = src.roles?.[name];
       pull(src, fromBucket, name);
+      dropRole(src, name);
       src.open = (src.open ?? 0) + 1;
       const dst = sectionOf(d, dest.gIdx, dest.sIdx);
       push(dst, arrive, name);
+      if (role) dst.roles = { ...(dst.roles ?? {}), [name]: role };
       if ((dst.open ?? 0) > 0) {
         const n = (dst.open ?? 0) - 1;
         if (n === 0) delete dst.open;
@@ -949,6 +1035,8 @@ export default function MaintenanceOrgChart({
                       onRemove={(bucket, name) => removePerson(openIdx as number, i, bucket, name)}
                       onSetStatus={(from, to, name) => setStatus(openIdx as number, i, from, to, name)}
                       onAdjustOpen={(delta) => adjustOpen(openIdx as number, i, delta)}
+                      onSetReportsTo={(value) => setSectionReportsTo(openIdx as number, i, value)}
+                      onSetRole={(name, value) => setPersonRole(openIdx as number, i, name, value)}
                       moveDests={moveDestsExcluding(openIdx as number, i)}
                       onMove={(bucket, name, dest, arrive) => movePerson(openIdx as number, i, bucket, name, dest, arrive)}
                       links={links}

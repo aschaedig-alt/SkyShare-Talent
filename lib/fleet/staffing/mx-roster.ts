@@ -55,6 +55,18 @@ function str(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+/** A { name: text } map with both halves trimmed and empties dropped. */
+function strMap(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const out: Record<string, string> = {};
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    const name = key.trim();
+    const text = typeof raw === "string" ? raw.trim() : "";
+    if (name && text) out[name] = text;
+  }
+  return out;
+}
+
 /** A maintenance section is a Seat (line/train/cand/candInt/open/openNamed/parked) plus a label. */
 function normalizeSection(value: unknown): MxSection | null {
   if (!value || typeof value !== "object") return null;
@@ -78,6 +90,12 @@ function normalizeSection(value: unknown): MxSection | null {
   if (openNamed.length) sec.openNamed = openNamed;
   if (open) sec.open = open;
   if (parked) sec.parked = parked;
+
+  const reportsTo = str(raw.reportsTo);
+  if (reportsTo) sec.reportsTo = reportsTo;
+  const roles = strMap(raw.roles);
+  if (Object.keys(roles).length) sec.roles = roles;
+
   return sec;
 }
 
