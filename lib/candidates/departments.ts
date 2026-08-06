@@ -9,10 +9,15 @@ import { resolveDepartmentKey } from "@/lib/calendar/departments";
  * information that is already there — and it would then go stale the moment
  * somebody's application moved. Deriving it costs one join and is always right.
  *
- * The ~431 who cannot be derived (312 with no application at all, 119 whose job
- * has a null department) resolve to "unassigned". That is the honest answer, and
- * it is the group a manual override should target — a small, targeted write
- * rather than a mass backfill.
+ * Anyone who cannot be derived (no application at all, or a job whose department
+ * was never filled in) resolves to "unassigned" — the honest answer, and the
+ * group a manual override is meant to target.
+ *
+ * That group was worked through on Aug 6: 305 LIVE candidates were reviewed and
+ * given an override (297 flight-ops, 8 maintenance), so no live candidate reads
+ * as unassigned today. Archived Jazz records were deliberately left alone.
+ * Derivation is still the primary path — the override exists for people no
+ * application can place, not as a backfill of what a join already knows.
  *
  * These keys are the recruiter's vocabulary, which is FLATTER than the
  * calendar's org taxonomy in lib/calendar/departments.ts: there, Sky Ops and
@@ -57,22 +62,26 @@ export function candidateDepartmentLabel(key: CandidateDepartmentKey): string {
 /**
  * Map ONE raw Job.department string onto a recruiting department.
  *
- * Every rule that is not a straight pass-through of resolveDepartmentKey is
- * called out, because a silent reinterpretation of the org taxonomy is exactly
- * the kind of thing that later reads as a bug:
+ * This is now a straight pass-through of resolveDepartmentKey. It briefly was
+ * not, and the exception is worth recording so nobody re-adds it:
  *
- *   "Operations" -> Sky Ops. resolveDepartmentKey sends a bare "Operations" to
- *   support/other, since its skyops rule wants "sky ops"/"dispatch"/
- *   "scheduling"/"operations control". SkyShare's Sky Ops IS that function, and
- *   "Operations" is the only ambiguous value in the whole job table, so it is
- *   mapped here rather than by widening the calendar's regex — widening it would
- *   silently recolour the calendar too.
+ *   "Operations" used to be forced to Sky Ops here, on the reasoning that
+ *   SkyShare's Sky Ops is the dispatch/scheduling function and "Operations" was
+ *   the only ambiguous value in the job table. That was a guess about a WORD.
+ *   The word turned out to be exactly one job — Corporate Cabin Attendant
+ *   (RETIRED, 284 applicants) — and the same file already read that job's TITLE
+ *   as flight-ops, so the module disagreed with itself. The user settled it on
+ *   Aug 6: pilots and cabin attendants are both Flight Ops. Fixed at source by
+ *   setting that job's department to "Flight Operations", a value 4 other jobs
+ *   already use, so no string in the job table is ambiguous any more and the
+ *   special case had nothing left to match.
+ *
+ *   Do not restore it. A future bare "Operations" should land in Other and be
+ *   looked at, not be silently coloured by a mapping that was wrong once.
  */
 export function candidateDepartmentFromRaw(raw: string | null | undefined): CandidateDepartmentKey {
   const value = (raw ?? "").trim();
   if (!value) return "unassigned";
-
-  if (/^operations$/i.test(value)) return "sky-ops";
 
   const { deptKey, subKey } = resolveDepartmentKey(value);
   if (deptKey === "maintenance") return "maintenance";
