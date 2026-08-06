@@ -1,10 +1,14 @@
 import Link from "next/link";
-import { List, BarChart3 } from "lucide-react";
+import { List, BarChart3, Bookmark } from "lucide-react";
 
-type CandidateView = "list" | "compare";
+type CandidateView = "list" | "compare" | "views";
 
+// Saved views need a permanent door. Without one they were reachable only from
+// the Compare tab when NO view was open — so opening a shortlist was a one-way
+// trip and the view read as lost.
 const tabs: Array<{ id: CandidateView; href: string; label: string; icon: typeof List }> = [
   { id: "list", href: "/candidates", label: "Records", icon: List },
+  { id: "views", href: "/candidates/views", label: "Saved views", icon: Bookmark },
   { id: "compare", href: "/candidates/compare", label: "Compare", icon: BarChart3 }
 ];
 

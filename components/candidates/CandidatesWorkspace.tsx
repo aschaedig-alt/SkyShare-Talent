@@ -12,6 +12,8 @@ import {
 import type { CandidateListData, CandidateTagOption } from "@/lib/data/candidates";
 import { SelectableCandidateTable } from "@/components/candidates/SelectableCandidateTable";
 import { CandidateTagFilter } from "@/components/candidates/CandidateTagFilter";
+import { CandidateDepartmentFilter } from "@/components/candidates/CandidateDepartmentFilter";
+import { CandidatePageSize } from "@/components/candidates/CandidatePageSize";
 import { NewCandidateButton } from "@/components/candidates/NewCandidateButton";
 import { ResumeIntake } from "@/components/candidates/ResumeIntake";
 import { DocumentIntake } from "@/components/candidates/DocumentIntake";
@@ -26,6 +28,8 @@ type CandidatesWorkspaceProps = {
   tagOptions?: CandidateTagOption[];
   /** Tags currently narrowing the list, from ?tags= in the URL. */
   activeTags?: string[];
+  /** Departments currently narrowing the list, from ?depts= in the URL. */
+  activeDepartments?: string[];
   canEdit?: boolean;
   savedLayout?: GridItem[] | null;
   savedWidgets?: WidgetInstance[] | null;
@@ -65,6 +69,7 @@ export function CandidatesWorkspace({
   query,
   tagOptions = [],
   activeTags = [],
+  activeDepartments = [],
   canEdit = false,
   savedLayout = null,
   savedWidgets = null,
@@ -131,7 +136,20 @@ export function CandidatesWorkspace({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <CandidateTagFilter options={tagOptions} active={activeTags} query={query} />
+          <CandidatePageSize size={data.listLimit} query={query} tags={activeTags} departments={activeDepartments} />
+          <CandidateDepartmentFilter
+            active={activeDepartments}
+            query={query}
+            tags={activeTags}
+            size={data.listLimit}
+          />
+          <CandidateTagFilter
+            options={tagOptions}
+            active={activeTags}
+            query={query}
+            departments={activeDepartments}
+            size={data.listLimit}
+          />
           <span className="rounded bg-brand-cloudDancer/70 px-3 py-1 text-xs font-semibold text-brand-lea dark:bg-white/5 dark:text-slate-100">
             {data.candidates.length} shown
           </span>

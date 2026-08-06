@@ -6,6 +6,7 @@ import { clsx } from "clsx";
 import { Tag as TagIcon, X, Check, Archive } from "lucide-react";
 import { HISTORICAL_CHIP_CLASS, tagChipClass, tagDotClass } from "@/lib/tags/colors";
 import type { CandidateTagOption } from "@/lib/data/candidates";
+import { buildCandidatesHref } from "@/lib/candidates/list-url";
 
 /** One selectable tag. Historical ones stay grey, matching the pills. */
 function TagRow({ option, on, onToggle }: { option: CandidateTagOption; on: boolean; onToggle: () => void }) {
@@ -65,11 +66,16 @@ function TagRow({ option, on, onToggle }: { option: CandidateTagOption; on: bool
 export function CandidateTagFilter({
   options,
   active,
-  query
+  query,
+  departments = [],
+  size
 }: {
   options: CandidateTagOption[];
   active: string[];
   query: string;
+  /** Carried through so picking a tag does not silently drop the other filters. */
+  departments?: string[];
+  size?: number;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -91,11 +97,7 @@ export function CandidateTagFilter({
   const [showHistorical, setShowHistorical] = useState(false);
 
   function apply(next: string[]) {
-    const params = new URLSearchParams();
-    if (query) params.set("q", query);
-    if (next.length) params.set("tags", next.join(","));
-    const qs = params.toString();
-    router.push(qs ? `/candidates?${qs}` : "/candidates");
+    router.push(buildCandidatesHref({ query, tags: next, departments, size }));
   }
 
   function toggle(label: string) {

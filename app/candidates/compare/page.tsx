@@ -90,7 +90,7 @@ export default async function CandidateComparePage({ searchParams }: ComparePage
               {savedViews.map((saved) => (
                 <li key={saved.id}>
                   <Link
-                    href={`/candidates/compare?view=${saved.id}`}
+                    href={`/candidates/views/${saved.id}`}
                     className="flex h-full flex-col rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-4 py-3 transition hover:shadow-glow hover:ring-1 hover:ring-brand-gold/40 dark:border-white/10 dark:bg-white/5"
                   >
                     <span className="font-semibold text-brand-lea dark:text-slate-100">{saved.name}</span>

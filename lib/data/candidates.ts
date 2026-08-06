@@ -5,6 +5,12 @@ import { normalizeEmail, normalizeName } from "@/lib/candidates/normalize";
 import { parseOfferSteps } from "@/lib/offers/steps";
 import { suggestCompanyEmail } from "@/lib/people/company-email";
 import { resolveDepartmentKey } from "@/lib/calendar/departments";
+import {
+  candidateDepartmentsFrom,
+  rawJobDepartmentsFor,
+  type CandidateDepartmentKey
+} from "@/lib/candidates/departments";
+import { CANDIDATE_LIST_LIMIT, CANDIDATE_LIST_MAX } from "@/lib/candidates/list-config";
 import type { ViewerScope } from "@/lib/auth/viewer-scope";
 import type { TagChip } from "@/lib/tags/colors";
 
@@ -49,17 +55,20 @@ export type CandidateListItem = {
   noteCount: number;
   fileCount: number;
   applicationCount: number;
+  /**
+   * Derived from the jobs they applied to — never stored. More than one when
+   * somebody applied across departments, which is real and should not collapse.
+   */
+  departments: CandidateDepartmentKey[];
   docMatch: { filename: string; snippet: string } | null;
   /** Direct link to this person's own record in Paycom, if one has been pasted in. */
   paycomLink: string | null;
 };
 
-/**
- * The list is capped rather than paged. Anything beyond this is reachable by
- * searching — but the UI must SAY it is showing a subset, or the page reads as
- * "the rest of my candidates vanished".
- */
-export const CANDIDATE_LIST_LIMIT = 100;
+// Defined in lib/candidates/list-config.ts (which imports nothing) because the
+// client-side filter controls need them and this module imports Prisma.
+// Re-exported here so existing server-side importers keep working.
+export { CANDIDATE_LIST_LIMIT, CANDIDATE_PAGE_SIZES, CANDIDATE_LIST_MAX } from "@/lib/candidates/list-config";
 
 export type CandidateListData = {
   candidates: CandidateListItem[];
@@ -404,11 +413,21 @@ export async function getCandidateListData(
    * returned page client-side would search only the first 100 rows and quietly
    * miss anyone past the cap.
    */
-  tagFilter: string[] = []
+  tagFilter: string[] = [],
+  /**
+   * Recruiting departments to narrow to, DERIVED from the job each candidate
+   * applied to (see lib/candidates/departments.ts). Like the tag filter this
+   * runs in the database — filtering the returned page would only ever search
+   * the current page and silently miss everyone past the cap.
+   */
+  departmentFilter: CandidateDepartmentKey[] = [],
+  /** Rows per page. Capped at CANDIDATE_LIST_MAX so a typo cannot ask for 50,000. */
+  limit: number = CANDIDATE_LIST_LIMIT
 ): Promise<CandidateListData> {
   const normalizedQuery = query.trim().toLowerCase();
   const hasQuery = normalizedQuery.length > 0;
   const tags = tagFilter.map((t) => t.trim()).filter(Boolean);
+  const pageSize = Math.min(Math.max(1, Math.floor(limit)), CANDIDATE_LIST_MAX);
 
   // When searching, span ALL candidates including archived/historical (Jazz)
   // ones so legacy records are findable. With no query, the default list stays
@@ -460,6 +479,42 @@ export async function getCandidateListData(
     };
   }
 
+  // Department filter. OR across departments — unlike tags, picking Maintenance
+  // AND FBO means "show me both", because a candidate has one department in
+  // practice and ANDing them would always return nobody.
+  //
+  // "Unassigned" cannot be expressed as "applied to a job in this bucket", since
+  // it is the ABSENCE of one: no application at all, or an application whose job
+  // carries no department. It gets its own branch, ORed alongside the rest.
+  if (departmentFilter.length) {
+    const allJobDepartments = await prisma.job.findMany({
+      where: { department: { not: null } },
+      select: { department: true },
+      distinct: ["department"]
+    });
+    const named = departmentFilter.filter((key) => key !== "unassigned");
+    const wantsUnassigned = departmentFilter.includes("unassigned");
+
+    const branches: Array<Record<string, unknown>> = [];
+    if (named.length) {
+      const rawStrings = await rawJobDepartmentsFor(
+        named,
+        allJobDepartments.map((j) => j.department)
+      );
+      // An empty rawStrings would make `in: []` match nobody, which is the
+      // correct answer: no job carries a department in those buckets.
+      branches.push({ applications: { some: { job: { department: { in: rawStrings } } } } });
+    }
+    if (wantsUnassigned) {
+      branches.push({ NOT: { applications: { some: { job: { department: { not: null } } } } } });
+    }
+
+    candidateWhere = {
+      ...candidateWhere,
+      AND: [...((candidateWhere.AND as unknown[]) ?? []), { OR: branches }]
+    };
+  }
+
   // Only pull document text for matching files when there's a query (keeps the list light).
   const filesInclude = hasQuery
     ? ({
@@ -483,11 +538,16 @@ export async function getCandidateListData(
   const [candidateRows, total, active, withFiles, withApplications, scheduledInterviews, archived] = await Promise.all([
     prisma.candidate.findMany({
       where: candidateWhere,
-      take: CANDIDATE_LIST_LIMIT,
+      take: pageSize,
       orderBy: [{ updatedAt: "desc" }, { displayName: "asc" }],
       include: {
         files: filesInclude,
         candidateTags: { include: { tag: { select: { label: true, color: true } } } },
+        // Just the department of each applied-to job — this is what the
+        // Department column shows, and it is why no Candidate.department column
+        // needs to exist. Deliberately narrow: at 500 rows a wider application
+        // include would be a real cost for nothing the list displays.
+        applications: { select: { job: { select: { department: true } } } },
       // `source` is what separates a tag somebody chose from one the importer
       // left behind; see mergeTagChips.
         _count: {
@@ -550,6 +610,10 @@ export async function getCandidateListData(
       noteCount: candidate._count.notes,
       fileCount: candidate._count.files,
       applicationCount: candidate._count.applications,
+      departments: candidateDepartmentsFrom(
+        (candidate as typeof candidate & { applications?: Array<{ job: { department: string | null } | null }> })
+          .applications?.map((a) => a.job?.department) ?? []
+      ),
       docMatch,
       paycomLink: candidate.paycomLink
     };
@@ -558,7 +622,7 @@ export async function getCandidateListData(
   return {
     candidates,
     matchingTotal: total,
-    listLimit: CANDIDATE_LIST_LIMIT,
+    listLimit: pageSize,
     stats: {
       total,
       active,
@@ -617,6 +681,58 @@ function splitListValue(value: string | null): string[] {
         .filter(Boolean)
     )
   ];
+}
+
+/**
+ * The members of a saved view, in the order the view stores them.
+ *
+ * Archived candidates are INCLUDED — a shortlist that silently dropped someone
+ * after they were archived would show a hiring manager a different list than the
+ * recruiter picked, with nothing on screen to say so. Ids that no longer resolve
+ * at all are simply absent, and the caller compares counts to report the gap.
+ *
+ * No docMatch here: there is no search query behind a saved view.
+ */
+export async function getCandidatesByIds(ids: string[]): Promise<CandidateListItem[]> {
+  if (ids.length === 0) return [];
+  const rows = await prisma.candidate.findMany({
+    where: { id: { in: ids } },
+    include: {
+      candidateTags: { include: { tag: { select: { label: true, color: true } } } },
+      applications: { select: { job: { select: { department: true } } } },
+      _count: { select: { notes: true, files: true, applications: true } }
+    }
+  });
+
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  // Preserve the saved order rather than the database's — the view was picked in
+  // a particular order and re-sorting it makes a re-read of the same list feel
+  // like a different one.
+  return ids
+    .map((id) => byId.get(id))
+    .filter((row): row is NonNullable<typeof row> => Boolean(row))
+    .map((candidate) => ({
+      id: candidate.id,
+      displayName: candidate.displayName,
+      currentTitle: candidate.currentTitle,
+      stage: candidate.stage,
+      owner: candidate.owner,
+      source: candidate.source,
+      primaryEmail: candidate.primaryEmail,
+      primaryPhone: candidate.primaryPhone,
+      tags: mergeTags(parseStringArray(candidate.tagsJson), candidate.candidateTags.map((ct) => ct.tag.label)),
+      tagChips: mergeTagChips(
+        parseStringArray(candidate.tagsJson),
+        candidate.candidateTags.map((ct) => ({ label: ct.tag.label, color: ct.tag.color, source: ct.source }))
+      ),
+      updatedAt: candidate.updatedAt.toISOString(),
+      noteCount: candidate._count.notes,
+      fileCount: candidate._count.files,
+      applicationCount: candidate._count.applications,
+      departments: candidateDepartmentsFrom(candidate.applications.map((a) => a.job?.department)),
+      docMatch: null,
+      paycomLink: candidate.paycomLink
+    }));
 }
 
 /**

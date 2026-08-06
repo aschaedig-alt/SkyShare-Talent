@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FileText, Send, StickyNote, Mail, Phone, Search, X, Check, BarChart3 } from "lucide-react";
 import type { CandidateListItem } from "@/lib/data/candidates";
+import { CANDIDATE_DEPARTMENTS } from "@/lib/candidates/departments";
 import { CandidateStageCell } from "@/components/candidates/CandidateStageCell";
 import { CandidateTagCell } from "@/components/candidates/CandidateTagCell";
 import { Button } from "@/components/ui";
@@ -122,7 +123,7 @@ export function SelectableCandidateTable({
         setBusy(false);
         return;
       }
-      router.push(`/candidates/compare?view=${body.view.id}`);
+      router.push(`/candidates/views/${body.view.id}`);
     } catch {
       setError("Network error — the view was not saved.");
       setBusy(false);
@@ -203,6 +204,7 @@ export function SelectableCandidateTable({
                     />
                   </th>
                   <th className="px-5 py-3 font-bold">Candidate</th>
+                  <th className="px-4 py-3 font-bold">Department</th>
                   <th className="px-4 py-3 font-bold">Stage</th>
                   <th className="px-4 py-3 font-bold">Contact</th>
                   <th className="px-4 py-3 font-bold">Tags</th>
@@ -259,6 +261,25 @@ export function SelectableCandidateTable({
                               </div>
                             )}
                           </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        {/* Derived from the jobs they applied to, never stored.
+                            More than one chip means they applied across
+                            departments, which is real. */}
+                        <div className="flex flex-wrap gap-1">
+                          {candidate.departments.map((key) => {
+                            const dept = CANDIDATE_DEPARTMENTS.find((d) => d.key === key);
+                            if (!dept) return null;
+                            return (
+                              <span
+                                key={key}
+                                className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[11px] font-semibold ${dept.chip}`}
+                              >
+                                {dept.label}
+                              </span>
+                            );
+                          })}
                         </div>
                       </td>
                       <td className="px-4 py-4">

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Link2, Check, Trash2 } from "lucide-react";
+import { Link2, Check, Trash2, ListChecks } from "lucide-react";
 import { Button } from "@/components/ui";
 
 /**
@@ -67,6 +68,14 @@ export function SavedViewHeader({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Compare is the metrics angle on a view; the working list — where you
+              can open somebody and drop them — is the other page. */}
+          <Link
+            href={`/candidates/views/${viewId}`}
+            className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-gold/10 dark:border-white/10 dark:text-slate-100"
+          >
+            <ListChecks className="h-4 w-4" /> Open working list
+          </Link>
           <Button variant="secondary" onClick={() => void copyLink()}>
             {copied ? <><Check className="h-4 w-4" /> Copied</> : <><Link2 className="h-4 w-4" /> Copy link</>}
           </Button>

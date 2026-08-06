@@ -1,12 +1,14 @@
 import { CandidatesWorkspace } from "@/components/candidates/CandidatesWorkspace";
 import { getCandidateListData, getCandidateTagOptions } from "@/lib/data/candidates";
+import { CANDIDATE_LIST_LIMIT, CANDIDATE_PAGE_SIZES } from "@/lib/candidates/list-config";
+import { isCandidateDepartmentKey } from "@/lib/candidates/departments";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { getPageLayout } from "@/lib/data/page-layout";
 import { isAdminOrRecruiter } from "@/lib/auth/roles";
 import { resolveViewerScope } from "@/lib/auth/viewer-scope";
 
 type CandidatesPageProps = {
-  searchParams?: Promise<{ q?: string; from?: string; tags?: string }>;
+  searchParams?: Promise<{ q?: string; from?: string; tags?: string; depts?: string; size?: string }>;
 };
 
 /** ?tags=Hot+lead,Veteran — comma-separated so the filter survives a copied URL. */
@@ -27,9 +29,16 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
   const params = await searchParams;
   const query = params?.q?.trim() ?? "";
   const activeTags = parseTagParam(params?.tags);
+  // Unknown department keys are dropped rather than passed through, so a
+  // hand-edited ?depts= cannot produce an empty list that looks like a bug.
+  const activeDepartments = parseTagParam(params?.depts).filter(isCandidateDepartmentKey);
+  const requestedSize = Number(params?.size);
+  const pageSize = CANDIDATE_PAGE_SIZES.includes(requestedSize as (typeof CANDIDATE_PAGE_SIZES)[number])
+    ? requestedSize
+    : CANDIDATE_LIST_LIMIT;
   const viewer = await resolveViewerScope(access.role, access.userId, access.email);
   const [data, layout, tagOptions] = await Promise.all([
-    getCandidateListData(query, viewer, activeTags),
+    getCandidateListData(query, viewer, activeTags, activeDepartments, pageSize),
     getPageLayout("candidates"),
     getCandidateTagOptions()
   ]);
@@ -43,6 +52,7 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
       query={query}
       tagOptions={tagOptions}
       activeTags={activeTags}
+      activeDepartments={activeDepartments}
       canEdit={isAdminOrRecruiter(access.role)}
       onboardingIntent={params?.from === "onboarding"}
       savedLayout={layout.layout}
