@@ -5,16 +5,12 @@ import {
   FileText,
   Send,
   CalendarClock,
-  Mail,
-  Phone,
-  StickyNote,
   Search,
   Archive,
   ArrowRight
 } from "lucide-react";
 import type { CandidateListData, CandidateTagOption } from "@/lib/data/candidates";
-import { CandidateStageCell } from "@/components/candidates/CandidateStageCell";
-import { CandidateTagCell } from "@/components/candidates/CandidateTagCell";
+import { SelectableCandidateTable } from "@/components/candidates/SelectableCandidateTable";
 import { CandidateTagFilter } from "@/components/candidates/CandidateTagFilter";
 import { NewCandidateButton } from "@/components/candidates/NewCandidateButton";
 import { ResumeIntake } from "@/components/candidates/ResumeIntake";
@@ -63,46 +59,6 @@ const statConfig: StatConfig[] = [
   { key: "scheduledInterviews", label: "Scheduled interviews", icon: CalendarClock, accent: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-500/15 dark:text-fuchsia-300" },
   { key: "archived", label: "In historical archive", icon: Archive, accent: "bg-slate-200 text-slate-700 dark:bg-white/10 dark:text-slate-300" }
 ];
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
-}
-
-/** Wrap occurrences of query in <mark> for highlighted snippets. */
-function highlight(text: string, query: string) {
-  const q = query.trim();
-  if (!q) return text;
-  const parts = text.split(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "ig"));
-  return parts.map((part, i) =>
-    part.toLowerCase() === q.toLowerCase() ? (
-      <mark key={i} className="rounded-sm bg-brand-gold/40 px-0.5 text-brand-lea dark:text-slate-100">
-        {part}
-      </mark>
-    ) : (
-      <span key={i}>{part}</span>
-    )
-  );
-}
-
-/** Color a stage pill by keyword so the pipeline reads at a glance. */
-function stagePill(stage: string | null) {
-  const s = (stage ?? "").toLowerCase();
-  if (!stage) return "border-brand-lea/15 bg-brand-cloudDancer/60 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400";
-  if (s.includes("hire") || s.includes("offer")) return "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
-  if (s.includes("interview") || s.includes("screen")) return "border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300";
-  if (s.includes("reject") || s.includes("declin") || s.includes("withdraw")) return "border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400";
-  if (s.includes("new") || s.includes("appl") || s.includes("lead")) return "border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300";
-  return "border-brand-gold/30 bg-brand-gold/10 text-brand-lea dark:text-slate-100";
-}
-
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? "")
-    .join("");
-}
 
 export function CandidatesWorkspace({
   data,
@@ -181,125 +137,7 @@ export function CandidatesWorkspace({
           </span>
         </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto">
-        {data.candidates.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[940px] border-collapse text-left text-sm">
-              <thead className="bg-brand-cloudDancer/60 text-[11px] uppercase tracking-[0.16em] text-brand-grey dark:bg-white/5 dark:text-slate-400">
-                <tr>
-                  <th className="px-5 py-3 font-bold">Candidate</th>
-                  <th className="px-4 py-3 font-bold">Stage</th>
-                  <th className="px-4 py-3 font-bold">Contact</th>
-                  <th className="px-4 py-3 font-bold">Tags</th>
-                  <th className="px-4 py-3 font-bold">Activity</th>
-                  <th className="px-4 py-3 font-bold">Updated</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-brand-lea/10 dark:divide-white/10">
-                {data.candidates.map((candidate) => (
-                  <tr key={candidate.id} className="row-wash align-top">
-                    <td className="px-5 py-4">
-                      <div className="flex gap-3">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-lea/10 text-xs font-bold text-brand-lea dark:text-slate-100">
-                          {initials(candidate.displayName) || "—"}
-                        </span>
-                        <div className="min-w-0">
-                          <span className="inline-flex items-center gap-1.5">
-                            {/* prefetch={false}: this table renders up to 100
-                                rows, and the fresh production logs from the
-                                sidebar fix immediately showed the SAME pattern
-                                one level down — ~15 simultaneous
-                                /candidates/[id] prefetches the instant this
-                                page loaded, one for every row in the initial
-                                viewport. A candidate profile is a heavier
-                                fetch than the list itself (interviews, notes,
-                                files, applications, tags, travel), so this was
-                                likely contributing to the slowness at least as
-                                much as the sidebar was. */}
-                            <Link href={`/candidates/${candidate.id}`} prefetch={false} className="font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-100">
-                              {candidate.displayName}
-                            </Link>
-                            {/* Only shown once someone has pasted a real link on the
-                                profile — nothing to click here otherwise. */}
-                            {candidate.paycomLink && (
-                              <a
-                                href={candidate.paycomLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                title="Open in Paycom"
-                                aria-label={`Open ${candidate.displayName} in Paycom`}
-                                className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] text-[8px] font-black leading-none text-white transition hover:brightness-110"
-                                style={{ backgroundColor: "#2E9E5B" }}
-                              >
-                                P
-                              </a>
-                            )}
-                          </span>
-                          <div className="text-xs text-brand-grey dark:text-slate-400">{candidate.currentTitle ?? "No current role"}</div>
-                          {candidate.docMatch && (
-                            <div className="mt-1.5 max-w-[380px] rounded border border-brand-lea/10 bg-brand-cloudDancer/50 px-2.5 py-1.5 text-[11px] leading-5 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-                              <span className="font-semibold text-brand-lea dark:text-slate-100">{candidate.docMatch.filename}: </span>
-                              {highlight(candidate.docMatch.snippet, query)}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <CandidateStageCell
-                        candidateId={candidate.id}
-                        candidateName={candidate.displayName}
-                        stage={candidate.stage}
-                        pillClass={stagePill(candidate.stage)}
-                        canEdit={canEdit}
-                      />
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="space-y-1 text-xs text-brand-grey dark:text-slate-400">
-                        <div className="flex items-center gap-1.5">
-                          <Mail className="h-3 w-3 shrink-0 text-brand-lea/50" />
-                          <span className="min-w-0 truncate">{candidate.primaryEmail ?? "No email"}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <Phone className="h-3 w-3 shrink-0 text-brand-lea/50" />
-                          <span>{candidate.primaryPhone ?? "No phone"}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <CandidateTagCell chips={candidate.tagChips} />
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex flex-wrap gap-1.5 text-[11px] font-medium text-brand-grey dark:text-slate-400">
-                        <span className="inline-flex items-center gap-1 rounded bg-amber-50 dark:bg-amber-500/15 px-1.5 py-0.5 text-amber-700 dark:text-amber-300" title="Files">
-                          <FileText className="h-3 w-3" /> {candidate.fileCount}
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded bg-brand-cloudDancer/70 px-1.5 py-0.5 text-brand-lea dark:bg-white/5 dark:text-slate-100" title="Notes">
-                          <StickyNote className="h-3 w-3" /> {candidate.noteCount}
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300" title="Applications">
-                          <Send className="h-3 w-3" /> {candidate.applicationCount}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-xs text-brand-grey dark:text-slate-400">{formatDate(candidate.updatedAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="px-4 py-16 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-cloudDancer/70 dark:bg-white/5">
-              <Search className="h-5 w-5 text-brand-grey dark:text-slate-400" />
-            </div>
-            <div className="mt-3 text-base font-semibold text-brand-lea dark:text-slate-100">No candidates found</div>
-            <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-              Seed data will appear here after the local recruiting seed runs, or clear the search.
-            </p>
-          </div>
-        )}
-      </div>
+      <SelectableCandidateTable candidates={data.candidates} query={query} canEdit={canEdit} />
     </section>
   );
 

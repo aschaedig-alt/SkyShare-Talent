@@ -619,10 +619,18 @@ function splitListValue(value: string | null): string[] {
   ];
 }
 
-export async function getCandidateComparisonData(): Promise<CandidateComparisonData> {
+/**
+ * @param candidateIds When given, compare exactly these people and nobody else —
+ * this is a saved view being opened. Archived candidates are INCLUDED in that
+ * case: a shortlist that silently dropped somebody after they were archived
+ * would show a hiring manager a different list than the recruiter picked, with
+ * nothing on screen to say so. Without it, the page keeps its old behaviour of
+ * showing every live candidate.
+ */
+export async function getCandidateComparisonData(candidateIds?: string[]): Promise<CandidateComparisonData> {
   const candidateRows = await prisma.candidate.findMany({
-    where: { archivedAt: null },
-    take: 1000,
+    where: candidateIds ? { id: { in: candidateIds } } : { archivedAt: null },
+    take: candidateIds ? candidateIds.length : 1000,
     orderBy: [{ displayName: "asc" }],
     select: {
       id: true,
