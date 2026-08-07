@@ -57,6 +57,8 @@ type PilotAppResponse = {
   conversationsScanned: number;
   noticesFound: number;
   attached: number;
+  /** Names of people this run CREATED because nobody matched. */
+  createdCandidates?: string[];
   results: PilotAppRow[];
   missingTags?: string[];
 };
@@ -269,8 +271,32 @@ function PilotAppResults({ pilot }: { pilot: PilotAppResponse }) {
   const unplaced = pilot.results.filter((r) => r.outcome === "no-match" || r.outcome === "ambiguous-match");
   const unreadable = pilot.results.filter((r) => r.outcome === "no-identifier" || r.outcome === "no-attachment");
 
+  const created = pilot.createdCandidates ?? [];
+
   return (
     <div className="mt-2">
+      {/* People this run ADDED, called out ahead of everything else. They also
+          appear under Filed below, but a run that created a person did more than
+          file a document and the modal has to say so — this is the only moment
+          anyone sees it, and a new record in a shared database should never be
+          something you have to infer from a tally. */}
+      {created.length > 0 && (
+        <div className="mb-3 rounded border border-brand-gold/50 bg-brand-gold/10 p-3 dark:border-brand-gold/40 dark:bg-brand-gold/10">
+          <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">
+            Added {created.length} new {created.length === 1 ? "candidate" : "candidates"}
+          </p>
+          <ul className="mt-1 space-y-0.5 text-sm text-brand-lea dark:text-slate-200">
+            {created.map((name, i) => (
+              <li key={i}>{name}</li>
+            ))}
+          </ul>
+          <p className="mt-1.5 text-xs text-brand-grey dark:text-slate-400">
+            Nobody matched these applications, so each person was created from the application itself — it holds only
+            the name and email that were on it. Their Front threads are tagged Candidate Created by App.
+          </p>
+        </div>
+      )}
+
       {filed.length > 0 ? (
         <div className="rounded border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
           <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
