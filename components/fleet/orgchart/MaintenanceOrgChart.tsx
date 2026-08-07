@@ -38,6 +38,20 @@ function push(seat: Seat, bucket: FillBucket, name: string) {
   if (!arr.includes(name)) arr.push(name);
 }
 
+/** An input that sits on the modal's navy header without looking pasted on. */
+function headerInputStyle(size: number, weight: number): React.CSSProperties {
+  return {
+    width: "100%",
+    fontSize: size,
+    fontWeight: weight,
+    color: "#fff",
+    background: "rgba(255,255,255,0.10)",
+    border: "1px solid rgba(255,255,255,0.28)",
+    borderRadius: 4,
+    padding: "4px 8px"
+  };
+}
+
 /** Forget one person's role note, dropping the map once it is empty. */
 function dropRole(sec: MxSection, name: string) {
   if (!sec.roles?.[name]) return;
@@ -57,6 +71,11 @@ function MxEditSection({
   onAdjustOpen,
   onSetReportsTo,
   onSetRole,
+  onRename,
+  onRemoveSection,
+  onAddNamed,
+  onRemoveNamed,
+  onFillNamed,
   moveDests,
   onMove,
   links,
@@ -70,6 +89,11 @@ function MxEditSection({
   onAdjustOpen: (delta: number) => void;
   onSetReportsTo: (value: string) => void;
   onSetRole: (name: string, value: string) => void;
+  onRename: (label: string) => void;
+  onRemoveSection: () => void;
+  onAddNamed: (label: string) => void;
+  onRemoveNamed: (label: string) => void;
+  onFillNamed: (label: string, name: string, bucket: FillBucket) => void;
   /** Every other section this person could move to. */
   moveDests: MoveDest[];
   onMove: (bucket: FillBucket, name: string, dest: { gIdx: number; sIdx: number }, arrive: FillBucket) => void;
@@ -79,6 +103,11 @@ function MxEditSection({
 }) {
   const [draftName, setDraftName] = useState("");
   const [draftBucket, setDraftBucket] = useState<FillBucket>("cand");
+  const [draftNamed, setDraftNamed] = useState("");
+  /** Which named opening is being filled, and by whom. */
+  const [filling, setFilling] = useState<string | null>(null);
+  const [fillName, setFillName] = useState("");
+  const [fillBucket, setFillBucket] = useState<FillBucket>("cand");
   // Which person has an action panel open, and which one.
   const [action, setAction] = useState<{ name: string; kind: "move" | "link" | "role" } | null>(null);
   const [moveDest, setMoveDest] = useState("");
@@ -96,10 +125,38 @@ function MxEditSection({
   return (
     <div className="m-col ec">
       <div className="colh">
-        <span>{sec.label}</span>
+        <input
+          value={sec.label}
+          onChange={(e) => onRename(e.target.value)}
+          aria-label="Section name"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            font: "inherit",
+            letterSpacing: "inherit",
+            textTransform: "inherit",
+            color: "inherit",
+            background: "transparent",
+            border: "1px solid transparent",
+            borderRadius: 4,
+            padding: "2px 4px"
+          }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = "var(--line, #cdd7e2)")}
+          onBlur={(e) => (e.currentTarget.style.borderColor = "transparent")}
+        />
         <span>
           {filled}/{total}
         </span>
+        <button
+          type="button"
+          className="del"
+          title="Delete this whole section"
+          onClick={() => {
+            if (window.confirm(`Delete the "${sec.label}" section and everyone in it?`)) onRemoveSection();
+          }}
+        >
+          ✕
+        </button>
       </div>
       {/* Left blank, the section just inherits the card's own manager — which is
           the right answer for every section that is not its own reporting line. */}
@@ -262,11 +319,92 @@ function MxEditSection({
           </div>
         );
       })}
-      {o.openNamed.map((l, i) => (
-        <div className="ec-named" key={`on${i}`}>
-          {l} · <span>named opening</span>
-        </div>
-      ))}
+      {/* A named req used to be dead text here, so there was no way to say
+          "Robert Patrick is the SLC Team Lead candidate" — you could only add
+          him loose into the section and leave the req sitting beside him
+          unexplained. Filling one moves the person in and keeps the req's name
+          as their role, so the card still says which seat they are taking. */}
+      {o.openNamed.map((l, i) => {
+        const isFilling = filling === l;
+        return (
+          <div className="ec-named" key={`on${i}`}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                {l} · <span>named opening</span>
+              </span>
+              <button
+                type="button"
+                style={linkBtnStyle}
+                title={`Put somebody into ${l}`}
+                onClick={() => {
+                  setFillName("");
+                  setFillBucket("cand");
+                  setFilling(isFilling ? null : l);
+                }}
+              >
+                fill
+              </button>
+              <button type="button" className="del" title="Delete this named opening" onClick={() => onRemoveNamed(l)}>
+                ✕
+              </button>
+            </div>
+            {isFilling && (
+              <form
+                style={{ display: "flex", gap: 4, marginTop: 4, alignItems: "center" }}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!fillName.trim()) return;
+                  onFillNamed(l, fillName, fillBucket);
+                  setFilling(null);
+                  setFillName("");
+                }}
+              >
+                <input
+                  value={fillName}
+                  onChange={(e) => setFillName(e.target.value)}
+                  placeholder="Who fills it…"
+                  aria-label={`Who fills ${l}`}
+                  style={{ flex: 1, minWidth: 0, fontSize: 11, padding: "2px 4px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)" }}
+                />
+                <select
+                  value={fillBucket}
+                  onChange={(e) => setFillBucket(e.target.value as FillBucket)}
+                  aria-label="Their status"
+                  style={{ fontSize: 11, padding: "2px 4px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)" }}
+                >
+                  {MX_STATUS.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+                <button type="submit" style={linkBtnStyle} disabled={!fillName.trim()}>
+                  fill
+                </button>
+              </form>
+            )}
+          </div>
+        );
+      })}
+      <form
+        style={{ display: "flex", gap: 4, marginTop: 4 }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          onAddNamed(draftNamed);
+          setDraftNamed("");
+        }}
+      >
+        <input
+          value={draftNamed}
+          onChange={(e) => setDraftNamed(e.target.value)}
+          placeholder="Add a named opening…"
+          aria-label="Add a named opening"
+          style={{ flex: 1, minWidth: 0, fontSize: 11, padding: "2px 4px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)" }}
+        />
+        <button type="submit" style={linkBtnStyle} disabled={!draftNamed.trim()}>
+          add
+        </button>
+      </form>
       <div className="ec-open">
         <span>Open positions</span>
         <button type="button" onClick={() => onAdjustOpen(-1)} disabled={o.open === 0} aria-label="Remove an open position">
@@ -457,12 +595,17 @@ export default function MaintenanceOrgChart({
   const removePerson = (gIdx: number, sIdx: number, bucket: FillBucket, name: string) =>
     applyEdit((d) => {
       const s = sectionOf(d, gIdx, sIdx);
+      const role = s.roles?.[name];
       pull(s, bucket, name);
       // Their role note goes with them. Leaving it behind would silently
       // re-attach to the next person who happens to have the same name.
       dropRole(s, name);
-      // removing a person reopens the position (a backfill req)
-      s.open = (s.open ?? 0) + 1;
+      // Removing a person reopens the position. If they held a NAMED role, the
+      // req comes back under that name rather than degrading into an anonymous
+      // "Open position" — losing "SLC Team Lead" the moment its candidate falls
+      // through is exactly the information you need most at that point.
+      if (role) s.openNamed = [...(s.openNamed ?? []), role];
+      else s.open = (s.open ?? 0) + 1;
     });
   const setStatus = (gIdx: number, sIdx: number, from: FillBucket, to: FillBucket, name: string) => {
     if (from === to) return;
@@ -488,6 +631,59 @@ export default function MaintenanceOrgChart({
       const clean = value.trim();
       if (clean) s.reportsTo = clean;
       else delete s.reportsTo;
+    });
+  /** The card's own title, subtitle and manager. Blank is refused — a card with
+      no name is unreachable from the chart behind it. */
+  const setGroupField = (gIdx: number, field: "name" | "sub" | "mgr", value: string) =>
+    applyEdit((d) => {
+      const clean = value.trim();
+      if (clean) d[gIdx][field] = clean;
+    });
+  const renameSection = (gIdx: number, sIdx: number, label: string) =>
+    applyEdit((d) => {
+      const clean = label.trim();
+      if (clean) sectionOf(d, gIdx, sIdx).label = clean;
+    });
+  const addSection = (gIdx: number) =>
+    applyEdit((d) => {
+      d[gIdx].sections.push({ label: "New section" });
+    });
+  const removeSection = (gIdx: number, sIdx: number) =>
+    applyEdit((d) => {
+      d[gIdx].sections.splice(sIdx, 1);
+    });
+  /** A req that carries a label, e.g. "SLC Team Lead" — not an anonymous opening. */
+  const addNamedOpening = (gIdx: number, sIdx: number, label: string) =>
+    applyEdit((d) => {
+      const s = sectionOf(d, gIdx, sIdx);
+      const clean = label.trim();
+      if (clean) s.openNamed = [...(s.openNamed ?? []), clean];
+    });
+  const removeNamedOpening = (gIdx: number, sIdx: number, label: string) =>
+    applyEdit((d) => {
+      const s = sectionOf(d, gIdx, sIdx);
+      const rest = (s.openNamed ?? []).filter((l) => l !== label);
+      if (rest.length) s.openNamed = rest;
+      else delete s.openNamed;
+    });
+  /**
+   * Put a person INTO a named opening.
+   *
+   * The req's label becomes their role, which is what makes the card still say
+   * WHICH seat they are filling — "Robert Patrick · SLC Team Lead · candidate"
+   * rather than a candidate floating in a section next to two unexplained reqs.
+   * Removing them later hands the named req straight back (see removePerson).
+   */
+  const fillNamedOpening = (gIdx: number, sIdx: number, label: string, name: string, bucket: FillBucket) =>
+    applyEdit((d) => {
+      const s = sectionOf(d, gIdx, sIdx);
+      const clean = name.trim();
+      if (!clean) return;
+      const rest = (s.openNamed ?? []).filter((l) => l !== label);
+      if (rest.length) s.openNamed = rest;
+      else delete s.openNamed;
+      push(s, bucket, clean);
+      s.roles = { ...(s.roles ?? {}), [clean]: label };
     });
   /** A named role for one person inside a shared section. Blank clears it. */
   const setPersonRole = (gIdx: number, sIdx: number, name: string, value: string) =>
@@ -993,10 +1189,45 @@ export default function MaintenanceOrgChart({
               <button className="m-close" aria-label="Close" data-dialog-close onClick={closeModal}>
                 ✕
               </button>
-              <div className="m-ty">{active.name}</div>
-              <div className="m-sub">
-                {active.sub} · {at.f}/{at.at} staffed · reports to {active.mgr}
-              </div>
+              {isEditing ? (
+                // The card's own title was never editable, so a group could not
+                // be renamed once seeded — the only route was deleting it and
+                // rebuilding it from scratch, losing every candidate link on it.
+                <div style={{ display: "grid", gap: 6, marginBottom: 4 }}>
+                  <input
+                    value={active.name}
+                    onChange={(e) => setGroupField(openIdx as number, "name", e.target.value)}
+                    aria-label="Card title"
+                    style={headerInputStyle(20, 800)}
+                  />
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <input
+                      value={active.sub}
+                      onChange={(e) => setGroupField(openIdx as number, "sub", e.target.value)}
+                      aria-label="Card subtitle"
+                      placeholder="Subtitle"
+                      style={{ ...headerInputStyle(12, 400), flex: "1 1 180px" }}
+                    />
+                    <input
+                      value={active.mgr}
+                      onChange={(e) => setGroupField(openIdx as number, "mgr", e.target.value)}
+                      aria-label="Who this card reports to"
+                      placeholder="Reports to"
+                      style={{ ...headerInputStyle(12, 400), flex: "1 1 180px" }}
+                    />
+                  </div>
+                  <div className="m-sub">
+                    {at.f}/{at.at} staffed
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="m-ty">{active.name}</div>
+                  <div className="m-sub">
+                    {active.sub} · {at.f}/{at.at} staffed · reports to {active.mgr}
+                  </div>
+                </>
+              )}
               {/* Edit at the TOP, matching the crew chart — it used to sit below
                   every section and the hiring pipeline. Gold on the navy header
                   for the same reason: a navy button on a navy bar disappears. */}
@@ -1037,6 +1268,11 @@ export default function MaintenanceOrgChart({
                       onAdjustOpen={(delta) => adjustOpen(openIdx as number, i, delta)}
                       onSetReportsTo={(value) => setSectionReportsTo(openIdx as number, i, value)}
                       onSetRole={(name, value) => setPersonRole(openIdx as number, i, name, value)}
+                      onRename={(label) => renameSection(openIdx as number, i, label)}
+                      onRemoveSection={() => removeSection(openIdx as number, i)}
+                      onAddNamed={(label) => addNamedOpening(openIdx as number, i, label)}
+                      onRemoveNamed={(label) => removeNamedOpening(openIdx as number, i, label)}
+                      onFillNamed={(label, name, bucket) => fillNamedOpening(openIdx as number, i, label, name, bucket)}
                       moveDests={moveDestsExcluding(openIdx as number, i)}
                       onMove={(bucket, name, dest, arrive) => movePerson(openIdx as number, i, bucket, name, dest, arrive)}
                       links={links}
@@ -1045,6 +1281,13 @@ export default function MaintenanceOrgChart({
                     />
                   ))}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => addSection(openIdx as number)}
+                  style={{ ...linkBtnStyle, marginTop: 8, padding: "5px 10px", fontSize: 12 }}
+                >
+                  + Add a section
+                </button>
                 <div className="m-edithint">
                   Changes are local until you press <b>{cardEditing ? "Save this location" : "Save all changes"}</b> below. Use each person&apos;s status dropdown to change them (e.g. <b>Candidate → In training</b>). Adding a person fills an open position; removing one reopens it. Candidate = red (external), Candidate · internal = blue.
                 </div>
