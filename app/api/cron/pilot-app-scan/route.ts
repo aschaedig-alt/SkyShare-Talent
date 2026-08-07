@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { scanPilotApplications } from "@/lib/pilotapp/scan";
+import { scanPilotApplications, SCAN_WINDOW_DAYS } from "@/lib/pilotapp/scan";
+import { recordPilotAppRun, mountainDayKey, type PilotAppRunRecord } from "@/lib/pilotapp/runs";
+import { sendDailySummary, worthSending } from "@/lib/pilotapp/daily-email";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +31,18 @@ export const dynamic = "force-dynamic";
  * duplicate person is a worse outcome than an unfiled document. Everything it
  * creates carries source "Pilot application (Adobe Sign)", which is the handle
  * for auditing or undoing a run.
+ *
+ * WHAT IT SEES: the last SCAN_WINDOW_DAYS days of Adobe Sign notices in EVERY
+ * state, open or archived — not just open. Hannah archives a thread once the
+ * application is in Paycom, and an is:open sweep could never see that thread
+ * again, so anything archived before the scan reached it was missed permanently
+ * and silently. The date window is what makes all-states affordable; see
+ * windowedQuery in lib/pilotapp/scan.ts.
+ *
+ * EVERY RUN IS RECORDED, acting or not, to pilotapp/scan-runs — the quiet nights
+ * are the point, because "it never fired" is otherwise indistinguishable from "it
+ * fired and found nothing". A summary email goes to hrotasks@ only when there is
+ * something to say.
  */
 export async function GET(request: Request) {
   // FAIL CLOSED — this route writes to the live database and to Front, and the
@@ -48,8 +62,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, message: "Front is not configured" });
   }
 
+  const at = new Date();
   try {
-    const report = await scanPilotApplications({ apply: true, createMissing: true });
+    const report = await scanPilotApplications({
+      apply: true,
+      createMissing: true,
+      windowDays: SCAN_WINDOW_DAYS
+    });
     const created = report.createdCandidates ?? [];
     // Name every person this run created. An unattended job that adds people to
     // a shared database has to say who, or the only record of it is the rows
@@ -60,19 +79,77 @@ export async function GET(request: Request) {
       report.tally,
       created.length ? `created: ${created.join(", ")}` : ""
     );
+
+    const summary = {
+      created,
+      conversationsScanned: report.conversationsScanned,
+      noticesFound: report.noticesFound,
+      attached: report.attached,
+      missingTags: report.missingTags
+    };
+
+    // The email must never be able to undo the filing. Everything above this
+    // point has already been written to the database and to Front, so a send
+    // failure is recorded and reported, not thrown.
+    let emailed = false;
+    let emailError: string | undefined;
+    if (worthSending(summary)) {
+      try {
+        await sendDailySummary(summary);
+        emailed = true;
+      } catch (err) {
+        emailError = err instanceof Error ? err.message : String(err);
+        console.error("Pilot app cron: summary email failed:", err);
+      }
+    }
+
+    const record: PilotAppRunRecord = {
+      at: at.toISOString(),
+      dayKey: mountainDayKey(at),
+      outcome: created.length ? "created" : report.attached ? "filed-only" : "nothing-found",
+      query: report.query,
+      conversationsScanned: report.conversationsScanned,
+      noticesFound: report.noticesFound,
+      attached: report.attached,
+      created,
+      ...(report.missingTags?.length ? { missingTags: report.missingTags } : {}),
+      ...(worthSending(summary) ? { emailed } : {}),
+      ...(emailError ? { emailError } : {})
+    };
+    await recordPilotAppRun(record);
+
     return NextResponse.json({
       ok: true,
+      query: report.query,
       conversationsScanned: report.conversationsScanned,
       noticesFound: report.noticesFound,
       attached: report.attached,
       createdCandidates: created,
+      emailed,
+      ...(emailError ? { emailError } : {}),
       tally: report.tally
     });
   } catch (error) {
     console.error("Pilot app cron error:", error);
-    return NextResponse.json(
-      { ok: false, message: error instanceof Error ? error.message : String(error) },
-      { status: 502 }
-    );
+    const message = error instanceof Error ? error.message : String(error);
+    // A crashed run is the one most worth recording: it is the state that looks
+    // identical to "never scheduled" from the outside.
+    await recordPilotAppRun({
+      at: at.toISOString(),
+      dayKey: mountainDayKey(at),
+      outcome: "crashed",
+      query: "(threw before reporting)",
+      conversationsScanned: 0,
+      noticesFound: 0,
+      attached: 0,
+      created: [],
+      error: message
+    });
+    try {
+      await sendDailySummary({ created: [], conversationsScanned: 0, noticesFound: 0, attached: 0, error: message });
+    } catch {
+      /* the failure is already logged and recorded — a second failure must not mask it */
+    }
+    return NextResponse.json({ ok: false, message }, { status: 502 });
   }
 }

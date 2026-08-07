@@ -87,7 +87,12 @@ export function PaycomScanButton() {
         if (!r.ok || !d?.ok) throw new Error(d?.message ?? "Could not read the inbox.");
         return d;
       }),
-      fetch("/api/front/scan-pilot-apps?apply=1", { method: "POST" }).then(async (r) => {
+      // createMissing matches the nightly cron. Without it this button filed
+      // documents only for people who already existed, so clicking it and
+      // waiting for the 7:30am run produced DIFFERENT outcomes on the same
+      // thread — the button left a "could not find the candidate" note that the
+      // cron would then have resolved by creating them.
+      fetch("/api/front/scan-pilot-apps?apply=1&createMissing=1", { method: "POST" }).then(async (r) => {
         const d = (await r.json().catch(() => null)) as PilotAppResponse | null;
         if (!r.ok || !d?.ok) throw new Error(d?.message ?? "Could not read pilot applications.");
         return d;

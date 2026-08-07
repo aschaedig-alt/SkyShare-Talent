@@ -74,7 +74,41 @@ export const TAGS = {
 export const DEFAULT_QUERY = 'is:open cc:pilotapp@skyshare.com from:adobesign@adobesign.com';
 /** The same notices regardless of state — for the one-off historical backfill. */
 export const BACKFILL_QUERY = "cc:pilotapp@skyshare.com from:adobesign@adobesign.com";
-export const DEFAULT_MAX_CONVERSATIONS = 40;
+
+/** How far back the nightly sweep looks. See windowedQuery. */
+export const SCAN_WINDOW_DAYS = 30;
+
+/**
+ * The nightly query: every Adobe Sign notice from the last N days REGARDLESS OF
+ * STATE — open or archived.
+ *
+ * DEFAULT_QUERY only saw is:open, and that was wrong once the scanner stopped
+ * archiving (Jul 30). Hannah archives a thread when she has put the application
+ * into Paycom, which is the correct end of her workflow — but an is:open sweep
+ * can never see that thread again, so anything she archived before the scan
+ * reached it was missed permanently and silently.
+ *
+ * Dropping the state filter alone would be worse: the archive holds 400-odd
+ * notices, and an unbounded all-states query re-walks the whole history every
+ * night, hitting the conversation cap on the OLDEST threads and never reaching
+ * today's. The date window is what makes all-states affordable — it bounds the
+ * set by time rather than by state, so newly archived threads stay visible for a
+ * month and old ones drop out on their own.
+ *
+ * after:<unix> is the one date filter Front's search DSL was confirmed to accept.
+ */
+export function windowedQuery(days: number = SCAN_WINDOW_DAYS, now: Date = new Date()): string {
+  const after = Math.floor(now.getTime() / 1000) - days * 86400;
+  return `${BACKFILL_QUERY} after:${after}`;
+}
+
+/**
+ * Threads one sweep will walk. Raised from 40 with the window above: 40 was sized
+ * for "the handful of OPEN threads", and this query also returns everything
+ * archived in the last 30 days. Still far below HARD_MAX_CONVERSATIONS, so a
+ * query that goes wrong is bounded rather than unlimited.
+ */
+export const DEFAULT_MAX_CONVERSATIONS = 200;
 /**
  * Ceiling for one sweep. Raised from 300 to 800 to finish the one-off historical
  * backfill: the archive holds 400-odd Adobe Sign notices and a 300 cap stopped
@@ -106,6 +140,8 @@ export type PilotAppScanOptions = {
   apply?: boolean;
   query?: string;
   maxConversations?: number;
+  /** Days back for the default all-states window. Ignored if query or backfill is set. */
+  windowDays?: number;
   /**
    * One-off historical pass over threads the team ALREADY handled by hand.
    *
@@ -434,7 +470,10 @@ export async function scanPilotApplications(opts: PilotAppScanOptions = {}): Pro
   const apply = opts.apply === true;
   const backfill = opts.backfill === true;
   const createMissing = opts.createMissing === true;
-  const query = opts.query?.trim() || (backfill ? BACKFILL_QUERY : DEFAULT_QUERY);
+  // Default is now the 30-day all-states window rather than is:open — see
+  // windowedQuery for why. An explicit ?q= still wins, and ?backfill=1 still
+  // reaches the whole history for a one-off catch-up.
+  const query = opts.query?.trim() || (backfill ? BACKFILL_QUERY : windowedQuery(opts.windowDays));
   const maxConversations = opts.maxConversations ?? DEFAULT_MAX_CONVERSATIONS;
 
   const results: PilotAppRow[] = [];
