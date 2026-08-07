@@ -26,6 +26,7 @@ export {
   iterateConversations,
   getMessages,
   addTags,
+  removeTags,
   getConversationTagNames,
   listTags,
   resolveTagIds,

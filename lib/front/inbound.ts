@@ -83,6 +83,24 @@ export async function addTags(
   });
 }
 
+/**
+ * Take a tag OFF a thread.
+ *
+ * Deliberately not used by any scanner — the automation adds labels, it does not
+ * take them away, and a job that can silently un-label a thread somebody is
+ * working from is a job that can hide work. This exists for one-off corrections
+ * where the app applied a tag it should not have, and the caller is expected to
+ * have established provenance first (Front's conversation events name the actor
+ * as api / teammate / rule).
+ */
+export async function removeTags(conversationId: string, tagIds: string[]): Promise<void> {
+  if (tagIds.length === 0) return;
+  await frontFetch(`/conversations/${conversationId}/tags`, {
+    method: "DELETE",
+    body: JSON.stringify({ tag_ids: tagIds }),
+  });
+}
+
 export type FrontTag = { id: string; name: string };
 
 /**

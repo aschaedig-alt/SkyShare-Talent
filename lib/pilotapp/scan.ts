@@ -56,9 +56,19 @@ export const TAGS = {
   automated: ["[Automated]", "automated"],
   /** What this thread is. */
   pilotApp: ["Pilot App", "pilot app"],
-  /** The team's existing "this is in the ATS now" marker, applied on success.
-      Means the PDF is on the candidate here — NOT that it's in Paycom; that step
-      is still Hannah's, and the open thread is what tells her it's outstanding. */
+  /**
+   * HANNAH'S TAG. THE APP MUST NEVER APPLY IT. (Changed Aug 7, on the user's
+   * instruction, reversing the Jul 27 decision.)
+   *
+   * "Manually Added to ATS" means a person put the application into PAYCOM. The
+   * scanner used to set it on every successful filing, which read as that having
+   * happened when all the app had done was attach the PDF on this side — so the
+   * one marker telling Hannah what was still outstanding was being ticked for
+   * her, by a job that cannot do the thing it claims.
+   *
+   * Kept here only so the retro-fix script can name the tag it removes. Do not
+   * put it back into a tag() call.
+   */
   addedToAts: ["Manually Added to ATS", "manually added to ats"],
   /** Seen but NOT actioned — no candidate, or two candidates. */
   needsReview: ["Needs Review", "needs review"],
@@ -396,11 +406,15 @@ export async function processPilotAppConversation(
         } catch {
           /* the document is filed — a failed note must not undo that */
         }
+        // NOT addedToAts — see the comment on that tag. Filing the PDF here is
+        // not the same as somebody putting the application into Paycom, and the
+        // app claiming the latter took away the only signal Hannah had for what
+        // was still outstanding.
         await tag(
           conversationId,
           createdHere
-            ? [TAGS.automated, TAGS.pilotApp, TAGS.addedToAts, TAGS.candidateCreated]
-            : [TAGS.automated, TAGS.pilotApp, TAGS.addedToAts],
+            ? [TAGS.automated, TAGS.pilotApp, TAGS.candidateCreated]
+            : [TAGS.automated, TAGS.pilotApp],
           missing
         );
         // Deliberately NOT archived: Paycom is still a manual step and this thread

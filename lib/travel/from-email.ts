@@ -49,8 +49,20 @@ export type TravelImportResult = {
   match: TravelerMatch | null;
 };
 
+/**
+ * Each entry is ONE tag with acceptable spellings; the first that exists wins.
+ *
+ * Two faults were fixed here on Aug 7. The importer never applied [Automated] at
+ * all, and worse, its "imported" entry listed "Travel Imported" then "Automated"
+ * — NEITHER of which exists in the account, since the real tag is "[Automated]"
+ * with brackets. A tag that resolves to nothing is dropped silently by design,
+ * so travel threads the app read and filed carried no sign it had touched them.
+ */
 const TAGS = {
-  imported: ["Travel Imported", "Automated"],
+  /** On every thread this importer acts on, filed or not. */
+  automated: ["[Automated]", "automated"],
+  /** The travel marker. "Travel Imported" does not exist yet; "Travel" does. */
+  imported: ["Travel Imported", "Travel"],
   needsReview: ["Needs Review", "needs review"]
 } as const;
 
@@ -303,10 +315,21 @@ async function comment(conversationId: string, body: string): Promise<void> {
   }
 }
 
-async function tag(conversationId: string, names: readonly string[]): Promise<void> {
+/**
+ * Apply one or more tags, ALWAYS including [Automated].
+ *
+ * Callers pass only the specific marker; the automated one is added here rather
+ * than at each call site, so a new branch cannot forget it. That is how the
+ * needs-review path came to be untagged in the first place.
+ */
+async function tag(conversationId: string, ...entries: readonly (readonly string[])[]): Promise<void> {
   try {
-    const id = await resolveTagIdByNames([...names]);
-    if (id) await addTags(conversationId, [id]);
+    const ids: string[] = [];
+    for (const names of [TAGS.automated, ...entries]) {
+      const id = await resolveTagIdByNames([...names]);
+      if (id && !ids.includes(id)) ids.push(id);
+    }
+    if (ids.length) await addTags(conversationId, ids);
   } catch {
     /* a tag is a label, not the work */
   }

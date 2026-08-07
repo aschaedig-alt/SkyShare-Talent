@@ -130,7 +130,12 @@ export async function processConversationById(
             result.outcome === "ambiguous-match" ||
             result.outcome === "no-name-found" ||
             result.outcome === "unrecognised-subject"
-          ? [TAGS.needsReview]
+          ? // [Automated] goes on here too. The app READ this thread and made a
+            // decision about it — that it could not place it — which is exactly
+            // as much an automated touch as a successful tick. Without it, the
+            // threads the automation understood least were the ones carrying no
+            // sign it had been involved.
+            [TAGS.automated, TAGS.needsReview]
           : [];
     if (wanted.length) {
       try {
