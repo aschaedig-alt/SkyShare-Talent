@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { normalizeName, normalizePhone } from "@/lib/candidates/normalize";
+import {
+  historicalTextPredicates,
+  jazzIdentifierPredicates,
+  splitSearchTerms
+} from "@/lib/candidates/search-terms";
 
 export type HistoricalSearchFilters = {
   q?: string;
@@ -47,20 +52,26 @@ export async function searchHistorical(filters: HistoricalSearchFilters): Promis
   // Always scope to historical records — created-from-Jazz or merged-with-Jazz.
   const and: Record<string, unknown>[] = [{ OR: [{ origin: "JAZZ" }, { historicalSourceId: { not: null } }] }];
 
-  const q = filters.q?.trim();
-  if (q) {
+  // One OR-block per typed term, ANDed by virtue of being separate entries in
+  // `and`. A single match against the whole string meant any two-term query
+  // ("Pilatus Hired") returned nothing at all.
+  for (const term of splitSearchTerms(filters.q ?? "")) {
     and.push({
       OR: [
-        { normalizedName: { contains: normalizeName(q) ?? q.toLowerCase() } },
-        { displayName: ci(q) },
-        { primaryEmail: ci(q) },
-        { primaryPhone: { contains: normalizePhone(q) ?? q } },
-        { jazzCandidateNumber: ci(q) },
-        { applications: { some: { job: { title: ci(q) } } } },
-        { applications: { some: { job: { recruiter: ci(q) } } } },
-        { interviews: { some: { interviewer: ci(q) } } },
-        { notes: { some: { body: ci(q) } } },
-        { interviews: { some: { notes: ci(q) } } }
+        { normalizedName: { contains: normalizeName(term) ?? term.toLowerCase() } },
+        { displayName: ci(term) },
+        { primaryEmail: ci(term) },
+        { primaryPhone: { contains: normalizePhone(term) ?? term } },
+        { applications: { some: { job: { recruiter: ci(term) } } } },
+        { interviews: { some: { interviewer: ci(term) } } },
+        { notes: { some: { body: ci(term) } } },
+        { interviews: { some: { notes: ci(term) } } },
+        // Jazz identifiers are PREFIX-matched, not substring — "projob_"
+        // contains "job_", so substring matching on a partial job id would drag
+        // in every application in the archive. See lib/candidates/search-terms.ts.
+        ...jazzIdentifierPredicates(term),
+        // Job title and Jazz's own status vocabulary.
+        ...historicalTextPredicates(term)
       ]
     });
   }

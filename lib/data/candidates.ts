@@ -11,6 +11,11 @@ import {
   type CandidateDepartmentKey
 } from "@/lib/candidates/departments";
 import { CANDIDATE_LIST_LIMIT, CANDIDATE_LIST_MAX } from "@/lib/candidates/list-config";
+import {
+  historicalTextPredicates,
+  jazzIdentifierPredicates,
+  splitSearchTerms
+} from "@/lib/candidates/search-terms";
 import type { ViewerScope } from "@/lib/auth/viewer-scope";
 import type { TagChip } from "@/lib/tags/colors";
 
@@ -426,30 +431,44 @@ export async function getCandidateListData(
 ): Promise<CandidateListData> {
   const normalizedQuery = query.trim().toLowerCase();
   const hasQuery = normalizedQuery.length > 0;
+  const terms = splitSearchTerms(query);
   const tags = tagFilter.map((t) => t.trim()).filter(Boolean);
   const pageSize = Math.min(Math.max(1, Math.floor(limit)), CANDIDATE_LIST_MAX);
+
+  // One OR-block per term, ANDed together, so every word the user typed has to
+  // land somewhere. A single `contains` against the whole typed string can only
+  // ever match one field, which made any two-term query return nothing.
+  const termPredicate = (term: string) => {
+    const lower = term.toLowerCase();
+    const digits = lower.replace(/\D/g, "");
+    return {
+      OR: [
+        { normalizedName: { contains: lower } },
+        { normalizedEmail: { contains: lower } },
+        { normalizedPhone: { contains: digits || lower } },
+        { displayName: { contains: term, mode: "insensitive" as const } },
+        { currentTitle: { contains: term, mode: "insensitive" as const } },
+        { stage: { contains: term, mode: "insensitive" as const } },
+        { owner: { contains: term, mode: "insensitive" as const } },
+        { source: { contains: term, mode: "insensitive" as const } },
+        { primaryEmail: { contains: lower, mode: "insensitive" as const } },
+        { primaryPhone: { contains: term } },
+        { tagsJson: { contains: term, mode: "insensitive" as const } },
+        // Search inside document text (resumes, pilot apps, etc.)
+        { files: { some: { extractedText: { contains: term, mode: "insensitive" as const } } } },
+        // Jazz-era identifiers and history. Identifiers are PREFIX-matched —
+        // see lib/candidates/search-terms.ts for why substring is wrong here.
+        ...jazzIdentifierPredicates(term),
+        ...historicalTextPredicates(term)
+      ]
+    };
+  };
 
   // When searching, span ALL candidates including archived/historical (Jazz)
   // ones so legacy records are findable. With no query, the default list stays
   // active-only (archivedAt: null) so the historical archive doesn't flood it.
-  const baseWhere = hasQuery
-    ? {
-        OR: [
-          { normalizedName: { contains: normalizedQuery } },
-          { normalizedEmail: { contains: normalizedQuery } },
-          { normalizedPhone: { contains: normalizedQuery.replace(/\D/g, "") || normalizedQuery } },
-          { displayName: { contains: query, mode: "insensitive" as const } },
-          { currentTitle: { contains: query, mode: "insensitive" as const } },
-          { stage: { contains: query, mode: "insensitive" as const } },
-          { owner: { contains: query, mode: "insensitive" as const } },
-          { source: { contains: query, mode: "insensitive" as const } },
-          { primaryEmail: { contains: normalizedQuery, mode: "insensitive" as const } },
-          { primaryPhone: { contains: query } },
-          { tagsJson: { contains: query, mode: "insensitive" as const } },
-          // Search inside document text (resumes, pilot apps, etc.)
-          { files: { some: { extractedText: { contains: query, mode: "insensitive" as const } } } }
-        ]
-      }
+  const baseWhere: Record<string, unknown> = hasQuery
+    ? { AND: terms.map(termPredicate) }
     : { archivedAt: null };
 
   // Org-wide by default — a HIRING_MANAGER only gets narrowed to their own
@@ -471,11 +490,17 @@ export async function getCandidateListData(
   // Matched case-insensitively through `normalized`, since the legacy importer
   // and hand-typed tags do not agree on casing.
   if (tags.length) {
+    // Append to any existing AND rather than replacing it — the search itself
+    // now lives in `AND` (one entry per typed term), so assigning here would
+    // silently drop the query and return tag matches for everybody.
     candidateWhere = {
       ...candidateWhere,
-      AND: tags.map((label) => ({
-        candidateTags: { some: { tag: { normalized: label.toLowerCase() } } }
-      }))
+      AND: [
+        ...((candidateWhere.AND as unknown[]) ?? []),
+        ...tags.map((label) => ({
+          candidateTags: { some: { tag: { normalized: label.toLowerCase() } } }
+        }))
+      ]
     };
   }
 
@@ -529,12 +554,18 @@ export async function getCandidateListData(
   }
 
   // Only pull document text for matching files when there's a query (keeps the list light).
+  // Match on ANY typed term, not the whole string — otherwise a multi-term
+  // query never surfaces the document snippet that explains the hit.
   const filesInclude = hasQuery
-    ? ({
-        where: { extractedText: { contains: query, mode: "insensitive" as const } },
+    ? {
+        where: {
+          OR: terms.map((term) => ({
+            extractedText: { contains: term, mode: "insensitive" as const }
+          }))
+        },
         select: { displayFilename: true, extractedText: true },
         take: 1
-      } as const)
+      }
     : false;
 
   // BACK TO Promise.all, REVERTED from $transaction. The $transaction attempt
