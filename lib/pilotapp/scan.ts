@@ -61,7 +61,13 @@ export const TAGS = {
       is still Hannah's, and the open thread is what tells her it's outstanding. */
   addedToAts: ["Manually Added to ATS", "manually added to ats"],
   /** Seen but NOT actioned — no candidate, or two candidates. */
-  needsReview: ["Needs Review", "needs review"]
+  needsReview: ["Needs Review", "needs review"],
+  /** This run CREATED the candidate from the application rather than matching an
+      existing one. Applied alongside addedToAts, not instead of it: the document
+      was still filed, but the person did not exist until this thread arrived, so
+      the record has only what the application itself carried. Anyone auditing
+      auto-created people can find them from Front with this one tag. */
+  candidateCreated: ["Candidate Created by App", "candidate created by app"]
 } as const;
 
 /** Adobe Sign is the only sender, and the group is the only cc that matters. */
@@ -294,12 +300,19 @@ export async function processPilotAppConversation(
 
     // --- from here on we are writing ---
 
+    // Did THIS message create the person? Drives both the tag and the wording of
+    // the Front comment below, neither of which can be inferred afterwards:
+    // a created candidate has matchedBy null, which is indistinguishable from a
+    // plain name match once we are past this block.
+    let createdHere = false;
+
     // No candidate, but we know exactly who signed — create them and carry on.
     // Only on a clean no-match: an AMBIGUOUS one means someone very like them is
     // already here, and creating a second record is the worst possible answer.
     if (createMissing && result.outcome === "no-match" && result.signerName && result.signerEmail) {
       try {
         const made = await createCandidateFromApplication(result.signerName, result.signerEmail);
+        createdHere = true;
         result = {
           ...result,
           outcome: "attached",
@@ -327,8 +340,13 @@ export async function processPilotAppConversation(
       }
       try {
         const fileId = await fileDocument(result.candidateId, pdf, message.id, conversationId);
-        const via =
-          result.matchedBy === "email"
+        // A created candidate has no matchedBy, so without this branch the note
+        // below would claim we "matched on the name" somebody who did not exist
+        // until a moment ago — the one line a recruiter reads to decide whether
+        // to trust the filing.
+        const via = createdHere
+          ? `new candidate created from this application`
+          : result.matchedBy === "email"
             ? `matched on ${result.signerEmail}`
             : result.matchedBy === "nickname"
               ? `matched "${result.signerName}" to them by surname and first name`
@@ -342,7 +360,13 @@ export async function processPilotAppConversation(
         } catch {
           /* the document is filed — a failed note must not undo that */
         }
-        await tag(conversationId, [TAGS.automated, TAGS.pilotApp, TAGS.addedToAts], missing);
+        await tag(
+          conversationId,
+          createdHere
+            ? [TAGS.automated, TAGS.pilotApp, TAGS.addedToAts, TAGS.candidateCreated]
+            : [TAGS.automated, TAGS.pilotApp, TAGS.addedToAts],
+          missing
+        );
         // Deliberately NOT archived: Paycom is still a manual step and this thread
         // is the queue for it. See the note at the top of the file.
         out.push({ conversationId, ...result, outcome: "attached", candidateFileId: fileId });

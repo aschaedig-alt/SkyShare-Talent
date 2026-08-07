@@ -16,6 +16,19 @@ export const dynamic = "force-dynamic";
  * and nothing else), and it never guesses when a name matches two people. Use
  * POST /api/front/scan-pilot-apps (dry run by default) to see what it would do
  * first.
+ *
+ * createMissing: an applicant nobody in the system matches gets CREATED from
+ * their own application rather than skipped with a "could not find the
+ * candidate" note. The note was a dead end — it asked a human to add the person
+ * and re-run, which is exactly the work this route can do itself, and until
+ * someone did it the signed PDF was never downloaded at all.
+ *
+ * This only fires on a CLEAN no-match, and only when the application yields both
+ * a name and an email. An ambiguous match — a name that resolves to two people —
+ * still refuses to guess and still leaves the thread for a human, because a
+ * duplicate person is a worse outcome than an unfiled document. Everything it
+ * creates carries source "Pilot application (Adobe Sign)", which is the handle
+ * for auditing or undoing a run.
  */
 export async function GET(request: Request) {
   // FAIL CLOSED — this route writes to the live database and to Front, and the
@@ -36,16 +49,23 @@ export async function GET(request: Request) {
   }
 
   try {
-    const report = await scanPilotApplications({ apply: true });
+    const report = await scanPilotApplications({ apply: true, createMissing: true });
+    const created = report.createdCandidates ?? [];
+    // Name every person this run created. An unattended job that adds people to
+    // a shared database has to say who, or the only record of it is the rows
+    // themselves.
     console.log(
-      `Pilot app cron: ${report.conversationsScanned} threads, ${report.noticesFound} notices, ${report.attached} filed (threads left open for Paycom)`,
-      report.tally
+      `Pilot app cron: ${report.conversationsScanned} threads, ${report.noticesFound} notices, ` +
+        `${report.attached} filed, ${created.length} candidate(s) created (threads left open for Paycom)`,
+      report.tally,
+      created.length ? `created: ${created.join(", ")}` : ""
     );
     return NextResponse.json({
       ok: true,
       conversationsScanned: report.conversationsScanned,
       noticesFound: report.noticesFound,
       attached: report.attached,
+      createdCandidates: created,
       tally: report.tally
     });
   } catch (error) {
