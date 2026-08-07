@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { scanPilotApplications, resolveLimit } from "@/lib/pilotapp/scan";
+import { completePilotAppRun, recordPilotAppCrash } from "@/lib/pilotapp/complete-run";
 
 /**
  * Manual/on-demand sweep for completed pilot applications in pilotapp@.
@@ -51,13 +52,34 @@ export async function POST(request: Request) {
       createMissing: url.searchParams.get("createMissing") === "1"
     });
 
+    // A WRITING run leaves the same trace whoever set it off. A dry run
+    // deliberately does not: it changed nothing, and a log full of previews
+    // would bury the runs that actually created somebody.
+    let emailed = false;
+    let emailError: string | undefined;
+    if (apply) {
+      ({ emailed, emailError } = await completePilotAppRun({
+        report,
+        trigger: "manual",
+        actor: auth.user?.email ?? null
+      }));
+    }
+
     return NextResponse.json({
       ok: true,
       mode: apply ? "APPLIED" : "DRY RUN (pass ?apply=1 to write)",
+      ...(apply ? { emailed, ...(emailError ? { emailError } : {}) } : {}),
       ...report
     });
   } catch (error) {
     console.error("Pilot application scan error:", error);
+    if (apply) {
+      await recordPilotAppCrash({
+        trigger: "manual",
+        actor: auth.user?.email ?? null,
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
     return NextResponse.json(
       {
         message: "Could not read from Front.",

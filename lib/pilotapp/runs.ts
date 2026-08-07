@@ -37,6 +37,14 @@ export type PilotAppRunRecord = {
   at: string;
   /** The Mountain day it ran on. */
   dayKey: string;
+  /**
+   * What set this run off. The button can create people just as the cron can, so
+   * a log that recorded only the cron would be an incomplete answer to "what
+   * added this person" — which is the one question the log exists to answer.
+   */
+  trigger: "cron" | "manual";
+  /** Who clicked, for a manual run. Null under the local auth bypass. */
+  actor?: string | null;
   outcome: "created" | "filed-only" | "nothing-found" | "crashed";
   query: string;
   conversationsScanned: number;

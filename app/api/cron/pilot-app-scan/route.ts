@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { scanPilotApplications, SCAN_WINDOW_DAYS } from "@/lib/pilotapp/scan";
-import { recordPilotAppRun, mountainDayKey, type PilotAppRunRecord } from "@/lib/pilotapp/runs";
-import { sendDailySummary, worthSending } from "@/lib/pilotapp/daily-email";
+import { completePilotAppRun, recordPilotAppCrash } from "@/lib/pilotapp/complete-run";
 
 export const dynamic = "force-dynamic";
 
@@ -80,43 +79,10 @@ export async function GET(request: Request) {
       created.length ? `created: ${created.join(", ")}` : ""
     );
 
-    const summary = {
-      created,
-      conversationsScanned: report.conversationsScanned,
-      noticesFound: report.noticesFound,
-      attached: report.attached,
-      missingTags: report.missingTags
-    };
-
-    // The email must never be able to undo the filing. Everything above this
-    // point has already been written to the database and to Front, so a send
-    // failure is recorded and reported, not thrown.
-    let emailed = false;
-    let emailError: string | undefined;
-    if (worthSending(summary)) {
-      try {
-        await sendDailySummary(summary);
-        emailed = true;
-      } catch (err) {
-        emailError = err instanceof Error ? err.message : String(err);
-        console.error("Pilot app cron: summary email failed:", err);
-      }
-    }
-
-    const record: PilotAppRunRecord = {
-      at: at.toISOString(),
-      dayKey: mountainDayKey(at),
-      outcome: created.length ? "created" : report.attached ? "filed-only" : "nothing-found",
-      query: report.query,
-      conversationsScanned: report.conversationsScanned,
-      noticesFound: report.noticesFound,
-      attached: report.attached,
-      created,
-      ...(report.missingTags?.length ? { missingTags: report.missingTags } : {}),
-      ...(worthSending(summary) ? { emailed } : {}),
-      ...(emailError ? { emailError } : {})
-    };
-    await recordPilotAppRun(record);
+    // Recording and reporting are shared with the manual button so the two
+    // cannot drift — see lib/pilotapp/complete-run.ts. Neither can throw: the
+    // filing is already done by this point.
+    const { emailed, emailError } = await completePilotAppRun({ report, trigger: "cron", at });
 
     return NextResponse.json({
       ok: true,
@@ -132,24 +98,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("Pilot app cron error:", error);
     const message = error instanceof Error ? error.message : String(error);
-    // A crashed run is the one most worth recording: it is the state that looks
-    // identical to "never scheduled" from the outside.
-    await recordPilotAppRun({
-      at: at.toISOString(),
-      dayKey: mountainDayKey(at),
-      outcome: "crashed",
-      query: "(threw before reporting)",
-      conversationsScanned: 0,
-      noticesFound: 0,
-      attached: 0,
-      created: [],
-      error: message
-    });
-    try {
-      await sendDailySummary({ created: [], conversationsScanned: 0, noticesFound: 0, attached: 0, error: message });
-    } catch {
-      /* the failure is already logged and recorded — a second failure must not mask it */
-    }
+    await recordPilotAppCrash({ trigger: "cron", message, at });
     return NextResponse.json({ ok: false, message }, { status: 502 });
   }
 }
