@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { MxRoster } from "./mx-roster";
-import { defaultMxRoster, normalizeMxRoster, normalizeMxLinks } from "./mx-roster";
+import { defaultMxRoster, normalizeMxRoster, normalizeMxLinks, pruneMxLinks } from "./mx-roster";
 
 const SCOPE = "fleet";
 const KEY = "mx-roster";
@@ -25,11 +25,19 @@ export async function getMxRoster(): Promise<MxRoster> {
   }
 }
 
-/** Persist an edited roster + links (normalized first). */
+/**
+ * Persist an edited roster + links (normalized first).
+ *
+ * Links are pruned against the roster being written, so a link can never
+ * outlive the person it points at. This is the ONE write path — the chart, a
+ * script, or any future caller all land here — which is why the prune belongs
+ * on this side rather than in the editor's remove handler.
+ */
 export async function saveMxRoster(input: { groups?: unknown; links?: unknown }): Promise<MxRoster> {
+  const groups = normalizeMxRoster(input?.groups);
   const roster: MxRoster = {
-    groups: normalizeMxRoster(input?.groups),
-    links: normalizeMxLinks(input?.links)
+    groups,
+    links: pruneMxLinks(groups, normalizeMxLinks(input?.links))
   };
   await prisma.workspaceSetting.upsert({
     where: { scope_key: { scope: SCOPE, key: KEY } },

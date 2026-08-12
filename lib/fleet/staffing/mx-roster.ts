@@ -40,6 +40,52 @@ export function normalizeMxLinks(input: unknown): MxLinks {
   return out;
 }
 
+/**
+ * Every person NAME the chart actually shows: the five people buckets on each
+ * section, plus each card's manager.
+ *
+ * Deliberately NOT openNamed — those are requisition labels ("OGD Team Lead"),
+ * not people — and not the keys of `roles`, which are only meaningful for
+ * somebody already in a bucket.
+ */
+function namesOnChart(groups: MxGroup[]): Set<string> {
+  const names = new Set<string>();
+  for (const g of groups) {
+    if (g.mgr) names.add(g.mgr);
+    for (const s of g.sections ?? []) {
+      for (const bucket of [s.line, s.train, s.cand, s.candInt, s.offered]) {
+        for (const n of bucket ?? []) names.add(n);
+      }
+    }
+  }
+  return names;
+}
+
+/**
+ * Drop candidate links belonging to people who are no longer on the chart.
+ *
+ * Links are keyed by name and survive a MOVE on purpose (see MxLinks above), so
+ * they cannot be cleaned up at the point of removal without also breaking that.
+ * Doing it here — against the finished roster, at the single write path — is
+ * what makes "still on the chart somewhere?" answerable at all, and it catches
+ * every way a link can be orphaned rather than just one: a person removed, a
+ * section deleted, a whole card deleted, or a name edited.
+ *
+ * Found Aug 12: Poom Padmanuja was correctly removed from every section but his
+ * link stayed behind. Harmless on its own, since nothing renders a link for a
+ * person who is not shown — but the map would otherwise grow an orphan for
+ * everyone ever removed, and a later name-matching feature would read them as
+ * real. The existing orphans clear on the next save.
+ */
+export function pruneMxLinks(groups: MxGroup[], links: MxLinks): MxLinks {
+  const present = namesOnChart(groups);
+  const out: MxLinks = {};
+  for (const [name, id] of Object.entries(links)) {
+    if (present.has(name)) out[name] = id;
+  }
+  return out;
+}
+
 // --- normalization -------------------------------------------------------
 
 function strArr(value: unknown): string[] {
