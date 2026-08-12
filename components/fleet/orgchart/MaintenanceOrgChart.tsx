@@ -72,6 +72,8 @@ function MxEditSection({
   onSetReportsTo,
   onSetRole,
   onRename,
+  onCommitRename,
+  onCommitReportsTo,
   onRemoveSection,
   onAddNamed,
   onRemoveNamed,
@@ -90,6 +92,8 @@ function MxEditSection({
   onSetReportsTo: (value: string) => void;
   onSetRole: (name: string, value: string) => void;
   onRename: (label: string) => void;
+  onCommitRename: () => void;
+  onCommitReportsTo: () => void;
   onRemoveSection: () => void;
   onAddNamed: (label: string) => void;
   onRemoveNamed: (label: string) => void;
@@ -142,7 +146,10 @@ function MxEditSection({
             padding: "2px 4px"
           }}
           onFocus={(e) => (e.currentTarget.style.borderColor = "var(--line, #cdd7e2)")}
-          onBlur={(e) => (e.currentTarget.style.borderColor = "transparent")}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = "transparent";
+            onCommitRename();
+          }}
         />
         <span>
           {filled}/{total}
@@ -163,6 +170,7 @@ function MxEditSection({
       <input
         value={sec.reportsTo ?? ""}
         onChange={(e) => onSetReportsTo(e.target.value)}
+        onBlur={onCommitReportsTo}
         placeholder="Reports to… (blank = the card's manager)"
         aria-label={`Who ${sec.label} reports to`}
         style={{
@@ -625,24 +633,59 @@ export default function MaintenanceOrgChart({
       else s.open = n;
     });
   /** Who this section reports to. Blank clears it, so it falls back to the card's mgr. */
+  // WHY THESE WRITE THE RAW VALUE.
+  //
+  // They used to trim on every keystroke. These are CONTROLLED inputs, so
+  // typing "Supervisors" then a space wrote back the trimmed "Supervisors",
+  // the input re-rendered without the space, and a trailing space could never
+  // be typed at all — which means no space between words while typing. Editing
+  // an existing label worked, because a space inserted mid-string is neither
+  // leading nor trailing. Reported exactly that way.
+  //
+  // Trimming now happens on BLUR (commit* below) and again in normalizeMxRoster
+  // at save, so nothing untrimmed is ever persisted.
   const setSectionReportsTo = (gIdx: number, sIdx: number, value: string) =>
     applyEdit((d) => {
-      const s = sectionOf(d, gIdx, sIdx);
-      const clean = value.trim();
-      if (clean) s.reportsTo = clean;
-      else delete s.reportsTo;
+      sectionOf(d, gIdx, sIdx).reportsTo = value;
     });
-  /** The card's own title, subtitle and manager. Blank is refused — a card with
-      no name is unreachable from the chart behind it. */
   const setGroupField = (gIdx: number, field: "name" | "sub" | "mgr", value: string) =>
     applyEdit((d) => {
-      const clean = value.trim();
-      if (clean) d[gIdx][field] = clean;
+      d[gIdx][field] = value;
     });
   const renameSection = (gIdx: number, sIdx: number, label: string) =>
     applyEdit((d) => {
-      const clean = label.trim();
-      if (clean) sectionOf(d, gIdx, sIdx).label = clean;
+      sectionOf(d, gIdx, sIdx).label = label;
+    });
+
+  // ...and why blur has to put something back rather than just trim.
+  //
+  // normalizeGroup DROPS a group whose name, sub or mgr is blank, and
+  // normalizeSection drops a section with a blank label. Before this, the
+  // trim-on-keystroke refused empty writes and so accidentally hid that; now
+  // that the raw value is written, clearing a field and saving would silently
+  // delete the card or the section. A placeholder is recoverable — you type
+  // over it — where a vanished card is not.
+  const GROUP_FALLBACK: Record<"name" | "sub" | "mgr", string> = {
+    name: "Untitled card",
+    sub: "No subtitle",
+    mgr: "Unassigned"
+  };
+  const commitGroupField = (gIdx: number, field: "name" | "sub" | "mgr") =>
+    applyEdit((d) => {
+      d[gIdx][field] = d[gIdx][field].trim() || GROUP_FALLBACK[field];
+    });
+  const commitSectionLabel = (gIdx: number, sIdx: number) =>
+    applyEdit((d) => {
+      const s = sectionOf(d, gIdx, sIdx);
+      s.label = s.label.trim() || "Untitled section";
+    });
+  /** reportsTo is optional, so empty is a valid answer — drop the key entirely. */
+  const commitSectionReportsTo = (gIdx: number, sIdx: number) =>
+    applyEdit((d) => {
+      const s = sectionOf(d, gIdx, sIdx);
+      const clean = (s.reportsTo ?? "").trim();
+      if (clean) s.reportsTo = clean;
+      else delete s.reportsTo;
     });
   const addSection = (gIdx: number) =>
     applyEdit((d) => {
@@ -689,12 +732,13 @@ export default function MaintenanceOrgChart({
   const setPersonRole = (gIdx: number, sIdx: number, name: string, value: string) =>
     applyEdit((d) => {
       const s = sectionOf(d, gIdx, sIdx);
-      const clean = value.trim();
-      if (!clean) {
+      // Raw, for the same reason as the fields above — a trailing space trimmed
+      // on every keystroke is a space you can never type.
+      if (!value) {
         dropRole(s, name);
         return;
       }
-      s.roles = { ...(s.roles ?? {}), [name]: clean };
+      s.roles = { ...(s.roles ?? {}), [name]: value };
     });
 
   // Move a person from one section to another: pull them from the source (which
@@ -1197,6 +1241,7 @@ export default function MaintenanceOrgChart({
                   <input
                     value={active.name}
                     onChange={(e) => setGroupField(openIdx as number, "name", e.target.value)}
+                    onBlur={() => commitGroupField(openIdx as number, "name")}
                     aria-label="Card title"
                     style={headerInputStyle(20, 800)}
                   />
@@ -1204,6 +1249,7 @@ export default function MaintenanceOrgChart({
                     <input
                       value={active.sub}
                       onChange={(e) => setGroupField(openIdx as number, "sub", e.target.value)}
+                      onBlur={() => commitGroupField(openIdx as number, "sub")}
                       aria-label="Card subtitle"
                       placeholder="Subtitle"
                       style={{ ...headerInputStyle(12, 400), flex: "1 1 180px" }}
@@ -1211,6 +1257,7 @@ export default function MaintenanceOrgChart({
                     <input
                       value={active.mgr}
                       onChange={(e) => setGroupField(openIdx as number, "mgr", e.target.value)}
+                      onBlur={() => commitGroupField(openIdx as number, "mgr")}
                       aria-label="Who this card reports to"
                       placeholder="Reports to"
                       style={{ ...headerInputStyle(12, 400), flex: "1 1 180px" }}
@@ -1269,6 +1316,8 @@ export default function MaintenanceOrgChart({
                       onSetReportsTo={(value) => setSectionReportsTo(openIdx as number, i, value)}
                       onSetRole={(name, value) => setPersonRole(openIdx as number, i, name, value)}
                       onRename={(label) => renameSection(openIdx as number, i, label)}
+                      onCommitRename={() => commitSectionLabel(openIdx as number, i)}
+                      onCommitReportsTo={() => commitSectionReportsTo(openIdx as number, i)}
                       onRemoveSection={() => removeSection(openIdx as number, i)}
                       onAddNamed={(label) => addNamedOpening(openIdx as number, i, label)}
                       onRemoveNamed={(label) => removeNamedOpening(openIdx as number, i, label)}
