@@ -85,10 +85,23 @@ export const CHAPTERS: HandbookChapter[] = [
     slug: "travel",
     file: null,
     title: "Arranging travel",
-    blurb: "Booking a trip, items and receipts, reimbursement, and auto-fill. Coming soon.",
+    blurb: "Booking a trip, trip items, and auto-fill from confirmations. Coming soon.",
     status: "planned",
     group: "The hiring lifecycle",
     routePrefixes: []
+  },
+  {
+    // Split out of the planned "Arranging travel" chapter above, which still
+    // owes the booking half. Reimbursement is its own document because it is a
+    // different process with a different owner — it runs through accounting,
+    // largely outside the app, and it was the open blocker on the travel rock.
+    slug: "travel-reimbursement",
+    file: "06-travel-reimbursement.html",
+    title: "Travel reimbursement",
+    blurb: "After a trip: collecting receipts, what HR sends accounting, and closing the loop.",
+    status: "published",
+    group: "The hiring lifecycle",
+    routePrefixes: ["/travel"]
   },
 
   // ── Recruiting ────────────────────────────────────────────────────────

@@ -162,8 +162,8 @@ function purposeItems(purpose: string): ChecklistItem[] {
         {
           key: "indoc-details",
           label: "Traveler has the indoc details",
-          waitingOn:
-            "Waiting on the CPO's indoc content — what to bring, times and places, and what is expected of them. Nothing is written here yet."
+          detail:
+            "From the Chief Pilot's Office welcome: INDOC is in Ogden at 3715 Airport Rd, Ogden, UT 84405, on site and ready at 0800 on the first day — confirm this session's dates, and send the calendar invite. Arrival: west side main entrance, up the stairs straight ahead, classroom behind the half walls. All assigned online training must be COMPLETED BEFORE they arrive, with their completion times written down. A notebook and pen are provided; their own are welcome. Lunch is provided each day. Phones away during class. Booking airlines and hotels is covered during INDOC itself. Contacts to give them: cpo@skyshare.com for anything Chief Pilot's Office including days off, crewinfo@skyshare.com for all hotel and airline communication, skyops@skyshare.com or 801 516 9189 for flight scheduling, and the on-duty manager on 435 220 4924 for flight-related admin only."
         }
       ];
     case "TRAINING":

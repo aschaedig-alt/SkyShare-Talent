@@ -22,6 +22,7 @@ the published pages are generated *from* these files, never the other way around
 | 3 | `03-business-cards.html` | Ordering ahead of orientation + the six after-order steps | https://claude.ai/code/artifact/b52e49c2-bc88-4c4e-a6e3-366fb251261f |
 | 4 | `04-org-charts.html` | Adding someone to a fleet card and linking their profile | https://claude.ai/code/artifact/3feb9260-c4e2-4dff-b888-63e8350e5b6e |
 | 5 | `05-orientation.html` | Running an orientation: create the session, invite everyone, send the emails, close it out | https://claude.ai/code/artifact/51f060eb-2ee2-448f-b745-9a27a87325f5 |
+| 6 | `06-travel-reimbursement.html` | After a trip: collecting receipts, what HR sends accounting, closing the loop | *not published yet* |
 
 PDFs of each are generated on request into the user's `Downloads` folder.
 
@@ -47,6 +48,12 @@ Reference facts now baked into the SOPs (update them here if any change):
 | Ships cards to remote staff | Morgan Langholf, or Hannah Byers — hbyers@skyshare.com (you never need the address) |
 | Offer letters | Live in **Paycom** — template, drafting and both signatures. The app's six offer steps only *record* that each happened. |
 | Role changes, access, escalations | Recruiting Manager |
+| Travel reimbursement — submitted to | payables@skyshare.com, by **HR**, as a plain email with receipts attached |
+| Travel reimbursement — what to include | Traveler name, dates, purpose of the trip, and the expenses |
+| Travel reimbursement — the invoice | **Dropped in full (Aug 2026).** The fillable invoice assumed the traveler submitted their own claim. They don't. Do not rebuild it. |
+| INDOC — where | 3715 Airport Rd, Ogden, UT 84405 · on site and ready at 0800 on day one |
+| INDOC — arrival | West side main entrance, up the stairs straight ahead, classroom behind the half walls |
+| INDOC — contacts given to the traveler | cpo@ (Chief Pilot's Office, incl. days off) · crewinfo@ (all hotel & airline comms) · skyops@ / 801 516 9189 (flight scheduling) · on-duty manager 435 220 4924 (flight admin only) |
 
 ## Updating an SOP
 
