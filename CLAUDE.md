@@ -39,8 +39,72 @@ the constraint.
 - **Do not switch branches.** You share this working tree; changing the checked-out
   branch yanks it out from under whoever else is working.
 - **Do not let a subagent run git.**
+- **Claim the files you are about to work on, before your first edit** — see
+  "Claiming what you are working on" below.
 - Run `git status` before you finish. If you see changes you did not make, leave
   them alone and name them in your handoff so they are not staged by mistake.
+
+### Claiming what you are working on
+
+You cannot see the other sessions, so say out loud what you are about to touch.
+
+**Your first action, before any edit:** list `.claude/claims/`, read what is
+there, and run `git status`. The two answer different questions — a claim tells
+you what somebody *intends* to touch and why, `git status` tells you what is
+*already* dirty. You need both.
+
+Then write your own claim, **before** you edit anything:
+
+```
+.claude/claims/<short-label>-<8 chars of your session id>.md
+```
+
+```
+session:  paycom-gmail-scan
+started:  2026-08-16 13:42 MT
+status:   active          # active | handed-off
+what:     Gmail-based Paycom notice scanning
+
+paths:
+  lib/paycom/scan.ts
+  lib/google/user-gmail.ts          (new)
+  auth.ts                           (SHARED — adding one provider scope only)
+
+notes:
+  auth.ts is shared. If you need it, say so in your claim rather than both
+  editing it, and we sequence through the commit agent.
+```
+
+**One file per session, never a shared one.** A single `WORKING-ON.md` that every
+session appends to would become exactly what `roadmap.ts` was — the one file
+guaranteed to collide, because it is the one file everybody writes. A directory of
+per-session files cannot collide. The directory is gitignored: it describes this
+working tree, not the repo, and it must never be stageable by accident.
+
+The `what:` line earns its place — it lets the next agent judge overlap by meaning,
+not just by filename.
+
+Four rules that make it work:
+
+1. **If your paths overlap an active claim, do not just proceed.** Pick different
+   work, or say so in your `notes:` AND in your handoff, so the commit agent knows
+   to expect it and can sequence the commits.
+2. **Scope grows — update your claim when it does.** This is the rule most likely
+   to get skipped and the one that matters most. A claim that is stale by an hour
+   is worse than no claim, because it is believed.
+3. **At handoff**, set `status: handed-off` and name the claim file in the block.
+4. **The commit agent deletes your claim when it commits your handoff.** Committing
+   is what releases the files. Nobody has to tidy up.
+
+A claim is **advisory, not a lock.** Nothing enforces it. It does not protect you
+from a destructive git command, which is why "do not let a subagent run git" stays
+absolute. And it cannot help when two pieces of work genuinely need the same shared
+file — what it buys there is that the second agent finds out *before* editing
+rather than at commit time.
+
+If a claim is hours old and `git status` shows none of its files dirty, that
+session died. The commit agent clears it and says so. A dead claim must never block
+live work.
 
 ### If you are the commit-and-push agent
 
@@ -56,6 +120,8 @@ stray backtick will break.
 
 ```
 [label — what this work was]
+
+claim: .claude/claims/<your claim file>   (or "none" if you made no edits)
 
 paths:
   <exact paths you touched, one per line>
@@ -183,8 +249,10 @@ blocks and asks for it.
 
 Work through them one at a time, in the order given:
 
-1. `git status` first. Anything modified that no handoff block claims belongs to a
-   session still working — **leave it alone**, and say so rather than guessing.
+1. `git status` first, then read `.claude/claims/`. Anything modified that no
+   handoff block claims belongs to a session still working — **leave it alone**,
+   and say so rather than guessing. The claims directory usually tells you whose
+   it is and what they are doing, which beats guessing from filenames.
 2. For each block, stage **only** its listed paths — `git add path/to/file`, one
    path at a time. **NEVER `git add -A`, `git add .`, or `git commit -a`.** A
    previous session clobbered a sibling's uncommitted work doing exactly that.
@@ -192,11 +260,15 @@ Work through them one at a time, in the order given:
    the block described, stop and report.
 4. Commit that block with its own message. **One commit per handoff block** — a
    single mixed commit cannot be reviewed or reverted per-agent.
-5. Repeat for the next block. Do not batch.
+5. Delete that block's claim file from `.claude/claims/` once its commit lands.
+   Committing is what releases the files, so the directory stays honest without
+   anyone tidying up. Also clear any claim whose session has plainly died — hours
+   old and none of its files dirty — and say that you cleared it.
+6. Repeat for the next block. Do not batch.
 
 Then, once all the work is committed:
 
-6. Apply every `ROADMAP:` section into `lib/roadmap/roadmap.ts` — into the named
+7. Apply every `ROADMAP:` section into `lib/roadmap/roadmap.ts` — into the named
    section, in the stated format, **no backticks**. Flip any existing `[~]` whose
    only remaining step was shipping. Commit that on its own.
    - **You add the date, and only you.** Handoff blocks arrive without one. Take
@@ -212,11 +284,11 @@ Then, once all the work is committed:
      belongs to. These are the user's own answers — a decision, a confirmed
      process, a name or a number — and the roadmap is the only place they survive
      the session that heard them.
-7. Verify the COMBINED tree, because what gets pushed is everyone's work merged and
+8. Verify the COMBINED tree, because what gets pushed is everyone's work merged and
    no single agent tested that state: `npm run lint` and
    `NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.json`
    (unpiped — piping hides an OOM crash as a false pass).
-8. Push once, only if both are clean.
+9. Push once, only if both are clean.
 
 Pushing to `main` auto-deploys to the live site, so one push is one deploy. If the
 batch is large, that is a reason to split it across pushes, not to trust it.
