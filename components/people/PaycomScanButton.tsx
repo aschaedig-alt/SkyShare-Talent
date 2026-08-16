@@ -6,8 +6,8 @@ import { MailCheck } from "lucide-react";
 import { Button, Modal } from "@/components/ui";
 
 /**
- * On-demand pull of everything the app watches for in Front — Paycom's
- * background-check notices AND completed pilot applications.
+ * On-demand pull of everything the app watches for in Front — Paycom's notices
+ * (background checks AND offer acceptances) plus completed pilot applications.
  *
  * ONE button rather than two, by request: the team shouldn't have to remember
  * which sweep to run, and both answer the same question ("has anything come in
@@ -25,6 +25,10 @@ type ScanRow = {
   personName: string | null;
   hireName: string | null;
   matchedBy?: "exact" | "nickname";
+  /** Which Paycom notice this was — decides which group it is shown under. */
+  kind?: "BG_INFO_SUBMITTED" | "BG_CHECK_COMPLETE" | "OFFER_ACCEPTED" | null;
+  /** The role, on an offer acceptance. Shown so a wrong match is visible. */
+  position?: string | null;
   /** Task key on a tick; on a failure, why it could not be read. */
   detail?: string | null;
   outcome: string;
@@ -51,6 +55,27 @@ type PilotAppRow = {
   detail?: string;
 };
 
+type OfferRow = {
+  outcome: string;
+  personName: string | null;
+  hireName: string | null;
+  matchedBy?: "exact" | "nickname";
+  position?: string | null;
+  detail?: string | null;
+};
+
+type OfferResponse = {
+  ok?: boolean;
+  message?: string;
+  mailbox: string;
+  messagesScanned: number;
+  noticesFound: number;
+  ticked: number;
+  results: OfferRow[];
+  /** Set when the app has no Gmail access — a sentence saying who fixes it how. */
+  blocker: string | null;
+};
+
 type PilotAppResponse = {
   ok?: boolean;
   message?: string;
@@ -71,19 +96,23 @@ export function PaycomScanButton() {
   const [error, setError] = useState<string | null>(null);
   const [pilot, setPilot] = useState<PilotAppResponse | null>(null);
   const [pilotError, setPilotError] = useState<string | null>(null);
+  const [offers, setOffers] = useState<OfferResponse | null>(null);
+  const [offersError, setOffersError] = useState<string | null>(null);
 
   async function run() {
     setOpen(true);
     setRunning(true);
     setResult(null);
     setPilot(null);
+    setOffers(null);
     setError(null);
     setPilotError(null);
+    setOffersError(null);
 
-    // Run both, and let each fail on its own: if Paycom's sweep breaks, the
+    // Run all three, and let each fail on its own: if Paycom's sweep breaks, the
     // pilot-application one should still report, and vice versa. Settled rather
-    // than raced so one rejection can't discard the other's result.
-    const [paycomRes, pilotRes] = await Promise.allSettled([
+    // than raced so one rejection can't discard the others' results.
+    const [paycomRes, pilotRes, offerRes] = await Promise.allSettled([
       fetch("/api/front/scan-paycom?apply=1", { method: "POST" }).then(async (r) => {
         const d = (await r.json().catch(() => null)) as ScanResponse | null;
         if (!r.ok || !d?.ok) throw new Error(d?.message ?? "Could not read the inbox.");
@@ -98,6 +127,15 @@ export function PaycomScanButton() {
         const d = (await r.json().catch(() => null)) as PilotAppResponse | null;
         if (!r.ok || !d?.ok) throw new Error(d?.message ?? "Could not read pilot applications.");
         return d;
+      }),
+      // Offer acceptances come from GMAIL, not Front — Paycom addresses that
+      // notice to one person and never copies a Front inbox. A missing Gmail
+      // grant comes back as ok:true with a `blocker` sentence rather than an
+      // error, so it reads as "here's what to do" instead of "something broke".
+      fetch("/api/gmail/scan-offer-accepted?apply=1", { method: "POST" }).then(async (r) => {
+        const d = (await r.json().catch(() => null)) as OfferResponse | null;
+        if (!r.ok || !d?.ok) throw new Error(d?.message ?? "Could not read the offer mailbox.");
+        return d;
       })
     ]);
 
@@ -107,15 +145,36 @@ export function PaycomScanButton() {
     if (pilotRes.status === "fulfilled") setPilot(pilotRes.value);
     else setPilotError(pilotRes.reason instanceof Error ? pilotRes.reason.message : "Could not read pilot applications.");
 
+    if (offerRes.status === "fulfilled") setOffers(offerRes.value);
+    else setOffersError(offerRes.reason instanceof Error ? offerRes.reason.message : "Could not read the offer mailbox.");
+
     const changed =
       (paycomRes.status === "fulfilled" && paycomRes.value.ticked > 0) ||
-      (pilotRes.status === "fulfilled" && pilotRes.value.attached > 0);
+      (pilotRes.status === "fulfilled" && pilotRes.value.attached > 0) ||
+      (offerRes.status === "fulfilled" && offerRes.value.ticked > 0);
     if (changed) router.refresh();
 
     setRunning(false);
   }
 
   const ticked = result?.results.filter((r) => r.outcome === "ticked") ?? [];
+  // Split by what the notice MEANT, not just that something moved. "Offer
+  // accepted" and "background check started" are different news to a recruiter —
+  // one is a person joining, the other is a step inside onboarding — and a single
+  // "marked started for 3 people" line reads as neither.
+  const tickedChecks = ticked.filter((r) => r.kind !== "OFFER_ACCEPTED");
+
+  // Offer acceptances from EITHER door, shown as one list.
+  //
+  // In practice they arrive from Gmail — Paycom addresses that notice to one
+  // person and never copies a Front inbox. The Front branch stays because the
+  // notice CAN be routed there (by adding a Front address as a Paycom recipient),
+  // and if that ever happens the reader should see one list of people, not two
+  // sections split by which mailbox the app happened to read.
+  const offerTicks = [
+    ...ticked.filter((r) => r.kind === "OFFER_ACCEPTED"),
+    ...(offers?.results.filter((r) => r.outcome === "ticked") ?? [])
+  ];
   // People Paycom named that we deliberately left alone — usually former staff or
   // someone who never made it onto the roster. Shown so it isn't silent.
   const unmatched = result ? [...new Set(result.results.filter((r) => r.outcome === "no-match").map((r) => r.personName))] : [];
@@ -145,8 +204,8 @@ export function PaycomScanButton() {
       <Modal open={open} onClose={() => setOpen(false)} busy={running}>
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Front mail</h2>
         <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-          Two sweeps in one: Paycom&apos;s background-check notices, and completed pilot applications waiting in pilotapp@.
-          Both run on their own each morning; clicking is just for checking now.
+          Two sweeps in one: Paycom&apos;s notices (offer accepted, background checks), and completed pilot applications
+          waiting in pilotapp@. Both run on their own each morning; clicking is just for checking now.
         </p>
 
         {running ? (
@@ -155,7 +214,7 @@ export function PaycomScanButton() {
 
         {!running && (error || result) ? (
           <h3 className="mt-4 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
-            Paycom background checks
+            Paycom notices
           </h3>
         ) : null}
         {!running && error ? (
@@ -163,13 +222,41 @@ export function PaycomScanButton() {
         ) : null}
         {!running && result ? (
           <div className="mt-2">
-            {ticked.length > 0 ? (
+            {/* Offer acceptances lead. Somebody saying yes is the biggest thing
+                in this dialog, and it is the step that moves a person from
+                recruiting into onboarding. */}
+            {offerTicks.length > 0 && (
+              <div className="mb-3 rounded border border-brand-gold/50 bg-brand-gold/10 p-3 dark:border-brand-gold/40 dark:bg-brand-gold/10">
+                <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">
+                  {offerTicks.length === 1 ? "Offer accepted" : `${offerTicks.length} offers accepted`}
+                </p>
+                <ul className="mt-1 space-y-0.5 text-sm text-brand-lea dark:text-slate-200">
+                  {offerTicks.map((r, i) => (
+                    <li key={i}>
+                      {r.hireName}
+                      {r.position ? (
+                        <span className="text-xs text-brand-grey dark:text-slate-400"> — {r.position}</span>
+                      ) : null}
+                      {r.matchedBy === "nickname" ? (
+                        <span className="text-xs text-brand-grey dark:text-slate-400"> (Paycom said &ldquo;{r.personName}&rdquo;)</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1.5 text-xs text-brand-grey dark:text-slate-400">
+                  &ldquo;Candidate signed offer letter&rdquo; is now ticked on their checklist, and their offer shows as signed on
+                  the candidate record.
+                </p>
+              </div>
+            )}
+
+            {tickedChecks.length > 0 ? (
               <div className="rounded border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
                 <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-                  Marked started for {ticked.length} {ticked.length === 1 ? "person" : "people"}
+                  Background checks moved for {tickedChecks.length} {tickedChecks.length === 1 ? "person" : "people"}
                 </p>
                 <ul className="mt-1 space-y-0.5 text-sm text-emerald-900 dark:text-emerald-200">
-                  {ticked.map((r, i) => (
+                  {tickedChecks.map((r, i) => (
                     <li key={i}>
                       {r.hireName}
                       {r.matchedBy === "nickname" ? (
@@ -179,7 +266,7 @@ export function PaycomScanButton() {
                   ))}
                 </ul>
               </div>
-            ) : (
+            ) : offerTicks.length > 0 ? null : (
               <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 p-3 dark:border-white/10 dark:bg-white/5">
                 <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">Nothing new</p>
                 <p className="mt-0.5 text-sm text-brand-grey dark:text-slate-400">
@@ -229,6 +316,26 @@ export function PaycomScanButton() {
 
             <p className="mt-3 text-xs text-brand-grey dark:text-slate-400">
               Checked the {result.conversationsScanned} most recent Paycom threads.
+            </p>
+          </div>
+        ) : null}
+
+        {/*
+          Offer acceptances are read from Gmail, so they have a failure mode the
+          Front sweeps do not: the app may simply not have been granted access
+          yet. That is not an error and must not read as one — it is one person
+          doing one thing, so the blocker sentence says who and what.
+        */}
+        {!running && offersError ? (
+          <p className="mt-2 text-sm font-medium text-red-700 dark:text-red-300">{offersError}</p>
+        ) : null}
+        {!running && offers?.blocker ? (
+          <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/15">
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Offer acceptances aren&apos;t being checked</p>
+            <p className="mt-0.5 text-xs text-amber-900/80 dark:text-amber-200/80">{offers.blocker}</p>
+            <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-200/80">
+              Paycom sends &ldquo;Offer Accepted&rdquo; to {offers.mailbox} only — it never reaches a shared inbox, so the app
+              reads it there. Everything else on this dialog is unaffected.
             </p>
           </div>
         ) : null}

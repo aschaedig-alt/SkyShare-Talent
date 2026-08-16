@@ -9,7 +9,7 @@ import { scanPaycomInbox, resolveLimit } from "@/lib/paycom/scan";
  * SAFE BY DEFAULT: dry run unless ?apply=1. The nightly run lives at
  * /api/cron/paycom-scan; both call the same scanPaycomInbox().
  *
- * Query params: apply=1 to write · limit=N to reach further back (max 300) ·
+ * Query params: apply=1 to write · limit=N to reach further back (max 500) ·
  * q=<front search> to override the search · debug=1 to see what Front returned.
  */
 
