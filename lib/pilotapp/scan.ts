@@ -15,6 +15,7 @@ import { extractFileText } from "@/lib/files/pdf-text";
 import { detectDocumentType } from "@/lib/files/document-types";
 import { splitCandidateName, normalizeEmail, normalizeName } from "@/lib/candidates/normalize";
 import { readPilotApplication, signedPdf, type PilotAppResult } from "./notices";
+import { JOURNEY_TAGS, PILOT_APP_TAG, NEVER_APPLY_TAG } from "@/lib/front/tags";
 
 /**
  * Sweep Front for completed pilot applications and file them against candidates.
@@ -47,15 +48,19 @@ const COMMENT_MARKER = "SkyShare Journey:";
 const LEGACY_COMMENT_MARKER = "SkyShare Talent-Ops:";
 
 /**
- * Tag names as they REALLY exist in Front (read from the account, not guessed).
- * Each entry lists acceptable spellings for one tag and the first that exists
- * wins, so renaming one in Front doesn't silently switch the tagging off.
+ * Tag names come from lib/front/tags.ts — one list, checked against the real
+ * account, shared with the Paycom and travel sweeps.
+ *
+ * This file used to carry its own copy, and "Candidate Created by App" was
+ * silently dead after the Aug 16 renaming: the tag is now "candidate profile
+ * created", a name that does not exist resolves to null, and the sweep carries on
+ * untagged. Nothing failed; nothing was tagged either.
  */
 export const TAGS = {
   /** On every thread the automation acted on. */
-  automated: ["[Automated]", "automated"],
-  /** What this thread is. */
-  pilotApp: ["Pilot App", "pilot app"],
+  automated: [JOURNEY_TAGS.automated],
+  /** What this thread is. Lives under "Pilot" in Front, not SkyShare Journey. */
+  pilotApp: [PILOT_APP_TAG],
   /**
    * HANNAH'S TAG. THE APP MUST NEVER APPLY IT. (Changed Aug 7, on the user's
    * instruction, reversing the Jul 27 decision.)
@@ -69,15 +74,19 @@ export const TAGS = {
    * Kept here only so the retro-fix script can name the tag it removes. Do not
    * put it back into a tag() call.
    */
-  addedToAts: ["Manually Added to ATS", "manually added to ats"],
+  addedToAts: [NEVER_APPLY_TAG],
   /** Seen but NOT actioned — no candidate, or two candidates. */
-  needsReview: ["Needs Review", "needs review"],
+  needsReview: [JOURNEY_TAGS.needsReview],
   /** This run CREATED the candidate from the application rather than matching an
-      existing one. Applied alongside addedToAts, not instead of it: the document
-      was still filed, but the person did not exist until this thread arrived, so
-      the record has only what the application itself carried. Anyone auditing
-      auto-created people can find them from Front with this one tag. */
-  candidateCreated: ["Candidate Created by App", "candidate created by app"]
+      existing one: the document was still filed, but the person did not exist
+      until this thread arrived, so the record has only what the application
+      itself carried. Anyone auditing auto-created people can find them from
+      Front with this one tag. */
+  candidateCreated: [JOURNEY_TAGS.candidateCreated],
+  /** The app downloaded the signed PDF and filed it onto a candidate. Says WHAT
+      the automation did to this thread, which "[automated]" alone does not —
+      added Aug 16 so a filing is visible in Front and not only on the profile. */
+  fileAdded: [JOURNEY_TAGS.fileAdded]
 } as const;
 
 /** Adobe Sign is the only sender, and the group is the only cc that matters. */
@@ -410,11 +419,15 @@ export async function processPilotAppConversation(
         // not the same as somebody putting the application into Paycom, and the
         // app claiming the latter took away the only signal Hannah had for what
         // was still outstanding.
+        // fileAdded goes on every successful filing: "[automated]" says a robot
+        // touched the thread, this says what it actually DID with it. Without it,
+        // a filed application and a thread the app merely read and gave up on
+        // carried the same marks in Front.
         await tag(
           conversationId,
           createdHere
-            ? [TAGS.automated, TAGS.pilotApp, TAGS.candidateCreated]
-            : [TAGS.automated, TAGS.pilotApp],
+            ? [TAGS.automated, TAGS.pilotApp, TAGS.fileAdded, TAGS.candidateCreated]
+            : [TAGS.automated, TAGS.pilotApp, TAGS.fileAdded],
           missing
         );
         // Deliberately NOT archived: Paycom is still a manual step and this thread

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getMessages, addComment, addTags, resolveTagIdByNames } from "@/lib/front";
+import { JOURNEY_TAGS } from "@/lib/front/tags";
 import {
   extractTravelFromEmail,
   auditTravel,
@@ -60,10 +61,10 @@ export type TravelImportResult = {
  */
 const TAGS = {
   /** On every thread this importer acts on, filed or not. */
-  automated: ["[Automated]", "automated"],
-  /** The travel marker. "Travel Imported" does not exist yet; "Travel" does. */
-  imported: ["Travel Imported", "Travel"],
-  needsReview: ["Needs Review", "needs review"]
+  automated: [JOURNEY_TAGS.automated],
+  /** The travel marker. */
+  imported: [JOURNEY_TAGS.travel],
+  needsReview: [JOURNEY_TAGS.needsReview]
 } as const;
 
 function stripHtml(html: string): string {
