@@ -705,7 +705,14 @@ export function CandidateProfileWorkspace({
           )}
 
           {/* Notes tab */}
-          {activeTab === "notes" && <CandidateNotes candidateId={candidate.id} initialNotes={candidate.notes} people={team} />}
+          {activeTab === "notes" && (
+            <CandidateNotes
+              candidateId={candidate.id}
+              initialNotes={candidate.notes}
+              people={team}
+              interviewWriteUps={candidate.interviews}
+            />
+          )}
 
           {/* Timeline tab — unified candidate lifecycle (live + historical) */}
           {activeTab === "timeline" && <CandidateTimeline events={candidate.timeline} />}

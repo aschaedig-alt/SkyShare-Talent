@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Send, Trash2, Pencil } from "lucide-react";
 import { clsx } from "clsx";
 import { Button } from "@/components/ui";
 import { RichTextEditor, RichTextView } from "@/components/richtext/RichTextEditor";
+import { noteAttribution, noteBodyWithoutSignature } from "@/lib/notes/attribution";
 
 type Note = {
   id: string;
@@ -18,6 +19,25 @@ type Note = {
   updatedAt: string;
 };
 
+/**
+ * A write-up that lives on the Interview record rather than on a note.
+ *
+ * These are read-only here. The Interviews tab owns editing them; this view
+ * exists so a recruiter reading Notes can SEE them, which until now they could
+ * not — 41 imported candidates have their only written record on an interview,
+ * so the Notes tab showed an empty page for people who had been interviewed and
+ * written up at length.
+ */
+export type InterviewWriteUp = {
+  id: string;
+  title: string;
+  interviewer: string | null;
+  notes: string | null;
+  notesHtml?: string | null;
+  outcome?: string | null;
+  startDateTime: string;
+};
+
 function formatWhen(value: string) {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }).format(
     new Date(value)
@@ -27,11 +47,13 @@ function formatWhen(value: string) {
 export function CandidateNotes({
   candidateId,
   initialNotes,
-  people = []
+  people = [],
+  interviewWriteUps = []
 }: {
   candidateId: string;
   initialNotes: Note[];
   people?: Array<{ name: string; email: string }>;
+  interviewWriteUps?: InterviewWriteUp[];
 }) {
   const router = useRouter();
   const [notes, setNotes] = useState<Note[]>(initialNotes);
@@ -41,6 +63,19 @@ export function CandidateNotes({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+
+  // One chronological feed of everything written about this candidate. Write-ups
+  // with no actual text are dropped — an interview record exists for every
+  // scheduled slot, and empty ones would bury the notes under blank cards.
+  const feed = useMemo(() => {
+    const entries = [
+      ...notes.map((note) => ({ kind: "note" as const, at: note.createdAt, note })),
+      ...interviewWriteUps
+        .filter((w) => (w.notes ?? "").trim() || (w.notesHtml ?? "").trim())
+        .map((writeUp) => ({ kind: "interview" as const, at: writeUp.startDateTime, writeUp }))
+    ];
+    return entries.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+  }, [notes, interviewWriteUps]);
 
   function isBlank(html: string) {
     return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length === 0;
@@ -138,13 +173,54 @@ export function CandidateNotes({
       </div>
       {error ? <p className="mt-2 text-xs font-medium text-red-700 dark:text-red-300">{error}</p> : null}
 
-      {/* List */}
+      {/* List — notes and interview write-ups together, newest first.
+          Interleaved rather than kept in two sections: they are the same thing
+          to the person reading (what was written about this candidate, and
+          when), and splitting them is what let a write-up go unseen. */}
       <div className="mt-4 space-y-2">
-        {notes.length === 0 ? (
+        {feed.length === 0 ? (
           <p className="py-6 text-center text-sm text-brand-grey dark:text-slate-400">No notes yet. Add the first one above.</p>
         ) : (
-          notes.map((note) =>
-            editingId === note.id ? (
+          feed.map((entry) => {
+            if (entry.kind === "interview") {
+              const w = entry.writeUp;
+              return (
+                <div
+                  key={`iv-${w.id}`}
+                  className="rounded border border-brand-sweet/50 bg-brand-sweet/10 p-3 dark:border-brand-sweet/25 dark:bg-brand-sweet/5"
+                >
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="rounded bg-brand-lea px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                      Interview write-up
+                    </span>
+                    <span className="text-xs font-semibold text-brand-lea dark:text-slate-200">{w.title}</span>
+                    {w.outcome ? (
+                      <span className="text-[11px] text-brand-grey dark:text-slate-400">· {w.outcome}</span>
+                    ) : null}
+                  </div>
+                  {w.notesHtml ? (
+                    <RichTextView html={w.notesHtml} className="mt-2 leading-6 text-brand-black/80 dark:text-slate-300" />
+                  ) : (
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-brand-black/80 dark:text-slate-300">
+                      {w.notes}
+                    </p>
+                  )}
+                  <div className="mt-2 text-xs text-brand-grey dark:text-slate-400">
+                    {w.interviewer?.trim() || "Interviewer not recorded"} · {formatWhen(w.startDateTime)} · edit on the
+                    Interviews tab
+                  </div>
+                </div>
+              );
+            }
+
+            const note = entry.note;
+            // Who to credit, and the body to show. An imported note carries its
+            // author as a trailing "— Name" line, so when that is what we are
+            // crediting it has to come OUT of the body or the name renders twice.
+            const attribution = noteAttribution(note);
+            const shownBody = attribution.fromSignature ? noteBodyWithoutSignature(note.body) : note.body;
+
+            return editingId === note.id ? (
               <div key={note.id} className="rounded border border-brand-lea/15 bg-brand-cloudDancer/40 p-3 dark:border-white/10 dark:bg-white/5">
                 <RichTextEditor value={editDraft} onChange={setEditDraft} people={people} minHeight={100} />
                 <div className="mt-2 flex items-center gap-2">
@@ -167,7 +243,7 @@ export function CandidateNotes({
                       <RichTextView html={note.bodyHtml} className="leading-6 text-brand-black/80 dark:text-slate-300" />
                     </div>
                   ) : (
-                    <p className="min-w-0 flex-1 whitespace-pre-wrap text-sm leading-6 text-brand-black/80 dark:text-slate-300">{note.body}</p>
+                    <p className="min-w-0 flex-1 whitespace-pre-wrap text-sm leading-6 text-brand-black/80 dark:text-slate-300">{shownBody}</p>
                   )}
                   <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
                     <button
@@ -196,11 +272,11 @@ export function CandidateNotes({
                   </span>
                 </div>
                 <div className="mt-2 text-xs text-brand-grey dark:text-slate-400">
-                  {note.author ?? note.source ?? "Unknown"} · {formatWhen(note.createdAt)}
+                  {attribution.name} · {formatWhen(note.createdAt)}
                 </div>
               </div>
-            )
-          )
+            );
+          })
         )}
       </div>
     </section>
