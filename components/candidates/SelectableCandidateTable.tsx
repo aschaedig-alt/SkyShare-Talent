@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileText, Send, StickyNote, Mail, Phone, Search, X, Check, BarChart3 } from "lucide-react";
+import { FileText, Send, StickyNote, Mail, Phone, Search, X, Check, BarChart3, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import type { CandidateListItem } from "@/lib/data/candidates";
 import { CANDIDATE_DEPARTMENTS } from "@/lib/candidates/departments";
 import { CandidateStageCell } from "@/components/candidates/CandidateStageCell";
@@ -77,6 +77,44 @@ export function SelectableCandidateTable({
   const [error, setError] = useState<string | null>(null);
 
   const shownIds = useMemo(() => candidates.map((c) => c.id), [candidates]);
+
+  // Sorting by department, which the filter could already narrow to but the
+  // table could never order by.
+  //
+  // CLIENT-SIDE, AND THAT IS A REAL LIMIT: the list arrives capped at 100 rows,
+  // so this orders the page you are looking at, not the whole result set. It is
+  // the same cap the select-all has. Server-side ordering would need the sort
+  // pushed into the query, and department is DERIVED from the jobs applied to
+  // rather than stored on the row, so there is no column to ORDER BY yet.
+  const [deptSort, setDeptSort] = useState<"none" | "asc" | "desc">("none");
+
+  const rows = useMemo(() => {
+    if (deptSort === "none") return candidates;
+
+    // A candidate can sit in more than one department, which is real — they
+    // applied across them. Sort on the alphabetically first of their labels so
+    // the ordering is stable rather than dependent on application order.
+    const sortLabel = (c: CandidateListItem) =>
+      c.departments
+        .map((k) => CANDIDATE_DEPARTMENTS.find((d) => d.key === k)?.label)
+        .filter((l): l is string => Boolean(l))
+        .sort((a, b) => a.localeCompare(b))[0] ?? null;
+
+    return [...candidates].sort((a, b) => {
+      const la = sortLabel(a);
+      const lb = sortLabel(b);
+      // Unassigned sinks to the bottom in BOTH directions. It is the absence of
+      // a department, not a value that belongs at one end of the alphabet, and
+      // flipping the sort to hunt for it would be the wrong tool anyway — the
+      // filter has an Unassigned option.
+      if (!la && !lb) return a.displayName.localeCompare(b.displayName);
+      if (!la) return 1;
+      if (!lb) return -1;
+      const cmp = la.localeCompare(lb);
+      if (cmp !== 0) return deptSort === "asc" ? cmp : -cmp;
+      return a.displayName.localeCompare(b.displayName);
+    });
+  }, [candidates, deptSort]);
   const allShownSelected = shownIds.length > 0 && shownIds.every((id) => selected.has(id));
 
   function toggle(id: string) {
@@ -204,7 +242,29 @@ export function SelectableCandidateTable({
                     />
                   </th>
                   <th className="px-5 py-3 font-bold">Candidate</th>
-                  <th className="px-4 py-3 font-bold">Department</th>
+                  <th className="px-4 py-3 font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setDeptSort((s) => (s === "none" ? "asc" : s === "asc" ? "desc" : "none"))}
+                      title={
+                        deptSort === "none"
+                          ? "Sort by department"
+                          : deptSort === "asc"
+                            ? "Sorted A–Z — click for Z–A"
+                            : "Sorted Z–A — click to clear"
+                      }
+                      className="inline-flex items-center gap-1 font-bold uppercase tracking-[0.16em] transition hover:text-brand-lea dark:hover:text-slate-100"
+                    >
+                      Department
+                      {deptSort === "none" ? (
+                        <ArrowUpDown className="h-3 w-3 opacity-40" />
+                      ) : deptSort === "asc" ? (
+                        <ArrowUp className="h-3 w-3" />
+                      ) : (
+                        <ArrowDown className="h-3 w-3" />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-4 py-3 font-bold">Stage</th>
                   <th className="px-4 py-3 font-bold">Contact</th>
                   <th className="px-4 py-3 font-bold">Tags</th>
@@ -213,7 +273,7 @@ export function SelectableCandidateTable({
                 </tr>
               </thead>
               <tbody className="divide-y divide-brand-lea/10 dark:divide-white/10">
-                {candidates.map((candidate) => {
+                {rows.map((candidate) => {
                   const isSelected = selected.has(candidate.id);
                   return (
                     <tr
