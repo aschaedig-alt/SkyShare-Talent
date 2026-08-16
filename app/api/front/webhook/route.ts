@@ -5,6 +5,7 @@ import { processConversationById } from "@/lib/paycom/scan";
 import { processTravelConversation } from "@/lib/travel/from-email";
 import { processMentionReply } from "@/lib/notifications/process-mention-reply";
 import { getConversationTagNames } from "@/lib/front";
+import { JOURNEY_TAGS } from "@/lib/front/tags";
 
 export const dynamic = "force-dynamic";
 
@@ -119,11 +120,17 @@ function findSenderEmail(payload: unknown): string | null {
 const PAYCOM_SENDER = /@paycomonline\.com$/i;
 
 /**
- * Tag names that mean "file this as travel". Matched case-insensitively, and a
- * few spellings are accepted because the tag is created by hand in Front and
- * "Travel" / "travel" / "Travel Booking" are all plausible.
+ * Tag names that mean "file this as travel". Matched case-insensitively.
+ *
+ * The name comes from lib/front/tags.ts — this was a FOURTH private copy of tag
+ * names, missed when the other three sweeps were consolidated. It guessed at
+ * "travel booking" and "travel confirmation" as plausible hand-created spellings;
+ * an audit of the live account on Aug 16 2026 found neither exists, and only the
+ * plain "travel" tag (now under the SkyShare Journey group) is real. Dropping the
+ * two invented spellings changes no behaviour and removes the last place a tag
+ * name is written down twice.
  */
-const TRAVEL_TAGS = ["travel", "travel booking", "travel confirmation"];
+const TRAVEL_TAGS: string[] = [JOURNEY_TAGS.travel];
 
 /** Any tag name in the payload — a tag-triggered rule usually includes it. */
 function findTagNames(payload: unknown): string[] {
