@@ -9,6 +9,11 @@ import { Button, Modal } from "@/components/ui";
  * On-demand pull of everything the app watches for in Front — Paycom's notices
  * (background checks AND offer acceptances) plus completed pilot applications.
  *
+ * ALL OF IT COMES FROM FRONT. A Gmail reader for "Offer Accepted" existed for a
+ * few hours on Aug 16 2026 and was removed: the user's Front rule copies that
+ * notice into the shared inbox, which was proven live, so the second door only
+ * duplicated work and needed a mailbox-wide Google grant to do it.
+ *
  * ONE button rather than two, by request: the team shouldn't have to remember
  * which sweep to run, and both answer the same question ("has anything come in
  * for me?"). The two scans stay separate underneath so a failure in one still
@@ -55,27 +60,6 @@ type PilotAppRow = {
   detail?: string;
 };
 
-type OfferRow = {
-  outcome: string;
-  personName: string | null;
-  hireName: string | null;
-  matchedBy?: "exact" | "nickname";
-  position?: string | null;
-  detail?: string | null;
-};
-
-type OfferResponse = {
-  ok?: boolean;
-  message?: string;
-  mailbox: string;
-  messagesScanned: number;
-  noticesFound: number;
-  ticked: number;
-  results: OfferRow[];
-  /** Set when the app has no Gmail access — a sentence saying who fixes it how. */
-  blocker: string | null;
-};
-
 type PilotAppResponse = {
   ok?: boolean;
   message?: string;
@@ -96,23 +80,19 @@ export function PaycomScanButton() {
   const [error, setError] = useState<string | null>(null);
   const [pilot, setPilot] = useState<PilotAppResponse | null>(null);
   const [pilotError, setPilotError] = useState<string | null>(null);
-  const [offers, setOffers] = useState<OfferResponse | null>(null);
-  const [offersError, setOffersError] = useState<string | null>(null);
 
   async function run() {
     setOpen(true);
     setRunning(true);
     setResult(null);
     setPilot(null);
-    setOffers(null);
     setError(null);
     setPilotError(null);
-    setOffersError(null);
 
-    // Run all three, and let each fail on its own: if Paycom's sweep breaks, the
+    // Run both, and let each fail on its own: if Paycom's sweep breaks, the
     // pilot-application one should still report, and vice versa. Settled rather
-    // than raced so one rejection can't discard the others' results.
-    const [paycomRes, pilotRes, offerRes] = await Promise.allSettled([
+    // than raced so one rejection can't discard the other's result.
+    const [paycomRes, pilotRes] = await Promise.allSettled([
       fetch("/api/front/scan-paycom?apply=1", { method: "POST" }).then(async (r) => {
         const d = (await r.json().catch(() => null)) as ScanResponse | null;
         if (!r.ok || !d?.ok) throw new Error(d?.message ?? "Could not read the inbox.");
@@ -127,15 +107,6 @@ export function PaycomScanButton() {
         const d = (await r.json().catch(() => null)) as PilotAppResponse | null;
         if (!r.ok || !d?.ok) throw new Error(d?.message ?? "Could not read pilot applications.");
         return d;
-      }),
-      // Offer acceptances come from GMAIL, not Front — Paycom addresses that
-      // notice to one person and never copies a Front inbox. A missing Gmail
-      // grant comes back as ok:true with a `blocker` sentence rather than an
-      // error, so it reads as "here's what to do" instead of "something broke".
-      fetch("/api/gmail/scan-offer-accepted?apply=1", { method: "POST" }).then(async (r) => {
-        const d = (await r.json().catch(() => null)) as OfferResponse | null;
-        if (!r.ok || !d?.ok) throw new Error(d?.message ?? "Could not read the offer mailbox.");
-        return d;
       })
     ]);
 
@@ -145,13 +116,9 @@ export function PaycomScanButton() {
     if (pilotRes.status === "fulfilled") setPilot(pilotRes.value);
     else setPilotError(pilotRes.reason instanceof Error ? pilotRes.reason.message : "Could not read pilot applications.");
 
-    if (offerRes.status === "fulfilled") setOffers(offerRes.value);
-    else setOffersError(offerRes.reason instanceof Error ? offerRes.reason.message : "Could not read the offer mailbox.");
-
     const changed =
       (paycomRes.status === "fulfilled" && paycomRes.value.ticked > 0) ||
-      (pilotRes.status === "fulfilled" && pilotRes.value.attached > 0) ||
-      (offerRes.status === "fulfilled" && offerRes.value.ticked > 0);
+      (pilotRes.status === "fulfilled" && pilotRes.value.attached > 0);
     if (changed) router.refresh();
 
     setRunning(false);
@@ -164,17 +131,11 @@ export function PaycomScanButton() {
   // "marked started for 3 people" line reads as neither.
   const tickedChecks = ticked.filter((r) => r.kind !== "OFFER_ACCEPTED");
 
-  // Offer acceptances from EITHER door, shown as one list.
-  //
-  // In practice they arrive from Gmail — Paycom addresses that notice to one
-  // person and never copies a Front inbox. The Front branch stays because the
-  // notice CAN be routed there (by adding a Front address as a Paycom recipient),
-  // and if that ever happens the reader should see one list of people, not two
-  // sections split by which mailbox the app happened to read.
-  const offerTicks = [
-    ...ticked.filter((r) => r.kind === "OFFER_ACCEPTED"),
-    ...(offers?.results.filter((r) => r.outcome === "ticked") ?? [])
-  ];
+  // Offer acceptances, which reach Front as a copy created by the user's own
+  // forwarding rule rather than addressed there by Paycom. That rule is the only
+  // route now: a Gmail reader existed briefly and was removed once this path was
+  // shown working, because both doors read the same notice.
+  const offerTicks = ticked.filter((r) => r.kind === "OFFER_ACCEPTED");
   // People Paycom named that we deliberately left alone — usually former staff or
   // someone who never made it onto the roster. Shown so it isn't silent.
   const unmatched = result ? [...new Set(result.results.filter((r) => r.outcome === "no-match").map((r) => r.personName))] : [];
@@ -316,26 +277,6 @@ export function PaycomScanButton() {
 
             <p className="mt-3 text-xs text-brand-grey dark:text-slate-400">
               Checked the {result.conversationsScanned} most recent Paycom threads.
-            </p>
-          </div>
-        ) : null}
-
-        {/*
-          Offer acceptances are read from Gmail, so they have a failure mode the
-          Front sweeps do not: the app may simply not have been granted access
-          yet. That is not an error and must not read as one — it is one person
-          doing one thing, so the blocker sentence says who and what.
-        */}
-        {!running && offersError ? (
-          <p className="mt-2 text-sm font-medium text-red-700 dark:text-red-300">{offersError}</p>
-        ) : null}
-        {!running && offers?.blocker ? (
-          <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/15">
-            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Offer acceptances aren&apos;t being checked</p>
-            <p className="mt-0.5 text-xs text-amber-900/80 dark:text-amber-200/80">{offers.blocker}</p>
-            <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-200/80">
-              Paycom sends &ldquo;Offer Accepted&rdquo; to {offers.mailbox} only — it never reaches a shared inbox, so the app
-              reads it there. Everything else on this dialog is unaffected.
             </p>
           </div>
         ) : null}

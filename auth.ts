@@ -115,17 +115,16 @@ export const authOptions: NextAuthOptions = {
           // robot account (which cannot invite guests at all without domain-wide
           // delegation from a Workspace admin).
           //
-          // ...and READ-ONLY Gmail, added Aug 16 2026 on the user's explicit
-          // approval. Paycom's "Offer Accepted" notice is addressed to one person
-          // and is never delivered to a Front inbox, so reading that mailbox is
-          // the only way the app can see an offer being accepted. See
-          // lib/google/user-gmail.ts.
-          //
-          // BE AWARE WHAT THIS GRANTS: gmail.readonly is the narrowest scope that
-          // can read a message BODY, and it covers the WHOLE mailbox — Google has
-          // no per-sender scope, and gmail.metadata cannot see a body at all. The
-          // sweep's own query is what keeps the app to the mail it needs; the
-          // scope itself is broader than the use.
+          // NO GMAIL SCOPE, and that is deliberate. gmail.readonly was added on
+          // Aug 16 2026 to read Paycom's "Offer Accepted" notice, which Paycom
+          // addresses to one person and copies to no shared inbox — and removed
+          // the same day. The user's own Front rule copies that notice into the
+          // shared inbox, which was proven live, so the Gmail reader only read the
+          // same mail a second time. It is not worth a WHOLE-MAILBOX grant to do
+          // that: gmail.readonly is the narrowest scope that can read a message
+          // body and it covers everything in the account, because Google has no
+          // per-sender scope. If Front ever stops carrying that notice, this is
+          // the trade to reconsider — not a gap to quietly re-add.
           //
           // access_type=offline + prompt=consent are what make Google hand over a
           // REFRESH token. Without both, you get a one-hour access token and no way
@@ -133,14 +132,18 @@ export const authOptions: NextAuthOptions = {
           // Every pre-existing account here had refresh_token = null for exactly
           // this reason, so everyone re-consents once.
           //
-          // ADDING A SCOPE DOES NOT UPGRADE ANYONE AUTOMATICALLY. A token already
-          // stored keeps the scopes it was granted with, which is why the Gmail
-          // path reports a blocker naming the person who has to sign out and back
-          // in rather than failing obscurely.
+          // CHANGING THIS LIST DOES NOT CHANGE ANYONE'S EXISTING TOKEN, in either
+          // direction. A stored token keeps the scopes it was granted with, so
+          // adding one grants nobody anything until they sign in again — and
+          // REMOVING one does not revoke it either. Aimee's token still carries
+          // the gmail.readonly granted on Aug 16 2026 and will until she signs out
+          // and back in, or revokes this app at myaccount.google.com/permissions.
+          // Any code depending on a scope must therefore check the stored token
+          // rather than assume this list.
           authorization: {
             params: {
               scope:
-                "openid email profile https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/gmail.readonly",
+                "openid email profile https://www.googleapis.com/auth/calendar.events",
               access_type: "offline",
               prompt: "consent"
             }
