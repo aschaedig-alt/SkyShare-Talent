@@ -411,3 +411,20 @@ storage behaviour from the code alone.
   which collapses/overlaps the layout. Always render a **stable panel set** (show
   placeholders instead of conditionally adding/removing panels) and **memoize** the
   array.
+- **`.claude/settings.local.json` is NOT tracked, and you do not need to think
+  about it.** Claude Code writes to it itself every time anyone approves a
+  permission, so it changes constantly and belongs to no session. Do not add it to
+  a `do NOT stage` list — it is gitignored and cannot be staged by accident.
+  *Why this note exists:* it was swept into a commit by accident on 2026-06-08 and
+  spent ten weeks tracked. Because the tool kept writing to it, it was permanently
+  dirty, so every session read it as a sibling's uncommitted work and refused to
+  touch it — which meant it was never committed, which kept it dirty. Handoffs
+  carried "do NOT stage this" for weeks with nobody able to say why, and it
+  collected ~50 dead one-off rules naming session-specific temp paths. Untracked
+  2026-08-17; the loop is gone.
+- **Shared, deliberate permissions go in `.claude/settings.json`**, which IS
+  tracked. It holds the read-only git rules (`log`, `status`, `show`, `diff`) that
+  the scheduled Monday check-in needs to run unattended — it used to hang forever
+  on a prompt because the only matching rule was a frozen literal carrying the date
+  it was approved. Keep that file hand-written and small: **never a bare `git *`**,
+  which would cover `reset` and `push`. One-off approvals belong in the local file.

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(git -C C:\\\\Users\\\\Recruiter\\\\Projects\\\\skyshare-talent-ops log *)",
+      "PowerShell(git -C C:\\\\Users\\\\Recruiter\\\\Projects\\\\skyshare-talent-ops status *)",
+      "PowerShell(git -C C:\\\\Users\\\\Recruiter\\\\Projects\\\\skyshare-talent-ops show *)",
+      "PowerShell(git -C C:\\\\Users\\\\Recruiter\\\\Projects\\\\skyshare-talent-ops diff *)",
+      "Bash(git log *)",
+      "Bash(git status *)",
+      "Bash(git show *)",
+      "Bash(git diff *)"
+    ]
+  }
+}

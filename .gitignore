@@ -32,3 +32,12 @@ scripts/_*_output/
 # of THIS working tree, not the repo — they must never be committable, or a claim
 # from a dead session would ship and be believed.
 .claude/claims/
+
+# PERSONAL, PER-MACHINE Claude Code settings. The tool WRITES to this file itself
+# every time somebody approves a permission, so while it was tracked it was
+# permanently dirty and every session read it as a sibling's uncommitted work and
+# refused to stage it — which is why it went three weeks without a commit and
+# collected ~50 dead one-off rules. It was only ever tracked by accident (swept
+# into 9ec4c8f on 2026-06-08). Shared, deliberate rules belong in the committed
+# .claude/settings.json instead.
+.claude/settings.local.json
