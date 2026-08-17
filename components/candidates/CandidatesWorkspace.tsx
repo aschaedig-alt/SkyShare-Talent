@@ -5,7 +5,6 @@ import {
   FileText,
   Send,
   CalendarClock,
-  Search,
   Archive,
   ArrowRight
 } from "lucide-react";
@@ -18,6 +17,7 @@ import { NewCandidateButton } from "@/components/candidates/NewCandidateButton";
 import { ResumeIntake } from "@/components/candidates/ResumeIntake";
 import { DocumentIntake } from "@/components/candidates/DocumentIntake";
 import { CandidateViewTabs } from "@/components/candidates/CandidateViewTabs";
+import { CandidateSearchBox } from "@/components/candidates/CandidateSearchBox";
 import { EditableGrid, type GridItem } from "@/components/shared/EditableGrid";
 import type { WidgetInstance } from "@/lib/data/page-layout";
 
@@ -177,20 +177,17 @@ export function CandidatesWorkspace({
               <DocumentIntake variant="solid" />
               <NewCandidateButton />
             </div>
-            <form className="flex w-full gap-2">
-              <div className="relative min-w-0 flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey" />
-                <input
-                  name="q"
-                  defaultValue={query}
-                  placeholder="Search name, role, tag, or text inside resumes & pilot apps"
-                  className="w-full rounded border border-white/20 bg-white/95 py-2.5 pl-9 pr-3 text-sm text-brand-black shadow-sm outline-none transition focus:ring-2 focus:ring-brand-gold/50"
-                />
-              </div>
-              <button type="submit" className="rounded border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20">
-                Search
-              </button>
-            </form>
+            {/* Was an inline form with a lone q input, which meant a search wiped
+                whatever tag / department / size filter was in the URL. The shared
+                component carries them as hidden inputs, and is the same box the
+                candidate profile now renders. */}
+            <CandidateSearchBox
+              defaultQuery={query}
+              tags={activeTags}
+              departments={activeDepartments}
+              size={data.listLimit}
+              tone="dark"
+            />
           </div>
         </div>
       </section>

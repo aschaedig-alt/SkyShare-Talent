@@ -18,6 +18,7 @@ import { MoveToPreOnboardingPanel } from "@/components/candidates/MoveToPreOnboa
 import { AddJobToCandidate } from "@/components/candidates/AddJobToCandidate";
 import { DeleteCandidateButton } from "@/components/candidates/DeleteCandidateButton";
 import { CandidateTagEditor } from "@/components/candidates/CandidateTagEditor";
+import { CandidateSearchBox } from "@/components/candidates/CandidateSearchBox";
 import { stageOptionsFor } from "@/lib/candidates/stages";
 import { OfferControl } from "@/components/candidates/OfferControl";
 import { isTestTagged } from "@/lib/testdata/markers";
@@ -363,15 +364,31 @@ export function CandidateProfileWorkspace({
             that highlights on hover, so where to click is visible before you
             click and anywhere inside it works. The negative margin cancels the
             new padding so the text still lines up with the content below. */}
-        <Link
-          href="/candidates"
-          className="-ml-2.5 inline-flex items-center gap-1.5 rounded border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-eden transition hover:border-brand-gold hover:bg-brand-gold/10 hover:text-brand-lea hover:shadow-glow dark:border-white/10 dark:text-slate-300 dark:hover:bg-brand-gold/15 dark:hover:text-slate-100"
-        >
-          ← Back to candidates
-          {/* The click already worked before this existed — what was missing
-              was any sign of it. See the component doc. */}
-          <LinkPendingIndicator />
-        </Link>
+        {/* Back link and search share one row. The search is here, on the row you
+            already look at to leave the page, because leaving to search was the
+            whole problem: looking up a second person meant back, retype, open.
+            Now the name goes straight in from here.
+
+            Kept to ONE row and no taller than the back link, deliberately — this
+            page already spends a lot of height on chrome before any of the actual
+            record, and a search strip is not worth pushing the person further
+            down the screen. */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link
+            href="/candidates"
+            className="-ml-2.5 inline-flex items-center gap-1.5 rounded border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-eden transition hover:border-brand-gold hover:bg-brand-gold/10 hover:text-brand-lea hover:shadow-glow dark:border-white/10 dark:text-slate-300 dark:hover:bg-brand-gold/15 dark:hover:text-slate-100"
+          >
+            ← Back to candidates
+            {/* The click already worked before this existed — what was missing
+                was any sign of it. See the component doc. */}
+            <LinkPendingIndicator />
+          </Link>
+          <CandidateSearchBox
+            tone="light"
+            placeholder="Search another candidate…"
+            className="w-full sm:w-[22rem]"
+          />
+        </div>
         <div className="mt-3 flex flex-wrap items-start gap-4">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-sweet/25 text-lg font-semibold text-brand-lea dark:text-slate-100">
             {initials(candidate.displayName) || "?"}
