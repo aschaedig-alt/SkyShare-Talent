@@ -102,9 +102,21 @@ absolute. And it cannot help when two pieces of work genuinely need the same sha
 file — what it buys there is that the second agent finds out *before* editing
 rather than at commit time.
 
-If a claim is hours old and `git status` shows none of its files dirty, that
-session died. The commit agent clears it and says so. A dead claim must never block
-live work.
+If a WORKING agent's claim is hours old and `git status` shows none of its files
+dirty, that session died. The commit agent clears it and says so. A dead claim must
+never block live work.
+
+**That test does not apply to the commit-and-push agent's own claim, and this
+already caught somebody out.** That session keeps ONE standing claim for its whole
+life, holds `lib/roadmap/roadmap.ts` by definition, and goes quiet between handoffs
+rather than finishing — so "hours old with nothing dirty" is its normal resting
+state, not evidence it died. Its claim says `session: commit-push-...` and names
+`roadmap.ts`. Leave it alone; it clears its own when it is done, and refreshes it
+rather than letting it look abandoned.
+
+The asymmetry is real rather than a special case: a working agent with no dirty
+files has either died or already been committed, and either way its claim should
+go. The commit agent with no dirty files is simply waiting for you.
 
 ### If you are the commit-and-push agent
 
@@ -262,8 +274,11 @@ Work through them one at a time, in the order given:
    single mixed commit cannot be reviewed or reverted per-agent.
 5. Delete that block's claim file from `.claude/claims/` once its commit lands.
    Committing is what releases the files, so the directory stays honest without
-   anyone tidying up. Also clear any claim whose session has plainly died — hours
-   old and none of its files dirty — and say that you cleared it.
+   anyone tidying up. Also clear any WORKING agent's claim whose session has plainly
+   died — hours old and none of its files dirty — and say that you cleared it.
+   **Not your own**: yours is a standing claim held for the whole session and it
+   looks identical to a dead one between handoffs. Keep it, and refresh it so the
+   next reader is not left wondering.
 6. Repeat for the next block. Do not batch.
 
 Then, once all the work is committed:
