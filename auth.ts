@@ -135,11 +135,30 @@ export const authOptions: NextAuthOptions = {
           // CHANGING THIS LIST DOES NOT CHANGE ANYONE'S EXISTING TOKEN, in either
           // direction. A stored token keeps the scopes it was granted with, so
           // adding one grants nobody anything until they sign in again — and
-          // REMOVING one does not revoke it either. Aimee's token still carries
-          // the gmail.readonly granted on Aug 16 2026 and will until she signs out
-          // and back in, or revokes this app at myaccount.google.com/permissions.
-          // Any code depending on a scope must therefore check the stored token
-          // rather than assume this list.
+          // REMOVING one does not revoke it either. Any code depending on a scope
+          // must therefore check the stored token rather than assume this list.
+          //
+          // NOTHING IS OUTSTANDING TO REVOKE — and that is worth stating carefully,
+          // because it is NOT because the grant never happened. gmail.readonly sat
+          // in this list for about an hour on Aug 16 2026 (2f672d9 to d86e41c), and
+          // a token WAS issued carrying it: the mailbox owner signed in during that
+          // window, and the stored scope was read straight back out of the database
+          // showing 1 of 5 accounts holding it. Google confirmed it independently —
+          // with the scope present it answered SERVICE_DISABLED, meaning the Gmail
+          // API is switched off in the Cloud project, and it only reaches that check
+          // AFTER the scope check passes. With the scope absent it answers
+          // ACCESS_TOKEN_SCOPE_INSUFFICIENT instead, which is what it answers now.
+          //
+          // She signed out and back in once more after the removal shipped, which
+          // cleared it — exactly what the paragraph above predicts. Verified again
+          // 2026-08-17 by listing all 5 Account rows: 0 of 5 carry any gmail scope,
+          // while four of the five DO carry calendar.events, so the absence has a
+          // positive control behind it rather than being an empty query.
+          //
+          // Written this way deliberately. A whole-mailbox grant on a named person's
+          // account was real for an hour, and "it never happened" is a different and
+          // much less careful claim than "it happened and has been cleared". A
+          // present-tense query cannot establish a past absence.
           authorization: {
             params: {
               scope:
