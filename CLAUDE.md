@@ -428,3 +428,23 @@ storage behaviour from the code alone.
   on a prompt because the only matching rule was a frozen literal carrying the date
   it was approved. Keep that file hand-written and small: **never a bare `git *`**,
   which would cover `reset` and `push`. One-off approvals belong in the local file.
+- **The git commands that destroy work are now BLOCKED, not just forbidden in
+  prose.** `.claude/settings.json` carries a `deny` list, and deny beats allow. It
+  covers, in both the Bash and PowerShell forms: `git add -A` / `--all` / `-u` /
+  `.`, `git commit -a` / `--all`, `git reset --hard`, `git checkout` (any form —
+  which also enforces "do not switch branches"), `git restore`, `git clean`,
+  `git stash`, and `git push --force` / `-f`. Every one of those either destroys
+  uncommitted work or rewrites pushed history, and both have cost real work here.
+  Ordinary use is untouched: `git add <path>`, `git commit -F`, `git push origin
+  main` and every read-only verb still run without a prompt — verified against a
+  table of 18 dangerous and 13 legitimate commands before it shipped, because a
+  deny rule that over-matches would break the commit agent and one that
+  under-matches is worse than none.
+  **Two honest limits.** Rules match the START of a command, so an unusual spelling
+  can slip past — notably `git -C <path> add -A`, which is not covered. And an
+  agent that decided to route around this could. It is a guardrail against a
+  MISTAKE, which is what every incident here has actually been, not a security
+  boundary.
+  **If it ever blocks something you legitimately need:** the rule is one line in
+  `.claude/settings.json` — delete it, or ask a session to. Nothing else depends on
+  it.
