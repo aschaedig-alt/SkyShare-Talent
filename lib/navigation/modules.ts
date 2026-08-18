@@ -140,6 +140,10 @@ export const navigationGroups: readonly NavigationGroup[] = [
         label: "Interviews & Scheduling",
         items: [
           { id: "calendar", href: "/calendar", label: "Calendar", icon: CalendarDays },
+          // Interviews that happened with no write-up yet. Rides on the calendar
+          // module's access, like Offers rides on candidates above — it is a view
+          // of calendar interviews, not a separate thing to permission.
+          { id: "calendar", href: "/interviews/debrief", label: "Debrief Queue", icon: CalendarCheck },
           { id: "scheduling", href: "/scheduling", label: "Scheduling", icon: CalendarClock },
           { id: "interview-questions", href: "/interview-questions", label: "Question Bank", icon: ListChecks }
         ]
