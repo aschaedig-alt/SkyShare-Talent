@@ -21,7 +21,6 @@
       "Bash(git checkout *)",
       "Bash(git restore *)",
       "Bash(git clean *)",
-      "Bash(git stash*)",
       "Bash(git push --force*)",
       "Bash(git push -f*)",
       "PowerShell(git add -A*)",
@@ -34,9 +33,26 @@
       "PowerShell(git checkout *)",
       "PowerShell(git restore *)",
       "PowerShell(git clean *)",
-      "PowerShell(git stash*)",
       "PowerShell(git push --force*)",
-      "PowerShell(git push -f*)"
+      "PowerShell(git push -f*)",
+      "Bash(git stash)",
+      "Bash(git stash push*)",
+      "Bash(git stash save*)",
+      "Bash(git stash pop*)",
+      "Bash(git stash apply*)",
+      "Bash(git stash drop*)",
+      "Bash(git stash clear*)",
+      "Bash(git stash create*)",
+      "Bash(git stash store*)",
+      "PowerShell(git stash)",
+      "PowerShell(git stash push*)",
+      "PowerShell(git stash save*)",
+      "PowerShell(git stash pop*)",
+      "PowerShell(git stash apply*)",
+      "PowerShell(git stash drop*)",
+      "PowerShell(git stash clear*)",
+      "PowerShell(git stash create*)",
+      "PowerShell(git stash store*)"
     ]
   }
 }
