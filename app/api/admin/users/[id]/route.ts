@@ -4,6 +4,8 @@ import { requireApiPermission } from "@/lib/auth/route-auth";
 import { VALID_ROLES, UserRole } from "@/lib/auth/permissions";
 import { logActivity } from "@/lib/activity/logger";
 import { blockEmail } from "@/lib/auth/blocklist";
+import { isScopingDepartment, MAX_ALLOWED_CANDIDATES, SCOPING_DEPARTMENT_VALUES } from "@/lib/auth/scoping-options";
+import { parseUserModuleOverrides, serializeUserModuleOverrides } from "@/lib/auth/user-module-access";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireApiPermission("settings:admin");
@@ -12,11 +14,19 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   const { id } = await params;
+  // NOTE: this body type and the data object below are hand-maintained whitelists.
+  // A field added to one but not the other is accepted by the route and silently
+  // dropped before it reaches the database, with no error anywhere. Add to BOTH.
   const body = await request.json() as {
     role?: string;
     department?: string | null;
     isExecutive?: boolean;
     restrictCandidatesToDepartment?: boolean;
+    restrictCandidatesToAllowlist?: boolean;
+    allowlistCanAnnotate?: boolean;
+    moduleOverrides?: unknown;
+    addCandidateIds?: unknown;
+    removeCandidateIds?: unknown;
   };
 
   const data: {
@@ -24,6 +34,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     department?: string | null;
     isExecutive?: boolean;
     restrictCandidatesToDepartment?: boolean;
+    restrictCandidatesToAllowlist?: boolean;
+    allowlistCanAnnotate?: boolean;
+    moduleAccessJson?: string | null;
   } = {};
 
   if (body.role !== undefined) {
@@ -33,10 +46,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     data.role = body.role;
   }
 
-  const DEPARTMENTS = ["crew", "maintenance", "fbo", "support"];
+  // Departments come from lib/auth/scoping-options.ts, shared with the picker in
+  // the settings UI. They used to be hardcoded separately in both places.
   if (body.department !== undefined) {
-    if (body.department !== null && !DEPARTMENTS.includes(body.department)) {
-      return NextResponse.json({ message: "Invalid department" }, { status: 400 });
+    if (body.department !== null && !isScopingDepartment(body.department)) {
+      return NextResponse.json(
+        { message: `Invalid department. Expected one of: ${SCOPING_DEPARTMENT_VALUES.join(", ")}.` },
+        { status: 400 }
+      );
     }
     data.department = body.department;
   }
@@ -46,8 +63,48 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (typeof body.restrictCandidatesToDepartment === "boolean") {
     data.restrictCandidatesToDepartment = body.restrictCandidatesToDepartment;
   }
+  if (typeof body.restrictCandidatesToAllowlist === "boolean") {
+    data.restrictCandidatesToAllowlist = body.restrictCandidatesToAllowlist;
+    if (body.restrictCandidatesToAllowlist) {
+      // The allowlist wins over the department restriction (see
+      // lib/auth/candidate-scope.ts), so turning it ON clears the other rather
+      // than leaving a stored setting that reads as active and does nothing.
+      data.restrictCandidatesToDepartment = false;
+    } else {
+      // Turning it off also drops the annotate grant: it is meaningless without
+      // the allowlist, and leaving it set would silently re-arm the write path if
+      // the allowlist were ever switched back on.
+      data.allowlistCanAnnotate = false;
+    }
+  }
+  // Guarded: the block above clears the annotate grant when the allowlist is turned
+  // OFF, and an unguarded assignment here would immediately undo that. A body of
+  // { restrictCandidatesToAllowlist: false, allowlistCanAnnotate: true } would then
+  // store a live write grant on an account with no allowlist - exactly the silent
+  // re-arming the comment above says it prevents.
+  if (typeof body.allowlistCanAnnotate === "boolean" && body.restrictCandidatesToAllowlist !== false) {
+    data.allowlistCanAnnotate = body.allowlistCanAnnotate;
+  }
+  if (body.moduleOverrides !== undefined) {
+    // null clears the override and returns the account to its role policy.
+    data.moduleAccessJson =
+      body.moduleOverrides === null
+        ? null
+        : serializeUserModuleOverrides(parseUserModuleOverrides(JSON.stringify(body.moduleOverrides)));
+  }
 
-  if (Object.keys(data).length === 0) {
+  // Candidate grants are an explicit ADD/REMOVE pair rather than a whole-array
+  // replace. Two admins editing the same person against this shared live database
+  // would otherwise clobber each other: the second save would write a list built
+  // before the first one landed, silently revoking it.
+  const addIds = Array.isArray(body.addCandidateIds)
+    ? [...new Set(body.addCandidateIds.filter((v): v is string => typeof v === "string" && Boolean(v)))]
+    : [];
+  const removeIds = Array.isArray(body.removeCandidateIds)
+    ? [...new Set(body.removeCandidateIds.filter((v): v is string => typeof v === "string" && Boolean(v)))]
+    : [];
+
+  if (Object.keys(data).length === 0 && addIds.length === 0 && removeIds.length === 0) {
     return NextResponse.json({ message: "Nothing to update" }, { status: 400 });
   }
 
@@ -55,20 +112,54 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     // Get current user to log activity
     const currentUser = auth.user;
 
-    const user = await prisma.user.update({
-      where: { id },
-      data,
-    });
+    if (addIds.length) {
+      const currentCount = await prisma.userCandidateAccess.count({ where: { userId: id } });
+      // Net of the removals in this same request. Counting the grants we are about to
+      // delete would reject a straight swap at the ceiling with a message about a
+      // limit the save would never have crossed.
+      if (currentCount - removeIds.length + addIds.length > MAX_ALLOWED_CANDIDATES) {
+        return NextResponse.json(
+          { message: `A person can be granted at most ${MAX_ALLOWED_CANDIDATES} candidates.` },
+          { status: 400 }
+        );
+      }
+      // Validate every id exists, so a bad id is rejected loudly rather than
+      // granting nothing and looking like it worked.
+      const found = await prisma.candidate.findMany({ where: { id: { in: addIds } }, select: { id: true } });
+      if (found.length !== addIds.length) {
+        return NextResponse.json({ message: "One or more selected candidates no longer exist." }, { status: 400 });
+      }
+      await prisma.userCandidateAccess.createMany({
+        data: addIds.map((candidateId) => ({ userId: id, candidateId, grantedByEmail: auth.user.email })),
+        skipDuplicates: true
+      });
+    }
+
+    if (removeIds.length) {
+      await prisma.userCandidateAccess.deleteMany({
+        where: { userId: id, candidateId: { in: removeIds } }
+      });
+    }
+
+    const user =
+      Object.keys(data).length > 0
+        ? await prisma.user.update({ where: { id }, data })
+        : await prisma.user.findUniqueOrThrow({ where: { id } });
 
     // Log the activity
     await logActivity({
       userId: currentUser?.id,
       userEmail: currentUser?.email || undefined,
       activityType: "PERMISSION_CHANGED",
-      description: `Updated access settings for ${user.name || user.email}`,
+      description:
+        `Updated access settings for ${user.name || user.email}` +
+        (addIds.length ? `; granted ${addIds.length} candidate(s)` : "") +
+        (removeIds.length ? `; revoked ${removeIds.length} candidate(s)` : ""),
       entityType: "User",
       entityId: id,
-      metadata: { ...data, userId: id },
+      // The granted/revoked ids go into the audit trail so a widened allowlist is
+      // answerable after the fact: who was added, by whom, and when.
+      metadata: { ...data, userId: id, addedCandidateIds: addIds, removedCandidateIds: removeIds },
     });
 
     return NextResponse.json(user);

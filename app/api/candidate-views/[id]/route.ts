@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiPermission } from "@/lib/auth/route-auth";
+import { visibleCandidateIdsFor } from "@/lib/data/candidates";
 import {
   deleteCandidateView,
   getCandidateView,
@@ -17,7 +18,22 @@ export async function GET(_request: Request, { params }: Context) {
   const { id } = await params;
   const view = await getCandidateView(id);
   if (!view) return NextResponse.json({ message: "No such view." }, { status: 404 });
-  return NextResponse.json({ ok: true, view });
+
+  // Saved views are workspace-global with no owner filter, so this route would
+  // otherwise hand an allowlist-scoped viewer the FULL member id list of any view
+  // in the system — and an id is all the other candidate endpoints need. Narrow
+  // the list to the people this viewer may see, and treat a view that ends up
+  // empty as one that does not exist, so an empty result cannot be read as
+  // confirmation that a view holds people they are not allowed to know about.
+  // visibleCandidateIdsFor applies BOTH narrowings - the hand-picked allowlist and the
+  // older department restriction. scopeCandidateIds implements only the first, which
+  // left a department-scoped manager reading every id on any view in the system.
+  const visibleIds = await visibleCandidateIdsFor(view.candidateIds, auth.user.viewer);
+  if (visibleIds.length === 0 && view.candidateIds.length > 0) {
+    return NextResponse.json({ message: "No such view." }, { status: 404 });
+  }
+
+  return NextResponse.json({ ok: true, view: { ...view, candidateIds: visibleIds } });
 }
 
 // PATCH /api/candidate-views/[id] — rename, re-note, or replace the member list.

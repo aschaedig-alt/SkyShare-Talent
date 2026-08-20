@@ -7,10 +7,13 @@ type PilotRequirementsPageProps = {
 };
 
 export default async function PilotRequirementsPage({ searchParams }: PilotRequirementsPageProps) {
-  await requireModulePageAccess("pilot-requirements");
+  const access = await requireModulePageAccess("pilot-requirements");
   const params = await searchParams;
   const query = params?.q?.trim() ?? "";
-  const data = await getPilotRequirementsData(query, params?.id);
+  // candidateMatches for the initial selection are computed here, on the server,
+  // and shipped with the first paint — the gate on the Scan action never sees
+  // that list. Thread the viewer so the pool is narrowed at the query instead.
+  const data = await getPilotRequirementsData(query, params?.id, access.viewer);
 
   return <PilotRequirementsWorkspace data={data} query={query} />;
 }

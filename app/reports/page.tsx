@@ -6,8 +6,10 @@ import { getWorkspaceBranding, resolveBrandingLogo } from "@/lib/data/branding";
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
-  const { role } = await requireModulePageAccess("reports");
-  const data = await getReportsData();
+  const { role, viewer } = await requireModulePageAccess("reports");
+  // The document-currency panel lists candidate names as profile links, so this
+  // report has to respect the same narrowing the candidate list does.
+  const data = await getReportsData(viewer);
   const branding = await getWorkspaceBranding();
 
   return <ReportsWorkspace data={data} logoDataUrl={resolveBrandingLogo(branding, "reports")} canShare={role === "ADMIN"} />;

@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { canonicalTitle } from "@/lib/fleet/positions";
 import { parseStringArray } from "@/lib/json";
+import { candidateScopeWhere } from "@/lib/auth/candidate-scope";
+import type { ViewerScope } from "@/lib/auth/viewer-scope";
 
 export type RecruitingJobListItem = {
   id: string;
@@ -65,22 +67,29 @@ function locationLabel(city: string | null, state: string | null) {
   return [city, state].filter(Boolean).join(", ") || null;
 }
 
-function toListItem(job: {
-  id: string;
-  title: string;
-  department: string | null;
-  status: string;
-  city: string | null;
-  state: string | null;
-  pilotSeat: string | null;
-  aircraftTypesJson: string | null;
-  isPilotRole: boolean;
-  updatedAt: Date;
-  _count: {
-    applications: number;
-    pilotRequirements: number;
-  };
-}): RecruitingJobListItem {
+function toListItem(
+  job: {
+    id: string;
+    title: string;
+    department: string | null;
+    status: string;
+    city: string | null;
+    state: string | null;
+    pilotSeat: string | null;
+    aircraftTypesJson: string | null;
+    isPilotRole: boolean;
+    updatedAt: Date;
+    _count: {
+      applications: number;
+      pilotRequirements: number;
+    };
+  },
+  // Applicant count as this viewer may see it. Omitted (the unrestricted case)
+  // falls through to the unfiltered _count, so nothing changes for anyone who
+  // is not allowlist-scoped. NOTE: because this now takes a second parameter it
+  // must never be handed straight to Array.map, which would pass the index.
+  candidateCount?: number
+): RecruitingJobListItem {
   return {
     id: job.id,
     title: canonicalTitle(job.title),
@@ -92,7 +101,7 @@ function toListItem(job: {
     pilotSeat: job.pilotSeat,
     aircraftTypes: parseStringArray(job.aircraftTypesJson),
     isPilotRole: job.isPilotRole,
-    candidateCount: job._count.applications,
+    candidateCount: candidateCount ?? job._count.applications,
     requirementCount: job._count.pilotRequirements,
     updatedAt: job.updatedAt.toISOString()
   };
@@ -118,7 +127,23 @@ function matchesSearch(job: RecruitingJobListItem, query: string) {
   return searchable.includes(query.toLowerCase());
 }
 
-export async function getRecruitingJobsData(query = "", selectedId?: string): Promise<RecruitingJobsData> {
+export async function getRecruitingJobsData(
+  query = "",
+  selectedId?: string,
+  // Optional and trailing so any non-request caller keeps working; omitted means
+  // unrestricted. Pass it from anything serving a signed-in user — linkedCandidates
+  // below carries a candidate id, name and current title for EVERY application on
+  // EVERY job, in the first-paint payload.
+  viewer?: ViewerScope | null
+): Promise<RecruitingJobsData> {
+  // Null for anyone who is not allowlist-scoped, so the query below comes out
+  // byte-identical to what it has always been for every existing user.
+  //
+  // Applied through the relation (candidate: { id: { in: ... } }) rather than the
+  // applications.candidateId column, matching lib/data/recent-interviews.ts: the
+  // column-shaped helper returns an index-signature Record, which is not worth
+  // spreading into a Prisma where clause.
+  const scope = candidateScopeWhere(viewer);
   const [rows, total, open, pilot, withCandidates] = await Promise.all([
     prisma.job.findMany({
       where: { mergedIntoJobId: null },
@@ -140,6 +165,11 @@ export async function getRecruitingJobsData(query = "", selectedId?: string): Pr
           }
         },
         applications: {
+          // `undefined` is Prisma for "no filter", so the unrestricted case is
+          // the exact query that was here before. Not a conditional spread: this
+          // object is what Prisma infers the result shape from, and a spread
+          // would turn it into a union.
+          where: scope ? { candidate: scope } : undefined,
           include: {
             candidate: {
               select: {
@@ -159,7 +189,15 @@ export async function getRecruitingJobsData(query = "", selectedId?: string): Pr
     prisma.job.count({ where: { mergedIntoJobId: null, applications: { some: {} } } })
   ]);
 
-  const listItems = rows.map(toListItem);
+  // The applications array is loaded in full (no `take`), so its length IS the
+  // applicant count — the scoped one once the where above is on. The
+  // unrestricted path keeps reading _count, so that case is untouched.
+  //
+  // Not `rows.map(toListItem)` any more: toListItem takes a second parameter
+  // now, and map would have passed it the array index.
+  const candidateCountFor = (job: (typeof rows)[number]) =>
+    scope ? job.applications.length : job._count.applications;
+  const listItems = rows.map((row) => toListItem(row, candidateCountFor(row)));
   // Active (OPEN) jobs first. Stable sort, so the DB's isPilotRole/department/title
   // order is preserved within the active and inactive groups (Node's sort is stable).
   listItems.sort((a, b) => (a.isActive === b.isActive ? 0 : a.isActive ? -1 : 1));
@@ -174,7 +212,7 @@ export async function getRecruitingJobsData(query = "", selectedId?: string): Pr
   const details: Record<string, RecruitingJobDetail> = {};
   for (const row of rows) {
     details[row.id] = {
-      ...toListItem(row),
+      ...toListItem(row, candidateCountFor(row)),
       recruiter: row.recruiter,
       jobReqId: row.jobReqId,
       paycomReqId: row.paycomReqId,

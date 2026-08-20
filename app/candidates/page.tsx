@@ -5,7 +5,6 @@ import { isCandidateDepartmentKey } from "@/lib/candidates/departments";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { getPageLayout } from "@/lib/data/page-layout";
 import { isAdminOrRecruiter } from "@/lib/auth/roles";
-import { resolveViewerScope } from "@/lib/auth/viewer-scope";
 
 type CandidatesPageProps = {
   searchParams?: Promise<{ q?: string; from?: string; tags?: string; depts?: string; size?: string }>;
@@ -36,9 +35,12 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
   const pageSize = CANDIDATE_PAGE_SIZES.includes(requestedSize as (typeof CANDIDATE_PAGE_SIZES)[number])
     ? requestedSize
     : CANDIDATE_LIST_LIMIT;
-  const viewer = await resolveViewerScope(access.role, access.userId, access.email);
+  // requireModulePageAccess already resolved the viewer, so take it from there
+  // rather than calling resolveViewerScope again. Same object either way — the
+  // resolver is React-cached per request — but one caller means one place to
+  // look when asking what this page scoped itself to.
   const [data, layout, tagOptions] = await Promise.all([
-    getCandidateListData(query, viewer, activeTags, activeDepartments, pageSize),
+    getCandidateListData(query, access.viewer, activeTags, activeDepartments, pageSize),
     getPageLayout("candidates"),
     getCandidateTagOptions()
   ]);

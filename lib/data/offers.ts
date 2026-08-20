@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { candidateFieldScopeWhere, type CandidateAccessScope } from "@/lib/auth/candidate-scope";
 
 export type OfferRow = {
   applicationId: string;
@@ -32,9 +33,19 @@ const iso = (d: Date | null) => (d ? d.toISOString() : null);
 // Started/planned are still in your court, so they sit below the sent/signed ones.
 const ORDER: Record<string, number> = { SENT: 0, SIGNED: 1, STARTED: 2, PLANNED: 3, DECLINED: 4 };
 
-export async function getOffersBoard(): Promise<OffersBoard> {
+// viewer is REQUIRED. Offers ride on the CANDIDATES module (see app/offers/page.tsx),
+// which is precisely the module a hand-picked hiring manager has switched ON - so this
+// board is reachable by the one account the allowlist exists to contain, and it carries
+// every candidate's name, email, job title, offer status and decline reason. Making the
+// parameter required rather than optional is deliberate: an optional viewer defaulting to
+// "unrestricted" is how this surface came to be missed in the first place.
+export async function getOffersBoard(viewer: CandidateAccessScope | null): Promise<OffersBoard> {
+  const scope = candidateFieldScopeWhere(viewer);
   const apps = await prisma.candidateApplication.findMany({
-    where: { offerStatus: { not: "NONE" } },
+    // Null for anyone not allowlist-scoped, leaving the clause exactly as it was.
+    where: scope
+      ? { AND: [{ offerStatus: { not: "NONE" } }, scope] }
+      : { offerStatus: { not: "NONE" } },
     select: {
       id: true,
       offerStatus: true,

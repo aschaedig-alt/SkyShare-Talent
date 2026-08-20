@@ -16,10 +16,14 @@ import { KEEP_ON_POSITION, type PositionSkip, type PositionSkipReason, type Requ
 import { isScanExclusionReason, type ScanExclusionReason } from "@/lib/candidates/scan-exclusion";
 import {
   scanPoolWhere,
+  currentPoolWhere,
+  archivePoolWhere,
   isArchivedCandidateStatus,
   CURRENT_MATCH_LIMIT,
   ARCHIVE_MATCH_LIMIT
 } from "@/lib/candidates/scan-pool";
+import { getScanPoolCounts, type ScanPoolCounts } from "@/lib/candidates/scan-pool.server";
+import { candidateScopeWhere, scopeCandidateIds, type CandidateAccessScope } from "@/lib/auth/candidate-scope";
 import { resolveFleetPosition, aircraftSharingTypeRating } from "@/lib/fleet/positions";
 import { parseStringArray } from "@/lib/json";
 
@@ -1033,6 +1037,78 @@ export const candidateMatchSelect = {
   }
 } as const;
 
+// ---------------------------------------------------------------------------
+// Who the scan is allowed to look at
+// ---------------------------------------------------------------------------
+//
+// candidateMatchSelect above reads note bodies and extracted document text for
+// EVERY row it returns, and the three findMany sites below are the only places
+// it is used. That makes this file the one chokepoint for candidate visibility
+// across the Match Board, Pilot Requirements and Job Screening — scoping here
+// covers all three at once, rather than each caller remembering.
+
+/**
+ * The scannable pool, narrowed to what this viewer may see.
+ *
+ * Scoped AT THE QUERY, never by filtering a finished result. A scored, ranked
+ * list leaks the size of the pool it was drawn from and each person's position
+ * within it, which for a match board is most of the information — narrowing
+ * afterwards would hide the names and leave the shape.
+ *
+ * candidateScopeWhere() returns null for anyone who is not allowlist-scoped,
+ * including a null viewer (the local-dev bypass and every non-request caller),
+ * so the where clause comes back byte-identical to what it has always been for
+ * every existing user. That is the whole safety argument for this change.
+ */
+export function scanPoolWhereForViewer(
+  includeExcluded: boolean,
+  viewer: CandidateAccessScope | null | undefined
+) {
+  const pool = scanPoolWhere(includeExcluded);
+  const scope = candidateScopeWhere(viewer);
+  // Both predicates go INSIDE one AND rather than the scope being merged on top
+  // of the pool: the pool owns `status` and `scanExcludedReason` today and may
+  // grow more keys — an `AND` or an `OR` of its own included — and nothing here
+  // can overwrite whatever it grows. The previous shape (`{ ...pool, AND: [scope] }`)
+  // ASSIGNED the AND key, so a pool predicate that grew one would have had it
+  // dropped silently, widening the query for exactly the viewer this narrows.
+  return scope ? { AND: [pool, scope] } : pool;
+}
+
+/**
+ * getScanPoolCounts(), narrowed the same way.
+ *
+ * These counts are rendered as "N candidates in system" next to the results, so
+ * leaving them whole would put the true pool size on a page that is showing an
+ * allowlisted viewer four people — exactly the leak the query scoping above is
+ * for. Lives here rather than beside getScanPoolCounts because this is the
+ * module that owns "which candidates does a scan look at"; the pool predicates
+ * themselves are still imported from lib/candidates/scan-pool.ts and never
+ * restated.
+ *
+ * The unrestricted path delegates to getScanPoolCounts untouched, so nothing
+ * changes for a viewer with no allowlist.
+ */
+export async function getScanPoolCountsForViewer(
+  viewer: CandidateAccessScope | null | undefined,
+  includeExcluded = false
+): Promise<ScanPoolCounts> {
+  const scope = candidateScopeWhere(viewer);
+  if (!scope) {
+    return getScanPoolCounts(includeExcluded);
+  }
+
+  // Same shape as scanPoolWhereForViewer above, and for the same reason: the
+  // pool predicate goes inside the AND rather than under it, so it keeps every
+  // key it has — or later grows — instead of having an AND of its own assigned
+  // over the top.
+  const [current, archive] = await Promise.all([
+    prisma.candidate.count({ where: { AND: [currentPoolWhere(includeExcluded), scope] } }),
+    prisma.candidate.count({ where: { AND: [archivePoolWhere(includeExcluded), scope] } })
+  ]);
+  return { current, archive, total: current + archive };
+}
+
 // Both groups were capped low enough that real scans hit the ceiling EXACTLY —
 // 60 set aside on the live G200 scan, 40 likely-overqualified on PC-12 Captain —
 // and a list that stops at its cap with no count reads as the complete list.
@@ -1099,7 +1175,10 @@ export async function scanRequirementPool(
   feedback: RequirementFeedback = {},
   overrides: TierOverrides = {},
   skips: RequirementSkips = {},
-  includeExcluded = false
+  includeExcluded = false,
+  // Optional and trailing so every non-request caller (scripts, run-scan) keeps
+  // working unchanged; omitted means unrestricted, which is what they were.
+  viewer?: CandidateAccessScope | null
 ): Promise<RequirementScanResult> {
   if (!requirement) {
     return { ranked: [], likelyOverqualified: [], setAside: [], likelyOverqualifiedTotal: 0, setAsideTotal: 0 };
@@ -1109,7 +1188,7 @@ export async function scanRequirementPool(
   // scan silently saw only the most recently touched slice of the pool; with the
   // archive included that would have hidden almost all of it.
   const candidates = await prisma.candidate.findMany({
-    where: scanPoolWhere(includeExcluded),
+    where: scanPoolWhereForViewer(includeExcluded, viewer),
     select: candidateMatchSelect
   });
 
@@ -1163,9 +1242,18 @@ export async function getPilotRequirementCandidateMatches(
   feedback: RequirementFeedback = {},
   overrides: TierOverrides = {},
   includeExcluded = false,
-  skips: RequirementSkips = {}
+  skips: RequirementSkips = {},
+  viewer?: CandidateAccessScope | null
 ): Promise<PilotRequirementCandidateMatch[]> {
-  const { ranked } = await scanRequirementPool(requirement, config, feedback, overrides, skips, includeExcluded);
+  const { ranked } = await scanRequirementPool(
+    requirement,
+    config,
+    feedback,
+    overrides,
+    skips,
+    includeExcluded,
+    viewer
+  );
   return ranked;
 }
 
@@ -1189,12 +1277,13 @@ export type UnverifiedCandidate = {
 export async function getUnverifiedForRequirement(
   requirement: MatchRequirement | null,
   config: ScoringProfileConfig = defaultProfileConfig(),
-  includeExcluded = false
+  includeExcluded = false,
+  viewer?: CandidateAccessScope | null
 ): Promise<UnverifiedCandidate[]> {
   if (!requirement) return [];
 
   const candidates = await prisma.candidate.findMany({
-    where: scanPoolWhere(includeExcluded),
+    where: scanPoolWhereForViewer(includeExcluded, viewer),
     select: candidateMatchSelect
   });
 
@@ -1247,12 +1336,19 @@ export async function scoreSpecificCandidates(
   config: ScoringProfileConfig = defaultProfileConfig(),
   feedback: RequirementFeedback = {},
   overrides: TierOverrides = {},
-  skips: RequirementSkips = {}
+  skips: RequirementSkips = {},
+  viewer?: CandidateAccessScope | null
 ): Promise<PilotRequirementCandidateMatch[]> {
   if (candidateIds.length === 0) return [];
 
+  // Narrowed BEFORE the query rather than after the scoring, so a candidate this
+  // viewer may not see is never read and never counted. scopeCandidateIds
+  // returns the list untouched for anyone who is not allowlist-scoped.
+  const scopedIds = scopeCandidateIds(viewer, candidateIds);
+  if (scopedIds.length === 0) return [];
+
   const candidates = await prisma.candidate.findMany({
-    where: { id: { in: candidateIds } },
+    where: { id: { in: scopedIds } },
     select: candidateMatchSelect
   });
 

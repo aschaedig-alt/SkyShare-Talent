@@ -17,9 +17,53 @@ import {
   splitSearchTerms
 } from "@/lib/candidates/search-terms";
 import type { ViewerScope } from "@/lib/auth/viewer-scope";
+import {
+  candidateScopeWhere,
+  isCandidateAllowlisted,
+  isCandidateVisible,
+  scopeCandidateIds
+} from "@/lib/auth/candidate-scope";
 import type { TagChip } from "@/lib/tags/colors";
 
-export type CandidateListViewer = Pick<ViewerScope, "role" | "department" | "restrictCandidatesToDepartment">;
+// Carries BOTH narrowing mechanisms: the department restriction (a join through
+// applications->job->department, resolved in this file) and the hand-picked
+// allowlist (a set of ids, resolved in lib/auth/candidate-scope.ts).
+export type CandidateListViewer = Pick<
+  ViewerScope,
+  | "role"
+  | "department"
+  | "restrictCandidatesToDepartment"
+  | "restrictCandidatesToAllowlist"
+  | "allowedCandidateIds"
+>;
+
+// Is the DEPARTMENT restriction on for this viewer? An admin-set exception that
+// only ever applies to a HIRING_MANAGER — ADMIN/RECRUITER are never narrowed.
+// Named because two things ask it (the where-fragment below and
+// isCandidateScopeNarrowed) and a second hand-rolled copy of the condition is
+// exactly how one of these rules gets half-fixed.
+function isDepartmentRestricted(viewer: CandidateListViewer | undefined): boolean {
+  return Boolean(viewer && viewer.role === "HIRING_MANAGER" && viewer.restrictCandidatesToDepartment);
+}
+
+// The where-fragment for the DEPARTMENT restriction, or null when it does not
+// apply. Extracted so the list, the comparison board and the saved-view reader
+// all narrow the same way — before this, only the list honoured it, so a
+// department-scoped hiring manager saw their own department on /candidates and
+// the entire roster on the Compare tab.
+async function departmentScopeWhere(
+  viewer: CandidateListViewer | undefined
+): Promise<{ applications: { some: { job: { department: { in: string[] } } } } } | null> {
+  if (!isDepartmentRestricted(viewer)) {
+    return null;
+  }
+  // No department set means no job strings match, which correctly matches nobody
+  // rather than falling open to everybody.
+  // Optional-chained because the guard above is now a named predicate, which
+  // does not narrow the parameter for the compiler the way an inline !viewer did.
+  const deptStrings = viewer?.department ? await jobDepartmentStringsFor(viewer.department) : [];
+  return { applications: { some: { job: { department: { in: deptStrings } } } } };
+}
 
 // Candidates have no department column of their own — it's derived through
 // their job applications, same as the calendar does (see
@@ -36,6 +80,71 @@ async function jobDepartmentStringsFor(dept: NonNullable<CandidateListViewer["de
   return jobs
     .map((j) => j.department)
     .filter((d): d is string => Boolean(d) && resolveDepartmentKey(d).deptKey === dept);
+}
+
+/**
+ * Is this viewer narrowed by EITHER mechanism — the hand-picked allowlist or the
+ * department restriction?
+ *
+ * For the pages that hide a saved view holding nobody this viewer may see, and
+ * that show "N of M" instead of a bare count. Asking isCandidateAllowlisted()
+ * there covers only half of it: a department-scoped hiring manager is narrowed
+ * too, and their cards promised the full count and then opened short.
+ */
+export function isCandidateScopeNarrowed(viewer?: CandidateListViewer): boolean {
+  return isCandidateAllowlisted(viewer) || isDepartmentRestricted(viewer);
+}
+
+/**
+ * Which of these saved candidate ids may this viewer actually see?
+ *
+ * The question a page has to answer before it can explain why a saved view came
+ * back short, and it applies BOTH narrowing mechanisms: the hand-picked
+ * allowlist (a set of ids, lib/auth/candidate-scope.ts) and the department
+ * restriction (the join above). scopeCandidateIds() implements only the first
+ * and hands the ids straight back when the allowlist is off, so for a
+ * department-scoped viewer every member the department filter dropped was
+ * counted as an id that no longer resolves — and the saved view told a real
+ * hiring manager that live candidates "can no longer be loaded, most likely
+ * deleted or merged". That is the reason this exists.
+ *
+ * Returns the survivors in the order they were passed. What comes back short by
+ * is the caller's WITHHELD count; ids that survive here and still resolve to no
+ * row are its MISSING count.
+ *
+ * Costs no query at all for a viewer under neither restriction — most of the
+ * roster, every ADMIN and RECRUITER, and a null viewer — which is why the
+ * department lookup is guarded rather than run and discarded.
+ */
+export async function visibleCandidateIdsFor(ids: string[], viewer?: CandidateListViewer): Promise<string[]> {
+  if (ids.length === 0) {
+    return ids;
+  }
+  // The allowlist first: it is a set of ids the viewer already carries, so it
+  // needs no round trip, and it narrows what the query below has to ask about.
+  const scoped = scopeCandidateIds(viewer, ids);
+  if (scoped.length === 0) {
+    return scoped;
+  }
+  const department = await departmentScopeWhere(viewer);
+  if (!department) {
+    // Not department-scoped, so the allowlist answer is the whole answer — and
+    // for an unrestricted viewer that is the ids untouched, no query run.
+    return scoped;
+  }
+  // One id-only lookup answering "exists AND applied in this department". Note
+  // it collapses the two reasons an id can fail: for a department-scoped viewer
+  // an id that no longer resolves at all lands in the caller's withheld bucket
+  // rather than its missing one. Deliberate — telling somebody a deleted record
+  // is outside their access is a small wrong answer, telling them a live one was
+  // deleted is the expensive one, and separating them costs a second query on
+  // every saved view to relabel a case that only happens after a merge.
+  const rows = await prisma.candidate.findMany({
+    where: { AND: [{ id: { in: scoped } }, department] },
+    select: { id: true }
+  });
+  const inDepartment = new Set(rows.map((row) => row.id));
+  return scoped.filter((id) => inDepartment.has(id));
 }
 
 export type CandidateListItem = {
@@ -475,12 +584,31 @@ export async function getCandidateListData(
   // department when an admin explicitly turns on restrictCandidatesToDepartment
   // for them (an exception, not the rule). ADMIN/RECRUITER are never narrowed.
   let candidateWhere: Record<string, unknown> = baseWhere;
-  if (viewer && viewer.role === "HIRING_MANAGER" && viewer.restrictCandidatesToDepartment) {
-    const deptStrings = viewer.department ? await jobDepartmentStringsFor(viewer.department) : [];
-    candidateWhere = {
-      ...baseWhere,
-      applications: { some: { job: { department: { in: deptStrings } } } }
-    };
+
+  // The hand-picked allowlist is checked FIRST and WINS outright over the
+  // department restriction below. The two are alternative answers to the same
+  // question, and intersecting them would hand an admin who set a department and
+  // then picked somebody outside it an empty list with no explanation. The admin
+  // UI disables the department control while this is on, so the two cannot be set
+  // in contradiction in the first place.
+  //
+  // Note this REPLACES baseWhere rather than extending it: an allowlisted viewer
+  // sees exactly the people they were granted, archived ones included. Being
+  // handed somebody by name and then not finding them because they were archived
+  // last month would read as the feature being broken.
+  const allowlist = candidateScopeWhere(viewer);
+  if (allowlist) {
+    candidateWhere = hasQuery
+      ? { AND: [...((baseWhere.AND as unknown[] | undefined) ?? []), allowlist] }
+      : allowlist;
+  } else {
+    // Same helper the comparison board and the saved-view reader use, so the
+    // department rule has exactly one definition. It returns null unless this
+    // viewer is actually department-scoped.
+    const departmentBranch = await departmentScopeWhere(viewer);
+    if (departmentBranch) {
+      candidateWhere = { ...baseWhere, ...departmentBranch };
+    }
   }
 
   // Tag filter. AND across tags — picking two means "carries both", which is
@@ -611,8 +739,18 @@ export async function getCandidateListData(
     prisma.candidate.count({ where: { ...candidateWhere, status: "ACTIVE" } }),
     prisma.candidate.count({ where: { ...candidateWhere, files: { some: {} } } }),
     prisma.candidate.count({ where: { ...candidateWhere, applications: { some: {} } } }),
-    prisma.interview.count({ where: { status: "SCHEDULED" } }),
-    prisma.candidate.count({ where: { archivedAt: { not: null } } })
+    // These two are NOT built from candidateWhere, so they have always ignored the
+    // department restriction too. Scoped explicitly rather than left to drift: a
+    // restricted viewer being told there are 3,169 archived candidates is a
+    // headline count of people they cannot see, which is its own small leak.
+    prisma.interview.count({
+      where: allowlist
+        ? { status: "SCHEDULED", candidateId: { in: viewer?.allowedCandidateIds ?? [] } }
+        : { status: "SCHEDULED" }
+    }),
+    prisma.candidate.count({
+      where: allowlist ? { AND: [{ archivedAt: { not: null } }, allowlist] } : { archivedAt: { not: null } }
+    })
   ]);
   // TEMPORARY diagnostic: the candidates page has been reported slow twice
   // now on guesses that didn't hold up under real measurement. This puts an
@@ -739,10 +877,20 @@ function splitListValue(value: string | null): string[] {
  *
  * No docMatch here: there is no search query behind a saved view.
  */
-export async function getCandidatesByIds(ids: string[]): Promise<CandidateListItem[]> {
+// viewer is optional for the same reason it is elsewhere in this file — internal
+// callers not serving a request pass nothing — but every REQUEST-serving caller
+// must pass it. Saved views are the caller that matters: without this, an
+// allowlisted viewer opening a saved view reads every candidate on it.
+export async function getCandidatesByIds(ids: string[], viewer?: CandidateListViewer): Promise<CandidateListItem[]> {
   if (ids.length === 0) return [];
+  const scoped = ids.filter((id) => isCandidateVisible(viewer, id));
+  if (scoped.length === 0) return [];
+  // A saved view can name anybody, so it has to respect the department
+  // restriction as well as the allowlist — otherwise a view is a way round the
+  // narrowing rather than a shortcut through it.
+  const byIdsDepartment = await departmentScopeWhere(viewer);
   const rows = await prisma.candidate.findMany({
-    where: { id: { in: ids } },
+    where: byIdsDepartment ? { AND: [{ id: { in: scoped } }, byIdsDepartment] } : { id: { in: scoped } },
     include: {
       candidateTags: { include: { tag: { select: { label: true, color: true } } } },
       applications: { select: { job: { select: { department: true } } } },
@@ -754,7 +902,9 @@ export async function getCandidatesByIds(ids: string[]): Promise<CandidateListIt
   // Preserve the saved order rather than the database's — the view was picked in
   // a particular order and re-sorting it makes a re-read of the same list feel
   // like a different one.
-  return ids
+  // Iterate the requested order but drop anything the query did not return —
+  // the department filter can remove members the allowlist let through.
+  return scoped
     .map((id) => byId.get(id))
     .filter((row): row is NonNullable<typeof row> => Boolean(row))
     .map((candidate) => ({
@@ -792,10 +942,31 @@ export async function getCandidatesByIds(ids: string[]): Promise<CandidateListIt
  * nothing on screen to say so. Without it, the page keeps its old behaviour of
  * showing every live candidate.
  */
-export async function getCandidateComparisonData(candidateIds?: string[]): Promise<CandidateComparisonData> {
+export async function getCandidateComparisonData(
+  candidateIds?: string[],
+  viewer?: CandidateListViewer
+): Promise<CandidateComparisonData> {
+  // The no-ids branch returns up to 1000 candidates with every flight metric, and
+  // /candidates/compare hits exactly that branch when there is no ?view=. For an
+  // allowlisted viewer that fallback must be THEIR people rather than everybody —
+  // and gating the CSV export button would be cosmetic, because by then the rows
+  // are already in the page.
+  const scopedIds = candidateIds ? candidateIds.filter((id) => isCandidateVisible(viewer, id)) : undefined;
+  const comparisonAllowlist = candidateScopeWhere(viewer);
+  // Both narrowings apply here, not just the allowlist. The department one is
+  // the older rule and had never reached this function: /candidates narrowed a
+  // department-scoped manager while this board handed the same person all 1000.
+  const comparisonDepartment = comparisonAllowlist ? null : await departmentScopeWhere(viewer);
+  const comparisonBase: Array<Record<string, unknown>> = scopedIds
+    ? [{ id: { in: scopedIds } }]
+    : [{ archivedAt: null }];
+  if (comparisonAllowlist) comparisonBase.push(comparisonAllowlist);
+  if (comparisonDepartment) comparisonBase.push(comparisonDepartment);
+  const comparisonWhere = comparisonBase.length === 1 ? comparisonBase[0] : { AND: comparisonBase };
+
   const candidateRows = await prisma.candidate.findMany({
-    where: candidateIds ? { id: { in: candidateIds } } : { archivedAt: null },
-    take: candidateIds ? candidateIds.length : 1000,
+    where: comparisonWhere,
+    take: scopedIds ? scopedIds.length : 1000,
     orderBy: [{ displayName: "asc" }],
     select: {
       id: true,
@@ -887,7 +1058,27 @@ function formatLocation(city: string | null, state: string | null) {
 
 const PRIVATE_NOTE_PLACEHOLDER = "Only visible to the assigned interviewer, their department's hiring managers, and Admin/Recruiter.";
 
-export async function getCandidateProfileData(id: string, viewer?: ViewerScope): Promise<CandidateProfileData | null> {
+// THE CHOKEPOINT for reading one candidate.
+//
+// viewer is REQUIRED. It used to be optional, with a missing viewer meaning
+// "unrestricted" — which is the wrong default for a gate: any future call site
+// that forgot the argument would silently open the record. Pass null explicitly
+// for a genuinely internal caller that is not serving a request.
+//
+// Returns null — the same answer as "no such candidate" — when the viewer is
+// allowlisted and this candidate is not on their list. Both existing callers
+// already handle null correctly (notFound() on the page, 404 from the API), and
+// 404 is the RIGHT answer rather than 403: a restricted hiring manager should
+// not be able to learn that a given person is in the system at all by pasting
+// ids into the URL bar.
+export async function getCandidateProfileData(
+  id: string,
+  viewer: ViewerScope | null
+): Promise<CandidateProfileData | null> {
+  if (!isCandidateVisible(viewer, id)) {
+    return null;
+  }
+
   const candidate = await prisma.candidate.findUnique({
     where: { id },
     include: {
@@ -967,8 +1158,19 @@ export async function getCandidateProfileData(id: string, viewer?: ViewerScope):
   const unrestrictedViewer =
     !viewer || viewer.role === "ADMIN" || viewer.role === "RECRUITER" || viewer.isExecutive;
   const departmentMatches = Boolean(viewer?.department && candidateDeptKey && viewer.department === candidateDeptKey);
+  // A hand-picked viewer reaching this line has ALREADY been checked against the
+  // allowlist above, so this candidate is one of theirs. Without this arm the
+  // feature contradicts itself: they would be granted a candidate by name and
+  // then shown PRIVATE_NOTE_PLACEHOLDER in place of every interview write-up and
+  // note body, because they carry no department, authored nothing, and are not an
+  // executive — all three existing arms are false for exactly this user.
+  //
+  // Granting someone a candidate IS granting them that candidate's file. If the
+  // assessments are meant to stay private the answer is to not grant the
+  // candidate, not to hand over a redacted record.
+  const allowlistGrantsCandidate = Boolean(viewer?.restrictCandidatesToAllowlist);
   function canSeeContent(authoredByViewer: boolean) {
-    return unrestrictedViewer || departmentMatches || authoredByViewer;
+    return unrestrictedViewer || departmentMatches || allowlistGrantsCandidate || authoredByViewer;
   }
   const declinedOffer = candidate.applications.some((a) => (a.status ?? "").toLowerCase().includes("declined"));
   const hired = candidate.applications.some((a) => (a.status ?? "").toLowerCase().includes("hired") && !(a.status ?? "").toLowerCase().includes("elsewhere"));

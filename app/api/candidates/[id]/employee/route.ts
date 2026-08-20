@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { CURRENT_EMPLOYEE_WHERE } from "@/lib/data/current-employee";
+import { isCandidateVisible } from "@/lib/auth/candidate-scope";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -21,6 +22,14 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
   const { id } = await context.params;
+
+  // { employee: null } is what an unlinked candidate AND an unknown id both get
+  // back, so it is also the right answer for one this viewer may not see — a 404
+  // here would single out real people on the other side of the allowlist. The
+  // linked employee's name and seat are exactly the detail being withheld.
+  if (!isCandidateVisible(auth.user.viewer, id)) {
+    return NextResponse.json({ employee: null });
+  }
 
   const hire = await prisma.newHire.findFirst({
     where: {

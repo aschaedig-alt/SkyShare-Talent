@@ -1,8 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { VALID_ROLES, ROLE_PERMISSIONS } from "@/lib/auth/permissions";
 import { useDialogClose } from "@/lib/hooks/useDialogClose";
+import { TeamMemberAccessModal, type AccessDraft } from "@/components/settings/TeamMemberAccessModal";
+import { SCOPING_DEPARTMENTS } from "@/lib/auth/scoping-options";
+import type { UserModuleOverrides } from "@/lib/auth/user-module-access";
+
+type AllowedCandidate = { id: string; displayName: string };
 
 interface UserWithPermissions {
   id: string;
@@ -12,26 +18,52 @@ interface UserWithPermissions {
   department: string | null;
   isExecutive: boolean;
   restrictCandidatesToDepartment: boolean;
+  restrictCandidatesToAllowlist: boolean;
+  allowlistCanAnnotate: boolean;
+  moduleOverrides: UserModuleOverrides | null;
+  allowedCandidates: AllowedCandidate[];
   permissions: Array<{ id: string; userId: string; permission: string }>;
   accounts: Array<{ id: string }>;
 }
 
-const DEPARTMENT_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "crew", label: "Crew" },
-  { value: "maintenance", label: "Maintenance" },
-  { value: "fbo", label: "FBO" },
-  { value: "support", label: "Support" }
-];
+interface PendingInvite {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  department: string | null;
+  restrictCandidatesToAllowlist: boolean;
+  allowlistCanAnnotate: boolean;
+  moduleOverrides: UserModuleOverrides | null;
+  candidates: AllowedCandidate[];
+  createdAt: string;
+}
+
+// Only these two roles are actually narrowed. resolveViewerScope short-circuits
+// ADMIN and RECRUITER to an unrestricted scope before it reads any of these
+// fields, so offering the controls for them would be a switch that does nothing.
+const SCOPABLE_ROLES = ["HIRING_MANAGER", "VIEWER"];
 
 interface UsersManagementWorkspaceProps {
   users: UserWithPermissions[];
   currentUserId?: string | null;
   blockedEmails?: string[];
+  pendingInvites?: PendingInvite[];
 }
 
-export function UsersManagementWorkspace({ users: initialUsers, currentUserId = null, blockedEmails = [] }: UsersManagementWorkspaceProps) {
+export function UsersManagementWorkspace({
+  users: initialUsers,
+  currentUserId = null,
+  blockedEmails = [],
+  pendingInvites = []
+}: UsersManagementWorkspaceProps) {
+  const router = useRouter();
   const [users, setUsers] = useState(initialUsers);
   const [blocked, setBlocked] = useState<string[]>(blockedEmails);
+  const [invites, setInvites] = useState<PendingInvite[]>(pendingInvites);
+  // Which modal is open: the invite form, or one existing person's access.
+  const [inviting, setInviting] = useState(false);
+  const [editingAccess, setEditingAccess] = useState<UserWithPermissions | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>("");
   const [saving, setSaving] = useState(false);
@@ -46,7 +78,10 @@ export function UsersManagementWorkspace({ users: initialUsers, currentUserId = 
 
   const flash = (type: "success" | "error", text: string) => {
     setMessage({ type, text });
-    setTimeout(() => setMessage(null), 3000);
+    // Long enough to read a two-line explanation, not just to notice a tick. The
+    // invite route returns real instructions here (an address that cannot sign in
+    // yet, an account that was replaced) and three seconds is not enough for them.
+    setTimeout(() => setMessage(null), text.length > 80 ? 12000 : 3000);
   };
 
   const removeAccess = async () => {
@@ -71,6 +106,49 @@ export function UsersManagementWorkspace({ users: initialUsers, currentUserId = 
       setSaving(false);
     }
   };
+
+  // The modal writes straight to the API, so the page is refreshed from the
+  // server afterwards rather than trying to reconstruct the new state by hand -
+  // an invite can land as EITHER a stored invite or an immediate change to an
+  // existing account, and guessing which locally would eventually be wrong.
+  const afterAccessSaved = (text: string) => {
+    // router.refresh(), NOT window.location.reload(): a full reload throws away the
+    // component state before React paints it, and the messages this discards are the
+    // ones that matter most - that the address is not on an allowed sign-in domain
+    // and will be turned away, or that an existing account was just replaced.
+    // refresh() re-runs the server component and keeps the flash on screen.
+    flash("success", text);
+    router.refresh();
+  };
+
+  const cancelInvite = async (id: string) => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/invites", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+      });
+      if (!res.ok) throw new Error("Failed to cancel the invite");
+      setInvites((current) => current.filter((invite) => invite.id !== id));
+      flash("success", "Invite cancelled.");
+    } catch (err) {
+      flash("error", err instanceof Error ? err.message : "Failed to cancel the invite");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const draftForUser = (user: UserWithPermissions): AccessDraft => ({
+    email: user.email ?? "",
+    name: user.name ?? "",
+    role: user.role,
+    department: user.department,
+    restrictCandidatesToAllowlist: user.restrictCandidatesToAllowlist,
+    allowlistCanAnnotate: user.allowlistCanAnnotate,
+    moduleOverrides: user.moduleOverrides,
+    candidates: user.allowedCandidates
+  });
 
   const restoreAccess = async (email: string) => {
     setSaving(true);
@@ -154,11 +232,21 @@ export function UsersManagementWorkspace({ users: initialUsers, currentUserId = 
       )}
 
       <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-        <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
-          User Management
-        </p>
-        <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Team Members</h1>
-        <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">Manage user roles and permissions</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
+              User Management
+            </p>
+            <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Team Members</h1>
+            <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">Manage user roles and permissions</p>
+          </div>
+          <button
+            onClick={() => setInviting(true)}
+            className="rounded bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-black transition hover:bg-brand-gold/90"
+          >
+            Add a team member
+          </button>
+        </div>
       </section>
 
       <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
@@ -187,17 +275,21 @@ export function UsersManagementWorkspace({ users: initialUsers, currentUserId = 
                       {user.role}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    {user.role === "HIRING_MANAGER" ? (
+                  <td className="px-4 py-3 align-top">
+                    {SCOPABLE_ROLES.includes(user.role) ? (
                       <div className="flex flex-col gap-1.5">
                         <select
                           value={user.department ?? ""}
                           onChange={(e) => updateScoping(user.id, { department: e.target.value || null })}
-                          disabled={saving}
-                          className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-xs text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
+                          /* The allowlist wins over the department restriction, so
+                             the department control is disabled while it is on -
+                             leaving it live would let an admin set two rules that
+                             contradict each other and see no sign of it. */
+                          disabled={saving || user.restrictCandidatesToAllowlist}
+                          className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-xs text-brand-lea disabled:opacity-50 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
                         >
                           <option value="">No department set</option>
-                          {DEPARTMENT_OPTIONS.map((dept) => (
+                          {SCOPING_DEPARTMENTS.map((dept) => (
                             <option key={dept.value} value={dept.value}>
                               {dept.label}
                             </option>
@@ -216,11 +308,56 @@ export function UsersManagementWorkspace({ users: initialUsers, currentUserId = 
                           <input
                             type="checkbox"
                             checked={user.restrictCandidatesToDepartment}
-                            disabled={saving}
+                            disabled={saving || user.restrictCandidatesToAllowlist}
                             onChange={(e) => updateScoping(user.id, { restrictCandidatesToDepartment: e.target.checked })}
                           />
                           Restrict candidate list to own department
                         </label>
+
+                        {user.restrictCandidatesToAllowlist && (
+                          <div className="mt-0.5 rounded border border-brand-gold/40 bg-brand-gold/10 px-2 py-1.5">
+                            <p className="text-xs font-semibold text-brand-lea dark:text-slate-100">
+                              {user.allowedCandidates.length === 0
+                                ? "Specific candidates only — none picked, so they see nobody"
+                                : `Specific candidates only — ${user.allowedCandidates.length} granted`}
+                            </p>
+                            {user.allowedCandidates.length > 0 && (
+                              <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
+                                {user.allowedCandidates.slice(0, 3).map((c) => c.displayName).join(", ")}
+                                {user.allowedCandidates.length > 3 ? ` +${user.allowedCandidates.length - 3} more` : ""}
+                              </p>
+                            )}
+                            {user.allowlistCanAnnotate && (
+                              <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">Can add notes and scorecards.</p>
+                            )}
+                          </div>
+                        )}
+                        {user.moduleOverrides && (
+                          <p className="text-xs text-brand-eden dark:text-brand-sweet">
+                            Custom area access set for this account.
+                          </p>
+                        )}
+
+                        <button
+                          onClick={() => setEditingAccess(user)}
+                          className="mt-0.5 self-start rounded border border-brand-lea/20 px-2 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-gold/10 dark:border-white/10 dark:text-slate-100"
+                        >
+                          Candidate &amp; area access…
+                        </button>
+                      </div>
+                    ) : user.moduleOverrides ? (
+                      // A stored override on a role the scoping controls do not cover
+                      // (a recruiter, say) would otherwise be invisible AND unreachable:
+                      // module overrides DO apply to a recruiter even though the
+                      // candidate allowlist does not, so it has to stay editable.
+                      <div className="flex flex-col gap-1.5">
+                        <p className="text-xs text-brand-eden dark:text-brand-sweet">Custom area access set for this account.</p>
+                        <button
+                          onClick={() => setEditingAccess(user)}
+                          className="self-start rounded border border-brand-lea/20 px-2 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-gold/10 dark:border-white/10 dark:text-slate-100"
+                        >
+                          Candidate &amp; area access…
+                        </button>
                       </div>
                     ) : (
                       <span className="text-xs text-brand-grey dark:text-slate-400">Not narrowed — sees everything</span>
@@ -291,6 +428,47 @@ export function UsersManagementWorkspace({ users: initialUsers, currentUserId = 
         )}
       </section>
 
+      {invites.length > 0 && (
+        <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+          <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Waiting for first sign-in</h2>
+          <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
+            Their access is configured and applies automatically the first time they sign in with Google. They do not
+            appear in the list above until then, because the account does not exist yet.
+          </p>
+          <div className="mt-3 divide-y divide-brand-lea/10 dark:divide-white/10">
+            {invites.map((invite) => (
+              <div key={invite.id} className="flex flex-wrap items-start justify-between gap-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="font-medium text-brand-lea dark:text-slate-100">
+                    {invite.name ? `${invite.name} — ` : ""}
+                    {invite.email}
+                  </p>
+                  <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
+                    {invite.role}
+                    {invite.restrictCandidatesToAllowlist
+                      ? ` · ${invite.candidates.length} candidate${invite.candidates.length === 1 ? "" : "s"}`
+                      : " · all candidates"}
+                    {invite.moduleOverrides ? " · custom area access" : ""}
+                  </p>
+                  {invite.candidates.length > 0 && (
+                    <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
+                      {invite.candidates.map((c) => c.displayName).join(", ")}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => cancelInvite(invite.id)}
+                  disabled={saving}
+                  className="rounded border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-eden transition hover:bg-brand-cloudDancer/40 disabled:opacity-50 dark:border-white/10 dark:text-slate-200"
+                >
+                  Cancel invite
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {blocked.length > 0 && (
         <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Revoked access</h2>
@@ -316,6 +494,10 @@ export function UsersManagementWorkspace({ users: initialUsers, currentUserId = 
 
       <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Role Permissions</h2>
+        <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
+          Reference only. This table comes from lib/auth/permissions.ts, which is not the list the app enforces — the
+          live one is lib/auth/roles.ts. Per-person access is set with the buttons above, not here.
+        </p>
         <div className="mt-4 space-y-4">
           {VALID_ROLES.map((role) => (
             <div key={role} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/30 p-3 dark:border-white/10 dark:bg-white/5">
@@ -331,6 +513,35 @@ export function UsersManagementWorkspace({ users: initialUsers, currentUserId = 
           ))}
         </div>
       </section>
+
+      {inviting && (
+        <TeamMemberAccessModal
+          mode="invite"
+          initial={{
+            email: "",
+            name: "",
+            role: "HIRING_MANAGER",
+            department: null,
+            restrictCandidatesToAllowlist: true,
+            allowlistCanAnnotate: true,
+            moduleOverrides: null,
+            candidates: []
+          }}
+          onClose={() => setInviting(false)}
+          onSaved={afterAccessSaved}
+        />
+      )}
+
+      {editingAccess && (
+        <TeamMemberAccessModal
+          mode="edit"
+          userId={editingAccess.id}
+          initial={draftForUser(editingAccess)}
+          originalCandidateIds={editingAccess.allowedCandidates.map((c) => c.id)}
+          onClose={() => setEditingAccess(null)}
+          onSaved={afterAccessSaved}
+        />
+      )}
 
       {removing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-lea/40 p-4" onClick={() => !saving && setRemoving(null)}>

@@ -51,6 +51,11 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
       canCreateJob={hasPermission(access.role, "jobs:write")}
       // Test-data deletion is admin-only and further gated on the TEST tag.
       canDelete={access.role === "ADMIN"}
+      // The narrow write path for a hiring manager scoped to specific candidates.
+      // Reaching this line already means the allowlist let them open the profile
+      // (getCandidateProfileData returns null otherwise), so the only remaining
+      // question is whether an admin granted them the annotate right.
+      canAnnotate={Boolean(viewer.allowlistCanAnnotate)}
       savedLayout={layout.layout}
       savedWidgets={layout.widgets}
       travelTrips={travelTrips}

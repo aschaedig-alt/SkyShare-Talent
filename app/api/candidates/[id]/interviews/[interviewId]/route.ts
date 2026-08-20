@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireApiPermission } from "@/lib/auth/route-auth";
+import { requireApiUser, authFailureResponse } from "@/lib/auth/route-auth";
+import { hasPermission } from "@/lib/auth/roles";
+import { canAnnotateCandidate, isCandidateVisible } from "@/lib/auth/candidate-scope";
 import { logActivity } from "@/lib/activity/logger";
 import { sanitizeRichText, richTextToPlain, extractMentions } from "@/lib/richtext/sanitize";
 import { INTERVIEW_OUTCOMES } from "@/lib/interviews/constants";
@@ -13,9 +15,37 @@ import { notifyMentions } from "@/lib/notifications/mentions";
  * scheduling flow (calendar:write, pushes to Google Calendar) and a logged
  * write-up has neither a calendar event nor that permission's blast radius.
  * Same reasoning as the POST route this pairs with.
+ *
+ * Same grant as that POST route too — an allowlist-scoped viewer may annotate a
+ * candidate they were given — but narrower: they may only change a write-up of
+ * their OWN interview. candidates:write is unchanged and still covers every one.
  */
 
 type Ctx = { params: Promise<{ id: string; interviewId: string }> };
+
+const forbidden = () =>
+  NextResponse.json({ message: "You do not have permission to perform this action." }, { status: 403 });
+
+const interviewNotFound = () => NextResponse.json({ message: "Interview not found." }, { status: 404 });
+
+/**
+ * Did this caller run this interview?
+ *
+ * Interview has no author column. The only identity it records is
+ * interviewerEmail, which the schema itself keeps precisely because the
+ * free-text interviewer NAME cannot answer "show me the ones I did" — two people
+ * typing their own name differently is enough to break that. So that address is
+ * what authorship means here, and a row with none recorded belongs to nobody and
+ * stays off limits to an allowlisted annotator.
+ *
+ * Note this is who RAN the interview rather than who typed the write-up; they
+ * are the same person for the flow this grant exists for, and the alternative is
+ * no ownership signal at all.
+ */
+function ranIt(email: string | null, interviewerEmail: string | null | undefined): boolean {
+  if (!email || !interviewerEmail) return false;
+  return email.trim().toLowerCase() === interviewerEmail.trim().toLowerCase();
+}
 
 function clampRating(value: unknown): number | null | undefined {
   if (value === null) return null;
@@ -32,12 +62,26 @@ async function loadOwned(id: string, interviewId: string) {
 }
 
 export async function PATCH(request: Request, ctx: Ctx) {
-  const auth = await requireApiPermission("candidates:write");
-  if (!auth.ok) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const auth = await requireApiUser();
+  if (!auth.ok) return authFailureResponse(auth);
 
   const { id, interviewId } = await ctx.params;
+
+  // Off-allowlist candidates answer as if the interview simply is not there, so
+  // the 404/403 split can never confirm that a person exists. Checked before the
+  // lookup for that reason.
+  if (!isCandidateVisible(auth.user.viewer, id)) return interviewNotFound();
+
+  const canWriteAnyInterview = hasPermission(auth.user.role, "candidates:write");
+  if (!canWriteAnyInterview && !canAnnotateCandidate(auth.user.viewer, id)) return forbidden();
+
   const existing = await loadOwned(id, interviewId);
-  if (!existing) return NextResponse.json({ message: "Interview not found." }, { status: 404 });
+  if (!existing) return interviewNotFound();
+
+  // The per-row half of the grant. 403 rather than 404 is fine here: the
+  // candidate is already one this viewer may read, so the interview's existence
+  // is not news to them — only the right to change it is being refused.
+  if (!canWriteAnyInterview && !ranIt(auth.user.email, existing.interviewerEmail)) return forbidden();
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const data: Record<string, unknown> = {};
@@ -135,12 +179,20 @@ export async function PATCH(request: Request, ctx: Ctx) {
 }
 
 export async function DELETE(_request: Request, ctx: Ctx) {
-  const auth = await requireApiPermission("candidates:write");
-  if (!auth.ok) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const auth = await requireApiUser();
+  if (!auth.ok) return authFailureResponse(auth);
 
   const { id, interviewId } = await ctx.params;
+
+  if (!isCandidateVisible(auth.user.viewer, id)) return interviewNotFound();
+
+  const canWriteAnyInterview = hasPermission(auth.user.role, "candidates:write");
+  if (!canWriteAnyInterview && !canAnnotateCandidate(auth.user.viewer, id)) return forbidden();
+
   const existing = await loadOwned(id, interviewId);
-  if (!existing) return NextResponse.json({ message: "Interview not found." }, { status: 404 });
+  if (!existing) return interviewNotFound();
+
+  if (!canWriteAnyInterview && !ranIt(auth.user.email, existing.interviewerEmail)) return forbidden();
 
   await prisma.interview.delete({ where: { id: interviewId } });
 

@@ -42,6 +42,10 @@ import { formatMomentDate, formatMomentDateTime } from "@/lib/dates/display";
 type CandidateProfileWorkspaceProps = {
   candidate: CandidateProfileData;
   canEdit?: boolean;
+  // Narrow grant for a hiring manager restricted to specific candidates: they may
+  // record interview write-ups on the candidates they were given, without holding
+  // candidates:write. Everything else on this profile stays gated on canEdit.
+  canAnnotate?: boolean;
   canDelete?: boolean;
   canCreateJob?: boolean;
   savedLayout?: GridItem[] | null;
@@ -131,6 +135,7 @@ const labelClass = "text-[10px] font-bold uppercase tracking-[0.16em] text-brand
 export function CandidateProfileWorkspace({
   candidate: initialCandidate,
   canEdit = false,
+  canAnnotate = false,
   canDelete = false,
   canCreateJob = false,
   savedLayout = null,
@@ -776,6 +781,7 @@ export function CandidateProfileWorkspace({
               people={team}
               me={me}
               canEdit={canEdit}
+              canAnnotate={canAnnotate}
             />
           )}
         </>

@@ -8,6 +8,8 @@ import {
   type ScorecardItem
 } from "@/lib/interviews/scorecard";
 import { parseStringArray } from "@/lib/json";
+import type { ViewerScope } from "@/lib/auth/viewer-scope";
+import { isCandidateVisible } from "@/lib/auth/candidate-scope";
 
 export type ScorecardView = {
   id: string;
@@ -50,7 +52,19 @@ function parseItems(json: string): ScorecardItem[] {
   }
 }
 
-export async function getInterviewDetail(id: string): Promise<InterviewDetail | null> {
+// viewer is REQUIRED, not optional: the only caller is a request-serving page,
+// and an optional parameter here would default to unrestricted every time
+// somebody forgot it — which is exactly how this route came to be a bypass.
+//
+// It is worth being blunt about why this needs its own check. /interviews/[id]
+// is gated on the CALENDAR module, not on candidates, so hiding Candidates from
+// a restricted viewer does nothing to it: they can still reach every scorecard's
+// free-text comments by id. Scoping has to happen here, at the data layer.
+//
+// Returns null — the same answer as "no such interview" — when the candidate is
+// off-allowlist, so the page 404s. A 403 would confirm the interview exists,
+// which tells a restricted manager that the person is in the system at all.
+export async function getInterviewDetail(id: string, viewer: ViewerScope | null): Promise<InterviewDetail | null> {
   const interview = await prisma.interview.findUnique({
     where: { id },
     include: {
@@ -73,6 +87,9 @@ export async function getInterviewDetail(id: string): Promise<InterviewDetail | 
     }
   });
   if (!interview) return null;
+  // Checked before the two follow-up queries below, so an off-allowlist id costs
+  // nothing beyond the lookup that already happened.
+  if (!isCandidateVisible(viewer, interview.candidateId)) return null;
 
   const resolved = resolveDepartmentKey(
     interviewDepartmentRaw(

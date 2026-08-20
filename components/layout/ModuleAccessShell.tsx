@@ -2,22 +2,27 @@
 
 import { usePathname } from "next/navigation";
 import type { RoleName } from "@/lib/auth/roles";
-import { getModuleAccessForPath, type ModuleAccessPolicy } from "@/lib/navigation/modules";
+import {
+  getModuleAccessForPath,
+  type ModuleAccessPolicy,
+  type ModuleRuleOverrides
+} from "@/lib/navigation/modules";
 
 type ModuleAccessShellProps = {
   role: RoleName | null;
   policy: ModuleAccessPolicy;
+  moduleOverrides?: ModuleRuleOverrides | null;
   children: React.ReactNode;
 };
 
-export function ModuleAccessShell({ role, policy, children }: ModuleAccessShellProps) {
+export function ModuleAccessShell({ role, policy, moduleOverrides, children }: ModuleAccessShellProps) {
   const pathname = usePathname();
 
   if (!role) {
     return <>{children}</>;
   }
 
-  const access = getModuleAccessForPath(pathname, policy, role);
+  const access = getModuleAccessForPath(pathname, policy, role, moduleOverrides);
 
   if (!access) {
     return <>{children}</>;

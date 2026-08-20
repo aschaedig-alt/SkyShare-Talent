@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { logActivity } from "@/lib/activity/logger";
 import { autoTagColor, isTagColor } from "@/lib/tags/colors";
+import { isCandidateVisible } from "@/lib/auth/candidate-scope";
 
 /**
  * Remove a tag from ONE candidate.
@@ -45,6 +46,16 @@ export async function POST(request: Request, context: RouteContext) {
   if (!auth.ok) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const { id } = await context.params;
+
+  // Already covered by candidates:write, which no allowlistable role holds —
+  // present so tagging cannot quietly become a way to write to a candidate this
+  // viewer is not allowed to read, if that permission ever widens. Same 404 the
+  // missing-candidate check below returns, and ahead of it so neither the read
+  // nor the write happens.
+  if (!isCandidateVisible(auth.user.viewer, id)) {
+    return NextResponse.json({ message: "Candidate not found." }, { status: 404 });
+  }
+
   const body = (await request.json().catch(() => ({}))) as { label?: unknown; color?: unknown };
   const label = typeof body.label === "string" ? body.label.trim() : "";
   if (!label) return NextResponse.json({ message: "Give the tag a name." }, { status: 400 });
@@ -128,6 +139,13 @@ export async function DELETE(request: Request, context: RouteContext) {
   if (!auth.ok) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const { id } = await context.params;
+
+  // As on POST above: unreachable while candidates:write stays recruiter-and-up,
+  // kept so removal is gated too rather than only addition.
+  if (!isCandidateVisible(auth.user.viewer, id)) {
+    return NextResponse.json({ message: "Candidate not found." }, { status: 404 });
+  }
+
   const body = (await request.json().catch(() => ({}))) as { label?: unknown };
   const label = typeof body.label === "string" ? body.label.trim() : "";
   if (!label) {

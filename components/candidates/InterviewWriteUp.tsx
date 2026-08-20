@@ -46,13 +46,21 @@ export function InterviewWriteUp({
   interviews,
   people,
   me,
-  canEdit
+  canEdit,
+  // A hiring manager scoped to a hand-picked set of candidates, allowed to record
+  // write-ups on THOSE candidates only. They do not hold candidates:write, so
+  // canEdit is false for them and every other control on this profile stays shut;
+  // this prop opens the interview write-up and nothing else. The server enforces
+  // the same rule independently — see canAnnotateCandidate in
+  // lib/auth/candidate-scope.ts — so this only decides what is worth rendering.
+  canAnnotate = false
 }: {
   candidateId: string;
   interviews: InterviewView[];
   people: Array<{ name: string; email: string }>;
   me: { name: string; email: string } | null;
   canEdit: boolean;
+  canAnnotate?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -120,7 +128,7 @@ export function InterviewWriteUp({
     <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Interviews</h2>
-        {canEdit && (
+        {(canEdit || canAnnotate) && (
           <button
             onClick={() => setOpen((v) => !v)}
             className="rounded bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden"
@@ -251,7 +259,10 @@ export function InterviewWriteUp({
               candidateId={candidateId}
               interview={i}
               people={people}
-              canEdit={canEdit}
+              // An annotator may edit only the write-ups attributed to them, which
+              // is exactly what the API allows. Showing the pencil on somebody
+              // else's row would offer an action guaranteed to come back 403.
+              canEdit={canEdit || (canAnnotate && Boolean(me?.email) && i.interviewerEmail === me?.email)}
             />
           ))
         ) : (

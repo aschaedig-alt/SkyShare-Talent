@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
+import { isCandidateVisible } from "@/lib/auth/candidate-scope";
 import { extractPilotMetrics, METRIC_DEFS } from "@/lib/extraction/pilot-metrics";
 import { extractPilotMetricsLlm, dropImpossible } from "@/lib/extraction/pilot-metrics-llm";
 import { normalizeAircraft, timeInTypeKey } from "@/lib/fleet/aircraft-normalize";
@@ -20,6 +21,14 @@ export async function POST(_request: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
+
+  // Already covered by candidates:write, which no allowlistable role holds.
+  // Worth having regardless: this is the route that reads every one of a
+  // candidate's document files and hands their text back as metrics, so it is
+  // the widest read on the profile even though it is filed as a write.
+  if (!isCandidateVisible(auth.user.viewer, id)) {
+    return NextResponse.json({ message: "Candidate not found." }, { status: 404 });
+  }
 
   try {
     // Self-heal: extract text now for any of this candidate's files that are missing it.

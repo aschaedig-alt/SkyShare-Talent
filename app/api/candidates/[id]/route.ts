@@ -7,7 +7,7 @@ import { normalizeEmail, normalizeName, normalizePhone } from "@/lib/candidates/
 import { getCandidateProfileData } from "@/lib/data/candidates";
 import { logActivity } from "@/lib/activity/logger";
 import { isTestTagged, TEST_TAG } from "@/lib/testdata/markers";
-import { resolveViewerScope } from "@/lib/auth/viewer-scope";
+import { isCandidateVisible } from "@/lib/auth/candidate-scope";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireApiPermission("candidates:read");
@@ -19,8 +19,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 }
 
   const { id } = await params;
-  const viewer = await resolveViewerScope(auth.user.role, auth.user.id, auth.user.email);
-  const candidate = await getCandidateProfileData(id, viewer);
+  // requireApiPermission already resolved the viewer, so take it from there
+  // rather than resolving a second time. getCandidateProfileData applies the
+  // allowlist itself and returns null for an off-allowlist candidate, which
+  // lands on the same 404 below as an id that does not exist.
+  const candidate = await getCandidateProfileData(id, auth.user.viewer);
 
   if (!candidate) {
     return NextResponse.json({ message: "Candidate not found." }, { status: 404 });
@@ -39,6 +42,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   const { id } = await params;
+
+  // An allowlisted viewer may edit only the people they were actually given.
+  // This gate is REACHABLE, unlike the ones on the candidates:write routes: the
+  // write check above is canWriteModule, which grants a HIRING_MANAGER edit
+  // rights whenever the workspace policy sets Candidates to EDIT or FULL_ACCESS
+  // — and HIRING_MANAGER is the role the allowlist is built for.
+  //
+  // 404, not 403, and checked before the read: telling a restricted manager
+  // "you may not edit this one" confirms the person is in the system, which is
+  // the fact the allowlist exists to hide.
+  if (!isCandidateVisible(auth.user.viewer, id)) {
+    return NextResponse.json({ message: "Candidate not found." }, { status: 404 });
+  }
+
   const body = await request.json();
 
   const candidate = await prisma.candidate.findUnique({
@@ -188,7 +205,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       data: updateData
     });
 
-    const updated = await getCandidateProfileData(id);
+    const updated = await getCandidateProfileData(id, auth.user.viewer);
     if (!updated) {
       return NextResponse.json({ message: "Failed to retrieve updated candidate." }, { status: 500 });
     }
@@ -225,6 +242,14 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   }
 
   const { id } = await params;
+
+  // Belt and braces: an allowlisted viewer is a HIRING_MANAGER or VIEWER and can
+  // never hold settings:admin, and resolveViewerScope never narrows an ADMIN at
+  // all — so this cannot fire today. It is here so the fence still holds if the
+  // teardown control is ever opened to a narrower role.
+  if (!isCandidateVisible(auth.user.viewer, id)) {
+    return NextResponse.json({ message: "Candidate not found." }, { status: 404 });
+  }
 
   const candidate = await prisma.candidate.findUnique({
     where: { id },

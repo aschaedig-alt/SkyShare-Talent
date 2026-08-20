@@ -147,6 +147,27 @@ model User {
   // Off by default: a HIRING_MANAGER sees every candidate's name/record org-wide. Turning
   // this on scopes their candidate list to their own department (an explicit exception).
   restrictCandidatesToDepartment Boolean @default(false)
+  // The hand-picked sibling of the line above, and a STRICTER exception: on, this user sees
+  // ONLY the candidates in allowedCandidates - plus their history, files and interviews -
+  // and nothing else candidate-side. Built for bringing a hiring manager in for one search.
+  //
+  // The FLAG is deliberately separate from the ROWS so that "restricted but nobody picked
+  // yet" is distinguishable from "not restricted at all". Inferring the rule from row count
+  // alone would fail OPEN for an account an admin created and had not finished configuring,
+  // which is the exact direction this must never fail. Off by default, so this changes the
+  // behaviour of precisely zero existing users.
+  restrictCandidatesToAllowlist Boolean @default(false)
+  // Lets a hand-picked manager write interview notes and scorecards on the candidates they
+  // ARE allowed to see, without granting candidates:write org-wide. Meaningless unless
+  // restrictCandidatesToAllowlist is on - see lib/auth/candidate-scope.ts.
+  allowlistCanAnnotate Boolean @default(false)
+  // Per-user override of the workspace Module Visibility policy, as JSON:
+  //   { "candidates": { "showInSidebar": true, "accessLevel": "VIEW_ONLY" }, ... }
+  // NULL means "follow the role policy", which is what every existing user has - so this is
+  // inert until an admin sets it. Only the modules named here are overridden; the rest still
+  // come from the role. Enforced on PAGES (lib/data/module-access.ts) and on API routes and
+  // server actions (lib/auth/api-module-access.ts) - the workspace policy gates pages only.
+  moduleAccessJson String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
@@ -156,6 +177,7 @@ model User {
   auditEvents   AuditEvent[]
   permissions   UserPermission[]
   activityLogs  ActivityLog[]    @relation("ActivityLogs")
+  allowedCandidates UserCandidateAccess[]
 }
 
 model Account {
@@ -772,6 +794,7 @@ model Candidate {
   aiSummary            CandidateAiSummary?
   communications       CandidateCommunication[]
   questionnaireAnswers CandidateQuestionnaireAnswer[]
+  allowedUsers         UserCandidateAccess[]
 
   @@index([normalizedEmail])
   @@index([normalizedPhone])
@@ -1329,6 +1352,70 @@ model UserPermission {
 
   @@unique([userId, permission])
   @@index([userId])
+}
+
+// One candidate a specific user is allowed to see. Only consulted when that user's
+// restrictCandidatesToAllowlist is on; for everybody else the table is simply empty.
+//
+// A JOIN TABLE rather than a JSON id array on User, deliberately: this database merges and
+// archives candidates, and the FK cascade means a merged-away candidate cannot leave a dead
+// id sitting in somebody's allowlist, reading as access to a record that no longer exists.
+//
+// NOTE the cascade on userId: the offboarding DELETE in app/api/admin/users/[id]/route.ts
+// destroys these grants along with the account, which is the right default - offboarding
+// revokes. The round trip is worth knowing though: "Restore access" lets the person sign in
+// again as a fresh VIEWER with a NEW id, so their allowlist has to be rebuilt by hand.
+model UserCandidateAccess {
+  id          String   @id @default(cuid())
+  userId      String
+  candidateId String
+  // Who granted it, so a widened allowlist is answerable after the fact. An email rather than
+  // an FK because the granting admin may later be offboarded and their row deleted.
+  grantedByEmail String?
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, candidateId])
+  @@index([userId])
+  @@index([candidateId])
+}
+
+// Access configured for somebody who has not signed in yet.
+//
+// This exists because a User row CANNOT usefully be created ahead of time. Sign-in is
+// Google-only and auth.ts sets allowDangerousEmailAccountLinking: false, so NextAuth throws
+// AccountNotLinkedError when a row with that email exists but carries no linked Account
+// (verified in node_modules/next-auth/core/lib/callback-handler.js, and it surfaces to the
+// person as ?error=OAuthAccountNotLinked) - i.e. pre-creating the User row would LOCK THEM
+// OUT rather than prepare their access.
+//
+// So an admin configures an invite against an email address, and auth.ts claims it on that
+// person's first successful sign-in: role, department, module overrides and the candidate
+// allowlist are all applied before their first page render. An invite for somebody who
+// ALREADY has a User row is applied immediately at create time and never stored here.
+model UserInvite {
+  id        String   @id @default(cuid())
+  email     String   @unique  // stored lowercased; matched against the Google profile email
+  name      String?
+  role      String   @default("HIRING_MANAGER")
+  department String?
+  isExecutive Boolean @default(false)
+  restrictCandidatesToDepartment Boolean @default(false)
+  restrictCandidatesToAllowlist  Boolean @default(false)
+  allowlistCanAnnotate           Boolean @default(false)
+  moduleAccessJson String?
+  // JSON array of candidate ids to grant when the invite is claimed. Ids are validated at
+  // claim time, so one that has since been merged or deleted is skipped rather than failing
+  // the whole sign-in.
+  candidateIdsJson String?
+  invitedByEmail String?
+  createdAt DateTime @default(now())
+  claimedAt DateTime?
+  claimedUserId String?
+
+  @@index([claimedAt])
 }
 
 model ActivityLog {

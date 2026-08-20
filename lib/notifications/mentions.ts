@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { getChannelId } from "@/lib/front/config";
 import { sendEmail } from "@/lib/front/messages";
+import { isRoleName } from "@/lib/auth/roles";
+import { resolveViewerScope } from "@/lib/auth/viewer-scope";
+import { isCandidateVisible } from "@/lib/auth/candidate-scope";
 
 /**
  * Email a teammate that they were @-mentioned on a candidate, and remember
@@ -9,9 +12,10 @@ import { sendEmail } from "@/lib/front/messages";
  * INTERNAL ONLY, and that is what makes auto-send acceptable here. The
  * draft-first default in lib/front/messages.ts exists because a candidate or
  * new hire is a real person with no test inbox — this never reaches one. Every
- * recipient is a mentioned teammate's own @skyshare.com address, the same
- * shape of internal traffic as the nightly hrotasks@ digest, which already
- * sends directly.
+ * recipient is a teammate with a real User row who is allowed to open this
+ * candidate in the app, which is ENFORCED below rather than assumed; see
+ * "Who may actually be told". That makes it the same shape of internal traffic
+ * as the nightly hrotasks@ digest, which already sends directly.
  *
  * Sent from hrotasks@ (the existing automation mailbox) rather than the
  * mentioning person's own address, so a reply-all does not surprise them by
@@ -120,7 +124,17 @@ export async function notifyMentions(input: {
 
   try {
     const [recipientUsers, mentioner, application] = await Promise.all([
-      prisma.user.findMany({ where: { email: { in: recipients } }, select: { email: true, name: true } }),
+      // Matched case-INSENSITIVELY, deliberately. extractMentions lowercases
+      // every address it finds, and getTeamMembers (which feeds the mention
+      // picker) lowercases too, while User.email is stored however the account
+      // was created. A plain `in` is case-sensitive in Postgres, so a row saved
+      // as Firstname.Lastname@skyshare.com would not match. That used to cost
+      // only the greeting's first name; now this lookup decides whether the
+      // person is mailed at all, so a near-miss must not silently drop them.
+      prisma.user.findMany({
+        where: { OR: recipients.map((email) => ({ email: { equals: email, mode: "insensitive" as const } })) },
+        select: { id: true, email: true, name: true, role: true }
+      }),
       input.mentionedBy
         ? prisma.user.findUnique({ where: { email: input.mentionedBy }, select: { name: true } })
         : Promise.resolve(null),
@@ -134,7 +148,82 @@ export async function notifyMentions(input: {
         select: { job: { select: { title: true } } }
       })
     ]);
-    const byEmail = new Map(recipientUsers.map((u) => [u.email!.toLowerCase(), u.name]));
+    // One row per mentioned address, keyed by the lowercased form the rest of
+    // this function works in. First row wins if two accounts differ only by
+    // case — one address still gets exactly one send.
+    const userByEmail = new Map<string, (typeof recipientUsers)[number]>();
+    for (const user of recipientUsers) {
+      const key = user.email?.toLowerCase();
+      if (key && !userByEmail.has(key)) userByEmail.set(key, user);
+    }
+
+    // ---- Who may actually be told -------------------------------------------
+    //
+    // This email leaves the app: the subject and body carry the candidate's full
+    // name, the job they applied for, and two deep links to their profile. No
+    // in-app gate can catch it once it is in somebody's inbox, so the gating has
+    // to happen HERE. Two checks, both of which were missing:
+    //
+    //   1. A real User row. Recipients arrive as whatever addresses
+    //      extractMentions found in the note's HTML. The sanitizer validates the
+    //      SHAPE of a data-mention value but never that it belongs to a
+    //      teammate, and this function used to consult the User table only to
+    //      look up a display NAME — so a typo, a pasted external address, or a
+    //      departed colleague's still-mentionable address was mailed anyway,
+    //      contradicting the promise made in the doc comment at the top of this
+    //      file. No row means no send.
+    //
+    //   2. The candidate is in that person's own scope. An allowlisted viewer
+    //      gets a 404 opening this candidate (see lib/data/candidates.ts), and
+    //      being unable to open somebody while being emailed their name is not
+    //      an allowlist. isCandidateVisible answers true for everyone who is not
+    //      allowlist-scoped, so an unrestricted recipient is unaffected.
+    const allowedRecipients: string[] = [];
+    for (const to of recipients) {
+      const user = userByEmail.get(to);
+      if (!user) {
+        console.warn(
+          `Skipping mention notification to ${to} — no User row; only teammates with an account are mailed.`
+        );
+        continue;
+      }
+
+      let visible = false;
+      try {
+        // Cheap for the common case: resolveViewerScope short-circuits without a
+        // query for ADMIN/RECRUITER and is React-cached per request otherwise.
+        // An unrecognised role string falls back to VIEWER rather than to
+        // anything privileged — VIEWER still resolves the account's real
+        // allowlist, so the fallback narrows, never widens.
+        const viewer = await resolveViewerScope(
+          isRoleName(user.role) ? user.role : "VIEWER",
+          user.id,
+          user.email ?? null
+        );
+        visible = isCandidateVisible(viewer, input.candidateId);
+      } catch (error) {
+        // Fail CLOSED, and contained to this one recipient. This may run outside
+        // a React request scope (a webhook, a script), and a scope we could not
+        // resolve is not a scope we may assume is unrestricted. Catching per
+        // recipient rather than letting it reach the outer handler keeps one bad
+        // row from silently cancelling everyone else's notification — and the
+        // outer catch already guarantees the note that triggered this still saves.
+        console.error(`Could not resolve viewer scope for ${to}; not sending the mention notification:`, error);
+        visible = false;
+      }
+
+      if (visible) {
+        allowedRecipients.push(to);
+      } else {
+        console.warn(
+          `Skipping mention notification to ${to} — candidate ${input.candidateId} is outside their allowlist.`
+        );
+      }
+    }
+    // Nobody left to tell: return before the Front call rather than opening a
+    // channel for an empty loop.
+    if (allowedRecipients.length === 0) return;
+
     const mentionerFirst = firstName(mentioner?.name, input.mentionedBy ?? "someone");
     const jobTitle = application?.job?.title ?? null;
 
@@ -159,8 +248,8 @@ export async function notifyMentions(input: {
         : `a note for <strong>${escapeHtml(input.candidateName)}</strong>`;
 
     const channelId = await getChannelId("hrotasks@skyshare.com");
-    for (const to of recipients) {
-      const recipientFirst = firstName(byEmail.get(to), to);
+    for (const to of allowedRecipients) {
+      const recipientFirst = firstName(userByEmail.get(to)?.name, to);
 
       // One send per recipient rather than a single "to" list — a mention is
       // between one person and the mentioner, and CC'ing everyone mentioned on

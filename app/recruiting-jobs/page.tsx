@@ -14,9 +14,12 @@ export default async function RecruitingJobsPage({ searchParams }: RecruitingJob
   const params = await searchParams;
   const query = params?.q?.trim() ?? "";
   const [data, saved, documentCurrency] = await Promise.all([
-    getRecruitingJobsData(query, params?.id),
+    // access.viewer, not just access.role: the job detail carries an applicant
+    // name and current title for every application, shipped with the first paint.
+    getRecruitingJobsData(query, params?.id, access.viewer),
     getPageLayout("recruiting-jobs"),
-    getDocumentCurrency()
+    // Same reason as above - the currency panel lists candidate names as links.
+    getDocumentCurrency(access.viewer)
   ]);
 
   return (

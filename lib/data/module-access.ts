@@ -8,12 +8,13 @@ import {
   createDefaultModuleAccessPolicy,
   normalizeModuleAccessPolicy,
   type ModuleAccessPolicy,
-  type ModuleId,
-  getModuleAccessRule
+  type ModuleId
 } from "@/lib/navigation/modules";
 import { isAuthRequired } from "@/lib/auth/auth-config";
 import { isRoleName } from "@/lib/auth/roles";
 import { isEmailBlocked } from "@/lib/auth/blocklist";
+import { resolveViewerScope } from "@/lib/auth/viewer-scope";
+import { resolveUserModuleRule } from "@/lib/auth/user-module-access";
 
 const workspaceSettingKey = "module-access";
 const workspaceSettingScope = "workspace";
@@ -101,7 +102,21 @@ export async function requireModulePageAccess(moduleId: ModuleId) {
   }
 
   const policy = await getWorkspaceModuleAccessPolicy();
-  const rule = getModuleAccessRule(policy, moduleId, role ?? "ADMIN");
+  const resolvedRole = role ?? "ADMIN";
+  const email = session?.user?.email ?? null;
+  const userId = session?.user?.id ?? null;
+
+  // Resolve the viewer HERE rather than leaving each page to remember. Every
+  // page already receives this object; carrying the scope on it is what lets a
+  // page hand its own scoping to the data layer without a second lookup.
+  // resolveViewerScope short-circuits for ADMIN/RECRUITER, so this costs no
+  // query for the roles that are never narrowed anyway.
+  const viewer = await resolveViewerScope(resolvedRole, userId, email);
+
+  // The per-user override wins over the role policy where one is set. Null for
+  // every account that has not been individually restricted, in which case this
+  // returns exactly the role rule it always did.
+  const rule = resolveUserModuleRule(policy, moduleId, resolvedRole, viewer.moduleOverrides);
 
   if (rule.accessLevel === "HIDDEN") {
     // MVP guard: this blocks direct route access at the page boundary.
@@ -111,12 +126,13 @@ export async function requireModulePageAccess(moduleId: ModuleId) {
 
   return {
     policy,
-    role: role ?? "ADMIN",
+    role: resolvedRole,
     rule,
     // Who is signed in, so a page can pre-select them (e.g. as the interviewer
     // on a write-up). Null when auth is bypassed in local dev, which callers
     // must treat as "nobody in particular" rather than assuming a user.
-    email: session?.user?.email ?? null,
-    userId: session?.user?.id ?? null
+    email,
+    userId,
+    viewer
   };
 }

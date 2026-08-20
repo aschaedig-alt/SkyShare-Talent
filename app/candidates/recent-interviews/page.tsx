@@ -30,7 +30,11 @@ export default async function RecentInterviewsPage({
   // "all" is an explicit choice; no parameter means the signed-in person.
   const who = params.who === "all" ? null : (params.who ?? access.email ?? null);
 
-  const { rows, interviewers } = await getRecentInterviews({ windowDays, interviewerEmail: who });
+  const { rows, interviewers } = await getRecentInterviews({
+    windowDays,
+    interviewerEmail: who,
+    viewer: access.viewer
+  });
 
   const chip = "rounded border px-3 py-1.5 text-sm font-semibold transition";
   const chipOn = "border-brand-lea bg-brand-lea text-white";

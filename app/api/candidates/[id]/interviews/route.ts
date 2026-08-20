@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireApiPermission } from "@/lib/auth/route-auth";
+import { requireApiUser, authFailureResponse } from "@/lib/auth/route-auth";
+import { hasPermission } from "@/lib/auth/roles";
+import { canAnnotateCandidate, isCandidateVisible } from "@/lib/auth/candidate-scope";
 import { logActivity } from "@/lib/activity/logger";
 import { sanitizeRichText, richTextToPlain, extractMentions } from "@/lib/richtext/sanitize";
 import { INTERVIEW_OUTCOMES } from "@/lib/interviews/constants";
@@ -17,9 +19,18 @@ import { notifyMentions } from "@/lib/notifications/mentions";
  *
  * The DATE is the date of the interview, not of the typing, because that is
  * what the recent-interviews filter counts from.
+ *
+ * Logging a write-up is one of the very few write paths an allowlist-scoped
+ * viewer gets, so this no longer demands candidates:write outright — a hiring
+ * manager given a named set of candidates can record the interview they just
+ * ran. The permission is checked FIRST and canAnnotateCandidate is only the
+ * fallback, so anyone who already held candidates:write is unaffected.
  */
 
 type Ctx = { params: Promise<{ id: string }> };
+
+const forbidden = () =>
+  NextResponse.json({ message: "You do not have permission to perform this action." }, { status: 403 });
 
 function clampRating(value: unknown): number | null {
   if (typeof value !== "number" || !Number.isFinite(value)) return null;
@@ -28,10 +39,22 @@ function clampRating(value: unknown): number | null {
 }
 
 export async function POST(request: Request, ctx: Ctx) {
-  const auth = await requireApiPermission("candidates:write");
-  if (!auth.ok) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const auth = await requireApiUser();
+  if (!auth.ok) return authFailureResponse(auth);
 
   const { id } = await ctx.params;
+
+  // Fail closed before anything else, and 404 rather than 403 — an off-allowlist
+  // candidate must answer exactly as if the record did not exist, so a write
+  // attempt cannot be used to probe for a person.
+  if (!isCandidateVisible(auth.user.viewer, id)) {
+    return NextResponse.json({ message: "Candidate not found." }, { status: 404 });
+  }
+
+  if (!hasPermission(auth.user.role, "candidates:write") && !canAnnotateCandidate(auth.user.viewer, id)) {
+    return forbidden();
+  }
+
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
 
   const candidate = await prisma.candidate.findUnique({

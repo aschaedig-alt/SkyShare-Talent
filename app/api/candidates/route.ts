@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireApiPermission } from "@/lib/auth/route-auth";
+import { requireApiPermission, authFailureResponse } from "@/lib/auth/route-auth";
+import { candidateScopeWhere } from "@/lib/auth/candidate-scope";
 import { normalizeEmail, normalizeName, normalizePhone, splitCandidateName } from "@/lib/candidates/normalize";
 
 type CreateBody = {
@@ -27,7 +28,10 @@ function parseTags(value: string | undefined) {
 export async function GET(request: Request) {
   const auth = await requireApiPermission("candidates:read");
   if (!auth.ok) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    // The prepared response rather than a flat 401: it distinguishes "not signed
+    // in" from "this account has the candidates module switched off", and the
+    // caller here only ever checks res.ok.
+    return authFailureResponse(auth);
   }
 
   const params = new URL(request.url).searchParams;
@@ -37,6 +41,14 @@ export async function GET(request: Request) {
   // to link someone who was archived (reconsidering them for a new position, which
   // is exactly what archiving should not block).
   const includeArchived = params.get("includeArchived") === "1";
+
+  // An allowlisted viewer searches only the people they were granted. This is
+  // the sharpest edge of the whole restriction: the picker hands back ids, names
+  // and emails ten rows at a time on a free-text query, so scoping the list PAGE
+  // and leaving this route open would make the allowlist theatre — you could walk
+  // the roster from here two letters at a time. Null for everyone else, which is
+  // what keeps this safe to add to a route the whole team uses.
+  const allowlist = candidateScopeWhere(auth.user.viewer);
 
   const candidates = await prisma.candidate.findMany({
     where: {
@@ -49,7 +61,11 @@ export async function GET(request: Request) {
               { normalizedName: { contains: q.toLowerCase() } }
             ]
           }
-        : {})
+        : {}),
+      // Into AND rather than a top-level id key: the OR above is a sibling key,
+      // and an id written alongside it would narrow the search rather than
+      // intersect with it the moment either side grows another clause.
+      ...(allowlist ? { AND: [allowlist] } : {})
     },
     // Active (archivedAt null) first, then most recently touched.
     orderBy: [{ archivedAt: { sort: "asc", nulls: "first" } }, { updatedAt: "desc" }],

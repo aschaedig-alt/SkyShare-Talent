@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { requireApiPermission } from "@/lib/auth/route-auth";
+import { isCandidateAllowlisted, isCandidateVisible } from "@/lib/auth/candidate-scope";
+import type { ViewerScope } from "@/lib/auth/viewer-scope";
 import { canEditScoring, saveScoringConfigDoc } from "@/lib/matching/scoring-config.server";
 import { isScanExclusionReason, type ScanExclusionReason } from "@/lib/candidates/scan-exclusion";
 import { fleetPositionBySlug } from "@/lib/fleet/positions";
@@ -25,6 +28,27 @@ async function guard(): Promise<ActionResult | null> {
     return { ok: false, error: "Only recruiters and admins can change scoring." };
   }
   return null;
+}
+
+/**
+ * The read-side counterpart to guard().
+ *
+ * guard() is the EDIT gate, and the two read-only actions in this file are meant
+ * to stay open to hiring managers and viewers, who hold candidates:read but no
+ * scoring rights. What they were missing is a check of ANY kind: a server action
+ * is a POST to the PAGE path, so it runs behind neither requireModulePageAccess
+ * nor the API permission gate, and getCandidatePreview in particular was handing
+ * out an email address and a phone number for any candidate id.
+ *
+ * requireApiPermission is the same helper every API read uses — no second auth
+ * pattern — and it carries the caller's resolved scope so the action can narrow
+ * what it returns. It honours the local-dev bypass (viewer null, which every
+ * scope helper reads as unrestricted).
+ */
+async function readGuard(): Promise<{ ok: true; viewer: ViewerScope | null } | { ok: false }> {
+  const auth = await requireApiPermission("candidates:read");
+  if (!auth.ok) return { ok: false };
+  return { ok: true, viewer: auth.user.viewer };
 }
 
 async function actorLabel(): Promise<string | null> {
@@ -50,6 +74,18 @@ export async function saveScoringConfig(input: unknown): Promise<ActionResult> {
 // Read-only re-scan of candidates for a requirement (no edit permission needed).
 export async function scanRequirementMatches(requirementId: string, includeExcluded = false): Promise<ScanResult> {
   if (!requirementId) return { ok: false, error: "Missing requirement." };
+
+  const access = await readGuard();
+  if (!access.ok) return { ok: false, error: "Could not scan candidates." };
+
+  // A whole-pool ranked scan: the best matches in the system, plus how many
+  // people were scored to produce them. Scoping it means scoring only the
+  // allowlisted viewer's own people, which cannot be done from here without
+  // re-deriving runRequirementScan; filtering the finished ranking instead would
+  // still leak pool size and relative position. So it is refused for an
+  // allowlist-scoped viewer and untouched for everyone else.
+  if (isCandidateAllowlisted(access.viewer)) return { ok: false, error: "Could not scan candidates." };
+
   try {
     const scan = await runRequirementScan(requirementId, includeExcluded);
     return { ok: true, data: scan };
@@ -223,6 +259,14 @@ export type CandidatePreviewResult = { ok: boolean; data?: CandidatePreview; err
 // Read-only compact profile for the screening preview pane (no edit permission needed).
 export async function getCandidatePreview(candidateId: string): Promise<CandidatePreviewResult> {
   if (!candidateId) return { ok: false, error: "Missing candidate." };
+
+  const access = await readGuard();
+  // Both refusals answer with the SAME message the missing-record branch below
+  // uses. A distinct "you are not allowed this one" would confirm the person is
+  // in the system, which is precisely the fact the allowlist hides.
+  if (!access.ok) return { ok: false, error: "Candidate not found." };
+  if (!isCandidateVisible(access.viewer, candidateId)) return { ok: false, error: "Candidate not found." };
+
   try {
     const candidate = await prisma.candidate.findUnique({
       where: { id: candidateId },

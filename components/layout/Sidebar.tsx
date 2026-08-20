@@ -13,6 +13,7 @@ import { LinkPendingIndicator } from "@/components/navigation/LinkPendingIndicat
 import {
   getVisibleNavigationGroups,
   type ModuleAccessPolicy,
+  type ModuleRuleOverrides,
   type VisibleNavigationGroup,
   type VisibleNavigationSection
 } from "@/lib/navigation/modules";
@@ -20,6 +21,9 @@ import {
 type SidebarProps = {
   role: RoleName;
   policy: ModuleAccessPolicy;
+  // This account s own module overrides, when an admin has restricted it.
+  // Undefined/null for everyone else, which yields the role policy unchanged.
+  moduleOverrides?: ModuleRuleOverrides | null;
   logoDataUrl?: string | null;
   userEmail?: string | null;
   homeHref?: string;
@@ -32,9 +36,9 @@ function matchesPath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function Sidebar({ role, policy, logoDataUrl, userEmail, homeHref = "/command-center" }: SidebarProps) {
+export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail, homeHref = "/command-center" }: SidebarProps) {
   const pathname = usePathname();
-  const groups = getVisibleNavigationGroups(policy, role);
+  const groups = getVisibleNavigationGroups(policy, role, moduleOverrides);
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);

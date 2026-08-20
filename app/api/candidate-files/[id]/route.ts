@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
-import { requireApiPermission } from "@/lib/auth/route-auth";
+import { requireApiPermission, authFailureResponse } from "@/lib/auth/route-auth";
+import { isCandidateVisible } from "@/lib/auth/candidate-scope";
 import { isDocumentType } from "@/lib/files/document-types";
 
 type RouteContext = {
@@ -18,8 +19,8 @@ export async function GET(_request: Request, context: RouteContext) {
     const auth = await requireApiPermission("files:read");
 
     if (!auth.ok) {
-  return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-}
+      return authFailureResponse(auth);
+    }
 
     const { id } = await context.params;
     const file = await prisma.candidateFile.findUnique({
@@ -34,7 +35,26 @@ export async function GET(_request: Request, context: RouteContext) {
       }
     });
 
-    if (!file?.storageKey) {
+    // The allowlist check has to happen HERE, and it has to happen before the
+    // bytes come out of storage.
+    //
+    // This route is keyed on a FILE id and sits behind files:read — a permission
+    // even a VIEWER holds — so no candidate-id gate anywhere upstream can cover
+    // it. candidateId was already being selected above purely to write it into
+    // the audit payload; it was never compared against anything.
+    //
+    // A file with candidateId === null is an unassigned intake document, and
+    // isCandidateVisible answers false for it: an allowlisted viewer was granted
+    // named people, and an unattached file is by definition not one of them.
+    //
+    // 404 and not 403, matching lib/data/candidates.ts: a restricted viewer must
+    // not be able to learn that a file (and therefore a person) exists by walking
+    // ids. The message is the same one a genuinely missing row returns.
+    if (!file || !isCandidateVisible(auth.user.viewer, file.candidateId)) {
+      return NextResponse.json({ message: "File not found." }, { status: 404 });
+    }
+
+    if (!file.storageKey) {
       return NextResponse.json({ message: "File content is not available in local storage." }, { status: 404 });
     }
 
@@ -78,6 +98,16 @@ export async function PATCH(request: Request, context: RouteContext) {
   const { id } = await context.params;
 
   try {
+    // Resolved BEFORE the payload is validated. files:write already puts this
+    // handler out of reach of an allowlisted viewer, but if that ever changes,
+    // validating first would answer 400 for a file they may not see and 404 for
+    // one that does not exist — which tells them the difference. The lookup was
+    // previously further down, immediately before the update.
+    const existing = await prisma.candidateFile.findUnique({ where: { id }, select: { candidateId: true } });
+    if (!existing || !isCandidateVisible(auth.user.viewer, existing.candidateId)) {
+      return NextResponse.json({ message: "File not found." }, { status: 404 });
+    }
+
     const body = (await request.json()) as { displayFilename?: string; documentType?: string; expiresAt?: string | null };
     const hasName = typeof body.displayFilename === "string";
     const hasType = typeof body.documentType === "string";
@@ -118,11 +148,6 @@ export async function PATCH(request: Request, context: RouteContext) {
         return NextResponse.json({ message: "Unknown document type." }, { status: 400 });
       }
       data.documentType = body.documentType;
-    }
-
-    const existing = await prisma.candidateFile.findUnique({ where: { id }, select: { candidateId: true } });
-    if (!existing) {
-      return NextResponse.json({ message: "File not found." }, { status: 404 });
     }
 
     const updated = await prisma.candidateFile.update({
@@ -177,7 +202,10 @@ export async function DELETE(_request: Request, context: RouteContext) {
       where: { id },
       select: { candidateId: true, displayFilename: true, originalFilename: true }
     });
-    if (!existing) {
+    // Same 404-not-403 rule as GET. Unreachable for an allowlisted viewer today
+    // (files:write), but the file should not carry one handler that checks and
+    // two that do not.
+    if (!existing || !isCandidateVisible(auth.user.viewer, existing.candidateId)) {
       return NextResponse.json({ message: "File not found." }, { status: 404 });
     }
 

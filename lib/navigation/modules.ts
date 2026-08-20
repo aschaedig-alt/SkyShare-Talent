@@ -411,10 +411,35 @@ export function getModuleIdForPath(pathname: string): ModuleId | null {
   return null;
 }
 
+// A per-user override of the role policy, as stored on User.moduleAccessJson and
+// parsed by lib/auth/user-module-access.ts. Typed structurally here rather than
+// imported, because that module imports THIS one and the cycle would be real.
+export type ModuleRuleOverrides = Partial<Record<ModuleId, ModuleAccessRule>>;
+
+// The rule that applies to one person: their own override where they have one,
+// otherwise their role's. ADMIN and the Settings module are never overridden -
+// the same carve-outs resolveUserModuleRule enforces, kept in step deliberately.
+function ruleFor(
+  policy: ModuleAccessPolicy,
+  moduleId: ModuleId,
+  role: RoleName,
+  overrides?: ModuleRuleOverrides | null
+): ModuleAccessRule {
+  const roleRule = getModuleAccessRule(policy, moduleId, role);
+  if (!overrides || role === "ADMIN" || moduleId === "settings") {
+    return roleRule;
+  }
+  // Missing means off, NOT the role default - kept deliberately in step with
+  // resolveUserModuleRule in lib/auth/user-module-access.ts. If these two ever
+  // disagree, the sidebar advertises links the gates refuse.
+  return overrides[moduleId] ?? { accessLevel: "HIDDEN", showInSidebar: false };
+}
+
 export function getModuleAccessForPath(
   pathname: string,
   policy: ModuleAccessPolicy,
-  role: RoleName
+  role: RoleName,
+  overrides?: ModuleRuleOverrides | null
 ): { moduleId: ModuleId; rule: ModuleAccessRule } | null {
   const moduleId = getModuleIdForPath(pathname);
 
@@ -424,18 +449,25 @@ export function getModuleAccessForPath(
 
   return {
     moduleId,
-    rule: getModuleAccessRule(policy, moduleId, role)
+    rule: ruleFor(policy, moduleId, role, overrides)
   };
 }
 
-export function getVisibleNavigationGroups(policy: ModuleAccessPolicy, role: RoleName) {
+// overrides is optional so every existing call site keeps its exact behaviour;
+// pass it and the sidebar reflects what this ONE account can actually open,
+// rather than advertising links that 403 the moment they are clicked.
+export function getVisibleNavigationGroups(
+  policy: ModuleAccessPolicy,
+  role: RoleName,
+  overrides?: ModuleRuleOverrides | null
+) {
   return navigationGroups
     .map((group) => ({
       ...group,
       sections: group.sections
         .map((section) => ({
           ...section,
-          items: section.items.filter((item) => isSidebarVisible(getModuleAccessRule(policy, item.id, role)))
+          items: section.items.filter((item) => isSidebarVisible(ruleFor(policy, item.id, role, overrides)))
         }))
         .filter((section) => section.items.length > 0)
     }))

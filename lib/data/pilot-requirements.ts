@@ -1,13 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import {
   getPilotRequirementCandidateMatches,
+  getScanPoolCountsForViewer,
   type PilotRequirementCandidateMatch
 } from "@/lib/matching/pilot-requirement-matches";
+import type { ViewerScope } from "@/lib/auth/viewer-scope";
 import { canEditScoring, getProfileScoringConfig } from "@/lib/matching/scoring-config.server";
 import { getRequirementFeedback } from "@/lib/matching/match-feedback";
 import { positionFor, fleetOrderIndex, fleetSeatRank, fleetPositionBySlug, aircraftForSlugs } from "@/lib/fleet/positions";
 import { parseStringArray } from "@/lib/json";
-import { getScanPoolCounts } from "@/lib/candidates/scan-pool.server";
 
 /** SkyShare roles first, then Managed, then anything unspecified. */
 function operatorRank(operatorType: string | null): number {
@@ -244,7 +245,16 @@ function groupAllGates(gates: RequirementGateView[]) {
   return Array.from(groups.entries()).map(([category, group]) => ({ category, gates: group }));
 }
 
-export async function getPilotRequirementsData(query = "", selectedId?: string): Promise<PilotRequirementsData> {
+export async function getPilotRequirementsData(
+  query = "",
+  selectedId?: string,
+  // Optional and trailing so any non-request caller keeps working; omitted means
+  // unrestricted, which is what every caller was before this existed. Pass it
+  // from anything serving a signed-in user — candidateMatches below is a scored,
+  // ranked list over the whole candidate pool and renders on the FIRST paint,
+  // before any of the gated server actions get a say.
+  viewer?: ViewerScope | null
+): Promise<PilotRequirementsData> {
   // Show the requirements that are CURRENT. Retired ones keep their gates, history
   // and applications — they are simply out of the working list.
   //
@@ -265,9 +275,12 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
   // after somebody presses Scan. It used to be its own inline
   // count({ status: "ACTIVE" }) here — about 200 — while the scan itself reported
   // the canonical pool of ~3,343, so the sentence changed by 16x on a button press
-  // that changed no data. Read the count from getScanPoolCounts, the same helper
-  // the scan uses (see lib/candidates/scan-pool.ts for what the pool IS); never
-  // re-state the predicate here, because that duplication is what drifted.
+  // that changed no data. Read the count from getScanPoolCountsForViewer, which
+  // is getScanPoolCounts narrowed by the same allowlist the scan below is
+  // narrowed by (see lib/candidates/scan-pool.ts for what the pool IS); never
+  // re-state the predicate here, because that duplication is what drifted. The
+  // pairing matters more now, not less: if the count stayed whole while the scan
+  // was scoped, the sentence would be back to disagreeing with the results.
   const [rows, total, active, needsReview, catalogItems, scanPoolCounts] = await Promise.all([
     prisma.pilotRequirement.findMany({
       where: onlyCurrent,
@@ -291,7 +304,7 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
     prisma.pilotRequirement.count({ where: { ...onlyCurrent, status: "ACTIVE" } }),
     prisma.pilotRequirement.count({ where: { ...onlyCurrent, reviewStatus: { not: "APPROVED" } } }),
     prisma.requirementCatalogItem.count({ where: { archivedAt: null } }),
-    getScanPoolCounts()
+    getScanPoolCountsForViewer(viewer)
   ]);
 
   const allListItems = rows.map(toListItem);
@@ -384,7 +397,14 @@ export async function getPilotRequirementsData(query = "", selectedId?: string):
         }
       : null,
     scoringConfig,
-    requirementFeedback
+    requirementFeedback,
+    // overrides / includeExcluded / skips keep their defaults — spelled out as
+    // undefined only because viewer is the trailing parameter and has to be
+    // reached past them.
+    undefined,
+    undefined,
+    undefined,
+    viewer
   );
 
   return {

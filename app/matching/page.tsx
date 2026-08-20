@@ -7,16 +7,21 @@ type MatchingPageProps = {
 };
 
 export default async function MatchingPage({ searchParams }: MatchingPageProps) {
-  await requireModulePageAccess("matching");
+  const access = await requireModulePageAccess("matching");
   const params = await searchParams;
   const mode: MatchboardMode =
     params?.mode === "candidate" ? "candidate" : params?.mode === "skipped" ? "skipped" : "role";
   const id = params?.id?.trim() || null;
 
-  const subjects = await getMatchboardSubjects();
+  // The server actions behind this page were gated, but the first-paint payload
+  // was not: the picker carried every name in the scan pool and the initial
+  // selection carried a whole-pool ranked scan. The viewer is threaded into the
+  // loaders so the pool is narrowed at the query; it is null-equivalent for
+  // anyone without an allowlist, who therefore sees exactly what they did.
+  const subjects = await getMatchboardSubjects(access.viewer);
   const [roleData, candidateData] = await Promise.all([
-    mode === "role" ? getRoleScreening(id) : Promise.resolve(null),
-    mode === "candidate" ? getCandidateRoleMatches(id) : Promise.resolve(null)
+    mode === "role" ? getRoleScreening(id, false, access.viewer) : Promise.resolve(null),
+    mode === "candidate" ? getCandidateRoleMatches(id, access.viewer) : Promise.resolve(null)
   ]);
 
   return (

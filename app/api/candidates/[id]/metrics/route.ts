@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
+import { isCandidateVisible } from "@/lib/auth/candidate-scope";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -23,6 +24,14 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
+
+  // Already covered: candidates:write is not a HIRING_MANAGER or VIEWER
+  // permission, so the only roles the allowlist can narrow are 403'd above.
+  // Added anyway so the file is correct on its own terms, and checked ahead of
+  // the existence lookup below so both answer with the identical 404.
+  if (!isCandidateVisible(auth.user.viewer, id)) {
+    return NextResponse.json({ message: "Candidate not found." }, { status: 404 });
+  }
 
   try {
     const body = (await request.json()) as { label?: string; value?: string; key?: string; unit?: string };

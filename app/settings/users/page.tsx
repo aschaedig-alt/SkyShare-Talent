@@ -4,24 +4,107 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { getBlockedEmails } from "@/lib/auth/blocklist";
+import { parseUserModuleOverrides } from "@/lib/auth/user-module-access";
 
 export const dynamic = "force-dynamic";
 
 export default async function UsersPage() {
-  try {
-    await requireModulePageAccess("settings");
+  // OUTSIDE the try. Both of this helper's refusal paths work by THROWING - redirect()
+  // for a revoked session and notFound() for a non-admin - and Next implements those as
+  // thrown errors. Catching them cancels the redirect and the 404 outright, so a hiring
+  // manager who types this URL would get a red "Failed to load" card (with the redirect
+  // target echoed in it) instead of a 404.
+  await requireModulePageAccess("settings");
 
-    const [users, blockedEmails, session] = await Promise.all([
+  try {
+
+    const [users, blockedEmails, session, invites] = await Promise.all([
       prisma.user.findMany({
         include: {
           accounts: true,
           permissions: true,
+          // Include the candidate NAMES so the allowlist renders as people rather
+          // than as a row of opaque cuids. Deliberately not the whole candidate
+          // table: the picker searches on demand through GET /api/candidates?q=.
+          allowedCandidates: {
+            include: { candidate: { select: { id: true, displayName: true } } },
+            orderBy: { createdAt: "asc" },
+          },
         },
         orderBy: { createdAt: "desc" },
       }),
       getBlockedEmails(),
       getServerSession(authOptions),
+      prisma.userInvite.findMany({ where: { claimedAt: null }, orderBy: { createdAt: "desc" } }),
     ]);
+
+    // Pending invites are people who have been configured but have never signed
+    // in, so they have no User row to appear in the list above. Without this the
+    // page would show no trace of them and an admin would reasonably invite the
+    // same person twice.
+    const inviteCandidateIds = [
+      ...new Set(
+        invites.flatMap((invite) => {
+          try {
+            const parsed = JSON.parse(invite.candidateIdsJson ?? "[]") as unknown;
+            return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [];
+          } catch {
+            return [];
+          }
+        })
+      ),
+    ];
+    const inviteCandidates = inviteCandidateIds.length
+      ? await prisma.candidate.findMany({
+          where: { id: { in: inviteCandidateIds } },
+          select: { id: true, displayName: true },
+        })
+      : [];
+    const inviteCandidateNames = new Map(inviteCandidates.map((c) => [c.id, c.displayName]));
+
+    const pendingInvites = invites.map((invite) => {
+      let ids: string[] = [];
+      try {
+        const parsed = JSON.parse(invite.candidateIdsJson ?? "[]") as unknown;
+        ids = Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [];
+      } catch {
+        ids = [];
+      }
+      return {
+        id: invite.id,
+        email: invite.email,
+        name: invite.name,
+        role: invite.role,
+        department: invite.department,
+        restrictCandidatesToAllowlist: invite.restrictCandidatesToAllowlist,
+        allowlistCanAnnotate: invite.allowlistCanAnnotate,
+        moduleOverrides: parseUserModuleOverrides(invite.moduleAccessJson),
+        candidates: ids.map((id) => ({
+          id,
+          displayName: inviteCandidateNames.get(id) ?? "(no longer in the system)",
+        })),
+        createdAt: invite.createdAt.toISOString(),
+      };
+    });
+
+    const usersForClient = users.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      department: user.department,
+      isExecutive: user.isExecutive,
+      restrictCandidatesToDepartment: user.restrictCandidatesToDepartment,
+      restrictCandidatesToAllowlist: user.restrictCandidatesToAllowlist,
+      allowlistCanAnnotate: user.allowlistCanAnnotate,
+      moduleOverrides: parseUserModuleOverrides(user.moduleAccessJson),
+      allowedCandidates: user.allowedCandidates.map((row) => ({
+        id: row.candidate.id,
+        displayName: row.candidate.displayName,
+      })),
+      permissions: user.permissions,
+      accounts: user.accounts.map((a) => ({ id: a.id })),
+    }));
 
     return (
       <div className="space-y-4 px-5 py-5 lg:px-8">
@@ -31,9 +114,10 @@ export default async function UsersPage() {
         </section>
 
         <UsersManagementWorkspace
-          users={users}
+          users={usersForClient}
           currentUserId={session?.user?.id ?? null}
           blockedEmails={blockedEmails}
+          pendingInvites={pendingInvites}
         />
       </div>
     );

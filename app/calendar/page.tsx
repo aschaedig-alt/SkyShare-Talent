@@ -12,7 +12,8 @@ export default async function CalendarPage() {
   const [data, saved, documentCurrency, departmentColors] = await Promise.all([
     getCalendarData(),
     getPageLayout("calendar"),
-    getDocumentCurrency(),
+    // Scoped: this panel lists candidate NAMES as links.
+    getDocumentCurrency(access.viewer),
     getDepartmentColors()
   ]);
 

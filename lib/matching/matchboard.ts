@@ -4,6 +4,8 @@ import {
   scoreSpecificCandidates,
   scoreCandidate,
   candidateMatchSelect,
+  scanPoolWhereForViewer,
+  getScanPoolCountsForViewer,
   type MatchRequirement,
   type PilotRequirementCandidateMatch
 } from "@/lib/matching/pilot-requirement-matches";
@@ -15,10 +17,11 @@ import { getRequirementSkips, getCandidateSkips } from "@/lib/matching/position-
 import { FLEET_POSITIONS, resolveFleetPosition, positionFor } from "@/lib/fleet/positions";
 import type { JobScreeningData } from "@/lib/data/job-screening";
 import { parseStringArray } from "@/lib/json";
-import { getScanPoolCounts } from "@/lib/candidates/scan-pool.server";
-import { scanPoolWhere, isArchivedCandidateStatus } from "@/lib/candidates/scan-pool";
+import { isArchivedCandidateStatus } from "@/lib/candidates/scan-pool";
 import { isScanExclusionReason, type ScanExclusionReason } from "@/lib/candidates/scan-exclusion";
 import { findPriorSkips, type PriorSkip } from "@/lib/candidates/skipped-pool";
+import { candidateScopeWhere, isCandidateVisible } from "@/lib/auth/candidate-scope";
+import type { ViewerScope } from "@/lib/auth/viewer-scope";
 
 
 // ---------------------------------------------------------------------------
@@ -53,7 +56,7 @@ export type MatchboardSubjects = {
   candidates: CandidateSubject[];
 };
 
-export async function getMatchboardSubjects(): Promise<MatchboardSubjects> {
+export async function getMatchboardSubjects(viewer?: ViewerScope | null): Promise<MatchboardSubjects> {
   const [requirements, candidates] = await Promise.all([
     prisma.pilotRequirement.findMany({
       where: { status: "ACTIVE" },
@@ -72,8 +75,13 @@ export async function getMatchboardSubjects(): Promise<MatchboardSubjects> {
     // The whole pool, not just live records — looking someone up in the archive
     // is the point. Skipped people stay in the picker (badged) so they can be
     // opened and restored; the scan filter is what holds them out of results.
+    //
+    // "The whole pool" means the whole pool THIS VIEWER may see. This is the
+    // first-paint payload for the picker: every name, title and total time in
+    // the system was in it, regardless of who was looking. An unrestricted
+    // viewer gets the identical query.
     prisma.candidate.findMany({
-      where: scanPoolWhere(true),
+      where: scanPoolWhereForViewer(true, viewer),
       orderBy: { displayName: "asc" },
       select: {
         id: true,
@@ -199,7 +207,11 @@ function toMatchRequirement(requirement: {
   };
 }
 
-export async function getRoleScreening(requirementId: string | null, includeExcluded = false): Promise<JobScreeningData> {
+export async function getRoleScreening(
+  requirementId: string | null,
+  includeExcluded = false,
+  viewer?: ViewerScope | null
+): Promise<JobScreeningData> {
   const canEdit = await canEditScoring();
   const empty: JobScreeningData = {
     hasRequirement: false,
@@ -219,12 +231,28 @@ export async function getRoleScreening(requirementId: string | null, includeExcl
   };
   if (!requirementId) return empty;
 
+  // The applicant list is candidate data too: the ids below are returned as
+  // `applicantIds` and drive the applicants panel. Filtered through the relation
+  // in the query rather than trimmed afterwards, so an id this viewer may not
+  // see is never fetched.
+  //
+  // `where: undefined` is Prisma for "no filter", so the unrestricted case is
+  // the query that was here before. Written this way rather than as a
+  // conditional spread because a spread would make the select's type a union,
+  // and the select is what Prisma infers the result shape from.
+  const applicantScope = candidateScopeWhere(viewer);
   const requirement = await prisma.pilotRequirement.findUnique({
     where: { id: requirementId },
-    select: { ...REQUIREMENT_SELECT, applications: { select: { candidateId: true } } }
+    select: {
+      ...REQUIREMENT_SELECT,
+      applications: {
+        where: applicantScope ? { candidate: applicantScope } : undefined,
+        select: { candidateId: true }
+      }
+    }
   });
 
-  const counts = await getScanPoolCounts(includeExcluded);
+  const counts = await getScanPoolCountsForViewer(viewer, includeExcluded);
   const countFields = {
     scannedCount: counts.total,
     scannedCurrent: counts.current,
@@ -243,8 +271,8 @@ export async function getRoleScreening(requirementId: string | null, includeExcl
 
   const applicantIds = [...new Set(requirement.applications.map((application) => application.candidateId))];
   const [applicants, scan] = await Promise.all([
-    scoreSpecificCandidates(matchRequirement, applicantIds, config, feedback, overrides, skips),
-    scanRequirementPool(matchRequirement, config, feedback, overrides, skips, includeExcluded)
+    scoreSpecificCandidates(matchRequirement, applicantIds, config, feedback, overrides, skips, viewer),
+    scanRequirementPool(matchRequirement, config, feedback, overrides, skips, includeExcluded, viewer)
   ]);
 
   return {
@@ -297,8 +325,16 @@ export type CandidateRoleMatches = {
   priorSkips: PriorSkip[];
 };
 
-export async function getCandidateRoleMatches(candidateId: string | null): Promise<CandidateRoleMatches | null> {
+export async function getCandidateRoleMatches(
+  candidateId: string | null,
+  viewer?: ViewerScope | null
+): Promise<CandidateRoleMatches | null> {
   if (!candidateId) return null;
+  // Fails closed, and to the SAME answer a missing record gives: a viewer who
+  // was not granted this person must not be able to tell "no such candidate"
+  // from "not yours" — the existence of the person is the fact being hidden.
+  // Checked before the query, so the row is never read.
+  if (!isCandidateVisible(viewer, candidateId)) return null;
   const canEdit = await canEditScoring();
 
   const candidate = await prisma.candidate.findUnique({
@@ -370,6 +406,12 @@ export async function getCandidateRoleMatches(candidateId: string | null): Promi
     fromArchive: isArchivedCandidateStatus(candidate.status),
     canEdit,
     roles,
-    priorSkips
+    // priorSkips are OTHER candidate records that look like the same human. As
+    // far as the allowlist is concerned they are separate people, so a viewer
+    // granted one record does not get the earlier ones along with it. A flat
+    // list — no ranking, and no count computed over what is being removed — so
+    // narrowing it after the lookup leaks nothing. Same rule the server action
+    // in app/matching/matchboard-actions.ts applies.
+    priorSkips: priorSkips.filter((skip) => isCandidateVisible(viewer, skip.candidateId))
   };
 }

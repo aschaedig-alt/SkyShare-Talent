@@ -1,15 +1,45 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireApiPermission } from "@/lib/auth/route-auth";
+import { requireApiUser, authFailureResponse } from "@/lib/auth/route-auth";
+import { hasPermission } from "@/lib/auth/roles";
+import { canAnnotateCandidate, isCandidateVisible } from "@/lib/auth/candidate-scope";
 import { logActivity } from "@/lib/activity/logger";
 import { sanitizeRichText, richTextToPlain, extractMentions } from "@/lib/richtext/sanitize";
 import { notifyMentions } from "@/lib/notifications/mentions";
 
+/**
+ * Writing a note is one of the very few write paths an allowlist-scoped viewer
+ * gets, so this no longer demands candidates:write outright — a hiring manager
+ * brought in for a specific search can record what they thought of the people
+ * they interviewed, which is the entire point of giving them access.
+ *
+ * The permission is checked FIRST and canAnnotateCandidate is only the fallback,
+ * so nobody who already held candidates:write is routed through the allowlist at
+ * all. Under the local-dev auth bypass the role is ADMIN, so the permission
+ * answers and nothing changes locally.
+ */
+
+const forbidden = () =>
+  NextResponse.json({ message: "You do not have permission to perform this action." }, { status: 403 });
+
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireApiPermission("candidates:write");
-  if (!auth.ok) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const auth = await requireApiUser();
+  if (!auth.ok) return authFailureResponse(auth);
 
   const { id } = await params;
+
+  // Fail closed before anything else, and 404 rather than 403: an off-allowlist
+  // candidate has to answer exactly as if the record did not exist, or a write
+  // attempt becomes a way to probe whether a given person is in the system —
+  // which is the fact the allowlist exists to hide.
+  if (!isCandidateVisible(auth.user.viewer, id)) {
+    return NextResponse.json({ message: "Candidate not found." }, { status: 404 });
+  }
+
+  if (!hasPermission(auth.user.role, "candidates:write") && !canAnnotateCandidate(auth.user.viewer, id)) {
+    return forbidden();
+  }
+
   const body = (await request.json().catch(() => ({}))) as { body?: unknown; bodyHtml?: unknown };
 
   // A formatted note arrives as HTML and is sanitized here — never trusted from

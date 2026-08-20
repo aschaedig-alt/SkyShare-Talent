@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { isRoleName, type RoleName } from "@/lib/auth/roles";
 import { isEmailBlocked } from "@/lib/auth/blocklist";
 import { logActivity } from "@/lib/activity/logger";
+import { claimInviteForUser } from "@/lib/auth/invites";
 
 // Record a sign-in attempt to the activity log so admins can see who tried to get
 // in and why they were turned away. Only what actually reaches us is capturable:
@@ -171,6 +172,23 @@ export const authOptions: NextAuthOptions = {
       ]
     : [],
   events: {
+    /**
+     * Apply any pre-configured access the moment the account is created.
+     *
+     * This is the ONLY point at which a brand-new person can be given a role and
+     * scoping before they see anything. An admin cannot pre-create the User row -
+     * allowDangerousEmailAccountLinking is false above, so a row existing with no
+     * linked Account makes NextAuth throw AccountNotLinkedError and the person
+     * cannot sign in at all. They configure an invite against the email instead,
+     * and it lands here.
+     *
+     * createUser fires AFTER the adapter has written the row and BEFORE the JWT
+     * is minted, so the role applied here is the role their first request carries.
+     * claimInviteForUser never throws - a failure must not cost somebody a login.
+     */
+    async createUser({ user }) {
+      await claimInviteForUser(user.id, user.email);
+    },
     /**
      * Persist the Google tokens on EVERY sign-in.
      *

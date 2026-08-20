@@ -1,6 +1,10 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
-import { getVisibleNavigationGroups, type ModuleAccessPolicy } from "@/lib/navigation/modules";
+import {
+  getVisibleNavigationGroups,
+  type ModuleAccessPolicy,
+  type ModuleRuleOverrides
+} from "@/lib/navigation/modules";
 import type { RoleName } from "@/lib/auth/roles";
 
 // Each user's chosen default landing page. It is PER-USER (keyed by the user id),
@@ -54,9 +58,13 @@ export type HomeChoice = { href: string; label: string; group: string };
 
 // The pages this user could pick as their home — exactly the nav items they can
 // actually see, so a picked page is never one they lack access to.
-export function visibleHomeChoices(policy: ModuleAccessPolicy, role: RoleName): HomeChoice[] {
+export function visibleHomeChoices(
+  policy: ModuleAccessPolicy,
+  role: RoleName,
+  overrides?: ModuleRuleOverrides | null
+): HomeChoice[] {
   const choices: HomeChoice[] = [];
-  for (const group of getVisibleNavigationGroups(policy, role)) {
+  for (const group of getVisibleNavigationGroups(policy, role, overrides)) {
     for (const section of group.sections) {
       for (const item of section.items) {
         choices.push({ href: item.href, label: item.label, group: group.label });
@@ -83,8 +91,15 @@ function defaultHomeFor(choices: HomeChoice[]): string {
 // The effective landing href: the user's choice if it's still a page they can see,
 // otherwise the default for their role. Used by the root redirect and the sidebar
 // Home button.
-export async function resolveUserHome(userId: string | null | undefined, policy: ModuleAccessPolicy, role: RoleName): Promise<string> {
-  const choices = visibleHomeChoices(policy, role);
+export async function resolveUserHome(
+  userId: string | null | undefined,
+  policy: ModuleAccessPolicy,
+  role: RoleName,
+  overrides?: ModuleRuleOverrides | null
+): Promise<string> {
+  // Pass the per-user overrides or a restricted account lands on a page it cannot
+  // open - the redirect would bounce them straight into a 404 on first login.
+  const choices = visibleHomeChoices(policy, role, overrides);
   const fallback = defaultHomeFor(choices);
   const chosen = await getUserHome(userId);
   if (!chosen) return fallback;

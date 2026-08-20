@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import type { ViewerScope } from "@/lib/auth/viewer-scope";
+import { candidateScopeWhere } from "@/lib/auth/candidate-scope";
 
 /**
  * Candidates interviewed in the last N days — the "who am I working on right
@@ -40,14 +42,32 @@ export async function getRecentInterviews(options: {
   windowDays: number;
   interviewerEmail?: string | null;
   now?: Date;
+  /**
+   * Required, and null is the deliberate "unrestricted" answer (local-dev
+   * bypass). Not optional: every row here carries a 180-character excerpt of the
+   * raw write-up, so a caller that forgets the viewer leaks assessment text.
+   */
+  viewer: ViewerScope | null;
 }): Promise<RecentInterviewsResult> {
   const now = options.now ?? new Date();
   const since = new Date(now.getTime() - options.windowDays * 24 * 60 * 60 * 1000);
 
+  // Null for everyone who is not allowlist-scoped, so both where clauses below
+  // come out byte-identical to what they were for every existing user.
+  //
+  // Applied through the RELATION (candidate: { id: { in: ... } }) rather than the
+  // candidateId column. candidateFieldScopeWhere() is the column-shaped helper and
+  // would work, but it returns a Record keyed by column name, and spreading an
+  // index-signature type into a Prisma where clause is not something worth being
+  // clever about. This keeps the fragment precisely typed; the join is on an
+  // indexed key inside an already date-bounded window.
+  const scope = candidateScopeWhere(options.viewer);
+
   const interviews = await prisma.interview.findMany({
     where: {
       startDateTime: { gte: since, lte: now },
-      ...(options.interviewerEmail ? { interviewerEmail: options.interviewerEmail.toLowerCase() } : {})
+      ...(options.interviewerEmail ? { interviewerEmail: options.interviewerEmail.toLowerCase() } : {}),
+      ...(scope ? { candidate: scope } : {})
     },
     orderBy: { startDateTime: "desc" },
     select: {
@@ -87,11 +107,19 @@ export async function getRecentInterviews(options: {
     });
   }
 
-  // The picker is built from the UNFILTERED window, so choosing a person never
-  // removes everyone else from the list you chose them from.
+  // The picker is built from the window UNFILTERED BY INTERVIEWER, so choosing a
+  // person never removes everyone else from the list you chose them from. That
+  // exemption is about the interviewer filter only — the candidate allowlist
+  // still applies, or the counts beside each name would total up interviews on
+  // candidates this viewer cannot open, and a name could appear here solely
+  // because of them. The other branch reuses the already-scoped `interviews`.
   const all = options.interviewerEmail
     ? await prisma.interview.findMany({
-        where: { startDateTime: { gte: since, lte: now }, interviewerEmail: { not: null } },
+        where: {
+          startDateTime: { gte: since, lte: now },
+          interviewerEmail: { not: null },
+          ...(scope ? { candidate: scope } : {})
+        },
         select: { interviewer: true, interviewerEmail: true }
       })
     : interviews.map((i) => ({ interviewer: i.interviewer, interviewerEmail: i.interviewerEmail }));
