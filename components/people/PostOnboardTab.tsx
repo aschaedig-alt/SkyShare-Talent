@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { clsx } from "clsx";
 import { Archive, CalendarClock, Building2, Trash2, ListChecks } from "lucide-react";
 import type { Checkin, EmploymentStatus, GridTaskStatus, PostOnboardHire } from "@/lib/data/onboarding";
 import { MAINTENANCE_TASKS } from "@/lib/onboarding/tasks";
 import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
-import { EmptyState } from "@/components/ui";
+import { EmptyState, Input } from "@/components/ui";
 import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
 
 // startDate is a chosen calendar day (UTC); onboardedAt is the moment they were
@@ -34,7 +34,42 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
 
-  const allSelected = hires.length > 0 && selected.size === hires.length;
+  // Filters. Applied in the browser rather than the server: this list is the
+  // post-onboard cohort, which is tens of rows, and it is already fully loaded —
+  // a round trip per keystroke would be slower and lose the check-in state that
+  // has been toggled optimistically.
+  const [q, setQ] = useState("");
+  const [dept, setDept] = useState("");
+  const [status, setStatus] = useState("");
+  const [outstandingOnly, setOutstandingOnly] = useState(false);
+
+  const departments = useMemo(
+    () => [...new Set(hires.map((h) => h.department).filter((d): d is string => Boolean(d && d.trim())))].sort((a, b) => a.localeCompare(b)),
+    [hires]
+  );
+
+  const visible = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return hires.filter((h) => {
+      if (dept && h.department !== dept) return false;
+      if (status && h.employmentStatus !== status) return false;
+      if (outstandingOnly && !h.checkins.some((c) => c.status !== "DONE")) return false;
+      if (!needle) return true;
+      return [h.name, h.position, h.department].some((v) => (v ?? "").toLowerCase().includes(needle));
+    });
+  }, [hires, q, dept, status, outstandingOnly]);
+
+  const filtered = visible.length !== hires.length;
+  function clearFilters() {
+    setQ("");
+    setDept("");
+    setStatus("");
+    setOutstandingOnly(false);
+  }
+
+  // Selection tracks what is ON SCREEN. Select-all must never reach a row a
+  // filter is hiding — a bulk archive of rows you cannot see is unrecoverable.
+  const allSelected = visible.length > 0 && visible.every((h) => selected.has(h.id));
   function toggleOne(id: string) {
     setSelected((s) => {
       const n = new Set(s);
@@ -44,7 +79,14 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
     });
   }
   function toggleAll() {
-    setSelected(allSelected ? new Set() : new Set(hires.map((h) => h.id)));
+    setSelected((s) => {
+      const n = new Set(s);
+      for (const h of visible) {
+        if (allSelected) n.delete(h.id);
+        else n.add(h.id);
+      }
+      return n;
+    });
   }
   async function applyBulk(patch: BulkPatch) {
     const ids = [...selected];
@@ -158,6 +200,45 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
 
   return (
     <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search name, position, department…"
+          aria-label="Search post-onboard employees"
+          className="w-64"
+        />
+        <select value={dept} onChange={(e) => setDept(e.target.value)} aria-label="Filter by department" className={"rounded border border-brand-lea/20 bg-white px-2 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-brand-field dark:text-slate-100"}>
+          <option value="">All departments</option>
+          {departments.map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+        </select>
+        <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Filter by employment status" className={"rounded border border-brand-lea/20 bg-white px-2 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-brand-field dark:text-slate-100"}>
+          <option value="">Any status</option>
+          <option value="ACTIVE">Active</option>
+          <option value="CONTRACT">Contract</option>
+          <option value="TERMINATED">Terminated</option>
+        </select>
+        <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-grey dark:text-slate-400">
+          <input type="checkbox" checked={outstandingOnly} onChange={(e) => setOutstandingOnly(e.target.checked)} className="h-4 w-4" />
+          Outstanding check-ins only
+        </label>
+        <span className="ml-auto text-xs text-brand-grey dark:text-slate-400">
+          {filtered ? `${visible.length} of ${hires.length}` : `${hires.length}`} shown
+        </span>
+        {filtered ? (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="rounded border border-brand-lea/20 px-2 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-gold/10 dark:border-white/10 dark:text-slate-100"
+          >
+            Clear
+          </button>
+        ) : null}
+      </div>
       <BulkActionBar count={selected.size} actions={POST_ONBOARD_BULK_ACTIONS} onApply={applyBulk} onChoice={bulkCheckin} onDelete={deleteSelected} onClear={() => setSelected(new Set())} busy={busy} />
       <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="overflow-x-auto">
@@ -176,7 +257,7 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
             </tr>
           </thead>
           <tbody>
-            {hires.map((h) => {
+            {visible.map((h) => {
               const terminated = h.employmentStatus === "TERMINATED";
               return (
               <tr key={h.id} className={clsx("row-wash border-b border-brand-lea/5 dark:border-white/10 dark:hover:bg-white/5", selected.has(h.id) ? "bg-brand-gold/10" : terminated && "bg-brand-cloudDancer/30 dark:bg-white/5")}>
@@ -233,11 +314,18 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
               </tr>
               );
             })}
+            {visible.length === 0 ? (
+              <tr>
+                <td colSpan={6 + heads.length} className="px-4 py-8 text-center text-sm text-brand-grey dark:text-slate-400">
+                  No post-onboard employees match these filters.
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
       <p className="border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey dark:border-white/10 dark:text-slate-400">
-        Check-ins are 30 / 60 / 90-day + benefits for now — tell me the ones you actually run and I will swap them in.
+        Check-ins are 30 / 60 / 90-day, benefits and the social media announcement — tell me the ones you actually run and I will swap them in.
       </p>
       </div>
     </div>

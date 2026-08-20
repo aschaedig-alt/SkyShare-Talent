@@ -5,8 +5,34 @@ import { hasPermission } from "@/lib/auth/roles";
 import { canAnnotateCandidate, isCandidateVisible } from "@/lib/auth/candidate-scope";
 import { logActivity } from "@/lib/activity/logger";
 import { sanitizeRichText, richTextToPlain, extractMentions } from "@/lib/richtext/sanitize";
-import { INTERVIEW_OUTCOMES } from "@/lib/interviews/constants";
+import { INTERVIEW_OUTCOMES, INTERVIEW_TYPES } from "@/lib/interviews/constants";
 import { notifyMentions } from "@/lib/notifications/mentions";
+
+/**
+ * Normalise a posted co-interviewer list into storable JSON.
+ *
+ * Capped at 10 and de-duplicated by email so a runaway client cannot write an
+ * unbounded blob. Returns null for an empty list, which is the same as "nobody
+ * else was in the room" and keeps the column clean rather than storing "[]".
+ */
+function normalizeCoInterviewers(input: unknown): string | null {
+  if (!Array.isArray(input)) return null;
+  const seen = new Set<string>();
+  const out: Array<{ name: string; email: string }> = [];
+  for (const raw of input) {
+    if (!raw || typeof raw !== "object") continue;
+    const r = raw as { name?: unknown; email?: unknown };
+    const email = String(r.email ?? "").trim().toLowerCase();
+    const name = String(r.name ?? "").trim();
+    if (!email && !name) continue;
+    const key = email || name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ name, email });
+    if (out.length >= 10) break;
+  }
+  return out.length ? JSON.stringify(out) : null;
+}
 
 /**
  * Edit or remove an interview WRITE-UP.
@@ -111,6 +137,18 @@ export async function PATCH(request: Request, ctx: Ctx) {
   if (typeof body.interviewerEmail === "string" && body.interviewerEmail.trim()) {
     data.interviewerEmail = body.interviewerEmail.trim().toLowerCase();
     if (typeof body.interviewerName === "string") data.interviewer = body.interviewerName.trim() || data.interviewerEmail;
+  }
+
+  // The interview TYPE was previously fixed at creation, so a call logged as a
+  // recruiter screen could never be corrected to a hiring-manager interview.
+  // Reported Aug 20. The title follows the type unless it has been hand-edited.
+  if (typeof body.interviewType === "string" && INTERVIEW_TYPES.some((t) => t.value === body.interviewType)) {
+    data.interviewType = body.interviewType;
+    if (typeof body.title === "string" && body.title.trim()) data.title = body.title.trim();
+  }
+
+  if ("coInterviewers" in body) {
+    data.coInterviewersJson = normalizeCoInterviewers(body.coInterviewers);
   }
 
   if (body.outcome === null || (typeof body.outcome === "string" && INTERVIEW_OUTCOMES.some((o) => o.value === body.outcome))) {

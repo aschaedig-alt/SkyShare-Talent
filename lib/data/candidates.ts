@@ -184,6 +184,21 @@ export type CandidateListItem = {
 // Re-exported here so existing server-side importers keep working.
 export { CANDIDATE_LIST_LIMIT, CANDIDATE_PAGE_SIZES, CANDIDATE_LIST_MAX } from "@/lib/candidates/list-config";
 
+/** Co-interviewers off the stored JSON. Anything unusable reads as an empty panel. */
+function parseCoInterviewers(raw: string | null): Array<{ name: string; email: string }> {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((p) => p && typeof p === "object")
+      .map((p) => ({ name: String(p.name ?? "").trim(), email: String(p.email ?? "").trim().toLowerCase() }))
+      .filter((p) => p.email || p.name);
+  } catch {
+    return [];
+  }
+}
+
 export type CandidateListData = {
   candidates: CandidateListItem[];
   /** How many candidates match the current view in total — the list itself is capped. */
@@ -351,6 +366,8 @@ export type CandidateProfileData = {
     title: string;
     startDateTime: string;
     endDateTime: string | null;
+    interviewType: string;
+    coInterviewers: Array<{ name: string; email: string }>;
     timezone: string | null;
     interviewer: string | null;
     location: string | null;
@@ -1452,6 +1469,10 @@ export async function getCandidateProfileData(
         title: interview.title,
         startDateTime: interview.startDateTime.toISOString(),
         endDateTime: interview.endDateTime?.toISOString() ?? null,
+        interviewType: interview.interviewType,
+        // Stored as JSON text. A malformed blob degrades to "nobody else was
+        // there" rather than throwing the whole profile.
+        coInterviewers: parseCoInterviewers(interview.coInterviewersJson),
         timezone: interview.timezone,
         interviewer: interview.interviewer,
         location: interview.location,

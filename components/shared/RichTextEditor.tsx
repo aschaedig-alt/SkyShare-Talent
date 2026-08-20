@@ -165,13 +165,42 @@ export function RichTextEditor({
 
   useEffect(() => {
     const editor = editorRef.current;
-    if (!editor || document.activeElement === editor || editorHtml === lastHtmlRef.current) {
+    if (!editor) {
+      return;
+    }
+
+    // Compare MEANING, not markup. The old guard compared our canonical HTML
+    // against the browser-produced innerHTML, and those two are almost never
+    // byte-identical — the browser writes its own tags and attribute order — so
+    // the check effectively always said "different", and the only thing stopping
+    // a clobber was the focus test below.
+    //
+    // That was not enough. Clicking from somewhere else straight into the middle
+    // of the text fires blur -> emitChange -> parent setState -> this effect, and
+    // during that window the editor is not yet document.activeElement. innerHTML
+    // got reassigned, which throws the caret to position 0 — and because these
+    // messages tend to open with a bold run, the caret landed INSIDE that bold
+    // node, so everything typed afterwards came out bold and could not be placed
+    // mid-line. Reported Aug 16 as the cursor jumping to the start and going bold.
+    //
+    // Round-tripping the live DOM back to markup answers the only question that
+    // matters: does what is on screen already mean what the incoming value means?
+    // If it does, this render is the parent echoing back what we just emitted,
+    // and touching the DOM can only do harm.
+    if (editorHtmlToMarkup(editor) === value) {
+      lastHtmlRef.current = editor.innerHTML;
+      return;
+    }
+
+    // A genuinely different value, but mid-edit — rewriting under the caret would
+    // lose the user their place. Leave it; the next blur reconciles.
+    if (document.activeElement === editor) {
       return;
     }
 
     editor.innerHTML = editorHtml;
     lastHtmlRef.current = editorHtml;
-  }, [editorHtml]);
+  }, [editorHtml, value]);
 
   function saveSelection() {
     const editor = editorRef.current;

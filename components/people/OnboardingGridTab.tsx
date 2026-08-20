@@ -12,6 +12,7 @@ import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type 
 import { copyRich } from "@/lib/business-cards/copy";
 import { buildHireInfoHtml, buildHireInfoText } from "@/lib/onboarding/hire-email-copy";
 import { EmptyState } from "@/components/ui";
+import { useFillViewportHeight } from "@/lib/hooks/useFillViewportHeight";
 
 const GRID_BULK_ACTIONS: BulkAction[] = [
   { kind: "run", key: "copy", label: "Copy for email", icon: ClipboardCopy },
@@ -69,6 +70,9 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [copyNote, setCopyNote] = useState<string | null>(null);
+  // Sizes the scroll box to whatever is left below it, so the page does not also
+  // scroll and leave two vertical scrollbars stacked on the right.
+  const gridScroll = useFillViewportHeight<HTMLDivElement>();
 
   // Manage-tasks mode: rename / hide built-ins, add / rename / remove customs.
   const [managing, setManaging] = useState(false);
@@ -365,8 +369,14 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
           3. The task-name column stays pinned as you scroll across, which it
              already did.
 
+          The cap is MEASURED, not a fixed 75vh: a fixed fraction still left the
+          page itself taller than the screen, so the right-hand side carried two
+          vertical scrollbars — the page one and this box one. Filling exactly the
+          space left below the box makes the page end at the fold, so this is the
+          only vertical scrollbar on screen.
+
           max-h only caps: a short list still renders at its natural height. */}
-      <div className="max-h-[75vh] overflow-auto">
+      <div ref={gridScroll.ref} className="max-h-[75vh] overflow-auto" style={{ maxHeight: gridScroll.maxHeight ?? undefined }}>
         <table className="border-separate border-spacing-0 text-xs">
           <thead>
             <tr>

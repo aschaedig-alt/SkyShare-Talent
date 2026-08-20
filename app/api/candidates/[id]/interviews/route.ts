@@ -9,6 +9,32 @@ import { INTERVIEW_OUTCOMES } from "@/lib/interviews/constants";
 import { notifyMentions } from "@/lib/notifications/mentions";
 
 /**
+ * Normalise a posted co-interviewer list into storable JSON.
+ *
+ * Capped at 10 and de-duplicated by email so a runaway client cannot write an
+ * unbounded blob. Returns null for an empty list, which is the same as "nobody
+ * else was in the room" and keeps the column clean rather than storing "[]".
+ */
+function normalizeCoInterviewers(input: unknown): string | null {
+  if (!Array.isArray(input)) return null;
+  const seen = new Set<string>();
+  const out: Array<{ name: string; email: string }> = [];
+  for (const raw of input) {
+    if (!raw || typeof raw !== "object") continue;
+    const r = raw as { name?: unknown; email?: unknown };
+    const email = String(r.email ?? "").trim().toLowerCase();
+    const name = String(r.name ?? "").trim();
+    if (!email && !name) continue;
+    const key = email || name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ name, email });
+    if (out.length >= 10) break;
+  }
+  return out.length ? JSON.stringify(out) : null;
+}
+
+/**
  * Log an interview that ALREADY HAPPENED, with the write-up pasted in.
  *
  * Separate from /api/interviews on purpose. That route schedules a future
@@ -95,6 +121,7 @@ export async function POST(request: Request, ctx: Ctx) {
       interviewType: typeof body.interviewType === "string" && body.interviewType ? body.interviewType : "RECRUITER_SCREEN",
       startDateTime: when,
       interviewer: interviewerName || interviewerEmail,
+      coInterviewersJson: normalizeCoInterviewers((body as { coInterviewers?: unknown }).coInterviewers),
       interviewerEmail,
       notes: plain.slice(0, 20000),
       notesHtml: notesHtml.slice(0, 120000),

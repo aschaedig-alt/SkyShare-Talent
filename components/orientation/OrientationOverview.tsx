@@ -152,6 +152,25 @@ export function OrientationOverview({
     setBusyHire(null);
     router.refresh();
   }
+  /**
+   * Mark somebody as not needing an orientation at all.
+   *
+   * A current employee moving roles has already attended one, so they would sit
+   * in this amber list forever looking like an oversight. Reversible from the
+   * hire's own page; nothing is deleted and no session is touched.
+   */
+  async function markNotNeeded(hireId: string, name: string) {
+    if (!window.confirm(`${name} will be removed from this list and will not be counted as needing an orientation. Continue?`)) return;
+    setBusyHire(hireId);
+    await fetch(`/api/new-hires/${hireId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orientationNotNeeded: true })
+    });
+    setBusyHire(null);
+    router.refresh();
+  }
+
   const [busyHire, setBusyHire] = useState<string | null>(null);
   const [view, setView] = useState<"sessions" | "cohorts">("sessions");
   const [adding, setAdding] = useState(false);
@@ -264,7 +283,16 @@ export function OrientationOverview({
                 <Link href={`/people/${h.id}`} className="font-medium text-brand-lea hover:underline dark:text-slate-100">{h.name}</Link>
                 <span className="text-xs text-brand-grey dark:text-slate-400">{h.position ?? "—"}</span>
                 {h.rescheduleCount > 0 ? <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-semibold text-brand-lea dark:text-slate-100">moved {h.rescheduleCount}×</span> : null}
-                <span className="ml-auto">
+                <span className="ml-auto flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => markNotNeeded(h.id, h.name)}
+                    disabled={busyHire === h.id}
+                    title="This person has already attended a new-hire orientation"
+                    className="rounded border border-amber-400/60 px-2 py-1 text-xs font-semibold text-amber-900 transition hover:bg-amber-100 disabled:opacity-50 dark:border-amber-500/40 dark:text-amber-300 dark:hover:bg-amber-500/20"
+                  >
+                    Not needed
+                  </button>
                   {upcoming.length > 0 ? (
                     <select value="" onChange={(e) => addToSession(h.id, e.target.value)} disabled={busyHire === h.id} className="rounded border border-brand-lea/15 bg-white px-2 py-1 text-xs text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">
                       <option value="">Add to…</option>
@@ -334,21 +362,28 @@ export function OrientationOverview({
       )}
 
       {adding && (
-        <Modal open={adding} onClose={() => setAdding(false)} busy={saving}>
+        <Modal open={adding} onClose={() => setAdding(false)} busy={saving} maxWidth="max-w-lg">
             <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">New orientation session</h2>
             <div className="mt-4 space-y-3">
-              <div className="flex gap-3">
-                <label className="flex-1 text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
+              {/* Grid with min-w-0 children, not a flex row. Chrome gives a native
+                  date or time input a large intrinsic minimum width, and a flex
+                  child defaults to min-width:auto — so flex-1 could not actually
+                  shrink them and the third control (End) was pushed outside the
+                  panel and clipped. Reported Jul 28. Stacking on the narrowest
+                  widths keeps each control above the ~110px that Chrome refuses
+                  to draw a time picker below. */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <label className="min-w-0 text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
                   Date
-                  <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100" />
+                  <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="mt-1 w-full min-w-0 rounded border border-brand-lea/15 px-2 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100" />
                 </label>
-                <label className="flex-1 text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
+                <label className="min-w-0 text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
                   Start (MT)
-                  <input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100" />
+                  <input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} className="mt-1 w-full min-w-0 rounded border border-brand-lea/15 px-2 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100" />
                 </label>
-                <label className="flex-1 text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
+                <label className="min-w-0 text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
                   End (MT)
-                  <input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100" />
+                  <input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="mt-1 w-full min-w-0 rounded border border-brand-lea/15 px-2 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100" />
                 </label>
               </div>
               <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Location" className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />

@@ -12,6 +12,7 @@ type FeedbackItem = {
   contextJson: string | null;
   imageKey: string | null;
   imageName: string | null;
+  images: Array<{ id: string; filename: string }>;
   status: string;
   userEmail: string | null;
   userName: string | null;
@@ -240,22 +241,34 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
         {/* The screenshot, if one was attached. Served through an
             admin-gated route (never a public URL) because these routinely
             contain candidate PII. Click opens it full size. */}
-        {item.imageKey && (
-          <a
-            href={`/api/feedback/${item.id}/image`}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-2 block w-fit rounded border border-brand-lea/15 p-1 transition hover:shadow-glow dark:border-white/10"
-            title={item.imageName ?? "Open the full screenshot"}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element -- authenticated same-origin route, not an optimizable asset */}
-            <img
-              src={`/api/feedback/${item.id}/image`}
-              alt={item.imageName ?? "Screenshot attached to this feedback"}
-              className="max-h-48 rounded object-contain"
-            />
-          </a>
-        )}
+        {(() => {
+          // Newer reports store every attachment as its own row; older ones have
+          // the single legacy column. Prefer the rows when present so a migrated
+          // report never renders its first picture twice.
+          const shots = item.images.length
+            ? item.images.map((i) => ({ href: `/api/feedback/${item.id}/image/${i.id}`, name: i.filename }))
+            : item.imageKey
+              ? [{ href: `/api/feedback/${item.id}/image`, name: item.imageName ?? "Screenshot" }]
+              : [];
+          if (shots.length === 0) return null;
+          return (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {shots.map((shot) => (
+                <a
+                  key={shot.href}
+                  href={shot.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block w-fit rounded border border-brand-lea/15 p-1 transition hover:shadow-glow dark:border-white/10"
+                  title={shot.name}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- authenticated same-origin route, not an optimizable asset */}
+                  <img src={shot.href} alt={shot.name} className="max-h-48 rounded object-contain" />
+                </a>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Auto-captured context — the full URL (with its query string),
             the screen it happened on, and anything that blew up. */}

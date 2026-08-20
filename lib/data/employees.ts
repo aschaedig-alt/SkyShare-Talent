@@ -44,6 +44,7 @@ export type EmployeeRow = {
   startDate: string | null; // first stint / hire
   serviceDate: string | null; // pilots: pay-step anchor / aircraft service date
   seniorityDate: string | null; // HR seniority anchor
+  seniorityNumber: number | null; // Paycom pilot seniority number, entered by hand
   lastRoleChange: string | null; // most recent role change (null if only ever one role)
   birthCountry: string | null;
   citizenship: string | null;
@@ -73,6 +74,7 @@ type Row = {
   startDate: Date | null;
   aircraftServiceDate: Date | null;
   seniorityDate: Date | null;
+  seniorityNumber: number | null;
   birthCountry: string | null;
   citizenshipCountry: string | null;
   terminationDate: Date | null;
@@ -147,6 +149,7 @@ export async function getEmployees(viewer: EmployeeViewer): Promise<EmployeeRow[
       startDate: true,
       aircraftServiceDate: true,
       seniorityDate: true,
+      seniorityNumber: true,
       birthCountry: true,
       citizenshipCountry: true,
       terminationDate: true,
@@ -179,6 +182,7 @@ export async function getEmployees(viewer: EmployeeViewer): Promise<EmployeeRow[
       startDate: iso(t.start ?? r.startDate),
       serviceDate: iso(r.aircraftServiceDate),
       seniorityDate: iso(r.seniorityDate),
+      seniorityNumber: r.seniorityNumber,
       // "Last position change" = the most recent role's start, but only if they've
       // held more than one role (otherwise there's been no change since hire).
       lastRoleChange: r._count.roleAssignments > 1 && r.roleAssignments[0] ? iso(r.roleAssignments[0].startDate) : null,

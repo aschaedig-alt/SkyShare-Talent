@@ -54,6 +54,9 @@ function collectContext(): FeedbackContext | null {
 // message instead of costing a round-trip. SVG is excluded on both sides — it is a
 // script-carrying document, not a picture.
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+// Mirrors MAX_FEEDBACK_IMAGES on the server. Duplicated rather than imported
+// because that module pulls in storage code this client bundle must not carry.
+const MAX_IMAGES = 4;
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 function imageProblem(file: File): string | null {
@@ -81,8 +84,8 @@ export function FeedbackButton() {
   const [error, setError] = useState<string | null>(null);
 
   // Optional screenshot + its local preview URL.
-  const [image, setImage] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [images, setImages] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -100,14 +103,18 @@ export function FeedbackButton() {
 
   // Object URL for the thumbnail, revoked on change/unmount so we don't leak it.
   useEffect(() => {
-    if (!image) {
-      setPreview(null);
-      return;
-    }
-    const url = URL.createObjectURL(image);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [image]);
+    const urls = images.map((f) => URL.createObjectURL(f));
+    setPreviews(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [images]);
+
+  // Always the latest addImages, without making the paste listener depend on it:
+  // addImages closes over `images`, so listing it as a dependency would tear down
+  // and re-attach the window listener on every attachment change.
+  const addImagesRef = useRef(addImages);
+  useEffect(() => {
+    addImagesRef.current = addImages;
+  });
 
   // Paste a screenshot straight in (Win+Shift+S then Ctrl+V). This is the whole
   // point: the moment someone can screenshot the problem, making them save a file
@@ -119,38 +126,51 @@ export function FeedbackButton() {
       const file = [...(e.clipboardData?.files ?? [])][0];
       if (!file || !file.type.startsWith("image/")) return; // a normal text paste
       e.preventDefault();
-      const problem = imageProblem(file);
-      if (problem) {
-        setError(problem);
-        return;
-      }
-      setError(null);
-      setImage(new File([file], pastedImageName(pathname, file.type), { type: file.type }));
+      addImagesRef.current([new File([file], pastedImageName(pathname, file.type), { type: file.type })]);
     };
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
   }, [open, done, pathname]);
 
-  const hasDraft = message.trim().length > 0 || image !== null;
+  const hasDraft = message.trim().length > 0 || images.length > 0;
 
   function reset() {
     setType("IDEA");
     setMessage("");
     setDone(false);
     setError(null);
-    setImage(null);
+    setImages([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  function chooseImage(file: File | undefined) {
-    if (!file) return;
-    const problem = imageProblem(file);
-    if (problem) {
-      setError(problem);
+  /**
+   * Add screenshots, from the picker or a paste.
+   *
+   * Rejects the batch on the FIRST bad file rather than silently keeping the
+   * good ones — quietly dropping an attachment is how somebody ends up believing
+   * they sent a picture they did not. The cap is stated when it is hit.
+   */
+  function addImages(files: File[]) {
+    if (files.length === 0) return;
+    for (const file of files) {
+      const problem = imageProblem(file);
+      if (problem) {
+        setError(problem);
+        return;
+      }
+    }
+    const room = MAX_IMAGES - images.length;
+    if (room <= 0) {
+      setError(`You can attach up to ${MAX_IMAGES} images.`);
       return;
     }
-    setError(null);
-    setImage(file);
+    setError(files.length > room ? `Only the first ${room} were added — the limit is ${MAX_IMAGES}.` : null);
+    setImages([...images, ...files.slice(0, room)]);
+  }
+
+  function removeImage(index: number) {
+    setImages(images.filter((_, i) => i !== index));
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   /**
@@ -181,13 +201,14 @@ export function FeedbackButton() {
       // Only reach for multipart when there is actually a file: the JSON path is
       // the common case and stays exactly as it was.
       let res: Response;
-      if (image) {
+      if (images.length > 0) {
         const form = new FormData();
         form.set("type", type);
         form.set("message", message.trim());
         form.set("page", pathname);
         form.set("context", JSON.stringify(collectContext()));
-        form.set("image", image, image.name);
+        // append, not set — the server reads them back with getAll("image").
+        for (const file of images) form.append("image", file, file.name);
         // No Content-Type header — the browser must set the multipart boundary.
         res = await fetch("/api/feedback", { method: "POST", body: form });
       } else {
@@ -300,26 +321,35 @@ export function FeedbackButton() {
                 type="file"
                 accept={IMAGE_TYPES.join(",")}
                 className="hidden"
-                onChange={(e) => chooseImage(e.target.files?.[0])}
+                multiple
+                onChange={(e) => addImages([...(e.target.files ?? [])])}
               />
 
-              {image && preview ? (
-                <div className="mt-2 flex items-center gap-2 rounded border border-brand-lea/15 bg-brand-cloudDancer/30 p-2 dark:border-white/10 dark:bg-white/5">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- local object URL, not a remote asset */}
-                  <img src={preview} alt="" className="h-12 w-12 rounded object-cover" />
-                  <span className="min-w-0 flex-1 truncate text-[11px] text-brand-grey dark:text-slate-400">
-                    {image.name}
-                  </span>
-                  <button
-                    onClick={() => {
-                      setImage(null);
-                      if (fileInputRef.current) fileInputRef.current.value = "";
-                    }}
-                    className="rounded p-1 text-brand-grey transition hover:text-red-600 dark:text-slate-400"
-                    aria-label="Remove image"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+              {images.length > 0 ? (
+                <div className="mt-2 space-y-1.5">
+                  {images.map((file, index) => (
+                    <div key={`${file.name}-${index}`} className="flex items-center gap-2 rounded border border-brand-lea/15 bg-brand-cloudDancer/30 p-2 dark:border-white/10 dark:bg-white/5">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- local object URL, not a remote asset */}
+                      <img src={previews[index]} alt="" className="h-12 w-12 rounded object-cover" />
+                      <span className="min-w-0 flex-1 truncate text-[11px] text-brand-grey dark:text-slate-400">{file.name}</span>
+                      <button
+                        onClick={() => removeImage(index)}
+                        className="rounded p-1 text-brand-grey transition hover:text-red-600 dark:text-slate-400"
+                        aria-label={`Remove ${file.name}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  {images.length < MAX_IMAGES ? (
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex w-full items-center justify-center gap-1.5 rounded border border-dashed border-brand-lea/25 px-2 py-1.5 text-[11px] font-medium text-brand-grey transition hover:border-brand-lea hover:shadow-glow dark:border-white/15 dark:text-slate-400"
+                    >
+                      <ImagePlus className="h-3.5 w-3.5" />
+                      Add another — {MAX_IMAGES - images.length} left
+                    </button>
+                  ) : null}
                 </div>
               ) : (
                 <button

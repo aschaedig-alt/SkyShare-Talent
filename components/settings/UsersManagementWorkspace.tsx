@@ -121,6 +121,22 @@ export function UsersManagementWorkspace({
     router.refresh();
   };
 
+  // The link to actually SEND somebody. Built in the browser so it carries
+  // whatever host this workspace is being used on (preview, prod) rather than a
+  // baked-in domain, and it is only a deep link to the sign-in page: it confers
+  // nothing on its own, and the invite record still decides what they get.
+  const [copiedInvite, setCopiedInvite] = useState<string | null>(null);
+  const inviteLink = (email: string) => `${window.location.origin}/login?email=${encodeURIComponent(email)}`;
+  const copyInviteLink = async (invite: PendingInvite) => {
+    try {
+      await navigator.clipboard.writeText(inviteLink(invite.email));
+      setCopiedInvite(invite.id);
+      window.setTimeout(() => setCopiedInvite((cur) => (cur === invite.id ? null : cur)), 2000);
+    } catch {
+      flash("error", "Could not copy the link.");
+    }
+  };
+
   const cancelInvite = async (id: string) => {
     setSaving(true);
     try {
@@ -456,6 +472,13 @@ export function UsersManagementWorkspace({
                     </p>
                   )}
                 </div>
+                <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => copyInviteLink(invite)}
+                  className="rounded border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-gold/10 dark:border-white/10 dark:text-slate-100"
+                >
+                  {copiedInvite === invite.id ? "Link copied" : "Copy invite link"}
+                </button>
                 <button
                   onClick={() => cancelInvite(invite.id)}
                   disabled={saving}
@@ -463,6 +486,7 @@ export function UsersManagementWorkspace({
                 >
                   Cancel invite
                 </button>
+                </div>
               </div>
             ))}
           </div>

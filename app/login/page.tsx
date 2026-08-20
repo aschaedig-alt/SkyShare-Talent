@@ -6,6 +6,8 @@ type LoginPageProps = {
   searchParams: Promise<{
     reason?: string;
     next?: string;
+    /** Set by an invite link so Google opens on the work account, not a personal one. */
+    email?: string;
   }>;
 };
 
@@ -45,6 +47,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   // "next" (the page they were bounced from) still wins.
   const callbackUrl = params.next || "/";
   const authReady = isGoogleAuthReady();
+  // A hint carried in the URL, so it is treated as display text and nothing more:
+  // it selects a Google account, it does not grant access. Whether this address is
+  // allowed in is decided by auth.ts and the invite record, exactly as before.
+  const invitedEmail = params.email?.trim() && params.email.includes("@") ? params.email.trim() : undefined;
   const title = authReady ? "Sign in to SkyShare Journey" : "Authentication setup required";
 
   let loginLogo: string | null = null;
@@ -64,6 +70,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Access control</p>
         <h1 className="mt-2 text-2xl font-semibold text-brand-lea dark:text-slate-100">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-brand-grey dark:text-slate-400">{messageForReason(params.reason, authReady)}</p>
+
+        {invitedEmail ? (
+          <div className="mt-4 rounded border border-brand-gold/30 bg-brand-gold/10 p-3 text-xs text-brand-grey dark:text-slate-300">
+            You were invited as <span className="font-semibold text-brand-lea dark:text-slate-100">{invitedEmail}</span>. Sign in
+            with that SkyShare account.
+          </div>
+        ) : null}
 
         {params.next ? (
           <div className="mt-4 rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-3 text-xs text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
@@ -85,7 +98,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
         <div className="mt-6 flex flex-wrap gap-2">
           {authReady ? (
-            <GoogleSignInButton callbackUrl={callbackUrl} />
+            <GoogleSignInButton callbackUrl={callbackUrl} loginHint={invitedEmail} />
           ) : (
             <div className="rounded border border-brand-gold/30 bg-brand-gold/10 px-4 py-2 text-sm font-semibold text-brand-lea dark:text-slate-100">
               Google auth environment variables are not configured yet.

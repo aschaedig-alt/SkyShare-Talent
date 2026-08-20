@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
+import { syncHireOrientationDates } from "@/lib/data/orientation";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -18,6 +19,9 @@ export async function POST(request: Request, ctx: Ctx) {
       create: { sessionId, newHireId: body.newHireId },
       update: {}
     });
+    // Seating somebody also sets the date on their own record, so the profile and
+    // the new-hires grid agree with the session rather than staying blank.
+    await syncHireOrientationDates([body.newHireId], sessionId);
     return NextResponse.json({ ok: true, id: attendee.id });
   } catch (error) {
     console.error("Add attendee error:", error);

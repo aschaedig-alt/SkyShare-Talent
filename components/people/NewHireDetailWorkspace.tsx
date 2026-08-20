@@ -79,6 +79,9 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     orientationDate: toDateInput(hire.orientationDate),
     aircraftServiceDate: toDateInput(hire.aircraftServiceDate),
     seniorityDate: toDateInput(hire.seniorityDate),
+    // Kept as a STRING in form state like every other field here; the API turns
+    // an empty string back into null so a cleared box means "not recorded".
+    seniorityNumber: hire.seniorityNumber === null || hire.seniorityNumber === undefined ? "" : String(hire.seniorityNumber),
     birthCountry: hire.birthCountry ?? "",
     citizenshipCountry: hire.citizenshipCountry ?? "",
     notes: hire.notes ?? ""
@@ -87,6 +90,9 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
   const [managedPilot, setManagedPilot] = useState(hire.managedPilot);
   const [tags, setTags] = useState<string[]>(hire.tags ?? []);
   const [savingDetails, setSavingDetails] = useState(false);
+  // Kept out of `details` on purpose: that object is all strings and feeds the
+  // shared field() helper, which types its value as a string.
+  const [orientationNotNeeded, setOrientationNotNeeded] = useState(hire.orientationNotNeeded);
   const [status, setStatus] = useState<string | null>(null);
   const [busyStage, setBusyStage] = useState(false);
   const [termOpen, setTermOpen] = useState(false);
@@ -157,7 +163,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
       const res = await fetch(`/api/new-hires/${hire.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(details)
+        body: JSON.stringify({ ...details, orientationNotNeeded })
       });
       if (!res.ok) throw new Error();
       setStatus("Details saved.");
@@ -218,12 +224,13 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     }
   }
 
-  function field(label: string, key: keyof typeof details, type: "text" | "date" = "text") {
+  function field(label: string, key: keyof typeof details, type: "text" | "date" | "number" = "text") {
     return (
       <label className="block">
         <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">{label}</span>
         <input
           type={type}
+          {...(type === "number" ? { min: 1, step: 1, inputMode: "numeric" as const } : {})}
           value={details[key]}
           onChange={(e) => setDetails({ ...details, [key]: e.target.value })}
           className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
@@ -494,7 +501,25 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
               {field("Start date", "startDate", "date")}
               {field("Orientation", "orientationDate", "date")}
               {field("Seniority date", "seniorityDate", "date")}
+              {field("Seniority # (Paycom)", "seniorityNumber", "number")}
             </div>
+            {/* The exemption, and the only way back from it: the orientation page
+                sets this when somebody is marked Not needed, and this is where it
+                gets undone. A current employee moving roles has already attended
+                one, so they should not sit on the orientation list forever. */}
+            <label className="flex items-start gap-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-2 dark:border-white/10 dark:bg-white/5">
+              <input
+                type="checkbox"
+                checked={orientationNotNeeded}
+                onChange={(e) => setOrientationNotNeeded(e.target.checked)}
+                className="mt-0.5 h-4 w-4"
+              />
+              <span className="text-xs text-brand-grey dark:text-slate-400">
+                <span className="font-semibold text-brand-lea dark:text-slate-100">No orientation needed</span>
+                <br />
+                Already attended a new-hire orientation — keeps them off the orientation page&apos;s outstanding list.
+              </span>
+            </label>
             <label className="block">
               <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Notes</span>
               <textarea

@@ -294,6 +294,12 @@ model NewHire {
   // pay-increase anniversary (PAF reminders are a later, separate feature).
   aircraftServiceDate DateTime?
   orientationDate DateTime?
+  // This hire does not need a new-hire orientation at all — a current employee
+  // moving roles has already attended one. Distinct from orientationDate being
+  // null, which means it simply has not been scheduled yet; without the
+  // distinction an exempt person sits on the orientation page forever looking
+  // like an oversight.
+  orientationNotNeeded Boolean @default(false)
   // Last day with SkyShare — set for former employees (employmentStatus TERMINATED).
   terminationDate DateTime?
   // Date of birth — dates only, used for recognition/"congrats" (no other PII stored).
@@ -302,6 +308,12 @@ model NewHire {
   // the original hire OR reset to a rehire date depending on the break — so it's
   // stored explicitly rather than derived. birth/citizenship country from HR too.
   seniorityDate   DateTime?
+  // Pilot seniority NUMBER, as kept in Paycom. Distinct from seniorityDate:
+  // the date is the anchor HR seniority is computed from, the number is the
+  // position on the pilot list that Paycom publishes. Entered by hand for now
+  // (there is no Paycom integration), so it is nullable and never derived —
+  // an absent number means nobody has typed it in, not seniority of zero.
+  seniorityNumber Int?
   birthCountry       String?
   citizenshipCountry String?
   // Lifecycle: ACTIVE (being onboarded) -> POST_ONBOARD (maintenance) -> ARCHIVED
@@ -714,9 +726,35 @@ model Feedback {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Additional screenshots beyond the single legacy one above. The four image*
+  // columns are KEPT rather than migrated: 30-odd existing rows use them, and
+  // rewriting live storage keys to gain tidiness is not a trade worth making.
+  // New submissions write here; readers show the legacy one first, then these.
+  images      FeedbackImage[]
+
   @@index([status])
   @@index([type])
   @@index([createdAt])
+}
+
+// One attached screenshot on a piece of feedback. Same privacy rules as the
+// legacy column it extends: a screenshot of this app routinely contains
+// candidate PII, so bytes live behind the admin-gated route and never get a
+// public URL.
+model FeedbackImage {
+  id         String   @id @default(cuid())
+  feedbackId String
+  storageKey String
+  filename   String
+  mimeType   String?
+  sizeBytes  Int?
+  // Display order, so the pair in a two-part report stays in the order sent.
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  @@index([feedbackId])
 }
 
 model Candidate {
@@ -1192,6 +1230,12 @@ model Interview {
   // cannot answer "show me the ones I did" — two people typing their own name
   // differently is enough to break that filter, so identity is the email.
   interviewerEmail     String?
+  // Anyone ELSE who sat in, as JSON [{ name, email }]. The two fields above stay
+  // the primary interviewer and are untouched: interviewerEmail is what decides
+  // who may edit a write-up (see the interviews PATCH route), so widening it to a
+  // list would quietly change who can edit what. A panel is recorded here
+  // instead. Null and [] both mean nobody else.
+  coInterviewersJson   String?
   attendeesJson        String?
   location             String?
   meetingUrl           String?

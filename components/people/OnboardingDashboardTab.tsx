@@ -462,7 +462,7 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
                 return (
                   <Link
                     key={`${a.id}-${i}`}
-                    href={`/people/${a.id}`}
+                    href={a.href ?? `/people/${a.id}`}
                     className={clsx("flex items-center justify-between gap-3 rounded px-4 py-2.5 text-sm transition-shadow hover:shadow-glow", s.row)}
                   >
                     <span className="text-brand-black dark:text-slate-100">

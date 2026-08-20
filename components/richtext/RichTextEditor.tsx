@@ -96,6 +96,24 @@ export function RichTextEditor({
       return;
     }
 
+    // NEVER rewrite the DOM while the caret is inside it.
+    //
+    // This line had no focus guard, and that is the whole bug reported Aug 16
+    // and again Aug 20: "I would click between words, and then my cursor would
+    // go back to the start of the message and would be bold."
+    //
+    // Typing calls emit() on every input, which sends el.innerHTML up to the
+    // parent. React re-renders a beat later, and while it does the DOM has
+    // already moved on — so value is stale, the comparison below says they
+    // differ, and the editor was reassigned its OWN older content. That both
+    // throws the caret to offset 0 and drops whatever was typed in between.
+    // Landing at offset 0 is also why the text came out bold: these write-ups
+    // routinely open with a bold run, so the caret arrives INSIDE it.
+    //
+    // Nothing is lost by skipping: handleBlur normalises and re-emits on the
+    // way out, so an external change reconciles the moment focus leaves.
+    if (document.activeElement === el) return;
+
     if (el.innerHTML !== value) el.innerHTML = value || "";
   }, [value]);
 

@@ -17,6 +17,7 @@ export type HistoricalSearchFilters = {
   from?: string;
   to?: string;
   page?: number;
+  pageSize?: number;
 };
 
 export type HistoricalSearchRow = {
@@ -43,6 +44,24 @@ export type HistoricalSearchResult = {
 export const DISPOSITIONS = ["APPLIED", "INTERVIEWED", "OFFER", "REJECTED", "HIRED"] as const;
 
 export const PAGE_SIZE = 100;
+
+/**
+ * Page sizes the archive offers.
+ *
+ * Mirrors CANDIDATE_PAGE_SIZES deliberately — same numbers, same reasoning.
+ * The archive is ~3,200 rows, and the job being done is scanning them, not
+ * looking one up, so paging 100 at a time is the actual complaint. 500 is a
+ * real cost per load (each row counts its applications and interviews), so it
+ * stays opt-in per request rather than becoming the default, and the ceiling
+ * stops a hand-typed ?size= from asking for the whole table.
+ */
+export const ARCHIVE_PAGE_SIZES = [100, 250, 500] as const;
+
+/** Coerce a ?size= into one of the offered sizes; anything else falls back to the default. */
+export function normalizeArchivePageSize(input: unknown): number {
+  const n = typeof input === "string" ? Number.parseInt(input, 10) : typeof input === "number" ? input : NaN;
+  return (ARCHIVE_PAGE_SIZES as readonly number[]).includes(n) ? n : PAGE_SIZE;
+}
 
 function ci(value: string) {
   return { contains: value, mode: "insensitive" as const };
@@ -106,15 +125,16 @@ export async function searchHistorical(filters: HistoricalSearchFilters): Promis
 
   const where = { AND: and };
 
+  const pageSize = normalizeArchivePageSize(filters.pageSize);
   const total = await prisma.candidate.count({ where });
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
   // Clamp so a hand-typed or stale ?page= never lands on an empty table.
   const page = Math.min(Math.max(1, Math.floor(filters.page ?? 1)), pageCount);
 
   const candidates = await prisma.candidate.findMany({
     where,
-    skip: (page - 1) * PAGE_SIZE,
-    take: PAGE_SIZE,
+    skip: (page - 1) * pageSize,
+    take: pageSize,
     orderBy: [{ displayName: "asc" }, { id: "asc" }],
     include: {
       applications: {
@@ -145,5 +165,5 @@ export async function searchHistorical(filters: HistoricalSearchFilters): Promis
     };
   });
 
-  return { rows, total, page, pageCount, pageSize: PAGE_SIZE };
+  return { rows, total, page, pageCount, pageSize };
 }

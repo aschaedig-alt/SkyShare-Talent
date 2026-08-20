@@ -56,6 +56,21 @@ export async function PATCH(request: Request, context: RouteContext) {
       const t = typeof body.businessCardTitle === "string" ? body.businessCardTitle.trim() : "";
       data.businessCardTitle = t.length ? t : null;
     }
+    // Seniority NUMBER, typed by hand from the Paycom pilot list. Empty string
+    // clears it back to null rather than storing 0 — "not recorded" and
+    // "number zero" are different answers.
+    if ("seniorityNumber" in body) {
+      const raw = body.seniorityNumber;
+      if (raw === null || raw === "") {
+        data.seniorityNumber = null;
+      } else {
+        const n = typeof raw === "number" ? raw : Number.parseInt(String(raw), 10);
+        if (Number.isFinite(n) && n >= 0) data.seniorityNumber = n;
+      }
+    }
+    if (typeof body.orientationNotNeeded === "boolean") {
+      data.orientationNotNeeded = body.orientationNotNeeded;
+    }
     if (typeof body.managedPilot === "boolean") {
       data.managedPilot = body.managedPilot;
     }

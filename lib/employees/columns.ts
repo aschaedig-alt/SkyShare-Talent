@@ -13,6 +13,7 @@ export const EMPLOYEE_COLUMN_KEYS = [
   "started",
   "serviceDate",
   "seniority",
+  "seniorityNo",
   "lastRoleChange",
   "tenure",
   "roles",

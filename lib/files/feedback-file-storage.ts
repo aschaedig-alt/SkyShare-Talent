@@ -23,6 +23,16 @@ const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp"]);
 /** 10 MB — comfortably more than a full-page screenshot, far less than a video. */
 export const MAX_FEEDBACK_IMAGE_BYTES = 10 * 1024 * 1024;
 
+/**
+ * How many screenshots one report may carry.
+ *
+ * A cap rather than no limit, because each is up to 10 MB and they are written
+ * to the live bucket. Four covers the case this exists for - a report that had
+ * to be split in two just to attach a second picture - without letting one
+ * submission write 40 MB.
+ */
+export const MAX_FEEDBACK_IMAGES = 4;
+
 export function isSupportedFeedbackImage(filename: string, mimeType: string | null): boolean {
   const extensionOk = IMAGE_EXTENSIONS.has(path.extname(filename).toLowerCase());
   // Both must agree. The extension alone is trivially renamed, and the mime type

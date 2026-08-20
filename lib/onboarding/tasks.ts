@@ -88,7 +88,11 @@ export const MAINTENANCE_TASKS: Array<{ key: string; label: string; short: strin
   { key: "checkin_30", label: "30-day check-in", short: "30-day", dueDays: 30 },
   { key: "checkin_60", label: "60-day check-in", short: "60-day", dueDays: 60 },
   { key: "checkin_90", label: "90-day check-in", short: "90-day", dueDays: 90 },
-  { key: "benefits_enrolled", label: "Benefits enrolled", short: "Benefits", dueDays: null }
+  { key: "benefits_enrolled", label: "Benefits enrolled", short: "Benefits", dueDays: null },
+  // Appended rather than slotted in date-order on purpose: the stored task rows
+  // carry an order of 100 + index, so inserting in the middle would renumber
+  // every existing row. No dueDays - there is no fixed day this is owed by.
+  { key: "social_announcement", label: "Social media announcement", short: "Social", dueDays: null }
 ];
 
 // Maps the verbose row labels from the current Google Sheet to our task keys (used by the importer).

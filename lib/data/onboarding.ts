@@ -60,6 +60,8 @@ export type NewHireRow = {
   orientationDate: string | null;
   aircraftServiceDate: string | null;
   seniorityDate: string | null;
+  seniorityNumber: number | null;
+  orientationNotNeeded: boolean;
   birthCountry: string | null;
   citizenshipCountry: string | null;
   terminationDate: string | null;
@@ -78,7 +80,19 @@ export type NewHireRow = {
   nextAction: string | null;
 };
 
-export type Alert = { id: string; name: string; level: AlertLevel; text: string };
+export type Alert = {
+  id: string;
+  name: string;
+  level: AlertLevel;
+  text: string;
+  /**
+   * Where the row links. Defaults to the new-hire page, which is right for every
+   * onboarding alert — but a travel reimbursement is just as often owed to a
+   * CANDIDATE on a recruiting visit, and sending those to /people/<candidateId>
+   * lands on a page that does not exist.
+   */
+  href?: string;
+};
 export type UpcomingStart = { id: string; name: string; position: string | null; startDate: string };
 
 export type ChartDatum = { label: string; count: number };
@@ -167,6 +181,8 @@ type HireWithTasks = {
   orientationDate: Date | null;
   aircraftServiceDate: Date | null;
   seniorityDate: Date | null;
+  seniorityNumber: number | null;
+  orientationNotNeeded: boolean;
   birthCountry: string | null;
   citizenshipCountry: string | null;
   terminationDate: Date | null;
@@ -238,6 +254,8 @@ function toRow(hire: HireWithTasks, now: number): NewHireRow {
     orientationDate: iso(hire.orientationDate),
     aircraftServiceDate: iso(hire.aircraftServiceDate),
     seniorityDate: iso(hire.seniorityDate),
+    seniorityNumber: hire.seniorityNumber,
+    orientationNotNeeded: hire.orientationNotNeeded,
     birthCountry: hire.birthCountry,
     citizenshipCountry: hire.citizenshipCountry,
     terminationDate: iso(hire.terminationDate),
@@ -276,12 +294,70 @@ async function travelStatusByHire(hireIds: string[]): Promise<Map<string, HireTr
   return map;
 }
 
+/** A hire we still owe travel money back to, with how much. */
+export type ReimbursementOwed = { personId: string; personName: string; href: string; amount: number; items: number };
+
+/**
+ * Everyone owed a travel reimbursement, across EVERY stage.
+ *
+ * Deliberately not scoped to the hires already on the dashboard. Reimbursement
+ * is owed after a trip, which is usually after onboarding finishes, so scoping
+ * this to active hires — or to the 21-day recently-onboarded window — would let
+ * the debt disappear off the board while it was still unpaid. That is the exact
+ * failure this exists to prevent.
+ *
+ * NEEDED is set by hand when somebody records that the traveller paid for
+ * something themselves, so a row here is a real obligation rather than an
+ * inference. Canceled trips are excluded; amount-less items still count toward
+ * the item tally so a missing figure cannot hide the debt entirely.
+ */
+async function reimbursementsOwed(): Promise<ReimbursementOwed[]> {
+  const items = await prisma.travelItem.findMany({
+    where: {
+      selfBooked: true,
+      reimbursement: "NEEDED",
+      trip: { status: { not: "CANCELED" } }
+    },
+    select: {
+      amount: true,
+      trip: {
+        select: {
+          newHireId: true,
+          candidateId: true,
+          newHire: { select: { name: true } },
+          candidate: { select: { displayName: true } }
+        }
+      }
+    }
+  });
+  const byPerson = new Map<string, ReimbursementOwed>();
+  for (const i of items) {
+    const t = i.trip;
+    // A trip linked to neither is orphaned data with nobody to pay; skipping it
+    // keeps an unclickable row off the board.
+    const person = t.newHireId
+      ? { personId: t.newHireId, personName: t.newHire?.name ?? "Unknown", href: `/people/${t.newHireId}` }
+      : t.candidateId
+        ? { personId: t.candidateId, personName: t.candidate?.displayName ?? "Unknown", href: `/candidates/${t.candidateId}` }
+        : null;
+    if (!person) continue;
+    const cur = byPerson.get(person.personId) ?? { ...person, amount: 0, items: 0 };
+    cur.amount += i.amount ?? 0;
+    cur.items += 1;
+    byPerson.set(person.personId, cur);
+  }
+  return [...byPerson.values()].sort((a, b) => b.amount - a.amount);
+}
+
+const money = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+
 function buildDashboard(
   active: HireWithTasks[],
   now: number,
   travelByHire: Map<string, HireTravelStatus>,
   recentlyOnboarded: HireWithTasks[] = [],
-  hiddenIds: Set<string> = new Set()
+  hiddenIds: Set<string> = new Set(),
+  owed: ReimbursementOwed[] = []
 ): OnboardingDashboard {
   const rows = active.map((h) => ({ hire: h, row: toRow(h, now) }));
 
@@ -329,6 +405,19 @@ function buildDashboard(
       alerts.push({ id: hire.id, name: hire.name, level: row.status === "Due soon" ? "urgent" : "missing", text: `${row.nextAction.toLowerCase()}` });
     }
   }
+  // Appended separately rather than inside the loop above: that loop is an
+  // else-if chain over ACTIVE hires only, so a debt would be both hidden behind
+  // an unrelated flag and invisible for anyone past onboarding.
+  for (const o of owed) {
+    alerts.push({
+      id: o.personId,
+      name: o.personName,
+      href: o.href,
+      level: "urgent",
+      text: o.amount > 0 ? `travel reimbursement owed — ${money(o.amount)}` : "travel reimbursement owed — amount not recorded"
+    });
+  }
+
   const severity: Record<AlertLevel, number> = { blocked: 0, urgent: 1, ready: 2, missing: 3 };
   alerts.sort((a, b) => severity[a.level] - severity[b.level]);
 
@@ -553,6 +642,8 @@ const hireSelect = {
   orientationDate: true,
   aircraftServiceDate: true,
   seniorityDate: true,
+  seniorityNumber: true,
+  orientationNotNeeded: true,
   birthCountry: true,
   citizenshipCountry: true,
   terminationDate: true,
@@ -728,8 +819,8 @@ export async function getActiveDashboard(): Promise<OnboardingDashboard> {
     }) as Promise<HireWithTasks[]>,
     getDashboardHiddenIds()
   ]);
-  const travelByHire = await travelStatusByHire(hires.map((h) => h.id));
-  return buildDashboard(hires, now, travelByHire, recentlyOnboarded, new Set(hiddenIds));
+  const [travelByHire, owed] = await Promise.all([travelStatusByHire(hires.map((h) => h.id)), reimbursementsOwed()]);
+  return buildDashboard(hires, now, travelByHire, recentlyOnboarded, new Set(hiddenIds), owed);
 }
 
 // ---- Grid + Milestones (active hires only) ----
@@ -853,7 +944,9 @@ export type PostOnboardHire = {
 export async function getPostOnboardHires(): Promise<PostOnboardHire[]> {
   const now = Date.now();
   const ids = await prisma.newHire.findMany({ where: { stage: "POST_ONBOARD" }, select: { id: true } });
-  // Ensure the 4 maintenance tasks exist for every post-onboard hire in a single insert.
+  // Ensure every maintenance task exists for each post-onboard hire in a single
+  // insert. skipDuplicates means adding a NEW task to MAINTENANCE_TASKS backfills
+  // a row for everyone already on this list the next time the page loads.
   await prisma.onboardingTask.createMany({
     data: ids.flatMap((h) =>
       MAINTENANCE_TASKS.map((m, i) => ({

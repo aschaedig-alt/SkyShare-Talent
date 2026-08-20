@@ -16,10 +16,10 @@ type Filter = "all" | "current" | "past";
 const FILTER_KEY = "skyshare-employees-filter";
 const isFilter = (v: unknown): v is Filter => v === "all" || v === "current" || v === "past";
 
-type SortKey = "name" | "role" | "department" | "tags" | "location" | "aircraft" | "seat" | "pool" | "started" | "serviceDate" | "seniority" | "lastRoleChange" | "tenure" | "roles" | "status";
+type SortKey = "name" | "role" | "department" | "tags" | "location" | "aircraft" | "seat" | "pool" | "started" | "serviceDate" | "seniority" | "seniorityNo" | "lastRoleChange" | "tenure" | "roles" | "status";
 type SortState = { key: SortKey; dir: "asc" | "desc" };
 const SORT_KEY = "skyshare-employees-sort";
-const SORT_KEYS: SortKey[] = ["name", "role", "department", "tags", "location", "aircraft", "seat", "pool", "started", "serviceDate", "seniority", "lastRoleChange", "tenure", "roles", "status"];
+const SORT_KEYS: SortKey[] = ["name", "role", "department", "tags", "location", "aircraft", "seat", "pool", "started", "serviceDate", "seniority", "seniorityNo", "lastRoleChange", "tenure", "roles", "status"];
 const UNTAGGED = "__untagged__";
 
 function statusRank(e: EmployeeRow): number {
@@ -65,6 +65,9 @@ const COLUMNS: Record<EmployeeColumnKey, { label: string; sortKey?: SortKey; cel
   started: { label: "Started", sortKey: "started", cell: (e) => fmtDate(e.startDate) },
   serviceDate: { label: "Service date", sortKey: "serviceDate", cell: (e) => fmtDate(e.serviceDate) },
   seniority: { label: "Seniority", sortKey: "seniority", cell: (e) => fmtDate(e.seniorityDate) },
+  // The Paycom pilot list number, typed in by hand. Labelled "Seniority #" so it
+  // is not mistaken for the date column directly above it.
+  seniorityNo: { label: "Seniority #", sortKey: "seniorityNo", cell: (e) => (e.seniorityNumber === null ? "—" : String(e.seniorityNumber)) },
   lastRoleChange: { label: "Last role change", sortKey: "lastRoleChange", cell: (e) => fmtDate(e.lastRoleChange) },
   tenure: { label: "Tenure", sortKey: "tenure", cell: (e) => tenure(e.tenureDays) },
   roles: { label: "Roles", sortKey: "roles", cell: (e) => `${e.roleCount || "—"}${e.stintCount > 1 ? ` · ${e.stintCount} stints` : ""}` },
@@ -90,6 +93,15 @@ function compareBy(a: EmployeeRow, b: EmployeeRow, key: SortKey): number {
     case "started": return (a.startDate ?? "").localeCompare(b.startDate ?? "");
     case "serviceDate": return (a.serviceDate ?? "").localeCompare(b.serviceDate ?? "");
     case "seniority": return (a.seniorityDate ?? "").localeCompare(b.seniorityDate ?? "");
+    // Nulls sort LAST in both directions: a pilot with no number recorded must
+    // not lead the list when sorting by seniority, which is the whole point of
+    // the column. Number 1 is the most senior, so ascending is the natural read.
+    case "seniorityNo": {
+      if (a.seniorityNumber === null && b.seniorityNumber === null) return 0;
+      if (a.seniorityNumber === null) return 1;
+      if (b.seniorityNumber === null) return -1;
+      return a.seniorityNumber - b.seniorityNumber;
+    }
     case "lastRoleChange": return (a.lastRoleChange ?? "").localeCompare(b.lastRoleChange ?? "");
     case "tenure": return (a.tenureDays ?? 0) - (b.tenureDays ?? 0);
     case "roles": return a.roleCount - b.roleCount;

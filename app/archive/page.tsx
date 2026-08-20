@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { requireModulePageAccess } from "@/lib/data/module-access";
-import { searchHistorical, DISPOSITIONS, type HistoricalSearchFilters, type HistoricalSearchResult } from "@/lib/archive/search";
+import {
+  searchHistorical,
+  DISPOSITIONS,
+  ARCHIVE_PAGE_SIZES,
+  normalizeArchivePageSize,
+  type HistoricalSearchFilters,
+  type HistoricalSearchResult
+} from "@/lib/archive/search";
 
 type ArchivePageProps = {
   searchParams?: Promise<Record<string, string | undefined>>;
@@ -41,6 +48,65 @@ function pageHref(params: Record<string, string | undefined>, page: number) {
   return qs ? `/archive?${qs}` : "/archive";
 }
 
+/** Same as pageHref but sets ?size= and resets to page 1. */
+function sizeHref(params: Record<string, string | undefined>, size: number) {
+  const next = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (key !== "page" && key !== "size" && value && value.trim()) next.set(key, value);
+  }
+  if (size !== ARCHIVE_PAGE_SIZES[0]) next.set("size", String(size));
+  const qs = next.toString();
+  return qs ? `/archive?${qs}` : "/archive";
+}
+
+/**
+ * How many rows per page.
+ *
+ * Real Links rather than buttons: this reloads the whole page, so it has to be
+ * ctrl-clickable like every other navigation here. Changing the size drops you
+ * back to page 1 on purpose — page 15 of 100-row pages is not page 15 of 500s,
+ * and silently landing somewhere unrelated is worse than restarting the scan.
+ */
+function PageSize({ current, params }: { current: number; params: Record<string, string | undefined> }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded border border-brand-lea/20 px-1 py-0.5 dark:border-white/10">
+      <span className="px-1 text-[10px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">Show</span>
+      {ARCHIVE_PAGE_SIZES.map((option) => (
+        <Link
+          key={option}
+          href={sizeHref(params, option)}
+          className={
+            option === current
+              ? "rounded bg-brand-lea px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white"
+              : "rounded px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-brand-grey transition hover:bg-brand-gold/10 hover:text-brand-lea dark:text-slate-400"
+          }
+        >
+          {option}
+        </Link>
+      ))}
+    </span>
+  );
+}
+
+/**
+ * Which page numbers to render: always first and last, plus a window around the
+ * current one, with gaps collapsed. Without this, 3,200 rows at 100 a page is 32
+ * links and the row wraps; with it, jumping 2 -> 15 is still one click via the
+ * last-page link and the window, rather than 13 presses of Next.
+ */
+function pageWindow(page: number, pageCount: number): Array<number | "gap"> {
+  const wanted = new Set<number>([1, pageCount]);
+  for (let i = page - 2; i <= page + 2; i++) if (i >= 1 && i <= pageCount) wanted.add(i);
+  const out: Array<number | "gap"> = [];
+  let prev = 0;
+  for (const n of [...wanted].sort((a, b) => a - b)) {
+    if (prev && n - prev > 1) out.push("gap");
+    out.push(n);
+    prev = n;
+  }
+  return out;
+}
+
 function Pager({ result, params }: { result: HistoricalSearchResult; params: Record<string, string | undefined> }) {
   if (result.pageCount <= 1) return null;
   const linkClass =
@@ -55,9 +121,31 @@ function Pager({ result, params }: { result: HistoricalSearchResult; params: Rec
       ) : (
         <span className={disabledClass}>← Previous</span>
       )}
-      <span className="text-xs text-brand-grey dark:text-slate-400">
-        Page {result.page} of {result.pageCount}
-      </span>
+      <div className="flex flex-wrap items-center justify-center gap-1">
+        {pageWindow(result.page, result.pageCount).map((entry, i) =>
+          entry === "gap" ? (
+            <span key={`gap-${i}`} className="px-1 text-xs text-brand-grey/60 dark:text-slate-500">
+              …
+            </span>
+          ) : entry === result.page ? (
+            <span
+              key={entry}
+              aria-current="page"
+              className="rounded bg-brand-lea px-2.5 py-1 text-xs font-semibold tabular-nums text-white"
+            >
+              {entry}
+            </span>
+          ) : (
+            <Link
+              key={entry}
+              href={pageHref(params, entry)}
+              className="rounded border border-brand-lea/20 px-2.5 py-1 text-xs font-semibold tabular-nums text-brand-lea transition hover:bg-brand-gold/10 dark:border-white/10 dark:text-slate-100"
+            >
+              {entry}
+            </Link>
+          )
+        )}
+      </div>
       {result.page < result.pageCount ? (
         <Link href={pageHref(params, result.page + 1)} className={linkClass}>
           Next →
@@ -83,9 +171,10 @@ export default async function ArchivePage({ searchParams }: ArchivePageProps) {
     applicationNumber: params.applicationNumber,
     from: params.from,
     to: params.to,
-    page: Number.isFinite(parsedPage) ? parsedPage : 1
+    page: Number.isFinite(parsedPage) ? parsedPage : 1,
+    pageSize: normalizeArchivePageSize(params.size)
   };
-  const hasFilters = Object.entries(filters).some(([key, v]) => key !== "page" && typeof v === "string" && v.trim().length > 0);
+  const hasFilters = Object.entries(filters).some(([key, v]) => key !== "page" && key !== "pageSize" && typeof v === "string" && v.trim().length > 0);
   const result = await searchHistorical(filters);
   const firstRow = (result.page - 1) * result.pageSize + 1;
   const lastRow = firstRow + result.rows.length - 1;
@@ -147,7 +236,8 @@ export default async function ArchivePage({ searchParams }: ArchivePageProps) {
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
             {hasFilters ? "Results" : "All historical candidates"}
           </p>
-          <span className="text-xs text-brand-grey dark:text-slate-400">
+          <span className="flex items-center gap-3 text-xs text-brand-grey dark:text-slate-400">
+            <PageSize current={result.pageSize} params={params} />
             {result.total} found
             {result.rows.length > 0 && result.total > result.rows.length ? ` · showing ${firstRow}–${lastRow}` : ""}
           </span>

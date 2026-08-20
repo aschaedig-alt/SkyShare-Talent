@@ -7,7 +7,8 @@ import { sanitizeFilename } from "@/lib/files/candidate-file-storage";
 import {
   createFeedbackStorageKey,
   isSupportedFeedbackImage,
-  MAX_FEEDBACK_IMAGE_BYTES
+  MAX_FEEDBACK_IMAGE_BYTES,
+  MAX_FEEDBACK_IMAGES
 } from "@/lib/files/feedback-file-storage";
 
 const VALID_TYPES = ["IDEA", "BUG", "QUESTION"];
@@ -52,7 +53,9 @@ export async function POST(request: Request) {
     const isMultipart = (request.headers.get("content-type") ?? "").includes("multipart/form-data");
 
     let submitted: SubmittedFeedback;
-    let image: File | null = null;
+    // Several screenshots per report: a two-part bug is one report, and splitting
+    // it across two submissions to attach a second picture loses the connection.
+    let images: File[] = [];
 
     if (isMultipart) {
       const form = await request.formData();
@@ -64,8 +67,9 @@ export async function POST(request: Request) {
         // In a form post the context arrives as a JSON string, not an object.
         context: typeof rawContext === "string" && rawContext ? safeParse(rawContext) : null
       });
-      const candidate = form.get("image");
-      image = isFileLike(candidate) && candidate.size > 0 ? candidate : null;
+      // getAll: the field name stays "image" so an older client posting a single
+      // file still works unchanged.
+      images = form.getAll("image").filter((c): c is File => isFileLike(c) && c.size > 0).slice(0, MAX_FEEDBACK_IMAGES);
     } else {
       submitted = normalize(await request.json());
     }
@@ -77,18 +81,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Feedback is too long." }, { status: 400 });
     }
 
-    // Validate the image BEFORE saving anything, so a bad file is a clean, fixable
-    // error rather than a half-saved report.
-    if (image) {
+    // Validate EVERY image before saving anything, so a bad file is a clean,
+    // fixable error rather than a half-saved report. All-or-nothing on purpose:
+    // silently dropping the third of three attachments is worse than refusing.
+    for (const image of images) {
       const filename = sanitizeFilename(image.name || "screenshot.png");
       if (!isSupportedFeedbackImage(filename, image.type || null)) {
         return NextResponse.json(
-          { message: "Attach a PNG, JPG, GIF or WEBP image." },
+          { message: "Attach PNG, JPG, GIF or WEBP images only." },
           { status: 400 }
         );
       }
       if (image.size > MAX_FEEDBACK_IMAGE_BYTES) {
-        return NextResponse.json({ message: "That image is larger than the 10 MB limit." }, { status: 400 });
+        return NextResponse.json({ message: `${filename} is larger than the 10 MB limit.` }, { status: 400 });
       }
     }
 
@@ -109,33 +114,44 @@ export async function POST(request: Request) {
     // storage failure costs the picture, never the words — losing what someone
     // took the trouble to write is the worse outcome by far.
     let imageWarning: string | null = null;
-    if (image) {
+    let stored = 0;
+    for (const [index, image] of images.entries()) {
       try {
         const storage = getFileStorageAdapter();
         if (shouldRequirePrivateFileStorage() && !isPrivateFileStorageReady(storage)) {
           throw new Error("Private file storage is not configured for this environment.");
         }
         const filename = sanitizeFilename(image.name || "screenshot.png");
-        const storageKey = createFeedbackStorageKey(feedback.id, filename);
+        // Index in the key so two files named screenshot.png cannot collide.
+        const storageKey = createFeedbackStorageKey(feedback.id, `${index}-${filename}`);
         await storage.write({
           storageKey,
           bytes: Buffer.from(await image.arrayBuffer()),
           contentType: image.type || null,
           metadata: { feedbackId: feedback.id, source: "feedback-image-upload", uploadedByEmail: auth.user.email ?? "" }
         });
-        await prisma.feedback.update({
-          where: { id: feedback.id },
+        await prisma.feedbackImage.create({
           data: {
-            imageKey: storageKey,
-            imageName: filename,
-            imageMime: image.type || null,
-            imageSizeBytes: image.size
+            feedbackId: feedback.id,
+            storageKey,
+            filename,
+            mimeType: image.type || null,
+            sizeBytes: image.size,
+            sortOrder: index
           }
         });
+        stored += 1;
       } catch (imageError) {
-        console.error("Feedback saved but the image could not be stored:", imageError);
-        imageWarning = "Your feedback was saved, but the image could not be attached.";
+        console.error("Feedback saved but an image could not be stored:", imageError);
       }
+    }
+    // Counted rather than assumed: partial success has to say so, or somebody
+    // believes all three pictures arrived when only two did.
+    if (images.length > 0 && stored < images.length) {
+      imageWarning =
+        stored === 0
+          ? "Your feedback was saved, but the images could not be attached."
+          : `Your feedback was saved, but only ${stored} of ${images.length} images could be attached.`;
     }
 
     return NextResponse.json({

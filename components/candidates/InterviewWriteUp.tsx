@@ -22,6 +22,9 @@ export type InterviewView = {
   id: string;
   title: string;
   startDateTime: string;
+  interviewType: string;
+  /** Anyone else who sat in. The primary interviewer stays interviewer/interviewerEmail. */
+  coInterviewers: Array<{ name: string; email: string }>;
   interviewer: string | null;
   interviewerEmail: string | null;
   status: string;
@@ -33,6 +36,58 @@ export type InterviewView = {
 };
 
 const label = "text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400";
+
+/**
+ * Who else was in the interview.
+ *
+ * A panel is common — more than one hiring manager sits in — and until now only
+ * one name could be recorded. Kept SEPARATE from the primary interviewer select
+ * rather than turning that into a multi-select, because interviewerEmail decides
+ * who is allowed to edit the write-up; one person still owns it.
+ */
+function CoInterviewers({
+  people,
+  primaryEmail,
+  selected,
+  onChange
+}: {
+  people: Array<{ name: string; email: string }>;
+  primaryEmail: string;
+  selected: Array<{ name: string; email: string }>;
+  onChange: (next: Array<{ name: string; email: string }>) => void;
+}) {
+  const chosen = new Set(selected.map((c) => c.email));
+  // The primary is excluded rather than shown ticked — listing them as "also
+  // present" alongside themselves reads as a duplicate.
+  const options = people.filter((x) => x.email !== primaryEmail);
+  function toggle(person: { name: string; email: string }) {
+    onChange(chosen.has(person.email) ? selected.filter((c) => c.email !== person.email) : [...selected, person]);
+  }
+  if (options.length === 0) return null;
+  return (
+    <div>
+      <span className={label}>Also interviewing</span>
+      <div className="mt-1 flex flex-wrap gap-1.5">
+        {options.map((person) => (
+          <button
+            key={person.email}
+            type="button"
+            onClick={() => toggle(person)}
+            aria-pressed={chosen.has(person.email)}
+            className={clsx(
+              "rounded border px-2.5 py-1 text-xs font-semibold transition",
+              chosen.has(person.email)
+                ? "border-brand-lea bg-brand-lea text-white"
+                : "border-brand-lea/20 text-brand-grey hover:bg-brand-gold/10 dark:border-white/10 dark:text-slate-300"
+            )}
+          >
+            {person.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 const field =
   "mt-1 block w-full rounded border border-brand-lea/20 px-3 py-1.5 text-sm text-brand-lea outline-none focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100";
 
@@ -70,6 +125,7 @@ export function InterviewWriteUp({
     interviewedAt: todayInputValue(),
     interviewerEmail: me?.email ?? people[0]?.email ?? "",
     interviewType: "RECRUITER_SCREEN",
+    coInterviewers: [] as Array<{ name: string; email: string }>,
     outcome: "",
     rating: 0,
     nextStep: "",
@@ -96,6 +152,7 @@ export function InterviewWriteUp({
           interviewerEmail: form.interviewerEmail,
           interviewerName: chosen?.name ?? "",
           interviewType: form.interviewType,
+          coInterviewers: form.coInterviewers,
           title: INTERVIEW_TYPES.find((t) => t.value === form.interviewType)?.label ?? "Interview",
           outcome: form.outcome || null,
           rating: form.rating || null,
@@ -107,7 +164,7 @@ export function InterviewWriteUp({
         setOpen(false);
         // Only cleared once the server has it — on any failure the typed notes
         // stay in the form so the same click can be retried.
-        setForm({ ...form, notesHtml: "", outcome: "", rating: 0, nextStep: "" });
+        setForm({ ...form, notesHtml: "", outcome: "", rating: 0, nextStep: "", coInterviewers: [] });
         router.refresh();
       } else {
         const payload = (await res.json().catch(() => null)) as { message?: string } | null;
@@ -198,6 +255,15 @@ export function InterviewWriteUp({
               className={field}
             />
           </label>
+
+          <div className="mt-3">
+            <CoInterviewers
+              people={people}
+              primaryEmail={form.interviewerEmail}
+              selected={form.coInterviewers}
+              onChange={(next) => setForm({ ...form, coInterviewers: next })}
+            />
+          </div>
 
           <div className="mt-3 flex flex-wrap items-end gap-4">
             <div>
@@ -297,6 +363,8 @@ function LoggedInterview({
   const [draft, setDraft] = useState(() => ({
     interviewedAt: todayInputValueFrom(interview.startDateTime),
     interviewerEmail: interview.interviewerEmail ?? people[0]?.email ?? "",
+    interviewType: interview.interviewType,
+    coInterviewers: interview.coInterviewers,
     outcome: interview.outcome ?? "",
     rating: interview.rating ?? 0,
     nextStep: interview.nextStep ?? "",
@@ -318,6 +386,9 @@ function LoggedInterview({
           interviewedAt: `${draft.interviewedAt}T12:00:00`,
           interviewerEmail: draft.interviewerEmail,
           interviewerName: chosen?.name ?? "",
+          interviewType: draft.interviewType,
+          title: INTERVIEW_TYPES.find((t) => t.value === draft.interviewType)?.label ?? "Interview",
+          coInterviewers: draft.coInterviewers,
           outcome: draft.outcome || null,
           rating: draft.rating || null,
           nextStep: draft.nextStep || null,
@@ -361,6 +432,12 @@ function LoggedInterview({
             <input type="date" value={draft.interviewedAt} onChange={(e) => setDraft({ ...draft, interviewedAt: e.target.value })} className={field} />
           </label>
           <label className="block">
+            <span className={label}>Type</span>
+            <select value={draft.interviewType} onChange={(e) => setDraft({ ...draft, interviewType: e.target.value })} className={field}>
+              {INTERVIEW_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </label>
+          <label className="block">
             <span className={label}>Interviewer</span>
             <select value={draft.interviewerEmail} onChange={(e) => setDraft({ ...draft, interviewerEmail: e.target.value })} className={field}>
               {people.map((p) => <option key={p.email} value={p.email}>{p.name}</option>)}
@@ -376,6 +453,14 @@ function LoggedInterview({
               ))}
             </div>
           </div>
+        </div>
+        <div className="mt-3">
+          <CoInterviewers
+            people={people}
+            primaryEmail={draft.interviewerEmail}
+            selected={draft.coInterviewers}
+            onChange={(next) => setDraft({ ...draft, coInterviewers: next })}
+          />
         </div>
         <label className="mt-3 block">
           <span className={label}>Next step</span>
@@ -423,6 +508,10 @@ function LoggedInterview({
         <span className="text-xs text-brand-grey dark:text-slate-400">
           {formatCalendarDayShort(interview.startDateTime)}
           {interview.interviewer ? ` · ${interview.interviewer}` : ""}
+          {/* A panel reads as one line: the owner, then everyone else who sat in. */}
+          {interview.coInterviewers.length > 0
+            ? ` + ${interview.coInterviewers.map((c) => c.name || c.email).join(", ")}`
+            : ""}
         </span>
         {interview.outcome && (
           <span className={clsx("rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide", interviewOutcomeTone(interview.outcome))}>

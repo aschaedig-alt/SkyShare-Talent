@@ -80,10 +80,10 @@ export const MX_GROUPS: MxGroup[] = [
     ]
   },
   {
-    name: "Aircraft Compliance",
+    name: "Quality Control",
     pool: "Admin",
-    sub: "Remote · Compliance",
+    sub: "Remote · QCM",
     mgr: "Jonathan Schaedig",
-    sections: [{ label: "Compliance Manager", line: ["Don St George"] }]
+    sections: [{ label: "Quality Control Manager", line: ["Don St George"] }]
   }
 ];

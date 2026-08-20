@@ -334,6 +334,22 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
   };
 }
 
+/**
+ * Copy a session's date onto the hire's own record.
+ *
+ * Every path that seats somebody on a session goes through this. moveAttendee
+ * already did it by hand; creating a session with attendees and adding one to an
+ * existing session both did NOT, so a hire could be sitting on the Aug 4 session
+ * with a blank Orientation date on their profile and on the new-hires grid.
+ * Reported Aug 19. Kept as one function so the next path added cannot forget it.
+ */
+export async function syncHireOrientationDates(newHireIds: string[], sessionId: string) {
+  if (newHireIds.length === 0) return;
+  const session = await prisma.orientationSession.findUnique({ where: { id: sessionId }, select: { date: true } });
+  if (!session) return;
+  await prisma.newHire.updateMany({ where: { id: { in: newHireIds } }, data: { orientationDate: session.date } });
+}
+
 /** Moves an attendee to another session: detaches from the old one (clearing its email
  * tracking), schedules them on the new one fresh, bumps the reschedule count, syncs the
  * hire's orientation date, and resets their "Attended orientation" task. */
@@ -366,7 +382,9 @@ export async function getUnscheduledHires(): Promise<UnscheduledHire[]> {
   const upcoming = await prisma.orientationSession.findMany({ where: { status: "UPCOMING" }, select: { attendees: { select: { newHireId: true } } } });
   const scheduled = new Set(upcoming.flatMap((s) => s.attendees.map((a) => a.newHireId)));
   const hires = await prisma.newHire.findMany({
-    where: { stage: "ACTIVE" },
+    // orientationNotNeeded is the explicit "this person does not attend one" —
+    // a current employee moving roles has already been through orientation.
+    where: { stage: "ACTIVE", orientationNotNeeded: false },
     select: {
       id: true,
       name: true,
@@ -378,7 +396,13 @@ export async function getUnscheduledHires(): Promise<UnscheduledHire[]> {
     orderBy: [{ orientationDate: "asc" }, { name: "asc" }]
   });
   return hires
-    .filter((h) => !scheduled.has(h.id) && (h.tasks[0]?.status ?? "TODO") !== "DONE")
+    // N/A counts as handled, not as outstanding. Marking the checklist item N/A
+    // is how somebody who does not need orientation was already being recorded,
+    // and treating it as TODO left them sitting here looking like an oversight.
+    .filter((h) => {
+      const status = h.tasks[0]?.status ?? "TODO";
+      return !scheduled.has(h.id) && status !== "DONE" && status !== "NA";
+    })
     .map((h) => ({ id: h.id, name: h.name, position: h.position, orientationDate: iso(h.orientationDate), rescheduleCount: h.orientationRescheduleCount }));
 }
 
@@ -410,6 +434,7 @@ export async function createOrientationSession(input: {
       data: input.attendeeHireIds.map((newHireId) => ({ sessionId: session.id, newHireId })),
       skipDuplicates: true
     });
+    await syncHireOrientationDates(input.attendeeHireIds, session.id);
   }
   return session;
 }
@@ -429,7 +454,10 @@ export type CohortData = { cohorts: Cohort[]; calendar: CalendarDay[] };
 export async function getOrientationCohorts(): Promise<CohortData> {
   const [hires, sessions] = await Promise.all([
     prisma.newHire.findMany({
-      where: { stage: "ACTIVE", orientationDate: { not: null } },
+      // Exempt hires are excluded here too, not just from the outstanding list.
+      // A current employee going to indoc instead should not appear in an
+      // orientation cohort either, or the same confusion returns one screen over.
+      where: { stage: "ACTIVE", orientationDate: { not: null }, orientationNotNeeded: false },
       select: { id: true, name: true, position: true, orientationDate: true },
       orderBy: [{ orientationDate: "asc" }, { name: "asc" }]
     }),
