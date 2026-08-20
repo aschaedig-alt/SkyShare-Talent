@@ -2,13 +2,29 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getJobPostById } from "@/lib/data/jobs";
+import { authFailureResponse, requireApiPermission } from "@/lib/auth/route-auth";
 import { jobBlockAttachSchema, jobBlockReorderSchema } from "@/lib/validation/blocks";
+
+// Both handlers here had NO authorization check of any kind: this file imported no auth
+// helper, so the only thing standing in front of two write endpoints was middleware
+// proving that SOME valid JWT existed. Any signed-in account could attach a content block
+// to any job post, or reorder the blocks on one.
+//
+// jobs:write is the permission its neighbours already use for exactly this work -
+// /api/jobs/[id] PATCH, /api/blocks and /api/blocks/[id] all require it - and it resolves
+// to ADMIN and RECRUITER. Using the same one keeps the publishing surface consistent
+// rather than inventing a second rule for the one file that was missing it.
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
 export async function POST(request: Request, context: RouteContext) {
+  const auth = await requireApiPermission("jobs:write");
+  if (!auth.ok) {
+    return authFailureResponse(auth);
+  }
+
   try {
     const { id } = await context.params;
     const payload = jobBlockAttachSchema.parse(await request.json());
@@ -87,6 +103,11 @@ export async function POST(request: Request, context: RouteContext) {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const auth = await requireApiPermission("jobs:write");
+  if (!auth.ok) {
+    return authFailureResponse(auth);
+  }
+
   try {
     const { id } = await context.params;
     const payload = jobBlockReorderSchema.parse(await request.json());

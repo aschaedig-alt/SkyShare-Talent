@@ -13,6 +13,10 @@ export type ActivityType =
   | "IMPORT_STARTED"
   | "IMPORT_COMPLETED"
   | "DUPLICATE_RESOLVED"
+  // A pool-wide duplicate SCAN, as distinct from resolving one pair. Expensive and
+  // it writes review items across the whole candidate pool, so who ran it is worth
+  // recording - see app/api/duplicate-review/candidates/scan/route.ts.
+  | "DUPLICATE_SCAN_RUN"
   | "OFFER_STATUS_CHANGED"
   | "INTERVIEW_SCHEDULED"
   | "INTERVIEW_UPDATED"
