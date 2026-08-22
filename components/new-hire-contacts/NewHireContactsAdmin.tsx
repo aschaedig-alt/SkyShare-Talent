@@ -61,6 +61,9 @@ export function NewHireContactsAdmin({
   // Two-step rather than a modal: rotating cuts off every link already sent, so
   // it should not be one stray click away.
   const [rotateArmed, setRotateArmed] = useState(false);
+  // Sticky until the page is left: rotating breaks the copy of this link that
+  // lives in the Front template, and that is a second job the person has to do.
+  const [justRotated, setJustRotated] = useState(false);
   const [rotating, setRotating] = useState(false);
   const newGroupCounter = useRef(0);
   const manualCounter = useRef(0);
@@ -222,6 +225,13 @@ export function NewHireContactsAdmin({
       const data = (await res.json()) as { shareUrl: string };
       setLiveShareUrl(data.shareUrl);
       setRotateArmed(false);
+      // The link is ALSO pasted into a Front template ("SkyShare New Hire -
+      // Contacts Link"), and rotating has just killed the copy sitting in it.
+      // Nothing else notices: the template keeps sending a dead link and the
+      // first sign is a new hire saying it did not work. So the reminder fires
+      // here, at the moment of rotation, rather than depending on whoever
+      // rotated remembering afterwards.
+      setJustRotated(true);
     } catch {
       /* leave the old link on screen — it is still the working one */
     } finally {
@@ -273,7 +283,8 @@ export function NewHireContactsAdmin({
           {rotateArmed ? (
             <>
               <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">
-                Rotating stops every link you’ve already sent from working. Sure?
+                Rotating stops every link you’ve already sent from working, including the one pasted into the
+                “SkyShare New Hire - Contacts Link” template in Front — you’ll need to update that too. Sure?
               </span>
               <Button variant="secondary" size="sm" onClick={rotateLink} disabled={rotating}>
                 {rotating ? "Rotating…" : "Yes, rotate it"}
@@ -289,6 +300,22 @@ export function NewHireContactsAdmin({
             </Button>
           )}
         </div>
+
+        {/* Stays on screen after rotating. The old link is dead everywhere it was
+            pasted, and the Front template is the copy nobody thinks of — it will
+            keep sending a link that 404s, silently, until somebody updates it. */}
+        {justRotated ? (
+          <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/15">
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+              One more step — update the Front template
+            </p>
+            <p className="mt-0.5 text-xs text-amber-900/80 dark:text-amber-200/80">
+              The new link is above. The old one is now dead everywhere it was sent, including inside the
+              “SkyShare New Hire - Contacts Link” template in Front. Copy the new link and paste it over the old
+              one there, or that template will keep sending a link that no longer works.
+            </p>
+          </div>
+        ) : null}
       </section>
 
       <div className="mt-6">
