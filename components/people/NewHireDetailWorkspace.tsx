@@ -13,6 +13,7 @@ import type { TravelTripView, TravelerLoyalty } from "@/lib/data/travel";
 import { EmployeeJourney } from "@/components/people/EmployeeJourney";
 import { BusinessCardPanel } from "@/components/people/BusinessCardPanel";
 import { SendOnboardingEmailButton } from "@/components/people/SendOnboardingEmailButton";
+import { SendContactsEmailButton } from "@/components/people/SendContactsEmailButton";
 import { SupervisorPicker } from "@/components/people/SupervisorPicker";
 import { StartNewOnboardingButton } from "@/components/people/StartNewOnboardingButton";
 import { OnboardingHistoryPanel } from "@/components/people/OnboardingHistoryPanel";
@@ -560,6 +561,15 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
                             taskStatus={t.status}
                             canEdit={canEdit}
                             onSent={() => setTasks((cur) => cur.map((x) => (x.key === "onboarding_journey" ? { ...x, status: "DONE" } : x)))}
+                          />
+                        )}
+                        {t.key === "contacts_link_sent" && (
+                          <SendContactsEmailButton
+                            hireId={hire.id}
+                            hireName={hire.name}
+                            taskStatus={t.status}
+                            canEdit={canEdit}
+                            onSent={() => setTasks((cur) => cur.map((x) => (x.key === "contacts_link_sent" ? { ...x, status: "DONE" } : x)))}
                           />
                         )}
                         <div className="flex shrink-0 overflow-hidden rounded border border-brand-lea/15 dark:border-white/10">

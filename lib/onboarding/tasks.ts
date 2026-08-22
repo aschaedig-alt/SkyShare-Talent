@@ -50,8 +50,9 @@ export const ONBOARDING_TASKS: OnboardingTaskDef[] = [
   // staff names, titles, phone numbers and email addresses, and a hire who has
   // been offered and welcomed may still never start — so it is not in the welcome
   // email and must not be added to one. See lib/new-hire-contacts/share-link.ts.
-  // Sent by hand from a Front template; the link is copied fresh from Settings →
-  // New hire contacts each time, because rotating it kills every link already out.
+  // Sent from the Send-contacts button on this row, which pulls the body from the
+  // Front template and injects the CURRENT share link — so a rotated token can no
+  // longer strand a copy pasted into the template.
   { key: "contacts_link_sent", label: "Send new hire contacts link (day of orientation)", group: "ORIENTATION" }
 ];
 

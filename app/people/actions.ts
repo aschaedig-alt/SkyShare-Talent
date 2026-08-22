@@ -6,7 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { isAuthRequired } from "@/lib/auth/auth-config";
 import { hasPermission, isRoleName } from "@/lib/auth/roles";
 import { getOrientationChannelId } from "@/lib/front/config";
-import { sendEmail } from "@/lib/front/messages";
+import { sendEmail, type SentMessage } from "@/lib/front/messages";
+import { guardDecision } from "@/lib/front/send-guard";
 import {
   buildOnboardingEmail,
   getSendRecord,
@@ -14,6 +15,13 @@ import {
   type OnboardingEmailPreview,
   type SendRecord,
 } from "@/lib/front/onboarding-email";
+import {
+  buildContactsEmail,
+  getContactsSendRecord,
+  recordContactsSend,
+  type ContactsEmailPreview,
+  type ContactsSendRecord,
+} from "@/lib/front/contacts-email";
 
 // Sending the "Start Your Onboarding Journey" email. This is deliberately a two-step
 // action — preview, then send — because the send is irreversible and lands in a real
@@ -131,4 +139,149 @@ export async function sendOnboardingEmail(hireId: string): Promise<SendResult> {
       error: err instanceof Error ? err.message : "Send failed.",
     };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Sending the contacts-link email. Same two-step preview-then-send shape as the
+// onboarding email above and for the same reason: it is irreversible and lands in a
+// real person's inbox. The difference worth knowing is WHEN — this one goes on the
+// day of orientation, deliberately not with the welcome email, because a hire who
+// has been offered and welcomed may still never start and the link hands over staff
+// mobile numbers.
+
+const CONTACTS_TASK_KEY = "contacts_link_sent";
+
+// Same shape as SendResult plus warnings: once the email has gone, a failure in the
+// bookkeeping is a caveat on a success, never a failure. Reporting it as a failure is
+// what invites a duplicate real send.
+export type ContactsSendResult = SendResult & { warnings?: string[] };
+
+export type ContactsPreviewResult = {
+  ok: boolean;
+  error?: string;
+  preview?: ContactsEmailPreview;
+  alreadySent?: ContactsSendRecord | null;
+};
+
+/** Build (but do not send) the contacts email, plus whether one already went out. */
+export async function previewContactsEmail(hireId: string): Promise<ContactsPreviewResult> {
+  if (!(await canEditPeople())) {
+    return { ok: false, error: "You don't have permission to send this email." };
+  }
+  const hire = await loadHire(hireId);
+  if (!hire) return { ok: false, error: "New hire not found." };
+
+  try {
+    const [preview, alreadySent] = await Promise.all([
+      buildContactsEmail(hire),
+      getContactsSendRecord(hireId),
+    ]);
+    return { ok: true, preview, alreadySent };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Could not build the email.",
+    };
+  }
+}
+
+/**
+ * Send it. Rebuilds from the same code path the preview used, so what was approved is
+ * what goes out — including re-reading the share token, so a rotation between preview
+ * and send cannot ship a dead link.
+ */
+export async function sendContactsEmail(hireId: string): Promise<ContactsSendResult> {
+  if (!(await canEditPeople())) {
+    return { ok: false, error: "You don't have permission to send this email." };
+  }
+  const hire = await loadHire(hireId);
+  if (!hire) return { ok: false, error: "New hire not found." };
+
+  // STEP 1 — everything that can still be retried safely. A throw here means
+  // nothing left the building.
+  let email: ContactsEmailPreview;
+  let channelId: string;
+  try {
+    email = await buildContactsEmail(hire);
+    channelId = await getOrientationChannelId();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Could not build the email." };
+  }
+
+  // Outside production every recipient is rewritten to FRONT_TEST_INBOX, and the
+  // send still succeeds — so without asking, this would record the hire's real
+  // address and tick the task for a message they never received.
+  const guard = guardDecision({ to: email.to, cc: email.cc, subject: email.subject });
+
+  // STEP 2 — the irreversible one, alone in its own try. Nothing else may share it:
+  // a failure in the bookkeeping below must never be reported as "Send failed",
+  // because that reads as "nothing went out" and invites a second REAL send.
+  let sent: SentMessage;
+  try {
+    sent = await sendEmail(channelId, {
+      to: email.to,
+      cc: email.cc,
+      subject: email.subject,
+      body: email.html,
+      archive: false,
+    });
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Send failed." };
+  }
+
+  // STEP 3 — bookkeeping. The email is already gone; from here every outcome is a
+  // success with a caveat, never a failure.
+  const sentAt = new Date().toISOString();
+  const warnings: string[] = [];
+
+  if (guard.mode !== "production") {
+    warnings.push(
+      `This is not the production environment, so the message was ${guard.mode === "redirected" ? "redirected to the test inbox" : `handled as "${guard.mode}"`} rather than delivered to ${email.to}.`
+    );
+  }
+
+  try {
+    await recordContactsSend(hireId, {
+      conversationId: sent.conversationId,
+      messageId: sent.id,
+      sentAt,
+      to: email.to,
+      sentBy: await actorLabel(),
+      mode: guard.mode,
+    });
+  } catch {
+    warnings.push("The email went out, but the send record could not be saved — a re-send will not warn you.");
+  }
+
+  try {
+    // Forward-only, same as the onboarding send: a send is evidence the step
+    // happened, and we never un-tick from here.
+    const ticked = await prisma.onboardingTask.updateMany({
+      where: { newHireId: hireId, key: CONTACTS_TASK_KEY, status: { not: "DONE" } },
+      data: { status: "DONE", completedAt: new Date() },
+    });
+    // count 0 means either already done, or NO SUCH TASK ROW — which is the state
+    // every hire predating the checklist item is in. Claiming "marked done" for a
+    // row that does not exist is how a no-op reads as success.
+    if (ticked.count === 0) {
+      const exists = await prisma.onboardingTask.count({
+        where: { newHireId: hireId, key: CONTACTS_TASK_KEY },
+      });
+      if (exists === 0) {
+        warnings.push(
+          "This hire has no contacts-link checklist item, so nothing was ticked. Their onboarding started before the item existed."
+        );
+      }
+    }
+  } catch {
+    warnings.push("The email went out, but the checklist item could not be ticked.");
+  }
+
+  return {
+    ok: true,
+    conversationId: sent.conversationId,
+    sentAt,
+    to: email.to,
+    warnings: warnings.length ? warnings : undefined,
+  };
 }
