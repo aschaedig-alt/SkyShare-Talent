@@ -45,7 +45,14 @@ export const ONBOARDING_TASKS: OnboardingTaskDef[] = [
   { key: "drug_screen", label: "Email docs to ITS for pre-employment drug screen", group: "SYSTEMS" },
 
   { key: "attended_orientation", label: "Attended orientation", group: "ORIENTATION" },
-  { key: "travel_complete", label: "Travel accommodations complete", group: "ORIENTATION" }
+  { key: "travel_complete", label: "Travel accommodations complete", group: "ORIENTATION" },
+  // DAY OF ORIENTATION, deliberately not earlier. The contacts link hands over
+  // staff names, titles, phone numbers and email addresses, and a hire who has
+  // been offered and welcomed may still never start — so it is not in the welcome
+  // email and must not be added to one. See lib/new-hire-contacts/share-link.ts.
+  // Sent by hand from a Front template; the link is copied fresh from Settings →
+  // New hire contacts each time, because rotating it kills every link already out.
+  { key: "contacts_link_sent", label: "Send new hire contacts link (day of orientation)", group: "ORIENTATION" }
 ];
 
 export const ONBOARDING_TASK_COUNT = ONBOARDING_TASKS.length;
@@ -75,7 +82,8 @@ export const MILESTONE_KEYS: Array<{ key: string; short: string }> = [
   { key: "groups_drive", short: "Added to groups & drive" },
   { key: "drug_screen", short: "Drug screen sent to ITS" },
   { key: "attended_orientation", short: "Attended orientation" },
-  { key: "travel_complete", short: "Travel arranged" }
+  { key: "travel_complete", short: "Travel arranged" },
+  { key: "contacts_link_sent", short: "Contacts link sent" }
 ];
 
 // Custom (user-added) milestones live in their own group so they do not disturb the
@@ -121,5 +129,8 @@ export const SHEET_LABEL_TO_KEY: Record<string, string> = {
   "email docs to its for pre-employment drug screen": "drug_screen",
   "attended orientation": "attended_orientation",
   "travel accomodations complete": "travel_complete",
-  "travel accommodations complete": "travel_complete"
+  "travel accommodations complete": "travel_complete",
+  "send new hire contacts link (day of orientation)": "contacts_link_sent",
+  "send new hire contacts link": "contacts_link_sent",
+  "contacts link": "contacts_link_sent"
 };
