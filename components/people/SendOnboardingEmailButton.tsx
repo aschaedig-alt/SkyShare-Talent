@@ -56,7 +56,9 @@ export function SendOnboardingEmailButton({
   }
 
   function close() {
-    if (sending) return;
+    // Deliberately NOT blocked while sending — see Modal.tsx: busy marks the dialog
+    // aria-busy but must never make it uncloseable, or a hung send traps the user.
+    // The double submit is guarded on the button.
     setOpen(false);
     // Delay the reset so the panel doesn't visibly empty during the close transition.
     setTimeout(() => {
