@@ -19,9 +19,12 @@ type ViewGroup = { id: string; label: string; contacts: ViewContact[] };
 // Trigger the phone's native contact importer by pointing the browser at the
 // vCard endpoint. The OS intercepts the text/vcard response (iOS shows an
 // "Add Contact(s)" sheet; Android hands off to Contacts / downloads the .vcf).
-function addContacts(keys: string[], name: string) {
+//
+// The share token from the page URL is forwarded: the vCard endpoint checks it
+// independently of the page, so an "Add" that dropped it would 404.
+function addContacts(keys: string[], name: string, token: string) {
   if (keys.length === 0) return;
-  const params = new URLSearchParams({ keys: keys.join(","), name });
+  const params = new URLSearchParams({ keys: keys.join(","), name, t: token });
   window.location.assign(`/api/contacts/vcard?${params.toString()}`);
 }
 
@@ -30,7 +33,15 @@ function initials(name: string): string {
   return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "")).toUpperCase();
 }
 
-export function NewHireContactsView({ intro, groups }: { intro: string; groups: ResolvedGroup[] }) {
+export function NewHireContactsView({
+  intro,
+  groups,
+  token
+}: {
+  intro: string;
+  groups: ResolvedGroup[];
+  token: string;
+}) {
   const viewGroups = groups as ViewGroup[];
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -66,7 +77,7 @@ export function NewHireContactsView({ intro, groups }: { intro: string; groups: 
 
       <button
         type="button"
-        onClick={() => addContacts(allKeys, "skyshare-all-contacts")}
+        onClick={() => addContacts(allKeys, "skyshare-all-contacts", token)}
         className="mt-6 flex w-full items-center justify-center gap-2 rounded bg-brand-lea px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-eden"
       >
         <UserPlus className="h-4 w-4" />
@@ -88,7 +99,7 @@ export function NewHireContactsView({ intro, groups }: { intro: string; groups: 
                 </h2>
                 <button
                   type="button"
-                  onClick={() => addContacts(groupKeys, `skyshare-${group.id}`)}
+                  onClick={() => addContacts(groupKeys, `skyshare-${group.id}`, token)}
                   className="rounded border border-brand-lea/20 px-2.5 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100"
                 >
                   Add all {group.label}
@@ -159,7 +170,7 @@ export function NewHireContactsView({ intro, groups }: { intro: string; groups: 
 
                       <button
                         type="button"
-                        onClick={() => addContacts([contact.key], `skyshare-${contact.fullName}`)}
+                        onClick={() => addContacts([contact.key], `skyshare-${contact.fullName}`, token)}
                         className="flex flex-none items-center gap-1 rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-sweet dark:text-slate-100"
                       >
                         <Plus className="h-3.5 w-3.5" />
@@ -186,7 +197,7 @@ export function NewHireContactsView({ intro, groups }: { intro: string; groups: 
             </button>
             <button
               type="button"
-              onClick={() => addContacts(Array.from(selected), "skyshare-selected-contacts")}
+              onClick={() => addContacts(Array.from(selected), "skyshare-selected-contacts", token)}
               className="flex items-center gap-2 rounded bg-brand-lea px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-eden"
             >
               <UserPlus className="h-4 w-4" />

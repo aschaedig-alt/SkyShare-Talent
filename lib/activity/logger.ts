@@ -30,7 +30,11 @@ export type ActivityType =
   // machine sent it — and because local dev and production share one database,
   // a redirect that happened on a laptop shows up on the live Activity page.
   | "EMAIL_REDIRECTED_TO_TEST"
-  | "EMAIL_SEND_BLOCKED";
+  | "EMAIL_SEND_BLOCKED"
+  // Rotating the public new-hire contacts share link. Recorded because it
+  // silently breaks a link somebody is already holding — when a new hire reports
+  // a dead contacts link, "who rotated it and when" is the question asked.
+  | "SHARE_LINK_ROTATED";
 
 export interface ActivityLogPayload {
   userId?: string;

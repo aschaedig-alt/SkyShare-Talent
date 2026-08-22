@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Building2, Check, ChevronDown, ChevronUp, Copy, ExternalLink, Eye, EyeOff, Plus, Trash2, UserPlus } from "lucide-react";
+import { Building2, Check, ChevronDown, ChevronUp, Copy, ExternalLink, Eye, EyeOff, Plus, RefreshCw, Trash2, UserPlus } from "lucide-react";
 import { clsx } from "clsx";
 import { Badge, Button, Input, Textarea } from "@/components/ui";
 import { ContactPicker } from "@/components/new-hire-contacts/ContactPicker";
@@ -55,6 +55,13 @@ export function NewHireContactsAdmin({
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // The link carries the share token, so rotating replaces it in place rather
+  // than needing a page reload to show the new one.
+  const [liveShareUrl, setLiveShareUrl] = useState(shareUrl);
+  // Two-step rather than a modal: rotating cuts off every link already sent, so
+  // it should not be one stray click away.
+  const [rotateArmed, setRotateArmed] = useState(false);
+  const [rotating, setRotating] = useState(false);
   const newGroupCounter = useRef(0);
   const manualCounter = useRef(0);
 
@@ -199,11 +206,26 @@ export function NewHireContactsAdmin({
 
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(liveShareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       /* clipboard blocked — no-op */
+    }
+  };
+
+  const rotateLink = async () => {
+    setRotating(true);
+    try {
+      const res = await fetch("/api/workspace-settings/new-hire-contacts/share-token", { method: "POST" });
+      if (!res.ok) throw new Error("rotate failed");
+      const data = (await res.json()) as { shareUrl: string };
+      setLiveShareUrl(data.shareUrl);
+      setRotateArmed(false);
+    } catch {
+      /* leave the old link on screen — it is still the working one */
+    } finally {
+      setRotating(false);
     }
   };
 
@@ -221,20 +243,51 @@ export function NewHireContactsAdmin({
         </p>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <code className="rounded bg-brand-cloudDancer px-3 py-2 text-xs text-brand-lea dark:bg-white/5 dark:text-slate-200">
-            {shareUrl}
+          <code className="max-w-full break-all rounded bg-brand-cloudDancer px-3 py-2 text-xs text-brand-lea dark:bg-white/5 dark:text-slate-200">
+            {liveShareUrl}
           </code>
           <Button variant="secondary" size="sm" onClick={copyLink}>
             {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             {copied ? "Copied" : "Copy link"}
           </Button>
-          <a href="/welcome" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-200">
+          <a
+            href={liveShareUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-200"
+          >
             <ExternalLink className="h-3.5 w-3.5" />
             Preview
           </a>
           <Badge tone={shownCount ? "brand" : "warning"} className="ml-auto">
             {shownCount} of {totalCount} shown to new hires
           </Badge>
+        </div>
+
+        <p className="mt-3 text-xs leading-relaxed text-brand-grey dark:text-slate-400">
+          This link is unguessable and works for anyone you send it to — no login needed. Treat it like a key: anyone
+          who receives or forwards it can open your contact list. Rotate it if it ends up somewhere it shouldn’t.
+        </p>
+
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {rotateArmed ? (
+            <>
+              <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">
+                Rotating stops every link you’ve already sent from working. Sure?
+              </span>
+              <Button variant="secondary" size="sm" onClick={rotateLink} disabled={rotating}>
+                {rotating ? "Rotating…" : "Yes, rotate it"}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setRotateArmed(false)} disabled={rotating}>
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setRotateArmed(true)}>
+              <RefreshCw className="h-3.5 w-3.5" />
+              Rotate link
+            </Button>
+          )}
         </div>
       </section>
 
