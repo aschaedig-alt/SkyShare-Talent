@@ -61,8 +61,10 @@ export function NewHireContactsAdmin({
   // Two-step rather than a modal: rotating cuts off every link already sent, so
   // it should not be one stray click away.
   const [rotateArmed, setRotateArmed] = useState(false);
-  // Sticky until the page is left: rotating breaks the copy of this link that
-  // lives in the Front template, and that is a second job the person has to do.
+  // Sticky until the page is left. Rotating no longer breaks the app's own sends —
+  // the Send-contacts button injects the current link every time — but it does
+  // break links already delivered, and the copy pasted inside the Front template
+  // for anyone who sends it straight from Front.
   const [justRotated, setJustRotated] = useState(false);
   const [rotating, setRotating] = useState(false);
   const newGroupCounter = useRef(0);
@@ -225,12 +227,12 @@ export function NewHireContactsAdmin({
       const data = (await res.json()) as { shareUrl: string };
       setLiveShareUrl(data.shareUrl);
       setRotateArmed(false);
-      // The link is ALSO pasted into a Front template ("SkyShare New Hire -
-      // Contacts Link"), and rotating has just killed the copy sitting in it.
-      // Nothing else notices: the template keeps sending a dead link and the
-      // first sign is a new hire saying it did not work. So the reminder fires
-      // here, at the moment of rotation, rather than depending on whoever
-      // rotated remembering afterwards.
+      // Sending from the new-hire checklist is safe — that path fetches the
+      // template from Front and replaces its link with the live one, so it cannot
+      // ship a dead token. What rotating DOES break is every link already
+      // delivered, plus the copy pasted in the template for anyone who composes
+      // from Front by hand. Both are worth saying at the moment of rotation
+      // rather than depending on somebody remembering afterwards.
       setJustRotated(true);
     } catch {
       /* leave the old link on screen — it is still the working one */
@@ -283,8 +285,8 @@ export function NewHireContactsAdmin({
           {rotateArmed ? (
             <>
               <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">
-                Rotating stops every link you’ve already sent from working, including the one pasted into the
-                “SkyShare New Hire - Contacts Link” template in Front — you’ll need to update that too. Sure?
+                Rotating stops every link you’ve already sent from working. Future sends from a new hire’s
+                checklist are fine — they pick up the new link automatically. Sure?
               </span>
               <Button variant="secondary" size="sm" onClick={rotateLink} disabled={rotating}>
                 {rotating ? "Rotating…" : "Yes, rotate it"}
@@ -301,18 +303,20 @@ export function NewHireContactsAdmin({
           )}
         </div>
 
-        {/* Stays on screen after rotating. The old link is dead everywhere it was
-            pasted, and the Front template is the copy nobody thinks of — it will
-            keep sending a link that 404s, silently, until somebody updates it. */}
+        {/* Stays on screen after rotating. Sending from a hire's checklist is now
+            safe on its own, so this no longer demands a chore — but the people
+            already holding the old link are affected, and that is the part nobody
+            thinks of at the moment they click rotate. */}
         {justRotated ? (
           <div className="mt-3 rounded border border-amber-300 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/15">
             <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-              One more step — update the Front template
+              Rotated — anyone holding the old link has lost it
             </p>
             <p className="mt-0.5 text-xs text-amber-900/80 dark:text-amber-200/80">
-              The new link is above. The old one is now dead everywhere it was sent, including inside the
-              “SkyShare New Hire - Contacts Link” template in Front. Copy the new link and paste it over the old
-              one there, or that template will keep sending a link that no longer works.
+              The new link is above. Sends from a new hire’s checklist pick it up automatically, so there is
+              nothing to update there. Two things to know: new hires who were already sent the old link will
+              need it again, and if anyone composes the “SkyShare New Hire - Contacts Link” template straight
+              from Front rather than from the checklist, the copy pasted in it is now dead.
             </p>
           </div>
         ) : null}
