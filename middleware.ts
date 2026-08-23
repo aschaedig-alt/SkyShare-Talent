@@ -13,6 +13,15 @@ const protectedPagePrefixes = [
   "/duplicate-review",
   "/employees",
   "/events",
+  // /handbook covers the pages AND app/handbook/[slug]/raw, the route handler the
+  // SOP iframe loads. That route shipped with no guard of its own and this list
+  // did not name /handbook, so every internal SOP was readable by anyone with the
+  // URL — confirmed against production, unauthenticated, Aug 22. The pages were
+  // never the leak: they call requireModulePageAccess, and although they answer
+  // 200 they carry no content, because a redirect thrown inside a rendered page
+  // cannot change a status code once the layout has begun streaming. Only route
+  // handlers leak, precisely because they do not stream.
+  "/handbook",
   "/imports",
   "/interview-questions",
   "/interviews",
