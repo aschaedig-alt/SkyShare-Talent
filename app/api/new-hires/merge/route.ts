@@ -38,6 +38,13 @@ export async function POST(request: Request) {
       await tx.travelTrip.updateMany({ where: { newHireId: secondaryId }, data: { newHireId: primaryId } });
       await tx.redemption.updateMany({ where: { newHireId: secondaryId }, data: { newHireId: primaryId } });
       await tx.businessCardVariant.updateMany({ where: { newHireId: secondaryId }, data: { newHireId: primaryId } });
+      // Card ORDER lines, beside the variant above. Easy to miss and silent when
+      // missed: this relation is onDelete SetNull rather than Cascade, so leaving
+      // it out of this list does not fail the merge and does not delete the rows -
+      // it detaches them, leaving the order holding only the typed personName. The
+      // damage would surface much later as an undercounted reorder history, which
+      // is the one question these tables exist to answer.
+      await tx.businessCardOrderLine.updateMany({ where: { newHireId: secondaryId }, data: { newHireId: primaryId } });
       await tx.recognition.updateMany({ where: { giverId: secondaryId }, data: { giverId: primaryId } });
       await tx.recognition.updateMany({ where: { recipientId: secondaryId }, data: { recipientId: primaryId } });
 
