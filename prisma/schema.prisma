@@ -382,6 +382,7 @@ model NewHire {
   recognitionsReceived Recognition[] @relation("recipient")
   redemptions          Redemption[]
   businessCardVariants BusinessCardVariant[]
+  cardOrderLines       BusinessCardOrderLine[]
   eventAttendances     EventAttendee[]
   eventsOwned          Event[]
 
@@ -414,6 +415,62 @@ model BusinessCardVariant {
 
   newHire NewHire @relation(fields: [newHireId], references: [id], onDelete: Cascade)
 
+  @@index([newHireId])
+}
+
+// A business-card ORDER: one batch sent to the printer, with a line per person on
+// it. This is a batch and not a per-person flag because that is what the orders
+// workbook has always been — 71 lines across 66 people in 8 batches of 3 to 19,
+// every line in a batch sharing one received date. NewHire.businessCardStatus
+// stays exactly as it is (NEEDED/ORDERED/RECEIVED/NOT_NEEDED); it answers "does
+// this person have cards", which one field can do. It cannot answer "how often
+// have we reordered for them", which is what these two tables are for.
+model BusinessCardOrder {
+  id String @id @default(cuid())
+
+  // Null for the seven legacy sheet lines that never carried a date. The raw cell
+  // is kept alongside so an undated row stays visibly undated rather than being
+  // quietly assigned a day nobody chose.
+  orderedOn    DateTime?
+  orderedLabel String?
+
+  // Received belongs to the ORDER, not the line: in the sheet every person in a
+  // batch carries the same received date, because the box arrives once.
+  receivedOn    DateTime?
+  // Kept for values that are not a date, e.g. one batch recorded only as "2026".
+  receivedLabel String?
+
+  // "Normal Inexpensive" vs "Executive Expensive" on the order sheets. Not present
+  // on the DataStatus tab, so it imports null and is filled in going forward.
+  cardTier String?
+
+  /** SHEET_IMPORT for anything that came out of the workbook; APP for later orders. */
+  source String  @default("APP")
+  note   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines BusinessCardOrderLine[]
+
+  @@index([orderedOn])
+}
+
+// One person on one order. newHireId is nullable on purpose: the sheet has a line
+// for "South Valley Regional", which is an FBO rather than an employee, and a
+// legacy row should not be dropped just because it does not resolve to a person.
+model BusinessCardOrderLine {
+  id      String @id @default(cuid())
+  orderId String
+
+  newHireId String?
+  /** The name exactly as the order was placed under, so an unmatched line is still readable. */
+  personName String
+
+  order   BusinessCardOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  newHire NewHire?          @relation(fields: [newHireId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
   @@index([newHireId])
 }
 
