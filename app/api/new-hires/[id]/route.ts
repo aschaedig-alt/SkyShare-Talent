@@ -41,7 +41,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     // candidateId links this hire back to its Candidate record (set when moving a
     // candidate into pre-onboarding, or linking to an already-typed hire).
-    for (const field of ["name", "legalName", "position", "department", "location", "managedAircraft", "phone", "ssEmail", "personalEmail", "supervisorName", "supervisorEmail", "supervisorHireId", "supervisor2Name", "supervisor2Email", "supervisor2HireId", "birthCountry", "citizenshipCountry", "travelStatus", "notes", "candidateId"]) {
+    for (const field of ["name", "legalName", "position", "department", "location", "managedAircraft", "phone", "ssEmail", "personalEmail", "supervisorName", "supervisorEmail", "supervisorHireId", "supervisor2Name", "supervisor2Email", "supervisor2HireId", "birthCountry", "citizenshipCountry", "travelStatus", "trainingLocation", "notes", "candidateId"]) {
       const v = strOrNull(body[field]);
       if (v !== undefined) data[field] = v;
     }
@@ -78,7 +78,22 @@ export async function PATCH(request: Request, context: RouteContext) {
       data.tags = normalizeTags(body.tags);
     }
 
-    for (const field of ["offerSentDate", "offerSignedDate", "startDate", "orientationDate", "aircraftServiceDate", "seniorityDate"]) {
+    // birthday was on the model but never in this list, so the column existed and
+    // nothing could write to it. indoc*/training* are the onboarding page's
+    // Dates & training row: indoc overrides the travel booking when set, training
+    // has no other source at all.
+    for (const field of [
+      "offerSentDate",
+      "offerSignedDate",
+      "startDate",
+      "orientationDate",
+      "aircraftServiceDate",
+      "seniorityDate",
+      "birthday",
+      "indocStartDate",
+      "indocEndDate",
+      "trainingDate"
+    ]) {
       const d = parseDate(body[field]);
       if (d !== undefined) data[field] = d;
     }

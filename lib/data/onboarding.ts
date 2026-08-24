@@ -62,6 +62,12 @@ export type NewHireRow = {
   seniorityDate: string | null;
   seniorityNumber: number | null;
   orientationNotNeeded: boolean;
+  birthday: string | null;
+  /** Indoc OVERRIDE. Empty means the page shows the travel booking instead. */
+  indocStartDate: string | null;
+  indocEndDate: string | null;
+  trainingDate: string | null;
+  trainingLocation: string | null;
   birthCountry: string | null;
   citizenshipCountry: string | null;
   terminationDate: string | null;
@@ -183,6 +189,11 @@ type HireWithTasks = {
   seniorityDate: Date | null;
   seniorityNumber: number | null;
   orientationNotNeeded: boolean;
+  birthday: Date | null;
+  indocStartDate: Date | null;
+  indocEndDate: Date | null;
+  trainingDate: Date | null;
+  trainingLocation: string | null;
   birthCountry: string | null;
   citizenshipCountry: string | null;
   terminationDate: Date | null;
@@ -256,6 +267,11 @@ function toRow(hire: HireWithTasks, now: number): NewHireRow {
     seniorityDate: iso(hire.seniorityDate),
     seniorityNumber: hire.seniorityNumber,
     orientationNotNeeded: hire.orientationNotNeeded,
+    birthday: iso(hire.birthday),
+    indocStartDate: iso(hire.indocStartDate),
+    indocEndDate: iso(hire.indocEndDate),
+    trainingDate: iso(hire.trainingDate),
+    trainingLocation: hire.trainingLocation,
     birthCountry: hire.birthCountry,
     citizenshipCountry: hire.citizenshipCountry,
     terminationDate: iso(hire.terminationDate),
@@ -644,6 +660,11 @@ const hireSelect = {
   seniorityDate: true,
   seniorityNumber: true,
   orientationNotNeeded: true,
+  birthday: true,
+  indocStartDate: true,
+  indocEndDate: true,
+  trainingDate: true,
+  trainingLocation: true,
   birthCountry: true,
   citizenshipCountry: true,
   terminationDate: true,

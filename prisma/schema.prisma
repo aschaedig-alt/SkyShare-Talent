@@ -300,6 +300,21 @@ model NewHire {
   // distinction an exempt person sits on the orientation page forever looking
   // like an oversight.
   orientationNotNeeded Boolean @default(false)
+  // Initial indoc and initial training, as shown on the onboarding page.
+  //
+  // Indoc is normally authored on the TRAVEL record (TravelTrip.indocStart /
+  // indocEnd) because that is where the trip is booked from, and the page reads
+  // it from there. These two columns are the OVERRIDE for a hire whose indoc is
+  // not attached to a trip, or whose real dates differ from the booking: when
+  // either is set it wins, and the field is labelled "typed in" rather than
+  // "from travel" so the two are never confused for each other.
+  indocStartDate  DateTime?
+  indocEndDate    DateTime?
+  // Initial training has no travel equivalent and no other source — there is
+  // exactly one TRAINING-purpose trip in the whole database and it carries no
+  // dates — so these are plain manual fields.
+  trainingDate    DateTime?
+  trainingLocation String?
   // Last day with SkyShare — set for former employees (employmentStatus TERMINATED).
   terminationDate DateTime?
   // Date of birth — dates only, used for recognition/"congrats" (no other PII stored).

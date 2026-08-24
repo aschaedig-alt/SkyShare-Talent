@@ -1,8 +1,26 @@
 "use client";
 
+// ---------------------------------------------------------------------------
+// THE PREVIOUS /people/<id> LAYOUT, kept verbatim.
+//
+// The page was rebuilt on 2026-08-24 (journey on top, three detail accordions,
+// stage-tabbed checklist). This is the layout it replaced, preserved so Hannah
+// can look at the old arrangement and say whether anything on it is worth
+// bringing back before it goes for good.
+//
+// It is a FULL WORKING COPY, not a screenshot: it reads and writes the same
+// records through the same API routes, so anything saved here is saved for
+// real. It is reachable only at /people/<id>/classic and nothing links to it
+// except one small link at the bottom of the live page.
+//
+// TEMPORARY. When the new layout is settled, delete this file, delete
+// app/people/[id]/classic/, and drop the link at the bottom of
+// NewHireDetailWorkspace.tsx. Nothing else depends on it.
+// ---------------------------------------------------------------------------
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { clsx } from "clsx";
 import { FileText } from "lucide-react";
 import { ONBOARDING_GROUPS, groupLabel } from "@/lib/onboarding/tasks";
@@ -11,8 +29,6 @@ import type { NewHireDetail, TaskView } from "@/lib/data/onboarding";
 import { TravelPanel } from "@/components/travel/TravelPanel";
 import type { TravelTripView, TravelerLoyalty } from "@/lib/data/travel";
 import { EmployeeJourney } from "@/components/people/EmployeeJourney";
-import { HireDetailsAccordion, type DetailSection } from "@/components/people/HireDetailsAccordion";
-import { OnboardingStageChecklist } from "@/components/people/OnboardingStageChecklist";
 import { BusinessCardPanel } from "@/components/people/BusinessCardPanel";
 import { SendOnboardingEmailButton } from "@/components/people/SendOnboardingEmailButton";
 import { SendContactsEmailButton } from "@/components/people/SendContactsEmailButton";
@@ -47,7 +63,13 @@ function toDateInput(iso: string | null) {
   return iso ? iso.slice(0, 10) : "";
 }
 
-export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journey, onboardingArchives, roleTitleOptions, canEdit }: Props) {
+const STATUS_BTN: Record<TaskView["status"], { label: string; on: string }> = {
+  DONE: { label: "Done", on: "bg-emerald-500 text-white" },
+  TODO: { label: "To do", on: "bg-brand-lea text-white" },
+  NA: { label: "N/A", on: "bg-brand-grey text-white" }
+};
+
+export function NewHireDetailWorkspaceClassic({ hire, travelTrips, travelLoyalty, journey, onboardingArchives, roleTitleOptions, canEdit }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskView[]>(hire.tasks);
   const [details, setDetails] = useState({
@@ -76,16 +98,6 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     orientationDate: toDateInput(hire.orientationDate),
     aircraftServiceDate: toDateInput(hire.aircraftServiceDate),
     seniorityDate: toDateInput(hire.seniorityDate),
-    birthday: toDateInput(hire.birthday),
-    // Indoc is normally read off the travel booking. These two are the override,
-    // and they stay EMPTY while the booking is the answer — so the box holds what
-    // somebody typed and the note underneath holds what travel says. Prefilling
-    // the box from travel would copy the booking into the hire on the next Save
-    // and quietly stop tracking it.
-    indocStartDate: toDateInput(hire.indocStartDate),
-    indocEndDate: toDateInput(hire.indocEndDate),
-    trainingDate: toDateInput(hire.trainingDate),
-    trainingLocation: hire.trainingLocation ?? "",
     // Kept as a STRING in form state like every other field here; the API turns
     // an empty string back into null so a cleared box means "not recorded".
     seniorityNumber: hire.seniorityNumber === null || hire.seniorityNumber === undefined ? "" : String(hire.seniorityNumber),
@@ -142,14 +154,10 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
   const doneCount = applicable.filter((t) => t.status === "DONE").length;
   const pct = applicable.length > 0 ? Math.round((doneCount / applicable.length) * 100) : 0;
 
-  // The four stages, plus "Additional milestones" only when there are any — a tab
-  // that is always empty is worse than no tab.
-  const checklistGroups = useMemo(() => {
-    const byGroup = (key: string) => tasks.filter((t) => t.group === key).sort((a, b) => a.order - b.order);
-    const base = ONBOARDING_GROUPS.map((g) => ({ key: g.key, label: groupLabel(g.key), items: byGroup(g.key) }));
-    const custom = byGroup("CUSTOM");
-    return custom.length ? [...base, { key: "CUSTOM", label: "Additional milestones", items: custom }] : base;
-  }, [tasks]);
+  const grouped = useMemo(
+    () => ONBOARDING_GROUPS.map((g) => ({ group: g, items: tasks.filter((t) => t.group === g.key).sort((a, b) => a.order - b.order) })),
+    [tasks]
+  );
 
   async function setTaskStatus(taskId: string, next: TaskView["status"]) {
     const prev = tasks;
@@ -235,7 +243,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     }
   }
 
-  function field(label: string, key: keyof typeof details, type: "text" | "date" | "number" = "text", note?: ReactNode) {
+  function field(label: string, key: keyof typeof details, type: "text" | "date" | "number" = "text") {
     return (
       <label className="block">
         <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">{label}</span>
@@ -244,258 +252,25 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
           {...(type === "number" ? { min: 1, step: 1, inputMode: "numeric" as const } : {})}
           value={details[key]}
           onChange={(e) => setDetails({ ...details, [key]: e.target.value })}
-          className="mt-1 w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold focus:shadow-glow dark:border-white/10 dark:bg-brand-field dark:text-slate-100"
+          className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
         />
-        {note}
       </label>
     );
   }
-
-  // A value read off something else. Says which of the two you are looking at,
-  // and shows the other one when they disagree — the only way a stale override
-  // is visible at all.
-  function sourceNote(typed: string, fromTravel: string | null) {
-    const base = "mt-1 block text-[10px] font-semibold uppercase tracking-[0.08em]";
-    if (typed) {
-      return (
-        <span className={clsx(base, "text-brand-eden dark:text-brand-edenOnDark")}>
-          Typed in{fromTravel ? ` · travel says ${fmtDay(fromTravel)}` : ""}
-        </span>
-      );
-    }
-    if (fromTravel) return <span className={clsx(base, "text-[#9a5b12] dark:text-brand-gold")}>From travel · {fmtDay(fromTravel)}</span>;
-    return <span className={clsx(base, "text-brand-grey/70 dark:text-slate-500")}>From travel, or type it</span>;
-  }
-
-  // A read-only value that another panel on this page owns.
-  function readOnlyField(label: string, value: string | null, ownedBy: string) {
-    return (
-      <div className="block">
-        <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">{label}</span>
-        <p className="mt-1 w-full rounded border border-dashed border-brand-lea/15 bg-white/60 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-field/60 dark:text-slate-100">
-          {value && value.trim() ? value : <span className="text-brand-grey/60 dark:text-slate-500">—</span>}
-        </p>
-        <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-brand-grey/70 dark:text-slate-500">
-          Set in {ownedBy}
-        </span>
-      </div>
-    );
-  }
-
-  // Indoc as the TRAVEL record has it. The trip is where it is authored, so it is
-  // the default answer; the hire's own indoc columns only exist to disagree with it.
-  const travelIndoc = useMemo(() => {
-    const trip = travelTrips.find((t) => t.indocStart) ?? null;
-    return trip ? { start: trip.indocStart, end: trip.indocEnd } : null;
-  }, [travelTrips]);
-
-  const isPilotish = /\b(captain|first officer|\bfo\b|\bpic\b|\bsic\b|pilot)\b/i.test(details.position) || managedPilot;
-
-  const legalNameControl = (
-    <div className="space-y-2">
-      <label className="flex items-center gap-1.5 text-xs text-brand-grey dark:text-slate-400">
-        <input
-          type="checkbox"
-          checked={hasLegalName}
-          onChange={(e) => {
-            setHasLegalName(e.target.checked);
-            if (!e.target.checked) setDetails((d) => ({ ...d, legalName: "" }));
-          }}
-        />
-        Goes by a different name (add legal name)
-      </label>
-      {hasLegalName ? field("Legal name", "legalName") : null}
-    </div>
-  );
-
-  const orientationExemption = (
-    <label className="flex items-start gap-2 rounded border border-brand-lea/10 bg-white/70 px-3 py-2 dark:border-white/10 dark:bg-white/5">
-      <input
-        type="checkbox"
-        checked={orientationNotNeeded}
-        onChange={(e) => setOrientationNotNeeded(e.target.checked)}
-        className="mt-0.5 h-4 w-4"
-      />
-      <span className="text-xs text-brand-grey dark:text-slate-400">
-        <span className="font-semibold text-brand-lea dark:text-slate-100">No orientation needed</span>
-        <br />
-        Already attended a new-hire orientation — keeps them off the orientation page&apos;s outstanding list.
-      </span>
-    </label>
-  );
-
-  const managedPilotControl = isPilotish ? (
-    <label className="flex items-start gap-2 text-xs text-brand-grey dark:text-slate-400">
-      <input type="checkbox" className="mt-0.5" checked={managedPilot} onChange={(e) => saveManagedPilot(e.target.checked)} />
-      <span>
-        Dedicated <strong>managed-aircraft</strong> pilot — excluded from SkyShare / fractional promotion tracking by default
-      </span>
-    </label>
-  ) : null;
-
-  const tagsControl = (
-    <div>
-      <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Tags</span>
-      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-        {EMPLOYEE_TAGS.map((t) => {
-          const on = tags.includes(t);
-          return (
-            <button
-              key={t}
-              type="button"
-              onClick={() => toggleTag(t)}
-              aria-pressed={on}
-              className={clsx(
-                "rounded border px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow",
-                on ? clsx(tagStyle(t), "border-transparent") : "border-brand-lea/20 bg-white text-brand-grey hover:text-brand-lea dark:border-white/10 dark:bg-brand-field dark:text-slate-400"
-              )}
-            >
-              {t}
-            </button>
-          );
-        })}
-        {hire.employmentStatus === "CONTRACT" ? (
-          <span className="inline-flex items-center gap-1 text-[11px] text-brand-grey dark:text-slate-500">
-            <TagPill tag="Contract" /> from status
-          </span>
-        ) : null}
-      </div>
-      <p className="mt-1 text-[11px] text-brand-grey dark:text-slate-500">Shown as pills on the Employees list — independent of department.</p>
-    </div>
-  );
-
-  const notesControl = (
-    <label className="block">
-      <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Notes</span>
-      <textarea
-        value={details.notes}
-        onChange={(e) => setDetails({ ...details, notes: e.target.value })}
-        rows={3}
-        className="mt-1 w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold focus:shadow-glow dark:border-white/10 dark:bg-brand-field dark:text-slate-100"
-      />
-    </label>
-  );
-
-  // Who they report to. The orientation emails cc the supervisor and one is
-  // addressed to them, so this is what lets the app fill that in instead of
-  // leaving it as a longhand note in the template. Linking is preferred — the
-  // address is then read from their record at send time rather than being a copy.
-  const supervisorControl = (which: 1 | 2) => {
-    const linkedIdKey = which === 1 ? "supervisorHireId" : "supervisor2HireId";
-    const linkedNameKey = which === 1 ? "supervisorHireName" : "supervisor2HireName";
-    const linkedEmailKey = which === 1 ? "supervisorHireEmail" : "supervisor2HireEmail";
-    const nameKey = which === 1 ? ("supervisorName" as const) : ("supervisor2Name" as const);
-    const emailKey = which === 1 ? ("supervisorEmail" as const) : ("supervisor2Email" as const);
-    return (
-      <div className="space-y-2">
-        <span className="block text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
-          {which === 1 ? "Supervisor" : <>Second supervisor <span className="font-normal normal-case tracking-normal text-brand-grey/70">(optional)</span></>}
-        </span>
-        <SupervisorPicker
-          hireId={hire.id}
-          linkedId={details[linkedIdKey] || null}
-          linkedName={details[linkedNameKey] || null}
-          linkedEmail={details[linkedEmailKey] || null}
-          onLink={(p) => setDetails((f) => ({ ...f, [linkedIdKey]: p.id, [linkedNameKey]: p.name, [linkedEmailKey]: p.email ?? "" }))}
-          onUnlink={() => setDetails((f) => ({ ...f, [linkedIdKey]: "", [linkedNameKey]: "", [linkedEmailKey]: "" }))}
-        />
-        {!details[linkedIdKey] ? (
-          <>
-            <p className="text-[11px] text-brand-grey dark:text-slate-500">
-              Not in the app yet? Type their details instead — used only when nobody is linked.
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              {field("Name", nameKey)}
-              {field("Email", emailKey)}
-            </div>
-          </>
-        ) : null}
-      </div>
-    );
-  };
-
-  const filled = (...vals: Array<string | number | null | undefined>) => vals.filter((v) => v !== null && v !== undefined && String(v).trim() !== "").length;
-
-  const detailSections: DetailSection[] = [
-    {
-      id: "identity",
-      title: "Identity & contact",
-      defaultOpen: true,
-      filled: filled(details.name, details.position, details.department, details.location, details.phone, details.ssEmail, details.personalEmail),
-      total: 7,
-      rows: [
-        [field("Name", "name"), field("Position", "position"), field("Department", "department"), field("Job location", "location")],
-        [field("Phone", "phone"), field("SkyShare email", "ssEmail"), field("Personal email", "personalEmail")],
-        [legalNameControl]
-      ]
-    },
-    {
-      id: "dates",
-      title: "Dates & training",
-      filled: filled(
-        details.offerSentDate,
-        details.offerSignedDate,
-        details.startDate,
-        details.orientationDate,
-        details.indocStartDate || travelIndoc?.start,
-        details.trainingDate,
-        details.trainingLocation
-      ),
-      total: 7,
-      rows: [
-        [field("Offer sent", "offerSentDate", "date"), field("Offer signed", "offerSignedDate", "date")],
-        [field("Start date", "startDate", "date"), field("Orientation", "orientationDate", "date")],
-        [
-          field("Indoc start", "indocStartDate", "date", sourceNote(details.indocStartDate, travelIndoc?.start ?? null)),
-          field("Indoc end", "indocEndDate", "date", sourceNote(details.indocEndDate, travelIndoc?.end ?? null)),
-          field("Training date", "trainingDate", "date"),
-          field("Training location", "trainingLocation")
-        ],
-        [orientationExemption]
-      ]
-    },
-    {
-      id: "hr",
-      title: "HR",
-      filled: filled(
-        details.birthday,
-        details.seniorityDate,
-        details.seniorityNumber,
-        details.aircraftServiceDate,
-        details.managedAircraft,
-        hire.businessCardStatus,
-        hire.businessCardTitle,
-        details.birthCountry,
-        details.citizenshipCountry,
-        details.supervisorHireId || details.supervisorName,
-        details.supervisor2HireId || details.supervisor2Name,
-        tags.length ? "y" : "",
-        details.notes
-      ),
-      total: 13,
-      rows: [
-        [
-          field("Birthday", "birthday", "date"),
-          field("Seniority date", "seniorityDate", "date"),
-          field("Seniority # (Paycom)", "seniorityNumber", "number"),
-          field("Aircraft service date", "aircraftServiceDate", "date")
-        ],
-        [
-          field("Managed aircraft (tail #)", "managedAircraft"),
-          readOnlyField("Business card", hire.businessCardStatus.toLowerCase().replace(/_/g, " "), "the Business cards panel"),
-          readOnlyField("Card title", hire.businessCardTitle, "the Business cards panel")
-        ],
-        ...(managedPilotControl ? [[managedPilotControl]] : []),
-        [field("Birth country", "birthCountry"), field("Citizenship", "citizenshipCountry")],
-        [supervisorControl(1), supervisorControl(2)],
-        [tagsControl],
-        [notesControl]
-      ]
-    }
-  ];
 
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-brand-gold/50 bg-brand-gold/10 px-4 py-3">
+        <p className="text-sm text-brand-lea dark:text-slate-100">
+          <span className="font-semibold">This is the previous layout</span>, kept for comparison. Edits here still save.
+        </p>
+        <Link
+          href={`/people/${hire.id}`}
+          className="rounded bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden hover:shadow-glow"
+        >
+          Back to the current page
+        </Link>
+      </div>
       <Link
         href={hire.stage === "ACTIVE" ? "/people" : "/employees"}
         className="inline-flex items-center gap-1 text-sm font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400"
@@ -628,57 +403,255 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
 
       <EmployeeJourney hireId={hire.id} journey={journey} roleTitleOptions={roleTitleOptions} />
 
-      {/* Details — the same fields as before, in three sections instead of one
-          column, so the page opens on what you need rather than all of it. */}
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          {status ? <span className="mr-auto text-sm font-semibold text-brand-eden dark:text-brand-edenOnDark">{status}</span> : null}
-          <button
-            onClick={saveDetails}
-            disabled={savingDetails}
-            className="rounded bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden hover:shadow-glow disabled:opacity-60"
-          >
-            {savingDetails ? "Saving..." : "Save details"}
-          </button>
-        </div>
-        <HireDetailsAccordion sections={detailSections} />
-      </div>
+      <div className="grid gap-4 lg:grid-cols-[2fr_1fr_1fr]">
+        {/* Details */}
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Details</h2>
+            <button onClick={saveDetails} disabled={savingDetails} className="rounded bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60">
+              {savingDetails ? "Saving..." : "Save"}
+            </button>
+          </div>
+          <div className="mt-3 space-y-3">
+            {field("Name", "name")}
+            <label className="flex items-center gap-1.5 text-xs text-brand-grey dark:text-slate-400">
+              <input
+                type="checkbox"
+                checked={hasLegalName}
+                onChange={(e) => {
+                  setHasLegalName(e.target.checked);
+                  if (!e.target.checked) setDetails((d) => ({ ...d, legalName: "" }));
+                }}
+              />
+              Goes by a different name (add legal name)
+            </label>
+            {hasLegalName ? field("Legal name", "legalName") : null}
+            {field("Position", "position")}
+            {field("Department", "department")}
+            {field("Job location", "location")}
+            {(details.department.toLowerCase().includes("managed") || details.managedAircraft) ? field("Managed aircraft (tail #)", "managedAircraft") : null}
+            {/\b(captain|first officer|\bfo\b|\bpic\b|\bsic\b|pilot)\b/i.test(details.position) || managedPilot ? (
+              <label className="flex items-start gap-2 text-xs text-brand-grey dark:text-slate-400">
+                <input type="checkbox" className="mt-0.5" checked={managedPilot} onChange={(e) => saveManagedPilot(e.target.checked)} />
+                <span>Dedicated <strong>managed-aircraft</strong> pilot — excluded from SkyShare / fractional promotion tracking by default</span>
+              </label>
+            ) : null}
+            {(/\b(captain|first officer|\bfo\b|\bpic\b|\bsic\b|pilot)\b/i.test(details.position) || details.aircraftServiceDate) ? field("Aircraft service date", "aircraftServiceDate", "date") : null}
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Tags</span>
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                {EMPLOYEE_TAGS.map((t) => {
+                  const on = tags.includes(t);
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => toggleTag(t)}
+                      aria-pressed={on}
+                      className={clsx("rounded border px-2.5 py-1 text-xs font-semibold transition", on ? clsx(tagStyle(t), "border-transparent") : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400")}
+                    >
+                      {t}
+                    </button>
+                  );
+                })}
+                {hire.employmentStatus === "CONTRACT" ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-brand-grey dark:text-slate-500">
+                    <TagPill tag="Contract" /> from status
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-1 text-[11px] text-brand-grey dark:text-slate-500">Shown as pills on the Employees list — independent of department.</p>
+            </div>
+            {field("Phone", "phone")}
+            {field("SkyShare email", "ssEmail")}
+            {field("Personal email", "personalEmail")}
+            {/* Who they report to. The orientation emails cc the supervisor and
+                one is addressed to them, so this is what lets the app fill that
+                in instead of leaving it as a longhand note in the template.
+                Linking is preferred — the address is then read from their record
+                at send time rather than being a copy that goes stale. */}
+            <div className="space-y-2">
+              <span className="block text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">Supervisor</span>
+              <SupervisorPicker
+                hireId={hire.id}
+                linkedId={details.supervisorHireId || null}
+                linkedName={details.supervisorHireName || null}
+                linkedEmail={details.supervisorHireEmail || null}
+                onLink={(p) =>
+                  setDetails((f) => ({ ...f, supervisorHireId: p.id, supervisorHireName: p.name, supervisorHireEmail: p.email ?? "" }))
+                }
+                onUnlink={() => setDetails((f) => ({ ...f, supervisorHireId: "", supervisorHireName: "", supervisorHireEmail: "" }))}
+              />
+              {!details.supervisorHireId ? (
+                <>
+                  <p className="text-[11px] text-brand-grey dark:text-slate-500">
+                    Not in the app yet? Type their details instead — these are used only when no supervisor is linked.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {field("Supervisor name", "supervisorName")}
+                    {field("Supervisor email", "supervisorEmail")}
+                  </div>
+                </>
+              ) : null}
+            </div>
 
-      {/* Checklist — one stage at a time, with the next outstanding item called
-          out above it. Same tasks, same statuses, same two Front send buttons. */}
-      <OnboardingStageChecklist
-        groups={checklistGroups}
-        onSetStatus={setTaskStatus}
-        renderTaskExtra={(t) =>
-          t.key === "onboarding_journey" ? (
-            <SendOnboardingEmailButton
-              hireId={hire.id}
-              hireName={hire.name}
-              taskStatus={t.status}
-              canEdit={canEdit}
-              onSent={() => setTasks((cur) => cur.map((x) => (x.key === "onboarding_journey" ? { ...x, status: "DONE" } : x)))}
-            />
-          ) : t.key === "contacts_link_sent" ? (
-            <SendContactsEmailButton
-              hireId={hire.id}
-              hireName={hire.name}
-              taskStatus={t.status}
-              canEdit={canEdit}
-              onSent={() => setTasks((cur) => cur.map((x) => (x.key === "contacts_link_sent" ? { ...x, status: "DONE" } : x)))}
-            />
-          ) : null
-        }
-      />
+            {/* A second supervisor, for hires who report to two people. Both get
+                the supervisors email and both are cc'd on the invitation. */}
+            <div className="space-y-2">
+              <span className="block text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">Second supervisor <span className="normal-case text-brand-grey/70">(optional)</span></span>
+              <SupervisorPicker
+                hireId={hire.id}
+                linkedId={details.supervisor2HireId || null}
+                linkedName={details.supervisor2HireName || null}
+                linkedEmail={details.supervisor2HireEmail || null}
+                onLink={(p) =>
+                  setDetails((f) => ({ ...f, supervisor2HireId: p.id, supervisor2HireName: p.name, supervisor2HireEmail: p.email ?? "" }))
+                }
+                onUnlink={() => setDetails((f) => ({ ...f, supervisor2HireId: "", supervisor2HireName: "", supervisor2HireEmail: "" }))}
+              />
+              {!details.supervisor2HireId ? (
+                <>
+                  <p className="text-[11px] text-brand-grey dark:text-slate-500">
+                    Not in the app yet? Type their details instead — used only when no second supervisor is linked.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {field("Second supervisor name", "supervisor2Name")}
+                    {field("Second supervisor email", "supervisor2Email")}
+                  </div>
+                </>
+              ) : null}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {field("Birth country", "birthCountry")}
+              {field("Citizenship", "citizenshipCountry")}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {field("Offer sent", "offerSentDate", "date")}
+              {field("Offer signed", "offerSignedDate", "date")}
+              {field("Start date", "startDate", "date")}
+              {field("Orientation", "orientationDate", "date")}
+              {field("Seniority date", "seniorityDate", "date")}
+              {field("Seniority # (Paycom)", "seniorityNumber", "number")}
+            </div>
+            {/* The exemption, and the only way back from it: the orientation page
+                sets this when somebody is marked Not needed, and this is where it
+                gets undone. A current employee moving roles has already attended
+                one, so they should not sit on the orientation list forever. */}
+            <label className="flex items-start gap-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-2 dark:border-white/10 dark:bg-white/5">
+              <input
+                type="checkbox"
+                checked={orientationNotNeeded}
+                onChange={(e) => setOrientationNotNeeded(e.target.checked)}
+                className="mt-0.5 h-4 w-4"
+              />
+              <span className="text-xs text-brand-grey dark:text-slate-400">
+                <span className="font-semibold text-brand-lea dark:text-slate-100">No orientation needed</span>
+                <br />
+                Already attended a new-hire orientation — keeps them off the orientation page&apos;s outstanding list.
+              </span>
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Notes</span>
+              <textarea
+                value={details.notes}
+                onChange={(e) => setDetails({ ...details, notes: e.target.value })}
+                rows={3}
+                className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
+              />
+            </label>
+          </div>
+        </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
         {/* Offer — the same stepper as the candidate's Offers tab, fed by the hire's
             linked offer. Editing here syncs back to the candidate side and vice versa. */}
-        {hire.offer ? (
+        {hire.offer && (
           <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Offer</h2>
             <OfferControl application={hire.offer} canEdit={canEdit} />
           </section>
-        ) : null}
+        )}
+
+        {/* Checklist */}
+        <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Checklist</h2>
+          <div className="mt-3 space-y-5">
+            {grouped.map(({ group, items }) => (
+              <div key={group.key}>
+                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-gold">{groupLabel(group.key)}</div>
+                <div className="mt-2 space-y-1.5">
+                  {items.map((t) => (
+                    <div key={t.id} className="flex items-center justify-between gap-3 rounded border border-brand-lea/10 px-3 py-2 dark:border-white/10">
+                      <span className={clsx("text-sm", t.status === "DONE" ? "text-brand-grey line-through dark:text-slate-400" : "text-brand-black dark:text-slate-100")}>{t.label}</span>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {t.key === "onboarding_journey" && (
+                          <SendOnboardingEmailButton
+                            hireId={hire.id}
+                            hireName={hire.name}
+                            taskStatus={t.status}
+                            canEdit={canEdit}
+                            onSent={() => setTasks((cur) => cur.map((x) => (x.key === "onboarding_journey" ? { ...x, status: "DONE" } : x)))}
+                          />
+                        )}
+                        {t.key === "contacts_link_sent" && (
+                          <SendContactsEmailButton
+                            hireId={hire.id}
+                            hireName={hire.name}
+                            taskStatus={t.status}
+                            canEdit={canEdit}
+                            onSent={() => setTasks((cur) => cur.map((x) => (x.key === "contacts_link_sent" ? { ...x, status: "DONE" } : x)))}
+                          />
+                        )}
+                        <div className="flex shrink-0 overflow-hidden rounded border border-brand-lea/15 dark:border-white/10">
+                          {(["TODO", "DONE", "NA"] as const).map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => setTaskStatus(t.id, s)}
+                              className={clsx(
+                                "px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow",
+                                t.status === s ? STATUS_BTN[s].on : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-brand-panel dark:text-slate-400"
+                              )}
+                            >
+                              {STATUS_BTN[s].label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {tasks.some((t) => t.group === "CUSTOM") && (
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-gold">Additional milestones</div>
+                <div className="mt-2 space-y-1.5">
+                  {tasks
+                    .filter((t) => t.group === "CUSTOM")
+                    .map((t) => (
+                      <div key={t.id} className="flex items-center justify-between gap-3 rounded border border-brand-lea/10 px-3 py-2 dark:border-white/10">
+                        <span className={clsx("text-sm", t.status === "DONE" ? "text-brand-grey line-through dark:text-slate-400" : "text-brand-black dark:text-slate-100")}>{t.label}</span>
+                        <div className="flex shrink-0 overflow-hidden rounded border border-brand-lea/15 dark:border-white/10">
+                          {(["TODO", "DONE", "NA"] as const).map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => setTaskStatus(t.id, s)}
+                              className={clsx(
+                                "px-2.5 py-1 text-xs font-semibold transition",
+                                t.status === s ? STATUS_BTN[s].on : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-brand-panel dark:text-slate-400"
+                              )}
+                            >
+                              {STATUS_BTN[s].label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
 
         <BusinessCardPanel hireId={hire.id} name={hire.name} position={hire.position} phone={hire.phone} ssEmail={hire.ssEmail} status={hire.businessCardStatus} cardTitle={hire.businessCardTitle} orientationDate={hire.orientationDate} />
       </div>
@@ -686,19 +659,6 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
       <OnboardingHistoryPanel hireId={hire.id} hireName={hire.name} archives={onboardingArchives} canEdit={canEdit} />
 
       <TravelPanel subjectType="newHire" subjectId={hire.id} initialTrips={travelTrips} loyalty={travelLoyalty} />
-
-      {/* TEMPORARY. The layout this page replaced on 2026-08-24, kept reachable so
-          anything worth carrying over can be spotted before it is deleted. Remove
-          this link, app/people/[id]/classic/ and NewHireDetailWorkspaceClassic.tsx
-          together — nothing else depends on any of them. */}
-      <p className="pt-2 text-center">
-        <Link
-          href={`/people/${hire.id}/classic`}
-          className="text-xs font-semibold text-brand-grey underline-offset-2 hover:text-brand-lea hover:underline dark:text-slate-500 dark:hover:text-slate-300"
-        >
-          View the previous layout
-        </Link>
-      </p>
     </div>
   );
 }
