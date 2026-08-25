@@ -5,14 +5,13 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
 import { clsx } from "clsx";
 import { FileText } from "lucide-react";
-import { ONBOARDING_GROUPS, groupLabel } from "@/lib/onboarding/tasks";
-import { OfferControl } from "@/components/candidates/OfferControl";
 import type { NewHireDetail, TaskView } from "@/lib/data/onboarding";
 import { TravelPanel } from "@/components/travel/TravelPanel";
 import type { TravelTripView, TravelerLoyalty } from "@/lib/data/travel";
 import { EmployeeJourney } from "@/components/people/EmployeeJourney";
 import { HireDetailsAccordion, type DetailSection } from "@/components/people/HireDetailsAccordion";
-import { OnboardingStageChecklist } from "@/components/people/OnboardingStageChecklist";
+import { OnboardingChecklist } from "@/components/people/OnboardingChecklist";
+import { NewHireBottomTabs, type BottomTab } from "@/components/people/NewHireBottomTabs";
 import { BusinessCardPanel } from "@/components/people/BusinessCardPanel";
 import { SendOnboardingEmailButton } from "@/components/people/SendOnboardingEmailButton";
 import { SendContactsEmailButton } from "@/components/people/SendContactsEmailButton";
@@ -22,6 +21,7 @@ import { OnboardingHistoryPanel } from "@/components/people/OnboardingHistoryPan
 import { roundReasonLabel } from "@/lib/onboarding/rounds";
 import type { ArchivedRoundView } from "@/lib/data/onboarding-rounds";
 import type { EmployeeJourney as Journey } from "@/lib/data/employee-journey";
+import type { CardOrderView } from "@/lib/data/business-cards";
 import { Button, Input, Modal } from "@/components/ui";
 import { EMPLOYEE_TAGS } from "@/lib/employees/columns";
 import { tagStyle, TagPill, displayTags } from "@/components/employees/EmployeeTags";
@@ -39,6 +39,8 @@ type Props = {
   journey: Journey;
   /** Previous trips through onboarding — a rehire or a department move has one or more. */
   onboardingArchives: ArchivedRoundView[];
+  /** This person's own business-card orders. Empty for most new hires. */
+  cardOrders: CardOrderView[];
   roleTitleOptions: string[];
   canEdit: boolean;
 };
@@ -47,7 +49,7 @@ function toDateInput(iso: string | null) {
   return iso ? iso.slice(0, 10) : "";
 }
 
-export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journey, onboardingArchives, roleTitleOptions, canEdit }: Props) {
+export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journey, onboardingArchives, cardOrders, roleTitleOptions, canEdit }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskView[]>(hire.tasks);
   const [details, setDetails] = useState({
@@ -141,15 +143,6 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
   const applicable = tasks.filter((t) => t.status !== "NA");
   const doneCount = applicable.filter((t) => t.status === "DONE").length;
   const pct = applicable.length > 0 ? Math.round((doneCount / applicable.length) * 100) : 0;
-
-  // The four stages, plus "Additional milestones" only when there are any — a tab
-  // that is always empty is worse than no tab.
-  const checklistGroups = useMemo(() => {
-    const byGroup = (key: string) => tasks.filter((t) => t.group === key).sort((a, b) => a.order - b.order);
-    const base = ONBOARDING_GROUPS.map((g) => ({ key: g.key, label: groupLabel(g.key), items: byGroup(g.key) }));
-    const custom = byGroup("CUSTOM");
-    return custom.length ? [...base, { key: "CUSTOM", label: "Additional milestones", items: custom }] : base;
-  }, [tasks]);
 
   async function setTaskStatus(taskId: string, next: TaskView["status"]) {
     const prev = tasks;
@@ -494,6 +487,76 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     }
   ];
 
+  const outstanding = tasks.filter((t) => t.status === "TODO").length;
+  const bottomTabs: BottomTab[] = [
+    {
+      key: "checklist",
+      label: "Checklist",
+      chip: outstanding ? `${outstanding} left` : "done",
+      chipWarn: outstanding > 0,
+      content: (
+        <OnboardingChecklist
+          hireId={hire.id}
+          hireName={hire.name}
+          tasks={tasks}
+          offer={hire.offer}
+          canEdit={canEdit}
+          onSetStatus={setTaskStatus}
+          onTaskAdded={(t) => setTasks((cur) => [...cur, t])}
+          renderTaskExtra={(t) =>
+            t.key === "onboarding_journey" ? (
+              <SendOnboardingEmailButton
+                hireId={hire.id}
+                hireName={hire.name}
+                taskStatus={t.status}
+                canEdit={canEdit}
+                onSent={() => setTasks((cur) => cur.map((x) => (x.key === "onboarding_journey" ? { ...x, status: "DONE" } : x)))}
+              />
+            ) : t.key === "contacts_link_sent" ? (
+              <SendContactsEmailButton
+                hireId={hire.id}
+                hireName={hire.name}
+                taskStatus={t.status}
+                canEdit={canEdit}
+                onSent={() => setTasks((cur) => cur.map((x) => (x.key === "contacts_link_sent" ? { ...x, status: "DONE" } : x)))}
+              />
+            ) : null
+          }
+        />
+      )
+    },
+    {
+      key: "travel",
+      label: "Travel",
+      chip: `${travelTrips.length} trip${travelTrips.length === 1 ? "" : "s"}`,
+      content: <TravelPanel subjectType="newHire" subjectId={hire.id} initialTrips={travelTrips} loyalty={travelLoyalty} />
+    },
+    {
+      key: "cards",
+      label: "Business cards",
+      chip: hire.businessCardStatus.toLowerCase().replace(/_/g, " "),
+      content: (
+        <BusinessCardPanel
+          hireId={hire.id}
+          name={hire.name}
+          position={hire.position}
+          phone={hire.phone}
+          ssEmail={hire.ssEmail}
+          status={hire.businessCardStatus}
+          cardTitle={hire.businessCardTitle}
+          orientationDate={hire.orientationDate}
+          cardOrders={cardOrders}
+        />
+      )
+    },
+    {
+      key: "history",
+      label: "History",
+      chip: String(onboardingArchives.length),
+      content: <OnboardingHistoryPanel hireId={hire.id} hireName={hire.name} archives={onboardingArchives} canEdit={canEdit} />
+    }
+  ];
+
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
       <Link
@@ -644,48 +707,9 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
         <HireDetailsAccordion sections={detailSections} />
       </div>
 
-      {/* Checklist — one stage at a time, with the next outstanding item called
-          out above it. Same tasks, same statuses, same two Front send buttons. */}
-      <OnboardingStageChecklist
-        groups={checklistGroups}
-        onSetStatus={setTaskStatus}
-        renderTaskExtra={(t) =>
-          t.key === "onboarding_journey" ? (
-            <SendOnboardingEmailButton
-              hireId={hire.id}
-              hireName={hire.name}
-              taskStatus={t.status}
-              canEdit={canEdit}
-              onSent={() => setTasks((cur) => cur.map((x) => (x.key === "onboarding_journey" ? { ...x, status: "DONE" } : x)))}
-            />
-          ) : t.key === "contacts_link_sent" ? (
-            <SendContactsEmailButton
-              hireId={hire.id}
-              hireName={hire.name}
-              taskStatus={t.status}
-              canEdit={canEdit}
-              onSent={() => setTasks((cur) => cur.map((x) => (x.key === "contacts_link_sent" ? { ...x, status: "DONE" } : x)))}
-            />
-          ) : null
-        }
-      />
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Offer — the same stepper as the candidate's Offers tab, fed by the hire's
-            linked offer. Editing here syncs back to the candidate side and vice versa. */}
-        {hire.offer ? (
-          <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-            <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Offer</h2>
-            <OfferControl application={hire.offer} canEdit={canEdit} />
-          </section>
-        ) : null}
-
-        <BusinessCardPanel hireId={hire.id} name={hire.name} position={hire.position} phone={hire.phone} ssEmail={hire.ssEmail} status={hire.businessCardStatus} cardTitle={hire.businessCardTitle} orientationDate={hire.orientationDate} />
-      </div>
-
-      <OnboardingHistoryPanel hireId={hire.id} hireName={hire.name} archives={onboardingArchives} canEdit={canEdit} />
-
-      <TravelPanel subjectType="newHire" subjectId={hire.id} initialTrips={travelTrips} loyalty={travelLoyalty} />
+      {/* The bottom half: four tabs rather than four stacked panels. Each tab
+          holds the panel that already existed - none of them are restyled. */}
+      <NewHireBottomTabs tabs={bottomTabs} />
 
       {/* TEMPORARY. The layout this page replaced on 2026-08-24, kept reachable so
           anything worth carrying over can be spotted before it is deleted. Remove

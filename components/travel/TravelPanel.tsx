@@ -196,7 +196,7 @@ export function TravelPanel({
       ) : (
         <div className="mt-3 space-y-3">
           {trips.map((trip) => (
-            <TripCard key={trip.id} trip={trip} onChange={patchTrip} onDelete={removeTrip} />
+            <TripCard key={trip.id} trip={trip} newest={trip.id === trips[0]?.id} onChange={patchTrip} onDelete={removeTrip} />
           ))}
         </div>
       )}
@@ -278,14 +278,21 @@ function LoyaltyCard({
 
 function TripCard({
   trip,
+  newest,
   onChange,
   onDelete
 }: {
   trip: TravelTripView;
+  /** The most recent trip — trips arrive newest-first. */
+  newest: boolean;
   onChange: (t: TravelTripView) => void;
   onDelete: (id: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(trip.items.length === 0);
+  // Open the newest trip and leave the older ones shut. This used to be
+  // `trip.items.length === 0`, which expanded a trip only while it had nothing
+  // on it — so the moment anything was booked, the one trip worth reading was
+  // the one that was closed.
+  const [expanded, setExpanded] = useState(newest);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const route = [trip.originAirport, trip.destinationAirport].filter(Boolean).join(" → ");

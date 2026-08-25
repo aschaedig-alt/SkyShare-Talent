@@ -19,6 +19,8 @@ import {
 } from "@/lib/business-cards/card";
 import { copyRich } from "@/lib/business-cards/copy";
 import { BusinessCardVisual } from "@/components/business-cards/BusinessCardVisual";
+import { CardOrderHistory } from "@/components/people/CardOrderHistory";
+import type { CardOrderView } from "@/lib/data/business-cards";
 
 function fmtDay(iso: string | null) {
   return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(iso)) : "";
@@ -76,7 +78,8 @@ export function BusinessCardPanel({
   ssEmail,
   status: statusProp,
   cardTitle: cardTitleProp,
-  orientationDate
+  orientationDate,
+  cardOrders = []
 }: {
   hireId: string;
   name: string;
@@ -86,6 +89,8 @@ export function BusinessCardPanel({
   status: string;
   cardTitle: string | null;
   orientationDate: string | null;
+  /** This person's own order history. Empty for most new hires. */
+  cardOrders?: CardOrderView[];
 }) {
   const [cardTitle, setCardTitle] = useState<string | null>(cardTitleProp);
   const input: BusinessCardInput = { name, position, phone, ssEmail, cardTitle };
@@ -255,6 +260,8 @@ export function BusinessCardPanel({
           return <CardBlock key={v.id} label={v.label} card={card} copied={copiedKey === v.id} onCopy={() => copyCard(v.id, card)} onEdit={() => openEdit(v)} onDelete={() => remove(v.id)} />;
         })}
       </div>
+
+      <CardOrderHistory orders={cardOrders} firstName={name.split(" ")[0]} />
 
       <Modal open={titleModal} onClose={() => setTitleModal(false)}>
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Card title</h2>

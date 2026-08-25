@@ -63,3 +63,66 @@ export async function getBusinessCards(): Promise<BusinessCardRow[]> {
   }
   return rows;
 }
+
+// ---------------------------------------------------------------------------
+// One person's own card-order history.
+//
+// Deliberately scoped to a single hire: a roster-wide table of everyone's orders
+// belongs on the Business cards page, not on somebody's profile. Most new hires
+// have none — cards are ordered once, near orientation. This earns its place
+// later, when an employee changes title or fleet and gets a second set.
+// ---------------------------------------------------------------------------
+
+export type CardOrderView = {
+  id: string;
+  /** Null for legacy sheet rows that never carried a date; the label says so. */
+  orderedOn: string | null;
+  orderedLabel: string | null;
+  /** Received belongs to the ORDER — the box arrives once for the whole batch. */
+  receivedOn: string | null;
+  receivedLabel: string | null;
+  cardTier: string | null;
+  source: string;
+  /** How many people were on that order, so a batch reads as a batch. */
+  peopleOnOrder: number;
+};
+
+export async function getCardOrdersForHire(newHireId: string): Promise<CardOrderView[]> {
+  const lines = await prisma.businessCardOrderLine.findMany({
+    where: { newHireId },
+    select: {
+      order: {
+        select: {
+          id: true,
+          orderedOn: true,
+          orderedLabel: true,
+          receivedOn: true,
+          receivedLabel: true,
+          cardTier: true,
+          source: true,
+          _count: { select: { lines: true } }
+        }
+      }
+    }
+  });
+
+  return lines
+    .map(({ order: o }) => ({
+      id: o.id,
+      orderedOn: iso(o.orderedOn),
+      orderedLabel: o.orderedLabel,
+      receivedOn: iso(o.receivedOn),
+      receivedLabel: o.receivedLabel,
+      cardTier: o.cardTier,
+      source: o.source,
+      peopleOnOrder: o._count.lines
+    }))
+    // Newest first. Undated rows sort last rather than being dropped — an order
+    // with no date on it still happened.
+    .sort((a, b) => {
+      if (a.orderedOn && b.orderedOn) return b.orderedOn.localeCompare(a.orderedOn);
+      if (a.orderedOn) return -1;
+      if (b.orderedOn) return 1;
+      return 0;
+    });
+}
