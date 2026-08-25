@@ -62,7 +62,20 @@ export async function addMilestone(label: string): Promise<MilestoneCatalogItem[
   const key = makeKey(trimmed);
   await writeCatalog([...cat, { key, label: trimmed }]);
 
-  const hires = await prisma.newHire.findMany({ select: { id: true } });
+  // ONLY HIRES STILL ONBOARDING. This used to be an unfiltered findMany, which wrote
+  // a live TODO onto every NewHire row — measured against live data on Aug 24 that
+  // was 457 rows, of which 428 were ARCHIVED, 23 POST_ONBOARD and only 6 ACTIVE, and
+  // 264 belonged to people whose employmentStatus is TERMINATED. Adding one milestone
+  // handed outstanding work to 264 former employees and put an orphan CUSTOM row on
+  // the 241 hires that carry no checklist at all.
+  //
+  // Nobody hired LATER is missed by narrowing this: ensureCustomMilestoneTasks below
+  // is called from both hire-creation routes and gives a new hire every custom
+  // milestone in the catalog. This call only has to cover the people who already
+  // exist, and the only ones for whom a new onboarding step is real are the ones
+  // still onboarding. Same reasoning as the contacts-link backfill, which gave
+  // archived and post-onboard hires NA rather than TODO for exactly this reason.
+  const hires = await prisma.newHire.findMany({ where: { stage: "ACTIVE" }, select: { id: true } });
   await prisma.onboardingTask.createMany({
     data: hires.map((h) => ({ newHireId: h.id, key, label: trimmed, group: CUSTOM_GROUP, order: 90, status: "TODO" })),
     skipDuplicates: true

@@ -257,7 +257,7 @@ export function OnboardingChecklist({
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-brand-grey dark:text-slate-400">Add it to</span>
                     <div className="mt-1 flex overflow-hidden rounded border border-brand-lea/15 dark:border-white/10">
-                      {([["one", `Just ${hireName.split(" ")[0]}`], ["all", "Everyone"]] as const).map(([v, l]) => (
+                      {([["one", `Just ${hireName.split(" ")[0]}`], ["all", "Everyone onboarding"]] as const).map(([v, l]) => (
                         <button
                           key={v}
                           type="button"
@@ -284,7 +284,7 @@ export function OnboardingChecklist({
                 </div>
                 <p className="text-xs text-brand-grey dark:text-slate-500">
                   {scope === "all"
-                    ? "Adds it to the workspace milestone list and puts the task on every hire — including people already onboarded."
+                    ? "Adds it to the workspace milestone list, puts it on everyone still onboarding, and gives it to each new hire from here on. People who already finished onboarding are left alone."
                     : `Adds one item to ${hireName} only. It will not appear on anybody else, or on the next person onboarded.`}
                 </p>
                 {error ? <p className="text-sm font-medium text-red-700 dark:text-red-300">{error}</p> : null}
