@@ -68,8 +68,22 @@ export async function getMatchboardSubjects(viewer?: ViewerScope | null): Promis
         fleetPositionSlug: true,
         pilotSeat: true,
         aircraftTypesJson: true,
-        sourceJobRecord: { select: { title: true } },
-        _count: { select: { applications: true } }
+        // COUNT APPLICANTS THROUGH THE JOB, not through the requirement.
+        //
+        // CandidateApplication carries BOTH jobId and pilotRequirementId and both
+        // are nullable. Attaching a candidate to a job writes jobId; nothing in
+        // the app has ever written pilotRequirementId. Measured Aug 26: 4,045
+        // application rows, 4,022 with a jobId, ZERO with a pilotRequirementId —
+        // so _count.applications on the requirement was 0 for all 61 requirements
+        // and every role on the board read "0 applied", permanently.
+        //
+        // It looked like a per-role data gap rather than a broken counter, which
+        // is why it survived: the number was plausible for any single role you
+        // happened to check. Listing all 61 is what showed it.
+        //
+        // The join already existed — every requirement carries sourceJobRecordId
+        // — so this reads the count off the linked job instead.
+        sourceJobRecord: { select: { title: true, _count: { select: { applications: true } } } }
       }
     }),
     // The whole pool, not just live records — looking someone up in the archive
@@ -106,9 +120,9 @@ export async function getMatchboardSubjects(viewer?: ViewerScope | null): Promis
       const group = bySlug.get(position.slug);
       if (group) {
         group.reqIds.push(req.id);
-        group.applicants += req._count.applications;
+        group.applicants += req.sourceJobRecord?._count.applications ?? 0;
       } else {
-        bySlug.set(position.slug, { reqIds: [req.id], applicants: req._count.applications });
+        bySlug.set(position.slug, { reqIds: [req.id], applicants: req.sourceJobRecord?._count.applications ?? 0 });
       }
     } else {
       unmatched.push({
@@ -118,7 +132,7 @@ export async function getMatchboardSubjects(viewer?: ViewerScope | null): Promis
         aircraft: parseStringArray(req.aircraftTypesJson)[0] ?? null,
         typeRating: null,
         status: null,
-        applicantCount: req._count.applications,
+        applicantCount: req.sourceJobRecord?._count.applications ?? 0,
         dupeCount: 1,
         unmatched: true,
         noProfile: false
