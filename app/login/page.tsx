@@ -4,10 +4,11 @@ import { getWorkspaceBranding, resolveBrandingLogo } from "@/lib/data/branding";
 
 type LoginPageProps = {
   searchParams: Promise<{
-    reason?: string;
-    next?: string;
+    // string | string[] because a repeated param IS an array — see first() below.
+    reason?: string | string[];
+    next?: string | string[];
     /** Set by an invite link so Google opens on the work account, not a personal one. */
-    email?: string;
+    email?: string | string[];
     /**
      * Set by next-auth when sign-in actually FAILED. auth.ts points both
      * pages.signIn and pages.error at this page, so a failed callback and a
@@ -22,7 +23,7 @@ type LoginPageProps = {
      * They reported it as "it makes me do every step twice", which is exactly
      * what it looks like when the error is invisible.
      */
-    error?: string;
+    error?: string | string[];
   }>;
 };
 
@@ -109,18 +110,42 @@ function isGoogleAuthReady() {
   );
 }
 
+/**
+ * A query param repeated in the URL arrives as an ARRAY, not a string.
+ *
+ * Next hands searchParams values typed string | string[] | undefined, and this
+ * page's own annotation said string - which is a promise Next never made. So
+ * /login?error=a&error=b called .trim() on an array, threw a TypeError inside a
+ * server component, and rendered the generic app error card: a page with NO
+ * sign-in button on it. On the one page that gates every other page, reachable
+ * by anybody, unauthenticated.
+ *
+ * The middleware above makes it worse than a curiosity, because it clones the
+ * whole query string into its redirect - so a logged-out click on
+ * /candidates?error=a&error=b lands in the same crash without anyone having to
+ * visit /login directly.
+ *
+ * Taking the first value matches how the rest of the app reads these and how a
+ * browser form would behave. Applied to email and next as well: email carried
+ * the identical latent crash before this page ever rendered an error.
+ */
+function first(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   // Land on the app root after sign-in, not a hard-coded page — the "/" route
   // resolves each user's chosen home page (falling back to Command Center). A
   // "next" (the page they were bounced from) still wins.
-  const callbackUrl = params.next || "/";
+  const callbackUrl = first(params.next) || "/";
   const authReady = isGoogleAuthReady();
   // A hint carried in the URL, so it is treated as display text and nothing more:
   // it selects a Google account, it does not grant access. Whether this address is
   // allowed in is decided by auth.ts and the invite record, exactly as before.
-  const invitedEmail = params.email?.trim() && params.email.includes("@") ? params.email.trim() : undefined;
-  const signInError = messageForError(params.error?.trim() || undefined);
+  const emailParam = first(params.email);
+  const invitedEmail = emailParam?.trim() && emailParam.includes("@") ? emailParam.trim() : undefined;
+  const signInError = messageForError(first(params.error)?.trim() || undefined);
   const title = authReady ? "Sign in to SkyShare Journey" : "Authentication setup required";
 
   let loginLogo: string | null = null;
@@ -139,7 +164,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         ) : null}
         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Access control</p>
         <h1 className="mt-2 text-2xl font-semibold text-brand-lea dark:text-slate-100">{title}</h1>
-        <p className="mt-3 text-sm leading-6 text-brand-grey dark:text-slate-400">{messageForReason(params.reason, authReady)}</p>
+        <p className="mt-3 text-sm leading-6 text-brand-grey dark:text-slate-400">{messageForReason(first(params.reason), authReady)}</p>
 
         {signInError ? (
           <div
@@ -158,9 +183,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </div>
         ) : null}
 
-        {params.next ? (
+        {callbackUrl !== "/" ? (
           <div className="mt-4 rounded border border-brand-lea/10 bg-brand-cloudDancer/55 p-3 text-xs text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-            Requested page: <span className="font-semibold text-brand-lea dark:text-slate-100">{params.next}</span>
+            Requested page: <span className="font-semibold text-brand-lea dark:text-slate-100">{callbackUrl}</span>
           </div>
         ) : null}
 

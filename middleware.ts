@@ -148,33 +148,47 @@ function authSecret() {
  * NON-BROWSER system calls it at a URL stored outside this app. Everything a
  * browser reaches should stay canonicalised.
  */
-const CANONICAL_HOST_EXEMPT_PREFIXES = ["/api/cron/", "/api/front/webhook"];
+// Stored WITHOUT a trailing slash and matched on a segment boundary, so an
+// exemption covers the route and everything under it and nothing that merely
+// starts with the same letters. Written as "/api/front/webhook" with a plain
+// startsWith, it also exempted /api/front/webhook-test and /api/front/webhooks/*;
+// written as "/api/cron/" it did NOT cover a bare /api/cron. Neither mattered
+// today - the four cron paths all carry a segment and no sibling route exists -
+// but an exemption that drifts silently is the wrong kind of thing to leave.
+const CANONICAL_HOST_EXEMPT_PREFIXES = ["/api/cron", "/api/front/webhook"];
 
 function canonicalHostRedirect(request: NextRequest): URL | null {
   if (process.env.VERCEL_ENV !== "production") return null;
 
   const { pathname } = request.nextUrl;
-  if (CANONICAL_HOST_EXEMPT_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix))) {
+  if (CANONICAL_HOST_EXEMPT_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
     return null;
   }
 
   const configured = process.env.NEXTAUTH_URL;
   if (!configured) return null;
 
-  let canonicalHost: string;
+  let canonical: URL;
   try {
-    canonicalHost = new URL(configured).host;
+    canonical = new URL(configured);
   } catch {
     return null;
   }
+  if (!canonical.hostname) return null;
 
+  // COMPARE AND REWRITE THE SAME THING. Reading .host (hostname plus port) and
+  // then clearing the port on the target meant a NEXTAUTH_URL carrying a port
+  // never matched the host it redirected to, so every request bounced to itself
+  // forever - a total production outage from one config character, with no
+  // circuit breaker. Hostname and port are now carried across explicitly, and
+  // canonical.port is "" when there is none, which clears a stale one.
   const requestHost = request.headers.get("host");
-  if (!canonicalHost || !requestHost || requestHost === canonicalHost) return null;
+  if (!requestHost || requestHost === canonical.host) return null;
 
   const target = request.nextUrl.clone();
-  target.host = canonicalHost;
   target.protocol = "https:";
-  target.port = "";
+  target.hostname = canonical.hostname;
+  target.port = canonical.port;
   return target;
 }
 
