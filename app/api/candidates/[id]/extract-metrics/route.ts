@@ -8,6 +8,7 @@ import { normalizeAircraft, timeInTypeKey } from "@/lib/fleet/aircraft-normalize
 
 const LLM_METRIC_LABEL = new Map(METRIC_DEFS.map((d) => [d.key, d.label]));
 import { extractFileText } from "@/lib/files/pdf-text";
+import { metricsFromForms } from "@/lib/extraction/form-metrics";
 import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
 import { extractPaycomRegex, extractPaycomApplication, mergePaycomExtract, looksLikePaycomApplication, isPaycomExtractConfigured } from "@/lib/extraction/paycom-application";
 import { normalizeEmail, normalizePhone } from "@/lib/candidates/normalize";
@@ -159,6 +160,30 @@ export async function POST(_request: Request, context: RouteContext) {
       }
     }
 
+    // Read the same documents as FORMS, by layout, and let those values win.
+    // The flattened text fuses a completed intake form into one unsplittable run
+    // of digits, which is why the model returns nothing for candidates whose only
+    // document is a Pilot Application — their hours are present but unreadable.
+    // The coordinate parser pairs each label with the value beside it: no
+    // inference, no API cost, and nothing to guess. It only covers the templated
+    // fields, so everything above (time in type, ratings, certificates) stands.
+    const formFiles = await prisma.candidateFile.findMany({
+      where: { candidateId: id, storageKey: { not: null } },
+      orderBy: { uploadedAt: "asc" },
+      select: { id: true, storageKey: true, mimeType: true, displayFilename: true, originalFilename: true }
+    });
+    const form = await metricsFromForms(formFiles);
+    for (const [key, m] of form.metrics) {
+      found.set(key, {
+        label: m.label,
+        valueNumber: m.valueNumber,
+        valueText: m.valueText,
+        unit: m.unit,
+        snippet: m.snippet,
+        sourceFileId: m.sourceFileId
+      });
+    }
+
     // Upsert as SUGGESTED, but never overwrite a CONFIRMED value.
     let suggested = 0;
     for (const [key, m] of found) {
@@ -266,6 +291,9 @@ export async function POST(_request: Request, context: RouteContext) {
     });
 
     const parts = [files.length === 0 ? "No document text to scan yet." : `Scanned ${files.length} document(s).`];
+    if (form.parsed.length > 0) {
+      parts.push(`Read ${form.parsed.length} form(s) by layout (${form.metrics.size} field(s)).`);
+    }
     if (paycomFilled.length > 0) parts.push(`Paycom application: filled ${paycomFilled.join(", ")}.`);
     else if (paycomAppFound) parts.push("Paycom application scanned — nothing new to fill.");
 

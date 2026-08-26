@@ -231,6 +231,16 @@ export type LlmExtractResult = {
   error?: string;
 };
 
+/**
+ * Whether a model accepts output_config.effort. The 4.5-generation Haiku and
+ * Sonnet do not and return a 400; Opus 4.5+ and everything newer do. Unknown
+ * models are assumed to support it — being wrong that way is a loud 400 on the
+ * first call, whereas wrongly omitting it just costs a little more.
+ */
+function supportsEffort(model: string): boolean {
+  return !/haiku-4-5|sonnet-4-5/i.test(model);
+}
+
 export function buildExtractionRequest(text: string, model: string = DEFAULT_MODEL) {
   return {
     model,
@@ -248,8 +258,14 @@ export function buildExtractionRequest(text: string, model: string = DEFAULT_MOD
     ],
     // Low effort: this is careful reading, not deep reasoning. Thinking stays
     // ON (disabling it on this model leaks internal tags into the response).
+    //
+    // NOT EVERY MODEL TAKES effort. Haiku 4.5 and Sonnet 4.5 reject it outright
+    // ("This model does not support the effort parameter", 400) — and because
+    // every caller treats a failed extraction as "fall back to regex", sending it
+    // to one of those models does not surface as an error at all: it quietly
+    // produces regex metrics, which misread hours badly. Omit it there instead.
     output_config: {
-      effort: "low",
+      ...(supportsEffort(model) ? { effort: "low" as const } : {}),
       format: { type: "json_schema" as const, schema: buildSchema() }
     },
     messages: [{ role: "user" as const, content: `Document text:\n\n${text.slice(0, MAX_CHARS)}` }]

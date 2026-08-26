@@ -1,8 +1,17 @@
 const MAX_CHARS = 500_000;
 
-/** Collapse whitespace so stored text is compact and searchable. */
+/**
+ * Collapse whitespace so stored text is compact and searchable.
+ *
+ * Null bytes are stripped first. Postgres rejects U+0000 in a text column
+ * outright ("invalid byte sequence for encoding UTF8: 0x00"), so a single one
+ * anywhere in a document fails the whole UPDATE and the file silently keeps no
+ * extracted text at all — it then looks identical to a scanned PDF. Hit for real
+ * on one candidate file during the 2026-08-26 bulk scan. \s does NOT match \0,
+ * so the collapse below never removed them.
+ */
 function normalize(text: string): string {
-  return text.replace(/\s+/g, " ").trim().slice(0, MAX_CHARS);
+  return text.replace(/\0/g, "").replace(/\s+/g, " ").trim().slice(0, MAX_CHARS);
 }
 
 function looksLikePdf(mimeType: string | null, filename: string): boolean {
