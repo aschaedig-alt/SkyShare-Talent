@@ -8,6 +8,21 @@ type LoginPageProps = {
     next?: string;
     /** Set by an invite link so Google opens on the work account, not a personal one. */
     email?: string;
+    /**
+     * Set by next-auth when sign-in actually FAILED. auth.ts points both
+     * pages.signIn and pages.error at this page, so a failed callback and a
+     * plain "you are not signed in" both land here — and until Aug 25 2026 this
+     * page read only `reason`, so they rendered IDENTICALLY.
+     *
+     * That is not cosmetic. It hid a real, reproducible fault for weeks: a
+     * sign-in started on a host other than NEXTAUTH_URL loses its state/PKCE
+     * cookies at the callback, fails with error=OAuthCallback, and silently
+     * re-renders this page — so the person completes the whole Google consent
+     * flow, lands back at the start with no explanation, and does it all again.
+     * They reported it as "it makes me do every step twice", which is exactly
+     * what it looks like when the error is invisible.
+     */
+    error?: string;
   }>;
 };
 
@@ -31,6 +46,60 @@ function messageForReason(reason: string | undefined, authReady: boolean) {
   return "Authentication setup is required before using protected SkyShare Journey pages.";
 }
 
+/**
+ * What actually went wrong, in words the person can act on.
+ *
+ * These codes are next-auth's own (core/index.js maps a failed callback to
+ * ?error=<code> on the sign-in page). The wording says what to DO rather than
+ * naming the internal fault, except where the fault is ours — a host/redirect_uri
+ * mismatch is a server misconfiguration and no amount of retrying fixes it, so
+ * that one says so plainly instead of sending somebody round the loop again.
+ */
+function messageForError(error: string | undefined): { title: string; detail: string } | null {
+  if (!error) {
+    return null;
+  }
+
+  if (error === "AccessDenied") {
+    return {
+      title: "That account is not allowed in.",
+      detail:
+        "Sign-in worked, but this address is not on the approved list — or it has been revoked. Ask an admin to grant access, then try again."
+    };
+  }
+
+  if (error === "OAuthAccountNotLinked") {
+    return {
+      title: "This email already exists under a different sign-in method.",
+      detail: "An admin needs to remove the old account record before you can sign in with Google."
+    };
+  }
+
+  if (error === "Configuration") {
+    return {
+      title: "Sign-in is misconfigured on the server.",
+      detail: "This is not something you can fix by retrying. Tell an admin — the auth environment variables need attention."
+    };
+  }
+
+  if (error === "OAuthCallback" || error === "Callback" || error === "OAuthSignin") {
+    return {
+      title: "Google sent you back, but the sign-in could not be completed.",
+      detail:
+        "This usually means the address you started from is not the one the server is configured for, so the security cookie set at the start was not there at the end. Retrying often appears to work because the second attempt starts from the right address — but the underlying setting is still wrong. Report it rather than living with it."
+    };
+  }
+
+  if (error === "SessionRequired") {
+    return { title: "You need to be signed in to see that page.", detail: "Sign in and you will be taken back to it." };
+  }
+
+  return {
+    title: "Sign-in failed.",
+    detail: `Google returned "${error}". If it happens again, send that code to an admin — it says which step broke.`
+  };
+}
+
 function isGoogleAuthReady() {
   return Boolean(
     (process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET) &&
@@ -51,6 +120,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   // it selects a Google account, it does not grant access. Whether this address is
   // allowed in is decided by auth.ts and the invite record, exactly as before.
   const invitedEmail = params.email?.trim() && params.email.includes("@") ? params.email.trim() : undefined;
+  const signInError = messageForError(params.error?.trim() || undefined);
   const title = authReady ? "Sign in to SkyShare Journey" : "Authentication setup required";
 
   let loginLogo: string | null = null;
@@ -70,6 +140,16 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Access control</p>
         <h1 className="mt-2 text-2xl font-semibold text-brand-lea dark:text-slate-100">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-brand-grey dark:text-slate-400">{messageForReason(params.reason, authReady)}</p>
+
+        {signInError ? (
+          <div
+            role="alert"
+            className="mt-4 rounded border border-red-300 bg-red-50 p-3 text-xs text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300"
+          >
+            <p className="font-semibold">{signInError.title}</p>
+            <p className="mt-1 leading-5">{signInError.detail}</p>
+          </div>
+        ) : null}
 
         {invitedEmail ? (
           <div className="mt-4 rounded border border-brand-gold/30 bg-brand-gold/10 p-3 text-xs text-brand-grey dark:text-slate-300">

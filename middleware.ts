@@ -95,8 +95,99 @@ function authSecret() {
   return process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET;
 }
 
+/**
+ * Send every production request to the ONE host NEXTAUTH_URL names.
+ *
+ * Why this exists. The app is reachable at more than one .vercel.app address —
+ * skyshare-journey (the name since the Aug 3 rename) and skyshare-talent (the
+ * original project name). Both serve the same deployment and neither redirected,
+ * so which one you used was pure habit. That is fine for every page and fatal for
+ * sign-in:
+ *
+ *   - next-auth builds redirect_uri from NEXTAUTH_URL, so Google always returns
+ *     the browser to the NEXTAUTH_URL host, whichever host the flow started on.
+ *   - The state and pkce.code_verifier cookies are set with NO domain attribute
+ *     (next-auth core/lib/cookie.js), so they are host-only.
+ *   - .vercel.app is on the Public Suffix List, so those two hosts can never
+ *     share a cookie — not even deliberately.
+ *
+ * Start on the wrong host and the callback arrives with no state cookie, throws
+ * "State cookie was missing", and bounces to /login?error=OAuthCallback. The
+ * FIRST attempt therefore always failed, the second worked (it now started from
+ * the right host), and the session cookie ended up on a host the person was not
+ * browsing — so they were "logged out" again the next time they opened their
+ * bookmark. Verified live on 2026-08-25 by walking the whole chain with curl.
+ *
+ * Deliberately keyed off NEXTAUTH_URL rather than a hard-coded domain: the
+ * canonical host is then whatever sign-in is actually configured for, so the two
+ * cannot drift apart again. Change NEXTAUTH_URL and this follows it.
+ *
+ * Guards, each load-bearing:
+ *   - production only. Preview deployments each have their own hostname and must
+ *     keep it; local dev must never be redirected at all (several sessions run
+ *     dev servers on different ports in this one working tree, and sending them
+ *     all to NEXTAUTH_URL's port would break them).
+ *   - /api/cron/* is exempt. Vercel's scheduler must reach the function directly;
+ *     a 308 there would put the four nightly jobs at the mercy of redirect
+ *     following.
+ *   - /api/front/webhook is exempt, and this one is the important exemption.
+ *     Every other caller of this app is a browser, which follows a redirect and
+ *     then makes all its later requests same-origin — so canonicalising the first
+ *     page load is enough and nothing else ever crosses hosts. Front is different:
+ *     it POSTs to a URL stored in ITS settings, on every event, forever. If that
+ *     stored URL names the non-canonical host, a 308 puts three separate things at
+ *     risk at once — whether Front follows a redirect on POST at all, whether the
+ *     signature header survives the hop, and the 5-second budget it allows before
+ *     giving up (there is no retry, so a miss is a message silently lost, not a
+ *     delayed one). The route itself works perfectly well on either hostname: it
+ *     authenticates by HMAC over the raw body, not by cookie. So there is nothing
+ *     to gain by redirecting it and a whole failure mode to avoid.
+ *   - no NEXTAUTH_URL, or an unparseable one, means do nothing.
+ *
+ * The general rule, if you add an endpoint later: exempt it if an EXTERNAL,
+ * NON-BROWSER system calls it at a URL stored outside this app. Everything a
+ * browser reaches should stay canonicalised.
+ */
+const CANONICAL_HOST_EXEMPT_PREFIXES = ["/api/cron/", "/api/front/webhook"];
+
+function canonicalHostRedirect(request: NextRequest): URL | null {
+  if (process.env.VERCEL_ENV !== "production") return null;
+
+  const { pathname } = request.nextUrl;
+  if (CANONICAL_HOST_EXEMPT_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix))) {
+    return null;
+  }
+
+  const configured = process.env.NEXTAUTH_URL;
+  if (!configured) return null;
+
+  let canonicalHost: string;
+  try {
+    canonicalHost = new URL(configured).host;
+  } catch {
+    return null;
+  }
+
+  const requestHost = request.headers.get("host");
+  if (!canonicalHost || !requestHost || requestHost === canonicalHost) return null;
+
+  const target = request.nextUrl.clone();
+  target.host = canonicalHost;
+  target.protocol = "https:";
+  target.port = "";
+  return target;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Before anything else, including the auth check: a request on a non-canonical
+  // host has its session cookie on the wrong host, so evaluating auth here would
+  // wrongly bounce a signed-in person to /login. Move them first, decide after.
+  const canonical = canonicalHostRedirect(request);
+  if (canonical) {
+    return NextResponse.redirect(canonical, 308);
+  }
 
   // Forward the path so server components (e.g. AppShell) can render bare pages
   // like the public /book scheduling surface without the app sidebar.
