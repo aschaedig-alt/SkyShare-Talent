@@ -12,7 +12,6 @@ import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type 
 import { copyRich } from "@/lib/business-cards/copy";
 import { buildHireInfoHtml, buildHireInfoText } from "@/lib/onboarding/hire-email-copy";
 import { EmptyState } from "@/components/ui";
-import { useFillViewportHeight } from "@/lib/hooks/useFillViewportHeight";
 
 const GRID_BULK_ACTIONS: BulkAction[] = [
   { kind: "run", key: "copy", label: "Copy for email", icon: ClipboardCopy },
@@ -70,9 +69,6 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [copyNote, setCopyNote] = useState<string | null>(null);
-  // Sizes the scroll box to whatever is left below it, so the page does not also
-  // scroll and leave two vertical scrollbars stacked on the right.
-  const gridScroll = useFillViewportHeight<HTMLDivElement>();
 
   // Manage-tasks mode: rename / hide built-ins, add / rename / remove customs.
   const [managing, setManaging] = useState(false);
@@ -357,26 +353,21 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
           <span className="font-semibold text-brand-lea dark:text-slate-100">Copy for email</span> puts the ticked people&apos;s details (or everyone) on the clipboard, ready to paste into a message.
         </p>
       </div>
-      {/* A bounded box rather than letting the table run the length of the page.
-          Three things follow from it, and the markup was already written for all
-          three but never got the container that makes them work:
+      {/* HORIZONTAL scroll only. The box used to carry a measured vertical cap so
+          it filled the space below itself, which gave the grid its own vertical
+          scrollbar; that was removed by request — there is now ONE vertical
+          scrollbar on the page and the table runs to its natural height.
 
-          1. The horizontal scrollbar sits at the bottom of THIS box, which is on
-             screen — so scrolling sideways no longer means scrolling to the
-             bottom of the page first to reach the bar.
-          2. The header row's sticky top-0 finally does something: names and
-             progress stay put while you scroll down the tasks.
-          3. The task-name column stays pinned as you scroll across, which it
-             already did.
+          overflow-x-auto keeps the sideways scrollbar attached to this box (so the
+          task-name column stays pinned as you scroll across) and, with no height
+          cap, the implied overflow-y never has anything to scroll.
 
-          The cap is MEASURED, not a fixed 75vh: a fixed fraction still left the
-          page itself taller than the screen, so the right-hand side carried two
-          vertical scrollbars — the page one and this box one. Filling exactly the
-          space left below the box makes the page end at the fold, so this is the
-          only vertical scrollbar on screen.
-
-          max-h only caps: a short list still renders at its natural height. */}
-      <div ref={gridScroll.ref} className="max-h-[75vh] overflow-auto" style={{ maxHeight: gridScroll.maxHeight ?? undefined }}>
+          Consequence, deliberate: the header row's sticky top-0 no longer pins to
+          the viewport. Sticky resolves against the nearest scrollport, which is
+          this box, and this box does not scroll vertically any more — so the names
+          and progress bars scroll away with the page. The classes are left in
+          place because sticky left-0 on the task column still does work. */}
+      <div className="overflow-x-auto">
         <table className="border-separate border-spacing-0 text-xs">
           <thead>
             <tr>
