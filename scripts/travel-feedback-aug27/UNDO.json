@@ -1,0 +1,22 @@
+{
+  "writtenAt": "2026-08-28T20:31:26.732Z",
+  "note": "Feedback.status before scripts/close-travel-feedback.ts --apply. Restore with --undo.",
+  "rows": [
+    {
+      "id": "cmt33t2w5000004jps57t0zzq",
+      "status": "NEW"
+    },
+    {
+      "id": "cmtbw0hc6000004l5847qe8ns",
+      "status": "NEW"
+    },
+    {
+      "id": "cmtbw544s000304l547if3f22",
+      "status": "NEW"
+    },
+    {
+      "id": "cmtbw8wx3000504l5tyd7ppq0",
+      "status": "NEW"
+    }
+  ]
+}
