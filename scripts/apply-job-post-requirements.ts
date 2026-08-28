@@ -42,7 +42,7 @@ const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: data
 
 const APPLY = process.argv.includes("--apply");
 const UNDO = process.argv.includes("--undo");
-const OUT_DIR = join(process.cwd(), "scripts", "_reconcile_output");
+const OUT_DIR = join(process.cwd(), "scripts", "open-roles-reconcile");
 const UNDO_FILE = join(OUT_DIR, "undo-job-post-requirements.json");
 const REVIEW_FILE = join(OUT_DIR, "review-job-post-requirements.txt");
 

@@ -1,0 +1,367 @@
+{
+  "generatedAt": "2026-08-28T17:05:19.607Z",
+  "requirements": [
+    {
+      "id": "cmtd5nr4p0000rgrm0t725wgk",
+      "title": "Challenger 350 Captain",
+      "fields": {
+        "payScaleRaw": "$220,000 - $230,000",
+        "rotation": null,
+        "scheduleRaw": null,
+        "locationFitRequirements": null,
+        "baseCity": "Salt Lake City",
+        "baseState": "UT",
+        "baseAirport": "SLC",
+        "aircraftTypesJson": "[\"Challenger 350\"]",
+        "manualOverrideNotes": "job already exists and is OPEN; only the requirement is created",
+        "rawMinimumRequirements": null,
+        "originalJobDescriptionText": null
+      },
+      "gates": [
+        {
+          "id": "cmtd5nr7p000trgrmlyooghpm",
+          "enabled": true,
+          "numericValue": 3000
+        },
+        {
+          "id": "cmtd5nr7p000vrgrmjukgcnb1",
+          "enabled": true,
+          "numericValue": 1000
+        },
+        {
+          "id": "cmtd5nr7p000wrgrmg5wrff8q",
+          "enabled": true,
+          "numericValue": 800
+        },
+        {
+          "id": "cmtd5nr7p000zrgrmtkm02u5m",
+          "enabled": true,
+          "numericValue": 135
+        },
+        {
+          "id": "cmtd5nr7p000nrgrmnz311kyi",
+          "enabled": true,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd5nr7o000ergrmd92slphj",
+          "enabled": true,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd5nr7o000drgrmuw49adkb",
+          "enabled": true,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd5nr7o000frgrmz734zhwr",
+          "enabled": true,
+          "numericValue": null
+        }
+      ]
+    },
+    {
+      "id": "cmtd5nre70015rgrmqo2fh7tq",
+      "title": "Challenger 350 First Officer",
+      "fields": {
+        "payScaleRaw": "$130,000",
+        "rotation": null,
+        "scheduleRaw": null,
+        "locationFitRequirements": null,
+        "baseCity": "Salt Lake City",
+        "baseState": "UT",
+        "baseAirport": "SLC",
+        "aircraftTypesJson": "[\"Challenger 350\"]",
+        "manualOverrideNotes": "new job and new requirement",
+        "rawMinimumRequirements": null,
+        "originalJobDescriptionText": null
+      },
+      "gates": [
+        {
+          "id": "cmtd5nrge0020rgrm5wvfaqh0",
+          "enabled": true,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd5nrge0022rgrm7xpbdrmt",
+          "enabled": true,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd5nrge0023rgrmx33lyi3u",
+          "enabled": true,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd5nrge001rrgrmvxp8yd1b",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd5nrge001srgrmvm0yko8x",
+          "enabled": true,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd5nrgd001irgrm0i4ocu2g",
+          "enabled": true,
+          "numericValue": null
+        }
+      ]
+    },
+    {
+      "id": "cmtd5nrky002argrmfvaj6zzw",
+      "title": "Praetor 600 Captain",
+      "fields": {
+        "payScaleRaw": "$230,000 - $240,000",
+        "rotation": null,
+        "scheduleRaw": null,
+        "locationFitRequirements": null,
+        "baseCity": "Ogden",
+        "baseState": "UT",
+        "baseAirport": "OGD",
+        "aircraftTypesJson": "[\"Praetor 600\"]",
+        "manualOverrideNotes": "managed, tail not known yet - attach the variant when it is",
+        "rawMinimumRequirements": null,
+        "originalJobDescriptionText": null
+      },
+      "gates": [
+        {
+          "id": "cmtd5nrmq0033rgrmeu5m5ggv",
+          "enabled": true,
+          "numericValue": 3000
+        },
+        {
+          "id": "cmtd5nrmq0035rgrmcr7rf3vi",
+          "enabled": true,
+          "numericValue": 1000
+        },
+        {
+          "id": "cmtd5nrmq0036rgrmaoalj7di",
+          "enabled": true,
+          "numericValue": 800
+        },
+        {
+          "id": "cmtd5nrmq0039rgrm5skzgo1p",
+          "enabled": true,
+          "numericValue": 135
+        },
+        {
+          "id": "cmtd5nrmq002yrgrma7fo4o7y",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd5nrmq002xrgrmpkt4am3h",
+          "enabled": true,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd5nrmq002orgrm7qemdrge",
+          "enabled": true,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd5nrmq002nrgrm0o44mdyl",
+          "enabled": true,
+          "numericValue": null
+        }
+      ]
+    },
+    {
+      "id": "cmtd5nrql003ergrm1967b0uu",
+      "title": "Praetor 600 First Officer",
+      "fields": {
+        "payScaleRaw": "$130,000 - $140,000",
+        "rotation": null,
+        "scheduleRaw": null,
+        "locationFitRequirements": null,
+        "baseCity": "Ogden",
+        "baseState": "UT",
+        "baseAirport": "OGD",
+        "aircraftTypesJson": "[\"Praetor 600\"]",
+        "manualOverrideNotes": "managed, tail not known yet - attach the variant when it is",
+        "rawMinimumRequirements": null,
+        "originalJobDescriptionText": null
+      },
+      "gates": [
+        {
+          "id": "cmtd5nrsh0049rgrmqwhwffb0",
+          "enabled": true,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd5nrsh004brgrmgd2eokni",
+          "enabled": true,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd5nrsh004crgrmnh8q4acp",
+          "enabled": true,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd5nrsh0040rgrmzeibvt7q",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd5nrsh0042rgrmefspeuml",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd5nrsh0041rgrm5kqjgfhx",
+          "enabled": true,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd5nrsh003rrgrm5o9mm115",
+          "enabled": true,
+          "numericValue": null
+        }
+      ]
+    },
+    {
+      "id": "cmtd5nrw8004irgrmujcy1k8x",
+      "title": "Single-Pilot Jet Captain (Georgia)",
+      "fields": {
+        "payScaleRaw": "$160,000 - $180,000",
+        "rotation": null,
+        "scheduleRaw": null,
+        "locationFitRequirements": null,
+        "baseCity": null,
+        "baseState": "GA",
+        "baseAirport": null,
+        "aircraftTypesJson": null,
+        "manualOverrideNotes": "NEW role - the SLC one was filled and stays retired; hour gates need entering by hand",
+        "rawMinimumRequirements": null,
+        "originalJobDescriptionText": null
+      },
+      "gates": [
+        {
+          "id": "cmtd7czlj000phgrmpw8wj9rm",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd7czlj000qhgrmdav56dze",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd7czlj000shgrm12v8ssyu",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd7czlj000uhgrmt374cwdr",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd7czlj000vhgrmrmjcqoef",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd7czlj0011hgrmeybihcxc",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd7czli0000hgrmisajr2rq",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd7czli0002hgrmsuqzzeql",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd7czli0003hgrmmc4lzb4c",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd7czli0001hgrmigv6s3ru",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd7czli0004hgrm713cky6p",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd7czli0005hgrm543507er",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd7czli0006hgrmzs5tkza4",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd7czli0007hgrm1yz6nt6g",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd7czlj0009hgrmyl51zp0f",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd7czlj000bhgrmwb3ufxr1",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd7czlj000lhgrmdyj2oe7p",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd7czlj000chgrm5aaay71z",
+          "enabled": false,
+          "numericValue": null
+        },
+        {
+          "id": "cmtd7czli0008hgrm7vk7948h",
+          "enabled": false,
+          "numericValue": null
+        }
+      ]
+    },
+    {
+      "id": "cmq5lgmqb00jt04l7546qjpyn",
+      "title": "PC-12 First Officer",
+      "fields": {
+        "payScaleRaw": "$40,000 annually",
+        "rotation": null,
+        "scheduleRaw": null,
+        "locationFitRequirements": null,
+        "baseCity": "Ogden",
+        "baseState": "Utah",
+        "baseAirport": "OGD",
+        "aircraftTypesJson": "[\"GV\",\"Pilatus PC-12\"]",
+        "manualOverrideNotes": null,
+        "rawMinimumRequirements": "● FAA Commercial or Airline Transport Pilot (ATP) Certificate with single and multi-engine land ratings\n● Minimum 800 hours total flight time*, including:\n○ 50 hours instrument\n○ *700 hours total flight time if currently employed as an active CFI\n● Valid FAA 1st Class Medical Certificate\n● FCC Restricted Radiotelephone Operator Permit\n● FAA Instrument Rating\n● Valid U.S. passport and driver’s license\n● Must be legally authorized to work in the United States without sponsorship\n● Must be able to pass TSA background checks and secure an appropriate SIDA badge when applicable\n\n● Ensure strict compliance with FAA regulations, company policies, checklists, and best practices\n● Perform duties of up to 14 hours per day during trips for as many as 8 consecutive days, often crossing multiple time zones\nand navigating drastically different weather conditions\n● As part of your rotation, you will have a flexible schedule, including days, nights, weekdays, weekends, and holidays. You\nwill also be available for overnight trips, spending several days and nights away from home in hotels.\n● Must reside within 1 hour of the Ogden, UT Airport or commit to relocating within two months of hire. Commuting is not an\noption for this position.\n\n● Adaptability and Change Management: Exhibits a safety-first mindset and the ability to adapt quickly to changing\nenvironments and demands\n● Effective Communication: Demonstrates exceptional oral, written, and interpersonal skills, ensuring professionalism and\nclarity in all interactions\n● Responsiveness: Possesses excellent decision-making and problem-solving skills, consistently demonstrating high\naccountability in all actions\n\n● Capable of managing sleep effectively to ensure readiness for flight duty\n● Strong customer-focused approach with professional presentation and excellent first-impression skills\n● Exhibits physical readiness, including occasionally moving objects up to 80 pounds\n● Competent in working with animals, including handling and care before, during, and after flights\n● Demonstrates a high degree of integrity and confidentiality",
+        "originalJobDescriptionText": "Pilatus PC-12 First Officer Job Location: OGD Position Type: Full Time Salary Range: $40,000 Job Category: FlightOps Paycom Question Templates: External - Workflow: Global Workflow, Knockout: Pilot - PC-12 SIC - KO, Global: Pilot - Global Questions New, Job Level: Pilot - PC12 PIC&SIC - Job Level Internal - Workflow: Global Workflow, Knockout: Pilot - Internal Default - KO, Global: Pilot - Internal - Global New, Job Level: Pilot - PC12 PIC&SIC - Job Level About the Role: SkyShare is seeking a passionate and skilled PC-12 First Officer to join our team. If you thrive on challenges, are eager to advance in your career, and value exceptional flying experiences, this role is for you. You'll be an advocate for our mission to love your journey and contribute to our vision of becoming the most loved private jet company. Future advancement opportunities are available by upgrading within our jet fleet. The Mission for this Position: As a pilot at SkyShare, you will be part of our exciting Part 135 flight department, which is based in Salt Lake City, Utah. You will leverage your flying expertise to provide our clients with the highest level of service and safety. About Us: SkyShare is one of the fastest-growing private aviation companies in the country. Named one of Utah's 100 fastest-growing companies and the Inc 5000's fastest-growing companies in the nation for the past four years. With operational bases in Ogden and Salt Lake City, UT, we offer the West's premier fractional aircraft ownership program, private aircraft charters, and managed aircraft services. Additionally, we operate FBO/Fuel services at the Ogden Airport and Gnoss Field Airport in Novato, CA. SkyShare operates a premium fleet ranging from Pilatus PC-12 turboprops to long-range Gulfstream GV jets. Supported by 16 years of aviation expertise and 130+ passionate professionals, we fly over 6,000 legs annually while delivering 5-star service and safety. Right Person, Right Seat: We are looking for talented pilots who are passionate about flying and committed to delivering exceptional customer experiences. The ideal candidate will be adaptable, professional, and most importantly, safety-focused at all times. You must possess SkyShare's core values: ● Fueled by Passion: Approaches work with energy, enthusiasm, and a commitment to excellence. Demonstrates a love for aviation and a drive to deliver exceptional results. ● Team Alignment: Works collaboratively across departments, aligning goals and actions with the broader team to ensure seamless operations. ● Deliver the Wow: Creates memorable and high-impact experiences for customers, colleagues, and partners by exceeding expectations. ● Solutions Focused: Approaches challenges with a proactive, problem-solving mindset to ensure efficiency and effectiveness. Job Responsibilities: ● Ensure strict compliance with FAA regulations, company policies, checklists, and best practices ● Perform duties of up to 14 hours per day during trips for as many as 8 consecutive days, often crossing multiple time zones and navigating drastically different weather conditions ● As part of your rotation, you will have a flexible schedule, including days, nights, weekdays, weekends, and holidays. You will also be available for overnight trips, spending several days and nights away from home in hotels. ● Must reside within 1 hour of the Ogden, UT Airport or commit to relocating within two months of hire. Commuting is not an option for this position. Qualifications: ● FAA Commercial or Airline Transport Pilot (ATP) Certificate with single and multi-engine land ratings ● Minimum 800 hours total flight time*, including: ○ 50 hours instrument ○ *700 hours total flight time if currently employed as an active CFI ● Valid FAA 1st Class Medical Certificate ● FCC Restricted Radiotelephone Operator Permit ● FAA Instrument Rating ● Valid U.S. passport and driver’s license ● Must be legally authorized to work in the United States without sponsorship ● Must be able to pass TSA background checks and secure an appropriate SIDA badge when applicable Personal/Character Requirements: ● Adaptability and Change Management: Exhibits a safety-first mindset and the ability to adapt quickly to changing environments and demands ● Effective Communication: Demonstrates exceptional oral, written, and interpersonal skills, ensuring professionalism and clarity in all interactions ● Responsiveness: Possesses excellent decision-making and problem-solving skills, consistently demonstrating high accountability in all actions Skills: ● Capable of managing sleep effectively to ensure readiness for flight duty ● Strong customer-focused approach with professional presentation and excellent first-impression skills ● Exhibits physical readiness, including occasionally moving objects up to 80 pounds ● Competent in working with animals, including handling and care before, during, and after flights ● Demonstrates a high degree of integrity and confidentiality Salary, Schedule, and Perks: ● Salary: $40,000 annually ● Schedule: 10/5 rotation for our PC-12 SICs ● Training: Includes an 18-month repayment contract, broken down quarterly ● Health Benefits: Medical, Dental, and Vision plans available ● Life Insurance: Employer-paid for your peace of mind, with optional additional coverage available ● Retirement: 401(k) Plan with employer match options ● Time Off: Competitive paid time off policy ● Travel Perks: Enjoy free flights on unoccupied trips\n\n● FAA Commercial or Airline Transport Pilot (ATP) Certificate with single and multi-engine land ratings\n● Minimum 800 hours total flight time*, including:\n○ 50 hours instrument\n○ *700 hours total flight time if currently employed as an active CFI\n● Valid FAA 1st Class Medical Certificate\n● FCC Restricted Radiotelephone Operator Permit\n● FAA Instrument Rating\n● Valid U.S. passport and driver’s license\n● Must be legally authorized to work in the United States without sponsorship\n● Must be able to pass TSA background checks and secure an appropriate SIDA badge when applicable\n\n● Ensure strict compliance with FAA regulations, company policies, checklists, and best practices\n● Perform duties of up to 14 hours per day during trips for as many as 8 consecutive days, often crossing multiple time zones\nand navigating drastically different weather conditions\n● As part of your rotation, you will have a flexible schedule, including days, nights, weekdays, weekends, and holidays. You\nwill also be available for overnight trips, spending several days and nights away from home in hotels.\n● Must reside within 1 hour of the Ogden, UT Airport or commit to relocating within two months of hire. Commuting is not an\noption for this position.\n\n● Adaptability and Change Management: Exhibits a safety-first mindset and the ability to adapt quickly to changing\nenvironments and demands\n● Effective Communication: Demonstrates exceptional oral, written, and interpersonal skills, ensuring professionalism and\nclarity in all interactions\n● Responsiveness: Possesses excellent decision-making and problem-solving skills, consistently demonstrating high\naccountability in all actions\n\n● Capable of managing sleep effectively to ensure readiness for flight duty\n● Strong customer-focused approach with professional presentation and excellent first-impression skills\n● Exhibits physical readiness, including occasionally moving objects up to 80 pounds\n● Competent in working with animals, including handling and care before, during, and after flights\n● Demonstrates a high degree of integrity and confidentiality\n\n● Salary: $40,000 annually"
+      },
+      "gates": [
+        {
+          "id": "cmq5lgors00l204l7fbuf5nel",
+          "enabled": false,
+          "numericValue": null
+        }
+      ]
+    }
+  ],
+  "createdVariantIds": [
+    "cmtd7d0290012hgrmetlkd87e"
+  ]
+}

@@ -1,0 +1,40 @@
+RECONCILE OPEN ROLES - APPLIED
+generated: 2026-08-28T16:04:26.637Z
+
+ACTIVE requirements before: 27
+staying ACTIVE:             5  (G450 & GV Captain, G200 First Officer, PC-12 Captain, Evergreen PDP, PC-12 First Officer)
+becoming INACTIVE:          22
+
+--- status changes (reversible; gates, fields and applications all kept) ---
+  560XLS+ Captain                                  ACTIVE -> INACTIVE   [Managed tail N6TM | job: none]
+  560XLS+ First Officer                            ACTIVE -> INACTIVE   [Managed tail N6TM | job: none]
+  CJ Captain                                       ACTIVE -> INACTIVE   [Managed tail N443BC | job: RETIRED Salt Lake City UT 198app]
+  Citation 560XL First Officer                     ACTIVE -> INACTIVE   [Managed | job: RETIRED Salt Lake City UT 210app]
+  Citation CE-525 (CJ2) Captain                    ACTIVE -> INACTIVE   [SkyShare | job: RETIRED SLC 0app]
+  Citation CE-525 First Officer                    ACTIVE -> INACTIVE   [SkyShare | job: RETIRED Salt Lake City UT 119app]
+  Citation CE525 Captain                           ACTIVE -> INACTIVE   [SkyShare | job: MERGED  0app]
+  Citation M2 First Officer                        ACTIVE -> INACTIVE   [Managed tail N785PD | job: RETIRED Salt Lake City UT 132app]
+  G450 Aircraft Maintenance Technician             ACTIVE -> INACTIVE   [SkyShare | job: RETIRED Henderson NV 28app]
+  Gulfstream G200 Captain                          ACTIVE -> INACTIVE   [Managed | job: RETIRED Salt Lake City UT 5app]
+  Gulfstream G450 & GV First Officer (Home-Based)  ACTIVE -> INACTIVE   [SkyShare | job: RETIRED SLC 0app]
+  Gulfstream G450 Captain                          ACTIVE -> INACTIVE   [Managed tail N787JS | job: RETIRED Henderson NV 141app]
+  Gulfstream G450 First Officer                    ACTIVE -> INACTIVE   [SkyShare | job: RETIRED Henderson NV 222app]
+  Gulfstream G450 Lead Captain                     ACTIVE -> INACTIVE   [Managed tail N787JS | job: RETIRED Henderson NV 39app]
+  Legacy 650 Captain                               ACTIVE -> INACTIVE   [Managed tail N650JF | job: none]
+  Legacy 650 Lead Captain                          ACTIVE -> INACTIVE   [Managed tail N650JF | job: none]
+  M2 Captain                                       ACTIVE -> INACTIVE   [Managed tail N785PD | job: none]
+  Phenom 100 Captain                               ACTIVE -> INACTIVE   [Managed tail N450JF | job: none]
+  Phenom 100 First Officer                         ACTIVE -> INACTIVE   [Managed tail N450JF | job: none]
+  Phenom 300 Captain                               ACTIVE -> INACTIVE   [Managed tail N409KG | job: none]
+  Phenom 300 First Officer                         ACTIVE -> INACTIVE   [Managed tail N409KG | job: none]
+  Pilatus PC-12 NG Lead Captain                    ACTIVE -> INACTIVE   [Managed tail N413UU | job: RETIRED Brigham City UT 32app]
+
+--- operatorType corrections ---
+  Gulfstream G200 Captain                          Managed -> SkyShare   [not a managed aircraft]
+  Citation 560XL First Officer                     Managed -> SkyShare   [not a managed aircraft]
+  Gulfstream G450 First Officer                    SkyShare -> Managed   [Henderson NV managed tail, was mistagged SkyShare]
+
+--- managed variants to attach ---
+  Gulfstream G450 First Officer                    + tail N787JS
+
+Matchboard after: 5 roles.

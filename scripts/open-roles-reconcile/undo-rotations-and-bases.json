@@ -1,0 +1,288 @@
+{
+  "generatedAt": "2026-08-28T17:14:21.251Z",
+  "rotations": [
+    {
+      "id": "cmq5lg8es006n04l768l2dv9q",
+      "title": "G200 First Officer",
+      "rotation": null
+    },
+    {
+      "id": "cmq5lg154000204l7so1ai4xj",
+      "title": "G450 & GV Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5lgke100hm04l7r0906zkb",
+      "title": "PC-12 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5if497013k04l7zxktq0k4",
+      "title": "Citation 560XL Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5jxtqa013k04l44sikurxe",
+      "title": "Citation 560XL Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5jx1vf00ff04l4ait9mdas",
+      "title": "Citation 560XL First Officer",
+      "rotation": null
+    },
+    {
+      "id": "cmq5ieeyi00ff04l7j5gj8gvk",
+      "title": "Citation 560XL First Officer",
+      "rotation": null
+    },
+    {
+      "id": "cmq5jx4el00hm04l44fvlafxy",
+      "title": "Citation CJ2 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5jwjw0000204l4kh85hc58",
+      "title": "Citation CJ2 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5ieh7v00hm04l773c5ugmo",
+      "title": "Citation CJ2 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5idxvy000204l7xcs44w2l",
+      "title": "Citation CJ2 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5iea5w00b104l7uqz4v3cn",
+      "title": "Citation CJ2 First Officer",
+      "rotation": null
+    },
+    {
+      "id": "cmq5jwwt900b104l4d7xzkq3w",
+      "title": "Citation CJ2 First Officer",
+      "rotation": null
+    },
+    {
+      "id": "cmq5jwu88008u04l4dx37s0d1",
+      "title": "Gulfstream G200 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5ie7rp008u04l7m3w2s7tn",
+      "title": "Gulfstream G200 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5jwrol006n04l4nerefi1a",
+      "title": "Gulfstream G200 First Officer",
+      "rotation": null
+    },
+    {
+      "id": "cmq5ie5cr006n04l7lvdsnfp7",
+      "title": "Gulfstream G200 First Officer",
+      "rotation": null
+    },
+    {
+      "id": "cmq5jxooe00z604l4hsqam1yr",
+      "title": "Gulfstream G450 First Officer",
+      "rotation": null
+    },
+    {
+      "id": "cmq5ieck500d804l766kzs3rh",
+      "title": "PC-12 NGX Lead Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5ielpf00m004l7xky4hwko",
+      "title": "Pilatus PC-12 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5jxc1d00o704l4sswt59jw",
+      "title": "Pilatus PC-12 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5jx9i000m004l4x4ib6mr0",
+      "title": "Pilatus PC-12 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5ieny300o704l75i3o6n3a",
+      "title": "Pilatus PC-12 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5jwmjq002904l492fnz9by",
+      "title": "Pilatus PC-12 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5ie0g7002904l7ka1gnkzq",
+      "title": "Pilatus PC-12 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5iejgr00jt04l7lne6hao0",
+      "title": "Pilatus PC-12 First Officer",
+      "rotation": null
+    },
+    {
+      "id": "cmq5jx6y200jt04l42t8gn04m",
+      "title": "Pilatus PC-12 First Officer",
+      "rotation": null
+    },
+    {
+      "id": "cmq5jwp59004g04l4l0bs3r6r",
+      "title": "Pilatus PC-12 NG Lead Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5if1w7011d04l7pptsbofj",
+      "title": "Pilatus PC-12 NG Lead Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5jxr7c011d04l421hj5l7v",
+      "title": "Pilatus PC-12 NG Lead Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmqlakr230002y8rmv3pr68ba",
+      "title": "560XLS+ Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmqlcw3xk0000xwrmnhgcqsms",
+      "title": "560XLS+ First Officer",
+      "rotation": null
+    },
+    {
+      "id": "cmq5iesfn00sl04l7z8t2zy3q",
+      "title": "CJ Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5lgard008u04l70xv5mx8h",
+      "title": "Citation 560XL Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5lgd4k00b104l7zp02226k",
+      "title": "Citation 560XL First Officer",
+      "rotation": null
+    },
+    {
+      "id": "cmq5lgfh000d804l7ipt8d92y",
+      "title": "Citation CE-525 (CJ2) Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5lghti00ff04l7cp9ab8ps",
+      "title": "Citation CE-525 First Officer",
+      "rotation": null
+    },
+    {
+      "id": "cmq5jxekh00qe04l411dqzf14",
+      "title": "Citation M2 First Officer",
+      "rotation": null
+    },
+    {
+      "id": "cmsjix4l0000i04jvedp4fu8p",
+      "title": "Evergreen PDP",
+      "rotation": null
+    },
+    {
+      "id": "cmq5lg61k004g04l75ujs435z",
+      "title": "Gulfstream G200 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5lg3oa002904l7ow9q3l6g",
+      "title": "Gulfstream G450 & GV First Officer (Home-Based)",
+      "rotation": null
+    },
+    {
+      "id": "cmq5iex6800wz04l7ifmfnqpi",
+      "title": "Gulfstream G450 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5iezj600z604l7jygv1wza",
+      "title": "Gulfstream G450 First Officer",
+      "rotation": null
+    },
+    {
+      "id": "cmq5ieuss00us04l74ao23pl7",
+      "title": "Gulfstream G450 Lead Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmqlakrdd0016y8rm66kxrebn",
+      "title": "Legacy 650 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmqldh4220000vsrm5fg0ptzg",
+      "title": "Legacy 650 Lead Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmqjm9vxu00005krm5z9acefc",
+      "title": "M2 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmq5jwzce00d804l48awzreeb",
+      "title": "PC-12 NGX Lead Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmqjm9wcj00265krmnkycp4aq",
+      "title": "Phenom 100 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmqjm9wjs00395krmgc8l4j5y",
+      "title": "Phenom 100 First Officer",
+      "rotation": null
+    },
+    {
+      "id": "cmqlakrn9002ay8rms8q8l8cz",
+      "title": "Phenom 300 Captain",
+      "rotation": null
+    },
+    {
+      "id": "cmqlcw4y50014xwrmmsfgg4bp",
+      "title": "Phenom 300 First Officer",
+      "rotation": null
+    },
+    {
+      "id": "cmq5ie2w6004g04l7q04kjsox",
+      "title": "Pilatus PC-12 NG Lead Captain",
+      "rotation": null
+    }
+  ],
+  "bases": [
+    {
+      "id": "cmtd5nrky002argrmfvaj6zzw",
+      "title": "Praetor 600 Captain",
+      "baseCity": "Salt Lake City",
+      "baseState": "UT",
+      "baseAirport": "SLC",
+      "locationFitRequirements": "Based in the Salt Lake City, UT area. Reside within approximately a 2-hour drive of Salt Lake City International Airport, or relocate within 2 months."
+    },
+    {
+      "id": "cmtd5nrql003ergrm1967b0uu",
+      "title": "Praetor 600 First Officer",
+      "baseCity": "Salt Lake City",
+      "baseState": "UT",
+      "baseAirport": "SLC",
+      "locationFitRequirements": "Based in the Salt Lake City, UT area. Reside within approximately a 2-hour drive of Salt Lake City International Airport, or relocate within 2 months."
+    }
+  ]
+}

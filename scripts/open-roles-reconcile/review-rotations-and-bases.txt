@@ -1,0 +1,76 @@
+APPLY ROTATIONS AND BASES - APPLIED
+generated: 2026-08-28T17:14:21.249Z
+
+--- rotations (66 requirements, every status) ---
+  G200 First Officer                               none                                 -> 8/6   [SkyShare Gulfstream G200 SIC]
+  G450 & GV Captain                                none                                 -> 15/13   [SkyShare Gulfstream G450 & GV PIC]
+  PC-12 Captain                                    none                                 -> 8/6   [SkyShare Pilatus PC-12 PIC]
+  Citation 560XL Captain                           none                                 -> 8/6   [SkyShare Citation 560XL PIC]
+  Citation 560XL Captain                           none                                 -> 8/6   [SkyShare Citation 560XL PIC]
+  Citation 560XL First Officer                     none                                 -> 8/6   [SkyShare Citation 560XL SIC]
+  Citation 560XL First Officer                     none                                 -> 8/6   [SkyShare Citation 560XL SIC]
+  Citation CJ2 Captain                             none                                 -> 8/6   [SkyShare Citation CJ2 PIC]
+  Citation CJ2 Captain                             none                                 -> 8/6   [SkyShare Citation CJ2 PIC]
+  Citation CJ2 Captain                             none                                 -> 8/6   [SkyShare Citation CJ2 PIC]
+  Citation CJ2 Captain                             none                                 -> 8/6   [SkyShare Citation CJ2 PIC]
+  Citation CJ2 First Officer                       none                                 -> 10/5   [SkyShare Citation CJ2 SIC]
+  Citation CJ2 First Officer                       none                                 -> 10/5   [SkyShare Citation CJ2 SIC]
+  Gulfstream G200 Captain                          none                                 -> 8/6   [SkyShare Gulfstream G200 PIC]
+  Gulfstream G200 Captain                          none                                 -> 8/6   [SkyShare Gulfstream G200 PIC]
+  Gulfstream G200 First Officer                    none                                 -> 8/6   [SkyShare Gulfstream G200 SIC]
+  Gulfstream G200 First Officer                    none                                 -> 8/6   [SkyShare Gulfstream G200 SIC]
+  Gulfstream G450 First Officer                    none                                 -> As needed, 8 hard days off per month   [managed]
+  PC-12 NGX Lead Captain                           none                                 -> 8/6   [SkyShare Pilatus PC-12 NGX PIC]
+  Pilatus PC-12 Captain                            none                                 -> 8/6   [SkyShare Pilatus PC-12 PIC]
+  Pilatus PC-12 Captain                            none                                 -> 8/6   [SkyShare Pilatus PC-12 PIC]
+  Pilatus PC-12 Captain                            none                                 -> 8/6   [SkyShare Pilatus PC-12 PIC]
+  Pilatus PC-12 Captain                            none                                 -> 8/6   [SkyShare Pilatus PC-12 PIC]
+  Pilatus PC-12 Captain                            none                                 -> 8/6   [SkyShare Pilatus PC-12 PIC]
+  Pilatus PC-12 Captain                            none                                 -> 8/6   [SkyShare Pilatus PC-12 PIC]
+  Pilatus PC-12 First Officer                      none                                 -> 10/5   [SkyShare Pilatus PC-12 SIC]
+  Pilatus PC-12 First Officer                      none                                 -> 10/5   [SkyShare Pilatus PC-12 SIC]
+  Pilatus PC-12 NG Lead Captain                    none                                 -> 8/6   [SkyShare Pilatus PC-12 NG PIC]
+  Pilatus PC-12 NG Lead Captain                    none                                 -> 8/6   [SkyShare Pilatus PC-12 NG PIC]
+  Pilatus PC-12 NG Lead Captain                    none                                 -> 8/6   [SkyShare Pilatus PC-12 NG PIC]
+  560XLS+ Captain                                  none                                 -> As needed, 8 hard days off per month   [managed]
+  560XLS+ First Officer                            none                                 -> As needed, 8 hard days off per month   [managed]
+  CJ Captain                                       none                                 -> As needed, 8 hard days off per month   [managed]
+  Citation 560XL Captain                           none                                 -> 8/6   [SkyShare Citation 560XL PIC]
+  Citation 560XL First Officer                     none                                 -> 8/6   [SkyShare Citation 560XL SIC]
+  Citation CE-525 (CJ2) Captain                    none                                 -> 8/6   [SkyShare Citation CJ2 PIC]
+  Citation CE-525 First Officer                    none                                 -> 10/5   [SkyShare Citation CJ2 SIC]
+  Citation M2 First Officer                        none                                 -> As needed, 8 hard days off per month   [managed]
+  Evergreen PDP                                    none                                 -> 10/5   [title override]
+  SKIP  G450 Aircraft Maintenance Technician             not a flying seat
+  Gulfstream G200 Captain                          none                                 -> 8/6   [SkyShare Gulfstream G200 PIC]
+  Gulfstream G450 & GV First Officer (Home-Based)  none                                 -> 15/13   [SkyShare Gulfstream G450 & GV SIC]
+  Gulfstream G450 Captain                          none                                 -> As needed, 8 hard days off per month   [managed]
+  Gulfstream G450 First Officer                    none                                 -> As needed, 8 hard days off per month   [managed]
+  Gulfstream G450 Lead Captain                     none                                 -> As needed, 8 hard days off per month   [managed]
+  Legacy 650 Captain                               none                                 -> As needed, 8 hard days off per month   [managed]
+  Legacy 650 Lead Captain                          none                                 -> As needed, 8 hard days off per month   [managed]
+  M2 Captain                                       none                                 -> As needed, 8 hard days off per month   [managed]
+  PC-12 NGX Lead Captain                           none                                 -> As needed, 8 hard days off per month   [managed]
+  Phenom 100 Captain                               none                                 -> As needed, 8 hard days off per month   [managed]
+  Phenom 100 First Officer                         none                                 -> As needed, 8 hard days off per month   [managed]
+  Phenom 300 Captain                               none                                 -> As needed, 8 hard days off per month   [managed]
+  Phenom 300 First Officer                         none                                 -> As needed, 8 hard days off per month   [managed]
+  Pilatus PC-12 NG Lead Captain                    none                                 -> As needed, 8 hard days off per month   [managed]
+
+  53 changed, 6 already correct, 6 not set
+
+--- no rotation applied, needs a rule from him ---
+  ? Citation M2 First Officer [HISTORICAL] - no rotation rule given for aircraft "Citation M2"
+  ? Gulfstream G450 Captain [HISTORICAL] - no rotation rule given for aircraft "Gulfstream G450"
+  ? Gulfstream G450 First Officer [HISTORICAL] - no rotation rule given for aircraft "Gulfstream G450"
+  ? Gulfstream G450 First Officer [HISTORICAL] - no rotation rule given for aircraft "Gulfstream G450"
+  ? Gulfstream G450 Lead Captain [HISTORICAL] - no rotation rule given for aircraft "Gulfstream G450"
+  ? Citation CE525 Captain [INACTIVE/SkyShare] - fleet position could not be resolved
+
+--- base corrections ---
+  Praetor 600 Captain            Salt Lake City/SLC -> Ogden/OGD   [post said the Salt Lake City area; he confirmed Ogden]
+  Praetor 600 First Officer      Salt Lake City/SLC -> Ogden/OGD   [post said the Salt Lake City area; he confirmed Ogden]
+
+NOTE: the SLC relocation gate stays ON for both Praetor roles - Ogden is inside
+the Wasatch Front commute the gate describes, and turning it off would stop
+flagging candidates who would need to move to Utah at all.

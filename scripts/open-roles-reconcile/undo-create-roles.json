@@ -1,0 +1,60 @@
+{
+  "generatedAt": "2026-08-28T16:17:44.390Z",
+  "createdJobIds": [
+    "cmtd5nrd10014rgrmabmg4gsu",
+    "cmtd5nrk90029rgrmyrf0p5z5",
+    "cmtd5nrpu003drgrmndf5p0zd",
+    "cmtd5nrvh004hrgrmyhbjd4ov",
+    "cmtd5nrxo004jrgrm7d7r294x",
+    "cmtd5nrz4004krgrmsjo5yr5k"
+  ],
+  "createdRequirementIds": [
+    "cmtd5nr4p0000rgrm0t725wgk",
+    "cmtd5nre70015rgrmqo2fh7tq",
+    "cmtd5nrky002argrmfvaj6zzw",
+    "cmtd5nrql003ergrm1967b0uu",
+    "cmtd5nrw8004irgrmujcy1k8x"
+  ],
+  "createdVariantIds": [
+    "cmtd5nran0013rgrmywb9r37n",
+    "cmtd5nri20028rgrm5zrq1yid"
+  ],
+  "fieldChanges": [
+    {
+      "model": "pilotRequirement",
+      "id": "cmq5lgmqb00jt04l7546qjpyn",
+      "field": "sourceJobRecordId",
+      "from": "cmqvr1z0l000sxcrmouomzmu0"
+    },
+    {
+      "model": "pilotRequirement",
+      "id": "cmsjix4l0000i04jvedp4fu8p",
+      "field": "status",
+      "from": "ACTIVE"
+    },
+    {
+      "model": "job",
+      "id": "cmqvr1z6u0010xcrmbciskr6t",
+      "field": "status",
+      "from": "OPEN"
+    }
+  ],
+  "merges": [
+    {
+      "secondaryJobId": "cmsjitjrv000a04jvxb94fp4p",
+      "secondaryTitle": "Evergreen PDP"
+    },
+    {
+      "secondaryJobId": "cmqvr1z0l000sxcrmouomzmu0",
+      "secondaryTitle": "Pilatus PC-12 First Officer"
+    },
+    {
+      "secondaryJobId": "cmqvr1zos001lxcrmojusl8ma",
+      "secondaryTitle": "Aircraft Maintenance Technician (Weekend Shift)"
+    },
+    {
+      "secondaryJobId": "cmqa2ja10000104jm1stq08n1",
+      "secondaryTitle": "Senior Gulfstream Technician (AMT)"
+    }
+  ]
+}

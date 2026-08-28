@@ -1,0 +1,100 @@
+APPLY JOB POST REQUIREMENTS - APPLIED
+generated: 2026-08-28T17:05:19.605Z
+
+Source: the four PDFs supplied 2026-08-28 (Challenger 350 PIC-SIC, Praetor 600
+PIC-SIC, Straight CJ PIC Georgia, PC-12 First Officer SIC).
+
+=== Challenger 350 Captain ===
+   hours  multi_engine_time                3000 -> 1000
+   hours  jet_time                         1000 -> 800
+   hours  instrument_time                   800 -> 300
+   hours  time_in_type                      135 -> 300
+   bool   set_rotation                       on -> off
+   bool   part_135_required                  on -> off
+   bool   part_135_preferred                 on -> off
+   bool   international_required             on -> off
+   pay    $220,000 - $230,000 -> $220,000 - $230,000 annually
+   rot    none -> As needed, 8 hard days off per month
+   text   requirements 0 chars -> 594 chars
+   note   Prior flight experience operating to and from Hawaii is REQUIRED - there is no catalog gate for this, so it must be checked by hand. 300 hours in the Challenger 300/350 is a hard requirement.
+
+=== Challenger 350 First Officer ===
+   hours  jet_time                  on/no value -> 200
+   hours  cross_country_time        on/no value -> off
+   hours  night_time                on/no value -> off
+   bool   fluid_schedule                    off -> on
+   bool   set_rotation                       on -> off
+   bool   part_135_preferred                 on -> off
+   pay    $130,000 -> $130,000 annually
+   rot    none -> As needed, 8 hard days off per month
+   text   requirements 0 chars -> 491 chars
+   note   No Hawaii requirement on the SIC seat, unlike the Captain post.
+
+=== Praetor 600 Captain ===
+   hours  multi_engine_time                3000 -> 1000
+   hours  jet_time                         1000 -> 800
+   hours  instrument_time                   800 -> 300
+   hours  time_in_type                      135 -> off
+   bool   slc_relocation                    off -> on
+   bool   set_rotation                       on -> off
+   bool   part_135_required                  on -> off
+   bool   part_135_preferred                 on -> off
+   base   Ogden/OGD -> Salt Lake City/SLC
+   pay    $230,000 - $240,000 -> $230,000 - $240,000 annually
+   rot    none -> As needed, 8 hard days off per month
+   text   requirements 0 chars -> 591 chars
+   note   250+ PIC hours in the EMB-550 is strongly preferred, not required, so it is not a gate. Overseas international experience IS required. Aircraft not yet purchased, so no tail number.
+
+=== Praetor 600 First Officer ===
+   hours  jet_time                  on/no value -> 200
+   hours  cross_country_time        on/no value -> off
+   hours  night_time                on/no value -> off
+   bool   fluid_schedule                    off -> on
+   bool   slc_relocation                    off -> on
+   bool   set_rotation                       on -> off
+   bool   part_135_preferred                 on -> off
+   base   Ogden/OGD -> Salt Lake City/SLC
+   pay    $130,000 - $140,000 -> $130,000 - $140,000 annually
+   rot    none -> As needed, 8 hard days off per month
+   text   requirements 0 chars -> 538 chars
+   note   Overseas international experience is preferred, not required, so it is not a gate. Aircraft not yet purchased, so no tail number.
+
+=== Single-Pilot Jet Captain (Georgia) ===
+   gates  none existed - seeding 38 catalog gates (all off, then set from the post)
+   hours  total_time                        off -> 2800
+   hours  pic_time                          off -> 250
+   hours  multi_engine_time                 off -> 500
+   hours  jet_time                          off -> 300
+   hours  instrument_time                   off -> 200
+   hours  single_pilot_jet_time             off -> on/no value
+   bool   commercial_certificate            off -> on
+   bool   first_class_medical               off -> on
+   bool   fcc_permit                        off -> on
+   bool   instrument_rating                 off -> on
+   bool   us_passport                       off -> on
+   bool   us_drivers_license                off -> on
+   bool   current_ifr                       off -> on
+   bool   work_authorization                off -> on
+   bool   training_contract                 off -> on
+   bool   atp_certificate                   off -> on
+   bool   fluid_schedule                    off -> on
+   bool   part_135_preferred                off -> on
+   bool   tsa_sida                          off -> on
+   base   none -> Covington/CVC
+   pay    $160,000 - $180,000 -> $160,000 - $180,000 annually, relocation assistance up to $10,000 may be available
+   rot    none -> As needed, 8 hard days off per month
+   text   requirements 0 chars -> 669 chars
+   tail   + N443BC
+   note   Managed Part 91 Citation CJ, tail N443BC - the same aircraft as the former SLC CJ Captain role, which moved to Georgia. Recent single-pilot jet experience is required but the post states no hour figure, so that gate carries no threshold. Initially at CVC, moving to CPP.
+
+=== PC-12 First Officer ===
+   bool   current_ifr                       off -> on
+   rot    none -> 10/5
+   text   requirements 2100 chars KEPT (already richer than the 561-char transcription)
+   note   800 hours total, or 700 if currently employed as an active CFI - the CFI allowance cannot be expressed as a gate and must be applied by hand. Part 135, SkyShare-operated, no tail.
+
+FLAGGED FOR HIM:
+  - Praetor 600: he said Ogden, both posts say the Salt Lake City area. Followed the posts.
+  - PC-12 First Officer pay is $40,000 in the post, well below the other seats. Taken as written.
+  - Challenger 350 Captain requires prior Hawaii experience; no catalog gate exists for it.
+  - PC-12 First Officer allows 700 hours for an active CFI; a gate cannot express that.

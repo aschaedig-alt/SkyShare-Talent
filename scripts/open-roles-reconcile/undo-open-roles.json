@@ -1,0 +1,212 @@
+{
+  "generatedAt": "2026-08-28T16:04:26.640Z",
+  "changes": [
+    {
+      "id": "cmqlakr230002y8rmv3pr68ba",
+      "title": "560XLS+ Captain",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "Managed tail N6TM | job: none"
+    },
+    {
+      "id": "cmqlcw3xk0000xwrmnhgcqsms",
+      "title": "560XLS+ First Officer",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "Managed tail N6TM | job: none"
+    },
+    {
+      "id": "cmq5iesfn00sl04l7z8t2zy3q",
+      "title": "CJ Captain",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "Managed tail N443BC | job: RETIRED Salt Lake City UT 198app"
+    },
+    {
+      "id": "cmq5lgd4k00b104l7zp02226k",
+      "title": "Citation 560XL First Officer",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "Managed | job: RETIRED Salt Lake City UT 210app"
+    },
+    {
+      "id": "cmq5lgfh000d804l7ipt8d92y",
+      "title": "Citation CE-525 (CJ2) Captain",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "SkyShare | job: RETIRED SLC 0app"
+    },
+    {
+      "id": "cmq5lghti00ff04l7cp9ab8ps",
+      "title": "Citation CE-525 First Officer",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "SkyShare | job: RETIRED Salt Lake City UT 119app"
+    },
+    {
+      "id": "cmq5jxh3i00sl04l4i5iyt98p",
+      "title": "Citation CE525 Captain",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "SkyShare | job: MERGED  0app"
+    },
+    {
+      "id": "cmq5jxekh00qe04l411dqzf14",
+      "title": "Citation M2 First Officer",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "Managed tail N785PD | job: RETIRED Salt Lake City UT 132app"
+    },
+    {
+      "id": "cmrton4mp000004l7syubhj12",
+      "title": "G450 Aircraft Maintenance Technician",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "SkyShare | job: RETIRED Henderson NV 28app"
+    },
+    {
+      "id": "cmq5lg61k004g04l75ujs435z",
+      "title": "Gulfstream G200 Captain",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "Managed | job: RETIRED Salt Lake City UT 5app"
+    },
+    {
+      "id": "cmq5lg3oa002904l7ow9q3l6g",
+      "title": "Gulfstream G450 & GV First Officer (Home-Based)",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "SkyShare | job: RETIRED SLC 0app"
+    },
+    {
+      "id": "cmq5iex6800wz04l7ifmfnqpi",
+      "title": "Gulfstream G450 Captain",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "Managed tail N787JS | job: RETIRED Henderson NV 141app"
+    },
+    {
+      "id": "cmq5iezj600z604l7jygv1wza",
+      "title": "Gulfstream G450 First Officer",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "SkyShare | job: RETIRED Henderson NV 222app"
+    },
+    {
+      "id": "cmq5ieuss00us04l74ao23pl7",
+      "title": "Gulfstream G450 Lead Captain",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "Managed tail N787JS | job: RETIRED Henderson NV 39app"
+    },
+    {
+      "id": "cmqlakrdd0016y8rm66kxrebn",
+      "title": "Legacy 650 Captain",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "Managed tail N650JF | job: none"
+    },
+    {
+      "id": "cmqldh4220000vsrm5fg0ptzg",
+      "title": "Legacy 650 Lead Captain",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "Managed tail N650JF | job: none"
+    },
+    {
+      "id": "cmqjm9vxu00005krm5z9acefc",
+      "title": "M2 Captain",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "Managed tail N785PD | job: none"
+    },
+    {
+      "id": "cmqjm9wcj00265krmnkycp4aq",
+      "title": "Phenom 100 Captain",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "Managed tail N450JF | job: none"
+    },
+    {
+      "id": "cmqjm9wjs00395krmgc8l4j5y",
+      "title": "Phenom 100 First Officer",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "Managed tail N450JF | job: none"
+    },
+    {
+      "id": "cmqlakrn9002ay8rms8q8l8cz",
+      "title": "Phenom 300 Captain",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "Managed tail N409KG | job: none"
+    },
+    {
+      "id": "cmqlcw4y50014xwrmmsfgg4bp",
+      "title": "Phenom 300 First Officer",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "Managed tail N409KG | job: none"
+    },
+    {
+      "id": "cmq5ie2w6004g04l7q04kjsox",
+      "title": "Pilatus PC-12 NG Lead Captain",
+      "field": "status",
+      "from": "ACTIVE",
+      "to": "INACTIVE",
+      "note": "Managed tail N413UU | job: RETIRED Brigham City UT 32app"
+    },
+    {
+      "id": "cmq5lg61k004g04l75ujs435z",
+      "title": "Gulfstream G200 Captain",
+      "field": "operatorType",
+      "from": "Managed",
+      "to": "SkyShare",
+      "note": "not a managed aircraft"
+    },
+    {
+      "id": "cmq5lgd4k00b104l7zp02226k",
+      "title": "Citation 560XL First Officer",
+      "field": "operatorType",
+      "from": "Managed",
+      "to": "SkyShare",
+      "note": "not a managed aircraft"
+    },
+    {
+      "id": "cmq5iezj600z604l7jygv1wza",
+      "title": "Gulfstream G450 First Officer",
+      "field": "operatorType",
+      "from": "SkyShare",
+      "to": "Managed",
+      "note": "Henderson NV managed tail, was mistagged SkyShare"
+    }
+  ],
+  "variantAdds": [
+    {
+      "requirementId": "cmq5iezj600z604l7jygv1wza",
+      "title": "Gulfstream G450 First Officer",
+      "tailNumber": "N787JS"
+    }
+  ]
+}

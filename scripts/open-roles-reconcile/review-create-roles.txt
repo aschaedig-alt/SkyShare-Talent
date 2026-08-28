@@ -1,0 +1,55 @@
+CREATE OPEN ROLES - APPLIED
+generated: 2026-08-28T16:17:43.607Z
+
+template "Gulfstream G200 Captain": 38 gates, 23 enabled
+template "G200 First Officer": 38 gates, 20 enabled
+
+--- pilot roles ---
+  Challenger 350 Captain
+      reuse existing job [OPEN] | CREATE requirement
+      Managed tail N522AD | Salt Lake City, UT | $220,000 - $230,000
+      gates from "Gulfstream G200 Captain"
+      job already exists and is OPEN; only the requirement is created
+  Challenger 350 First Officer
+      CREATE job (OPEN) | CREATE requirement
+      Managed tail N522AD | Salt Lake City, UT | $130,000
+      gates from "G200 First Officer"
+      new job and new requirement
+  Praetor 600 Captain
+      CREATE job (OPEN) | CREATE requirement
+      Managed (no tail yet) | Ogden, UT | $230,000 - $240,000
+      gates from "Gulfstream G200 Captain", minus slc_relocation
+      managed, tail not known yet - attach the variant when it is
+  Praetor 600 First Officer
+      CREATE job (OPEN) | CREATE requirement
+      Managed (no tail yet) | Ogden, UT | $130,000 - $140,000
+      gates from "G200 First Officer", minus slc_relocation
+      managed, tail not known yet - attach the variant when it is
+  Single-Pilot Jet Captain (Georgia)
+      CREATE job (OPEN) | CREATE requirement
+      Managed (no tail yet) | GA | $160,000 - $180,000
+      NO hour gates - needs entering by hand
+      NEW role - the SLC one was filled and stays retired; hour gates need entering by hand
+
+--- support jobs (no pilot requirement, they do not go on the Matchboard) ---
+  Vice President of Aircraft Sales (Brokerage)     CREATE (OPEN)
+  Sr. Staff Accountant                             CREATE (OPEN)
+
+--- job merges (applications and interviews move to the primary) ---
+  Evergreen PDP (3app) -> PC-12 First Officer (1app)
+      PDP evergreen is the PC-12 SIC role, not a separate one
+  Pilatus PC-12 First Officer (49app) -> PC-12 First Officer (4app)
+      same role, older job row, holds 49 applications
+  Aircraft Maintenance Technician (Weekend Shift) (30app) -> Aircraft Maintenance Technician (243app)
+      all AMT postings go under the one AMT job
+  Senior Gulfstream Technician (AMT) (0app) -> Aircraft Maintenance Technician (273app)
+      all AMT postings go under the one AMT job
+
+--- requirement relinks ---
+  PC-12 First Officer requirement: job "Pilatus PC-12 First Officer" [MERGED] -> "PC-12 First Officer" [OPEN]
+
+--- requirement deactivations ---
+  Evergreen PDP                                    ACTIVE -> INACTIVE
+
+--- job closures ---
+  Aircraft Maintenance Apprentice                  OPEN -> RETIRED (4 applications kept)
