@@ -44,6 +44,22 @@ async function writeAll(all: AllChecklistState): Promise<void> {
   });
 }
 
+/**
+ * Drop the false entries before storing.
+ *
+ * Restoring a folded-away group is expressed as false, and keeping those would
+ * grow this one shared blob by a key per group per trip that anybody ever
+ * un-folded — for a map whose whole meaning is "the keys that are present".
+ * Absent and false already mean the same thing everywhere that reads it.
+ */
+function pruneNotNeeded(map: TripChecklistState["notNeeded"]): TripChecklistState["notNeeded"] {
+  const out: TripChecklistState["notNeeded"] = {};
+  for (const [key, value] of Object.entries(map)) {
+    if (value === true) out[key as keyof TripChecklistState["notNeeded"]] = true;
+  }
+  return out;
+}
+
 export async function getTripChecklist(tripId: string): Promise<TripChecklistState> {
   const all = await readAll();
   return coerceChecklistState(all[tripId]);
@@ -74,7 +90,11 @@ export async function saveTripChecklist(
   const next: TripChecklistState = {
     ticks: { ...current.ticks, ...(patch.ticks ?? {}) },
     visit: { ...current.visit, ...(patch.visit ?? {}) },
-    reimbursement: patch.reimbursement ?? current.reimbursement
+    reimbursement: patch.reimbursement ?? current.reimbursement,
+    // Merged from what is IN THE DATABASE, not from a client's copy, so the
+    // request-details panel and the checklist panel can hold their own state
+    // without either one clobbering the other's half of the row.
+    notNeeded: pruneNotNeeded({ ...current.notNeeded, ...(patch.notNeeded ?? {}) })
   };
   all[tripId] = next;
   await writeAll(all);

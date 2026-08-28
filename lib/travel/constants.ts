@@ -10,9 +10,26 @@ export const TRAVEL_PURPOSES = [
   { value: "ORIENTATION", label: "Orientation" },
   { value: "INDOC", label: "Indoc" },
   { value: "TRAINING", label: "Training" },
+  { value: "CREW", label: "Crew travel" },
   { value: "RECRUITING_VISIT", label: "Recruiting visit" },
   { value: "OTHER", label: "Other" }
 ] as const;
+
+/**
+ * The purposes that mean "this person is travelling because we are onboarding
+ * them", and therefore the only ones allowed to tick the onboarding checklist's
+ * travel_complete. See app/travel/actions.ts.
+ *
+ * WHY THIS EXISTS. That tick used to fire on ANY trip of a hire's reaching
+ * BOOKED. It was harmless only by accident — the purposes that are not about
+ * onboarding attach to a candidate, so they carried no newHireId to tick. CREW
+ * breaks that accident: crew travel is booked for somebody who is already a
+ * hire, so without this list, booking a pilot's line trip would mark their
+ * orientation travel arranged. Verified against all 8 live trips before it
+ * shipped: the four carrying a newHireId are ORIENTATION x3 and TRAINING, so no
+ * existing row changes behaviour.
+ */
+export const ONBOARDING_TRAVEL_PURPOSES = ["ORIENTATION", "INDOC", "TRAINING"] as const;
 
 /** Purposes no longer offered, kept so an old row still reads as words. */
 const RETIRED_PURPOSE_LABELS: Record<string, string> = {
@@ -79,6 +96,26 @@ export function isTravelItemType(v: unknown): v is TravelItemType {
 }
 export function isTravelReimbursement(v: unknown): v is TravelReimbursement {
   return typeof v === "string" && TRAVEL_REIMBURSEMENTS.some((s) => s.value === v);
+}
+
+/**
+ * Where somebody's travel actually lives: their own profile, on its Travel tab.
+ *
+ * The travel hub used to answer "show me this person" by loading them into a
+ * pane at the BOTTOM of /travel. That was the wrong place — it put a profile
+ * below a six-week calendar and a roll-up, so reaching it meant scrolling past
+ * everything else, and it was a second, thinner copy of a page that already
+ * exists. Every "open this person" on the hub is now a real link to the real
+ * page, which also makes it ctrl-clickable into a new tab.
+ *
+ * `tripId` is passed when a specific TRIP was clicked — a calendar chip, a row
+ * in the table — so the panel on the far side can open that one rather than
+ * leaving somebody to find it among four.
+ */
+export function travelTabHref(profileHref: string, tripId?: string | null): string {
+  const params = new URLSearchParams({ tab: "travel" });
+  if (tripId) params.set("trip", tripId);
+  return `${profileHref}?${params.toString()}`;
 }
 
 export function formatUsd(amount: number | null | undefined): string {

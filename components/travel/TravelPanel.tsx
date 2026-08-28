@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 import {
   Plane,
@@ -36,8 +37,11 @@ import {
   updateItem,
   deleteItem,
   saveTravelerLoyalty,
-  extractTravelConfirmation
+  extractTravelConfirmation,
+  loadChecklist,
+  setFieldGroupNotNeeded
 } from "@/app/travel/actions";
+import { NOT_NEEDED_GROUPS, type NotNeededGroupKey } from "@/lib/travel/checklist";
 import type { ParsedTravel } from "@/lib/extraction/travel-confirmation";
 import { buildBookingGroups, bookingLabel, type ItemBookingInfo } from "@/lib/travel/booking-groups";
 import { TravelGaps, TravelGapBadge } from "@/components/travel/TravelGaps";
@@ -45,6 +49,7 @@ import { TravelChecklist } from "@/components/travel/TravelChecklist";
 import { useDialogClose } from "@/lib/hooks/useDialogClose";
 import {
   formatMomentDate,
+  formatMomentTime,
   formatCalendarDayShort,
   officeDayKey,
   officeTimeValue,
@@ -52,6 +57,7 @@ import {
   hasTimeOfDay,
   OFFICE_TIMEZONE
 } from "@/lib/dates/display";
+import { parseRoute, runsFor, HOME_AIRPORT } from "@/lib/travel/hub-calendar";
 import { zonedWallClockToUtc } from "@/lib/booking/timezone";
 
 type Props = {
@@ -108,6 +114,41 @@ function fmtDay(iso: string | null) {
   return formatCalendarDayShort(iso) || null;
 }
 
+/** A yyyy-mm-dd whose year is one a real booking could carry. See ItemWhen. */
+function isPlausibleTravelYear(dayKey: string): boolean {
+  const year = Number(dayKey.slice(0, 4));
+  return Number.isFinite(year) && year >= 2000 && year <= 2100;
+}
+
+/**
+ * What the time on an item row actually MEANS, said in words.
+ *
+ * A bare "3:30 PM" in a box answers neither question somebody actually has:
+ * whose clock is that, and — on a flight — is it the take-off or the landing.
+ * Both were already decided by the code and never written down anywhere the
+ * person typing could see.
+ *
+ * The clock is always Mountain. Every time in this panel is saved as a Mountain
+ * wall-clock (see ItemWhen's commit), so "the hotel is in New Jersey, is that
+ * Eastern?" has one answer: no, it is Utah time, always.
+ *
+ * The direction is the SLC rule the hub calendar already follows: a trip's
+ * flights all touch Salt Lake, so a leg INTO SLC carries its arrival time and a
+ * leg OUT of SLC carries its departure. Where the route does not name SLC — or
+ * is not filled in at all — this says nothing about direction rather than
+ * guessing, because a wrong "arrives" is worse than no word at all.
+ */
+function itemTimeNote(item: TravelItemView): string | null {
+  if (!item.startsAt || !hasTimeOfDay(item.startsAt)) return null;
+  const clock = `${formatMomentTime(item.startsAt)} Mountain (Utah) time`;
+  if (item.type !== "FLIGHT") return clock;
+
+  const route = parseRoute(item.detail) ?? parseRoute(item.confirmation);
+  if (route?.to === HOME_AIRPORT) return `Arrives ${HOME_AIRPORT} · ${clock}`;
+  if (route?.from === HOME_AIRPORT) return `Departs ${HOME_AIRPORT} · ${clock}`;
+  return `${clock} — add the route (e.g. PHX-SLC) in Details to show arrive vs depart`;
+}
+
 function tripWithRecomputedTotal(trip: TravelTripView, items: TravelItemView[]): TravelTripView {
   return { ...trip, items, total: items.reduce((sum, i) => sum + (i.amount ?? 0), 0) };
 }
@@ -120,6 +161,24 @@ export function TravelPanel({
   onTripsChange,
   hideHeading = false
 }: Props) {
+  const searchParams = useSearchParams();
+  /**
+   * ?trip=<id> opens that trip, for somebody arriving from a link that named
+   * one — a chip on the travel hub's calendar, a row in its table.
+   *
+   * THE URL IS THE ONLY WAY IN. The hub used to hand this down as a prop, from
+   * a copy of the profile it rendered in a pane at its own foot; that pane is
+   * gone and the hub links here instead, so there is one mechanism rather than
+   * two that had to agree.
+   *
+   * Read ONCE as the initial value. Re-reading would fight the user: a trip
+   * they collapsed by hand would spring open again on the next render, and the
+   * query string does not change when they do.
+   */
+  const [urlFocus] = useState(() => {
+    const requested = searchParams.get("trip");
+    return requested ? { tripId: requested } : null;
+  });
   const [trips, setTrips] = useState<TravelTripView[]>(initialTrips);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -196,7 +255,14 @@ export function TravelPanel({
       ) : (
         <div className="mt-3 space-y-3">
           {trips.map((trip) => (
-            <TripCard key={trip.id} trip={trip} newest={trip.id === trips[0]?.id} onChange={patchTrip} onDelete={removeTrip} />
+            <TripCard
+              key={trip.id}
+              trip={trip}
+              newest={trip.id === trips[0]?.id}
+              focused={urlFocus?.tripId === trip.id}
+              onChange={patchTrip}
+              onDelete={removeTrip}
+            />
           ))}
         </div>
       )}
@@ -276,24 +342,63 @@ function LoyaltyCard({
   );
 }
 
+/**
+ * Is this trip behind us? Used only to decide what opens on arrival — never to
+ * hide anything, so being wrong costs a click rather than a booking.
+ *
+ * A trip with no readable dates is NOT over. That is the case where guessing
+ * does damage: a half-entered trip is exactly the one somebody is coming here
+ * to finish, and defaulting it shut would hide the work.
+ */
+function tripIsOver(trip: TravelTripView, todayKey: string): boolean {
+  if (trip.status === "COMPLETED" || trip.status === "CANCELED") return true;
+  const run = runsFor(trip);
+  if (!run) return false;
+  return run.endDay < todayKey;
+}
+
 function TripCard({
   trip,
   newest,
+  focused,
   onChange,
   onDelete
 }: {
   trip: TravelTripView;
   /** The most recent trip — trips arrive newest-first. */
   newest: boolean;
+  /** This is the trip the URL asked for — open it, and scroll to it. */
+  focused: boolean;
   onChange: (t: TravelTripView) => void;
   onDelete: (id: string) => void;
 }) {
+  const todayKey = useMemo(() => officeDayKey(new Date()), []);
+  const over = tripIsOver(trip, todayKey);
+
   // Open the newest trip and leave the older ones shut. This used to be
   // `trip.items.length === 0`, which expanded a trip only while it had nothing
   // on it — so the moment anything was booked, the one trip worth reading was
   // the one that was closed.
-  const [expanded, setExpanded] = useState(newest);
+  //
+  // A trip that has already happened stays shut even when it IS the newest.
+  // Somebody opening a record whose only trip was in June is not there to read
+  // June; the header still carries the purpose, route, dates and totals, and one
+  // click brings it back.
+  // A trip the URL named is open from the FIRST render, including on the server.
+  // Setting it in an effect instead would render the card shut and then pop it
+  // open, and would leave the server-rendered HTML disagreeing with the link
+  // that was just followed.
+  const [expanded, setExpanded] = useState(focused || (newest && !over));
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+
+  // Bring it into view once the page exists. Only on mount: re-running this
+  // would drag somebody back here every time the card re-rendered.
+  useEffect(() => {
+    if (!focused) return;
+    cardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const route = [trip.originAirport, trip.destinationAirport].filter(Boolean).join(" → ");
   const dateSummary = fmtMoment(trip.requestedArrival) || fmtDay(trip.orientationDate);
@@ -329,7 +434,10 @@ function TripCard({
   }
 
   return (
-    <div className="rounded border border-brand-lea/12 bg-brand-cloudDancer/30 transition hover:shadow-glow dark:border-white/10 dark:bg-white/5">
+    <div
+      ref={cardRef}
+      className="rounded border border-brand-lea/12 bg-brand-cloudDancer/30 transition hover:shadow-glow dark:border-white/10 dark:bg-white/5"
+    >
       {/* Header row */}
       <div className="flex items-center gap-3 px-3 py-2.5">
         <button
@@ -339,7 +447,22 @@ function TripCard({
         >
           {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </button>
-        <div className="min-w-0 flex-1">
+        {/* The whole summary is the toggle, not just the chevron — a collapsed
+            trip is a header and nothing else, so the header is what people aim
+            at. The purpose select inside already stops its own clicks. */}
+        <div
+          className="min-w-0 flex-1 cursor-pointer"
+          onClick={() => setExpanded((v) => !v)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setExpanded((v) => !v);
+            }
+          }}
+          aria-expanded={expanded}
+        >
           <div className="flex flex-wrap items-center gap-2">
             {/* Editable in place. The purpose was read-only here, so a trip
                 booked as the wrong type could never be corrected once created
@@ -350,6 +473,9 @@ function TripCard({
               value={trip.purpose}
               onChange={(e) => saveField("purpose", e.target.value)}
               onClick={(e) => e.stopPropagation()}
+              // The header around this is now a toggle, and a keydown bubbles —
+              // without this, space on the open picker would collapse the card.
+              onKeyDown={(e) => e.stopPropagation()}
               aria-label="Trip purpose"
               className="-ml-1 shrink-0 cursor-pointer rounded border border-transparent bg-transparent px-1 py-0.5 text-sm font-semibold text-brand-lea outline-none transition hover:border-brand-lea/20 hover:shadow-glow focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:text-slate-100 dark:hover:border-white/20"
             >
@@ -362,6 +488,13 @@ function TripCard({
             {route && <span className="text-sm text-brand-grey dark:text-slate-400">· {route}</span>}
             {dateSummary && <span className="text-xs text-brand-grey dark:text-slate-400">· {dateSummary}</span>}
             <TravelGapBadge trip={trip} />
+            {/* Says why this one arrived shut. Without it a collapsed card reads
+                as a bug rather than as a deliberate tidy-away. */}
+            {over && !expanded ? (
+              <span className="rounded border border-brand-lea/15 bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">
+                Past
+              </span>
+            ) : null}
           </div>
           <div className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
             {trip.items.length} {trip.items.length === 1 ? "item" : "items"} · {formatUsd(trip.total)}
@@ -491,25 +624,151 @@ function GuestsBlock({ trip, onChange }: { trip: TravelTripView; onChange: (t: T
   );
 }
 
+/**
+ * The request-details block, with the parts a trip does not have folded away.
+ *
+ * Not everyone we fly in is a pilot: a support-role hire has an orientation and
+ * a start date, and no indoc and no training at all, so those boxes are dead
+ * space they scroll past every time. Marking a group not needed collapses it to
+ * a chip on one line at the bottom; nothing is cleared, and restoring brings
+ * back whatever was in the fields.
+ *
+ * The mark is loaded HERE rather than lifted into TripCard on purpose. It lives
+ * in the same per-trip row the checklist uses, and the two touch disjoint keys
+ * that the server merges from the database, so a second read costs one call on
+ * a card somebody has actually opened and buys leaving TravelChecklist alone.
+ */
 function RequestDetails({ trip, onSave }: { trip: TravelTripView; onSave: (field: string, value: string) => void }) {
+  const [notNeeded, setNotNeeded] = useState<Partial<Record<NotNeededGroupKey, boolean>>>({});
+  const [busy, setBusy] = useState<NotNeededGroupKey | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    loadChecklist(trip.id)
+      .then((res) => {
+        if (live && res.ok && res.state) setNotNeeded(res.state.notNeeded);
+      })
+      .catch(() => {
+        // A failed read leaves everything showing, which is the safe direction:
+        // worst case somebody sees a field they had folded away.
+      });
+    return () => {
+      live = false;
+    };
+  }, [trip.id]);
+
+  async function mark(group: NotNeededGroupKey, value: boolean) {
+    setBusy(group);
+    setError(null);
+    const res = await setFieldGroupNotNeeded(trip.id, group, value);
+    setBusy(null);
+    if (res.ok && res.state) setNotNeeded(res.state.notNeeded);
+    else setError(res.error ?? "Could not save that.");
+  }
+
   const text = (field: keyof TravelTripView, label: string) => (
     <TextField label={label} defaultValue={(trip[field] as string | null) ?? ""} onSave={(v) => onSave(field, v)} />
   );
+
+  const shown = (group: NotNeededGroupKey) => !notNeeded[group];
+  const hidden = NOT_NEEDED_GROUPS.filter((g) => notNeeded[g.key]);
+
+  /** The "this trip does not have these" control that sits on a group. */
+  const foldAway = (group: NotNeededGroupKey, what: string) => (
+    <button
+      onClick={() => void mark(group, true)}
+      disabled={busy === group}
+      title={`Fold ${what} away — this trip does not have them`}
+      className="text-[10px] font-bold uppercase tracking-[0.1em] text-brand-grey underline-offset-2 transition hover:text-brand-lea hover:underline disabled:opacity-50 dark:text-slate-500 dark:hover:text-slate-300"
+    >
+      Not needed
+    </button>
+  );
+
   return (
     <div>
       <p className={labelClass}>Request details</p>
       <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {text("originAirport", "From (airport)")}
         {text("destinationAirport", "To (airport)")}
-        <DateField label="Orientation date" defaultValue={toDateInput(trip.orientationDate)} onSave={(v) => onSave("orientationDate", v)} />
-        <DateField label="Indoc start" defaultValue={toDateInput(trip.indocStart)} onSave={(v) => onSave("indocStart", v)} />
-        <DateField label="Indoc end" defaultValue={toDateInput(trip.indocEnd)} onSave={(v) => onSave("indocEnd", v)} />
+        {shown("orientation") ? (
+          <div>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className={labelClass}>Orientation date</span>
+              {foldAway("orientation", "the orientation date")}
+            </div>
+            <input
+              type="date"
+              defaultValue={toDateInput(trip.orientationDate)}
+              onBlur={(e) => onSave("orientationDate", e.target.value)}
+              className={clsx(inputClass, "mt-1")}
+            />
+          </div>
+        ) : null}
+        {shown("indoc") ? (
+          <>
+            <div>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className={labelClass}>Indoc start</span>
+                {foldAway("indoc", "the indoc dates")}
+              </div>
+              <input
+                type="date"
+                defaultValue={toDateInput(trip.indocStart)}
+                onBlur={(e) => onSave("indocStart", e.target.value)}
+                className={clsx(inputClass, "mt-1")}
+              />
+            </div>
+            <DateField label="Indoc end" defaultValue={toDateInput(trip.indocEnd)} onSave={(v) => onSave("indocEnd", v)} />
+          </>
+        ) : null}
         <DateTimeField label="Requested arrival" defaultValue={toDateTimeLocal(trip.requestedArrival)} onSave={(v) => onSave("requestedArrival", v)} />
         <DateTimeField label="Requested return" defaultValue={toDateTimeLocal(trip.requestedReturn)} onSave={(v) => onSave("requestedReturn", v)} />
-        {text("preferredAirline", "Preferred airline / seat")}
-        {text("preferences", "Hotel / car preferences")}
-        {text("additionalTransport", "Additional transport")}
+        {shown("preferences") ? (
+          <>
+            <div>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className={labelClass}>Preferred airline / seat</span>
+                {foldAway("preferences", "the preference fields")}
+              </div>
+              <input
+                defaultValue={trip.preferredAirline ?? ""}
+                onBlur={(e) => onSave("preferredAirline", e.target.value)}
+                className={clsx(inputClass, "mt-1")}
+              />
+            </div>
+            {text("preferences", "Hotel / car preferences")}
+            {text("additionalTransport", "Additional transport")}
+          </>
+        ) : null}
       </div>
+
+      {/* Everything folded away, on ONE line. The point of the whole feature is
+          the scrolling it saves, so the folded state has to be small — and it
+          has to be visible, or a field somebody hid a month ago is simply gone
+          with no way back. */}
+      {hidden.length > 0 ? (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-brand-lea/10 pt-2 dark:border-white/10">
+          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-500">
+            Not needed on this trip
+          </span>
+          {hidden.map((g) => (
+            <button
+              key={g.key}
+              onClick={() => void mark(g.key, false)}
+              disabled={busy === g.key}
+              title="Bring these fields back"
+              className="inline-flex items-center gap-1 rounded border border-brand-lea/15 bg-white px-2 py-0.5 text-[11px] font-semibold text-brand-grey transition hover:shadow-glow hover:text-brand-lea disabled:opacity-50 dark:border-white/10 dark:bg-brand-panel dark:text-slate-400"
+            >
+              {g.label}
+              <Plus className="h-3 w-3" />
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {error ? <p className="mt-1 text-[11px] font-medium text-red-600 dark:text-red-400">{error}</p> : null}
     </div>
   );
 }
@@ -829,6 +1088,7 @@ function ItemRow({
             matters; the time is a bonus. */}
         <ItemWhen
           startsAt={item.startsAt}
+          note={itemTimeNote(item)}
           onSave={(iso) => saveRaw({ startsAt: iso })}
         />
       </div>
@@ -992,7 +1252,16 @@ function DateField({ label, defaultValue, onSave }: { label: string; defaultValu
  * that reads these treats exactly-midnight as "no time known" and shows the date
  * alone. See lib/dates/display.ts.
  */
-function ItemWhen({ startsAt, onSave }: { startsAt: string | null; onSave: (iso: string | null) => Promise<void> | void }) {
+function ItemWhen({
+  startsAt,
+  note,
+  onSave
+}: {
+  startsAt: string | null;
+  /** Plain-words reading of the saved time — see itemTimeNote. */
+  note: string | null;
+  onSave: (iso: string | null) => Promise<void> | void;
+}) {
   const [day, setDay] = useState(startsAt ? officeDayKey(startsAt) : "");
   const [time, setTime] = useState(startsAt && hasTimeOfDay(startsAt) ? officeTimeValue(startsAt) : "");
 
@@ -1007,6 +1276,20 @@ function ItemWhen({ startsAt, onSave }: { startsAt: string | null; onSave: (iso:
       void onSave(null);
       return;
     }
+    // HALF-TYPED YEARS MUST NOT REACH THE DATABASE.
+    //
+    // A native date input fires change on every keystroke, so typing 2026 into
+    // the year walks the value through 0002, 0020, 0202 and finally 2026 — and
+    // every one of those was saved as it went past. That is the "glitches
+    // through other dates and lands on 1906" Hannah reported (feedback Aug 21):
+    // an intermediate value winning the race between two in-flight saves.
+    //
+    // The window is deliberately narrow rather than merely sane. 1906 is a
+    // perfectly valid Date and a four-digit year, so a >= 1900 guard would let
+    // exactly the reported value through. No travel booking in this system is
+    // outside 2000–2100. Keystrokes still update the box either way — only the
+    // WRITE waits, so typing feels no different.
+    if (!isPlausibleTravelYear(nextDay)) return;
     const [y, m, d] = nextDay.split("-").map(Number);
     if (nextTime) {
       const [hh, mm] = nextTime.split(":").map(Number);
@@ -1018,29 +1301,43 @@ function ItemWhen({ startsAt, onSave }: { startsAt: string | null; onSave: (iso:
     }
   }
 
+  // Only ever true while a year is still being typed, or if somebody really did
+  // land on 1906. Either way the value in the box is NOT what is stored, and
+  // saying nothing would make a silent no-op look like a save.
+  const yearOutOfRange = Boolean(day) && !isPlausibleTravelYear(day);
+
   return (
-    <div className="flex items-center gap-1.5">
-      <input
-        type="date"
-        value={day}
-        onChange={(e) => {
-          setDay(e.target.value);
-          commit(e.target.value, time);
-        }}
-        className={inputClass}
-        title="Date (required for this to show on the calendar)"
-      />
-      <input
-        type="time"
-        value={time}
-        onChange={(e) => {
-          setTime(e.target.value);
-          commit(day, e.target.value);
-        }}
-        disabled={!day}
-        className={clsx(inputClass, "w-[7.5rem]")}
-        title={day ? "Time (optional)" : "Pick a date first"}
-      />
+    <div>
+      <div className="flex items-center gap-1.5">
+        <input
+          type="date"
+          value={day}
+          onChange={(e) => {
+            setDay(e.target.value);
+            commit(e.target.value, time);
+          }}
+          className={inputClass}
+          title="Date (required for this to show on the calendar)"
+        />
+        <input
+          type="time"
+          value={time}
+          onChange={(e) => {
+            setTime(e.target.value);
+            commit(day, e.target.value);
+          }}
+          disabled={!day}
+          className={clsx(inputClass, "w-[7.5rem]")}
+          title={day ? "Time (optional) — saved as Mountain (Utah) time" : "Pick a date first"}
+        />
+      </div>
+      {yearOutOfRange ? (
+        <p className="mt-1 text-[10.5px] font-semibold leading-snug text-amber-700 dark:text-amber-300">
+          Year looks wrong — not saved yet. Finish typing the year.
+        </p>
+      ) : note ? (
+        <p className="mt-1 text-[10.5px] leading-snug text-brand-grey dark:text-slate-400">{note}</p>
+      ) : null}
     </div>
   );
 }

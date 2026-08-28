@@ -248,13 +248,48 @@ export function checklistStatusLabel(v: string | null | undefined): string {
 
 export type ChecklistTick = { status: ChecklistStatus; at: string; by: string | null };
 
+/**
+ * Groups of request-detail fields that a given trip may simply not have.
+ *
+ * WHY THIS EXISTS. Not everyone we fly in is a pilot. A support-role hire has an
+ * orientation and a start date and no indoc and no training at all, so the indoc
+ * boxes on their trip are dead space somebody has to scroll past every time.
+ *
+ * IT IS A MARK, NOT A RULE. This is deliberately not derived from the trip's
+ * purpose, and the live data says why: an ORIENTATION trip is very often the
+ * same visit as the indoc that follows it — the Aug 31 trip runs six days and
+ * covers both — so a rule keyed on purpose would hide the indoc dates on
+ * exactly the trips that need them. Somebody who knows the person marks it.
+ *
+ * NOTHING IS DELETED. Marking a group not needed collapses it; the values, if
+ * any, are still on the trip and come straight back when it is restored.
+ */
+export const NOT_NEEDED_GROUPS = [
+  { key: "orientation", label: "Orientation date", fields: ["orientationDate"] },
+  { key: "indoc", label: "Indoc dates", fields: ["indocStart", "indocEnd"] },
+  { key: "preferences", label: "Airline, hotel and transport preferences", fields: ["preferredAirline", "preferences", "additionalTransport"] }
+] as const;
+
+export type NotNeededGroupKey = (typeof NOT_NEEDED_GROUPS)[number]["key"];
+
+export function isNotNeededGroup(v: unknown): v is NotNeededGroupKey {
+  return typeof v === "string" && NOT_NEEDED_GROUPS.some((g) => g.key === v);
+}
+
 export type TripChecklistState = {
   ticks: Record<string, ChecklistTick>;
   visit: Partial<Record<VisitFieldKey, string>>;
   reimbursement: ReimbursementStage;
+  /** Request-detail groups this trip does not have. Absent means shown. */
+  notNeeded: Partial<Record<NotNeededGroupKey, boolean>>;
 };
 
-export const EMPTY_STATE: TripChecklistState = { ticks: {}, visit: {}, reimbursement: "NOT_STARTED" };
+export const EMPTY_STATE: TripChecklistState = {
+  ticks: {},
+  visit: {},
+  reimbursement: "NOT_STARTED",
+  notNeeded: {}
+};
 
 export type AllChecklistState = Record<string, TripChecklistState>;
 
@@ -298,10 +333,20 @@ export function coerceChecklistState(raw: unknown): TripChecklistState {
     }
   }
 
+  // Only known group keys survive, and only as real booleans. Every row written
+  // before this field existed simply has none, which reads as "show everything".
+  const notNeeded: Partial<Record<NotNeededGroupKey, boolean>> = {};
+  if (o.notNeeded && typeof o.notNeeded === "object") {
+    for (const [key, value] of Object.entries(o.notNeeded as Record<string, unknown>)) {
+      if (isNotNeededGroup(key) && value === true) notNeeded[key] = true;
+    }
+  }
+
   return {
     ticks,
     visit: o.visit && typeof o.visit === "object" ? o.visit : {},
-    reimbursement: isReimbursementStage(o.reimbursement) ? o.reimbursement : "NOT_STARTED"
+    reimbursement: isReimbursementStage(o.reimbursement) ? o.reimbursement : "NOT_STARTED",
+    notNeeded
   };
 }
 

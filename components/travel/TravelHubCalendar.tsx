@@ -1,8 +1,22 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { clsx } from "clsx";
-import { ChevronLeft, ChevronRight, CalendarDays, Plane, BedDouble, Car, Bus, Receipt, MapPin } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  CalendarDays,
+  Plane,
+  BedDouble,
+  Car,
+  Bus,
+  Receipt,
+  MapPin,
+  Filter,
+  ExternalLink
+} from "lucide-react";
 import {
   buildMonthGrid,
   chipParts,
@@ -17,7 +31,7 @@ import {
   type TripRun
 } from "@/lib/travel/hub-calendar";
 import { assignTravelerColors, FALLBACK_TRAVELER_COLOR } from "@/lib/travel/traveler-colors";
-import { formatUsd, travelPurposeLabel } from "@/lib/travel/constants";
+import { formatUsd, travelPurposeLabel, travelTabHref } from "@/lib/travel/constants";
 import { officeDayKey } from "@/lib/dates/display";
 import type { TravelCalendarData, TravelCalendarTraveler } from "@/lib/data/travel";
 
@@ -46,13 +60,7 @@ const RAIL_ICON = {
  * Position alone says which end it belongs to, so no arrow is needed, and a time
  * in the other city is never shown — nobody here acts on it.
  */
-export function TravelHubCalendar({
-  data,
-  onOpenTraveler
-}: {
-  data: TravelCalendarData;
-  onOpenTraveler?: (t: { type: "newHire" | "candidate"; id: string }) => void;
-}) {
+export function TravelHubCalendar({ data }: { data: TravelCalendarData }) {
   const { travelers, undated } = data;
 
   const colors = useMemo(() => assignTravelerColors(travelers.map((t) => t.key)), [travelers]);
@@ -69,6 +77,17 @@ export function TravelHubCalendar({
   );
 
   const [focused, setFocused] = useState<string | null>(null);
+
+  /**
+   * Which rail cards are open, for the ones somebody has clicked.
+   *
+   * Absent means "use the default", which is: open unless every trip in view has
+   * already finished. A card is not hidden when it closes — the name, the dates
+   * and the colour band all stay — so a past traveller still reads at a glance
+   * and costs one click to open. Kept as an override map rather than seeded
+   * state so paging to another month re-applies the default to whoever appears.
+   */
+  const [railOpen, setRailOpen] = useState<Record<string, boolean>>({});
 
   const visible = useMemo(
     () => (focused ? runsByTraveler.filter((t) => t.key === focused) : runsByTraveler),
@@ -235,10 +254,13 @@ export function TravelHubCalendar({
                               seg={seg}
                               color={colors.get(seg.travelerKey) ?? FALLBACK_TRAVELER_COLOR}
                               name={byKey.get(seg.travelerKey)?.name ?? ""}
-                              onOpen={() => {
+                              // A chip is a real link to that trip on that
+                              // person's profile, so it ctrl-clicks into a new
+                              // tab like everything else that changes the page.
+                              href={(() => {
                                 const t = byKey.get(seg.travelerKey);
-                                if (t) onOpenTraveler?.({ type: t.type, id: t.travelerId });
-                              }}
+                                return t ? travelTabHref(t.href, seg.tripId) : null;
+                              })()}
                             />
                           ))}
                         </div>
@@ -268,6 +290,8 @@ export function TravelHubCalendar({
           {inWindow.map(({ traveler, runs }) => {
             const c = colors.get(traveler.key) ?? FALLBACK_TRAVELER_COLOR;
             const dim = focused !== null && focused !== traveler.key;
+            const allOver = runs.every((r) => r.endDay < today);
+            const open = railOpen[traveler.key] ?? !allOver;
             return (
               <div
                 key={traveler.key}
@@ -276,29 +300,67 @@ export function TravelHubCalendar({
                   dim && "opacity-45"
                 )}
               >
-                {/* C2: the colour carries a full band rather than a dot. Doubles
-                    as the focus control — clicking isolates this person. */}
-                <button
-                  onClick={() => setFocused(focused === traveler.key ? null : traveler.key)}
-                  title={focused === traveler.key ? "Show everyone again" : `Show only ${traveler.name}`}
-                  className={clsx(
-                    "flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left transition hover:brightness-105",
-                    c.band
-                  )}
-                >
-                  <span className="truncate text-[13px] font-bold">{traveler.name}</span>
-                  <span className="shrink-0 text-[10.5px] font-semibold opacity-80">
-                    {runs.map(runDateLabel).join(" · ")}
-                  </span>
-                </button>
+                {/* C2: the colour carries a full band rather than a dot.
+                    Three things live on it, and they used to be one: the whole
+                    band was the focus filter, which meant there was nowhere left
+                    to put "open this" or "fold this away". Clicking the NAME now
+                    folds — the thing a header is expected to do — and the two
+                    icon buttons carry focus and open. */}
+                <div className={clsx("flex items-center gap-1 px-3 py-1.5", c.band)}>
+                  <button
+                    onClick={() => setRailOpen((cur) => ({ ...cur, [traveler.key]: !open }))}
+                    title={open ? `Fold ${traveler.name} away` : `Show ${traveler.name}'s trip`}
+                    aria-expanded={open}
+                    className="flex min-w-0 flex-1 items-center gap-1.5 text-left transition hover:brightness-105"
+                  >
+                    {open ? (
+                      <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                    )}
+                    <span className="truncate text-[13px] font-bold">{traveler.name}</span>
+                    <span className="ml-auto shrink-0 text-[10.5px] font-semibold opacity-80">
+                      {runs.map(runDateLabel).join(" · ")}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setFocused(focused === traveler.key ? null : traveler.key)}
+                    title={focused === traveler.key ? "Show everyone again" : `Show only ${traveler.name} on the grid`}
+                    aria-pressed={focused === traveler.key}
+                    className={clsx(
+                      "shrink-0 rounded p-1 transition hover:brightness-110",
+                      focused === traveler.key ? "bg-black/15" : "opacity-70 hover:opacity-100"
+                    )}
+                  >
+                    <Filter className="h-3.5 w-3.5" />
+                  </button>
+                  {/* "Open this PERSON" — their own profile, on its Travel tab.
+                      It used to load a copy of the profile at the bottom of
+                      this page, which is the thing the team asked to be rid of.
+                      A real link, so it ctrl-clicks into a new tab. */}
+                  <Link
+                    href={travelTabHref(traveler.href)}
+                    title={`Open ${traveler.name}'s Travel tab`}
+                    className="shrink-0 rounded p-1 opacity-70 transition hover:opacity-100 hover:brightness-110"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
 
-                <div className="bg-white px-3 py-2 dark:bg-brand-panel">
+                <div className={clsx("bg-white px-3 py-2 dark:bg-brand-panel", !open && "hidden")}>
                   {runs.map((run) => (
                     <div key={run.tripId}>
-                      <p className="text-[12px] text-brand-grey dark:text-slate-400">
-                        {travelPurposeLabel(run.purpose)} · {runDays(run)} day{runDays(run) === 1 ? "" : "s"}
+                      <p className="flex flex-wrap items-center gap-1.5 text-[12px] text-brand-grey dark:text-slate-400">
+                        <Link
+                          href={travelTabHref(traveler.href, run.tripId)}
+                          title="Open this trip on their Travel tab"
+                          className="font-semibold text-brand-eden underline-offset-2 transition hover:underline dark:text-brand-sweet"
+                        >
+                          {travelPurposeLabel(run.purpose)}
+                        </Link>
+                        · {runDays(run)} day{runDays(run) === 1 ? "" : "s"}
                         {run.inferred ? (
-                          <span className="ml-1.5 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                          <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
                             dates from booking text
                           </span>
                         ) : null}
@@ -371,19 +433,20 @@ function Run({
   seg,
   color,
   name,
-  onOpen
+  href
 }: {
   seg: Segment;
   color: { bar: string; chip: string; dot: string; ring: string };
   name: string;
-  onOpen: () => void;
+  /** Where this run goes: that trip, on that person's Travel tab. */
+  href: string | null;
 }) {
   const style = { gridColumn: `${seg.startCol} / span ${seg.span}` };
 
   if (seg.loneLeg) {
     return (
       <div style={style} className="pointer-events-auto flex items-center overflow-hidden">
-        <Chip leg={seg.loneLeg} color={color} name={name} onOpen={onOpen} />
+        <Chip leg={seg.loneLeg} color={color} name={name} href={href} />
       </div>
     );
   }
@@ -391,19 +454,18 @@ function Run({
   return (
     <div style={style} className="pointer-events-auto flex items-center overflow-hidden">
       {seg.leftLeg ? (
-        <Chip leg={seg.leftLeg} color={color} name={name} onOpen={onOpen} />
+        <Chip leg={seg.leftLeg} color={color} name={name} href={href} />
       ) : seg.label ? (
-        <button
-          onClick={onOpen}
+        <ChipShell
+          href={href}
           title={`${name} — ${seg.label}`}
           className={clsx(
             "min-w-0 truncate rounded border border-solid px-1 py-px text-[9px] font-bold leading-[1.45]",
             color.chip
           )}
-          style={{ borderColor: "currentColor" }}
         >
           {seg.label}
-        </button>
+        </ChipShell>
       ) : null}
 
       {seg.span > 1 || seg.continuesLeft || seg.continuesRight ? (
@@ -422,8 +484,41 @@ function Run({
         />
       ) : null}
 
-      {seg.rightLeg ? <Chip leg={seg.rightLeg} color={color} name={name} onOpen={onOpen} /> : null}
+      {seg.rightLeg ? <Chip leg={seg.rightLeg} color={color} name={name} href={href} /> : null}
     </div>
+  );
+}
+
+/**
+ * A chip that navigates when we know where to, and is inert text when we do not.
+ *
+ * href is null only if a segment's traveller is missing from the map, which
+ * should not happen — but a link that goes nowhere is worse than plain text,
+ * because it looks clickable and then swallows the click.
+ */
+function ChipShell({
+  href,
+  title,
+  className,
+  children
+}: {
+  href: string | null;
+  title: string;
+  className: string;
+  children: React.ReactNode;
+}) {
+  const style = { borderColor: "currentColor" };
+  if (!href) {
+    return (
+      <span title={title} className={className} style={style}>
+        {children}
+      </span>
+    );
+  }
+  return (
+    <Link href={href} title={title} className={className} style={style}>
+      {children}
+    </Link>
   );
 }
 
@@ -432,20 +527,20 @@ function Chip({
   leg,
   color,
   name,
-  onOpen
+  href
 }: {
   leg: FlightLeg;
   color: { chip: string };
   name: string;
-  onOpen: () => void;
+  href: string | null;
 }) {
   const { timeBefore, from, to, route, timeAfter } = chipParts(leg);
   const where =
     leg.direction === "in" ? "lands here" : leg.direction === "out" ? "leaves here" : "flight";
 
   return (
-    <button
-      onClick={onOpen}
+    <ChipShell
+      href={href}
       title={`${name} — ${route ?? "Flight"}${leg.vendor ? ` · ${leg.vendor}` : ""}${
         leg.time ? ` · ${leg.time} ${where}` : ""
       }${leg.inferred ? " · date read from the booking text" : ""}`}
@@ -460,7 +555,6 @@ function Chip({
         "flex min-w-0 items-center gap-[3px] overflow-hidden whitespace-nowrap rounded border border-dashed px-1 py-px text-[9px] font-bold leading-[1.45]",
         color.chip
       )}
-      style={{ borderColor: "currentColor" }}
     >
       {timeBefore ? <span className="shrink-0 tabular-nums">{timeBefore}</span> : null}
       {from && to ? (
@@ -473,7 +567,7 @@ function Chip({
         <span className="truncate tracking-[0.02em]">{route}</span>
       ) : null}
       {timeAfter ? <span className="shrink-0 tabular-nums">{timeAfter}</span> : null}
-    </button>
+    </ChipShell>
   );
 }
 

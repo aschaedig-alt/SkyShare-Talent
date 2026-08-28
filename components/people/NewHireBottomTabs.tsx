@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 
 // The bottom half of /people/<id>: four tabs instead of a pile of panels.
@@ -20,7 +21,25 @@ export type BottomTab = {
 };
 
 export function NewHireBottomTabs({ tabs }: { tabs: BottomTab[] }) {
-  const [active, setActive] = useState(tabs[0]?.key ?? "");
+  const searchParams = useSearchParams();
+
+  /**
+   * ?tab= opens straight onto a tab, which is what makes this page linkable
+   * from elsewhere — the travel hub sends people here with ?tab=travel rather
+   * than loading a second copy of the profile at the bottom of its own page.
+   *
+   * Read once, as the INITIAL value, not on every render: somebody who lands on
+   * ?tab=travel and then clicks Checklist must stay on Checklist. The candidate
+   * profile already reads its tab this way; this matches it.
+   *
+   * An unknown or missing value falls back to the first tab. searchParams.get
+   * returns a single string, so the string | string[] trap that crashed /login
+   * does not apply here.
+   */
+  const [active, setActive] = useState(() => {
+    const requested = searchParams.get("tab");
+    return requested && tabs.some((t) => t.key === requested) ? requested : (tabs[0]?.key ?? "");
+  });
   const current = tabs.find((t) => t.key === active) ?? tabs[0];
 
   return (

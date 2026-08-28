@@ -9,20 +9,25 @@ import {
   isTravelItemType,
   isTravelPurpose,
   isTravelReimbursement,
-  isTravelStatus
+  isTravelStatus,
+  ONBOARDING_TRAVEL_PURPOSES
 } from "@/lib/travel/constants";
 import { parseTravelConfirmation, type ParsedTravel } from "@/lib/extraction/travel-confirmation";
-import { isChecklistStatus, isReimbursementStage, isVisitField, type TripChecklistState } from "@/lib/travel/checklist";
+import {
+  isChecklistStatus,
+  isNotNeededGroup,
+  isReimbursementStage,
+  isVisitField,
+  type TripChecklistState
+} from "@/lib/travel/checklist";
 import { clearTripChecklist, getTripChecklist, saveTripChecklist } from "@/lib/travel/checklist-store";
 import {
   getTravelTripView,
   getNewHireLoyalty,
   getCandidateLoyalty,
-  getTravelerDetail,
   toTravelTripView,
   type TravelItemView,
   type TravelTripView,
-  type TravelerDetail,
   type TravelerLoyalty
 } from "@/lib/data/travel";
 
@@ -87,23 +92,6 @@ const itemView = (i: {
   selfBooked: i.selfBooked,
   reimbursement: i.reimbursement
 });
-
-// Pull a traveller's details onto the travel page so whoever is booking can
-// confirm they picked the right person (and see their existing trips) without
-// bouncing to the candidate/hire record. Read-only.
-export async function loadTravelerDetail(input: {
-  type: "newHire" | "candidate";
-  id: string;
-}): Promise<{ ok: boolean; error?: string; traveler?: TravelerDetail }> {
-  if (!(await canEditTravel())) return { ok: false, error: "You do not have permission to view travel." };
-
-  const id = cleanString(input.id);
-  if (!id) return { ok: false, error: "Missing traveler." };
-  if (input.type !== "newHire" && input.type !== "candidate") return { ok: false, error: "Unknown traveler type." };
-
-  const traveler = await getTravelerDetail(input.type, id);
-  return traveler ? { ok: true, traveler } : { ok: false, error: "That person could not be found." };
-}
 
 export async function createTrip(input: {
   newHireId?: string | null;
@@ -227,7 +215,17 @@ export async function updateTrip(tripId: string, patch: Record<string, unknown>)
   // do not auto-untick on cancel (a hire can have several trips, and clobbering a
   // hand-set value is worse than a rare stale tick). Candidate fly-out trips have
   // no NewHire, so they are skipped.
-  if ((data.status === "BOOKED" || data.status === "COMPLETED") && trip.newHireId) {
+  //
+  // ONLY ONBOARDING PURPOSES TICK IT. This was unfiltered, and only safe because
+  // the non-onboarding purposes all happened to attach to a candidate rather
+  // than a hire. Crew travel is booked for people who ARE hires, so booking a
+  // pilot's line trip would otherwise have marked their orientation travel
+  // arranged. See ONBOARDING_TRAVEL_PURPOSES.
+  if (
+    (data.status === "BOOKED" || data.status === "COMPLETED") &&
+    trip.newHireId &&
+    (ONBOARDING_TRAVEL_PURPOSES as readonly string[]).includes(trip.purpose)
+  ) {
     await prisma.onboardingTask.updateMany({
       where: { newHireId: trip.newHireId, key: "travel_complete", status: { not: "DONE" } },
       data: { status: "DONE", completedAt: new Date() }
@@ -278,6 +276,23 @@ export async function setVisitField(tripId: string, field: string, value: string
   if (!(await canEditTravel())) return { ok: false, error: "You do not have permission to edit travel." };
   if (!isVisitField(field)) return { ok: false, error: "Unknown field." };
   const state = await saveTripChecklist(tripId, { visit: { [field]: value.trim() } });
+  return { ok: true, state };
+}
+
+/**
+ * Mark a group of request-detail fields as one this trip does not have, or put
+ * it back. Nothing on the trip is cleared — the values, if any, stay exactly
+ * where they are and reappear when the group is restored.
+ */
+export async function setFieldGroupNotNeeded(
+  tripId: string,
+  group: string,
+  notNeeded: boolean
+): Promise<ChecklistResult> {
+  if (!(await canEditTravel())) return { ok: false, error: "You do not have permission to edit travel." };
+  if (!isNotNeededGroup(group)) return { ok: false, error: "Unknown field group." };
+  if (typeof notNeeded !== "boolean") return { ok: false, error: "Expected true or false." };
+  const state = await saveTripChecklist(tripId, { notNeeded: { [group]: notNeeded } });
   return { ok: true, state };
 }
 
