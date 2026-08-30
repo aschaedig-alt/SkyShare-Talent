@@ -47,7 +47,7 @@ _Ordered by aircraft size._
 | Citation 560XL | CE-560XL | First Officer | SIC | 560XL First Officer | Active | |
 | Citation 560XLS+ | CE-560XL | Captain | PIC | 560XLS+ Captain | Archived | |
 | Citation 560XLS+ | CE-560XL | First Officer | SIC | 560XLS+ First Officer | Archived | |
-| Challenger 350 | CL-30 | Captain | PIC | Challenger 350 Captain | Active | managed, tail N522AD, SLC based; CL-30 type rating needs confirming |
+| Challenger 350 | CL-30 | Captain | PIC | Challenger 350 Captain | Active | managed, tail N522AD, SLC based; CL-30 rating confirmed by the user Aug 28, shared with the Challenger 300 which SkyShare does not operate |
 | Challenger 350 | CL-30 | First Officer | SIC | Challenger 350 First Officer | Active | managed, tail N522AD, SLC based |
 | Praetor 600 | EMB-550 | Captain | PIC | Praetor 600 Captain | Active | managed, Ogden based; tail unknown until the aircraft is purchased |
 | Praetor 600 | EMB-550 | First Officer | SIC | Praetor 600 First Officer | Active | managed, Ogden based; tail unknown until the aircraft is purchased |

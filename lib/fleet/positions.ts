@@ -43,7 +43,7 @@ const RAW_FLEET_POSITIONS: RawPosition[] = [
   { aircraft: "Citation 560XL", typeRating: "CE-560XL", role: "First Officer", seat: "SIC", title: "560XL First Officer", status: "Active", notes: "" },
   { aircraft: "Citation 560XLS+", typeRating: "CE-560XL", role: "Captain", seat: "PIC", title: "560XLS+ Captain", status: "Archived", notes: "" },
   { aircraft: "Citation 560XLS+", typeRating: "CE-560XL", role: "First Officer", seat: "SIC", title: "560XLS+ First Officer", status: "Archived", notes: "" },
-  { aircraft: "Challenger 350", typeRating: "CL-30", role: "Captain", seat: "PIC", title: "Challenger 350 Captain", status: "Active", notes: "managed, tail N522AD, SLC based; CL-30 type rating needs confirming" },
+  { aircraft: "Challenger 350", typeRating: "CL-30", role: "Captain", seat: "PIC", title: "Challenger 350 Captain", status: "Active", notes: "managed, tail N522AD, SLC based; CL-30 rating confirmed by the user Aug 28, shared with the Challenger 300 which SkyShare does not operate" },
   { aircraft: "Challenger 350", typeRating: "CL-30", role: "First Officer", seat: "SIC", title: "Challenger 350 First Officer", status: "Active", notes: "managed, tail N522AD, SLC based" },
   { aircraft: "Praetor 600", typeRating: "EMB-550", role: "Captain", seat: "PIC", title: "Praetor 600 Captain", status: "Active", notes: "managed, Ogden based; tail unknown until the aircraft is purchased" },
   { aircraft: "Praetor 600", typeRating: "EMB-550", role: "First Officer", seat: "SIC", title: "Praetor 600 First Officer", status: "Active", notes: "managed, Ogden based; tail unknown until the aircraft is purchased" },
