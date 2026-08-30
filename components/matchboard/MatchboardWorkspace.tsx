@@ -60,6 +60,13 @@ export function MatchboardWorkspace({
   candidateData: CandidateRoleMatches | null;
 }) {
   const [query, setQuery] = useState("");
+  /**
+   * The picker is driven by the fleet registry, so it lists every aircraft
+   * position we operate whether or not a seat is open. That put 11 unscannable
+   * "no profile" rows among the real ones and made the board read as mostly dead.
+   * Hidden by default, one click away, and a search always looks through them.
+   */
+  const [showWithoutProfile, setShowWithoutProfile] = useState(false);
   const [mode, setMode] = useState<MatchboardMode>(modeProp);
   const [selectedId, setSelectedId] = useState<string | null>(selectedIdProp);
   const [roleData, setRoleData] = useState<JobScreeningData | null>(roleDataProp);
@@ -112,13 +119,25 @@ export function MatchboardWorkspace({
     window.history.replaceState(null, "", url.toString());
   }, [mode, selectedId]);
 
+  const hiddenRoleCount = useMemo(
+    () => subjects.roles.filter((role) => role.noProfile).length,
+    [subjects.roles]
+  );
+
   const filteredRoles = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return subjects.roles;
-    return subjects.roles.filter((r) =>
-      [r.title, r.seat, r.aircraft, r.typeRating].filter(Boolean).join(" ").toLowerCase().includes(q)
+    // A search looks through everything, profile or not — hunting for a role you
+    // know exists and being told it does not is worse than a longer list.
+    const pool = showWithoutProfile || q ? subjects.roles : subjects.roles.filter((role) => !role.noProfile);
+    if (!q) return pool;
+    return pool.filter((r) =>
+      [r.title, r.seat, r.aircraft, r.typeRating, r.operatorType, ...r.tails]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(q)
     );
-  }, [subjects.roles, query]);
+  }, [subjects.roles, query, showWithoutProfile]);
 
   const filteredCandidates = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -220,7 +239,16 @@ export function MatchboardWorkspace({
                       <div className="mt-0.5 truncate text-xs text-brand-grey dark:text-slate-400">
                         {role.noProfile
                           ? "No requirement profile yet — not scannable"
-                          : [role.typeRating, `${role.applicantCount} applied`, role.dupeCount > 1 ? `${role.dupeCount} variants` : null]
+                          : [
+                              // Operator and tail lead the line: they are what
+                              // separates a managed owner-aircraft seat from a
+                              // SkyShare one when the two titles look alike.
+                              role.operatorType,
+                              role.tails.length ? role.tails.join(", ") : null,
+                              role.typeRating,
+                              `${role.applicantCount} applied`,
+                              role.dupeCount > 1 ? `${role.dupeCount} variants` : null
+                            ]
                               .filter(Boolean)
                               .join(" · ")}
                       </div>
@@ -268,6 +296,17 @@ export function MatchboardWorkspace({
                     </button>
                   );
                 })}
+            {mode === "role" && hiddenRoleCount > 0 && !query.trim() ? (
+              <button
+                type="button"
+                onClick={() => setShowWithoutProfile((current) => !current)}
+                className="mt-1 w-full rounded border border-dashed border-brand-lea/20 p-2 text-xs text-brand-grey transition hover:border-brand-sweet hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
+              >
+                {showWithoutProfile
+                  ? `Hide the ${hiddenRoleCount} fleet position${hiddenRoleCount === 1 ? "" : "s"} with no profile`
+                  : `Show ${hiddenRoleCount} more fleet position${hiddenRoleCount === 1 ? "" : "s"} we are not hiring for`}
+              </button>
+            ) : null}
             {mode === "candidate" && filteredCandidates.length > VISIBLE_SUBJECTS ? (
               <p className="p-3 text-xs text-brand-grey dark:text-slate-400">
                 Showing {VISIBLE_SUBJECTS} of {filteredCandidates.length.toLocaleString()} — search to narrow it down.

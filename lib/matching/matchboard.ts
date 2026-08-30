@@ -39,6 +39,16 @@ export type RoleSubject = {
   dupeCount: number; // requirement rows collapsed into this canonical position
   unmatched: boolean; // true = didn't resolve to a canonical fleet position
   noProfile: boolean; // active fleet position with no requirement record yet (not scannable)
+  /**
+   * "SkyShare" | "Managed", or null when the collapsed group disagrees / has none.
+   *
+   * Carried onto the board because without it a managed Henderson G450 Captain and
+   * a SkyShare SLC G450 & GV Captain are two near-identical titles with nothing to
+   * tell them apart while scanning — and they are entirely different jobs.
+   */
+  operatorType: string | null;
+  /** Tail numbers of the managed aircraft behind this role, if any. */
+  tails: string[];
 };
 
 export type CandidateSubject = {
@@ -68,6 +78,8 @@ export async function getMatchboardSubjects(viewer?: ViewerScope | null): Promis
         fleetPositionSlug: true,
         pilotSeat: true,
         aircraftTypesJson: true,
+        operatorType: true,
+        managedVariants: { where: { status: "ACTIVE" }, select: { tailNumber: true } },
         // COUNT APPLICANTS THROUGH THE JOB, not through the requirement.
         //
         // CandidateApplication carries BOTH jobId and pilotRequirementId and both
@@ -110,20 +122,19 @@ export async function getMatchboardSubjects(viewer?: ViewerScope | null): Promis
 
   // Collapse the messy requirement rows onto canonical fleet positions via the
   // registry resolver, so the picker shows the canonical, deduped list.
-  type Group = { reqIds: string[]; applicants: number };
+  type Group = { reqIds: string[]; applicants: number; operators: Set<string>; tails: Set<string> };
   const bySlug = new Map<string, Group>();
   const unmatched: RoleSubject[] = [];
 
   for (const req of requirements) {
     const position = positionFor(req.fleetPositionSlug, req.title);
     if (position) {
-      const group = bySlug.get(position.slug);
-      if (group) {
-        group.reqIds.push(req.id);
-        group.applicants += req.sourceJobRecord?._count.applications ?? 0;
-      } else {
-        bySlug.set(position.slug, { reqIds: [req.id], applicants: req.sourceJobRecord?._count.applications ?? 0 });
-      }
+      const group = bySlug.get(position.slug) ?? { reqIds: [], applicants: 0, operators: new Set<string>(), tails: new Set<string>() };
+      group.reqIds.push(req.id);
+      group.applicants += req.sourceJobRecord?._count.applications ?? 0;
+      if (req.operatorType) group.operators.add(req.operatorType);
+      for (const variant of req.managedVariants) group.tails.add(variant.tailNumber);
+      bySlug.set(position.slug, group);
     } else {
       unmatched.push({
         id: req.id,
@@ -135,7 +146,9 @@ export async function getMatchboardSubjects(viewer?: ViewerScope | null): Promis
         applicantCount: req.sourceJobRecord?._count.applications ?? 0,
         dupeCount: 1,
         unmatched: true,
-        noProfile: false
+        noProfile: false,
+        operatorType: req.operatorType,
+        tails: req.managedVariants.map((variant) => variant.tailNumber)
       });
     }
   }
@@ -157,7 +170,12 @@ export async function getMatchboardSubjects(viewer?: ViewerScope | null): Promis
       applicantCount: group ? group.applicants : 0,
       dupeCount: group ? group.reqIds.length : 0,
       unmatched: false,
-      noProfile: !group
+      noProfile: !group,
+      // Only claim an operator when the whole collapsed group agrees. A slug
+      // holding both a SkyShare and a managed requirement is a data problem, and
+      // labelling it as either one would hide that rather than show it.
+      operatorType: group && group.operators.size === 1 ? [...group.operators][0] : null,
+      tails: group ? [...group.tails].sort() : []
     };
   };
 

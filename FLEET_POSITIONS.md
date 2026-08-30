@@ -47,6 +47,10 @@ _Ordered by aircraft size._
 | Citation 560XL | CE-560XL | First Officer | SIC | 560XL First Officer | Active | |
 | Citation 560XLS+ | CE-560XL | Captain | PIC | 560XLS+ Captain | Archived | |
 | Citation 560XLS+ | CE-560XL | First Officer | SIC | 560XLS+ First Officer | Archived | |
+| Challenger 350 | CL-30 | Captain | PIC | Challenger 350 Captain | Active | managed, tail N522AD, SLC based; CL-30 type rating needs confirming |
+| Challenger 350 | CL-30 | First Officer | SIC | Challenger 350 First Officer | Active | managed, tail N522AD, SLC based |
+| Praetor 600 | EMB-550 | Captain | PIC | Praetor 600 Captain | Active | managed, Ogden based; tail unknown until the aircraft is purchased |
+| Praetor 600 | EMB-550 | First Officer | SIC | Praetor 600 First Officer | Active | managed, Ogden based; tail unknown until the aircraft is purchased |
 | Gulfstream G200 | G-200 | Captain | PIC | G200 Captain | Active | |
 | Gulfstream G200 | G-200 | First Officer | SIC | G200 First Officer | Active | |
 | Gulfstream G450 | G-V | Lead Captain | PIC | G450 Lead Captain | Archived | |

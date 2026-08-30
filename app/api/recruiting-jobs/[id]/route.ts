@@ -39,10 +39,36 @@ export async function PATCH(request: Request, context: RouteContext) {
         return NextResponse.json({ message: "Unknown job status." }, { status: 400 });
       }
       await prisma.job.update({ where: { id }, data: { status: body.status } });
+
+      // Closing a job stops the Matchboard scanning for it — but ONLY for roles we
+      // operate ourselves.
+      //
+      // NOT a blind cascade, and this is the whole subtlety. Most managed
+      // owner-aircraft roles sit on a RETIRED job row while the role itself is very
+      // much live: the job record was for a posting that closed, the seat belongs to
+      // the aircraft. Measured Aug 28, deriving "job retired => requirement inactive"
+      // across the board would have switched off most of the managed fleet. A
+      // SkyShare role follows its job; a managed role follows its tail, so it is left
+      // alone here and is switched off when the aircraft leaves.
+      //
+      // INACTIVE rather than HISTORICAL: /api/pilot-requirements treats INACTIVE as a
+      // current requirement, so the row keeps blocking a duplicate for the same fleet
+      // position, and reopening the job below brings this exact row back rather than
+      // making a second one.
+      const reopening = body.status === "OPEN";
+      const requirementSync = await prisma.pilotRequirement.updateMany({
+        where: {
+          sourceJobRecordId: id,
+          operatorType: "SkyShare",
+          status: reopening ? "INACTIVE" : "ACTIVE"
+        },
+        data: { status: reopening ? "ACTIVE" : "INACTIVE" }
+      });
+
       const alsoClassifying =
         body.isPilotRole !== undefined || body.pilotSeat !== undefined || body.aircraftTypes !== undefined;
       if (!alsoClassifying && body.paycomReqId === undefined) {
-        return NextResponse.json({ ok: true, status: body.status });
+        return NextResponse.json({ ok: true, status: body.status, requirementsChanged: requirementSync.count });
       }
     }
 
