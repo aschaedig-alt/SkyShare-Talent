@@ -54,7 +54,11 @@ type CandidateProfileWorkspaceProps = {
   travelRollup?: TravelChecklistRollup;
   travelLoyalty?: TravelerLoyalty;
   /** Everyone who can be recorded as an interviewer or @-mentioned. */
+  /** @-mention list: Users only, so a mention reaches somebody who can open the app. */
   team?: Array<{ name: string; email: string }>;
+  /** Interviewer list: Users PLUS booking hosts, because hiring managers run
+      interviews without having an account. Falls back to team when not supplied. */
+  interviewers?: Array<{ name: string; email: string }>;
   /** The signed-in user, pre-selected as the interviewer. Null in local dev. */
   me?: { name: string; email: string } | null;
 };
@@ -144,6 +148,7 @@ export function CandidateProfileWorkspace({
   travelRollup,
   travelLoyalty,
   team = [],
+  interviewers,
   me = null
 }: CandidateProfileWorkspaceProps) {
   const [candidate, setCandidate] = useState<CandidateProfileData>(initialCandidate);
@@ -778,7 +783,7 @@ export function CandidateProfileWorkspace({
             <InterviewWriteUp
               candidateId={candidate.id}
               interviews={candidate.interviews}
-              people={team}
+              people={interviewers ?? team}
               me={me}
               canEdit={canEdit}
               canAnnotate={canAnnotate}

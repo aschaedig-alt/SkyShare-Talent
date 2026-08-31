@@ -3,7 +3,7 @@ import { getCandidateProfileData } from "@/lib/data/candidates";
 import { getTravelTripsForCandidate, getCandidateLoyalty, getChecklistRollupForTrips } from "@/lib/data/travel";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { getPageLayout } from "@/lib/data/page-layout";
-import { getTeamMembers } from "@/lib/data/team";
+import { getTeamMembers, getInterviewers } from "@/lib/data/team";
 import { isAdminOrRecruiter, hasPermission } from "@/lib/auth/roles";
 import { resolveViewerScope } from "@/lib/auth/viewer-scope";
 import { notFound } from "next/navigation";
@@ -21,15 +21,20 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
   if (!candidate) {
     notFound();
   }
-  const [travelTrips, travelLoyalty, team] = await Promise.all([
+  // TWO lists on purpose. team feeds @-mentions and must stay Users only, so a
+  // mention always reaches somebody who can open the app. interviewers also
+  // includes booking hosts, because hiring managers run interviews long before
+  // they ever sign in. See lib/data/team.ts.
+  const [travelTrips, travelLoyalty, team, interviewers] = await Promise.all([
     getTravelTripsForCandidate(id),
     getCandidateLoyalty(id),
-    getTeamMembers()
+    getTeamMembers(),
+    getInterviewers()
   ]);
   // Whoever is signed in is pre-selected as the interviewer — the common case
   // is recording your own interview, and it also makes "my recent interviews"
   // work without anyone having to remember to set it.
-  const me = access.email ? team.find((t) => t.email === access.email.toLowerCase()) ?? null : null;
+  const me = access.email ? interviewers.find((t) => t.email === access.email.toLowerCase()) ?? null : null;
 
   // Checklists tab. Loaded after the trips because it needs them; skipped
   // entirely when there is no travel, so a candidate who has never flown out
@@ -42,6 +47,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
     <CandidateProfileWorkspace
       candidate={candidate}
       team={team}
+      interviewers={interviewers}
       me={me}
       // Recruiters run onboarding, not just admins — the Move-to-onboarding,
       // Link-to-a-job, and offer controls all POST candidates:write, which the

@@ -488,6 +488,10 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
   ];
 
   const outstanding = tasks.filter((t) => t.status === "TODO").length;
+
+  // Read live from tasks, not from a snapshot, so ticking travel N/A on the
+  // Checklist tab changes this tab's chip without a reload.
+  const travelNotNeeded = tasks.some((t) => t.key === "travel_complete" && t.status === "NA");
   const bottomTabs: BottomTab[] = [
     {
       key: "checklist",
@@ -528,7 +532,17 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     {
       key: "travel",
       label: "Travel",
-      chip: `${travelTrips.length} trip${travelTrips.length === 1 ? "" : "s"}`,
+      // "not needed", the same word Business cards uses, when travel has been
+      // marked N/A. No new field and no migration: travel_complete is already a
+      // per-hire OnboardingTask and its status is already TODO / DONE / NA, with
+      // the three-state control already on the Checklist tab. Marking it N/A IS
+      // the "this person does not need a trip" decision — it just was not
+      // visible from this tab, so a hire with no trips looked identical whether
+      // travel was not needed or simply not booked yet.
+      chip:
+        travelNotNeeded
+          ? "not needed"
+          : `${travelTrips.length} trip${travelTrips.length === 1 ? "" : "s"}`,
       content: <TravelPanel subjectType="newHire" subjectId={hire.id} initialTrips={travelTrips} loyalty={travelLoyalty} />
     },
     {
@@ -552,7 +566,10 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     {
       key: "history",
       label: "History",
-      chip: String(onboardingArchives.length),
+      // "none" rather than a bare 0. The panel already renders nothing at zero,
+      // so the number was telling you a count where a word reads better — and a
+      // lone "0" beside "not needed" and "ordered" looked like a broken value.
+      chip: onboardingArchives.length === 0 ? "none" : String(onboardingArchives.length),
       content: <OnboardingHistoryPanel hireId={hire.id} hireName={hire.name} archives={onboardingArchives} canEdit={canEdit} />
     }
   ];
