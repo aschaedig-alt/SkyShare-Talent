@@ -84,6 +84,26 @@
   background: rgba(255, 255, 255, 0.26);
 }
 
+/*
+ * Scroll if it must, but never show a bar.
+ *
+ * For FIXED-WIDTH CHROME only — the 70px nav rail. A visible scrollbar there is
+ * 12px of a 70px column, so it eats the width the icons need and then triggers a
+ * SECOND, horizontal bar in the space it stole. Two scrollbars in a nav that is
+ * meant to be furniture.
+ *
+ * Do NOT reach for this to quiet a scrollbar on real content. A hidden bar on a
+ * list or a table hides that there is more to see, which is worse than the bar.
+ * If content scrolls, the reader is entitled to know.
+ */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 * {
   box-sizing: border-box;
 }

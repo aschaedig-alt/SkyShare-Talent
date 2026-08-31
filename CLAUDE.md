@@ -343,6 +343,34 @@ that is shorter than the content, so the page scrolls *and* the box scrolls.
 The one deliberate exception is a genuinely fixed-height shell — the nav rail —
 which must then handle its own overflow rather than pushing it into the document.
 
+### A scrollbar is a last resort, not a fix
+
+His rule, asked for directly on 2026-08-31 after a "fix" of mine put **two**
+scrollbars on the far-left nav: *we don't want them if we can avoid them.*
+
+Work down this list in order, and stop at the first one that works:
+
+1. **Make it fit.** Most scrollbars are a layout that gave a box less room than
+   its content needs. Fix the room.
+2. **Let the PAGE scroll.** One vertical scrollbar per screen is fine and normal.
+   A panel inside a scrolling page should not scroll too.
+3. **Only then, scroll the container** — and only when it is genuinely fixed
+   (the nav rail, a modal).
+
+**If you do set an overflow, pin the other axis explicitly.** This is a real trap
+and it shipped: per the CSS overflow spec, setting one axis to anything other
+than `visible` makes the other axis compute to **`auto`**. So `overflow-y-auto`
+alone silently enables horizontal scrolling. On the 70px nav rail the vertical
+bar then ate 12px of the width, which pushed the content wide enough to trigger
+the horizontal bar it had just switched on. Write `overflow-y-auto
+overflow-x-hidden`, not `overflow-y-auto`.
+
+**Never hide a scrollbar on real content.** `.no-scrollbar` (`app/globals.css`)
+exists for fixed-width chrome — the nav rail — where a 12px bar is most of the
+gutter. On a list, a table or a panel, a hidden bar hides that there is more to
+see, which is worse than the bar. If content scrolls, the reader is entitled to
+know.
+
 ## Anything that navigates must be a real link
 
 The user's rule: if a click changes the **whole screen** to another page, use a real

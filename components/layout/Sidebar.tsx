@@ -238,17 +238,31 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
           z-index here that context sits at the default level and, being before <main> in DOM order,
           the page content paints over the flyout. Kept under the mobile drawer + modals (z-50). */}
       <div className="sticky top-0 z-30 hidden h-screen shrink-0 lg:flex print:hidden">
-        {/* Icon rail.
-            h-full + min-h-0 + overflow-y-auto is load-bearing, not tidying. The comment
-            above says only the panel/content scroll, and the items panel next to this one
-            honours that — but this rail did not. With enough groups its tiles overflowed
-            the h-screen parent and escaped into the DOCUMENT, so the whole page grew a
-            scrollbar to accommodate a nav that is supposed to be fixed. Measured Aug30 at
-            a 695px viewport: rail scrollHeight 964 against clientHeight 695, and
-            documentElement scrollHeight also exactly 964 — the page was tall because the
-            rail was. min-h-0 is required because a flex child will not shrink below its
-            content without it, so overflow-y-auto alone would do nothing here. */}
-        <div className="flex h-full min-h-0 w-[70px] flex-col items-center overflow-y-auto border-r border-white/10 bg-brand-eden py-3">
+        {/* Icon rail. Every class on the overflow here is load-bearing; read this
+            before simplifying it.
+
+            WHY IT IS CONTAINED AT ALL: the comment above says only the panel/content
+            scroll, and the items panel honours that — this rail did not. Its tiles
+            overflowed the h-screen parent and escaped into the DOCUMENT, so the whole
+            page grew a scrollbar for a nav that is meant to be furniture. Measured at a
+            695px viewport: rail scrollHeight 964 against clientHeight 695, and
+            documentElement scrollHeight also exactly 964.
+
+            min-h-0 — a flex child will not shrink below its content without it, so
+            overflow-y-auto alone does nothing here.
+
+            overflow-x-hidden — NOT redundant, and leaving it off is a real bug that
+            shipped. Per the CSS overflow spec, when one axis is set to something other
+            than visible the OTHER axis computes to auto, so overflow-y-auto silently
+            turned horizontal scrolling on too. The vertical bar then ate 12px of a 70px
+            column, which pushed the 54px dividers wide enough to trigger the horizontal
+            bar it had just enabled. Two scrollbars in the nav, from one property.
+
+            no-scrollbar — a 12px bar in a 70px rail is most of the gutter and looks
+            broken. It still scrolls on a short viewport; it just does not show a bar.
+            That is acceptable HERE because the rail is fixed-width chrome with a hover
+            flyout, and is NOT acceptable on real content (see app/globals.css). */}
+        <div className="no-scrollbar flex h-full min-h-0 w-[70px] flex-col items-center overflow-y-auto overflow-x-hidden border-r border-white/10 bg-brand-eden py-3">
           <Link
             href={homeHref}
             prefetch={false}
