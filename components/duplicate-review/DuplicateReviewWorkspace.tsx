@@ -2,6 +2,7 @@ import type { DuplicateReviewData } from "@/lib/data/duplicate-review";
 import { CandidateDuplicateScanCard } from "@/components/duplicate-review/CandidateDuplicateScanCard";
 import { JobDuplicateScanCard } from "@/components/duplicate-review/JobDuplicateScanCard";
 import { DuplicateReviewQueue } from "@/components/duplicate-review/DuplicateReviewQueue";
+import { ClosedDuplicatePairs } from "@/components/duplicate-review/ClosedDuplicatePairs";
 
 type DuplicateReviewWorkspaceProps = {
   data: DuplicateReviewData;
@@ -53,12 +54,16 @@ export function DuplicateReviewWorkspace({ data }: DuplicateReviewWorkspaceProps
             <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-8 text-center dark:border-white/10 dark:bg-white/5">
               <div className="text-lg font-semibold text-brand-lea dark:text-slate-100">No open duplicate reviews</div>
               <p className="mt-2 text-sm text-brand-grey dark:text-slate-400">
-                Run a scan above to check for candidate or job duplicates. Resolved and dismissed pairs stay cleared.
+                Run a scan above to check for candidate or job duplicates. Pairs a scan still counts, but that somebody already merged or dismissed, are listed below and can be reopened.
               </p>
             </div>
           )}
         </div>
       </section>
+
+      {/* The pairs a scan counts but the queue filters out. Renders nothing when
+          there are none, so a workspace with a genuinely empty history is unchanged. */}
+      <ClosedDuplicatePairs closed={data.closed} />
     </div>
   );
 }

@@ -13,6 +13,11 @@ export type ActivityType =
   | "IMPORT_STARTED"
   | "IMPORT_COMPLETED"
   | "DUPLICATE_RESOLVED"
+  // Putting a resolved or dismissed pair back in the queue. Distinct from
+  // RESOLVED because it is the opposite action and reads wrongly in a log
+  // otherwise. No migration: the column is a plain String, this union is the
+  // only thing constraining it.
+  | "DUPLICATE_REOPENED"
   // A pool-wide duplicate SCAN, as distinct from resolving one pair. Expensive and
   // it writes review items across the whole candidate pool, so who ran it is worth
   // recording - see app/api/duplicate-review/candidates/scan/route.ts.
