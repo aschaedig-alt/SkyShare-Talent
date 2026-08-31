@@ -1,4 +1,5 @@
 import { History } from "lucide-react";
+import { formatMomentDateTimeLong } from "@/lib/dates/display";
 
 type ActivityItem = {
   id: string;
@@ -22,9 +23,7 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 function formatWhen(value: string) {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }).format(
-    new Date(value)
-  );
+  return formatMomentDateTimeLong(value);
 }
 
 export function CandidateActivityTimeline({ items }: { items: ActivityItem[] }) {

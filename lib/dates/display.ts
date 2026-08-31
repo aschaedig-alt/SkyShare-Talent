@@ -97,6 +97,27 @@ export function formatMomentDateTime(value: string | Date | null | undefined): s
   }).format(d);
 }
 
+/**
+ * "Jul 20, 2026, 6:10 PM" — both, WITH the year.
+ *
+ * Same as formatMomentDateTime but keeping the year, which the candidate
+ * timeline and notes both show. It exists so those two could be moved off their
+ * own timezone-less Intl.DateTimeFormat without changing what they display: the
+ * bug was the missing timeZone, not the format.
+ */
+export function formatMomentDateTimeLong(value: string | Date | null | undefined): string {
+  const d = toDate(value);
+  if (!d) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: OFFICE_TZ,
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(d);
+}
+
 /* -- 2. Calendar days: render in UTC, where they were stored ------------- */
 
 /** "Jul 15, 2026" — a chosen day. Stored at midnight UTC, so read back in UTC. */

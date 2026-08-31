@@ -6,11 +6,12 @@ import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { GitMerge, X, Loader, ArrowRight } from "lucide-react";
 import type { DuplicateReviewData, DuplicateCandidateBrief } from "@/lib/data/duplicate-review";
+import { formatMomentDateTime } from "@/lib/dates/display";
 
 type Item = DuplicateReviewData["items"][number];
 
 function fmtDate(value: string) {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
+  return formatMomentDateTime(value);
 }
 
 function CandidateCard({ candidate, keep, onKeep }: { candidate: NonNullable<DuplicateCandidateBrief>; keep: boolean; onKeep: () => void }) {

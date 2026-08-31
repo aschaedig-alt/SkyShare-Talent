@@ -7,6 +7,7 @@ import { clsx } from "clsx";
 import { Button } from "@/components/ui";
 import { RichTextEditor, RichTextView } from "@/components/richtext/RichTextEditor";
 import { noteAttribution, noteBodyWithoutSignature } from "@/lib/notes/attribution";
+import { formatMomentDateTimeLong } from "@/lib/dates/display";
 
 type Note = {
   id: string;
@@ -39,9 +40,7 @@ export type InterviewWriteUp = {
 };
 
 function formatWhen(value: string) {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }).format(
-    new Date(value)
-  );
+  return formatMomentDateTimeLong(value);
 }
 
 export function CandidateNotes({

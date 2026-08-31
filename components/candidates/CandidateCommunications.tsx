@@ -4,6 +4,7 @@ import { useState } from "react";
 import { clsx } from "clsx";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import type { CandidateProfileData } from "@/lib/data/candidates";
+import { formatMomentDate } from "@/lib/dates/display";
 
 type CandidateCommunicationsProps = {
   communications: CandidateProfileData["communications"];
@@ -12,7 +13,7 @@ type CandidateCommunicationsProps = {
 
 function formatDate(value: string | null) {
   if (!value) return "Undated";
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
+  return formatMomentDate(value);
 }
 
 // Jazz stores message bodies as HTML. Render them as readable plain text (no

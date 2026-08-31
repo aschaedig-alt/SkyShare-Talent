@@ -2,13 +2,14 @@
 
 import { clsx } from "clsx";
 import type { CandidateProfileData } from "@/lib/data/candidates";
+import { formatMomentDate } from "@/lib/dates/display";
 
 type CandidateTimelineProps = {
   events: CandidateProfileData["timeline"];
 };
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
+  return formatMomentDate(value);
 }
 
 // Dot color by lifecycle type — gold for positive milestones, red for rejection,

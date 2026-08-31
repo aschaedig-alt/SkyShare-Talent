@@ -22,6 +22,7 @@ import type { CandidateListItem } from "@/lib/data/candidates";
 import { CANDIDATE_DEPARTMENTS } from "@/lib/candidates/departments";
 import { CandidateTagCell } from "@/components/candidates/CandidateTagCell";
 import { Button } from "@/components/ui";
+import { formatMomentDate } from "@/lib/dates/display";
 
 type ProfileSummary = {
   displayName: string;
@@ -35,7 +36,7 @@ type ProfileSummary = {
 };
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
+  return formatMomentDate(value);
 }
 
 function initials(name: string) {

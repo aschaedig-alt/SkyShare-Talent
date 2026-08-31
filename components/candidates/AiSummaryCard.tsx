@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sparkles, RefreshCw } from "lucide-react";
 import type { CandidateProfileData } from "@/lib/data/candidates";
+import { formatMomentDate } from "@/lib/dates/display";
 
 type AiSummaryCardProps = {
   candidateId: string;
@@ -12,7 +13,7 @@ type AiSummaryCardProps = {
 };
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
+  return formatMomentDate(value);
 }
 
 // Displays the AI-generated candidate narrative and (for editors) a Generate /
