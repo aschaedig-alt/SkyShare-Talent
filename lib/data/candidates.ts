@@ -609,9 +609,20 @@ export async function getCandidateListData(
   // When searching, span ALL candidates including archived/historical (Jazz)
   // ones so legacy records are findable. With no query, the default list stays
   // active-only (archivedAt: null) so the historical archive doesn't flood it.
+  // A MERGED row is NEVER listed, searched or not.
+  //
+  // It is not a second candidate — it is a tombstone. The merge moved that
+  // person's files, notes and applications onto the keeper and left this row
+  // behind so the history is not lost. Showing it means one human appears twice
+  // in a search under the same name, which is what a recruiter reads as an
+  // unfixed duplicate: reported 2026-08-31 after "Matt Smith" returned two rows.
+  // In an industry of repeat applicants that is the common case, not an edge one.
+  //
+  // The keeper is what search should find, and it carries everything.
+  const notMerged = { status: { not: "MERGED" } };
   const baseWhere: Record<string, unknown> = hasQuery
-    ? { AND: terms.map(termPredicate) }
-    : { archivedAt: null };
+    ? { AND: [notMerged, ...terms.map(termPredicate)] }
+    : { AND: [notMerged, { archivedAt: null }] };
 
   // Org-wide by default — a HIRING_MANAGER only gets narrowed to their own
   // department when an admin explicitly turns on restrictCandidatesToDepartment
