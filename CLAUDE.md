@@ -324,6 +324,25 @@ batch is large, that is a reason to split it across pushes, not to trust it.
 
 Match the surrounding components rather than inventing new styling.
 
+## Don't make the vertical space shorter than it needs to be
+
+Aimee's rule, asked for directly on 2026-08-30: stop capping content into a box
+that is shorter than the content, so the page scrolls *and* the box scrolls.
+
+- **Do not add a fixed or viewport-fraction height cap** (`max-h-[78vh]`,
+  `h-[600px]`, a measured pixel height) to a panel whose content grows with the
+  data. A list of 9 positions in ~460px of usable space is two scrollbars, not a
+  layout.
+- **Scroll-inside-scroll is the bug.** One vertical scrollbar per screen. If the
+  page already scrolls, the panel inside it must not.
+- **A container with no overflow handling at all is worse than a scrollbar** — it
+  spills silently past its box and can overlap what sits below.
+- The audit that produced this rule, with the per-page list of offenders, is on
+  the roadmap under "Bugs & UX Fixes".
+
+The one deliberate exception is a genuinely fixed-height shell — the nav rail —
+which must then handle its own overflow rather than pushing it into the document.
+
 ## Anything that navigates must be a real link
 
 The user's rule: if a click changes the **whole screen** to another page, use a real
