@@ -152,6 +152,22 @@ export type CandidateListItem = {
   displayName: string;
   currentTitle: string | null;
   stage: string | null;
+  /**
+   * Why this row is not in the live pool, or null when it is.
+   *
+   * SEARCH deliberately spans archived and historical records so legacy Jazz
+   * candidates stay findable (see the comment on baseWhere), which means a
+   * search can return a person twice: the record people work, and a tombstone
+   * left behind by a merge. Until 2026-08-31 those looked IDENTICAL in the
+   * list, so a resolved duplicate read as an unfixed one and the obvious
+   * reaction was to try to merge them again.
+   *
+   * MERGED means a merge folded this record into another and kept it for
+   * history. ARCHIVED is everything else out of the pool, mostly the Jazz
+   * import. Derived rather than exposing status and archivedAt raw, because
+   * the list only needs to answer "why is this one different".
+   */
+  archivedAs: "MERGED" | "ARCHIVED" | null;
   owner: string | null;
   source: string | null;
   primaryEmail: string | null;
@@ -789,6 +805,9 @@ export async function getCandidateListData(
       displayName: candidate.displayName,
       currentTitle: candidate.currentTitle,
       stage: candidate.stage,
+      // Only ever set on a row that is out of the live pool, so the default
+      // list - which is already archivedAt: null - never shows a badge.
+      archivedAs: candidate.archivedAt ? (candidate.status === "MERGED" ? "MERGED" : "ARCHIVED") : null,
       owner: candidate.owner,
       source: candidate.source,
       primaryEmail: candidate.primaryEmail,
@@ -929,6 +948,9 @@ export async function getCandidatesByIds(ids: string[], viewer?: CandidateListVi
       displayName: candidate.displayName,
       currentTitle: candidate.currentTitle,
       stage: candidate.stage,
+      // Only ever set on a row that is out of the live pool, so the default
+      // list - which is already archivedAt: null - never shows a badge.
+      archivedAs: candidate.archivedAt ? (candidate.status === "MERGED" ? "MERGED" : "ARCHIVED") : null,
       owner: candidate.owner,
       source: candidate.source,
       primaryEmail: candidate.primaryEmail,

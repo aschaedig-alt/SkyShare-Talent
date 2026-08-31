@@ -313,6 +313,27 @@ export function SelectableCandidateTable({
                                   P
                                 </a>
                               )}
+                              {/* Why this row is here twice.
+                                  Search deliberately spans archived and historical records so
+                                  legacy Jazz candidates stay findable, which means one person
+                                  can come back as two rows: the record people work, and a
+                                  tombstone a merge left behind. Without this badge those looked
+                                  identical, so a resolved duplicate read as an unfixed one —
+                                  reported after two Matt Smiths kept appearing in search. Only
+                                  ever set on a row outside the live pool, so the default list
+                                  never shows it. */}
+                              {candidate.archivedAs && (
+                                <span
+                                  title={
+                                    candidate.archivedAs === "MERGED"
+                                      ? "Merged into another record and kept for history. Not in the live pool."
+                                      : "Archived. Not in the live pool."
+                                  }
+                                  className="shrink-0 rounded border border-brand-lea/15 bg-brand-cloudDancer/70 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:border-white/15 dark:bg-white/10 dark:text-slate-300"
+                                >
+                                  {candidate.archivedAs === "MERGED" ? "merged" : "archived"}
+                                </span>
+                              )}
                             </span>
                             <div className="text-xs text-brand-grey dark:text-slate-400">{candidate.currentTitle ?? "No current role"}</div>
                             {candidate.docMatch && (
