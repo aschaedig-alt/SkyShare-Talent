@@ -16,6 +16,9 @@ import {
 import { MatchCard, formatScanTime, readinessStyles } from "@/components/pilot-requirements/MatchCard";
 import { CandidatePreview } from "@/components/recruiting-jobs/CandidatePreview";
 import { SCAN_EXCLUSION_LABELS, type ScanExclusionReason } from "@/lib/candidates/scan-exclusion";
+// scan-pool is a PURE module (no Prisma import) precisely so client components can
+// read these, per its own header comment.
+import { CURRENT_MATCH_LIMIT, ARCHIVE_MATCH_LIMIT } from "@/lib/candidates/scan-pool";
 import type { JobScreeningData } from "@/lib/data/job-screening";
 import type { PilotRequirementCandidateMatch, ReadinessLabel } from "@/lib/matching/pilot-requirement-matches";
 
@@ -267,8 +270,14 @@ export function JobScreeningPanel({
     };
   }, [selectedId, preview, previewLoading]);
 
+  // "All" is only honest when the list was not cut off. currentMatches is the
+  // CURRENT_MATCH_LIMIT slice, so a list sitting exactly at the limit is a top-N
+  // shortlist — and labelling that "All 12" is what made it read as "twelve people
+  // qualify" when 422 had actually been scored. Say "Top" whenever it is capped.
+  const currentCapped = currentMatches.length >= CURRENT_MATCH_LIMIT;
+  const archiveCapped = archiveMatches.length >= ARCHIVE_MATCH_LIMIT;
   const tabs: Array<{ key: Tab; label: string; count: number }> = [
-    { key: "all", label: "All", count: currentMatches.length },
+    { key: "all", label: currentCapped ? "Top" : "All", count: currentMatches.length },
     ...TIER_ORDER.map((tier) => ({ key: tier, label: tier, count: grouped[tier].length }))
   ];
 
@@ -539,7 +548,11 @@ export function JobScreeningPanel({
                   <span className="flex items-center gap-2">
                     <Archive className="h-3.5 w-3.5 text-brand-eden dark:text-slate-300" />
                     <span className="text-[11px] font-semibold text-brand-lea dark:text-slate-100">From the archive</span>
-                    <span className="text-xs text-brand-grey dark:text-slate-400">({archiveMatches.length})</span>
+                    <span className="text-xs text-brand-grey dark:text-slate-400">
+                      {archiveCapped
+                        ? `(top ${archiveMatches.length} of ${scannedArchive.toLocaleString()})`
+                        : `(${archiveMatches.length})`}
+                    </span>
                   </span>
                   <ChevronDown
                     className={clsx("h-4 w-4 text-brand-grey transition-transform dark:text-slate-400", !archiveOpen && "-rotate-90")}
