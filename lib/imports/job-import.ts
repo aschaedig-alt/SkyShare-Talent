@@ -11,7 +11,12 @@ type ImportJobsOptions = {
 };
 
 const titleKeys = ["job_title", "title", "job title", "position"];
+// One column, two requisition schemes — the SHAPE of the value decides which
+// database column it lands in. See splitRequisitionId.
 const reqKeys = ["job_req_id", "req id", "requisition id", "job req id"];
+// Headers that name Paycom outright. Checked first, but the value still has to be
+// digits to be believed, because digits are all Paycom issues.
+const paycomReqKeys = ["paycom_req_id", "paycom req id", "paycom requisition", "paycom requisition id"];
 const sourceIdKeys = ["job_id", "job id", "source job id"];
 const recruiterKeys = ["job_recruiter", "recruiter"];
 const departmentKeys = ["job_department", "department"];
@@ -77,6 +82,36 @@ function parseDate(value: string | null) {
 
 function normalizeTitle(value: string | null) {
   return (value ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+// Paycom issues a plain number (3296). Same test the app's own requisition field
+// enforces in app/api/recruiting-jobs/[id]/route.ts, kept identical on purpose so a
+// number typed by hand and a number imported from a CSV are judged the same way.
+function isPaycomReqNumber(value: string) {
+  return /^\d{1,20}$/.test(value);
+}
+
+// Split ONE incoming requisition value across the TWO columns that hold requisition
+// ids. Jazz issued codes (AMA.1, CJ2PIC.2, PC12PICNGX); Paycom issues plain numbers
+// (3296). The schema comment on Job says it outright — they are different schemes and
+// a Jazz code will never match a Paycom number — so they are kept apart, and the shape
+// of the value is the only signal available to tell them apart.
+//
+// Before this, every requisition landed on jobReqId whatever it looked like, and
+// "paycomReqId" appeared nowhere in this file. Paycom's Offer Accepted notice quotes a
+// requisition NUMBER, so a number filed under the Jazz code column is a key that can
+// never be matched against.
+export function splitRequisitionId(rawReq: string | null, rawPaycomReq: string | null) {
+  const req = (rawReq ?? "").trim();
+  const paycomNamed = (rawPaycomReq ?? "").trim();
+
+  // A column that names Paycom wins outright, and any plain req column beside it is
+  // then a Jazz code by elimination.
+  if (paycomNamed && isPaycomReqNumber(paycomNamed)) {
+    return { jobReqId: req || null, paycomReqId: paycomNamed };
+  }
+  if (req && isPaycomReqNumber(req)) return { jobReqId: null, paycomReqId: req };
+  return { jobReqId: req || null, paycomReqId: null };
 }
 
 // A role is "pilot" ONLY when the TITLE names a pilot seat/role (Captain, First Officer,
@@ -233,6 +268,10 @@ export async function importJobRows({ rows, sourceFilename, sourceType, importBa
   let updated = 0;
   let skipped = 0;
   let requirements = 0;
+  // Counted separately from `requirements` (which counts NEW drafts) because this one
+  // changes what the Matchboard shows for a role that already existed — a silent status
+  // flip on live data should be reported, not left to be inferred.
+  let requirementsReactivated = 0;
   let pilotRows = 0;
   let nonPilotRows = 0;
   let warnings = 0;
@@ -247,7 +286,10 @@ export async function importJobRows({ rows, sourceFilename, sourceType, importBa
       }
 
       const sourceJobId = getFirstValue(row, sourceIdKeys);
-      const jobReqId = getFirstValue(row, reqKeys);
+      const { jobReqId, paycomReqId } = splitRequisitionId(
+        getFirstValue(row, reqKeys),
+        getFirstValue(row, paycomReqKeys)
+      );
       const department = getFirstValue(row, departmentKeys);
       const rawDescription = getFirstValue(row, descriptionKeys);
       const rawMinimumRequirements = getFirstValue(row, minimumKeys);
@@ -257,10 +299,16 @@ export async function importJobRows({ rows, sourceFilename, sourceType, importBa
       const aircraftTypes = extractAircraftTypes(`${title}\n${sourceText}`);
       const filledDate = parseDate(getFirstValue(row, filledKeys));
 
+      // A Paycom number is ALSO checked against jobReqId, because rows written before
+      // the split above put it there. That lets a re-import recognise such a row and
+      // update it instead of creating a second copy — without writing anything to the
+      // old column, which is a backfill question and not this function's to decide.
       const identityMatches = [
         sourceJobId ? { sourceJobId } : undefined,
-        jobReqId ? { jobReqId } : undefined
-      ].filter(Boolean) as Array<{ sourceJobId: string } | { jobReqId: string }>;
+        jobReqId ? { jobReqId } : undefined,
+        paycomReqId ? { paycomReqId } : undefined,
+        paycomReqId ? { jobReqId: paycomReqId } : undefined
+      ].filter(Boolean) as Array<{ sourceJobId: string } | { jobReqId: string } | { paycomReqId: string }>;
 
       let existing = identityMatches.length
         ? await prisma.job.findFirst({ where: { OR: identityMatches } })
@@ -309,7 +357,7 @@ export async function importJobRows({ rows, sourceFilename, sourceType, importBa
 
       const job = existing
         ? await prisma.job.update({ where: { id: existing.id }, data: commonData })
-        : await prisma.job.create({ data: { ...commonData, sourceJobId, jobReqId, importedAt: new Date() } });
+        : await prisma.job.create({ data: { ...commonData, sourceJobId, jobReqId, paycomReqId, importedAt: new Date() } });
 
       if (pilotRole) {
         pilotRows += 1;
@@ -342,6 +390,50 @@ export async function importJobRows({ rows, sourceFilename, sourceType, importBa
           });
           await createPilotRequirementGates(requirement.id, `${title}\n${sourceText}`);
           requirements += 1;
+        } else {
+          // The importer used to create a requirement when none existed and otherwise do
+          // NOTHING, so a role that was closed and later reposted came back as an OPEN job
+          // still carrying a HISTORICAL requirement — and stayed invisible to the
+          // Matchboard, which lists ACTIVE rows. Reimporting the posting now revives it.
+          //
+          // Operator rule, taken from the status branch in
+          // app/api/recruiting-jobs/[id]/route.ts rather than invented again: a SkyShare
+          // role follows its JOB, a managed role follows its TAIL. Most managed
+          // owner-aircraft roles sit on a closed job row while the seat is very much live,
+          // so they are left alone here and switched off when the aircraft leaves.
+          //
+          // REACTIVATION ONLY, which is where this deliberately stops short of that route.
+          // The route deactivates because a human clicked "close this job". The importer
+          // has no such signal — it derives status as (filledDate ? FILLED : OPEN), and
+          // measured against the live database on Aug 30 that disagrees with the stored
+          // status on 52 of the 64 live job rows, because dozens carry a Jazz-era
+          // filledDate of 2025-02-25 while being correctly stored RETIRED. Worse, the live
+          // "G200 First Officer" requirement hangs off a job row stored OPEN that carries
+          // that same stale filledDate, so a deactivating branch would have switched a
+          // role the Matchboard is currently serving OFF on the next import. Closing stays
+          // an explicit human action.
+          //
+          // Only the STATUS moves. Gates, manualOverrideNotes and the extracted text are
+          // hand-curated — two live requirements carry rules no gate can express — and a
+          // re-import must not overwrite them.
+          const jobIsOpen = job.status !== "FILLED";
+          // A merged-away job row is a duplicate that reconciliation deliberately retired,
+          // and 34 of the 57 linked requirements hang off one. identityMatches above has no
+          // merged filter, so a CSV carrying an old key still reaches those rows — without
+          // this guard a single re-import would resurrect them onto the Matchboard, which
+          // is precisely the drift from 9 roles back to 27 that was just undone.
+          const jobWasMergedAway = Boolean(job.mergedIntoJobId);
+          // INACTIVE and HISTORICAL only. A status somebody chose is left alone: EVERGREEN
+          // means "always scanning", and RETIRED/ARCHIVED are decisions, not derived state.
+          const revivable = existingRequirement.status === "INACTIVE" || existingRequirement.status === "HISTORICAL";
+
+          if (existingRequirement.operatorType === "SkyShare" && jobIsOpen && !jobWasMergedAway && revivable) {
+            await prisma.pilotRequirement.update({
+              where: { id: existingRequirement.id },
+              data: { status: "ACTIVE" }
+            });
+            requirementsReactivated += 1;
+          }
         }
       } else {
         nonPilotRows += 1;
@@ -360,11 +452,11 @@ export async function importJobRows({ rows, sourceFilename, sourceType, importBa
         skippedCount: skipped,
         warningCount: warnings,
         completedAt: new Date(),
-        summaryJson: JSON.stringify({ created, updated, skipped, requirements, pilotRows, nonPilotRows, warnings })
+        summaryJson: JSON.stringify({ created, updated, skipped, requirements, requirementsReactivated, pilotRows, nonPilotRows, warnings })
       }
     });
 
-    return { batchId: batch.id, created, updated, skipped, requirements, pilotRows, nonPilotRows, warnings };
+    return { batchId: batch.id, created, updated, skipped, requirements, requirementsReactivated, pilotRows, nonPilotRows, warnings };
   } catch (error) {
     await prisma.importBatch.update({
       where: { id: batch.id },

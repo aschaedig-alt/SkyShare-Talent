@@ -33,6 +33,9 @@ export async function POST(request: Request) {
     let updated = 0;
     let skipped = 0;
     let requirements = 0;
+    // Revivals of requirements that already existed — reported separately from
+    // `requirements`, which counts new drafts, because these change the Matchboard.
+    let requirementsReactivated = 0;
     let warnings = 0;
     const parsedFiles: Array<{
       filename: string;
@@ -71,6 +74,7 @@ export async function POST(request: Request) {
       updated += result.updated;
       skipped += result.skipped;
       requirements += result.requirements;
+      requirementsReactivated += result.requirementsReactivated;
       warnings += result.warnings;
       parsedFiles.push({ filename, parser: file.parser ?? "browser-pdf-parser", rows: records.length, extractedCharacters: file.extractedCharacters ?? 0 });
     }
@@ -83,7 +87,12 @@ export async function POST(request: Request) {
         ? files.length === 1
           ? "Nothing was imported from this PDF."
           : `Nothing was imported from ${files.length} PDFs.`
-        : `Imported ${imported} PDF job record${imported === 1 ? "" : "s"} and created ${requirements} pilot requirement draft${requirements === 1 ? "" : "s"}.`;
+        : `Imported ${imported} PDF job record${imported === 1 ? "" : "s"} and created ${requirements} pilot requirement draft${requirements === 1 ? "" : "s"}.` +
+          // Reviving a requirement puts a role back on the Matchboard, so it is said
+          // out loud rather than left to be discovered.
+          (requirementsReactivated
+            ? ` Also reactivated ${requirementsReactivated} existing requirement${requirementsReactivated === 1 ? "" : "s"} whose job is open again.`
+            : "");
 
     return NextResponse.json({
       ok: true,
@@ -92,6 +101,7 @@ export async function POST(request: Request) {
       updated,
       skipped,
       warnings,
+      requirementsReactivated,
       files: files.length,
       parsedFiles
     });

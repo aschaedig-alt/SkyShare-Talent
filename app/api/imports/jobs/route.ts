@@ -31,10 +31,17 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    message: `Imported ${result.created + result.updated} jobs and created ${result.requirements} pilot requirement draft${result.requirements === 1 ? "" : "s"}.`,
+    message:
+      `Imported ${result.created + result.updated} jobs and created ${result.requirements} pilot requirement draft${result.requirements === 1 ? "" : "s"}.` +
+      // Reviving a requirement puts a role back on the Matchboard, so it is said out
+      // loud rather than left to be discovered.
+      (result.requirementsReactivated
+        ? ` Also reactivated ${result.requirementsReactivated} existing requirement${result.requirementsReactivated === 1 ? "" : "s"} whose job is open again.`
+        : ""),
     created: result.created,
     updated: result.updated,
     skipped: result.skipped,
-    warnings: result.warnings
+    warnings: result.warnings,
+    requirementsReactivated: result.requirementsReactivated
   });
 }
