@@ -373,7 +373,7 @@ export function PilotRequirementsWorkspace({ data, query }: PilotRequirementsWor
               {data.requirements.length} shown{query ? ` for "${query}"` : ""}
             </p>
           </div>
-          <div className="max-h-[calc(100vh-310px)] min-h-[360px] overflow-y-auto p-3">
+          <div className="min-h-[360px] p-3">
             {data.requirements.length > 0 ? (
               <div className="space-y-2">
                 {data.requirements.map((requirement, index) => {

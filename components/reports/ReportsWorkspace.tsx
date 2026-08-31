@@ -556,7 +556,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
                 <p className="text-[11px] text-brand-grey dark:text-slate-400"><span className="font-semibold text-brand-gold">↗ upgrade</span> · <span className="font-semibold text-brand-eden dark:text-slate-300">→ transition</span></p>
               </div>
             </div>
-            <div className="mt-2 max-h-[560px] space-y-2 overflow-y-auto pr-1 print:max-h-none print:overflow-visible">
+            <div className="mt-2 space-y-2 pr-1">
               {filtered.length === 0 ? (
                 <p className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 px-3 py-6 text-center text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
                   No pilots in this group yet.

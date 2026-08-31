@@ -121,7 +121,7 @@ export function ImportsWorkspace({ data }: ImportsWorkspaceProps) {
             </p>
             <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Recent import rows</h2>
           </div>
-          <div className="max-h-[460px] overflow-y-auto p-4">
+          <div className="p-4">
             {data.recentRows.length > 0 ? (
               <div className="space-y-2">
                 {data.recentRows.map((row) => (

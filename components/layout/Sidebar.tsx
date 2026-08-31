@@ -238,8 +238,17 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
           z-index here that context sits at the default level and, being before <main> in DOM order,
           the page content paints over the flyout. Kept under the mobile drawer + modals (z-50). */}
       <div className="sticky top-0 z-30 hidden h-screen shrink-0 lg:flex print:hidden">
-        {/* Icon rail */}
-        <div className="flex w-[70px] flex-col items-center border-r border-white/10 bg-brand-eden py-3">
+        {/* Icon rail.
+            h-full + min-h-0 + overflow-y-auto is load-bearing, not tidying. The comment
+            above says only the panel/content scroll, and the items panel next to this one
+            honours that — but this rail did not. With enough groups its tiles overflowed
+            the h-screen parent and escaped into the DOCUMENT, so the whole page grew a
+            scrollbar to accommodate a nav that is supposed to be fixed. Measured Aug30 at
+            a 695px viewport: rail scrollHeight 964 against clientHeight 695, and
+            documentElement scrollHeight also exactly 964 — the page was tall because the
+            rail was. min-h-0 is required because a flex child will not shrink below its
+            content without it, so overflow-y-auto alone would do nothing here. */}
+        <div className="flex h-full min-h-0 w-[70px] flex-col items-center overflow-y-auto border-r border-white/10 bg-brand-eden py-3">
           <Link
             href={homeHref}
             prefetch={false}

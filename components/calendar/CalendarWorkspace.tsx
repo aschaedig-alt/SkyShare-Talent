@@ -423,7 +423,22 @@ export function CalendarWorkspace({
 
   const calendarPanel = useMemo(
     () => (
-    <div className="h-full min-w-0">
+    // overflow-auto here is the LESSER of two evils, not the ideal.
+    //
+    // This panel is an EditableGrid slot fixed at h:18, about 708px. MonthCalendar's
+    // root has no height and no overflow of its own, so a busy month grew past the
+    // slot and painted OVER whatever sat below it — silently, with no scrollbar to
+    // hint that anything was cut. Overlapping content is worse than a scrollbar.
+    //
+    // Raising the default slot height would not fix it either: saved layouts live in
+    // the page-layout/calendar setting, so anyone who has arranged this page keeps
+    // their old heights. And no fixed height is right for every month, since the grid
+    // grows with events per day.
+    //
+    // The real answer is the one recorded for the Recruiting Jobs page: a fixed
+    // master-detail workflow does not belong on a rearrangeable-dashboard component.
+    // Until that is addressed, scroll rather than overlap.
+    <div className="h-full min-w-0 overflow-auto">
       {view === "month" && (
         <MonthCalendar
           interviews={filteredInterviews}

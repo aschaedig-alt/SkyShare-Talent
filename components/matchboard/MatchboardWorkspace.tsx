@@ -195,7 +195,7 @@ export function MatchboardWorkspace({
         <SkippedPoolPanel onViewCandidate={(id) => go("candidate", id)} />
       ) : (
       <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className="flex max-h-[78vh] flex-col overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+        <aside className="flex flex-col overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="shrink-0 border-b border-brand-lea/10 p-3 dark:border-white/10">
             <div className="relative">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey dark:text-slate-400" />
