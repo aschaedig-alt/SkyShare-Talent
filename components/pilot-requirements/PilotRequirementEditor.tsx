@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { PilotRequirementDetail } from "@/lib/data/pilot-requirements";
 import { Button } from "@/components/ui";
+import { PostingCheckPanel } from "@/components/pilot-requirements/PostingCheckPanel";
 
 type PilotRequirementEditorProps = {
   requirement: PilotRequirementDetail;
@@ -73,6 +74,21 @@ export function PilotRequirementEditor({ requirement }: PilotRequirementEditorPr
 
   function updateGate(id: string, patch: Partial<GateFormValue>) {
     setGates((current) => current.map((gate) => (gate.id === id ? { ...gate, ...patch } : gate)));
+  }
+
+  // Accepting a posting-check finding only fills this form. It is saved by the same
+  // "Save requirement" button as any hand edit, so a suggestion and a typed value
+  // travel exactly the same path to the database.
+  function applyPostingFinding(
+    gateId: string,
+    patch: { enabled: boolean; numericValue?: string; evidenceText: string }
+  ) {
+    updateGate(gateId, {
+      enabled: patch.enabled,
+      evidenceText: patch.evidenceText,
+      ...(patch.numericValue === undefined ? {} : { numericValue: patch.numericValue })
+    });
+    setMessage(null);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -222,6 +238,8 @@ export function PilotRequirementEditor({ requirement }: PilotRequirementEditorPr
           </label>
         </div>
       </section>
+
+      <PostingCheckPanel requirementId={requirement.id} onApply={applyPostingFinding} />
 
       <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="flex items-center justify-between gap-4">
