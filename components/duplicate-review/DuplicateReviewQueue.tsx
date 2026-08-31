@@ -58,7 +58,40 @@ export function DuplicateReviewQueue({ items }: { items: Item[] }) {
 
   // Candidate pairs where both records are present are the mergeable/selectable ones.
   const mergeable = items.filter((i) => i.reviewType === "CANDIDATE" && i.status === "OPEN" && i.primary && i.secondary);
-  const keepIdFor = (i: Item) => keepBy[i.id] ?? i.primary!.id;
+  /**
+   * Which record SHOULD survive a merge, unless a person says otherwise.
+   *
+   * This used to default to whichever row happened to be `primary`, which is
+   * arbitrary with respect to which one is real. The cost was not theoretical:
+   * eight merges folded a CURRENT Paycom applicant INTO that person's archived
+   * Jazz record, so the survivor stayed archived and the applicant dropped out
+   * of the live list and the scan pool entirely. They had to be reactivated by
+   * hand on 2026-08-31.
+   *
+   * His rule, same day: always merge old into new — one row per candidate.
+   *
+   * Ordered, first difference wins:
+   *   1. A LIVE record beats an archived one. This is the rule that was being
+   *      broken, and on its own it prevents the burial.
+   *   2. A current-system record beats the JAZZ legacy import.
+   *   3. Otherwise the NEWER record, which is "old into new" literally.
+   * Ties keep `primary`, so behaviour is unchanged when nothing distinguishes
+   * them. A person can still override with the picker; this only moves the
+   * default onto the side that is almost always right.
+   */
+  const preferredKeepId = (i: Item): string => {
+    const a = i.primary;
+    const b = i.secondary;
+    if (!a || !b) return a?.id ?? b!.id;
+    if (a.archived !== b.archived) return a.archived ? b.id : a.id;
+    const aLegacy = a.origin === "JAZZ";
+    const bLegacy = b.origin === "JAZZ";
+    if (aLegacy !== bLegacy) return aLegacy ? b.id : a.id;
+    if (a.createdAt !== b.createdAt) return a.createdAt > b.createdAt ? a.id : b.id;
+    return a.id;
+  };
+
+  const keepIdFor = (i: Item) => keepBy[i.id] ?? preferredKeepId(i);
   const dropIdFor = (i: Item) => (keepIdFor(i) === i.primary!.id ? i.secondary!.id : i.primary!.id);
 
   function toggle(id: string) {

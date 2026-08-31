@@ -1,0 +1,55 @@
+Buried keepers — 2026-08-31T23:36:32.753Z
+tombstones (MERGED rows) examined: 32
+
+ACTIVATE  cmqvr3scc08oxxcrmbr7rn19i
+   Michael Klotz   origin=JAZZ
+   status ARCHIVED -> ACTIVE, archivedAt 2026-06-27 -> null
+   carries files=15 metrics=12 applications=6
+   buried by the merge of: Michael Klotz (PAYCOM)
+
+ACTIVATE  cmqvr37fm05m3xcrm4m200ub0
+   Evelyn Hsieh   origin=JAZZ
+   status ARCHIVED -> ACTIVE, archivedAt 2026-06-27 -> null
+   carries files=4 metrics=11 applications=3
+   buried by the merge of: Evelyn Hsieh (PAYCOM)
+
+ACTIVATE  cmqvr43120afgxcrmi2o8c0b0
+   Chris Kang   origin=JAZZ
+   status ARCHIVED -> ACTIVE, archivedAt 2026-06-27 -> null
+   carries files=2 metrics=8 applications=2
+   buried by the merge of: Christopher Kang (PAYCOM)
+
+ACTIVATE  cmqvr36zz05k1xcrmzpkwnfrh
+   Martin Sharpe   origin=JAZZ
+   status ARCHIVED -> ACTIVE, archivedAt 2026-06-27 -> null
+   carries files=2 metrics=14 applications=4
+   buried by the merge of: Martin Sharpe (PAYCOM)
+
+ACTIVATE  cmqvr36p005i3xcrmzmzyxb7e
+   Robert O'Brien   origin=JAZZ
+   status ARCHIVED -> ACTIVE, archivedAt 2026-06-27 -> null
+   carries files=2 metrics=1 applications=2
+   buried by the merge of: Robert OBrien (PAYCOM)
+
+ACTIVATE  cmqvr236m00h5xcrmmjss5dcn
+   Joseph Frascone   origin=JAZZ
+   status ARCHIVED -> ACTIVE, archivedAt 2026-06-27 -> null
+   carries files=15 metrics=9 applications=8
+   buried by the merge of: Joseph Frascone (PAYCOM)
+
+ACTIVATE  cmqvr3nxg081fxcrmvgpofzor
+   Kimbol Poulsen   origin=JAZZ
+   status ARCHIVED -> ACTIVE, archivedAt 2026-06-27 -> null
+   carries files=2 metrics=5 applications=2
+   buried by the merge of: Kimbol Poulsen (PAYCOM)
+
+ACTIVATE  cmqvr4z3r0fknxcrmnt8p5a4q
+   Matt Smith   origin=JAZZ
+   status ARCHIVED -> ACTIVE, archivedAt 2026-06-27 -> null
+   carries files=3 metrics=21 applications=1
+   buried by the merge of: Matt Smith (PAYCOM)
+
+TO ACTIVATE: 8
+LEFT ALONE, correctly archived: 23
+SKIPPED, keeper is itself merged (a chain — needs a human): 1
+   Chari Kroeplin -> keeper cmqvr4kjb0d1oxcrm7tq0vgoy is ITSELF merged

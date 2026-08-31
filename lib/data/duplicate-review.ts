@@ -6,6 +6,12 @@ export type DuplicateCandidateBrief = {
   email: string | null;
   phone: string | null;
   counts: { files: number; notes: number; applications: number; interviews: number };
+  /** Out of the live pool. An archived record should never be the survivor of a
+      merge with a live one — that is how a current applicant gets buried. */
+  archived: boolean;
+  /** JAZZ = the legacy import, PAYCOM/MANUAL = the current system. */
+  origin: string | null;
+  createdAt: string;
 } | null;
 
 export type DuplicateReviewData = {
@@ -55,6 +61,9 @@ const candidateSelect = {
     displayName: true,
     primaryEmail: true,
     primaryPhone: true,
+    archivedAt: true,
+    origin: true,
+    createdAt: true,
     _count: { select: { files: true, notes: true, applications: true, interviews: true } }
   }
 } as const;
@@ -64,6 +73,9 @@ type CandidateRow = {
   displayName: string;
   primaryEmail: string | null;
   primaryPhone: string | null;
+  archivedAt: Date | null;
+  origin: string | null;
+  createdAt: Date;
   _count: { files: number; notes: number; applications: number; interviews: number };
 };
 
@@ -79,7 +91,10 @@ function brief(c: CandidateRow | null): DuplicateCandidateBrief {
       notes: c._count.notes,
       applications: c._count.applications,
       interviews: c._count.interviews
-    }
+    },
+    archived: Boolean(c.archivedAt),
+    origin: c.origin,
+    createdAt: c.createdAt.toISOString()
   };
 }
 
