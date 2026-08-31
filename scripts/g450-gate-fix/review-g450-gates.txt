@@ -1,0 +1,38 @@
+G450 & GV Captain — hour gate correction — DRY RUN, nothing was written
+======================================================================
+
+requirement cmq5lg154000204l7so1ai4xj  [ACTIVE/SkyShare]  "G450 & GV Captain"
+
+WOULD CHANGE (4)
+  Total Time
+    4000  ->  5000
+  Jet Aircraft Time
+    2000  ->  1500
+  Total Time in Type
+    250  ->  1000
+  PIC Time in Type
+    off (no value)  ->  250  and switched ON
+
+ALREADY CORRECT, left alone (2)
+    3000  PIC Time — already correct
+    2000  Multi-Engine Time — already correct
+
+Target keys with no gate row: (none)
+
+POSITIVE CONTROL — every hour gate on this requirement, current state:
+  ON     4000  total_time
+  ON     3000  pic_time
+  off       -  sic_time
+  ON     2000  multi_engine_time
+  off       -  turbine_time
+  ON     2000  jet_time
+  off       -  instrument_time
+  off       -  cross_country_time
+  off       -  night_time
+  ON      250  time_in_type
+  off       -  pic_time_in_type
+  off       -  single_pilot_time
+  off       -  single_pilot_jet_time
+
+Nothing outside this one ACTIVE requirement is touched, and no boolean gate is touched.
+Re-run with --apply to write these changes.

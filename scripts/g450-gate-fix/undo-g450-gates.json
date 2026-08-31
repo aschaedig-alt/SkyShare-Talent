@@ -1,0 +1,26 @@
+[
+  {
+    "gateId": "cmq5lg39d001u04l7jiewltc3",
+    "key": "total_time",
+    "enabledWas": true,
+    "numericValueWas": 4000
+  },
+  {
+    "gateId": "cmq5lg39d001z04l7c4wabm9m",
+    "key": "jet_time",
+    "enabledWas": true,
+    "numericValueWas": 2000
+  },
+  {
+    "gateId": "cmq5lg39d002304l7scv9m3eo",
+    "key": "time_in_type",
+    "enabledWas": true,
+    "numericValueWas": 250
+  },
+  {
+    "gateId": "cmq5lg39d002404l7c8gyubgl",
+    "key": "pic_time_in_type",
+    "enabledWas": false,
+    "numericValueWas": null
+  }
+]
