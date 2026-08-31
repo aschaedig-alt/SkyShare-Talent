@@ -1,0 +1,10 @@
+Resurrected merged-away candidates — 2026-08-31T20:47:01.316Z
+candidates carrying merge history: 32
+of those, archived (correct): 31
+of those, LIVE (to re-archive): 1
+
+RE-ARCHIVE  cmqjupt5b000504l2q6ozjcz7
+   Matthew Smith  mattsmith199446@gmail.com
+   status ACTIVE -> MERGED
+   archivedAt null -> 2026-06-27T04:40:18.367Z
+   holds files=0 metrics=0 applications=1 (left untouched)

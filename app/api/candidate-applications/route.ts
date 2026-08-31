@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     // candidate pipeline (e.g. Matt Dahle, an active PC-12 Captain).
     const candidate = await prisma.candidate.findUnique({
       where: { id: body.candidateId },
-      select: { archivedAt: true }
+      select: { archivedAt: true, mergeHistoryJson: true }
     });
     const employedHire = candidate?.archivedAt
       ? await prisma.newHire.findFirst({
@@ -62,7 +62,22 @@ export async function POST(request: Request) {
           select: { id: true }
         })
       : null;
-    const reactivated = Boolean(candidate?.archivedAt) && !employedHire;
+    // SECOND exclusion, and this one had already fired in production: a candidate
+    // that was MERGED AWAY into another record. That row is a tombstone — the merge
+    // moved the files, metrics and history onto the keeper and left this one hollow,
+    // so reactivating it puts an EMPTY duplicate of a real person into the live scan
+    // pool while the record holding the evidence stays archived.
+    //
+    // It happened on 2026-08-31. Candidate cmqjupt5b was merged into
+    // cmqvr4z3r0fknxcrmnt8p5a4q on 2026-06-27; linking it to a job here flipped it
+    // back to ACTIVE with 0 files and 0 metrics, against the keeper's 3 and 21. Both
+    // rows are the same Matthew Smith on one email and one phone. The duplicate scan
+    // then reported a pair it could not show anyone.
+    //
+    // A merged row is never the right one to reactivate. If the person genuinely
+    // needs considering again, that belongs on the KEEPER.
+    const mergedAway = Boolean(candidate?.mergeHistoryJson);
+    const reactivated = Boolean(candidate?.archivedAt) && !employedHire && !mergedAway;
     if (reactivated) {
       await prisma.candidate.update({
         where: { id: body.candidateId },
