@@ -229,6 +229,7 @@ export async function runDueReminders(): Promise<ReminderRunResult> {
       select: {
         date: true,
         endsAt: true,
+        address: true,
         location: true,
         attendees: {
           select: {
@@ -256,7 +257,8 @@ export async function runDueReminders(): Promise<ReminderRunResult> {
     const sessionForEmail = {
       date: full.date.toISOString(),
       endsAt: full.endsAt ? full.endsAt.toISOString() : null,
-      location: full.location
+      location: full.location,
+      address: full.address
     };
     const channelId = await getOrientationChannelId();
 
@@ -389,6 +391,7 @@ export async function previewDueReminders(dayKey?: string): Promise<ReminderPrev
       select: {
         date: true,
         endsAt: true,
+        address: true,
         location: true,
         attendees: {
           select: {
@@ -416,7 +419,8 @@ export async function previewDueReminders(dayKey?: string): Promise<ReminderPrev
     const sessionForEmail = {
       date: full.date.toISOString(),
       endsAt: full.endsAt ? full.endsAt.toISOString() : null,
-      location: full.location
+      location: full.location,
+      address: full.address
     };
 
     const recipients: ReminderPreviewRecipient[] = [];

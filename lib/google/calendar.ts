@@ -432,6 +432,48 @@ export async function createInviteEvent(
 }
 
 /**
+ * Push a session's CURRENT details onto an event that already exists.
+ *
+ * WHY: rescheduling an orientation wrote the database and nothing else, so the
+ * Google event kept its old title, description, location and times. There was no
+ * update path at all — the route offered only create, add-attendees and
+ * add-guests. updateGoogleEvent further up this file is NOT usable here: it goes
+ * through the service-account client and the shared calendar id, and orientation
+ * events live on the clicking user's own calendar under per-user OAuth.
+ *
+ * ATTENDEES ARE DELIBERATELY NOT SENT. events.patch REPLACES the attendees array,
+ * exactly as addInviteAttendees warns below, so including them here — or omitting
+ * them from a body that named them — would silently uninvite everybody already on
+ * the event. This patches only the fields a reschedule actually changes.
+ *
+ * sendUpdates is required rather than defaulted, for the same reason it is on
+ * createInviteEvent: "the invite now says the right time" and "seven new hires
+ * were just emailed about a change" are different outcomes and the caller chooses.
+ */
+export async function updateInviteEvent(
+  client: calendar_v3.Calendar,
+  calendarId: string,
+  eventId: string,
+  input: Omit<InviteEventInput, "attendeeEmails" | "addMeet">,
+  sendUpdates: "all" | "externalOnly" | "none"
+): Promise<{ id: string; htmlLink: string | null }> {
+  const requestBody: calendar_v3.Schema$Event = {
+    summary: input.summary,
+    description: input.description,
+    location: input.location,
+    colorId: input.colorId,
+    start: { dateTime: input.startTime, timeZone: input.timeZone },
+    end: { dateTime: input.endTime, timeZone: input.timeZone }
+  };
+
+  const res = await withGoogleRetry("updating the event", () =>
+    client.events.patch({ calendarId, eventId, sendUpdates, requestBody })
+  );
+
+  return { id: res.data.id ?? eventId, htmlLink: res.data.htmlLink ?? null };
+}
+
+/**
  * Add guests to an existing event, keeping whoever is already on it.
  *
  * Reads the current attendee list first and merges: events.patch REPLACES the

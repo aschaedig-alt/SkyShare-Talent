@@ -4,7 +4,8 @@ import {
   addGuestsToOrientationEvent,
   addOrientationAttendeesToEvent,
   createOrientationCalendarEvent,
-  previewOrientationCalendar
+  previewOrientationCalendar,
+  updateOrientationCalendarEvent
 } from "@/lib/orientation/calendar-sync";
 
 // The orientation calendar invite: preview it, create it, then invite the guests.
@@ -38,8 +39,13 @@ export async function POST(request: Request, ctx: Ctx) {
 
   let action: unknown;
   let emails: unknown;
+  let notify: unknown;
   try {
-    ({ action, emails } = (await request.json()) as { action?: unknown; emails?: unknown });
+    ({ action, emails, notify } = (await request.json()) as {
+      action?: unknown;
+      emails?: unknown;
+      notify?: unknown;
+    });
   } catch {
     return NextResponse.json({ message: "Expected a JSON body with an action." }, { status: 400 });
   }
@@ -48,6 +54,17 @@ export async function POST(request: Request, ctx: Ctx) {
     if (action === "create") {
       const record = await createOrientationCalendarEvent(id, auth.user.email);
       return NextResponse.json({ ok: true, record });
+    }
+
+    // Keep an existing event in step with the session after a reschedule. Silent
+    // unless notify is passed explicitly — see updateOrientationCalendarEvent for
+    // why "the invite is now correct" and "everyone was just emailed" are separate
+    // decisions here, exactly as create and add-guests are.
+    if (action === "update") {
+      const result = await updateOrientationCalendarEvent(id, auth.user.email, {
+        notify: notify === true
+      });
+      return NextResponse.json({ ok: true, notified: result.notified, record: result.record });
     }
 
     if (action === "add-attendees") {
@@ -64,7 +81,7 @@ export async function POST(request: Request, ctx: Ctx) {
     }
 
     return NextResponse.json(
-      { message: 'Unknown action. Expected "create", "add-attendees" or "add-guests".' },
+      { message: 'Unknown action. Expected "create", "update", "add-attendees" or "add-guests".' },
       { status: 400 }
     );
   } catch (error) {

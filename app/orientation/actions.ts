@@ -94,7 +94,7 @@ async function loadAttendee(attendeeId: string) {
           supervisor2Hire: { select: { name: true, ssEmail: true, personalEmail: true } }
         }
       },
-      session: { select: { id: true, date: true, endsAt: true, location: true } }
+      session: { select: { id: true, date: true, endsAt: true, location: true, address: true } }
     }
   });
 }
@@ -114,7 +114,8 @@ export async function previewOrientationEmail(
     const preview = await buildOrientationEmail(key, a.newHire, {
       date: a.session.date.toISOString(),
       endsAt: a.session.endsAt ? a.session.endsAt.toISOString() : null,
-      location: a.session.location
+      location: a.session.location,
+      address: a.session.address
     }, testTo);
     return { ok: true, preview, alreadySent: parseKeys(a.sentTemplateKeys).includes(key) };
   } catch (err) {
@@ -141,7 +142,8 @@ export async function sendOrientationEmail(
     const email = await buildOrientationEmail(key, a.newHire, {
       date: a.session.date.toISOString(),
       endsAt: a.session.endsAt ? a.session.endsAt.toISOString() : null,
-      location: a.session.location
+      location: a.session.location,
+      address: a.session.address
     }, testTo);
     const channelId = await getOrientationChannelId();
 
@@ -247,7 +249,8 @@ export async function previewOrientationEmailBatch(
       const preview = await buildOrientationEmail(key, a.newHire, {
         date: a.session.date.toISOString(),
         endsAt: a.session.endsAt ? a.session.endsAt.toISOString() : null,
-        location: a.session.location
+        location: a.session.location,
+        address: a.session.address
       });
       rows.push({
         attendeeId,
@@ -444,7 +447,7 @@ async function buildDigests(attendeeIds: string[]) {
           supervisor2Hire: { select: { name: true, ssEmail: true, personalEmail: true } }
         }
       },
-      session: { select: { date: true, endsAt: true, location: true } }
+      session: { select: { date: true, endsAt: true, location: true, address: true } }
     }
   });
 
@@ -496,7 +499,8 @@ export async function previewOrientationSupervisorBatch(attendeeIds: string[]): 
   const sessionForEmail = {
     date: session.date.toISOString(),
     endsAt: session.endsAt ? session.endsAt.toISOString() : null,
-    location: session.location
+    location: session.location,
+    address: session.address
   };
 
   const out: SupervisorDigestRow[] = [];
@@ -567,7 +571,8 @@ export async function sendOrientationSupervisorBatch(
   const sessionForEmail = {
     date: session.date.toISOString(),
     endsAt: session.endsAt ? session.endsAt.toISOString() : null,
-    location: session.location
+    location: session.location,
+    address: session.address
   };
 
   const sent: SupervisorBatchSendResult["sent"] = [];

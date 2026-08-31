@@ -131,6 +131,72 @@ export function fillDatePlaceholders(text: string, sessionDate: string): { text:
   return { text: out, count };
 }
 
+/**
+ * The one regex that finds an hours range in template prose ("9:30am to 3:00pm").
+ *
+ * Shared on purpose. The drift WARNING and the override below must agree about
+ * what counts as a time range, or the email could be rewritten without a warning
+ * or warned about without being rewritten.
+ */
+const TIME_RANGE_RE = /\d{1,2}:\d{2}\s*[ap]m\s*(?:to|-|–)\s*\d{1,2}:\d{2}\s*[ap]m/gi;
+
+/** Compare two written time ranges ignoring case, spacing, dash style and to/-. */
+function normalizeTimeRange(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, "").replace(/–/g, "-").replace(/to/g, "-");
+}
+
+/**
+ * Rewrite the hours and the address in a template body to match THIS session.
+ *
+ * WHY THIS EXISTS. Hannah, 2026-08-31: "most of our orientations are at the same
+ * time, but every once in a while the time is different, so we need to be able to
+ * change the body of the emails that go out and the time or location when needed."
+ * Until now the only remedy was editing the Front template, which would change
+ * every future session too. The app already DETECTED the mismatch and printed a
+ * warning; it just refused to act on it.
+ *
+ * Both rewrites are anchored, not guessed:
+ *   TIME — the shared regex above matches a written range, and only ranges that
+ *     disagree with the session are replaced. A template that already agrees is
+ *     untouched.
+ *   ADDRESS — anchored on the "Location:" LABEL the templates use, capturing only
+ *     to the end of that text node so it cannot run past a tag. The subject
+ *     deliberately does the opposite (see fillSubject): there "Location" is a
+ *     token to replace, here it is a label followed by the real address.
+ *
+ * Every change is reported so the preview can say what it did. Silent rewriting of
+ * somebody's copy would be worse than the problem.
+ */
+export function applySessionOverrides(
+  html: string,
+  session: { date: string; endsAt: string | null; address?: string | null }
+): { text: string; changes: string[] } {
+  let text = html;
+  const changes: string[] = [];
+
+  if (session.endsAt) {
+    const actual = formatTimeRange(session.date, session.endsAt).replace(/\s*MT$/, "");
+    const want = normalizeTimeRange(actual);
+    text = text.replace(TIME_RANGE_RE, (match) => {
+      if (normalizeTimeRange(match) === want) return match;
+      changes.push(`the time now reads ${actual} (the template said ${match.trim()})`);
+      return actual;
+    });
+  }
+
+  const address = session.address?.trim();
+  if (address) {
+    text = text.replace(/(Location:\s*(?:<[^>]+>\s*)*)([^<\n]+)/gi, (full, label: string, current: string) => {
+      const shown = current.trim();
+      if (!shown || shown === address) return full;
+      changes.push(`the location now reads ${address} (the template said ${shown})`);
+      return label + address;
+    });
+  }
+
+  return { text, changes };
+}
+
 // --- recipients -------------------------------------------------------------
 
 // The standing cc list is an editable SETTING (lib/orientation/email-cc.ts), not a
@@ -197,6 +263,9 @@ type SessionForEmail = {
   date: string;
   endsAt: string | null;
   location: string | null;
+  /** Street address. OPTIONAL on purpose: a caller that does not select it simply
+      gets no location override, rather than every call site breaking. */
+  address?: string | null;
 };
 
 function greetingHtml(name: string): string {
@@ -309,22 +378,16 @@ export async function buildOrientationEmail(
     warnings.push("No [Day, Date] placeholder found to replace — the date in this email may be stale.");
   }
 
-  // Drift check: the template hardcodes the hours in prose. We deliberately do NOT
-  // rewrite that (it's HR's copy), but we do say when it disagrees with the session.
-  if (session.endsAt) {
-    const actual = formatTimeRange(session.date, session.endsAt).replace(/\s*MT$/, "");
-    const times = [...bodyFill.text.matchAll(/\d{1,2}:\d{2}\s*[ap]m\s*(?:to|-|–)\s*\d{1,2}:\d{2}\s*[ap]m/gi)].map((m) =>
-      m[0].toLowerCase().replace(/\s+/g, "")
-    );
-    const want = actual.toLowerCase().replace(/\s+/g, "").replace(/–/g, "-");
-    const mismatch = times.filter((t) => t.replace(/–/g, "-").replace(/to/g, "-") !== want.replace(/to/g, "-"));
-    if (times.length && mismatch.length) {
-      warnings.push(
-        `The template says ${times.join(" / ")} but this session is ${actual}. Fix the wording in Front if that's wrong.`
-      );
-    }
+  // The template hardcodes the hours and the address in prose. We now REWRITE them
+  // to match this session rather than only warning, because the only previous remedy
+  // was editing the Front template, which would have changed every future session.
+  // Nothing is silent: every substitution is reported back as a warning line so the
+  // preview shows exactly what was changed before anybody sends it.
+  const overrides = applySessionOverrides(bodyFill.text, session);
+  bodyFill.text = overrides.text;
+  for (const change of overrides.changes) {
+    warnings.push(`Adjusted for this session: ${change}.`);
   }
-
   // Dedupe case-insensitively, and keep cc from repeating anyone already in to.
   const seen = new Set<string>();
   const finalTo = toList.map((t) => t.trim()).filter((t) => t && !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
@@ -428,6 +491,11 @@ export async function buildSupervisorDigestEmail(
     );
   }
   const bodyFill = fillDatePlaceholders(cleaned.body, session.date);
+  // Same session overrides as the attendee builder. Both feed all three templates
+  // and the reminder cron, so applying it in one place only would leave the digest
+  // quoting a time the attendee email had already corrected.
+  const digestOverrides = applySessionOverrides(bodyFill.text, session);
+  bodyFill.text = digestOverrides.text;
   if (subjectFill.count + bodyFill.count === 0) {
     warnings.push("No [Day, Date] placeholder found to replace — the date in this email may be stale.");
   }

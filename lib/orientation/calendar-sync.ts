@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { addInviteAttendees, createInviteEvent, getInviteEvent } from "@/lib/google/calendar";
+import { addInviteAttendees, createInviteEvent, getInviteEvent, updateInviteEvent } from "@/lib/google/calendar";
 import { getUserCalendar } from "@/lib/google/user-calendar";
 import { resolveSupervisors } from "@/lib/front/orientation-email";
 import { buildOrientationEvent, type OrientationEventDraft } from "./calendar-event";
@@ -253,6 +253,61 @@ export async function createOrientationCalendarEvent(
   };
   await writeRecord(sessionId, record);
   return record;
+}
+
+/**
+ * Push the session's current details onto the event that already exists.
+ *
+ * The gap this closes: rescheduling a session goes through a PATCH that writes the
+ * database and nothing else, so the Google event kept its old TITLE, DESCRIPTION,
+ * LOCATION and times. Nothing in this file could update an event — only create one
+ * and add people to it — so a moved orientation left every guest holding an invite
+ * for the old time.
+ *
+ * Pairs with the session overrides in the orientation email. Shipping those alone
+ * would have made the email right and the invite wrong, which is precisely the
+ * inconsistency the standing propagation rule exists to prevent.
+ *
+ * SILENT BY DEFAULT. notify must be passed explicitly to email the guests, matching
+ * how creating and inviting are kept apart everywhere else here: "the invite now
+ * says the right time" and "seven new hires were just emailed" are different
+ * outcomes. A caller fixing a typo in the address should not spam anybody; a caller
+ * moving the date almost certainly should pass notify.
+ */
+export async function updateOrientationCalendarEvent(
+  sessionId: string,
+  actingUserEmail: string | null,
+  options?: { notify?: boolean }
+): Promise<{ record: OrientationCalendarRecord; notified: boolean; draft: OrientationEventDraft }> {
+  const access = await getUserCalendar(actingUserEmail);
+  if (!access.client) throw new Error(access.blocker ?? "Google Calendar is unavailable.");
+
+  const record = await getOrientationCalendarRecord(sessionId);
+  if (!record) {
+    throw new Error("This session has no calendar event yet. Create it first, then it can be kept in step.");
+  }
+
+  const session = await loadSession(sessionId);
+  const draft = buildOrientationEvent(session);
+  const notify = Boolean(options?.notify);
+
+  await updateInviteEvent(
+    access.client,
+    record.calendarId,
+    record.eventId,
+    {
+      summary: draft.summary,
+      description: draft.description,
+      location: draft.location,
+      startTime: draft.startTime,
+      endTime: draft.endTime,
+      timeZone: draft.timeZone,
+      colorId: draft.colorId
+    },
+    notify ? "all" : "none"
+  );
+
+  return { record, notified: notify, draft };
 }
 
 /**
