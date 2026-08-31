@@ -1,0 +1,30 @@
+Paycom requisition backfill — DRY RUN, nothing was written
+=========================================================
+
+Unmerged Job rows carrying a jobReqId: 45
+  all-digits (look like Paycom numbers): 1
+  non-numeric (genuine Jazz codes):      44
+
+WOULD MOVE (1) — human-confirmed Paycom numbers
+  job cmrp0ea4k000004l7n1wencyh  "Maintenance Technician"  [RETIRED, source Created in app]
+    jobReqId    2619  ->  (null)
+    paycomReqId (null)  ->  2619
+
+WOULD LEAVE ALONE (0) — numeric but not confirmed
+  (none)
+
+POSITIVE CONTROL — first 10 non-numeric jobReqId values, untouched by design:
+  CJ2PIC  "(old) - Citation CJ2 Captain (125k-135k + 10k Sign On Bounus)"
+  G450SIC.1  "(old) Gulfstream G450 First Officer"
+  LST.1  "(old) Line Service Technician (Aviation)"
+  MFC.1  "(old) Maintenance and Facilities Coordinator"
+  PC12PICNGX  "(old) PC-12 NGX Lead Captain"
+  PC12PICuofu  "(old) Pilatus PC-12 NG Lead Captain"
+  AR.2  "Accounts Receivable Specialist"
+  AMA.1  "Aircraft Maintenance Apprentice"
+  AMT.2  "Aircraft Maintenance Technician"
+  AMSM.1  "Aircraft Management Sales Manager"
+
+Rows where paycomReqId is already set to something DIFFERENT: 0
+
+Re-run with --apply to write these changes.
