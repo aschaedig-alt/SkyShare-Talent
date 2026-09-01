@@ -633,7 +633,17 @@ export function JobBlockAssembly({ job, availableBlocks, onJobUpdated }: JobBloc
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 space-y-4 overflow-auto pr-1">
+            {/* Independent scrolling ONLY from xl, where this is a genuinely fixed
+                three-column workbench: you drag a block OUT of this library and INTO
+                the canvas beside it, so both have to stay on screen at once and the
+                library cannot be allowed to push the canvas past the fold. That is
+                the "genuinely fixed chrome" case, not a capped panel.
+                Below xl the columns stack, that justification disappears, and a
+                900px box with its own scrollbar inside a scrolling page is just the
+                bug — so there the list grows and the page scrolls. overflow-auto
+                (not overflow-y-auto) pins BOTH axes explicitly, which is what keeps
+                the spec's "other axis computes to auto" trap out of it. */}
+            <div className="min-h-0 flex-1 space-y-4 pr-1 xl:overflow-auto">
               {groupedAttachableBlocks.map((group) =>
                 group.blocks.length ? (
                   <div key={group.placement}>
@@ -708,7 +718,11 @@ export function JobBlockAssembly({ job, availableBlocks, onJobUpdated }: JobBloc
                 <Eye className="h-4 w-4" />
               </div>
             </div>
-            <div className="min-h-0 flex-1 overflow-auto rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-2 dark:border-white/10 dark:bg-white/5">
+            {/* Same reasoning as the library column above: scrolls on its own only
+                at xl, where it is a fixed third column of the workbench and must not
+                drive the page height for the two drag columns beside it. Stacked
+                below xl it grows and the page scrolls. */}
+            <div className="min-h-0 flex-1 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-2 xl:overflow-auto dark:border-white/10 dark:bg-white/5">
               <FormattedJobPost job={previewJob} showVersionBadges={false} showSourceBadges />
             </div>
           </aside>

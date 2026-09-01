@@ -228,8 +228,11 @@ export function TimeGridCalendar({
         ))}
       </div>
 
-      {/* Time grid */}
-      <div className="max-h-[600px] overflow-y-auto">
+      {/* Time grid. NO height cap here, deliberately: the default 7am-8pm window
+          is already 14 * HOUR_HEIGHT = 784px and the window widens on its own for
+          an early or late interview, so a max-h-[600px] was guaranteed to put a
+          scrollbar over the schedule every time. The page scrolls instead. */}
+      <div>
         <div className="flex">
           {/* Hour labels */}
           <div className="w-14 shrink-0">

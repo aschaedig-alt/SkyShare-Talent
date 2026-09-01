@@ -33,14 +33,32 @@ type ViewMode = "month" | "week" | "day" | "timeline" | "list";
 type ColorMode = "department" | "stage";
 
 // Default arrangement (12-col grid) used until an admin saves a custom layout.
+// The calendar itself and the Schedule-interview form are NO LONGER grid panels —
+// they render below the grid in ordinary page flow. Read this before adding them
+// back.
+//
+// A react-grid-layout item is an absolute pixel slot (h * rowHeight 28 plus 12px
+// gaps), so h:18 meant 708px whatever was inside it. MonthCalendar's natural
+// height is roughly 790-850px (header + weekday row + six rows at min-h-[110px] +
+// legend) and grows with events per day; the week grid is 784px before it widens
+// for an early or late interview; ScheduleInterviewForm is a long multi-field
+// form. All three exceeded the slot by design, so the choice inside the grid was
+// only ever "overlap the panels below" or "a second scrollbar over the calendar".
+// Out of the grid there is no cap and no inner scrollbar, and the page scrolls.
+//
+// The ids below carry a -v2 suffix, and that is load-bearing rather than cosmetic.
+// A saved layout was live for this page (WorkspaceSetting scope "page-layout", key
+// "calendar") that positioned cal-google at y:38, BELOW the calendar and the form.
+// Removing those two panels while keeping the old ids would have left about 1500px
+// of blank grid above it. EditableGrid falls back to defaultLayout for any id the
+// saved layout does not mention, so renaming the survivors re-lays the page out
+// from these defaults exactly once. The stale entries are simply ignored.
 const CALENDAR_DEFAULT_LAYOUT: GridItem[] = [
-  { i: "cal-header", x: 0, y: 0, w: 5, h: 5 },
-  { i: "cal-stats", x: 5, y: 0, w: 7, h: 5 },
-  { i: "cal-upcoming", x: 0, y: 5, w: 3, h: 6 },
-  { i: "cal-list", x: 0, y: 11, w: 3, h: 8 },
-  { i: "cal-google", x: 0, y: 19, w: 3, h: 4 },
-  { i: "cal-schedule", x: 3, y: 5, w: 3, h: 18 },
-  { i: "cal-calendar", x: 6, y: 5, w: 6, h: 18 }
+  { i: "cal-header-v2", x: 0, y: 0, w: 5, h: 5 },
+  { i: "cal-stats-v2", x: 5, y: 0, w: 7, h: 5 },
+  { i: "cal-upcoming-v2", x: 0, y: 5, w: 4, h: 8 },
+  { i: "cal-list-v2", x: 4, y: 5, w: 4, h: 8 },
+  { i: "cal-google-v2", x: 8, y: 5, w: 4, h: 8 }
 ];
 
 const statLabels: Array<[keyof CalendarData["stats"], string]> = [
@@ -421,24 +439,14 @@ export function CalendarWorkspace({
     [data.stats]
   );
 
+  // The overflow-auto that used to be here is gone, and so is the h-full it went
+  // with. Both existed only to contain this inside a 708px grid slot; the panel is
+  // no longer in the grid, so it grows to the month/week/timeline it is showing and
+  // the page scrolls. min-w-0 stays — it is the flex/grid min-content guard, not an
+  // overflow.
   const calendarPanel = useMemo(
     () => (
-    // overflow-auto here is the LESSER of two evils, not the ideal.
-    //
-    // This panel is an EditableGrid slot fixed at h:18, about 708px. MonthCalendar's
-    // root has no height and no overflow of its own, so a busy month grew past the
-    // slot and painted OVER whatever sat below it — silently, with no scrollbar to
-    // hint that anything was cut. Overlapping content is worse than a scrollbar.
-    //
-    // Raising the default slot height would not fix it either: saved layouts live in
-    // the page-layout/calendar setting, so anyone who has arranged this page keeps
-    // their old heights. And no fixed height is right for every month, since the grid
-    // grows with events per day.
-    //
-    // The real answer is the one recorded for the Recruiting Jobs page: a fixed
-    // master-detail workflow does not belong on a rearrangeable-dashboard component.
-    // Until that is addressed, scroll rather than overlap.
-    <div className="h-full min-w-0 overflow-auto">
+    <div className="min-w-0">
       {view === "month" && (
         <MonthCalendar
           interviews={filteredInterviews}
@@ -492,34 +500,13 @@ export function CalendarWorkspace({
   // grid layout. See the matching note in EditableGrid.
   const panels: EditablePanel[] = useMemo(
     () => [
-      { id: "cal-header", title: "Interview operations", node: headerPanel },
-      { id: "cal-stats", title: "Interview statistics", node: statsPanel },
-      { id: "cal-upcoming", title: "Upcoming interviews", node: <UpcomingInterviews interviews={filteredInterviews} onInterviewClick={handleInterviewClick} /> },
-      { id: "cal-list", title: "All interviews", node: <CompactInterviewList interviews={filteredInterviews} onInterviewClick={handleInterviewClick} /> },
-      { id: "cal-google", title: "Google sync", node: <GoogleSyncCard sync={data.sync} /> },
-      {
-        id: "cal-schedule",
-        title: "Schedule interview",
-        node: (
-          <div id="schedule-form" className="h-full">
-            <ScheduleInterviewForm candidates={data.candidates} jobs={data.jobs} interviewers={data.interviewers} prefilledDate={prefilledDate} />
-          </div>
-        )
-      },
-      { id: "cal-calendar", title: "Calendar", node: calendarPanel }
+      { id: "cal-header-v2", title: "Interview operations", node: headerPanel },
+      { id: "cal-stats-v2", title: "Interview statistics", node: statsPanel },
+      { id: "cal-upcoming-v2", title: "Upcoming interviews", node: <UpcomingInterviews interviews={filteredInterviews} onInterviewClick={handleInterviewClick} /> },
+      { id: "cal-list-v2", title: "All interviews", node: <CompactInterviewList interviews={filteredInterviews} onInterviewClick={handleInterviewClick} /> },
+      { id: "cal-google-v2", title: "Google sync", node: <GoogleSyncCard sync={data.sync} /> }
     ],
-    [
-      headerPanel,
-      statsPanel,
-      calendarPanel,
-      filteredInterviews,
-      handleInterviewClick,
-      data.sync,
-      data.candidates,
-      data.jobs,
-      data.interviewers,
-      prefilledDate
-    ]
+    [headerPanel, statsPanel, filteredInterviews, handleInterviewClick, data.sync]
   );
 
   return (
@@ -533,6 +520,17 @@ export function CalendarWorkspace({
         canEdit={canEdit}
         widgetData={widgetData}
       />
+
+      {/* The schedule form and the calendar sit OUTSIDE the grid — see
+          CALENDAR_DEFAULT_LAYOUT. Side by side from xl, stacked below it, and
+          neither column caps its own height, so a full month, a full week and the
+          timeline all render whole. */}
+      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(320px,1fr)_minmax(0,2.2fr)]">
+        <div id="schedule-form" className="min-w-0">
+          <ScheduleInterviewForm candidates={data.candidates} jobs={data.jobs} interviewers={data.interviewers} prefilledDate={prefilledDate} />
+        </div>
+        {calendarPanel}
+      </div>
 
       {/* Edit Modal */}
       {editingInterview && (

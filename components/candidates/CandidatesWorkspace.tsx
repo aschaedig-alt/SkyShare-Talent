@@ -38,10 +38,27 @@ type CandidatesWorkspaceProps = {
   onboardingIntent?: boolean;
 };
 
-// Default arrangement of the resizable boxes (stats row + records table).
+// Default arrangement of the resizable boxes.
+//
+// "records" USED TO LIVE HERE and no longer does — it is rendered below the grid
+// in ordinary page flow instead. Read this before putting it back.
+//
+// EditableGrid is react-grid-layout: every item gets an ABSOLUTE pixel slot
+// (h * rowHeight 28 + gaps of 12) and its content is stuck with it. At the old
+// default of h:26 that is 26*28 + 25*12 = 1028px, which a 100-row result set
+// overflows about six times over — so the table scrolled inside a fixed box on
+// the busiest page in the app while the page itself refused to grow. The live
+// saved layout showed what that costs: someone had dragged the slot to h:230
+// (~9188px) to stop the inner scrollbar, which just traded it for thousands of
+// pixels of empty white box under a 45-row list.
+//
+// There is no "grow to content" for a react-grid-layout item, so the honest fix
+// is for the table not to be one. The stats strip stays — it is genuinely a
+// dashboard row of fixed-height tiles — so "Edit layout" and widgets still work.
+// A stale "records" entry in a saved layout is harmless: buildInitial only looks
+// up ids that are actually in the panels array.
 const CANDIDATES_DEFAULT_LAYOUT: GridItem[] = [
-  { i: "stats", x: 0, y: 0, w: 12, h: 4 },
-  { i: "records", x: 0, y: 4, w: 12, h: 26 }
+  { i: "stats", x: 0, y: 0, w: 12, h: 4 }
 ];
 
 type StatConfig = {
@@ -122,7 +139,10 @@ export function CandidatesWorkspace({
   );
 
   const recordsPanel = (
-    <section className="flex h-full flex-col overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+    // No h-full and no overflow: this panel is in ordinary page flow now, so it
+    // grows to its rows and the PAGE scrolls. Dropping overflow-hidden also stops
+    // the filter popovers in the header being clipped by their own card.
+    <section className="flex flex-col rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
         <div>
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Candidate records</h2>
@@ -209,11 +229,11 @@ export function CandidatesWorkspace({
         savedLayout={savedLayout}
         savedWidgets={savedWidgets}
         defaultLayout={CANDIDATES_DEFAULT_LAYOUT}
-        panels={[
-          { id: "stats", title: "Statistics", node: statsPanel },
-          { id: "records", title: "Candidate records", node: recordsPanel }
-        ]}
+        panels={[{ id: "stats", title: "Statistics", node: statsPanel }]}
       />
+
+      {/* Outside the grid on purpose — see CANDIDATES_DEFAULT_LAYOUT above. */}
+      {recordsPanel}
     </div>
   );
 }

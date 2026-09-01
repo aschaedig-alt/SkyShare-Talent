@@ -226,7 +226,12 @@ export function SelectableCandidateTable({
         </div>
       )}
 
-      <div className="min-h-0 flex-1 overflow-auto">
+      {/* No vertical overflow here. The rows are the page's content, so the page
+          is what scrolls; this used to be flex-1 inside a fixed 1028px grid slot,
+          which put a second scrollbar over the table. The inner wrapper below
+          keeps HORIZONTAL scrolling only, for the 1000px-min table on a narrow
+          screen — that is a real axis of overflow, not a capped height. */}
+      <div>
         {candidates.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1000px] border-collapse text-left text-sm">
