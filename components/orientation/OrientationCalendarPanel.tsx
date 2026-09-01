@@ -38,6 +38,10 @@ type Preview = {
         createdAt: string;
         liveAttendees: string[];
         missingInGoogle: boolean;
+        /** true = matches the session, false = stale, null = no baseline recorded. */
+        inStep: boolean | null;
+        drifted: string[];
+        syncedAt?: string;
       }
     | null;
   blocker: string | null;
@@ -55,7 +59,17 @@ function fmtRange(startIso: string, endIso: string, timeZone: string): string {
   return `${day}, ${t(startIso)} – ${t(endIso)} MT`;
 }
 
-export function OrientationCalendarPanel({ sessionId }: { sessionId: string }) {
+export function OrientationCalendarPanel({
+  sessionId,
+  /** Bumped by the page when a calendar-relevant field is saved (a reschedule),
+      so this panel re-reads instead of sitting on a preview from before the
+      change. Without it the panel keeps saying the invite is in step while the
+      session underneath it has moved. */
+  refreshKey = 0
+}: {
+  sessionId: string;
+  refreshKey?: number;
+}) {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -80,9 +94,13 @@ export function OrientationCalendarPanel({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, refreshKey]);
 
-  async function act(action: "create" | "add-attendees" | "add-guests", emails?: string[]) {
+  async function act(
+    action: "create" | "update" | "add-attendees" | "add-guests",
+    emails?: string[],
+    notify?: boolean
+  ) {
     setBusy(true);
     setError(null);
     setResult(null);
@@ -90,7 +108,7 @@ export function OrientationCalendarPanel({ sessionId }: { sessionId: string }) {
       const res = await fetch(`/api/orientation/sessions/${sessionId}/calendar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(emails ? { action, emails } : { action })
+        body: JSON.stringify({ action, ...(emails ? { emails } : {}), ...(notify === undefined ? {} : { notify }) })
       });
       const data = (await res.json()) as {
         message?: string;
@@ -98,11 +116,18 @@ export function OrientationCalendarPanel({ sessionId }: { sessionId: string }) {
         alreadyThere?: string[];
         skipped?: string[];
         rejected?: string[];
+        notified?: boolean;
       };
       if (!res.ok) throw new Error(data.message ?? "That didn't work.");
 
       if (action === "create") {
         setResult("Calendar invite created. Nobody has been invited yet.");
+      } else if (action === "update") {
+        setResult(
+          data.notified
+            ? "Invite updated and the guests have been emailed about the change."
+            : "Invite updated — title, description, location and times now match the session. The guests were NOT emailed."
+        );
       } else {
         const bits = [`Invited ${data.added?.length ?? 0}.`];
         if (data.alreadyThere?.length) bits.push(`${data.alreadyThere.length} were already on it.`);
@@ -203,6 +228,23 @@ export function OrientationCalendarPanel({ sessionId }: { sessionId: string }) {
             </div>
           ) : null}
 
+          {/* Keeping the event in step with the session.
+              WHY THIS IS A BUTTON AND NOT AUTOMATIC ON SAVE. Both automatic
+              options are worse than an explicit one:
+                - push silently WITH notify and every typo fix in the address
+                  emails a "this event has changed" to every guest. On a session
+                  with seven new hires and their supervisors that is spam, and it
+                  trains people to ignore the one that matters.
+                - push silently WITHOUT notify and the invite is quietly correct
+                  while everyone who already accepted keeps the old time in their
+                  own calendar and is never told. That is the failure the standing
+                  propagation rule exists to prevent, dressed up as a fix.
+              So the app detects the drift, says exactly what moved, and makes the
+              person who moved it choose whether the guests hear about it. */}
+          {existing && !existing.missingInGoogle && !preview.blocker ? (
+            <CalendarSyncBox existing={existing} busy={busy} onUpdate={(notify) => void act("update", undefined, notify)} />
+          ) : null}
+
           {existing ? (
             <div className="mt-3 rounded border border-brand-lea/15 bg-brand-cloudDancer/40 p-2.5 text-[12px] dark:border-white/10 dark:bg-white/5">
               {existing.missingInGoogle ? (
@@ -284,6 +326,121 @@ export function OrientationCalendarPanel({ sessionId }: { sessionId: string }) {
         </div>
       ) : null}
     </section>
+  );
+}
+
+// --- keeping the event in step ----------------------------------------------
+//
+// updateOrientationCalendarEvent has existed since the reschedule work but had no
+// caller: the panel's action type was "create" | "add-attendees" | "add-guests"
+// and the reschedule PATCH wrote the session row and returned. So moving an
+// orientation left every guest holding an invite for the old time, silently.
+//
+// THREE STATES, and the third is not a rounding error. "In step" and "out of
+// step" are both claims that need a baseline to be true, and events created
+// before the fingerprint shipped have none — Google's events.get returns the
+// summary but not the start, end or location, so there is nothing else to
+// compare against. Those show as unknown and still offer the button, because
+// pushing a correct event again is harmless and asserting it is fine when nobody
+// knows is not.
+
+function CalendarSyncBox({
+  existing,
+  busy,
+  onUpdate
+}: {
+  existing: NonNullable<Preview["existing"]>;
+  busy: boolean;
+  onUpdate: (notify: boolean) => void;
+}) {
+  const [notify, setNotify] = useState(false);
+  const guests = existing.liveAttendees.length;
+
+  if (existing.inStep === true) {
+    return (
+      <p className="mt-3 text-[11.5px] text-brand-grey dark:text-slate-400">
+        The invite matches this session
+        {existing.syncedAt
+          ? ` — last pushed ${new Intl.DateTimeFormat("en-US", {
+              timeZone: "America/Denver",
+              dateStyle: "medium",
+              timeStyle: "short"
+            }).format(new Date(existing.syncedAt))} MT.`
+          : "."}
+      </p>
+    );
+  }
+
+  const stale = existing.inStep === false;
+
+  return (
+    <div
+      className={
+        stale
+          ? "mt-3 rounded border border-amber-300 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/15"
+          : "mt-3 rounded border border-brand-lea/15 p-3 dark:border-white/10"
+      }
+    >
+      <h3
+        className={
+          stale
+            ? "text-sm font-semibold text-amber-900 dark:text-amber-200"
+            : "text-sm font-semibold text-brand-lea dark:text-slate-100"
+        }
+      >
+        {stale ? "The invite is out of date" : "Keep the invite in step"}
+      </h3>
+      <p
+        className={
+          stale
+            ? "mt-1 text-[12px] text-amber-900 dark:text-amber-200"
+            : "mt-1 text-[11.5px] text-brand-grey dark:text-slate-400"
+        }
+      >
+        {stale ? (
+          <>
+            This session&apos;s <b>{existing.drifted.join(", ")}</b> changed after the invite was last pushed, so the
+            event in Google still shows the old details. Updating rewrites its title, description, location and times
+            from the session.
+          </>
+        ) : (
+          <>
+            This event was created before the app started recording what it pushed, so it can&apos;t say whether it
+            matches the session &mdash; Google doesn&apos;t report an event&apos;s time or address back. Updating pushes
+            the session&apos;s current title, description, location and times, which is harmless if it was already right.
+          </>
+        )}
+      </p>
+
+      <label className="mt-2 flex items-start gap-2 text-[12px] font-semibold text-brand-lea dark:text-slate-100">
+        <input type="checkbox" checked={notify} disabled={busy} onChange={(e) => setNotify(e.target.checked)} className="mt-0.5" />
+        <span>
+          Email the {guests} guest{guests === 1 ? "" : "s"} about the change
+          <span className="block font-normal text-brand-grey dark:text-slate-400">
+            Leave this off for a typo or a wording fix. Turn it on when the time or the place really moved &mdash;
+            otherwise anyone who already accepted keeps the old details in their own calendar and is never told.
+          </span>
+        </span>
+      </label>
+
+      <Button
+        className="mt-2"
+        onClick={() => {
+          if (
+            notify &&
+            !confirm(
+              `Update the invite and email ${guests} guest${guests === 1 ? "" : "s"}?\n\nGoogle sends the change notice immediately and it cannot be undone.`
+            )
+          ) {
+            return;
+          }
+          onUpdate(notify);
+        }}
+        disabled={busy}
+      >
+        {busy ? "Updating…" : notify ? `Update the invite and tell ${guests}` : "Update the invite (nobody emailed)"}
+      </Button>
+    </div>
   );
 }
 

@@ -47,6 +47,15 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
   const [resched, setResched] = useState({ date: "", time: "", endTime: "" });
   const [savingDate, setSavingDate] = useState(false);
   const [reschedErr, setReschedErr] = useState<string | null>(null);
+  // Bumped when a save moves something the Google invite renders. The calendar
+  // panel fetches its own preview on mount, so router.refresh() alone leaves it
+  // showing a picture from before the reschedule — and that picture is what says
+  // whether the invite is in step.
+  const [calendarKey, setCalendarKey] = useState(0);
+  // Its own banner rather than the shared `notice` further down the page: this
+  // has to appear where the Reschedule button is, at the top, because it is
+  // telling you that the save you just made is not finished yet.
+  const [calendarNotice, setCalendarNotice] = useState<string | null>(null);
 
   // ---- lunch ----
   // The arrival TIME is edited on its own; the date is always the session's own
@@ -133,10 +142,32 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
     }
     setSavingDate(true);
     setReschedErr(null);
-    const ok = await patchJson(`/api/orientation/sessions/${session.id}`, { date: iso, endsAt: endIso });
+    // Read the RESPONSE here rather than using patchJson's boolean: it reports
+    // which calendar-relevant fields actually moved, and that is what decides
+    // whether the guests are now holding an invite for a time that no longer
+    // exists. Losing it would put the propagation rule back on somebody's memory.
+    const res = await fetch(`/api/orientation/sessions/${session.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date: iso, endsAt: endIso })
+    });
     setSavingDate(false);
-    if (ok) {
+    if (res.ok) {
+      const data = (await res.json().catch(() => null)) as { calendarFieldsChanged?: string[] } | null;
       setRescheduling(false);
+      if (data?.calendarFieldsChanged?.length) {
+        // Re-read the calendar panel so it can say the invite is now stale, and
+        // point at it — the panel is far enough down the page to be missed.
+        setCalendarKey((n) => n + 1);
+        // No timeout: this one stays until it is dealt with. A message saying
+        // "the invite is still wrong" that disappears after eight seconds is
+        // worse than none, because it looks like it was handled.
+        setCalendarNotice(
+          "Session moved — the Google invite still has the old details. Use “Update the invite” in the Google Calendar invite panel below, and decide there whether the guests are emailed about it."
+        );
+      } else {
+        setCalendarNotice(null);
+      }
       router.refresh();
     } else {
       setReschedErr("Couldn't save the new date.");
@@ -333,6 +364,19 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
             {reschedErr ? <span className="text-xs font-semibold text-red-700 dark:text-red-300">{reschedErr}</span> : <span className="text-xs text-brand-grey dark:text-slate-400">Attendees keep their spots; this only moves the session date/time.</span>}
           </div>
         ) : null}
+
+        {calendarNotice ? (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-500/30 dark:bg-amber-500/15">
+            <p className="text-[12.5px] text-amber-900 dark:text-amber-200">{calendarNotice}</p>
+            <button
+              onClick={() => setCalendarNotice(null)}
+              className="shrink-0 text-[11px] font-semibold text-amber-900 underline-offset-2 hover:underline dark:text-amber-200"
+            >
+              Dismiss
+            </button>
+          </div>
+        ) : null}
+
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
           {[
             ["Attendees", headcount.total],
@@ -613,7 +657,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
       {/* The calendar invite comes BEFORE the email panel on purpose: the invitation
           template tells the new hire a calendar invite went to their company email,
           so the event has to exist first or the email is ahead of reality. */}
-      <OrientationCalendarPanel sessionId={session.id} />
+      <OrientationCalendarPanel sessionId={session.id} refreshKey={calendarKey} />
 
       {/* Sending + who's had what. Replaces the old tick-only tracker: the app can
           now send the team's real Front templates, so the five slots the app had

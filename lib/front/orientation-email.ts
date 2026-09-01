@@ -170,9 +170,10 @@ function normalizeTimeRange(value: string): string {
 export function applySessionOverrides(
   html: string,
   session: { date: string; endsAt: string | null; address?: string | null }
-): { text: string; changes: string[] } {
+): { text: string; changes: string[]; warnings: string[] } {
   let text = html;
   const changes: string[] = [];
+  const warnings: string[] = [];
 
   if (session.endsAt) {
     const actual = formatTimeRange(session.date, session.endsAt).replace(/\s*MT$/, "");
@@ -182,6 +183,25 @@ export function applySessionOverrides(
       changes.push(`the time now reads ${actual} (the template said ${match.trim()})`);
       return actual;
     });
+  } else {
+    // NO END TIME ON THE SESSION — and this used to degrade in silence.
+    //
+    // The old drift warning fired by comparing the template's hours to the
+    // session's; when the override replaced it, the whole comparison moved
+    // inside the `if (session.endsAt)` above. So a session with a null endsAt
+    // got no rewrite AND no warning, which is indistinguishable on screen from
+    // "the template and the session agree". The template's hours went out
+    // unchecked and nothing said so.
+    //
+    // There is genuinely nothing to check against here, so this does not guess —
+    // it names the range that is about to be sent and says nobody verified it.
+    const found = [...html.matchAll(TIME_RANGE_RE)].map((m) => m[0].trim());
+    const unique = [...new Set(found)];
+    if (unique.length) {
+      warnings.push(
+        `This session has no end time recorded, so the hours in this email (${unique.join(", ")}) came straight from the Front template and were NOT checked against the session. Set an end time on the session if that is wrong.`
+      );
+    }
   }
 
   const address = session.address?.trim();
@@ -194,8 +214,50 @@ export function applySessionOverrides(
     });
   }
 
-  return { text, changes };
+  return { text, changes, warnings };
 }
+
+// --- editing the body for one send ------------------------------------------
+
+/**
+ * A body typed by the person approving THIS send.
+ *
+ * WHY THIS EXISTS. Hannah, 2026-08-31: an email built from a template should
+ * still give her a box to change what it says, because occasionally one session
+ * needs wording no future session should inherit. Until now the only remedy was
+ * editing the Front template, which changes every send after it too.
+ *
+ * SCOPE, and it is deliberately narrow:
+ *   - it applies to ONE send. Nothing is written back to Front, no template is
+ *     created, and the next send re-reads the live template as before.
+ *   - it replaces the template BODY only, never the greeting. The greeting is
+ *     per-recipient ("Hi Axel,", "Hi Rich, Your new hires ... are attending"),
+ *     so an edit made once can still go to a whole cohort without carrying one
+ *     person's name to everybody.
+ *   - the AUTOMATIC REMINDER CRON NEVER PASSES ONE. See the note on the
+ *     bodyOverride parameter below.
+ *
+ * Deliberately NOT run through lib/richtext/normalize.ts or the candidate-note
+ * sanitizer. Both snap markup down to the small vocabulary those features store
+ * (p / strong / em / a / a fixed colour and size palette), which would rewrite
+ * the Front template's own Verdana 9pt markup on EVERY send — including the
+ * common case where nobody changed a word. What is stripped here is only what
+ * can execute, which no email client honours anyway, so nothing legible is lost.
+ */
+export function cleanEditedBody(html: string): string {
+  return html
+    .replace(/<\s*(script|style|iframe|object|embed)\b[\s\S]*?<\s*\/\s*\1\s*>/gi, "")
+    .replace(/<\s*\/?\s*(script|style|iframe|object|embed)\b[^>]*>/gi, "")
+    .replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, "")
+    .replace(/\son[a-z]+\s*=\s*'[^']*'/gi, "")
+    .replace(/\son[a-z]+\s*=\s*[^\s>]+/gi, "")
+    .replace(/javascript:/gi, "");
+}
+
+/** The banner the preview and the send record both hang off. One string, so the
+    dialog cannot describe an edited send differently from the history does. */
+export const EDITED_BODY_WARNING =
+  "EDITED FOR THIS SEND — the body below was changed by hand and is no longer the Front template. The change applies to this send only; the template in Front is untouched and every later send reads it fresh.";
 
 // --- recipients -------------------------------------------------------------
 
@@ -214,6 +276,13 @@ export type OrientationEmailPreview = {
   cc: string[];
   subject: string;
   html: string;
+  /** The two halves of `html`, split so the send dialog can make the body
+      EDITABLE while the per-recipient greeting stays fixed. Concatenating them
+      is exactly `html`; callers that only want the whole thing can ignore both. */
+  greetingHtml: string;
+  bodyHtml: string;
+  /** True when bodyHtml came from the sender rather than the Front template. */
+  bodyEdited: boolean;
   /** Things the sender should see before approving. */
   warnings: string[];
 };
@@ -291,7 +360,19 @@ export async function buildOrientationEmail(
    * a test send safe: without it, "just testing" would really email the new hire,
    * their supervisor, and everyone on the standing cc list.
    */
-  testTo?: string | null
+  testTo?: string | null,
+  /**
+   * Replace the template body for THIS SEND ONLY — see cleanEditedBody above.
+   *
+   * MANUAL SENDS ONLY, and this is load-bearing. The automatic reminder
+   * (lib/orientation/reminder.ts) fires from a cron with nobody watching, so
+   * there is no human to have approved any wording; it calls this WITHOUT a
+   * bodyOverride and must keep doing so, sending the live Front template plus
+   * the session overrides above. If you are adding an edit box to something,
+   * check first whether a person is present at send time — if not, it does not
+   * get one.
+   */
+  bodyOverride?: string | null
 ): Promise<OrientationEmailPreview> {
   const def = orientationTemplate(key);
   const tpl = await fetchTemplate(key);
@@ -388,6 +469,9 @@ export async function buildOrientationEmail(
   for (const change of overrides.changes) {
     warnings.push(`Adjusted for this session: ${change}.`);
   }
+  // Separate from the changes: things the override could NOT check, which have
+  // to be said out loud rather than left looking like agreement.
+  warnings.push(...overrides.warnings);
   // Dedupe case-insensitively, and keep cc from repeating anyone already in to.
   const seen = new Set<string>();
   const finalTo = toList.map((t) => t.trim()).filter((t) => t && !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
@@ -400,6 +484,15 @@ export async function buildOrientationEmail(
   const first = firstName || attendee.name.split(/\s+/)[0] || "there";
   const greeting = def.audience === "attendee" ? greetingHtml(first) : "";
 
+  // The per-send edit. It replaces the body BELOW the greeting, so the same
+  // edited wording can be sent to a cohort and each person still gets their own
+  // "Hi <first>,". The warning goes to the FRONT of the list: everything else
+  // there describes what the template resolution did to the text that pre-filled
+  // the box, and that stops being the whole story the moment it is edited.
+  const edited = Boolean(bodyOverride && bodyOverride.trim());
+  const body = edited ? cleanEditedBody(bodyOverride!) : bodyFill.text;
+  if (edited) warnings.unshift(EDITED_BODY_WARNING);
+
   return {
     templateKey: key,
     templateName: tpl.name,
@@ -408,7 +501,10 @@ export async function buildOrientationEmail(
     toSource,
     cc: finalCc,
     subject: subjectFill.text,
-    html: greeting + bodyFill.text,
+    greetingHtml: greeting,
+    bodyHtml: body,
+    bodyEdited: edited,
+    html: greeting + body,
     warnings
   };
 }
@@ -463,7 +559,9 @@ export type SupervisorDigest = {
 export async function buildSupervisorDigestEmail(
   digest: SupervisorDigest,
   session: SessionForEmail,
-  testTo?: string | null
+  testTo?: string | null,
+  /** Manual sends only — same rule as buildOrientationEmail's bodyOverride. */
+  bodyOverride?: string | null
 ): Promise<OrientationEmailPreview> {
   const tpl = await fetchTemplate("supervisors");
   const warnings: string[] = [];
@@ -494,8 +592,19 @@ export async function buildSupervisorDigestEmail(
   // Same session overrides as the attendee builder. Both feed all three templates
   // and the reminder cron, so applying it in one place only would leave the digest
   // quoting a time the attendee email had already corrected.
+  //
+  // The CHANGES it reports are surfaced here exactly as the attendee builder
+  // surfaces them. They used to be computed and thrown away, so the supervisors
+  // email was the one that got silently rewritten: the attendee preview said
+  // "Adjusted for this session: the time now reads 9:30am to 1:00pm" and the
+  // supervisors preview, sent from the same session and rewritten the same way,
+  // said nothing at all.
   const digestOverrides = applySessionOverrides(bodyFill.text, session);
   bodyFill.text = digestOverrides.text;
+  for (const change of digestOverrides.changes) {
+    warnings.push(`Adjusted for this session: ${change}.`);
+  }
+  warnings.push(...digestOverrides.warnings);
   if (subjectFill.count + bodyFill.count === 0) {
     warnings.push("No [Day, Date] placeholder found to replace — the date in this email may be stale.");
   }
@@ -508,6 +617,13 @@ export async function buildSupervisorDigestEmail(
   const finalTo = toList.map((t) => t.trim()).filter((t) => t && !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
   const finalCc = cc.map((c) => c.trim()).filter((c) => c && !seen.has(c.toLowerCase()) && seen.add(c.toLowerCase()));
 
+  // The intro names THIS supervisor and THEIR hires, so it stays out of the
+  // editable half for the same reason the attendee greeting does.
+  const greeting = digestIntroHtml(first, digest.hireNames);
+  const edited = Boolean(bodyOverride && bodyOverride.trim());
+  const body = edited ? cleanEditedBody(bodyOverride!) : bodyFill.text;
+  if (edited) warnings.unshift(EDITED_BODY_WARNING);
+
   return {
     templateKey: "supervisors",
     templateName: tpl.name,
@@ -516,7 +632,10 @@ export async function buildSupervisorDigestEmail(
     toSource,
     cc: finalCc,
     subject: subjectFill.text,
-    html: digestIntroHtml(first, digest.hireNames) + bodyFill.text,
+    greetingHtml: greeting,
+    bodyHtml: body,
+    bodyEdited: edited,
+    html: greeting + body,
     warnings
   };
 }
@@ -542,6 +661,11 @@ export type OrientationSendRecord = {
   /** The subject as actually sent, so history reads without opening Front. */
   subject?: string;
   sentBy?: string | null;
+  /** True when the body was hand-edited for that send rather than being the
+      Front template. Optional because records written before this existed
+      cannot say either way — the history shows those as unknown, not as
+      "template", which would be a claim nobody made. */
+  edited?: boolean;
 };
 
 /** Deep link to a Front conversation. Lives in lib/front/links.ts, which is

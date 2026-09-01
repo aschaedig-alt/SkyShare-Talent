@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
 import { Clock } from "lucide-react";
 import { Button, Modal } from "@/components/ui";
@@ -44,6 +44,10 @@ type SendRecord = {
   subject?: string;
   sentBy?: string | null;
   conversationId?: string;
+  /** Whether the body was hand-edited for that send. Undefined on records
+      written before per-send editing existed — shown as unknown, not as
+      "template", which would assert something nobody recorded. */
+  edited?: boolean;
 };
 type AttendeeRow = {
   id: string;
@@ -233,6 +237,11 @@ export function OrientationEmailPanel({
       </p>
       <p className="mt-1.5 rounded border border-brand-lea/15 bg-brand-cloudDancer/50 px-2.5 py-1.5 text-[12px] font-semibold text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
         Nothing sends on the first click. &ldquo;Send&hellip;&rdquo; opens the full email &mdash; recipients, subject and body &mdash; and you approve it there.
+        <span className="font-normal">
+          {" "}
+          The body is <b>editable in that dialog</b>: change the wording for one send without touching the Front template.
+          The automatic reminder always sends the template, because nobody is there to approve an edit.
+        </span>
       </p>
       {/* Says the quiet part out loud, because "nobody is cc'd" reads like something
           is missing unless you know where those people are being reached instead. */}
@@ -507,10 +516,13 @@ function SupervisorBatchDialog({
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<SupervisorDigestRow[] | null>(null);
   const [noSupervisor, setNoSupervisor] = useState<string[]>([]);
-  const [sample, setSample] = useState<{ subject?: string; html?: string; for?: string } | null>(null);
+  const [sample, setSample] = useState<{ subject?: string; html?: string; for?: string; greeting?: string; body?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [showBody, setShowBody] = useState(false);
+  // One edit for every supervisor in the run. Each still gets their own intro
+  // naming their own hires — the override replaces the template half only.
+  const [body, setBody] = useState<string | null>(null);
   const [includeAlreadySent, setIncludeAlreadySent] = useState(false);
   const [done, setDone] = useState<{ sent: number; failed: { supervisorEmail: string; error: string }[] } | null>(null);
 
@@ -526,7 +538,13 @@ function SupervisorBatchDialog({
         }
         setRows(res.rows ?? []);
         setNoSupervisor(res.noSupervisor ?? []);
-        setSample({ subject: res.sampleSubject, html: res.sampleHtml, for: res.sampleFor });
+        setSample({
+          subject: res.sampleSubject,
+          html: res.sampleHtml,
+          for: res.sampleFor,
+          greeting: res.sampleGreetingHtml,
+          body: res.sampleBodyHtml
+        });
       })
       .catch(() => !cancelled && setError("Couldn't build the emails."))
       .finally(() => !cancelled && setLoading(false));
@@ -542,9 +560,10 @@ function SupervisorBatchDialog({
   async function doSend() {
     if (!sendable.length) return;
     const lines = sendable.map((r) => `${r.supervisorName ?? r.supervisorEmail} → ${r.hireNames.join(", ")}`);
+    const editedNote = body !== null ? "\n\nThe body has been EDITED — all of them get that wording, not the Front template's." : "";
     if (
       !confirm(
-        `Send "${meta.label}" to ${sendable.length} supervisor${sendable.length === 1 ? "" : "s"}?\n\n${lines.join("\n")}\n\nOne email each. This sends immediately and cannot be undone.`
+        `Send "${meta.label}" to ${sendable.length} supervisor${sendable.length === 1 ? "" : "s"}?\n\n${lines.join("\n")}${editedNote}\n\nOne email each. This sends immediately and cannot be undone.`
       )
     ) {
       return;
@@ -553,7 +572,8 @@ function SupervisorBatchDialog({
     setError(null);
     const res = await sendOrientationSupervisorBatch(
       sendable.map((r) => r.supervisorEmail),
-      attendees.map((a) => a.id)
+      attendees.map((a) => a.id),
+      body
     );
     setSending(false);
     if (!res.ok) {
@@ -646,22 +666,31 @@ function SupervisorBatchDialog({
             {sendable.length} email{sendable.length === 1 ? "" : "s"} — one per supervisor, instead of one per attendee.
           </p>
 
-          {sample?.html ? (
+          {sample?.body !== undefined ? (
             <>
               <button
                 onClick={() => setShowBody((v) => !v)}
                 className="text-xs font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-slate-300"
               >
-                {showBody ? "Hide" : "Show"} the email {sample.for ? `(as ${sample.for} will get it)` : ""}
+                {showBody ? "Hide" : "Show and edit"} the email {sample.for ? `(as ${sample.for} will get it)` : ""}
+                {body !== null && !showBody ? " · edited" : ""}
               </button>
               {showBody ? (
-                <div className="max-h-56 overflow-y-auto rounded border border-brand-lea/15 bg-white p-3 dark:border-white/10 dark:bg-[#0f2033]">
-                  <p className="mb-2 text-[12px] font-semibold text-brand-lea dark:text-slate-100">{sample.subject}</p>
-                  <div
-                    className="prose-sm text-[12.5px] text-brand-black dark:text-slate-200"
-                    dangerouslySetInnerHTML={{ __html: sample.html }}
+                <>
+                  <p className="text-[12px] font-semibold text-brand-lea dark:text-slate-100">{sample.subject}</p>
+                  <BodyEditor
+                    greeting={sample.greeting ?? ""}
+                    template={sample.body ?? ""}
+                    edited={body}
+                    onChange={setBody}
+                    disabled={sending}
                   />
-                </div>
+                  {body !== null ? (
+                    <p className="text-[11.5px] text-amber-800 dark:text-amber-200">
+                      All {sendable.length} of them get this wording.
+                    </p>
+                  ) : null}
+                </>
               ) : null}
             </>
           ) : null}
@@ -703,10 +732,14 @@ function BatchDialog({
   const meta = ORIENTATION_TEMPLATE_META.find((t) => t.key === templateKey)!;
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<OrientationBatchRow[] | null>(null);
-  const [sample, setSample] = useState<{ subject?: string; html?: string; for?: string } | null>(null);
+  const [sample, setSample] = useState<{ subject?: string; html?: string; for?: string; greeting?: string; body?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [showBody, setShowBody] = useState(false);
+  // One edit, applied to the whole run. Safe because it replaces the template
+  // half only — every recipient's greeting is still rebuilt from their own name,
+  // so nobody receives an email opening with somebody else's.
+  const [body, setBody] = useState<string | null>(null);
   const [done, setDone] = useState<{ sent: number; failed: { name: string; error: string }[] } | null>(null);
   // Re-sending someone who already had this template is opt-in, so a second run
   // over the same session doesn't quietly email everyone twice.
@@ -723,7 +756,13 @@ function BatchDialog({
           return;
         }
         setRows(res.rows ?? []);
-        setSample({ subject: res.sampleSubject, html: res.sampleHtml, for: res.sampleFor });
+        setSample({
+          subject: res.sampleSubject,
+          html: res.sampleHtml,
+          for: res.sampleFor,
+          greeting: res.sampleGreetingHtml,
+          body: res.sampleBodyHtml
+        });
       })
       .catch(() => !cancelled && setError("Couldn't build the emails."))
       .finally(() => !cancelled && setLoading(false));
@@ -738,16 +777,17 @@ function BatchDialog({
 
   async function doSend() {
     if (!sendable.length) return;
+    const editedNote = body !== null ? "\n\nThe body has been EDITED — all of them get that wording, not the Front template's." : "";
     if (
       !confirm(
-        `Send "${meta.label}" to ${sendable.length} ${sendable.length === 1 ? "person" : "people"}?\n\n${sendable.map((r) => `${r.name} → ${r.to.join(", ")}`).join("\n")}\n\nThis sends immediately and cannot be undone.`
+        `Send "${meta.label}" to ${sendable.length} ${sendable.length === 1 ? "person" : "people"}?\n\n${sendable.map((r) => `${r.name} → ${r.to.join(", ")}`).join("\n")}${editedNote}\n\nThis sends immediately and cannot be undone.`
       )
     ) {
       return;
     }
     setSending(true);
     setError(null);
-    const res = await sendOrientationEmailBatch(sendable.map((r) => r.attendeeId), templateKey);
+    const res = await sendOrientationEmailBatch(sendable.map((r) => r.attendeeId), templateKey, body);
     setSending(false);
     if (!res.ok) {
       setError(res.error ?? "Send failed.");
@@ -841,22 +881,31 @@ function BatchDialog({
             email and the internal list gets the session summary.
           </p>
 
-          {sample?.html ? (
+          {sample?.body !== undefined ? (
             <>
               <button
                 onClick={() => setShowBody((v) => !v)}
                 className="text-xs font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-slate-300"
               >
-                {showBody ? "Hide" : "Show"} the email {sample.for ? `(as ${sample.for} will get it)` : ""}
+                {showBody ? "Hide" : "Show and edit"} the email {sample.for ? `(as ${sample.for} will get it)` : ""}
+                {body !== null && !showBody ? " · edited" : ""}
               </button>
               {showBody ? (
-                <div className="max-h-56 overflow-y-auto rounded border border-brand-lea/15 bg-white p-3 dark:border-white/10 dark:bg-[#0f2033]">
-                  <p className="mb-2 text-[12px] font-semibold text-brand-lea dark:text-slate-100">{sample.subject}</p>
-                  <div
-                    className="prose-sm text-[12.5px] text-brand-black dark:text-slate-200"
-                    dangerouslySetInnerHTML={{ __html: sample.html }}
+                <>
+                  <p className="text-[12px] font-semibold text-brand-lea dark:text-slate-100">{sample.subject}</p>
+                  <BodyEditor
+                    greeting={sample.greeting ?? ""}
+                    template={sample.body ?? ""}
+                    edited={body}
+                    onChange={setBody}
+                    disabled={sending}
                   />
-                </div>
+                  {body !== null ? (
+                    <p className="text-[11.5px] text-amber-800 dark:text-amber-200">
+                      All {sendable.length} of them get this wording.
+                    </p>
+                  ) : null}
+                </>
               ) : null}
             </>
           ) : null}
@@ -907,6 +956,12 @@ function SendDialog({
   // reintroduces duplicates: the bulk send groups by supervisor, this one does not.
   // Warn with the real names rather than a generic caution.
   const [sharedWith, setSharedWith] = useState<{ supervisor: string; others: string[] } | null>(null);
+  // Null until the body is actually touched. Null is sent as null, which makes
+  // the server rebuild from the live Front template — so an untouched send is
+  // the same send it was before this existed. Kept OUTSIDE the preview state so
+  // toggling test mode (which refetches, because it changes the recipients)
+  // cannot discard wording that has already been typed.
+  const [body, setBody] = useState<string | null>(null);
 
   useEffect(() => {
     if (templateKey !== "supervisors") {
@@ -953,10 +1008,11 @@ function SendDialog({
   async function doSend() {
     if (!preview) return;
     const who = testMode ? `TEST to ${preview.to.join(", ")}` : `${attendee.name} at ${preview.to.join(", ")}`;
-    if (!confirm(`Send "${meta.label}" — ${who}?\n\nThis sends immediately and cannot be undone.`)) return;
+    const editedNote = body !== null ? "\n\nThe body has been EDITED — this is not the Front template wording." : "";
+    if (!confirm(`Send "${meta.label}" — ${who}?${editedNote}\n\nThis sends immediately and cannot be undone.`)) return;
     setSending(true);
     setResult(null);
-    const res = await sendOrientationEmail(attendee.id, templateKey, testMode ? testTo : null);
+    const res = await sendOrientationEmail(attendee.id, templateKey, testMode ? testTo : null, body);
     setSending(false);
     if (!res.ok) {
       setError(res.error ?? "Send failed.");
@@ -1058,11 +1114,18 @@ function SendDialog({
             </Row>
           </dl>
 
-          <div className="max-h-64 overflow-y-auto rounded border border-brand-lea/15 bg-white p-3 dark:border-white/10 dark:bg-[#0f2033]">
-            {/* The real body, rendered as the recipient will see it. It comes from
-                the team's own Front template, not from anything typed here. */}
-            <div className="prose-sm text-[12.5px] text-brand-black dark:text-slate-200" dangerouslySetInnerHTML={{ __html: preview.html }} />
-          </div>
+          {/* The real body, as the recipient will see it — and editable, because
+              the time or the wording occasionally has to differ for one session.
+              The warnings stay ABOVE it and are never folded into the box: an
+              editable body must not be able to swallow "this is going to a
+              personal address" or "the time was adjusted for this session". */}
+          <BodyEditor
+            greeting={preview.greetingHtml}
+            template={preview.bodyHtml}
+            edited={body}
+            onChange={setBody}
+            disabled={sending}
+          />
         </div>
       ) : null}
 
@@ -1077,6 +1140,160 @@ function SendDialog({
         </Button>
       </div>
     </Modal>
+  );
+}
+
+// --- editing the body before it goes ----------------------------------------
+//
+// Hannah, 2026-08-31: an email built from a template should still give her a box
+// to change what it says. Occasionally one session needs wording that no future
+// session should inherit, and until now the only remedy was editing the Front
+// template — which changes every send after it too.
+//
+// WHY A BARE contenteditable AND NOT ONE OF THE TWO EDITORS THIS APP ALREADY HAS.
+// Both are lossy for this particular content, and the loss would be silent:
+//
+//   components/richtext/RichTextEditor runs normalizeRichHtml on load. That is
+//   the right thing for a candidate note — it snaps markup down to the small
+//   vocabulary the app stores (p / strong / em / a, a fixed colour and size
+//   palette). Run it over a Front template and every <div style="line-height:
+//   1.5"><span style="font-family: Verdana"><span style="font-size: 9pt"> becomes
+//   a bare <p>. MERELY OPENING THE DIALOG would restyle the email, including in
+//   the common case where nobody changes a word — which is exactly the case that
+//   has to stay byte-identical to what the app sent yesterday.
+//
+//   components/shared/RichTextEditor is not an HTML editor at all: its value is a
+//   bbcode-ish markup string ([b], [color=...]) and it serialises the DOM down to
+//   that. An HTML email body put through it comes out as near-plain text.
+//
+// So the body is edited AS ITSELF: the resolved HTML is written into a
+// contenteditable once and read back with innerHTML, with no normalisation step
+// in between. That is not a new editor — there is no toolbar, no command layer
+// and no document model, and the browser's own editing inherits the surrounding
+// Verdana/9pt spans for typed text. What it buys is that anything untouched
+// survives untouched.
+//
+// And the belt to that brace: an UNTOUCHED body is never sent back at all. The
+// value stays null until an input event fires, and null means the server rebuilds
+// from the live template exactly as before. So "he approves and sends" cannot be
+// changed even by a contenteditable round-trip re-quoting an attribute.
+function BodyEditor({
+  greeting,
+  template,
+  edited,
+  onChange,
+  disabled
+}: {
+  /** The per-recipient half — rendered, not editable. Empty for templates that
+      have no greeting (the supervisors one opens "Hello Supervisors,"). */
+  greeting: string;
+  /** The fully-resolved template body: stripped, date-filled, session-overridden. */
+  template: string;
+  /** Null until the body is actually edited. Null === send the template. */
+  edited: string | null;
+  onChange: (next: string | null) => void;
+  disabled?: boolean;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [seed, setSeed] = useState(0);
+  const [mode, setMode] = useState<"rich" | "html">("rich");
+
+  // Seeded imperatively, and deliberately NOT re-seeded from `edited`. Writing
+  // innerHTML back under a live caret throws the caret to position 0 — the same
+  // bug that was fixed in components/shared/RichTextEditor in August, where it
+  // then landed inside the document's opening bold run and everything typed
+  // afterwards came out bold. `seed` is bumped only by Revert and by switching
+  // back from the HTML view, which are the two moments a re-seed is wanted.
+  useEffect(() => {
+    if (mode === "rich" && ref.current) ref.current.innerHTML = edited ?? template;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [template, seed, mode]);
+
+  function revert() {
+    onChange(null);
+    setSeed((n) => n + 1);
+  }
+
+  return (
+    <div className="rounded border border-brand-lea/15 dark:border-white/10">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-lea/10 px-2.5 py-1.5 dark:border-white/10">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Body</span>
+          {edited === null ? (
+            <span className="rounded bg-brand-cloudDancer/70 px-1.5 py-0.5 text-[10px] font-semibold text-brand-grey dark:bg-white/5 dark:text-slate-400">
+              Front template, unchanged
+            </span>
+          ) : (
+            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900 ring-1 ring-amber-400/50 dark:bg-amber-500/20 dark:text-amber-200">
+              Edited for this send
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              setMode((m) => (m === "rich" ? "html" : "rich"));
+              setSeed((n) => n + 1);
+            }}
+            disabled={disabled}
+            className="text-[11px] font-semibold text-brand-eden underline-offset-2 hover:underline disabled:opacity-50 dark:text-slate-300"
+          >
+            {mode === "rich" ? "Edit as HTML" : "Back to the formatted view"}
+          </button>
+          {edited !== null ? (
+            <button
+              onClick={revert}
+              disabled={disabled}
+              className="text-[11px] font-semibold text-brand-eden underline-offset-2 hover:underline disabled:opacity-50 dark:text-slate-300"
+            >
+              Revert to the template
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {edited !== null ? (
+        <p className="border-b border-amber-300/60 bg-amber-50 px-2.5 py-1.5 text-[11.5px] text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200">
+          This wording applies to <b>this send only</b>. The template in Front is untouched, and the next send reads it
+          fresh.
+        </p>
+      ) : null}
+
+      {greeting ? (
+        <div className="border-b border-brand-lea/10 bg-brand-cloudDancer/30 px-3 py-2 dark:border-white/10 dark:bg-white/5">
+          <div
+            className="prose-sm text-[12.5px] text-brand-black dark:text-slate-200"
+            dangerouslySetInnerHTML={{ __html: greeting }}
+          />
+          <p className="mt-1 text-[10.5px] text-brand-grey dark:text-slate-400">
+            Written per recipient, so it isn&apos;t editable here — each person gets their own.
+          </p>
+        </div>
+      ) : null}
+
+      {mode === "rich" ? (
+        <div
+          ref={ref}
+          contentEditable={!disabled}
+          suppressContentEditableWarning
+          role="textbox"
+          aria-multiline="true"
+          aria-label="The body of this email"
+          onInput={(e) => onChange((e.currentTarget as HTMLDivElement).innerHTML)}
+          className="prose-sm max-h-64 overflow-y-auto overflow-x-hidden bg-white px-3 py-2 text-[12.5px] text-brand-black outline-none transition focus:ring-4 focus:ring-brand-sweet/35 dark:bg-[#0f2033] dark:text-slate-200"
+        />
+      ) : (
+        <textarea
+          value={edited ?? template}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          spellCheck={false}
+          rows={12}
+          aria-label="The body of this email, as HTML"
+          className="block w-full resize-y bg-white px-3 py-2 font-mono text-[11px] leading-relaxed text-brand-black outline-none focus:ring-4 focus:ring-brand-sweet/35 dark:bg-[#0f2033] dark:text-slate-200"
+        />
+      )}
+    </div>
   );
 }
 
@@ -1240,6 +1457,7 @@ function CommunicationHistory({ attendees }: { attendees: AttendeeRow[] }) {
                 <th className="px-2 py-1.5">When</th>
                 <th className="px-2 py-1.5">Who it&apos;s about</th>
                 <th className="px-2 py-1.5">Email</th>
+                <th className="px-2 py-1.5">Wording</th>
                 <th className="px-2 py-1.5">To</th>
                 <th className="px-2 py-1.5">Cc</th>
                 <th className="px-2 py-1.5">Sent by</th>
@@ -1262,6 +1480,23 @@ function CommunicationHistory({ attendees }: { attendees: AttendeeRow[] }) {
                     {r.subject ? (
                       <div className="text-[10px] text-brand-grey dark:text-slate-400">{r.subject}</div>
                     ) : null}
+                  </td>
+                  <td className="px-2 py-1.5">
+                    {/* Three states, and the third is genuinely "we don't know":
+                        records written before per-send editing carry no flag, and
+                        showing those as "template" would be a claim nobody made. */}
+                    {r.edited === undefined ? (
+                      <span className="text-brand-grey dark:text-slate-500">not recorded</span>
+                    ) : r.edited ? (
+                      <span
+                        className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900 ring-1 ring-amber-400/50 dark:bg-amber-500/20 dark:text-amber-200"
+                        title="The body was changed by hand before this went out — it is not the Front template wording."
+                      >
+                        Edited
+                      </span>
+                    ) : (
+                      <span className="text-brand-grey dark:text-slate-400">Template</span>
+                    )}
                   </td>
                   <td className="px-2 py-1.5 text-brand-black dark:text-slate-200">{r.to || "—"}</td>
                   <td className="px-2 py-1.5 text-brand-black dark:text-slate-200">

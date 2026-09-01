@@ -69,8 +69,44 @@ export async function PATCH(request: Request, ctx: Ctx) {
     }
     if (body.status === "UPCOMING" || body.status === "CANCELED") data.status = body.status;
 
+    // Did anything the Google invite renders actually move?
+    //
+    // The invite's TITLE and DESCRIPTION are built from the date, its LOCATION
+    // field from the address — so a change to any of these leaves the event in
+    // Google stale, and the standing rule is that a time or place change has to
+    // reach all of them.
+    //
+    // THIS DELIBERATELY DOES NOT PUSH THE CHANGE ITSELF. Patching Google from
+    // here would either email every guest on every field edit (an address typo
+    // becoming a "this event has changed" to seven new hires and their
+    // supervisors), or push silently and leave everyone who already accepted
+    // holding the old time with nobody telling them. Both are worse than
+    // reporting it: the response says what moved, and the calendar panel turns
+    // that into an explicit "update the invite", with emailing the guests as a
+    // separate choice made by the person who moved it.
+    const CALENDAR_FIELDS = ["date", "endsAt", "location", "address"] as const;
+    const touched = CALENDAR_FIELDS.filter((f) => f in data);
+    const before = touched.length
+      ? await prisma.orientationSession.findUnique({
+          where: { id },
+          select: { date: true, endsAt: true, location: true, address: true }
+        })
+      : null;
+
     await prisma.orientationSession.update({ where: { id }, data });
-    return NextResponse.json({ ok: true });
+
+    // Compare VALUES, not just "was it in the payload" — saving the reschedule
+    // form without changing anything sends date and endsAt every time, and
+    // warning that the invite is stale when nothing moved is how a real warning
+    // stops being read.
+    const same = (a: unknown, b: unknown) => {
+      if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
+      if (a instanceof Date || b instanceof Date) return false;
+      return (a ?? null) === (b ?? null);
+    };
+    const calendarFieldsChanged = before ? touched.filter((f) => !same(before[f], data[f])) : [];
+
+    return NextResponse.json({ ok: true, calendarFieldsChanged });
   } catch (error) {
     console.error("Update orientation session error:", error);
     return NextResponse.json({ message: "Unable to update session." }, { status: 500 });

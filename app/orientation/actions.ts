@@ -131,7 +131,21 @@ export async function previewOrientationEmail(
 export async function sendOrientationEmail(
   attendeeId: string,
   key: OrientationTemplateKey,
-  testTo?: string | null
+  testTo?: string | null,
+  /**
+   * The body as edited in the send dialog, for THIS SEND ONLY.
+   *
+   * Null (the normal case) rebuilds from the live Front template exactly as
+   * before, which is what keeps "approve and send" byte-identical to what the
+   * app did yesterday. Non-null is a body a human typed and approved seconds
+   * ago in the same dialog — it is not stored, not written back to Front, and
+   * not reused by the next send.
+   *
+   * NOT REACHABLE FROM THE CRON. lib/orientation/reminder.ts sends unattended
+   * and calls buildOrientationEmail directly without an override; nothing here
+   * gives it one, and nothing should.
+   */
+  bodyOverride?: string | null
 ): Promise<OrientationSendResult> {
   if (!(await canSend())) return { ok: false, error: "You don't have permission to send this email." };
   const a = await loadAttendee(attendeeId);
@@ -144,7 +158,7 @@ export async function sendOrientationEmail(
       endsAt: a.session.endsAt ? a.session.endsAt.toISOString() : null,
       location: a.session.location,
       address: a.session.address
-    }, testTo);
+    }, testTo, bodyOverride);
     const channelId = await getOrientationChannelId();
 
     const sent = await sendEmail(channelId, {
@@ -170,7 +184,11 @@ export async function sendOrientationEmail(
         to: email.to.join(", "),
         cc: email.cc.join(", "),
         subject: email.subject,
-        sentBy: await actorLabel()
+        sentBy: await actorLabel(),
+        // Recorded because "the template went out" and "somebody rewrote it
+        // before it went out" are different facts, and after the fact the only
+        // other way to tell them apart is opening the Front conversation.
+        edited: email.bodyEdited
       });
 
       // Tick the grid. Forward-only: a send is evidence it happened, and we never
@@ -222,6 +240,12 @@ export type OrientationBatchPreview = {
   sampleSubject?: string;
   sampleHtml?: string;
   sampleFor?: string;
+  /** The same sample split at the greeting. The body half is what the dialog
+      lets you edit — one edit, applied to every recipient, while each of them
+      still gets their own "Hi <first>,". The greeting half is shown read-only
+      so it is obvious WHY it is not editable. */
+  sampleGreetingHtml?: string;
+  sampleBodyHtml?: string;
 };
 
 /** Build every email in the batch WITHOUT sending, so the whole run can be
@@ -237,6 +261,8 @@ export async function previewOrientationEmailBatch(
   let sampleSubject: string | undefined;
   let sampleHtml: string | undefined;
   let sampleFor: string | undefined;
+  let sampleGreetingHtml: string | undefined;
+  let sampleBodyHtml: string | undefined;
 
   for (const attendeeId of attendeeIds) {
     const a = await loadAttendee(attendeeId);
@@ -264,6 +290,8 @@ export async function previewOrientationEmailBatch(
         sampleSubject = preview.subject;
         sampleHtml = preview.html;
         sampleFor = a.newHire.name;
+        sampleGreetingHtml = preview.greetingHtml;
+        sampleBodyHtml = preview.bodyHtml;
       }
     } catch (err) {
       // One unsendable person must not sink the batch — show why and carry on.
@@ -279,7 +307,7 @@ export async function previewOrientationEmailBatch(
     }
   }
 
-  return { ok: true, rows, sampleSubject, sampleHtml, sampleFor };
+  return { ok: true, rows, sampleSubject, sampleHtml, sampleFor, sampleGreetingHtml, sampleBodyHtml };
 }
 
 // --- the one internal summary ------------------------------------------------
@@ -427,6 +455,10 @@ export type SupervisorBatchPreview = {
   sampleSubject?: string;
   sampleHtml?: string;
   sampleFor?: string;
+  /** Split at the intro — see OrientationBatchPreview for why the intro is not
+      editable (it names this supervisor and their own hires). */
+  sampleGreetingHtml?: string;
+  sampleBodyHtml?: string;
 };
 
 /** Collapse the selected attendees into one entry per individual supervisor. */
@@ -507,6 +539,8 @@ export async function previewOrientationSupervisorBatch(attendeeIds: string[]): 
   let sampleSubject: string | undefined;
   let sampleHtml: string | undefined;
   let sampleFor: string | undefined;
+  let sampleGreetingHtml: string | undefined;
+  let sampleBodyHtml: string | undefined;
 
   for (const d of digests) {
     try {
@@ -525,6 +559,8 @@ export async function previewOrientationSupervisorBatch(attendeeIds: string[]): 
         sampleSubject = preview.subject;
         sampleHtml = preview.html;
         sampleFor = d.supervisorName ?? d.supervisorEmail;
+        sampleGreetingHtml = preview.greetingHtml;
+        sampleBodyHtml = preview.bodyHtml;
       }
     } catch (err) {
       out.push({
@@ -541,7 +577,7 @@ export async function previewOrientationSupervisorBatch(attendeeIds: string[]): 
     }
   }
 
-  return { ok: true, rows: out, noSupervisor, sampleSubject, sampleHtml, sampleFor };
+  return { ok: true, rows: out, noSupervisor, sampleSubject, sampleHtml, sampleFor, sampleGreetingHtml, sampleBodyHtml };
 }
 
 export type SupervisorBatchSendResult = {
@@ -558,7 +594,11 @@ export type SupervisorBatchSendResult = {
  */
 export async function sendOrientationSupervisorBatch(
   supervisorEmails: string[],
-  attendeeIds: string[]
+  attendeeIds: string[],
+  /** One edited body, applied to every supervisor in this run. Each of them
+      still gets their own intro naming their own hires — the override only
+      replaces the template half. Manual sends only; see sendOrientationEmail. */
+  bodyOverride?: string | null
 ): Promise<SupervisorBatchSendResult> {
   if (!(await canSend())) return { ok: false, error: "You don't have permission to send this email." };
   if (!supervisorEmails.length) return { ok: false, error: "Nobody selected." };
@@ -582,7 +622,7 @@ export async function sendOrientationSupervisorBatch(
 
   for (const d of chosen) {
     try {
-      const email = await buildSupervisorDigestEmail(d, sessionForEmail);
+      const email = await buildSupervisorDigestEmail(d, sessionForEmail, null, bodyOverride);
       const res = await sendEmail(channelId, {
         to: email.to,
         cc: email.cc,
@@ -600,7 +640,8 @@ export async function sendOrientationSupervisorBatch(
           to: email.to.join(", "),
           cc: email.cc.join(", "),
           subject: email.subject,
-          sentBy: actor
+          sentBy: actor,
+          edited: email.bodyEdited
         });
         const row = await prisma.orientationAttendee.findUnique({
           where: { id: attendeeId },
@@ -640,7 +681,11 @@ export type OrientationBatchSendResult = {
  */
 export async function sendOrientationEmailBatch(
   attendeeIds: string[],
-  key: OrientationTemplateKey
+  key: OrientationTemplateKey,
+  /** One edited body for the whole run. Safe to share across recipients because
+      it replaces the template half only — the greeting is rebuilt per person,
+      so nobody receives an email opening with somebody else's name. */
+  bodyOverride?: string | null
 ): Promise<OrientationBatchSendResult> {
   if (!(await canSend())) return { ok: false, error: "You don't have permission to send this email." };
   if (!attendeeIds.length) return { ok: false, error: "Nobody selected." };
@@ -653,7 +698,7 @@ export async function sendOrientationEmailBatch(
     const name = a?.newHire.name ?? "(not found)";
     // Reuses the single send wholesale, so a batch send and a one-off send are
     // literally the same code path — including the tick and the send record.
-    const res = await sendOrientationEmail(attendeeId, key);
+    const res = await sendOrientationEmail(attendeeId, key, null, bodyOverride);
     if (res.ok) sent.push({ attendeeId, name, to: res.to ?? "" });
     else failed.push({ attendeeId, name, error: res.error ?? "Send failed." });
   }

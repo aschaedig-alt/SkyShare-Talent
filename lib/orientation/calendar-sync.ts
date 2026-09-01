@@ -36,7 +36,36 @@ export type OrientationCalendarRecord = {
   hangoutLink: string | null;
   createdAt: string;
   createdBy?: string | null;
+  /** When the event was last built from the session, and from WHAT.
+   *
+   *  Both optional, and the absence is meaningful rather than a default: an event
+   *  created before this shipped has no baseline, so the app cannot say whether it
+   *  is in step. It says "unknown" instead of "in step", because Google's own API
+   *  is no help here — events.get returns the summary but not the start, end or
+   *  location, so there is nothing to compare a time or an address against.
+   *  Fingerprinting what we pushed is the only exact answer available without a
+   *  schema change, and this record already lives in a WorkspaceSetting. */
+  syncedAt?: string;
+  syncedFingerprint?: string;
+  syncedBy?: string | null;
 };
+
+/** Everything on a session that the invite renders: the TITLE and DESCRIPTION are
+    built from the date, the LOCATION field from the address. Change any of these
+    and the event in Google is stale. Deliberately not `location` alone — the
+    standing rule is that a change has to reach all four places at once. */
+function sessionFingerprint(s: { date: string; endsAt: string | null; location: string | null; address?: string | null }): string {
+  return [s.date, s.endsAt ?? "", s.location ?? "", s.address ?? ""].join("|");
+}
+
+/** Which of those fields moved, in words a person can act on. Empty means the
+    event matches the session. */
+export function describeCalendarDrift(before: string, after: string): string[] {
+  const LABELS = ["the date and start time", "the end time", "the location name", "the address"];
+  const a = before.split("|");
+  const b = after.split("|");
+  return LABELS.filter((_, i) => (a[i] ?? "") !== (b[i] ?? ""));
+}
 
 type CalendarMap = Record<string, OrientationCalendarRecord>;
 
@@ -142,7 +171,17 @@ export type OrientationCalendarPreview = {
   /** The attendees' own supervisors, offered as one-click guests. */
   supervisors: SupervisorGuest[];
   /** Already created? Then this holds what is really on the event in Google. */
-  existing: (OrientationCalendarRecord & { liveAttendees: string[]; missingInGoogle: boolean }) | null;
+  existing:
+    | (OrientationCalendarRecord & {
+        liveAttendees: string[];
+        missingInGoogle: boolean;
+        /** true = matches the session, false = stale, NULL = no baseline recorded
+            so we genuinely cannot tell. The UI must not render null as either. */
+        inStep: boolean | null;
+        /** What moved since the last push. Empty when in step or unknown. */
+        drifted: string[];
+      })
+    | null;
   /** Non-null when the app cannot talk to Google at all — shown instead of a dead button. */
   blocker: string | null;
 };
@@ -195,11 +234,19 @@ export async function previewOrientationCalendar(
         reachable = false;
       }
     }
+    const now = sessionFingerprint(session);
+    // No baseline is NOT "in step". An event created before fingerprinting
+    // existed has nothing to compare against, and claiming it matches would be
+    // exactly the kind of unfounded assertion that sends nobody to fix a real
+    // stale invite.
+    const inStep = record.syncedFingerprint === undefined ? null : record.syncedFingerprint === now;
     existing = {
       ...record,
       liveAttendees: live?.attendees ?? [],
       // Only assert "deleted in Google" when we actually got an answer back.
-      missingInGoogle: reachable && live === null
+      missingInGoogle: reachable && live === null,
+      inStep,
+      drifted: inStep === false ? describeCalendarDrift(record.syncedFingerprint!, now) : []
     };
   }
 
@@ -249,7 +296,13 @@ export async function createOrientationCalendarEvent(
     createdAt: new Date().toISOString(),
     // Who owns it, which matters here: with per-user OAuth the organizer is
     // whoever clicked, so the record has to say who that was.
-    createdBy: access.email
+    createdBy: access.email,
+    // The baseline. Creating IS a push, so the event is in step from this moment
+    // and any later divergence is a real reschedule rather than an artefact of
+    // never having recorded anything.
+    syncedAt: new Date().toISOString(),
+    syncedFingerprint: sessionFingerprint(session),
+    syncedBy: access.email
   };
   await writeRecord(sessionId, record);
   return record;
@@ -307,7 +360,20 @@ export async function updateOrientationCalendarEvent(
     notify ? "all" : "none"
   );
 
-  return { record, notified: notify, draft };
+  // Only AFTER Google accepted it. Writing the fingerprint before the patch would
+  // mark the event in step even when the call failed, which is the failure mode
+  // worth avoiding here: a stale invite that the app insists is fine gets nobody
+  // to look at it, whereas a "still out of step" after a failed update is at
+  // worst an extra click.
+  const updated: OrientationCalendarRecord = {
+    ...record,
+    syncedAt: new Date().toISOString(),
+    syncedFingerprint: sessionFingerprint(session),
+    syncedBy: access.email
+  };
+  await writeRecord(sessionId, updated);
+
+  return { record: updated, notified: notify, draft };
 }
 
 /**
