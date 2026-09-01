@@ -19,6 +19,7 @@ import {
   getInstanceFormatting
 } from "@/lib/blocks/sections";
 import { splitCleanLines } from "@/lib/formatting/text";
+import { formatCalendarDay } from "@/lib/dates/display";
 import { RichText, RichTextParagraphs, RichTextMixed } from "@/components/shared/RichText";
 import { FormattedJobPost } from "@/components/job-preview/FormattedJobPost";
 import { Button } from "@/components/ui";
@@ -177,10 +178,11 @@ const DENSITY_MAP = {
 } as const;
 type Density = keyof typeof DENSITY_MAP;
 
+// Job.postedDate is a CALENDAR DAY stored at midnight UTC — the same value
+// formatDateForDisplay in lib/formatting/text.ts already renders in UTC, and for
+// the same reason. Read in local time it lands on the previous day.
 function fmtDate(iso: string | null) {
-  if (!iso) return null;
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? null : new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(d);
+  return (iso ? formatCalendarDay(iso) : "") || null;
 }
 
 function BodyView({ body, format }: { body: string; format: BlockBodyFormat }) {

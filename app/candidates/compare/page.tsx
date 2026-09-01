@@ -11,14 +11,15 @@ import {
 import { getCandidateView, listCandidateViews } from "@/lib/data/candidate-views";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { isAdminOrRecruiter } from "@/lib/auth/roles";
+import { formatMomentDate } from "@/lib/dates/display";
 
 type ComparePageProps = {
   searchParams?: Promise<{ view?: string }>;
 };
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
-}
+// A saved view's updatedAt is a real instant — see the same note on the saved
+// views page. Rendered on the server, so it read in UTC.
+const formatDate = formatMomentDate;
 
 export default async function CandidateComparePage({ searchParams }: ComparePageProps) {
   const access = await requireModulePageAccess("candidates");

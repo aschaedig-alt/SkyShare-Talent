@@ -10,6 +10,7 @@ import { EVENT_TYPES, aircraftPlanLabel, eventStatusLabel, eventTypeLabel } from
 import { EventsCalendar } from "@/components/events/EventsCalendar";
 import { EventFromEmailModal } from "@/components/events/EventFromEmailModal";
 import type { CalendarEvent, EventListItem, PersonRef } from "@/lib/data/events";
+import { dayKeyOf, formatMixedDay, zoneForValue } from "@/lib/dates/display";
 
 type EventsOverviewProps = {
   upcoming: EventListItem[];
@@ -31,15 +32,25 @@ function statusTone(status: string) {
   return "neutral" as const;
 }
 
+// Event dates are a mixed column — a type="date" form writes midnight UTC, an
+// imported email writes a real instant — so every read here picks its zone per
+// value. The same-day and same-year tests used local getters, which put a
+// midnight-UTC event on the previous day for a Mountain browser and disagreed
+// with the UTC server, so they go through dayKeyOf too.
 function dateRange(startsAt: string, endsAt: string | null) {
-  const start = new Date(startsAt);
-  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" };
-  if (!endsAt) return start.toLocaleDateString(undefined, opts);
-  const end = new Date(endsAt);
-  if (start.toDateString() === end.toDateString()) return start.toLocaleDateString(undefined, opts);
-  const sameYear = start.getFullYear() === end.getFullYear();
-  const startText = start.toLocaleDateString(undefined, sameYear ? { month: "short", day: "numeric" } : opts);
-  return `${startText} – ${end.toLocaleDateString(undefined, opts)}`;
+  if (!endsAt) return formatMixedDay(startsAt);
+  const startKey = dayKeyOf(startsAt);
+  const endKey = dayKeyOf(endsAt);
+  if (startKey === endKey) return formatMixedDay(startsAt);
+  const startText =
+    startKey.slice(0, 4) === endKey.slice(0, 4)
+      ? new Intl.DateTimeFormat("en-US", {
+          timeZone: zoneForValue(startsAt),
+          month: "short",
+          day: "numeric"
+        }).format(new Date(startsAt))
+      : formatMixedDay(startsAt);
+  return `${startText} – ${formatMixedDay(endsAt)}`;
 }
 
 function place(e: EventListItem) {

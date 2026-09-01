@@ -14,6 +14,7 @@ import {
   eventTypeLabel
 } from "@/lib/events/constants";
 import type { AttendeeView, EventDetail, SupplyLineView, TaskView } from "@/lib/data/events";
+import { zoneForValue } from "@/lib/dates/display";
 
 const FIELD =
   "w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100";
@@ -32,8 +33,13 @@ async function send(url: string, body: unknown, method = "PATCH") {
   return res.ok;
 }
 
+// Event dates are a mixed column: a type="date" form writes midnight UTC, an
+// imported email writes a real instant. Both live rows prove it (2026-09-19
+// 00:00Z and 2026-09-24 06:00Z), so the zone has to be picked per value —
+// reading the first in Mountain shows the 18th. This kept three different
+// option sets, so it takes the zone rather than a fixed formatter.
 function fmtDate(iso: string, opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" }) {
-  return new Date(iso).toLocaleDateString(undefined, opts);
+  return new Intl.DateTimeFormat("en-US", { timeZone: zoneForValue(iso), ...opts }).format(new Date(iso));
 }
 
 function statusTone(status: string) {

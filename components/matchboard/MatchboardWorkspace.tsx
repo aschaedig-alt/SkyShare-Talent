@@ -26,6 +26,7 @@ import {
   SCAN_EXCLUSION_LABELS,
   type ScanExclusionReason
 } from "@/lib/candidates/scan-exclusion";
+import { formatMomentDate } from "@/lib/dates/display";
 import type { SkippedCandidate } from "@/lib/candidates/skipped-pool";
 import type { MatchboardSubjects, CandidateRoleMatches } from "@/lib/matching/matchboard";
 import type { JobScreeningData } from "@/lib/data/job-screening";
@@ -469,7 +470,7 @@ function SkippedPoolPanel({ onViewCandidate }: { onViewCandidate: (candidateId: 
                     {[
                       row.currentTitle,
                       row.reasonNote,
-                      row.skippedAt ? `skipped ${new Date(row.skippedAt).toLocaleDateString()}` : null,
+                      row.skippedAt ? `skipped ${formatMomentDate(row.skippedAt)}` : null,
                       row.skippedBy ? `by ${row.skippedBy}` : null
                     ]
                       .filter(Boolean)
@@ -644,7 +645,7 @@ function CandidateRoles({
                 </button>{" "}
                 — {skip.reason ? SCAN_EXCLUSION_LABELS[skip.reason] : "skipped"}
                 {skip.reasonNote ? `: ${skip.reasonNote}` : ""}
-                {skip.skippedAt ? ` · ${new Date(skip.skippedAt).toLocaleDateString()}` : ""}
+                {skip.skippedAt ? ` · ${formatMomentDate(skip.skippedAt)}` : ""}
                 {skip.skippedBy ? ` by ${skip.skippedBy}` : ""}
                 <span className="ml-1 opacity-75">
                   (matched on {skip.matchedOn}
@@ -696,7 +697,7 @@ function CandidateRoles({
           </div>
           {data.excludedReason && data.excludedAt ? (
             <p className="mt-1.5 text-[11px] text-brand-grey dark:text-slate-400">
-              Skipped {new Date(data.excludedAt).toLocaleDateString()}
+              Skipped {formatMomentDate(data.excludedAt)}
               {data.excludedBy ? ` by ${data.excludedBy}` : ""} — they stay out of scans until you put them back.
             </p>
           ) : null}

@@ -8,6 +8,7 @@ import { ExternalLink, Package } from "lucide-react";
 import { Badge, Button, EmptyState, Input, Modal } from "@/components/ui";
 import { SUPPLY_CATEGORIES, supplyCategoryLabel } from "@/lib/events/constants";
 import type { SupplyItemView } from "@/lib/data/events";
+import { formatMixedDayShort } from "@/lib/dates/display";
 
 const FIELD =
   "w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100";
@@ -252,7 +253,7 @@ export function SuppliesWorkspace({ items }: { items: SupplyItemView[] }) {
                                 </Link>
                                 <span className="text-brand-grey dark:text-slate-400">
                                   {" "}
-                                  — {c.quantity} {item.unit}, {new Date(c.startsAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                                  — {c.quantity} {item.unit}, {formatMixedDayShort(c.startsAt)}
                                 </span>
                               </li>
                             ))}

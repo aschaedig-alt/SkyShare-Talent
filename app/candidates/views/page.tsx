@@ -4,10 +4,11 @@ import { CandidateViewTabs } from "@/components/candidates/CandidateViewTabs";
 import { listCandidateViews } from "@/lib/data/candidate-views";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { isCandidateScopeNarrowed, visibleCandidateIdsFor } from "@/lib/data/candidates";
+import { formatMomentDate } from "@/lib/dates/display";
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
-}
+// A saved view's updatedAt is a real instant. This renders on the server, where
+// Vercel runs UTC, so an evening edit was showing tomorrow's date.
+const formatDate = formatMomentDate;
 
 export default async function SavedViewsPage() {
   const access = await requireModulePageAccess("candidates");

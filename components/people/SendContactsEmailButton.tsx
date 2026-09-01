@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Modal } from "@/components/ui";
+import { formatMomentDate } from "@/lib/dates/display";
 import {
   previewContactsEmail,
   sendContactsEmail,
@@ -135,7 +136,7 @@ export function SendContactsEmailButton({ hireId, taskStatus, canEdit, onSent }:
             {preview?.alreadySent && (
               <p className="mt-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
                 Already sent to {preview.alreadySent.to} on{" "}
-                {new Date(preview.alreadySent.sentAt).toLocaleDateString()}
+                {formatMomentDate(preview.alreadySent.sentAt)}
                 {preview.alreadySent.sentBy ? ` by ${preview.alreadySent.sentBy}` : ""}. Sending
                 again will deliver a second copy.
               </p>

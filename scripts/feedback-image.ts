@@ -14,6 +14,23 @@
  * logic, so it follows FILE_STORAGE_PROVIDER and cannot drift from what the app
  * itself reads.
  *
+ * TWO SOURCES, AND YOU MUST READ BOTH. Screenshots live in two places and this
+ * script was blind to the newer one for long enough to matter:
+ *
+ *   1. Feedback.imageKey / imageName / imageMime — the ORIGINAL single-image
+ *      columns. 16 rows still use them. They were deliberately never migrated
+ *      (see the model comment in prisma/schema.prisma): rewriting live storage
+ *      keys to gain tidiness is not a trade worth making.
+ *   2. The FeedbackImage relation — where every submission has written since
+ *      multi-image support shipped. 15 rows across 11 reports, ordered by
+ *      sortOrder so a two-part report stays in the order it was sent.
+ *
+ * Reading only (1) made every newer report print "(no screenshot attached)"
+ * while its rows sat there — a false ABSENCE, reported on three real reports on
+ * Aug 31, which is the most expensive way for a tool to be wrong. A report with
+ * several images writes one file each, suffixed -1, -2, ... so they stay
+ * distinguishable on disk.
+ *
  * USAGE
  *   npx tsx scripts/feedback-image.ts                 report every screenshot + whether it is reachable
  *   npx tsx scripts/feedback-image.ts <feedbackId>    fetch just that one
@@ -69,11 +86,17 @@ async function main() {
   console.log(`FILE_STORAGE_PROVIDER=${process.env.FILE_STORAGE_PROVIDER ?? "(unset)"}  bucket=${process.env.S3_CANDIDATE_FILES_BUCKET ?? "(unset)"}\n`);
 
   const rows = await prisma.feedback.findMany({
-    where: wantedId ? { id: wantedId } : { imageKey: { not: null } },
+    // Without an id, "has a screenshot" must mean EITHER source. Filtering on
+    // imageKey alone silently hid every report that used the newer relation.
+    where: wantedId ? { id: wantedId } : { OR: [{ imageKey: { not: null } }, { images: { some: {} } }] },
     orderBy: { createdAt: "desc" },
     select: {
       id: true, imageKey: true, imageName: true, imageMime: true, imageSizeBytes: true,
-      message: true, page: true, createdAt: true
+      message: true, page: true, createdAt: true,
+      images: {
+        orderBy: { sortOrder: "asc" },
+        select: { id: true, storageKey: true, filename: true, mimeType: true, sizeBytes: true, sortOrder: true }
+      }
     }
   });
 
@@ -90,20 +113,40 @@ async function main() {
   for (const row of rows) {
     console.log(`${row.createdAt.toISOString().slice(0, 10)}  ${row.id}`);
     console.log(`   ${row.message.replace(/\s+/g, " ").trim().slice(0, 96)}`);
-    if (!row.imageKey) {
+
+    // Both sources, legacy first, then the relation in sortOrder — which is the
+    // same order the app's own feedback panel shows them in.
+    const attachments: Array<{ key: string; mime: string | null; name: string | null; source: string }> = [];
+    if (row.imageKey) {
+      attachments.push({ key: row.imageKey, mime: row.imageMime, name: row.imageName, source: "imageKey" });
+    }
+    for (const img of row.images) {
+      attachments.push({ key: img.storageKey, mime: img.mimeType, name: img.filename, source: "FeedbackImage" });
+    }
+
+    if (attachments.length === 0) {
       console.log(`   (no screenshot attached)\n`);
       continue;
     }
-    try {
-      const { bytes } = await storage.read(row.imageKey);
-      const file = path.join(outDir, `${row.id}${extensionFor(row.imageMime, row.imageName)}`);
-      writeFileSync(file, Buffer.from(bytes));
-      console.log(`   SAVED  ${file}  (${bytes.byteLength} bytes)\n`);
-      reachable++;
-    } catch (error) {
-      console.log(`   UNREACHABLE  ${error instanceof Error ? error.message : String(error)}\n`);
-      unreachable++;
+
+    // One file per attachment. A single one keeps the original bare "<id>.png"
+    // name so existing notes and links still resolve; several get -1, -2, ...
+    const many = attachments.length > 1;
+    for (const [i, att] of attachments.entries()) {
+      const suffix = many ? `-${i + 1}` : "";
+      const label = many ? `[${i + 1}/${attachments.length}] ` : "";
+      try {
+        const { bytes } = await storage.read(att.key);
+        const file = path.join(outDir, `${row.id}${suffix}${extensionFor(att.mime, att.name)}`);
+        writeFileSync(file, Buffer.from(bytes));
+        console.log(`   ${label}SAVED  ${file}  (${bytes.byteLength} bytes, ${att.source})`);
+        reachable++;
+      } catch (error) {
+        console.log(`   ${label}UNREACHABLE  ${att.source}  ${error instanceof Error ? error.message : String(error)}`);
+        unreachable++;
+      }
     }
+    console.log("");
   }
 
   console.log(`reachable: ${reachable}   unreachable: ${unreachable}`);

@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { Loader, ChevronDown, RotateCcw } from "lucide-react";
+import { formatMomentDate } from "@/lib/dates/display";
 
 interface MergedJob {
   id: string;
@@ -131,7 +132,7 @@ export function JobMergedHistory() {
                         "another job"
                       )}
                       {" • "}
-                      {new Date(job.mergedAt).toLocaleDateString()}
+                      {formatMomentDate(job.mergedAt)}
                       {job.mergedBy ? ` • by ${job.mergedBy}` : ""}
                     </div>
                     <div className="mt-1 text-[11px] text-brand-grey dark:text-slate-400">

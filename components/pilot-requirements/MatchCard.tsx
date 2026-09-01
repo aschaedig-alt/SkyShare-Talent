@@ -37,6 +37,7 @@ import type {
 import { SCAN_EXCLUSION_REASONS, SCAN_EXCLUSION_LABELS, type ScanExclusionReason } from "@/lib/candidates/scan-exclusion";
 import { ScoreSplit } from "@/components/pilot-requirements/ScoreSplit";
 import type { MatchVerdict } from "@/lib/matching/match-feedback";
+import { formatMomentTime } from "@/lib/dates/display";
 
 const FIT_TAGS: Array<{ value: MatchVerdict; label: string; Icon: LucideIcon; on: string }> = [
   { value: "up", label: "Good fit", Icon: ThumbsUp, on: "bg-value-teamwork-light text-value-teamwork-dark" },
@@ -70,12 +71,9 @@ export function initials(name: string): string {
     .join("");
 }
 
+/** The scan's scannedAt is a real instant, so it reads in the office timezone. */
 export function formatScanTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  } catch {
-    return "just now";
-  }
+  return formatMomentTime(iso) || "just now";
 }
 
 function FactorIcon({ status }: { status: FactorStatus }) {

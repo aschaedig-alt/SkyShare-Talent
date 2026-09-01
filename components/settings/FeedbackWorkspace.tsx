@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Lightbulb, Bug, HelpCircle, Trash2 } from "lucide-react";
 import { clsx } from "clsx";
+import { formatMomentDateTime } from "@/lib/dates/display";
 
 type FeedbackItem = {
   id: string;
@@ -87,14 +88,11 @@ const STATUS_CHIP: Record<string, string> = {
   DONE: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
 };
 
-function formatDate(iso: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  }).format(new Date(iso));
-}
+// Feedback.createdAt is a real instant, so it renders in the office timezone.
+// It was formatting with no timeZone at all, which is the React #418 hydration
+// mismatch these very reports were filed about: Vercel renders in UTC, the
+// browser re-renders in Mountain, and the two strings differ.
+const formatDate = formatMomentDateTime;
 
 export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem[] }) {
   const [items, setItems] = useState(initialItems);

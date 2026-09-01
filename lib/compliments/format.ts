@@ -1,5 +1,7 @@
 // Compliments by SkyShare — small display helpers.
 
+import { formatMomentDateShort } from "@/lib/dates/display";
+
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
@@ -23,7 +25,10 @@ export function relativeTime(date: Date | string, now: Date = new Date()): strin
     const d = Math.floor(diff / DAY);
     return `${d}d ago`;
   }
-  return then.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  // A recognition's createdAt is a real instant, so the older-than-a-week
+  // fallback reads in the office timezone. The relative branches above are
+  // timezone-free arithmetic; only this one ever needed a zone.
+  return formatMomentDateShort(then);
 }
 
 /** Initials from a full name, e.g. "Sarah Johnson" → "SJ". */

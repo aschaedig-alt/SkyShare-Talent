@@ -19,6 +19,7 @@ import {
 } from "@/lib/travel/checklist";
 import { loadChecklist, setChecklistStatus, setVisitField, setReimbursementStage } from "@/app/travel/actions";
 import type { TravelTripView } from "@/lib/data/travel";
+import { formatMomentDateShort } from "@/lib/dates/display";
 
 /**
  * What still has to happen on this trip, and who still has to be told.
@@ -294,7 +295,7 @@ function ChecklistRow({
           <p className="mt-0.5 text-[10.5px] text-brand-grey dark:text-slate-500">
             {status === "NA" ? "Marked N/A · " : ""}
             {tick.by ? `${tick.by} · ` : ""}
-            {new Date(tick.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            {formatMomentDateShort(tick.at)}
           </p>
         ) : null}
       </div>

@@ -2,6 +2,7 @@ import type { SettingsData } from "@/lib/data/settings";
 import type { RoleName } from "@/lib/auth/roles";
 import { ModuleVisibilityAccessPanel } from "@/components/settings/ModuleVisibilityAccessPanel";
 import { BrandingPanel } from "@/components/settings/BrandingPanel";
+import { formatMomentDateTimeLong } from "@/lib/dates/display";
 
 type SettingsWorkspaceProps = {
   data: SettingsData;
@@ -17,18 +18,10 @@ const countLabels: Array<[keyof SettingsData["counts"], string]> = [
   ["importBatches", "Import batches"]
 ];
 
+// The calendar connection's lastSyncedAt is a real instant — office timezone,
+// not the server's UTC.
 function formatDate(value: string | null) {
-  if (!value) {
-    return "Never";
-  }
-
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  }).format(new Date(value));
+  return value ? formatMomentDateTimeLong(value) : "Never";
 }
 
 function StatusCard({ label, value, detail }: { label: string; value: string; detail: string }) {

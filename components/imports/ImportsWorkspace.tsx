@@ -1,4 +1,5 @@
 import type { ImportsData } from "@/lib/data/imports";
+import { formatMomentDateTime } from "@/lib/dates/display";
 import { CandidateCsvImportCard } from "@/components/imports/CandidateCsvImportCard";
 import {
   JobPdfImportCard,
@@ -19,17 +20,9 @@ const statLabels: Array<[keyof ImportsData["stats"], string]> = [
   ["pendingRows", "Pending rows"]
 ];
 
+// completedAt on a batch and createdAt on a row are both real instants.
 function formatDate(value: string | null) {
-  if (!value) {
-    return "Not completed";
-  }
-
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  }).format(new Date(value));
+  return value ? formatMomentDateTime(value) : "Not completed";
 }
 
 export function ImportsWorkspace({ data }: ImportsWorkspaceProps) {

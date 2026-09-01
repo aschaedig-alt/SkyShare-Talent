@@ -243,6 +243,56 @@ export function clockTimeOf(value: string | Date | null | undefined): string | n
   return formatMomentTimeCompact(d);
 }
 
+/* -- 3. Columns that hold BOTH kinds ------------------------------------- */
+
+/**
+ * "Sep 19, 2026" — for a column that holds calendar days AND moments.
+ *
+ * Some columns genuinely carry both, and the name does not tell you which:
+ *
+ *  - Event.startsAt is written by a type="date" input, so it lands at midnight
+ *    UTC — but rows created from an imported email carry a real instant. Both
+ *    shapes are live right now: "Girls in Aviation day" is 2026-09-19T00:00:00Z
+ *    and "Utah State University" is 2026-09-24T06:00:00Z (midnight Mountain).
+ *    Reading the first in Mountain shows Sep 18; reading the second in UTC
+ *    shows Sep 24, which is right, so per-value is the only rule that gets
+ *    both.
+ *  - TravelTrip's start falls back requestedArrival ?? orientationDate, and
+ *    those two are stored differently — the same split lib/travel already
+ *    solves with dayKeyOf.
+ *
+ * Prefer formatCalendarDay or formatMomentDate when you KNOW which kind you
+ * have. Reach for these only where the column is genuinely mixed; the caveat
+ * on isStoredCalendarDay applies (a moment landing exactly on UTC midnight
+ * reads as a calendar day).
+ */
+/**
+ * Which timezone this particular value must be read in: UTC for a stored
+ * calendar day, the office zone for a moment.
+ *
+ * For the handful of callers in a mixed column that need an option set the
+ * helpers below do not cover (a weekday, a range that drops the year). Pass it
+ * as timeZone and the rest of the options stay yours. Everywhere else, prefer
+ * the named formatters — a bare Intl.DateTimeFormat with no timeZone at all is
+ * the bug this module exists to stop.
+ */
+export function zoneForValue(value: string | Date | null | undefined): string {
+  return isStoredCalendarDay(value) ? "UTC" : OFFICE_TZ;
+}
+
+export function formatMixedDay(value: string | Date | null | undefined): string {
+  const d = toDate(value);
+  if (!d) return "";
+  return isStoredCalendarDay(d) ? formatCalendarDay(d) : formatMomentDate(d);
+}
+
+/** "Sep 19" — formatMixedDay without the year, for dense rows. */
+export function formatMixedDayShort(value: string | Date | null | undefined): string {
+  const d = toDate(value);
+  if (!d) return "";
+  return isStoredCalendarDay(d) ? formatCalendarDayShort(d) : formatMomentDateShort(d);
+}
+
 /** "09:37" — the 24-hour office-local time, shaped for an <input type="time">. */
 export function officeTimeValue(value: string | Date | null | undefined): string {
   const d = toDate(value);

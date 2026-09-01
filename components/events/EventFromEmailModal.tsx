@@ -6,6 +6,7 @@ import clsx from "clsx";
 import { AlertTriangle, ExternalLink, Inbox, Mail, Plane, Sparkles } from "lucide-react";
 import { Badge, Button, Input, Modal, Textarea } from "@/components/ui";
 import { EVENT_TYPES } from "@/lib/events/constants";
+import { formatMixedDay } from "@/lib/dates/display";
 
 /**
  * Turning an email into a pending event.
@@ -81,9 +82,10 @@ function toDateInput(iso: string | null): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// Event dates are a mixed column — see formatMixedDay. The value here is the
+// date the extractor read out of the email, so it can be either kind.
 function fmtDay(iso: string | null) {
-  if (!iso) return "no date";
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return iso ? formatMixedDay(iso) : "no date";
 }
 
 export function EventFromEmailModal({ open, onClose }: { open: boolean; onClose: () => void }) {

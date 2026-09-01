@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatMomentDateTimeLong } from "@/lib/dates/display";
 
 interface ActivityDashboardWorkspaceProps {
   activityData: {
@@ -133,7 +134,7 @@ export function ActivityDashboardWorkspace({ activityData }: ActivityDashboardWo
                 <div className="mt-1 text-sm font-medium text-brand-lea dark:text-slate-100">{activity.description}</div>
                 <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">
                   {activity.user?.name || activity.userEmail || "Unknown"} •{" "}
-                  {new Date(activity.createdAt).toLocaleString()}
+                  {formatMomentDateTimeLong(activity.createdAt)}
                 </div>
               </div>
             </div>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ClipboardList, ChevronDown, ChevronRight, Check, Clock } from "lucide-react";
 import type { TravelChecklistRollup as Rollup, TripChecklistSummary } from "@/lib/travel/rollup";
+import { formatMixedDayShort } from "@/lib/dates/display";
 
 // Across-all-trips checklist view for the Travel page.
 //
@@ -16,9 +17,12 @@ import type { TravelChecklistRollup as Rollup, TripChecklistSummary } from "@/li
 // pane on the same page, so the expander is a button; the traveller's name and
 // the trip itself are real Links, because those change the whole screen.
 
+// tripStart falls back requestedArrival ?? orientationDate ?? indocStart, and
+// those are NOT stored alike: orientationDate is a calendar day at midnight UTC
+// (3 of 3 live rows), requestedArrival is a real instant (0 of 3 at midnight).
+// formatMixedDayShort picks per value, so neither kind reads a day early.
 function formatDate(iso: string | null): string {
-  if (!iso) return "No dates yet";
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(iso));
+  return iso ? formatMixedDayShort(iso) : "No dates yet";
 }
 
 function TripRow({ trip, defaultOpen }: { trip: TripChecklistSummary; defaultOpen: boolean }) {
