@@ -1,0 +1,11 @@
+Circular merges — 2026-09-01T00:04:31.700Z
+MERGED rows examined: 32
+
+CYCLE  Chari Kroeplin  <->  CHARI KROEPLIN
+   cmq5ncrtn000d04l4dnfkydog  holds 15 records
+   cmqvr4kjb0d1oxcrm7tq0vgoy  holds 0 records
+   SURVIVOR  cmq5ncrtn000d04l4dnfkydog  (Chari Kroeplin)
+      status MERGED -> ACTIVE, archivedAt -> null, mergeHistoryJson -> cleared
+   TOMBSTONE cmqvr4kjb0d1oxcrm7tq0vgoy  (CHARI KROEPLIN)  left as-is
+
+cycles found: 1

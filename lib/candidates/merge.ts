@@ -26,11 +26,33 @@ export async function mergeCandidates(
   try {
     const moved = await prisma.$transaction(async (tx) => {
       const [keep, drop] = await Promise.all([
-        tx.candidate.findUnique({ where: { id: keepId }, select: { id: true } }),
+        tx.candidate.findUnique({ where: { id: keepId }, select: { id: true, displayName: true, status: true } }),
         tx.candidate.findUnique({ where: { id: dropId }, select: { id: true, displayName: true, status: true } })
       ]);
       if (!keep || !drop) throw new Error("One or both candidates not found.");
       if (drop.status === "MERGED") throw new Error("That candidate is already merged.");
+
+      // The KEEP side was never checked, and that is how a person ends up with no
+      // live record at all.
+      //
+      // Merging INTO a tombstone was allowed. Do it twice in opposite directions —
+      // which is exactly what happens when somebody notices a merge went the wrong
+      // way and tries to correct it — and both rows end up MERGED pointing at each
+      // other, with neither surviving. Chari Kroeplin was merged Paycom-into-Jazz
+      // on 2026-06-27, corrected Jazz-into-Paycom on 2026-07-16, and had no live
+      // row from that day on. Nothing surfaced it until merged rows stopped being
+      // listed and she disappeared entirely.
+      //
+      // Refusing is deliberate rather than silently following the chain to its end:
+      // a merged keeper means somebody is working from a stale view of who is real,
+      // and quietly redirecting the merge somewhere they did not choose is how the
+      // wrong records get combined.
+      if (keep.status === "MERGED") {
+        throw new Error(
+          `"${keep.displayName}" has already been merged into another record, so it cannot be the one you keep. ` +
+            `Open it to find the surviving record and merge into that instead, or reactivate it first if it is the real one.`
+        );
+      }
 
       const [contacts, notes, files, applications, interviews] = await Promise.all([
         tx.candidateContact.updateMany({ where: { candidateId: dropId }, data: { candidateId: keepId } }),

@@ -1,0 +1,11 @@
+{
+  "writtenAt": "2026-09-01T00:04:31.703Z",
+  "rows": [
+    {
+      "id": "cmq5ncrtn000d04l4dnfkydog",
+      "status": "MERGED",
+      "archivedAt": "2026-06-27T04:39:06.277Z",
+      "mergeHistoryJson": "{\"mergedIntoCandidateId\":\"cmqvr4kjb0d1oxcrm7tq0vgoy\",\"mergedAt\":\"2026-06-27T04:39:06.277Z\",\"byUserId\":null,\"byEmail\":null}"
+    }
+  ]
+}
