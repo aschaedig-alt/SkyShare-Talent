@@ -9,6 +9,8 @@ type ScanResult = {
   scannedCandidates?: number;
   candidatePairsFound?: number;
   newReviewItems?: number;
+  /** Of the pairs this run detected, how many already had a review item. */
+  alreadyReviewedPairs?: number;
   existingReviewItems?: number;
   /** Open pairs closed because a side had already been merged away. */
   staleResolved?: number;
@@ -20,22 +22,11 @@ type ScanResult = {
   };
 };
 
-function formatResult(result: ScanResult | null) {
-  if (!result) {
-    return null;
-  }
+/** Anchor on the "Already reviewed" panel further down the same page. */
+export const CLOSED_PAIRS_ANCHOR = "already-reviewed-pairs";
 
-  const parts = [
-    `${result.scannedCandidates ?? 0} candidates scanned`,
-    `${result.candidatePairsFound ?? 0} possible pairs`,
-    `${result.newReviewItems ?? 0} new review items`
-  ];
-  // Only mention the cleanup when it actually did something.
-  if (result.staleResolved) {
-    parts.push(`${result.staleResolved} stale pair${result.staleResolved === 1 ? "" : "s"} closed (already merged)`);
-  }
-  parts.push(`${result.durationMs ?? 0}ms`);
-  return parts.join(" - ");
+function plural(n: number, one: string, many: string) {
+  return n === 1 ? one : many;
 }
 
 export function CandidateDuplicateScanCard() {
@@ -68,7 +59,18 @@ export function CandidateDuplicateScanCard() {
     }
   }
 
-  const summary = formatResult(result);
+  // Split "detected" from "actionable" explicitly.
+  //
+  // The old banner said "N possible pairs" straight from candidatePairsFound,
+  // which is EVERY pair the run detected regardless of whether somebody had
+  // already dealt with it. The queue and all four stat tiles filter to OPEN, so
+  // the page showed three numbers that contradicted each other: banner N,
+  // tiles 0, closed-pairs panel 44. Aimee read the banner and reasonably asked
+  // where the three pairs were. Detected = new + already reviewed, and only the
+  // "new" half lands in the queue above.
+  const detected = result?.candidatePairsFound ?? 0;
+  const created = result?.newReviewItems ?? 0;
+  const alreadyReviewed = result?.alreadyReviewedPairs ?? Math.max(detected - created, 0);
 
   return (
     <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
@@ -102,13 +104,35 @@ export function CandidateDuplicateScanCard() {
         </div>
       ) : null}
 
-      {summary ? (
+      {result ? (
         <div
           role="status"
           aria-live="polite"
           className="mt-3 rounded border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 px-3 py-2 text-sm text-emerald-900 dark:text-emerald-300"
         >
-          {summary}
+          <p className="font-semibold">
+            {detected} {plural(detected, "pair", "pairs")} detected — {created} new,{" "}
+            {alreadyReviewed} already reviewed
+          </p>
+          <p className="mt-1 text-xs text-emerald-800 dark:text-emerald-300/80">
+            {created > 0
+              ? `The ${created} new ${plural(created, "pair is", "pairs are")} in the review queue below. `
+              : "Nothing new to review — every pair found was already merged or dismissed. "}
+            {alreadyReviewed > 0 ? (
+              <a
+                href={`#${CLOSED_PAIRS_ANCHOR}`}
+                className="font-semibold underline underline-offset-2 transition hover:text-emerald-950 dark:hover:text-emerald-200"
+              >
+                See the {alreadyReviewed} already reviewed
+              </a>
+            ) : null}
+          </p>
+          <p className="mt-1 text-xs text-emerald-800/80 dark:text-emerald-300/70">
+            {result.scannedCandidates ?? 0} candidates scanned in {result.durationMs ?? 0}ms
+            {result.staleResolved
+              ? ` — ${result.staleResolved} stale ${plural(result.staleResolved, "pair", "pairs")} closed (a side was already merged)`
+              : ""}
+          </p>
         </div>
       ) : null}
 

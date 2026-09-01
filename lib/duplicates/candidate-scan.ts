@@ -234,6 +234,16 @@ export async function scanCandidateDuplicates() {
     scannedCandidates: candidates.length,
     candidatePairsFound: pairs.size,
     newReviewItems: newPairs.length,
+    /**
+     * Of the pairs THIS run detected, how many already had a review item.
+     *
+     * Deliberately not existingReviewItems below, which counts every pair key
+     * ever recorded — including ones this scan no longer detects. The banner
+     * needs the two numbers to add up to candidatePairsFound, or it is back to
+     * reporting a total nothing on the page accounts for, which is the exact
+     * complaint this is fixing.
+     */
+    alreadyReviewedPairs: pairs.size - newPairs.length,
     existingReviewItems: existingPairKeys.size,
     /** Open pairs that could never merge (a side was already merged/deleted). */
     staleResolved: staleIds.length,

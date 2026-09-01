@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiPermission, authFailureResponse } from "@/lib/auth/route-auth";
 import { candidateScopeWhere } from "@/lib/auth/candidate-scope";
 import { normalizeEmail, normalizeName, normalizePhone, splitCandidateName } from "@/lib/candidates/normalize";
+import { isMergedAway, resolveMergedAway } from "@/lib/candidates/merged-guard";
 
 type CreateBody = {
   firstName?: string;
@@ -109,7 +110,11 @@ export async function POST(request: Request) {
     const tags = parseTags(body.tags);
 
     // Reuse an existing candidate if the email or phone already matches, to avoid duplicates.
-    const existing =
+    // NOTE the deliberate absence of a status filter: a merged-away tombstone keeps
+    // the email and phone of the person it was, so it MATCHES here. That is handled
+    // immediately below rather than by narrowing this query, because skipping the
+    // tombstone would just create a third row for the same person.
+    const matched =
       normalizedEmail || normalizedPhone
         ? await prisma.candidate.findFirst({
             where: {
@@ -120,6 +125,34 @@ export async function POST(request: Request) {
             }
           })
         : null;
+
+    // THE GUARD, mirroring POST /api/candidate-applications (~77-78).
+    //
+    // Without it this route reproduced the original bug exactly: it matched a
+    // merged-away row by email, then wrote { archivedAt: null, status: "ACTIVE" }
+    // below and put an empty duplicate of a real person back into the live pool
+    // — and the duplicate scan then reported a pair nobody could action.
+    //
+    // Redirecting beats refusing where we can: the caller wanted this person on a
+    // job, and the surviving record IS this person, holding the files and history
+    // the tombstone was emptied of. We only refuse when the keeper cannot be found.
+    let redirect: { fromId: string; message: string } | null = null;
+    let existing = matched;
+    if (matched && isMergedAway(matched)) {
+      const resolution = await resolveMergedAway(matched);
+      if (!resolution.merged || !resolution.keeper) {
+        return NextResponse.json(
+          { message: resolution.merged ? resolution.message : "Unable to create candidate." },
+          { status: 409 }
+        );
+      }
+      const keeper = await prisma.candidate.findUnique({ where: { id: resolution.keeper.id } });
+      if (!keeper) {
+        return NextResponse.json({ message: resolution.message }, { status: 409 });
+      }
+      existing = keeper;
+      redirect = { fromId: matched.id, message: resolution.message };
+    }
 
     const candidate =
       existing ??
@@ -189,7 +222,11 @@ export async function POST(request: Request) {
           },
           select: { id: true }
         });
-        if (!employedHire) {
+        // Belt and braces. `existing` cannot be a tombstone by this point — the
+        // guard above either redirected to the keeper or returned 409 — but this
+        // is the line that actually does the resurrecting, so it states its own
+        // precondition rather than trusting a check forty lines away.
+        if (!employedHire && !isMergedAway(existing)) {
           await prisma.candidate.update({
             where: { id: candidate.id },
             data: { archivedAt: null, status: "ACTIVE" }
@@ -199,7 +236,15 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ candidate: { id: candidate.id, displayName: candidate.displayName }, reused: Boolean(existing), reactivated });
+    return NextResponse.json({
+      candidate: { id: candidate.id, displayName: candidate.displayName },
+      reused: Boolean(existing),
+      reactivated,
+      // Tell the caller when we did not act on the record they matched, so a
+      // silent substitution is visible rather than surprising.
+      redirectedFromMergedCandidateId: redirect?.fromId ?? null,
+      ...(redirect ? { message: redirect.message } : {})
+    });
   } catch {
     return NextResponse.json({ message: "Unable to create candidate." }, { status: 500 });
   }

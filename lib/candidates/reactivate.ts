@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { isMergedAway } from "@/lib/candidates/merged-guard";
 
 /**
  * Bring an archived candidate back as a current applicant.
@@ -45,11 +46,14 @@ export async function reactivateArchivedCandidate(
 ): Promise<ReactivationResult> {
   const candidate = await prisma.candidate.findUnique({
     where: { id: candidateId },
-    select: { id: true, status: true, stage: true, archivedAt: true, displayName: true }
+    select: { id: true, status: true, stage: true, archivedAt: true, displayName: true, mergeHistoryJson: true }
   });
 
   // Not archived, gone, or merged — nothing to do, and merged must stay merged.
-  if (!candidate || candidate.status === "MERGED") return { reactivated: false };
+  // Through the shared guard rather than testing status alone: this used to check
+  // one column while two sibling paths checked the other, and "equivalent today"
+  // is how a divergence ships unnoticed. See lib/candidates/merged-guard.ts.
+  if (!candidate || isMergedAway(candidate)) return { reactivated: false };
   if (!candidate.archivedAt && candidate.status !== "ARCHIVED") return { reactivated: false };
 
   const previousStage = candidate.stage;

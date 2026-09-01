@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
+import { isMergedAway } from "@/lib/candidates/merged-guard";
 
 type LinkBody = {
   candidateId?: string;
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
     // candidate pipeline (e.g. Matt Dahle, an active PC-12 Captain).
     const candidate = await prisma.candidate.findUnique({
       where: { id: body.candidateId },
-      select: { archivedAt: true, mergeHistoryJson: true }
+      select: { archivedAt: true, status: true, mergeHistoryJson: true }
     });
     const employedHire = candidate?.archivedAt
       ? await prisma.newHire.findFirst({
@@ -76,7 +77,10 @@ export async function POST(request: Request) {
     //
     // A merged row is never the right one to reactivate. If the person genuinely
     // needs considering again, that belongs on the KEEPER.
-    const mergedAway = Boolean(candidate?.mergeHistoryJson);
+    // Via the shared guard rather than testing mergeHistoryJson directly: three
+    // paths used to write this check against two different columns. See
+    // lib/candidates/merged-guard.ts.
+    const mergedAway = isMergedAway(candidate);
     const reactivated = Boolean(candidate?.archivedAt) && !employedHire && !mergedAway;
     if (reactivated) {
       await prisma.candidate.update({
