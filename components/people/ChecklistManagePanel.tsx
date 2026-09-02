@@ -548,13 +548,21 @@ function TaskEmailSetup({
 }: {
   task: GridTaskDef;
   busy: boolean;
-  onSave: (payload: { templateId: string; templateName: string; audience: string; cc: string; greeting: boolean }) => void;
+  onSave: (payload: {
+    templateId: string;
+    templateName: string;
+    audience: string;
+    to: string;
+    cc: string;
+    greeting: boolean;
+  }) => void;
   onClear: () => void;
 }) {
   const [templates, setTemplates] = useState<FrontTemplateSummary[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [templateId, setTemplateId] = useState(task.email?.templateId ?? "");
-  const [audience, setAudience] = useState(task.email?.audience ?? "personal");
+  const [audience, setAudience] = useState<string>(task.email?.audience ?? "personal");
+  const [to, setTo] = useState((task.email?.to ?? []).join(", "));
   const [cc, setCc] = useState((task.email?.cc ?? ["hrotasks@skyshare.com"]).join(", "));
   const [greeting, setGreeting] = useState(task.email?.greeting ?? true);
 
@@ -621,13 +629,39 @@ function TaskEmailSetup({
           Send to
           <select
             value={audience}
-            onChange={(e) => setAudience(e.target.value as "personal" | "company")}
+            onChange={(e) => {
+              const next = e.target.value;
+              setAudience(next);
+              // A template addressed to somebody OTHER than the hire is almost
+              // never one that should open "Hi <the hire's first name>," — that is
+              // the whole reason this option exists. Turned off on the switch
+              // rather than forced, so it can still be turned back on.
+              if (next === "custom") setGreeting(false);
+            }}
             className="mt-1 block w-full rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-sm font-normal text-brand-black dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
           >
-            <option value="personal">Personal email (falls back to SkyShare)</option>
-            <option value="company">SkyShare email (falls back to personal)</option>
+            <option value="personal">Their personal email (falls back to SkyShare)</option>
+            <option value="company">Their SkyShare email (falls back to personal)</option>
+            <option value="custom">Addresses I type in below</option>
           </select>
         </label>
+
+        {audience === "custom" ? (
+          <label className="block text-xs font-semibold text-brand-grey dark:text-slate-400 sm:col-span-2">
+            To
+            <input
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              placeholder="its@skyshare.com, someone.else@skyshare.com"
+              className="mt-1 block w-full rounded border border-brand-lea/15 px-2 py-1.5 text-sm font-normal dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
+            />
+            <span className="mt-1 block font-normal text-brand-grey dark:text-slate-400">
+              The same addresses for every hire &mdash; for a step that emails someone else <i>about</i> the new hire
+              rather than emailing the new hire. This list never falls back to their address, so a step set up this way
+              can never reach them by accident.
+            </span>
+          </label>
+        ) : null}
 
         <label className="block text-xs font-semibold text-brand-grey dark:text-slate-400 sm:col-span-2">
           Cc
@@ -640,9 +674,23 @@ function TaskEmailSetup({
         </label>
       </div>
 
-      <label className="mt-2 flex items-center gap-2 text-xs text-brand-black dark:text-slate-200">
-        <input type="checkbox" checked={greeting} onChange={(e) => setGreeting(e.target.checked)} className="h-3.5 w-3.5" />
-        Start the email with &ldquo;Hi &lt;first name&gt;,&rdquo; &mdash; turn this off if the template already greets them.
+      <label className="mt-2 flex items-start gap-2 text-xs text-brand-black dark:text-slate-200">
+        <input
+          type="checkbox"
+          checked={greeting}
+          onChange={(e) => setGreeting(e.target.checked)}
+          className="mt-0.5 h-3.5 w-3.5"
+        />
+        <span>
+          Start the email with &ldquo;Hi &lt;first name&gt;,&rdquo; &mdash; turn this off if the template already greets
+          them.
+          {audience === "custom" ? (
+            <b className="block font-semibold text-brand-gold">
+              The name is the NEW HIRE&apos;s, not the recipient&apos;s &mdash; so on a step that emails somebody else,
+              this greets the wrong person.
+            </b>
+          ) : null}
+        </span>
       </label>
 
       {chosen?.subject ? (
@@ -653,8 +701,10 @@ function TaskEmailSetup({
 
       <div className="mt-3 flex flex-wrap gap-2">
         <button
-          onClick={() => onSave({ templateId, templateName: chosen?.name ?? task.email?.templateName ?? "", audience, cc, greeting })}
-          disabled={busy || !templateId}
+          onClick={() =>
+            onSave({ templateId, templateName: chosen?.name ?? task.email?.templateName ?? "", audience, to, cc, greeting })
+          }
+          disabled={busy || !templateId || (audience === "custom" && !to.trim())}
           className="rounded bg-brand-lea px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-eden disabled:opacity-50 dark:bg-brand-sweet dark:text-brand-lea"
         >
           Save email settings

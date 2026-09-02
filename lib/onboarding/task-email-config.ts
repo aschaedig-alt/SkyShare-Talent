@@ -23,13 +23,21 @@ const KEY = "onboarding-task-emails";
  *
  *   personal  personal email, falling back to the SkyShare one
  *   company   SkyShare email, falling back to the personal one
+ *   custom    addresses typed in by hand, the same for every hire
  *
- * Both fall back, and the preview always says which of the two it actually
+ * The first two fall back, and the preview always says which of them it actually
  * resolved to, because the right answer depends on WHEN in the checklist the task
  * sits: before "Create a Company Gmail" there is no company address to send to,
  * and after it there usually is.
+ *
+ * CUSTOM EXISTS BECAUSE SOME STEPS DO NOT EMAIL THE HIRE AT ALL (asked for
+ * 2026-09-02). "2. PRD Request to ITS" is addressed to IT, not the pilot, so with
+ * only the two options above the mail would have gone to the wrong person - the
+ * one thing worse than not being able to send it. A custom list never falls back:
+ * an internal address that is wrong should fail loudly, not quietly reroute to a
+ * new hire.
  */
-export type TaskEmailAudience = "personal" | "company";
+export type TaskEmailAudience = "personal" | "company" | "custom";
 
 export type TaskEmailConfig = {
   /** Front message template id (rsp_...). */
@@ -38,6 +46,9 @@ export type TaskEmailConfig = {
    *  round trip, and so a template deleted in Front still says what it WAS. */
   templateName: string;
   audience: TaskEmailAudience;
+  /** Only read when audience is "custom" - the addresses she typed in. Kept on
+   *  the config when she switches away, so flipping back does not lose them. */
+  to: string[];
   cc: string[];
   /** Prepend "Hi <first name>," in the template's own font. Off for templates
    *  that already open with their own greeting. */
@@ -49,6 +60,10 @@ export type TaskEmailMap = Record<string, TaskEmailConfig>;
 /** Tasks whose send is hand-built and must not be re-wired from here. */
 export const EXCLUDED_TASK_KEYS = new Set(["onboarding_journey", "contacts_link_sent"]);
 
+function parseAudience(v: unknown): TaskEmailAudience {
+  return v === "company" ? "company" : v === "custom" ? "custom" : "personal";
+}
+
 function parseConfig(v: unknown): TaskEmailConfig | null {
   if (!v || typeof v !== "object") return null;
   const o = v as Record<string, unknown>;
@@ -56,7 +71,8 @@ function parseConfig(v: unknown): TaskEmailConfig | null {
   return {
     templateId: o.templateId,
     templateName: typeof o.templateName === "string" ? o.templateName : o.templateId,
-    audience: o.audience === "company" ? "company" : "personal",
+    audience: parseAudience(o.audience),
+    to: parseAddressList(Array.isArray(o.to) ? o.to.filter((x): x is string => typeof x === "string") : []),
     cc: Array.isArray(o.cc) ? o.cc.filter((x): x is string => typeof x === "string") : [],
     greeting: o.greeting !== false
   };
@@ -97,10 +113,16 @@ async function writeMap(map: TaskEmailMap): Promise<void> {
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Turn what was typed into the cc box into addresses. Anything that is not an
- *  address is dropped rather than sent, because a malformed cc is rejected by
- *  Front at send time — which would fail the whole send for a typo in a cc. */
-export function parseCcList(input: string | string[]): string[] {
+/** Turn what was typed into a recipient box into addresses. Anything that is not
+ *  an address is dropped rather than sent, because a malformed recipient is
+ *  rejected by Front at send time — which would fail the whole send for one typo.
+ *
+ *  Used for BOTH the cc list and the custom To list. Dropping silently is the
+ *  right answer for a cc and the wrong one for a To, where losing the only
+ *  address would leave nothing to send to — so setTaskEmail checks the To list is
+ *  non-empty AFTER this runs and refuses to save otherwise, which turns a typo
+ *  into an error at setup time rather than a surprise at send time. */
+export function parseAddressList(input: string | string[]): string[] {
   const parts = Array.isArray(input) ? input : input.split(/[,;\s]+/);
   const seen = new Set<string>();
   const out: string[] = [];
@@ -118,12 +140,21 @@ export async function setTaskEmail(taskKey: string, config: Omit<TaskEmailConfig
     throw new Error("That task already sends its own email and is wired up in code.");
   }
   if (!config.templateId.trim()) throw new Error("Choose a Front template.");
+  const audience = parseAudience(config.audience);
+  const to = parseAddressList(config.to ?? []);
+  // Refused rather than saved empty: a custom send has no fallback by design, so
+  // saving it with nothing in the To box would produce a Send button that can only
+  // ever fail, and it would fail in front of whoever pressed it rather than here.
+  if (audience === "custom" && to.length === 0) {
+    throw new Error("Type at least one email address to send to, or choose the hire personal or SkyShare address instead.");
+  }
   const map = await getTaskEmailMap();
   map[taskKey] = {
     templateId: config.templateId.trim(),
     templateName: (config.templateName ?? config.templateId).trim(),
-    audience: config.audience === "company" ? "company" : "personal",
-    cc: parseCcList(config.cc),
+    audience,
+    to,
+    cc: parseAddressList(config.cc),
     greeting: config.greeting !== false
   };
   await writeMap(map);

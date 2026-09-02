@@ -49,10 +49,13 @@ export function cleanEditedBody(html: string): string {
 export type TaskEmailPreview = {
   taskKey: string;
   taskLabel: string;
-  to: string;
-  /** Which field the address came from, so the confirm dialog can say so. */
-  toSource: "personal" | "company";
-  /** True when the address she picked was empty and the other one was used. */
+  /** A LIST, because a custom audience can name several. The two hire-address
+   *  cases always resolve to exactly one. */
+  to: string[];
+  /** Which field the addresses came from, so the confirm dialog can say so. */
+  toSource: "personal" | "company" | "custom";
+  /** True when the address she picked was empty and the other one was used.
+   *  Never true for a custom list, which does not fall back. */
   fellBack: boolean;
   cc: string[];
   firstName: string;
@@ -75,14 +78,25 @@ export type HireForTaskEmail = {
   ssEmail: string | null;
 };
 
-function resolveRecipient(hire: HireForTaskEmail, audience: TaskEmailConfig["audience"]) {
+function resolveRecipient(hire: HireForTaskEmail, cfg: TaskEmailConfig) {
+  // A CUSTOM LIST IS NOT ABOUT THE HIRE AT ALL, so it neither reads their fields
+  // nor falls back to them. The step it exists for ("2. PRD Request to ITS") is
+  // addressed to IT; falling back to the pilot on an empty list would send an
+  // internal request about somebody to that same somebody.
+  if (cfg.audience === "custom") {
+    const to = cfg.to.filter((a) => a.trim());
+    if (!to.length) {
+      throw new Error("This task is set to send to addresses you type in, but none are saved. Add them in Manage tasks.");
+    }
+    return { to, toSource: "custom" as const, fellBack: false };
+  }
   const personal = hire.personalEmail?.trim() ?? "";
   const company = hire.ssEmail?.trim() ?? "";
-  const first = audience === "company" ? company : personal;
-  const second = audience === "company" ? personal : company;
-  if (first) return { to: first, toSource: audience, fellBack: false };
+  const first = cfg.audience === "company" ? company : personal;
+  const second = cfg.audience === "company" ? personal : company;
+  if (first) return { to: [first], toSource: cfg.audience, fellBack: false };
   if (second) {
-    return { to: second, toSource: audience === "company" ? ("personal" as const) : ("company" as const), fellBack: true };
+    return { to: [second], toSource: cfg.audience === "company" ? ("personal" as const) : ("company" as const), fellBack: true };
   }
   throw new Error(`${hire.name} has no personal or SkyShare email on file — add one before sending.`);
 }
@@ -109,7 +123,7 @@ export async function buildTaskEmail(
     throw new Error("This task is not set up to send an email. Turn it on in Manage tasks first.");
   }
 
-  const { to, toSource, fellBack } = resolveRecipient(hire, cfg.audience);
+  const { to, toSource, fellBack } = resolveRecipient(hire, cfg);
   const tpl = await fetchTemplate(cfg.templateId, cfg.templateName);
 
   const { firstName } = splitCandidateName(hire.name);
@@ -148,6 +162,8 @@ export type TaskSendRecord = {
   conversationId?: string;
   messageId?: string;
   sentAt: string;
+  /** Comma-joined when there is more than one, so a record written before custom
+      recipients existed still reads exactly the same way. */
   to: string;
   sentBy?: string | null;
   /** Which send-guard mode was in force, so a redirected test send is not later

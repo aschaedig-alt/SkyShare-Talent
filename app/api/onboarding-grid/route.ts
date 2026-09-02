@@ -6,7 +6,7 @@ import {
   renameGroup,
   saveChecklistArrangement
 } from "@/lib/data/onboarding-grid-config";
-import { setTaskEmail, clearTaskEmail, parseCcList } from "@/lib/onboarding/task-email-config";
+import { setTaskEmail, clearTaskEmail, parseAddressList } from "@/lib/onboarding/task-email-config";
 
 // PATCH /api/onboarding-grid — rename or hide a built-in checklist task, or rename
 // a group heading, from the Grid's Manage mode. Custom (added) tasks go through
@@ -122,6 +122,7 @@ export async function POST(request: Request) {
     templateId?: unknown;
     templateName?: unknown;
     audience?: unknown;
+    to?: unknown;
     cc?: unknown;
     greeting?: unknown;
   };
@@ -138,8 +139,12 @@ export async function POST(request: Request) {
     await setTaskEmail(body.key, {
       templateId: body.templateId,
       templateName: typeof body.templateName === "string" ? body.templateName : undefined,
-      audience: body.audience === "company" ? "company" : "personal",
-      cc: parseCcList(typeof body.cc === "string" ? body.cc : Array.isArray(body.cc) ? (body.cc as string[]) : []),
+      audience: body.audience === "company" ? "company" : body.audience === "custom" ? "custom" : "personal",
+      // Left unvalidated here on purpose: setTaskEmail parses it and REFUSES an
+      // empty custom list, so the 400 carries a sentence she can act on rather
+      // than this route quietly coercing a typo into "no recipients".
+      to: parseAddressList(typeof body.to === "string" ? body.to : Array.isArray(body.to) ? (body.to as string[]) : []),
+      cc: parseAddressList(typeof body.cc === "string" ? body.cc : Array.isArray(body.cc) ? (body.cc as string[]) : []),
       greeting: body.greeting !== false
     });
     return NextResponse.json({ ok: true });

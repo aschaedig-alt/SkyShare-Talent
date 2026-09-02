@@ -152,9 +152,15 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
             <dl className="mt-3 grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm">
               <dt className="font-semibold text-brand-grey dark:text-slate-400">To</dt>
               <dd className="text-brand-black dark:text-slate-100">
-                {p.to}{" "}
+                {p.to.join(", ")}{" "}
                 <span className="text-xs text-brand-grey dark:text-slate-400">
-                  ({p.toSource === "personal" ? "personal email" : "SkyShare email"})
+                  (
+                  {p.toSource === "personal"
+                    ? "their personal email"
+                    : p.toSource === "company"
+                      ? "their SkyShare email"
+                      : "set for this step, not read from their record"}
+                  )
                 </span>
               </dd>
               <dt className="font-semibold text-brand-grey dark:text-slate-400">Cc</dt>
@@ -178,7 +184,11 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
                 Cancel
               </Button>
               <Button onClick={confirmSend} disabled={sending}>
-                {sending ? "Sending…" : body === null ? `Send to ${p.to}` : `Send edited copy to ${p.to}`}
+                {sending
+                  ? "Sending…"
+                  : `Send ${body === null ? "" : "edited copy "}to ${
+                      p.to.length === 1 ? p.to[0] : `${p.to.length} recipients`
+                    }`}
               </Button>
             </div>
           </>

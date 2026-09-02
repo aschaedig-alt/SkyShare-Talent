@@ -381,6 +381,12 @@ export async function sendTaskEmail(
   // send still succeeds — so without asking, this would record the hire's real
   // address and tick the task for a message they never received.
   const guard = guardDecision({ to: email.to, cc: email.cc, subject: email.subject });
+  // Front takes the array; everything that READS a recipient afterwards — the send
+  // record, SendResult.to, the dialog's confirmation line — has always held a
+  // single string, and widening all three for a case that is one address almost
+  // every time buys nothing. So the array goes to Front and this goes everywhere
+  // else.
+  const toLabel = email.to.join(", ");
 
   // STEP 2 — the irreversible one, alone in its own try. Nothing else may share
   // it: a failure in the bookkeeping below must never be reported as "Send
@@ -406,7 +412,7 @@ export async function sendTaskEmail(
 
   if (guard.mode !== "production") {
     warnings.push(
-      `This is not the production environment, so the message was ${guard.mode === "redirected" ? "redirected to the test inbox" : `handled as "${guard.mode}"`} rather than delivered to ${email.to}.`
+      `This is not the production environment, so the message was ${guard.mode === "redirected" ? "redirected to the test inbox" : `handled as "${guard.mode}"`} rather than delivered to ${toLabel}.`
     );
   }
 
@@ -415,7 +421,7 @@ export async function sendTaskEmail(
       conversationId: sent.conversationId,
       messageId: sent.id,
       sentAt,
-      to: email.to,
+      to: toLabel,
       sentBy: await actorLabel(),
       mode: guard.mode,
       edited: email.edited,
@@ -448,7 +454,7 @@ export async function sendTaskEmail(
     ok: true,
     conversationId: sent.conversationId,
     sentAt,
-    to: email.to,
+    to: toLabel,
     warnings: warnings.length ? warnings : undefined,
   };
 }
