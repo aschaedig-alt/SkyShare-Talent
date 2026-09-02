@@ -15,6 +15,8 @@ import { NewHireBottomTabs, type BottomTab } from "@/components/people/NewHireBo
 import { BusinessCardPanel } from "@/components/people/BusinessCardPanel";
 import { SendOnboardingEmailButton } from "@/components/people/SendOnboardingEmailButton";
 import { SendContactsEmailButton } from "@/components/people/SendContactsEmailButton";
+import { SendTaskEmailButton } from "@/components/people/SendTaskEmailButton";
+import type { ChecklistSection } from "@/lib/data/onboarding-grid-config";
 import { SupervisorPicker } from "@/components/people/SupervisorPicker";
 import { StartNewOnboardingButton } from "@/components/people/StartNewOnboardingButton";
 import { OnboardingHistoryPanel } from "@/components/people/OnboardingHistoryPanel";
@@ -42,6 +44,13 @@ type Props = {
   /** This person's own business-card orders. Empty for most new hires. */
   cardOrders: CardOrderView[];
   roleTitleOptions: string[];
+  /** Checklist sections in their saved order, with their saved names. */
+  sections: ChecklistSection[];
+  /** Task keys she has pointed at a Front template in Manage tasks. Each one gets
+   *  a Send button on its checklist row. Just the keys: the template, the
+   *  recipient and the cc list are resolved server-side at send time, so a change
+   *  made in Manage tasks applies to the very next send without a reload. */
+  emailTaskKeys: string[];
   canEdit: boolean;
 };
 
@@ -49,7 +58,7 @@ function toDateInput(iso: string | null) {
   return iso ? iso.slice(0, 10) : "";
 }
 
-export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journey, onboardingArchives, cardOrders, roleTitleOptions, canEdit }: Props) {
+export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journey, onboardingArchives, cardOrders, roleTitleOptions, sections, emailTaskKeys, canEdit }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskView[]>(hire.tasks);
   const [details, setDetails] = useState({
@@ -274,6 +283,8 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
       </div>
     );
   }
+
+  const emailKeys = useMemo(() => new Set(emailTaskKeys), [emailTaskKeys]);
 
   // Indoc as the TRAVEL record has it. The trip is where it is authored, so it is
   // the default answer; the hire's own indoc columns only exist to disagree with it.
@@ -507,6 +518,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
           canEdit={canEdit}
           onSetStatus={setTaskStatus}
           onTaskAdded={(t) => setTasks((cur) => [...cur, t])}
+          sections={sections}
           renderTaskExtra={(t) =>
             t.key === "onboarding_journey" ? (
               <SendOnboardingEmailButton
@@ -523,6 +535,18 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
                 taskStatus={t.status}
                 canEdit={canEdit}
                 onSent={() => setTasks((cur) => cur.map((x) => (x.key === "contacts_link_sent" ? { ...x, status: "DONE" } : x)))}
+              />
+            ) : emailKeys.has(t.key) ? (
+              // Any task she pointed at a Front template in Manage tasks. The two
+              // above keep their own buttons because each does more than fill a
+              // template — see lib/front/task-email.ts.
+              <SendTaskEmailButton
+                hireId={hire.id}
+                taskKey={t.key}
+                taskLabel={t.label}
+                taskStatus={t.status}
+                canEdit={canEdit}
+                onSent={() => setTasks((cur) => cur.map((x) => (x.key === t.key ? { ...x, status: "DONE" } : x)))}
               />
             ) : null
           }

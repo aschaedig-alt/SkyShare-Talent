@@ -4,8 +4,9 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { Plus } from "lucide-react";
-import { ONBOARDING_GROUPS, groupLabel, CUSTOM_GROUP } from "@/lib/onboarding/tasks";
+import { CUSTOM_GROUP, MAINTENANCE_GROUP } from "@/lib/onboarding/tasks";
 import type { TaskView } from "@/lib/data/onboarding";
+import type { ChecklistSection } from "@/lib/data/onboarding-grid-config";
 import { OfferControl } from "@/components/candidates/OfferControl";
 import type { OfferApplicationView } from "@/lib/offers/steps";
 
@@ -36,7 +37,16 @@ type Props = {
   canEdit: boolean;
   onSetStatus: (taskId: string, next: TaskView["status"]) => void;
   onTaskAdded: (task: TaskView) => void;
-  /** The two Front send buttons, supplied by the page so this file stays layout-only. */
+  /**
+   * The checklist SECTIONS, in order, with their display names — read from the
+   * same stored layout the grid's Manage tasks panel edits.
+   *
+   * This used to come straight from ONBOARDING_GROUPS and groupLabel() in code,
+   * which meant a section renamed on the grid still read by its built-in name
+   * here, and a section reordered there did not move here at all. One source now.
+   */
+  sections: ChecklistSection[];
+  /** The Front send buttons, supplied by the page so this file stays layout-only. */
   renderTaskExtra?: (task: TaskView) => ReactNode;
 };
 
@@ -48,6 +58,7 @@ export function OnboardingChecklist({
   canEdit,
   onSetStatus,
   onTaskAdded,
+  sections,
   renderTaskExtra
 }: Props) {
   const router = useRouter();
@@ -59,10 +70,23 @@ export function OnboardingChecklist({
 
   const groups = useMemo(() => {
     const of = (key: string) => tasks.filter((t) => t.group === key).sort((a, b) => a.order - b.order);
-    const base = ONBOARDING_GROUPS.map((g) => ({ key: g.key, label: groupLabel(g.key), items: of(g.key) }));
-    const custom = of(CUSTOM_GROUP);
-    return custom.length ? [...base, { key: CUSTOM_GROUP, label: "Additional milestones", items: custom }] : base;
-  }, [tasks]);
+    // Any task filed under a section this build does not know about would other-
+    // wise be invisible. It is swept into Custom rather than dropped, because a
+    // checklist item you cannot see is one nobody does.
+    //
+    // MAINTENANCE is not an orphan and must not be swept in: the 30/60/90 and
+    // benefits check-ins belong to the post-onboard page and have never rendered
+    // on this tab. It is excluded by name for exactly that reason.
+    const known = new Set(sections.map((s) => s.key));
+    const orphans = tasks
+      .filter((t) => !known.has(t.group) && t.group !== MAINTENANCE_GROUP)
+      .sort((a, b) => a.order - b.order);
+    return sections.map((s) => ({
+      key: s.key,
+      label: s.label,
+      items: s.key === CUSTOM_GROUP ? [...of(s.key), ...orphans] : of(s.key)
+    }));
+  }, [tasks, sections]);
 
   const applicable = tasks.filter((t) => t.status !== "NA");
   const doneCount = applicable.filter((t) => t.status === "DONE").length;

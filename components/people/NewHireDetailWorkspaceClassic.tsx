@@ -23,7 +23,8 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { clsx } from "clsx";
 import { FileText } from "lucide-react";
-import { ONBOARDING_GROUPS, groupLabel } from "@/lib/onboarding/tasks";
+import { MAINTENANCE_GROUP } from "@/lib/onboarding/tasks";
+import type { ChecklistSection } from "@/lib/data/onboarding-grid-config";
 import { OfferControl } from "@/components/candidates/OfferControl";
 import type { NewHireDetail, TaskView } from "@/lib/data/onboarding";
 import { TravelPanel } from "@/components/travel/TravelPanel";
@@ -32,6 +33,7 @@ import { EmployeeJourney } from "@/components/people/EmployeeJourney";
 import { BusinessCardPanel } from "@/components/people/BusinessCardPanel";
 import { SendOnboardingEmailButton } from "@/components/people/SendOnboardingEmailButton";
 import { SendContactsEmailButton } from "@/components/people/SendContactsEmailButton";
+import { SendTaskEmailButton } from "@/components/people/SendTaskEmailButton";
 import { SupervisorPicker } from "@/components/people/SupervisorPicker";
 import { StartNewOnboardingButton } from "@/components/people/StartNewOnboardingButton";
 import { OnboardingHistoryPanel } from "@/components/people/OnboardingHistoryPanel";
@@ -56,6 +58,12 @@ type Props = {
   /** Previous trips through onboarding — a rehire or a department move has one or more. */
   onboardingArchives: ArchivedRoundView[];
   roleTitleOptions: string[];
+  /** Checklist sections in their saved order and with their saved names, so this
+   *  parked layout cannot show a different checklist from the live one while it
+   *  is being compared against it. */
+  sections: ChecklistSection[];
+  /** Task keys pointed at a Front template in Manage tasks. */
+  emailTaskKeys: string[];
   canEdit: boolean;
 };
 
@@ -69,7 +77,7 @@ const STATUS_BTN: Record<TaskView["status"], { label: string; on: string }> = {
   NA: { label: "N/A", on: "bg-brand-grey text-white" }
 };
 
-export function NewHireDetailWorkspaceClassic({ hire, travelTrips, travelLoyalty, journey, onboardingArchives, roleTitleOptions, canEdit }: Props) {
+export function NewHireDetailWorkspaceClassic({ hire, travelTrips, travelLoyalty, journey, onboardingArchives, roleTitleOptions, sections, emailTaskKeys, canEdit }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskView[]>(hire.tasks);
   const [details, setDetails] = useState({
@@ -154,9 +162,10 @@ export function NewHireDetailWorkspaceClassic({ hire, travelTrips, travelLoyalty
   const doneCount = applicable.filter((t) => t.status === "DONE").length;
   const pct = applicable.length > 0 ? Math.round((doneCount / applicable.length) * 100) : 0;
 
+  const emailKeys = useMemo(() => new Set(emailTaskKeys), [emailTaskKeys]);
   const grouped = useMemo(
-    () => ONBOARDING_GROUPS.map((g) => ({ group: g, items: tasks.filter((t) => t.group === g.key).sort((a, b) => a.order - b.order) })),
-    [tasks]
+    () => sections.map((g) => ({ group: g, items: tasks.filter((t) => t.group === g.key && t.group !== MAINTENANCE_GROUP).sort((a, b) => a.order - b.order) })),
+    [tasks, sections]
   );
 
   async function setTaskStatus(taskId: string, next: TaskView["status"]) {
@@ -577,7 +586,7 @@ export function NewHireDetailWorkspaceClassic({ hire, travelTrips, travelLoyalty
           <div className="mt-3 space-y-5">
             {grouped.map(({ group, items }) => (
               <div key={group.key}>
-                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-gold">{groupLabel(group.key)}</div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-gold">{group.label}</div>
                 <div className="mt-2 space-y-1.5">
                   {items.map((t) => (
                     <div key={t.id} className="flex items-center justify-between gap-3 rounded border border-brand-lea/10 px-3 py-2 dark:border-white/10">
@@ -599,6 +608,16 @@ export function NewHireDetailWorkspaceClassic({ hire, travelTrips, travelLoyalty
                             taskStatus={t.status}
                             canEdit={canEdit}
                             onSent={() => setTasks((cur) => cur.map((x) => (x.key === "contacts_link_sent" ? { ...x, status: "DONE" } : x)))}
+                          />
+                        )}
+                        {!["onboarding_journey", "contacts_link_sent"].includes(t.key) && emailKeys.has(t.key) && (
+                          <SendTaskEmailButton
+                            hireId={hire.id}
+                            taskKey={t.key}
+                            taskLabel={t.label}
+                            taskStatus={t.status}
+                            canEdit={canEdit}
+                            onSent={() => setTasks((cur) => cur.map((x) => (x.key === t.key ? { ...x, status: "DONE" } : x)))}
                           />
                         )}
                         <div className="flex shrink-0 overflow-hidden rounded border border-brand-lea/15 dark:border-white/10">
