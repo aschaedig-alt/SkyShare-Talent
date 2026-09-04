@@ -8,6 +8,7 @@ import { JobClassificationEditor } from "@/components/recruiting-jobs/JobClassif
 import { JobListsPanel } from "@/components/recruiting-jobs/JobListsPanel";
 import { EditableGrid, type EditablePanel, type GridItem } from "@/components/shared/EditableGrid";
 import { AddCandidateToJob } from "@/components/recruiting-jobs/AddCandidateToJob";
+import { BatchAddCandidatesToJob } from "@/components/recruiting-jobs/BatchAddCandidatesToJob";
 import { NewJobButton } from "@/components/recruiting-jobs/NewJobButton";
 import { PaycomReqField } from "@/components/recruiting-jobs/PaycomReqField";
 import { JobActiveToggle } from "@/components/recruiting-jobs/JobActiveToggle";
@@ -169,6 +170,7 @@ function LinkedCandidates({ job }: { job: RecruitingJobDetail }) {
           <ResumeIntake jobId={job.id} jobTitle={job.title} />
           <DocumentIntake jobId={job.id} />
           <AddCandidateToJob jobId={job.id} jobTitle={job.title} />
+          <BatchAddCandidatesToJob jobId={job.id} jobTitle={job.title} />
         </div>
       </div>
       <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">
