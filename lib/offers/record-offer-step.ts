@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { recordOfferStatus } from "@/lib/offers/record-offer-status";
 import { syncOfferStepToOnboarding } from "@/lib/offers/onboarding-sync";
-import type { OfferStatus } from "@/lib/offers/constants";
+import { isOfferClosed, type OfferStatus } from "@/lib/offers/constants";
 import {
   deriveOfferStatus,
   parseOfferSteps,
@@ -50,14 +50,18 @@ export async function recordOfferStep(
 
   // Keep the linked hire's onboarding OFFER task in step (no-op if not moved in
   // yet). Done for every offer-step write, whatever the resulting status — so this
-  // runs before the DECLINED short-circuit below.
+  // runs before the closed-offer short-circuit below.
   await syncOfferStepToOnboarding(app.candidateId, key, done, at);
 
-  // A decline is something THEY did — it is not derivable from our steps, and it
-  // must not be silently undone by someone tidying up a checkbox afterwards.
-  // Leaving DECLINED is an explicit choice, made with the status control.
-  if (app.offerStatus === "DECLINED") {
-    return { ok: true, steps, status: "DECLINED" };
+  // A closed offer stays closed until somebody says otherwise. Neither ending is
+  // derivable from our steps — a decline is something THEY did, and "not sent" is
+  // the absence of a step rather than the presence of one — so neither may be
+  // silently undone by someone tidying up a checkbox afterwards. That tidying is
+  // exactly what happens to a dead offer: people go back and tick what really did
+  // occur (the verbal, the draft) for the record, and it must not resurrect the
+  // offer. Re-opening one is an explicit choice, made with the status control.
+  if (isOfferClosed(app.offerStatus)) {
+    return { ok: true, steps, status: app.offerStatus };
   }
 
   // An offer you have already opened should not silently vanish to "no offer"
@@ -65,7 +69,7 @@ export async function recordOfferStep(
   // offer exists, clearing every step floors it at PLANNED, not NONE. Going all
   // the way back to NONE is the explicit "No offer" choice on the status control.
   let status: OfferStatus = deriveOfferStatus(steps);
-  if (status === "NONE" && app.offerStatus !== "NONE" && app.offerStatus !== "DECLINED") {
+  if (status === "NONE" && app.offerStatus !== "NONE" && !isOfferClosed(app.offerStatus)) {
     status = "PLANNED";
   }
   const result = await recordOfferStatus(applicationId, {

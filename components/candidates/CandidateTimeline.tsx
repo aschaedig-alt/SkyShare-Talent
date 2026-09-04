@@ -2,6 +2,7 @@
 
 import { clsx } from "clsx";
 import type { CandidateProfileData } from "@/lib/data/candidates";
+import { offerStatusLabel } from "@/lib/offers/constants";
 import { formatMomentDate } from "@/lib/dates/display";
 
 type CandidateTimelineProps = {
@@ -12,9 +13,24 @@ function formatDate(value: string) {
   return formatMomentDate(value);
 }
 
+// An OFFER timeline entry is titled "<status label> — <job>" by
+// recordOfferStatus, so the label is what tells the two endings apart here.
+// Read from the constants rather than typed out, so re-wording a status cannot
+// silently turn a dead offer gold again.
+const DECLINED_TITLE = offerStatusLabel("DECLINED");
+const NOT_SENT_TITLE = offerStatusLabel("NOT_SENT");
+
 // Dot color by lifecycle type — gold for positive milestones, red for rejection,
 // navy for the rest. Keeps the chronology scannable at a glance.
-function dotClass(type: string) {
+//
+// An OFFER event is gold EXCEPT for the two that ended it: a dead offer glowing
+// gold reads as good news at a glance, which is the opposite of true. Red keeps
+// meaning the candidate said no; grey means it stopped on our side. That
+// distinction is the whole reason the not-sent state exists, so the timeline —
+// where somebody reads this history a year later — has to keep it.
+function dotClass(type: string, title: string) {
+  if (type === "OFFER" && title.startsWith(NOT_SENT_TITLE)) return "bg-slate-400";
+  if (type === "OFFER" && title.startsWith(DECLINED_TITLE)) return "bg-red-500";
   if (type === "HIRED" || type === "OFFER") return "bg-brand-gold";
   if (type === "REJECTED") return "bg-red-500";
   return "bg-brand-eden";
@@ -52,12 +68,16 @@ export function CandidateTimeline({ events }: CandidateTimelineProps) {
               <span
                 className={clsx(
                   "absolute -left-[1.55rem] top-1 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-brand-panel",
-                  dotClass(event.type)
+                  dotClass(event.type, event.title)
                 )}
               />
               <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                 <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">
-                  {TYPE_LABEL[event.type] ?? event.type}
+                  {/* "Offer" alone, on the row that says the offer was never
+                      sent, is the one place this reads as a contradiction. */}
+                  {event.type === "OFFER" && event.title.startsWith(NOT_SENT_TITLE)
+                    ? "Offer stopped"
+                    : (TYPE_LABEL[event.type] ?? event.type)}
                 </span>
                 <span className="text-xs text-brand-grey dark:text-slate-400">{formatDate(event.occurredAt)}</span>
               </div>

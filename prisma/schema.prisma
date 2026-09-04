@@ -1238,10 +1238,10 @@ model CandidateApplication {
 
   // ---- Offer -------------------------------------------------------------
   // An offer is made for a specific job, so it lives on the application rather
-  // than as a parallel record. NONE | PLANNED | SENT | SIGNED | DECLINED —
-  // deliberately mutually exclusive (no VERBAL: an offer can be sent AND agreed
-  // verbally at the same time, so as a state it would fight SENT; record that as
-  // a note or a date instead).
+  // than as a parallel record. NONE | PLANNED | STARTED | SENT | SIGNED |
+  // DECLINED | NOT_SENT — deliberately mutually exclusive (no VERBAL: an offer
+  // can be sent AND agreed verbally at the same time, so as a state it would
+  // fight SENT; record that as a note or a date instead).
   //
   // NO PAY AMOUNT LIVES HERE, ON PURPOSE. Paycom owns compensation; this tracks
   // the workflow only.
@@ -1255,6 +1255,14 @@ model CandidateApplication {
   offerSignedAt        DateTime?
   offerDeclinedAt      DateTime?
   offerDeclineReason   String?
+  // The offer died on OUR side and was never sent — the President did not
+  // approve it, the seat was pulled, the req was cancelled. Kept apart from the
+  // decline fields on purpose: "declined" is the CANDIDATE's answer, and somebody
+  // who never received an offer has not given one. Conflating the two puts a
+  // rejection on the record of a person who did nothing wrong, which is exactly
+  // the kind of thing a later recruiter reads and believes.
+  offerNotSentAt       DateTime?
+  offerNotSentReason   String?
   // The start date named on the offer, when there is one. Prefills the new
   // hire's start date on the move into onboarding.
   offerStartDate       DateTime?

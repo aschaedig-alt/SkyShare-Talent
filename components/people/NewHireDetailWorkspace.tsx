@@ -116,8 +116,15 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
   const [termOpen, setTermOpen] = useState(false);
   const [termDate, setTermDate] = useState("");
   const [busyEmp, setBusyEmp] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [busyCancel, setBusyCancel] = useState(false);
 
   const terminated = hire.employmentStatus === "TERMINATED";
+  // They never started. Different from a former employee in the way that matters
+  // most here: a former employee WAS one, so their history is employment history.
+  // This person's offer fell through before day one, so counting them as staff —
+  // in headcount, in the card queue, as a pickable supervisor — is simply wrong.
+  const canceled = hire.canceled;
   // Someone with an archived round has been through onboarding before — the live
   // checklist is round N+1, and the newest archive says why it was started.
   const currentRound = onboardingArchives.length + 1;
@@ -139,6 +146,39 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
       setStatus("Could not update employment status.");
     } finally {
       setBusyEmp(false);
+    }
+  }
+
+  /**
+   * The offer fell through, or it did not.
+   *
+   * NewHire.canceled has been read by the app for a long time — the employees
+   * directory, the business-card queue, the supervisor picker and the dateless-
+   * hires callout all filter on it, each with a comment describing this exact
+   * case — but nothing could ever SET it. So a hire whose offer died stayed
+   * employmentStatus ACTIVE forever and kept showing up as staff.
+   *
+   * Deliberately a single boolean and nothing else. It is tempting to also clear
+   * the dates or the card status here, but those are the record of what was
+   * planned, and every list that matters already keys off this one flag — so
+   * setting it is enough, and it stays reversible in one click.
+   */
+  async function setCanceled(next: boolean) {
+    setBusyCancel(true);
+    setStatus(null);
+    try {
+      const res = await fetch(`/api/new-hires/${hire.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ canceled: next })
+      });
+      if (!res.ok) throw new Error();
+      setCancelOpen(false);
+      router.refresh();
+    } catch {
+      setStatus(next ? "Could not mark the offer as fallen through." : "Could not bring them back.");
+    } finally {
+      setBusyCancel(false);
     }
   }
 
@@ -645,6 +685,11 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
             {hire.position ?? "Position not set"}
             {hire.department ? ` · ${hire.department}` : ""}
           </p>
+          {canceled ? (
+            <span className="mt-2 inline-flex items-center gap-1.5 rounded bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:bg-slate-500/20 dark:text-slate-300">
+              Offer fell through — never started
+            </span>
+          ) : null}
           {terminated ? (
             <span className="mt-2 inline-flex items-center gap-1.5 rounded bg-brand-grey/15 px-2.5 py-0.5 text-xs font-semibold text-brand-grey dark:bg-white/10 dark:text-slate-300">
               Former employee{hire.terminationDate ? ` · left ${fmtDay(hire.terminationDate)}` : ""}
@@ -706,6 +751,34 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
               <button onClick={openTerminate} disabled={busyEmp} className="rounded border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-500/40 dark:text-red-300 dark:hover:bg-red-500/10">
                 Mark as former employee
               </button>
+              {/* Kept apart from "former employee", which is for somebody who
+                  actually worked here. Someone whose offer died before day one
+                  is not a leaver, and filing them as one writes a job they never
+                  had into their history.
+
+                  canEdit-gated, unlike its neighbours in this row — they predate
+                  the check and show for everyone, which is a separate thing to
+                  tidy. A new control should not copy that. */}
+              {!canEdit ? null : canceled ? (
+                <button
+                  onClick={() => void setCanceled(false)}
+                  disabled={busyCancel}
+                  className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/5"
+                >
+                  {busyCancel ? "Saving…" : "They are coming after all"}
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setStatus(null);
+                    setCancelOpen(true);
+                  }}
+                  disabled={busyCancel}
+                  className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 disabled:opacity-60 dark:border-white/10 dark:text-slate-400 dark:hover:bg-white/5"
+                >
+                  Offer fell through
+                </button>
+              )}
             </>
           )}
         </div>
@@ -726,6 +799,37 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
           <Button variant="secondary" onClick={() => setTermOpen(false)} disabled={busyEmp}>Cancel</Button>
           <Button variant="danger" onClick={() => setEmployment("TERMINATED", termDate)} disabled={busyEmp || !termDate}>
             {busyEmp ? "Saving…" : "Mark as former"}
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} busy={busyCancel}>
+        <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Offer fell through</h2>
+        <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
+          For someone who was going to join and now is not — the offer was never sent, it was withdrawn, or they
+          backed out before their first day. Not the same as “Mark as former employee,” which is for someone who
+          actually worked here.
+        </p>
+        <p className="mt-3 text-sm font-semibold text-brand-lea dark:text-slate-100">
+          {hire.name} comes off:
+        </p>
+        <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-brand-grey dark:text-slate-400">
+          <li>the employees directory and headcount</li>
+          <li>the business-card queue</li>
+          <li>the list of people who can be picked as a supervisor</li>
+          <li>the “no start date” callout on the onboarding dashboard</li>
+        </ul>
+        <p className="mt-3 text-sm text-brand-grey dark:text-slate-400">
+          Their record, checklist and history all stay exactly as they are, marked{" "}
+          <span className="font-semibold text-brand-lea dark:text-slate-100">Canceled</span> — so if the seat reopens
+          you still have everything. Reversible any time with “They are coming after all.”
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setCancelOpen(false)} disabled={busyCancel}>
+            Cancel
+          </Button>
+          <Button onClick={() => void setCanceled(true)} disabled={busyCancel}>
+            {busyCancel ? "Saving…" : "Yes, it fell through"}
           </Button>
         </div>
       </Modal>

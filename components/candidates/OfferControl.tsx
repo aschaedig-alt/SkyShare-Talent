@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileSignature, Check } from "lucide-react";
+import { FileSignature, Check, Ban } from "lucide-react";
 import { clsx } from "clsx";
 import { OFFER_STATUSES, offerStatusLabel } from "@/lib/offers/constants";
-import { OFFER_STEPS, type OfferApplicationView } from "@/lib/offers/steps";
+import { OFFER_STEPS, lastOfferStepDone, type OfferApplicationView } from "@/lib/offers/steps";
 import { formatMomentDate, formatCalendarDay } from "@/lib/dates/display";
 
 // The candidate profile passes its full application object (a superset); the
@@ -30,7 +30,23 @@ const CHIP: Record<string, string> = {
   STARTED: "bg-brand-eden/20 text-brand-eden dark:bg-brand-sweet/20 dark:text-slate-100",
   SENT: "bg-brand-gold/25 text-brand-lea dark:text-slate-100",
   SIGNED: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
-  DECLINED: "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300"
+  DECLINED: "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300",
+  // Deliberately NOT red. Red is the candidate saying no; this is our own
+  // approval stopping, and the person it is attached to did nothing wrong.
+  NOT_SENT: "bg-slate-200 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300"
+};
+
+// The two endings that want a "why", and the wording each one asks for. The
+// question is genuinely different: one asks about them, one asks about us.
+const REASON_PROMPT: Record<string, { placeholder: string; suggestions: string[] }> = {
+  DECLINED: {
+    placeholder: "Why did they decline? (optional)",
+    suggestions: ["Took another offer", "Pay", "Schedule or base", "Stayed with current employer"]
+  },
+  NOT_SENT: {
+    placeholder: "Why was it never sent? (optional)",
+    suggestions: ["President did not approve", "Supervisor did not approve", "Position was pulled", "Put on hold"]
+  }
 };
 
 /**
@@ -43,8 +59,10 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [reason, setReason] = useState(application.offerDeclineReason ?? "");
-  const [askReason, setAskReason] = useState(false);
+  const [reason, setReason] = useState(application.offerDeclineReason ?? application.offerNotSentReason ?? "");
+  // Which ending we are asking about: "DECLINED", "NOT_SENT", or null for "not
+  // asking". It used to be a boolean, which could only ever mean declined.
+  const [askReason, setAskReason] = useState<string | null>(null);
   // Start date is asked for at the moment of signing, the one time it is actually
   // known. recordOfferStatus and the API have always accepted it; nothing ever
   // sent it, which is why "prefill the start date from the signed offer" on the
@@ -60,7 +78,13 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
   const doneCount = OFFER_STEPS.filter((s) => steps[s.key]).length;
   // Once an offer is in flight the steps are the story, so show them. Before that
   // they stay tucked away — most applications will never become an offer.
+  //
+  // A DECLINED offer hides them: it ran its course and the ending was theirs. A
+  // NOT_SENT one keeps them OPEN, because there the ticks ARE the record — how
+  // far the offer actually got before it stopped, which is the one thing a
+  // reader needs later and cannot reconstruct from the status alone.
   const stepsOpen = showSteps || (status !== "NONE" && status !== "DECLINED");
+  const stalledAt = status === "NOT_SENT" ? lastOfferStepDone(steps) : null;
 
   async function toggleStep(key: string, done: boolean) {
     // Optimistic: tick it now, put it back if the server disagrees.
@@ -106,7 +130,7 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
       });
       const data = (await res.json().catch(() => ({}))) as { message?: string };
       if (!res.ok) throw new Error(data.message || "Could not update the offer.");
-      setAskReason(false);
+      setAskReason(null);
       setAskStart(false);
       router.refresh();
     } catch (e) {
@@ -120,6 +144,7 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
     application.offerSentAt ? `sent ${fmtMoment(application.offerSentAt)}` : null,
     application.offerSignedAt ? `signed ${fmtMoment(application.offerSignedAt)}` : null,
     application.offerDeclinedAt ? `declined ${fmtMoment(application.offerDeclinedAt)}` : null,
+    application.offerNotSentAt ? `stopped ${fmtMoment(application.offerNotSentAt)}` : null,
     application.offerStartDate ? `starts ${fmtDay(application.offerStartDate)}` : null
   ].filter(Boolean);
 
@@ -153,7 +178,10 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
             disabled={busy}
             onChange={(e) => {
               const next = e.target.value;
-              if (next === "DECLINED") setAskReason(true);
+              // Both endings ask for a why before they are recorded. An offer
+              // that simply stops, with nothing saying why, is precisely what
+              // nobody can reconstruct six months later.
+              if (next === "DECLINED" || next === "NOT_SENT") setAskReason(next);
               // Signing is the handoff to onboarding, and the start date is the
               // one thing onboarding needs that only the offer knows.
               else if (next === "SIGNED") setAskStart(true);
@@ -228,6 +256,26 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
         </p>
       )}
 
+      {/* Says the quiet part out loud: they did not turn us down. Worth the two
+          lines, because a bare closed status reads as "did not work out", and
+          this is often someone to go straight back to when the seat reopens. */}
+      {status === "NOT_SENT" && (
+        <div className="mt-1.5 rounded border border-slate-300/70 bg-slate-100 px-2 py-1.5 dark:border-white/10 dark:bg-white/5">
+          <p className="flex items-start gap-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+            <Ban className="mt-px h-3 w-3 shrink-0" />
+            <span>
+              Never sent — the candidate did not decline.
+              {stalledAt ? ` Got as far as "${stalledAt.label}".` : null}
+            </span>
+          </p>
+          {application.offerNotSentReason ? (
+            <p className="mt-0.5 pl-[1.125rem] text-[11px] text-brand-grey dark:text-slate-400">
+              {application.offerNotSentReason}
+            </p>
+          ) : null}
+        </div>
+      )}
+
       {dates.length > 0 && (
         <p className="mt-1 text-[11px] text-brand-grey dark:text-slate-400">{dates.join(" · ")}</p>
       )}
@@ -278,27 +326,48 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
       )}
 
       {askReason && (
-        <div className="mt-2 flex flex-wrap gap-2">
-          <input
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Why did they decline? (optional)"
-            className="flex-1 rounded border border-brand-lea/20 px-2 py-1 text-xs outline-none focus:border-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
-          />
-          <button
-            onClick={() => void set("DECLINED", { reason })}
-            disabled={busy}
-            className="rounded bg-brand-lea px-3 py-1 text-xs font-semibold text-white transition hover:bg-brand-eden disabled:opacity-50"
-          >
-            Save
-          </button>
-          <button
-            onClick={() => setAskReason(false)}
-            disabled={busy}
-            className="rounded px-2 py-1 text-xs font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/40 disabled:opacity-50 dark:text-slate-400"
-          >
-            Cancel
-          </button>
+        <div className="mt-2 space-y-1.5">
+          <div className="flex flex-wrap gap-2">
+            <input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder={REASON_PROMPT[askReason]?.placeholder ?? "Why? (optional)"}
+              className="min-w-[12rem] flex-1 rounded border border-brand-lea/20 px-2 py-1 text-xs outline-none focus:border-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+            />
+            <button
+              onClick={() => void set(askReason, { reason })}
+              disabled={busy}
+              className="rounded bg-brand-lea px-3 py-1 text-xs font-semibold text-white transition hover:bg-brand-eden disabled:opacity-50"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => setAskReason(null)}
+              disabled={busy}
+              className="rounded px-2 py-1 text-xs font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/40 disabled:opacity-50 dark:text-slate-400"
+            >
+              Cancel
+            </button>
+          </div>
+          {/* A reason is only useful if it is written the same way twice — one
+              click beats four people typing four spellings of the same thing. */}
+          <div className="flex flex-wrap gap-1">
+            {(REASON_PROMPT[askReason]?.suggestions ?? []).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setReason(s)}
+                className={clsx(
+                  "rounded border px-1.5 py-0.5 text-[10px] font-semibold transition",
+                  reason === s
+                    ? "border-brand-lea bg-brand-lea text-white dark:border-brand-gold dark:bg-brand-gold dark:text-brand-black"
+                    : "border-brand-lea/20 text-brand-grey hover:shadow-glow dark:border-white/15 dark:text-slate-400"
+                )}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>

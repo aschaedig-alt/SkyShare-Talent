@@ -1,13 +1,18 @@
 import { z } from "zod";
+import { interviewTypes } from "@/lib/calendar/interview-types";
+
+// Built from the one list rather than typed out again. The literal union that
+// used to live here was the third copy of the same seven strings, and it is the
+// copy that would have rejected a new stage with a 400 while the dropdown
+// happily offered it.
+const interviewTypeEnum = z.enum(interviewTypes);
 
 export const interviewCreateSchema = z
   .object({
     candidateId: z.string().min(1, "Candidate is required."),
     jobId: z.string().optional().nullable(),
     title: z.string().trim().min(2, "Title is required."),
-    interviewType: z
-      .enum(["RECRUITER_SCREEN", "HIRING_MANAGER", "TECHNICAL", "PANEL", "FINAL", "OFFER", "OTHER"])
-      .default("RECRUITER_SCREEN"),
+    interviewType: interviewTypeEnum.default("RECRUITER_SCREEN"),
     startDateTime: z.string().min(1, "Start date and time are required."),
     durationMinutes: z.coerce.number().int().min(15).max(480).default(60),
     timezone: z.string().trim().optional().nullable(),
@@ -52,9 +57,7 @@ export const interviewUpdateSchema = z
   .object({
     jobId: z.string().optional().nullable(),
     title: z.string().trim().min(2, "Title is required.").optional(),
-    interviewType: z
-      .enum(["RECRUITER_SCREEN", "HIRING_MANAGER", "TECHNICAL", "PANEL", "FINAL", "OFFER", "OTHER"])
-      .optional(),
+    interviewType: interviewTypeEnum.optional(),
     startDateTime: z.string().min(1).optional(),
     durationMinutes: z.coerce.number().int().min(15).max(480).optional(),
     timezone: z.string().trim().optional().nullable(),

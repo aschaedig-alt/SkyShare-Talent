@@ -10,7 +10,10 @@ import { OFFER_STEP_KEYS, type OfferStepKey } from "@/lib/offers/steps";
 
 // Best-known ordering of an offer's progress, used to pick which application
 // carries the offer when a candidate has more than one.
-const STATUS_RANK: Record<string, number> = { SIGNED: 5, SENT: 4, STARTED: 3, PLANNED: 2, DECLINED: 1, NONE: 0 };
+// DECLINED and NOT_SENT share the bottom rung above NONE: both are offers that
+// ended, so neither should outrank one still in play, but both still beat an
+// application that never had an offer at all.
+const STATUS_RANK: Record<string, number> = { SIGNED: 5, SENT: 4, STARTED: 3, PLANNED: 2, DECLINED: 1, NOT_SENT: 1, NONE: 0 };
 
 /**
  * The application that represents this candidate's offer — the furthest-along one

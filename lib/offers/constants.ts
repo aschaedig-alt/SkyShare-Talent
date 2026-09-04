@@ -2,9 +2,10 @@
 // convention), with this as the source of truth.
 //
 // Deliberately NO "verbal" state: an offer can be sent AND agreed verbally at the
-// same moment, so as a status it would fight SENT. These four are mutually
-// exclusive, which is what a status has to be. Record a verbal yes as a note or
-// use the signed date once it is real.
+// same moment, so as a status it would fight SENT. These are mutually exclusive,
+// which is what a status has to be. Record a verbal yes with the "Verbal offer"
+// STEP (lib/offers/steps.ts) — which is also what makes NOT_SENT legible: verbal
+// ticked, letter never sent.
 
 export const OFFER_STATUSES = [
   { value: "NONE", label: "No offer" },
@@ -12,8 +13,29 @@ export const OFFER_STATUSES = [
   { value: "STARTED", label: "Offer started" },
   { value: "SENT", label: "Offer sent" },
   { value: "SIGNED", label: "Offer signed" },
-  { value: "DECLINED", label: "Offer declined" }
+  { value: "DECLINED", label: "Offer declined" },
+  { value: "NOT_SENT", label: "Offer not sent" }
 ] as const;
+
+/**
+ * The two ways an offer ends without a hire, and they are NOT the same thing.
+ *
+ * DECLINED is the candidate's answer: we sent it, they said no.
+ * NOT_SENT is ours: the offer was worked — sometimes as far as a verbal yes —
+ * and then never went out, because the President did not approve it, the seat
+ * was pulled, or the req was cancelled. The candidate did nothing; in most cases
+ * they never even knew there was a letter to receive.
+ *
+ * They are split because the record outlives the memory of it. Filing a
+ * non-approval under "declined" writes a rejection onto somebody who never
+ * rejected us, and the next recruiter who opens that profile has no way to tell.
+ * It also loses the only fact worth keeping for OUR side: the offer stalled
+ * internally, at a step we can name.
+ */
+export const isOfferDeclinedByCandidate = (v: string | null | undefined) => v === "DECLINED";
+export const isOfferStoppedInternally = (v: string | null | undefined) => v === "NOT_SENT";
+/** Ended without a hire, either way — for "is this offer still live?" checks. */
+export const isOfferClosed = (v: string | null | undefined) => v === "DECLINED" || v === "NOT_SENT";
 
 // Where a transition came from. MANUAL is someone ticking it in the app; FRONT is
 // an inbound Paycom notification arriving through Front; PAYCOM is a direct feed.

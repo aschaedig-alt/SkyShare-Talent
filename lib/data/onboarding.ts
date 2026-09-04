@@ -734,6 +734,8 @@ async function loadHireOffer(candidateId: string | null | undefined): Promise<Of
       offerSignedAt: true,
       offerDeclinedAt: true,
       offerDeclineReason: true,
+      offerNotSentAt: true,
+      offerNotSentReason: true,
       offerStartDate: true,
       offerSource: true
     }
@@ -747,6 +749,8 @@ async function loadHireOffer(candidateId: string | null | undefined): Promise<Of
     offerSignedAt: app.offerSignedAt?.toISOString() ?? null,
     offerDeclinedAt: app.offerDeclinedAt?.toISOString() ?? null,
     offerDeclineReason: app.offerDeclineReason,
+    offerNotSentAt: app.offerNotSentAt?.toISOString() ?? null,
+    offerNotSentReason: app.offerNotSentReason,
     offerStartDate: app.offerStartDate?.toISOString() ?? null,
     offerSource: app.offerSource
   };

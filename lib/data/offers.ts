@@ -13,6 +13,9 @@ export type OfferRow = {
   signedAt: string | null;
   declinedAt: string | null;
   declineReason: string | null;
+  /** Stopped on our side, never sent — NOT the same as declined. */
+  notSentAt: string | null;
+  notSentReason: string | null;
   startDate: string | null;
   source: string | null;
   /** Set once they have been moved into onboarding. */
@@ -21,7 +24,7 @@ export type OfferRow = {
 
 export type OffersBoard = {
   rows: OfferRow[];
-  counts: { planned: number; started: number; sent: number; signed: number; declined: number };
+  counts: { planned: number; started: number; sent: number; signed: number; declined: number; notSent: number };
   /** Signed but not yet moved into onboarding — the list that actually needs doing. */
   awaitingOnboarding: number;
 };
@@ -31,7 +34,8 @@ const iso = (d: Date | null) => (d ? d.toISOString() : null);
 // Outstanding work first: an offer that is out is the one you are waiting on,
 // and a signed offer that has not been onboarded is the one you are late on.
 // Started/planned are still in your court, so they sit below the sent/signed ones.
-const ORDER: Record<string, number> = { SENT: 0, SIGNED: 1, STARTED: 2, PLANNED: 3, DECLINED: 4 };
+// Offers that ended sort last — they are the record, not the work.
+const ORDER: Record<string, number> = { SENT: 0, SIGNED: 1, STARTED: 2, PLANNED: 3, DECLINED: 4, NOT_SENT: 5 };
 
 // viewer is REQUIRED. Offers ride on the CANDIDATES module (see app/offers/page.tsx),
 // which is precisely the module a hand-picked hiring manager has switched ON - so this
@@ -53,6 +57,8 @@ export async function getOffersBoard(viewer: CandidateAccessScope | null): Promi
       offerSignedAt: true,
       offerDeclinedAt: true,
       offerDeclineReason: true,
+      offerNotSentAt: true,
+      offerNotSentReason: true,
       offerStartDate: true,
       offerSource: true,
       candidateId: true,
@@ -84,6 +90,8 @@ export async function getOffersBoard(viewer: CandidateAccessScope | null): Promi
       signedAt: iso(a.offerSignedAt),
       declinedAt: iso(a.offerDeclinedAt),
       declineReason: a.offerDeclineReason,
+      notSentAt: iso(a.offerNotSentAt),
+      notSentReason: a.offerNotSentReason,
       startDate: iso(a.offerStartDate),
       source: a.offerSource,
       hireId: hireByCandidate.get(a.candidateId) ?? null
@@ -102,7 +110,8 @@ export async function getOffersBoard(viewer: CandidateAccessScope | null): Promi
     started: rows.filter((r) => r.status === "STARTED").length,
     sent: rows.filter((r) => r.status === "SENT").length,
     signed: rows.filter((r) => r.status === "SIGNED").length,
-    declined: rows.filter((r) => r.status === "DECLINED").length
+    declined: rows.filter((r) => r.status === "DECLINED").length,
+    notSent: rows.filter((r) => r.status === "NOT_SENT").length
   };
 
   return {

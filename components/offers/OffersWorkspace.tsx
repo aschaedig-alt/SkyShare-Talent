@@ -18,10 +18,12 @@ const CHIP: Record<string, string> = {
   STARTED: "bg-brand-eden/20 text-brand-eden dark:bg-brand-sweet/20 dark:text-slate-100",
   SENT: "bg-brand-gold/25 text-brand-lea dark:text-slate-100",
   SIGNED: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
-  DECLINED: "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300"
+  DECLINED: "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300",
+  // Not red: this ending was ours, not theirs. See lib/offers/constants.ts.
+  NOT_SENT: "bg-slate-200 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300"
 };
 
-type Filter = "ALL" | "PLANNED" | "STARTED" | "SENT" | "SIGNED" | "DECLINED";
+type Filter = "ALL" | "PLANNED" | "STARTED" | "SENT" | "SIGNED" | "DECLINED" | "NOT_SENT";
 
 function OfferCard({ row }: { row: OfferRow }) {
   // A signed offer with nobody onboarding them is the thing that falls through
@@ -31,6 +33,7 @@ function OfferCard({ row }: { row: OfferRow }) {
     row.sentAt ? `sent ${fmtMoment(row.sentAt)}` : null,
     row.signedAt ? `signed ${fmtMoment(row.signedAt)}` : null,
     row.declinedAt ? `declined ${fmtMoment(row.declinedAt)}` : null,
+    row.notSentAt ? `stopped ${fmtMoment(row.notSentAt)}` : null,
     row.startDate ? `starts ${fmtDay(row.startDate)}` : null
   ].filter(Boolean);
 
@@ -70,6 +73,13 @@ function OfferCard({ row }: { row: OfferRow }) {
           )}
           {row.declineReason && row.status === "DECLINED" ? (
             <div className="mt-0.5 text-[11px] text-brand-grey dark:text-slate-400">Reason: {row.declineReason}</div>
+          ) : null}
+          {/* Spelled out rather than left to the chip: on a board of offers, a
+              closed one gets read as a rejection unless it says otherwise. */}
+          {row.status === "NOT_SENT" ? (
+            <div className="mt-0.5 text-[11px] text-brand-grey dark:text-slate-400">
+              Never sent — not declined{row.notSentReason ? `. ${row.notSentReason}` : ""}
+            </div>
           ) : null}
         </div>
 
@@ -125,7 +135,8 @@ export function OffersWorkspace({ board }: { board: OffersBoard }) {
     { key: "SIGNED", label: "Signed", count: board.counts.signed },
     { key: "STARTED", label: "Started", count: board.counts.started },
     { key: "PLANNED", label: "Planned", count: board.counts.planned },
-    { key: "DECLINED", label: "Declined", count: board.counts.declined }
+    { key: "DECLINED", label: "Declined", count: board.counts.declined },
+    { key: "NOT_SENT", label: "Not sent", count: board.counts.notSent }
   ];
 
   return (

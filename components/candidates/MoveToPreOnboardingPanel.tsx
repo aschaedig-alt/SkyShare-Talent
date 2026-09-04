@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserPlus, CheckCircle2, Link2 } from "lucide-react";
+import { isOfferClosed } from "@/lib/offers/constants";
 import type { CandidateProfileData } from "@/lib/data/candidates";
 
 type Props = {
@@ -264,6 +265,15 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
   // application at STARTED, the letter going out lands it at SENT.
   const offerSent = !hired && candidate.applications.some((a) => a.offerStatus === "SENT");
   const offerUnderway = !hired && candidate.applications.some((a) => a.offerStatus === "STARTED" || a.offerStatus === "SENT");
+  // Every offer they have has ended — they declined, or it was never sent. The
+  // eyebrow below falls through to "Offer under way" otherwise, which on a dead
+  // offer is simply untrue, and it is the line that decides whether somebody
+  // moves this person onto the onboarding board.
+  const offerClosed =
+    !hired &&
+    !offerUnderway &&
+    candidate.applications.some((a) => isOfferClosed(a.offerStatus)) &&
+    !candidate.applications.some((a) => a.offerStatus === "SIGNED");
   // Prominent = there's an offer in flight (signed, hired, or under way).
   const prominent = hired || offerUnderway;
 
@@ -273,11 +283,15 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
       ? "Hired — ready to onboard"
       : offerSent
         ? "Offer out — move them in now"
-        : "Offer under way — move them in now";
+        : offerClosed
+          ? "That offer ended — check before moving them in"
+          : "Offer under way — move them in now";
   const lead =
     hired
       ? `Move ${candidate.displayName} into onboarding to start their checklist.`
-      : `Move ${candidate.displayName} onto the onboarding board now — you don't have to wait for the signature. The offer keeps going right there.`;
+      : offerClosed
+        ? `${candidate.displayName}'s offer is closed — see the Offers tab for what happened. You can still move them in, but only if that offer has been re-opened.`
+        : `Move ${candidate.displayName} onto the onboarding board now — you don't have to wait for the signature. The offer keeps going right there.`;
 
   return (
     <section

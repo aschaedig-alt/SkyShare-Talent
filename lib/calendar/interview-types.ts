@@ -1,17 +1,25 @@
 /**
- * Interview stages/types with visual color mapping.
- * Each type maps to:
+ * Interview stages/types with visual color mapping. Each type maps to:
  *  - an in-app color (Tailwind classes)
  *  - a Google Calendar colorId (1-11) so the stage is visually distinct in Google too
  *
  * Google Calendar event colorIds:
  *  1 Lavender, 2 Sage, 3 Grape, 4 Flamingo, 5 Banana,
  *  6 Tangerine, 7 Peacock, 8 Graphite, 9 Blueberry, 10 Basil, 11 Tomato
+ *
+ * THIS IS THE ONLY LIST. lib/interviews/constants.ts re-exports it for the
+ * write-up form, and lib/validation/interview.ts builds its zod enum from it, so
+ * a stage added here is immediately selectable, savable and valid everywhere.
+ * Those used to be separate hand-written copies and they drifted: the write-up
+ * one was missing TECHNICAL and OFFER entirely, so an interview scheduled as
+ * Technical on the calendar could not be saved as Technical from the profile —
+ * the PATCH route validated against the short list and silently dropped it.
  */
 
 export const interviewTypes = [
   "RECRUITER_SCREEN",
   "HIRING_MANAGER",
+  "SIM_EVAL",
   "TECHNICAL",
   "PANEL",
   "FINAL",
@@ -53,9 +61,24 @@ export const INTERVIEW_TYPE_META: Record<InterviewType, InterviewTypeMeta> = {
     dot: "bg-purple-500",
     accent: "border-l-purple-500"
   },
+  // The sim ride, split out of TECHNICAL — which used to be labelled
+  // "Technical / Sim" and so had to stand for both. They are different events
+  // run by different people on different days, and a pilot pipeline lives or
+  // dies on the sim, so it gets to be its own stage rather than a footnote in
+  // someone else's label. Rows already stored as TECHNICAL are untouched and
+  // still valid; this only adds a type alongside them.
+  SIM_EVAL: {
+    value: "SIM_EVAL",
+    label: "SIM Eval",
+    shortLabel: "SIM",
+    googleColorId: "4", // Flamingo (pink) — the most distinct colorId left
+    chip: "bg-pink-500 text-white hover:bg-pink-600",
+    dot: "bg-pink-500",
+    accent: "border-l-pink-500"
+  },
   TECHNICAL: {
     value: "TECHNICAL",
-    label: "Technical / Sim",
+    label: "Technical",
     shortLabel: "Technical",
     googleColorId: "6", // Tangerine (orange)
     chip: "bg-orange-500 text-white hover:bg-orange-600",

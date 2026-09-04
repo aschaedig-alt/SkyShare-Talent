@@ -22,7 +22,12 @@ export type OfferTransition = {
   at?: Date | null;
   /** How we know. MANUAL today; FRONT / PAYCOM once inbound email is wired. */
   source?: OfferSource;
-  /** Why they declined — only meaningful with DECLINED. */
+  /**
+   * Why the offer ended. With DECLINED that is why THEY said no; with NOT_SENT it
+   * is why WE never sent it ("President did not approve"). One field for both
+   * because it answers the same question — what closed this offer — and the
+   * status already says whose decision it was.
+   */
   reason?: string | null;
   /** The start date named on the offer, if there is one. */
   startDate?: Date | null;
@@ -92,6 +97,14 @@ export async function recordOfferStatus(applicationId: string, t: OfferTransitio
     data.offerDeclinedAt = when;
     data.offerDeclineReason = t.reason?.trim() || null;
   }
+  // Stopped on our side. Written to its OWN pair of columns, never to the decline
+  // ones: an offerDeclinedAt on somebody who was never sent an offer is a
+  // rejection they did not make, and nothing downstream could tell the two apart
+  // afterwards.
+  if (t.status === "NOT_SENT") {
+    data.offerNotSentAt = when;
+    data.offerNotSentReason = t.reason?.trim() || null;
+  }
   if (t.startDate !== undefined) data.offerStartDate = t.startDate;
 
   await prisma.candidateApplication.update({ where: { id: applicationId }, data });
@@ -99,6 +112,11 @@ export async function recordOfferStatus(applicationId: string, t: OfferTransitio
   const who = app.candidate?.displayName ?? "Candidate";
   const role = app.job?.title ? ` — ${app.job.title}` : "";
   const label = offerStatusLabel(t.status);
+  // The reason is the whole point of these two states — an "Offer not sent" with
+  // no why on it tells the next reader nothing. Carried onto the timeline entry
+  // so the profile's history answers the question without anyone opening the
+  // application to look.
+  const reasonMatters = t.status === "DECLINED" || t.status === "NOT_SENT";
 
   // Timeline entry so the offer shows in the candidate's history alongside their
   // applications and interviews, rather than only as a status chip.
@@ -108,7 +126,7 @@ export async function recordOfferStatus(applicationId: string, t: OfferTransitio
         candidateId: app.candidateId,
         type: "OFFER",
         title: `${label}${role}`,
-        detail: t.status === "DECLINED" && t.reason ? t.reason : source === "MANUAL" ? null : `via ${source}`,
+        detail: reasonMatters && t.reason?.trim() ? t.reason.trim() : source === "MANUAL" ? null : `via ${source}`,
         occurredAt: when,
         sourceType: "Application",
         sourceId: app.id

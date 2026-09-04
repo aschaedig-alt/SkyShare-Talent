@@ -76,9 +76,12 @@ export function serializeOfferSteps(steps: OfferSteps): string | null {
  * step (there is none) — it is set explicitly (the "Start an offer" action).
  *
  * DECLINED is deliberately NOT derivable: declining is something THEY do, not a
- * step we take, so it stays an explicit action.
+ * step we take, so it stays an explicit action. NOT_SENT is not derivable either,
+ * for the opposite reason — it is the ABSENCE of a step (the letter never went
+ * out), and you cannot tell "not sent yet" from "never going to be sent" by
+ * looking at the ticks. Only a person knows which, so they say so explicitly.
  */
-export function deriveOfferStatus(steps: OfferSteps): Exclude<OfferStatus, "DECLINED" | "PLANNED"> {
+export function deriveOfferStatus(steps: OfferSteps): Exclude<OfferStatus, "DECLINED" | "PLANNED" | "NOT_SENT"> {
   if (steps.candidate_signed) return "SIGNED";
   if (steps.offer_letter_sent) return "SENT";
   if (OFFER_STEP_KEYS.some((k) => steps[k])) return "STARTED";
@@ -106,6 +109,24 @@ export type OfferApplicationView = {
   offerSignedAt: string | null;
   offerDeclinedAt: string | null;
   offerDeclineReason: string | null;
+  offerNotSentAt: string | null;
+  offerNotSentReason: string | null;
   offerStartDate: string | null;
   offerSource: string | null;
 };
+
+/**
+ * The step an offer stalled at — the last one ticked, or null if none are.
+ *
+ * This is what makes "not sent" a useful record rather than a shrug: an offer
+ * that stopped at "Verbal offer" was never drafted, and one that stopped at
+ * "President signs" was drafted, approved by the supervisor, and then blocked at
+ * the top. Both read as "not sent" without it.
+ */
+export function lastOfferStepDone(steps: OfferSteps): { key: OfferStepKey; label: string } | null {
+  for (let i = OFFER_STEPS.length - 1; i >= 0; i -= 1) {
+    const step = OFFER_STEPS[i];
+    if (steps[step.key]) return step;
+  }
+  return null;
+}

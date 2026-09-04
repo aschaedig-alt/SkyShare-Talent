@@ -351,13 +351,17 @@ export type CandidateProfileData = {
     source: string | null;
     appliedAt: string | null;
     // Offer lives on the application because an offer is always for a job.
-    // NONE | PLANNED | SENT | SIGNED | DECLINED. Never written directly — see
-    // lib/offers/record-offer-status.ts.
+    // NONE | PLANNED | STARTED | SENT | SIGNED | DECLINED | NOT_SENT. Never
+    // written directly — see lib/offers/record-offer-status.ts.
     offerStatus: string;
     offerSentAt: string | null;
     offerSignedAt: string | null;
     offerDeclinedAt: string | null;
     offerDeclineReason: string | null;
+    // Stopped on our side and never sent — kept apart from the decline pair
+    // above, which is the candidate's answer. See lib/offers/constants.ts.
+    offerNotSentAt: string | null;
+    offerNotSentReason: string | null;
     offerStartDate: string | null;
     offerSource: string | null;
     /** Ticked offer steps: key → when. offerStatus is derived from these. */
@@ -1466,6 +1470,8 @@ export async function getCandidateProfileData(
       offerSignedAt: application.offerSignedAt?.toISOString() ?? null,
       offerDeclinedAt: application.offerDeclinedAt?.toISOString() ?? null,
       offerDeclineReason: application.offerDeclineReason,
+      offerNotSentAt: application.offerNotSentAt?.toISOString() ?? null,
+      offerNotSentReason: application.offerNotSentReason,
       offerStartDate: application.offerStartDate?.toISOString() ?? null,
       offerSource: application.offerSource,
       offerSteps: parseOfferSteps(application.offerStepsJson),
