@@ -136,7 +136,10 @@ export function MatchCard({
   excluding = false,
   onSelectName,
   selected = false,
-  onViewRoles
+  onViewRoles,
+  selectable = false,
+  checked = false,
+  onToggleChecked
 }: {
   match: PilotRequirementCandidateMatch;
   requirementId: string | null;
@@ -149,6 +152,15 @@ export function MatchCard({
   onSelectName?: (candidateId: string) => void;
   selected?: boolean;
   onViewRoles?: (candidateId: string) => void;
+  /**
+   * Bulk-triage checkbox. Off by default so the other panel that renders this
+   * card (CandidateTriagePanel) is unchanged — and deliberately separate from
+   * `selected`, which means "this is the card the detail pane is showing".
+   * One card can be both.
+   */
+  selectable?: boolean;
+  checked?: boolean;
+  onToggleChecked?: (candidateId: string) => void;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -231,11 +243,25 @@ export function MatchCard({
       // the pane always opened at the top however far down you had scrolled.
       data-candidate-card={match.candidateId}
       className={clsx(
-        "rounded border bg-brand-cloudDancer/40 p-3 transition dark:bg-white/5",
-        selected ? "border-brand-gold ring-1 ring-brand-gold/40" : "border-brand-lea/10 dark:border-white/10"
+        "rounded border p-3 transition",
+        checked ? "bg-brand-sweet/20 dark:bg-white/10" : "bg-brand-cloudDancer/40 dark:bg-white/5",
+        selected
+          ? "border-brand-gold ring-1 ring-brand-gold/40"
+          : checked
+            ? "border-brand-lea/40 dark:border-white/25"
+            : "border-brand-lea/10 dark:border-white/10"
       )}
     >
       <div className="flex items-start gap-3">
+        {selectable ? (
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={() => onToggleChecked?.(match.candidateId)}
+            aria-label={`Select ${match.candidateName} for a bulk decision`}
+            className="mt-2.5 h-4 w-4 shrink-0 cursor-pointer accent-brand-lea"
+          />
+        ) : null}
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-sweet/30 text-xs font-semibold text-brand-lea dark:text-slate-100">
           {initials(match.candidateName)}
         </div>

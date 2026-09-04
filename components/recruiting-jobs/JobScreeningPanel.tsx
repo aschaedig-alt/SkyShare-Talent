@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { SlidersHorizontal, RefreshCw, ChevronDown, Lightbulb, Archive, TrendingUp } from "lucide-react";
+import { SlidersHorizontal, RefreshCw, ChevronDown, Lightbulb, Archive, TrendingUp, Search, X } from "lucide-react";
 import { UnverifiedQueuePanel } from "@/components/pilot-requirements/UnverifiedQueuePanel";
 import Link from "next/link";
 import {
@@ -15,7 +15,10 @@ import {
 } from "@/app/pilot-requirements/scoring-actions";
 import { MatchCard, formatScanTime, readinessStyles } from "@/components/pilot-requirements/MatchCard";
 import { CandidatePreview } from "@/components/recruiting-jobs/CandidatePreview";
+import { BulkPositionSkipBar } from "@/components/recruiting-jobs/BulkPositionSkipBar";
 import { SCAN_EXCLUSION_LABELS, type ScanExclusionReason } from "@/lib/candidates/scan-exclusion";
+import { filterMatches, searchTerms } from "@/lib/matching/match-search";
+import { isPositionSkipReason, type PositionDecisionValue } from "@/lib/matching/position-skip";
 // scan-pool is a PURE module (no Prisma import) precisely so client components can
 // read these, per its own header comment.
 import { CURRENT_MATCH_LIMIT, ARCHIVE_MATCH_LIMIT } from "@/lib/candidates/scan-pool";
@@ -25,6 +28,38 @@ import type { PilotRequirementCandidateMatch, ReadinessLabel } from "@/lib/match
 const TIER_ORDER: ReadinessLabel[] = ["Strong signal", "Worth a look", "Needs review"];
 
 type Tab = "all" | ReadinessLabel;
+
+/**
+ * A position decision made in THIS session by the bulk bar, before any refetch.
+ * null means "cleared, back to the engine's call"; an id absent from the record
+ * has not been touched at all, which is why membership is tested with `in`.
+ */
+type BulkDecision = { reason: PositionDecisionValue; note: string; at: string } | null;
+
+/**
+ * Lay a bulk decision over a card the server sent, so the sweep is visible the
+ * instant it is applied rather than after a round trip.
+ *
+ * Applied to BOTH the merged list and the server's own set-aside list: someone
+ * who is set aside but did not make the ranked scan appears only in the latter,
+ * and skipping them there is how they would silently vanish from the page when
+ * a bulk undo put them back.
+ */
+function withBulkDecision(
+  match: PilotRequirementCandidateMatch,
+  bulk: Record<string, BulkDecision>
+): PilotRequirementCandidateMatch {
+  if (!(match.candidateId in bulk)) return match;
+  const decision = bulk[match.candidateId];
+  if (!decision) return { ...match, setAsideReason: null, positionSkip: null };
+  return {
+    ...match,
+    // KEEP is a decision but not a set-aside — it pins someone INTO the ranked
+    // list against the automatic overqualified catch.
+    setAsideReason: isPositionSkipReason(decision.reason) ? decision.reason : null,
+    positionSkip: { reason: decision.reason, note: decision.note, at: decision.at, by: null, automatic: false }
+  };
+}
 
 export function JobScreeningPanel({
   data,
@@ -54,8 +89,14 @@ export function JobScreeningPanel({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [preview, setPreview] = useState<CandidatePreviewData | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  // Bulk triage: a keyword filter over the cards, a tick per card, and the
+  // decisions applied in this session laid over the server's data.
+  const [filter, setFilter] = useState("");
+  const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const [bulkSkips, setBulkSkips] = useState<Record<string, BulkDecision>>({});
 
   const appliedIds = useMemo(() => new Set(data.applicantIds), [data.applicantIds]);
+  const terms = useMemo(() => searchTerms(filter), [filter]);
 
   // One deduped list (applicants are kept in full; system matches fill in the rest),
   // with any in-session move + scan-exclusion layered on top of the server data.
@@ -69,15 +110,18 @@ export function JobScreeningPanel({
         const moved = overrides[match.candidateId];
         const excludedReason =
           match.candidateId in exclusions ? exclusions[match.candidateId] : match.excludedReason;
-        return {
-          ...match,
-          readiness: moved ?? match.readiness,
-          overridden: moved ? true : match.overridden,
-          excludedReason
-        };
+        return withBulkDecision(
+          {
+            ...match,
+            readiness: moved ?? match.readiness,
+            overridden: moved ? true : match.overridden,
+            excludedReason
+          },
+          bulkSkips
+        );
       })
       .filter((match) => includeExcluded || !match.excludedReason);
-  }, [data.applicants, best, overrides, exclusions, includeExcluded]);
+  }, [data.applicants, best, overrides, exclusions, includeExcluded, bulkSkips]);
 
   // Two lanes, not one ranking. Archived (historical Jazz) people frequently
   // out-score live candidates, so merging them into a single top-N pushed the
@@ -89,13 +133,17 @@ export function JobScreeningPanel({
   const setAsideMatches = useMemo(() => {
     const byId = new Map<string, PilotRequirementCandidateMatch>();
     for (const match of merged) if (match.setAsideReason) byId.set(match.candidateId, match);
-    for (const match of rescanSetAside ?? data.setAside) {
-      if (!byId.has(match.candidateId)) byId.set(match.candidateId, match);
+    for (const raw of rescanSetAside ?? data.setAside) {
+      if (byId.has(raw.candidateId)) continue;
+      // A bulk decision from this session wins over the server's snapshot —
+      // including one that UN-sets someone aside, which drops them from here.
+      const match = withBulkDecision(raw, bulkSkips);
+      if (match.setAsideReason) byId.set(match.candidateId, match);
     }
     return [...byId.values()].sort(
       (a, b) => b.score - a.score || a.candidateName.localeCompare(b.candidateName)
     );
-  }, [merged, rescanSetAside, data.setAside]);
+  }, [merged, rescanSetAside, data.setAside, bulkSkips]);
 
   const ranked = useMemo(() => merged.filter((match) => !match.setAsideReason), [merged]);
 
@@ -107,14 +155,18 @@ export function JobScreeningPanel({
   // them, precisely so they are not cut off by the ranked slice.
   const likelyOverqualified = useMemo(() => {
     const byId = new Map<string, PilotRequirementCandidateMatch>();
-    for (const match of merged) if (match.likelyOverqualified) byId.set(match.candidateId, match);
-    for (const match of rescanOverqualified ?? data.likelyOverqualified) {
-      if (!byId.has(match.candidateId)) byId.set(match.candidateId, match);
+    for (const match of merged) if (match.likelyOverqualified && !match.setAsideReason) byId.set(match.candidateId, match);
+    for (const raw of rescanOverqualified ?? data.likelyOverqualified) {
+      if (byId.has(raw.candidateId)) continue;
+      // A bulk skip applied here moves the person to Set aside, so they must
+      // leave this group rather than appear in both.
+      const match = withBulkDecision(raw, bulkSkips);
+      if (!match.setAsideReason) byId.set(match.candidateId, match);
     }
     return [...byId.values()].sort(
       (a, b) => b.score - a.score || a.candidateName.localeCompare(b.candidateName)
     );
-  }, [merged, rescanOverqualified, data.likelyOverqualified]);
+  }, [merged, rescanOverqualified, data.likelyOverqualified, bulkSkips]);
   const currentMatches = useMemo(
     () => ranked.filter((match) => !match.fromArchive && !match.likelyOverqualified),
     [ranked]
@@ -136,6 +188,98 @@ export function JobScreeningPanel({
     }
     return groups;
   }, [currentMatches]);
+
+  // --- Keyword filter + bulk selection -------------------------------------
+  //
+  // The filter narrows every lane at once, so what is on screen after typing
+  // "jet 0" is the whole answer rather than one group's worth of it. It searches
+  // the text the cards actually render (see lib/matching/match-search.ts) — and
+  // only the cards on this list, which is the top-50 slice of each half of the
+  // pool, not the pool itself. The hint under the box says so.
+  const visibleGrouped = useMemo(() => {
+    const groups: Record<ReadinessLabel, PilotRequirementCandidateMatch[]> = {
+      "Strong signal": [],
+      "Worth a look": [],
+      "Needs review": []
+    };
+    for (const tier of TIER_ORDER) groups[tier] = filterMatches(grouped[tier], terms);
+    return groups;
+  }, [grouped, terms]);
+  const visibleOverqualified = useMemo(() => filterMatches(likelyOverqualified, terms), [likelyOverqualified, terms]);
+  const visibleSetAside = useMemo(() => filterMatches(setAsideMatches, terms), [setAsideMatches, terms]);
+  const visibleArchive = useMemo(() => filterMatches(archiveMatches, terms), [archiveMatches, terms]);
+
+  const laneTotal =
+    currentMatches.length + likelyOverqualified.length + setAsideMatches.length + archiveMatches.length;
+  const laneShown =
+    TIER_ORDER.reduce((sum, tier) => sum + visibleGrouped[tier].length, 0) +
+    visibleOverqualified.length +
+    visibleSetAside.length +
+    visibleArchive.length;
+
+  /**
+   * Exactly the cards rendered right now — respecting the tier tab AND whether
+   * a group is expanded.
+   *
+   * "Select all" has to mean what it says. Reaching into a collapsed group would
+   * apply a decision to people the recruiter cannot see, which is the one thing
+   * a bulk control must never do.
+   */
+  const renderedIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const tier of TIER_ORDER) {
+      if (tab !== "all" && tab !== tier) continue;
+      if (collapsed[tier]) continue;
+      for (const match of visibleGrouped[tier]) ids.push(match.candidateId);
+    }
+    if (overqualifiedOpen) for (const match of visibleOverqualified) ids.push(match.candidateId);
+    if (setAsideOpen) for (const match of visibleSetAside) ids.push(match.candidateId);
+    if (archiveOpen) for (const match of visibleArchive) ids.push(match.candidateId);
+    return [...new Set(ids)];
+  }, [
+    tab,
+    collapsed,
+    visibleGrouped,
+    overqualifiedOpen,
+    visibleOverqualified,
+    setAsideOpen,
+    visibleSetAside,
+    archiveOpen,
+    visibleArchive
+  ]);
+
+  /**
+   * The selection is DERIVED from what is on screen rather than stored flat, so
+   * narrowing the filter or collapsing a group cannot leave an invisible person
+   * ticked. Re-widening brings their tick back, which is what someone who
+   * collapsed a group by accident expects.
+   */
+  const selectedIds = useMemo(() => renderedIds.filter((id) => checked[id]), [renderedIds, checked]);
+  const allRenderedSelected = renderedIds.length > 0 && selectedIds.length === renderedIds.length;
+  // A position decision needs a position, and writing one needs edit rights.
+  const bulkSelectable = data.canEdit && Boolean(data.requirementId);
+
+  function toggleChecked(candidateId: string) {
+    setChecked((current) => ({ ...current, [candidateId]: !current[candidateId] }));
+  }
+
+  function toggleAllRendered() {
+    const next = !allRenderedSelected;
+    setChecked((current) => {
+      const updated = { ...current };
+      for (const id of renderedIds) updated[id] = next;
+      return updated;
+    });
+  }
+
+  function applyBulk(ids: string[], reason: PositionDecisionValue | null, note: string) {
+    const at = new Date().toISOString();
+    setBulkSkips((current) => {
+      const updated = { ...current };
+      for (const id of ids) updated[id] = reason === null ? null : { reason, note, at };
+      return updated;
+    });
+  }
 
   function rescan(include: boolean) {
     if (!data.requirementId) return;
@@ -361,12 +505,75 @@ export function JobScreeningPanel({
             ))}
           </div>
 
+          {/* Filter the cards on this list, then act on the whole selection at
+              once. Searches what the cards show, so "jet 0" finds everyone whose
+              Jet time factor reads 0 hrs. */}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[15rem] flex-1">
+              <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-brand-grey dark:text-slate-400" />
+              <input
+                type="search"
+                value={filter}
+                onChange={(event) => setFilter(event.target.value)}
+                placeholder="Filter these candidates — try: jet 0"
+                aria-label="Filter the candidates on this list by keyword"
+                className="w-full rounded-element border border-brand-lea/20 bg-white py-1.5 pl-7 pr-7 text-xs text-brand-lea outline-none transition placeholder:text-brand-grey/70 focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+              />
+              {filter ? (
+                <button
+                  type="button"
+                  onClick={() => setFilter("")}
+                  aria-label="Clear the filter"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-element p-0.5 text-brand-grey transition hover:text-brand-lea dark:text-slate-400"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              ) : null}
+            </div>
+
+            {terms.length > 0 ? (
+              <span className="text-[11px] font-semibold text-brand-lea dark:text-slate-100">
+                {laneShown} of {laneTotal} on this list match
+              </span>
+            ) : null}
+
+            {data.canEdit && data.requirementId && renderedIds.length > 0 ? (
+              <button
+                type="button"
+                onClick={toggleAllRendered}
+                className="inline-flex items-center gap-1.5 rounded-element border border-brand-lea/20 px-2.5 py-1.5 text-[11px] font-semibold text-brand-eden transition hover:border-brand-gold hover:bg-brand-cloudDancer/60 hover:shadow-glow dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
+              >
+                {allRenderedSelected ? "Clear all" : `Select all ${renderedIds.length} shown`}
+              </button>
+            ) : null}
+          </div>
+
+          {terms.length > 0 ? (
+            <p className="mt-1 text-[10px] text-brand-grey dark:text-slate-400">
+              Every term has to land on the <strong className="font-semibold">same line</strong> of the card, in any
+              order — so “jet 0” means the Jet time line reads 0, not a card with jet somewhere and a 0 somewhere else.
+              Numbers match whole (“0” is not the 0 inside 500 or 4,000); words match from the start, so “smi” finds
+              Smith. This searches the cards on this list only — the top {CURRENT_MATCH_LIMIT} current and top{" "}
+              {ARCHIVE_MATCH_LIMIT} archived, not all {(scan?.count ?? data.scannedCount).toLocaleString()} scored.
+            </p>
+          ) : null}
+
+          {data.canEdit && data.requirementId ? (
+            <BulkPositionSkipBar
+              requirementId={data.requirementId}
+              candidateIds={selectedIds}
+              onClear={() => setChecked({})}
+              onApplied={applyBulk}
+            />
+          ) : null}
+
           {data.canEdit ? (
             <p className="mt-2 text-[11px] text-brand-grey dark:text-slate-400">
-              Click a name to preview the candidate on the right. Disagree with a read? Use “Move to” — the move
-              sticks and the system learns. To keep someone out of scans (test record, hired, didn’t pass, not a
-              culture fit, not eligible to hire), set “Scan eligibility” on their card. Skips are reversible — the
-              Matchboard’s Skipped list shows everyone held out and puts them back.
+              Click a name to preview the candidate on the right. Tick the boxes (or “Select all shown”) to set a whole
+              filtered batch aside in one go — that only ever reaches cards you can see, and it is undoable. Disagree
+              with a read? Use “Move to” — the move sticks and the system learns. To keep someone out of scans (test
+              record, hired, didn’t pass, not a culture fit, not eligible to hire), set “Scan eligibility” on their
+              card. Skips are reversible — the Matchboard’s Skipped list shows everyone held out and puts them back.
             </p>
           ) : null}
 
@@ -383,7 +590,7 @@ export function JobScreeningPanel({
           >
             {TIER_ORDER.map((tier) => {
               if (tab !== "all" && tab !== tier) return null;
-              const list = grouped[tier];
+              const list = visibleGrouped[tier];
               const isCollapsed = !!collapsed[tier];
               return (
                 <div key={tier} className="overflow-hidden rounded border border-brand-lea/10 dark:border-white/10">
@@ -397,7 +604,7 @@ export function JobScreeningPanel({
                       <span className={clsx("rounded px-2.5 py-0.5 text-[11px] font-semibold", readinessStyles[tier])}>
                         {tier}
                       </span>
-                      <span className="text-xs text-brand-grey dark:text-slate-400">({list.length})</span>
+                      <FilteredCount shown={list.length} total={grouped[tier].length} filtering={terms.length > 0} />
                     </span>
                     <ChevronDown
                       className={clsx("h-4 w-4 text-brand-grey transition-transform dark:text-slate-400", isCollapsed && "-rotate-90")}
@@ -420,11 +627,16 @@ export function JobScreeningPanel({
                             onSelectName={selectCandidate}
                             selected={selectedId === match.candidateId}
                             onViewRoles={onViewCandidate}
+                            selectable={bulkSelectable}
+                            checked={!!checked[match.candidateId]}
+                            onToggleChecked={toggleChecked}
                           />
                         ))
                       ) : (
                         <p className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-                          No candidates in this group.
+                          {terms.length > 0
+                            ? `No one in this group matches “${filter.trim()}”.`
+                            : "No candidates in this group."}
                         </p>
                       )}
                     </div>
@@ -438,7 +650,7 @@ export function JobScreeningPanel({
             {/* Captain seats where total time is 2x+ the minimum. Its own group
                 at the bottom rather than a skip: on a high-minimum seat plenty
                 of hours is exactly what you want, so these stay candidates. */}
-            {likelyOverqualified.length > 0 ? (
+            {visibleOverqualified.length > 0 ? (
               <div className="overflow-hidden rounded border border-value-leadership-dark/20 dark:border-white/10">
                 <button
                   type="button"
@@ -449,7 +661,11 @@ export function JobScreeningPanel({
                   <span className="flex items-center gap-2">
                     <TrendingUp className="h-3.5 w-3.5 text-value-leadership-dark" />
                     <span className="text-[11px] font-semibold text-brand-lea dark:text-slate-100">Likely overqualified</span>
-                    <GroupCount shown={likelyOverqualified.length} total={data.likelyOverqualifiedTotal} />
+                    {terms.length > 0 ? (
+                      <FilteredCount shown={visibleOverqualified.length} total={likelyOverqualified.length} filtering />
+                    ) : (
+                      <GroupCount shown={likelyOverqualified.length} total={data.likelyOverqualifiedTotal} />
+                    )}
                   </span>
                   <ChevronDown
                     className={clsx("h-4 w-4 text-brand-grey transition-transform dark:text-slate-400", !overqualifiedOpen && "-rotate-90")}
@@ -463,7 +679,7 @@ export function JobScreeningPanel({
                       experience is often a flight risk. Use &quot;Skip — Overqualified&quot; on a card to set one aside
                       properly.
                     </p>
-                    {likelyOverqualified.map((match) => (
+                    {visibleOverqualified.map((match) => (
                       <MatchCard
                         key={`over:${match.candidateId}`}
                         match={match}
@@ -477,6 +693,9 @@ export function JobScreeningPanel({
                         onSelectName={selectCandidate}
                         selected={selectedId === match.candidateId}
                         onViewRoles={onViewCandidate}
+                        selectable={bulkSelectable}
+                        checked={!!checked[match.candidateId]}
+                        onToggleChecked={toggleChecked}
                       />
                     ))}
                   </div>
@@ -488,7 +707,7 @@ export function JobScreeningPanel({
                 the automatic catch fires off self-reported hours, which are
                 known to disagree between a candidate's own documents, so a
                 wrong call has to be visible and reversible. */}
-            {setAsideMatches.length > 0 ? (
+            {visibleSetAside.length > 0 ? (
               <div className="overflow-hidden rounded border border-value-leadership-dark/25 dark:border-white/10">
                 <button
                   type="button"
@@ -499,7 +718,11 @@ export function JobScreeningPanel({
                   <span className="flex items-center gap-2">
                     <TrendingUp className="h-3.5 w-3.5 text-value-leadership-dark" />
                     <span className="text-[11px] font-semibold text-brand-lea dark:text-slate-100">Set aside on this position</span>
-                    <GroupCount shown={setAsideMatches.length} total={data.setAsideTotal} />
+                    {terms.length > 0 ? (
+                      <FilteredCount shown={visibleSetAside.length} total={setAsideMatches.length} filtering />
+                    ) : (
+                      <GroupCount shown={setAsideMatches.length} total={data.setAsideTotal} />
+                    )}
                   </span>
                   <ChevronDown
                     className={clsx("h-4 w-4 text-brand-grey transition-transform dark:text-slate-400", !setAsideOpen && "-rotate-90")}
@@ -513,7 +736,7 @@ export function JobScreeningPanel({
                       time reaches twice this seat&apos;s minimum — use &quot;Keep on this position&quot; on any card
                       where that call is wrong.
                     </p>
-                    {setAsideMatches.map((match) => (
+                    {visibleSetAside.map((match) => (
                       <MatchCard
                         key={`aside:${match.candidateId}`}
                         match={match}
@@ -527,6 +750,9 @@ export function JobScreeningPanel({
                         onSelectName={selectCandidate}
                         selected={selectedId === match.candidateId}
                         onViewRoles={onViewCandidate}
+                        selectable={bulkSelectable}
+                        checked={!!checked[match.candidateId]}
+                        onToggleChecked={toggleChecked}
                       />
                     ))}
                   </div>
@@ -537,7 +763,7 @@ export function JobScreeningPanel({
             {/* The archive lane. Held apart from the tiers above on purpose:
                 these are historical Jazz records, and before this they had
                 never been scanned once. */}
-            {archiveMatches.length > 0 ? (
+            {visibleArchive.length > 0 ? (
               <div className="overflow-hidden rounded border border-brand-eden/25 dark:border-white/10">
                 <button
                   type="button"
@@ -549,9 +775,11 @@ export function JobScreeningPanel({
                     <Archive className="h-3.5 w-3.5 text-brand-eden dark:text-slate-300" />
                     <span className="text-[11px] font-semibold text-brand-lea dark:text-slate-100">From the archive</span>
                     <span className="text-xs text-brand-grey dark:text-slate-400">
-                      {archiveCapped
-                        ? `(top ${archiveMatches.length} of ${scannedArchive.toLocaleString()})`
-                        : `(${archiveMatches.length})`}
+                      {terms.length > 0
+                        ? `(${visibleArchive.length} of ${archiveMatches.length} match)`
+                        : archiveCapped
+                          ? `(top ${archiveMatches.length} of ${scannedArchive.toLocaleString()})`
+                          : `(${archiveMatches.length})`}
                     </span>
                   </span>
                   <ChevronDown
@@ -565,7 +793,7 @@ export function JobScreeningPanel({
                       the current pool. Most have no structured hours on file, so their read comes largely from resume
                       text — worth a look rather than a like-for-like comparison.
                     </p>
-                    {archiveMatches.map((match) => (
+                    {visibleArchive.map((match) => (
                       <MatchCard
                         key={`archive:${match.candidateId}`}
                         match={match}
@@ -579,6 +807,9 @@ export function JobScreeningPanel({
                         onSelectName={selectCandidate}
                         selected={selectedId === match.candidateId}
                         onViewRoles={onViewCandidate}
+                        selectable={bulkSelectable}
+                        checked={!!checked[match.candidateId]}
+                        onToggleChecked={toggleChecked}
                       />
                     ))}
                   </div>
@@ -622,6 +853,26 @@ export function JobScreeningPanel({
  * in-session skip adds rows client-side — so the "of" only appears when the
  * server actually truncated.
  */
+/**
+ * A group's size under the keyword filter.
+ *
+ * Kept apart from GroupCount below because the two hide different things and
+ * conflating them would be a lie in one direction or the other: GroupCount's
+ * "of" means the server cut the list short, this one means the filter did. When
+ * no filter is on it renders exactly what the plain count always did.
+ */
+function FilteredCount({ shown, total, filtering }: { shown: number; total: number; filtering: boolean }) {
+  if (!filtering) return <span className="text-xs text-brand-grey dark:text-slate-400">({total})</span>;
+  return (
+    <span
+      className={clsx("text-xs", shown < total ? "font-semibold text-brand-gold" : "text-brand-grey dark:text-slate-400")}
+      title={`${shown} of the ${total} on this list match the filter`}
+    >
+      ({shown} of {total} match)
+    </span>
+  );
+}
+
 function GroupCount({ shown, total }: { shown: number; total: number }) {
   const truncated = total > shown;
   return (

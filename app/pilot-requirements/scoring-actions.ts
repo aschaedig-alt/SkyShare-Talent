@@ -12,8 +12,13 @@ import { isScanExclusionReason, type ScanExclusionReason } from "@/lib/candidate
 import { fleetPositionBySlug } from "@/lib/fleet/positions";
 import { setMatchFeedback, MATCH_VERDICTS, type MatchVerdict } from "@/lib/matching/match-feedback";
 import { setTierOverride, OVERRIDE_TIERS, type OverrideTier } from "@/lib/matching/tier-override";
-import { setPositionSkip } from "@/lib/matching/position-skip.server";
-import { isPositionDecisionValue, type PositionDecisionValue } from "@/lib/matching/position-skip";
+import { setPositionSkip, setPositionSkipsBulk, restorePositionSkips } from "@/lib/matching/position-skip.server";
+import {
+  isPositionDecisionValue,
+  normalizeSkips,
+  type PositionDecisionValue,
+  type PositionSkip
+} from "@/lib/matching/position-skip";
 import { runRequirementScan, loadScorableRequirement, type RequirementScan } from "@/lib/matching/run-scan";
 import {
   getUnverifiedForRequirement,
@@ -228,6 +233,104 @@ export async function setCandidatePositionSkip(input: {
     });
   } catch {
     return { ok: false, error: "Could not update this position's skip list." };
+  }
+
+  revalidatePath("/pilot-requirements");
+  revalidatePath("/recruiting-jobs");
+  revalidatePath("/matching");
+  return { ok: true };
+}
+
+/**
+ * The same call as above, made once for a whole filtered selection.
+ *
+ * Screening a role means working through 50 cards, and the honest answer for
+ * most of them is the same one sentence ("no jet time"). Doing that one dropdown
+ * at a time is why the board takes an afternoon. This takes the ids the
+ * recruiter selected, one reason and one note, and writes them together.
+ *
+ * `previous` comes back so the caller can offer a real undo. It is the exact
+ * prior value of every id touched — a skip that was already there, or null for
+ * one that had no decision — which is the only way to reverse a bulk call
+ * without flattening decisions that were made earlier and meant.
+ *
+ * Capped at 500 ids, matching exportMatchContacts. The lists this runs against
+ * are display slices of 50, so the cap is a bound on a hostile payload rather
+ * than a limit anyone will meet.
+ */
+export type PositionSkipBatchResult = {
+  ok: boolean;
+  changed?: number;
+  previous?: Record<string, PositionSkip | null>;
+  error?: string;
+};
+
+export async function setCandidatePositionSkipBatch(input: {
+  requirementId: string;
+  candidateIds: string[];
+  reason: PositionDecisionValue | null;
+  note?: string;
+}): Promise<PositionSkipBatchResult> {
+  const denied = await guard();
+  if (denied) return { ok: false, error: denied.error };
+
+  if (!input?.requirementId) return { ok: false, error: "Missing position." };
+  if (input.reason !== null && !isPositionDecisionValue(input.reason)) {
+    return { ok: false, error: "Invalid skip reason." };
+  }
+
+  const ids = [...new Set((input.candidateIds ?? []).filter(Boolean))].slice(0, 500);
+  if (ids.length === 0) return { ok: false, error: "No candidates selected." };
+
+  try {
+    const result = await setPositionSkipsBulk({
+      requirementId: input.requirementId,
+      candidateIds: ids,
+      reason: input.reason,
+      note: input.note,
+      by: await actorLabel(),
+      nowIso: new Date().toISOString()
+    });
+    revalidatePath("/pilot-requirements");
+    revalidatePath("/recruiting-jobs");
+    revalidatePath("/matching");
+    return { ok: true, changed: result.changed, previous: result.previous };
+  } catch {
+    return { ok: false, error: "Could not update this position's skip list." };
+  }
+}
+
+/**
+ * Undo one bulk call, by writing back the `previous` map it returned.
+ *
+ * The map arrives from the browser, so it is re-validated the same way the
+ * stored JSON is — normalizeSkips drops anything that is not a real decision —
+ * rather than trusted because we produced it a moment ago.
+ */
+export async function undoCandidatePositionSkipBatch(input: {
+  requirementId: string;
+  previous: Record<string, PositionSkip | null>;
+}): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+  if (!input?.requirementId) return { ok: false, error: "Missing position." };
+
+  const raw = input.previous ?? {};
+  const ids = Object.keys(raw).slice(0, 500);
+  if (ids.length === 0) return { ok: false, error: "Nothing to undo." };
+
+  // Validate the non-null half through the same normalizer the stored row uses;
+  // every id that was previously undecided stays an explicit null (a clear).
+  const restorable = normalizeSkips(
+    Object.fromEntries(ids.filter((id) => raw[id] !== null).map((id) => [id, raw[id]]))
+  );
+  const previous: Record<string, PositionSkip | null> = {};
+  for (const id of ids) previous[id] = restorable[id] ?? null;
+
+  try {
+    await restorePositionSkips({ requirementId: input.requirementId, previous });
+  } catch {
+    return { ok: false, error: "Could not undo the change." };
   }
 
   revalidatePath("/pilot-requirements");
