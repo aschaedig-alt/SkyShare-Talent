@@ -24,6 +24,19 @@ import {
   scopeCandidateIds
 } from "@/lib/auth/candidate-scope";
 import type { TagChip } from "@/lib/tags/colors";
+import { getDispositionOverrides } from "@/lib/data/disposition-groups";
+import {
+  applicationOutcome,
+  bucketOf,
+  dispositionGroup,
+  sortApplicationsForDisplay,
+  BUCKET_ORDER,
+  ACROSS_ORDER,
+  type ApplicationOutcome,
+  type CandidateAcross,
+  type CandidateBucket,
+  type DispositionGroup
+} from "@/lib/candidates/buckets";
 
 // Carries BOTH narrowing mechanisms: the department restriction (a join through
 // applications->job->department, resolved in this file) and the hand-picked
@@ -193,6 +206,33 @@ export type CandidateListItem = {
   docMatch: { filename: string; snippet: string } | null;
   /** Direct link to this person's own record in Paycom, if one has been pasted in. */
   paycomLink: string | null;
+  /**
+   * Which segment of the rail this person sits in. Derived, never stored — see
+   * lib/candidates/buckets.ts for the ladder and why its order matters.
+   */
+  bucket: CandidateBucket;
+  /**
+   * Every application, MOST RECENT FIRST. The list row shows applications[0] and
+   * the expanded rows show the rest, so both read the same array in the same
+   * order and cannot disagree about which one is "last applied to".
+   */
+  applications: CandidateListApplication[];
+  /** Type ratings off the confirmed extraction, for the Types column. */
+  typeRatings: string[];
+};
+
+/** One application as the list needs it — deliberately narrower than the model. */
+export type CandidateListApplication = {
+  id: string;
+  jobId: string | null;
+  jobTitle: string | null;
+  appliedAt: string | null;
+  /** The raw Paycom disposition text, kept for the expanded row's detail line. */
+  statusText: string | null;
+  outcome: ApplicationOutcome;
+  group: DispositionGroup;
+  /** True once this is a Jazz-era record rather than a live Paycom application. */
+  historical: boolean;
 };
 
 // Defined in lib/candidates/list-config.ts (which imports nothing) because the
@@ -230,6 +270,19 @@ export type CandidateListData = {
     /** Historical (Jazz) records, kept out of the working list but findable by search. */
     archived: number;
   };
+  /**
+   * How many candidates are in each bucket, across the WHOLE filtered
+   * population rather than the current page. Counting the page would make the
+   * rail read "Active 12" on a 500-person pipeline, which is worse than no
+   * number at all.
+   */
+  bucketCounts: Record<CandidateBucket, number>;
+  /**
+   * Counts for the cross-cutting filters, over the same population as
+   * bucketCounts. These do NOT sum with the buckets and are not meant to —
+   * they cut across all six.
+   */
+  acrossCounts: Record<CandidateAcross, number>;
 };
 
 export type CandidateProfileData = {
@@ -573,7 +626,23 @@ export async function getCandidateListData(
    */
   departmentFilter: CandidateDepartmentKey[] = [],
   /** Rows per page. Capped at CANDIDATE_LIST_MAX so a typo cannot ask for 50,000. */
-  limit: number = CANDIDATE_LIST_LIMIT
+  limit: number = CANDIDATE_LIST_LIMIT,
+  /**
+   * Which segment of the rail to show, or null for everyone.
+   *
+   * A bucket is DERIVED from a person's applications, so there is no column to
+   * filter on. It is resolved to a concrete id list first and folded into the
+   * WHERE — never applied to the page after it comes back. Filtering the
+   * returned page would search only the current rows and silently miss everyone
+   * past the cap, which is the same trap the tag filter above documents.
+   */
+  bucketFilter: CandidateBucket | null = null,
+  /**
+   * A cross-cutting filter, or null. Combines WITH the bucket rather than
+   * replacing it — "Active AND type rated" is a real thing to ask for, and the
+   * two are different questions about the same person.
+   */
+  acrossFilter: CandidateAcross | null = null
 ): Promise<CandidateListData> {
   const normalizedQuery = query.trim().toLowerCase();
   const hasQuery = normalizedQuery.length > 0;
@@ -624,9 +693,21 @@ export async function getCandidateListData(
   //
   // The keeper is what search should find, and it carries everything.
   const notMerged = { status: { not: "MERGED" } };
+  // The archive is excluded from the DEFAULT list, but NOT from the segment
+  // rail's population. Historical is one of the six buckets, so counting it over
+  // a population that already excluded archived records made it permanently 0 —
+  // a segment that could never contain anybody, sitting next to five that could.
+  // Picking a segment replaces the archivedAt default with the bucket's own id
+  // list, which is what lets Historical reach the archive at all.
+  // A cross-cutting filter drops the archive default for the same reason a
+  // bucket does: its COUNT is taken over the whole population, so leaving the
+  // default on made "Failed interview 108" open a list of 3 — the other 105
+  // being in the archive. A number that does not match what clicking it shows
+  // is worse than no number.
+  const archivedDefault = hasQuery || bucketFilter || acrossFilter ? [] : [{ archivedAt: null }];
   const baseWhere: Record<string, unknown> = hasQuery
     ? { AND: [notMerged, ...terms.map(termPredicate)] }
-    : { AND: [notMerged, { archivedAt: null }] };
+    : { AND: [notMerged, ...archivedDefault] };
 
   // Org-wide by default — a HIRING_MANAGER only gets narrowed to their own
   // department when an admin explicitly turns on restrictCandidatesToDepartment
@@ -744,6 +825,100 @@ export async function getCandidateListData(
       }
     : false;
 
+  // Buckets have to be resolved BEFORE the page query, because they are derived
+  // and cannot be expressed in SQL. This pulls the ladder's few scalar columns
+  // for the whole filtered population, counts every bucket for the rail, and —
+  // when a segment is selected — narrows the WHERE to those ids so pagination
+  // and every count below stay exact.
+  //
+  // isHistoricalRecord: ORIGIN ALONE IS NOT ENOUGH. A Jazz candidate pulled back
+  // into the live pipeline has archivedAt cleared, and filing them under
+  // Historical would hide somebody who is actively being worked.
+  const isHistoricalRecord = (origin: string | null, archivedAt: Date | null) =>
+    origin === "JAZZ" && archivedAt !== null;
+
+  // The rail counts EVERYONE in scope, archive included — otherwise Historical
+  // is a segment that can never hold anybody. Drops only the archivedAt default
+  // added above; every other narrowing (search, tags, departments, the viewer's
+  // own scope) still applies, so the counts always describe the list you are
+  // looking at.
+  const bucketPopulationWhere: Record<string, unknown> = {
+    ...candidateWhere,
+    AND: ((candidateWhere.AND as unknown[]) ?? []).filter(
+      (clause) => !(clause && typeof clause === "object" && "archivedAt" in (clause as Record<string, unknown>))
+    )
+  };
+
+  const [bucketRows, typeRatedRows, dispositionOverrides] = await Promise.all([
+    prisma.candidate.findMany({
+      where: bucketPopulationWhere,
+      select: {
+        id: true,
+        origin: true,
+        archivedAt: true,
+        applications: { select: { status: true, disposition: true, offerStatus: true } }
+      }
+    }),
+    // Everybody carrying a type rating we have not dismissed. Distinct ids only
+    // — this is a membership test, not a data read, and there are ~116 of them.
+    prisma.candidateMetric.findMany({
+      where: { key: "type_ratings", status: { not: "DISMISSED" }, valueText: { not: null } },
+      select: { candidateId: true },
+      distinct: ["candidateId"]
+    }),
+    // A chosen group beats the pattern matcher — see lib/data/disposition-groups.
+    getDispositionOverrides()
+  ]);
+  const typeRatedIds = new Set(typeRatedRows.map((r) => r.candidateId));
+
+  const bucketCounts = BUCKET_ORDER.reduce(
+    (acc, b) => ({ ...acc, [b]: 0 }),
+    {} as Record<CandidateBucket, number>
+  );
+  const acrossCounts = ACROSS_ORDER.reduce(
+    (acc, k) => ({ ...acc, [k]: 0 }),
+    {} as Record<CandidateAcross, number>
+  );
+  const idsInBucket: string[] = [];
+  const idsMatchingAcross: string[] = [];
+
+  for (const row of bucketRows) {
+    const apps = row.applications.map((a) => {
+      const outcome = applicationOutcome(a.status, a.disposition, a.offerStatus);
+      return { outcome, group: dispositionGroup(a.status, outcome, dispositionOverrides) };
+    });
+    const bucket = bucketOf(apps, isHistoricalRecord(row.origin, row.archivedAt));
+    bucketCounts[bucket] += 1;
+    if (bucketFilter && bucket === bucketFilter) idsInBucket.push(row.id);
+
+    // Cross-cutting, so counted over EVERY row regardless of which bucket it
+    // landed in — that is the whole point of the axis.
+    const failedInterview = apps.some((a) => a.group === "interview");
+    const typeRated = typeRatedIds.has(row.id);
+    if (failedInterview) acrossCounts.interview += 1;
+    if (typeRated) acrossCounts.typed += 1;
+
+    const matchesAcross =
+      acrossFilter === "interview" ? failedInterview : acrossFilter === "typed" ? typeRated : false;
+    if (acrossFilter && matchesAcross) idsMatchingAcross.push(row.id);
+  }
+
+  // Both narrowings resolve to id lists folded into the WHERE, and they stack:
+  // two `id: { in: [...] }` clauses inside AND intersect, which is exactly the
+  // "Active AND type rated" behaviour the axis is for.
+  if (bucketFilter) {
+    candidateWhere = {
+      ...candidateWhere,
+      AND: [...((candidateWhere.AND as unknown[]) ?? []), { id: { in: idsInBucket } }]
+    };
+  }
+  if (acrossFilter) {
+    candidateWhere = {
+      ...candidateWhere,
+      AND: [...((candidateWhere.AND as unknown[]) ?? []), { id: { in: idsMatchingAcross } }]
+    };
+  }
+
   // BACK TO Promise.all, REVERTED from $transaction. The $transaction attempt
   // (theory: fewer concurrent cold connections) was never actually proven —
   // local measurements were noisy and inconclusive, and swapping it in forced
@@ -755,7 +930,15 @@ export async function getCandidateListData(
   // had. Reverting to the known-good behavior and instrumenting it for real
   // numbers (see queryMs below) rather than guessing a third time.
   const listQueryStart = Date.now();
-  const [candidateRows, total, active, withFiles, withApplications, scheduledInterviews, archived] = await Promise.all([
+  const [
+    candidateRows,
+    total,
+    active,
+    withFiles,
+    withApplications,
+    scheduledInterviews,
+    archived
+  ] = await Promise.all([
     prisma.candidate.findMany({
       where: candidateWhere,
       take: pageSize,
@@ -763,11 +946,28 @@ export async function getCandidateListData(
       include: {
         files: filesInclude,
         candidateTags: { include: { tag: { select: { label: true, color: true } } } },
-        // Just the department of each applied-to job — this is what the
-        // Department column shows, and it is why no Candidate.department column
-        // needs to exist. Deliberately narrow: at 500 rows a wider application
-        // include would be a real cost for nothing the list displays.
-        applications: { select: { job: { select: { department: true } } } },
+        // The applied-to job's department (which is what the Department column
+        // shows, and why no Candidate.department column needs to exist) PLUS the
+        // few outcome fields the segment rail and the expanded rows need.
+        //
+        // This used to select only `job.department`, on the grounds that a wider
+        // include costs real time at 500 rows. It is wider now because the list
+        // genuinely shows per-application outcomes — but only by scalar columns
+        // on a table that was already being joined, so it is extra columns on an
+        // existing join rather than an extra query.
+        applications: {
+          select: {
+            id: true,
+            jobId: true,
+            appliedAt: true,
+            status: true,
+            disposition: true,
+            offerStatus: true,
+            origin: true,
+            historicalJobTitle: true,
+            job: { select: { title: true, department: true } }
+          }
+        },
       // `source` is what separates a tag somebody chose from one the importer
       // left behind; see mergeTagChips.
         _count: {
@@ -806,6 +1006,26 @@ export async function getCandidateListData(
   // in until the real bottleneck is confirmed and fixed, then remove.
   console.log(`[perf] getCandidateListData query time: ${Date.now() - listQueryStart}ms (query="${query}")`);
 
+  // Type ratings for the Types column, fetched for the CURRENT PAGE only — this
+  // one is a separate query rather than an include because CandidateMetric holds
+  // every extracted metric and we want exactly one key from it.
+  const typeRatingRows = candidateRows.length
+    ? await prisma.candidateMetric.findMany({
+        where: {
+          candidateId: { in: candidateRows.map((c) => c.id) },
+          key: "type_ratings",
+          // DISMISSED means a person looked at this extraction and rejected it.
+          // Showing it anyway puts a rating on somebody that a human already said
+          // was wrong, which is worse than showing nothing.
+          status: { not: "DISMISSED" }
+        },
+        select: { candidateId: true, valueText: true }
+      })
+    : [];
+  const typeRatingsById = new Map<string, string[]>(
+    typeRatingRows.map((r) => [r.candidateId, splitListValue(r.valueText)])
+  );
+
   const candidates: CandidateListItem[] = candidateRows.map((candidate) => {
     const matchedFile = hasQuery
       ? (candidate as typeof candidate & { files?: Array<{ displayFilename: string; extractedText: string | null }> }).files?.[0]
@@ -814,6 +1034,44 @@ export async function getCandidateListData(
       matchedFile?.extractedText
         ? { filename: matchedFile.displayFilename, snippet: buildSnippet(matchedFile.extractedText, query) }
         : null;
+
+    const isHistorical = isHistoricalRecord(candidate.origin, candidate.archivedAt);
+
+    // Sorted MOST RECENT FIRST here, once, so every consumer — the collapsed
+    // row's "last applied to", its Status column, and the expanded rows — reads
+    // the same array in the same order. Deriving the row's outcome from a
+    // differently-ordered list is what previously let the Status column describe
+    // one application while the job title named another.
+    const listApplications: CandidateListApplication[] = sortApplicationsForDisplay(
+      (candidate as typeof candidate & {
+        applications?: Array<{
+          id: string;
+          jobId: string | null;
+          appliedAt: Date | null;
+          status: string | null;
+          disposition: string | null;
+          offerStatus: string | null;
+          origin: string;
+          historicalJobTitle: string | null;
+          job: { title: string; department: string | null } | null;
+        }>;
+      }).applications ?? []
+    ).map((a) => {
+      const outcome = applicationOutcome(a.status, a.disposition, a.offerStatus);
+      return {
+        id: a.id,
+        jobId: a.jobId,
+        // A Jazz application often has no Job row at all, only the title it was
+        // imported with — falling back keeps the expanded row from reading
+        // "(no job)" for two thirds of the archive.
+        jobTitle: a.job?.title ?? a.historicalJobTitle ?? null,
+        appliedAt: a.appliedAt ? a.appliedAt.toISOString() : null,
+        statusText: a.status,
+        outcome,
+        group: dispositionGroup(a.status, outcome, dispositionOverrides),
+        historical: a.origin === "JAZZ"
+      };
+    });
 
     return {
       id: candidate.id,
@@ -850,7 +1108,10 @@ export async function getCandidateListData(
           .applications?.map((a) => a.job?.department) ?? []
       ),
       docMatch,
-      paycomLink: candidate.paycomLink
+      paycomLink: candidate.paycomLink,
+      bucket: bucketOf(listApplications, isHistorical),
+      applications: listApplications,
+      typeRatings: typeRatingsById.get(candidate.id) ?? []
     };
   });
 
@@ -865,7 +1126,9 @@ export async function getCandidateListData(
       withApplications,
       scheduledInterviews,
       archived
-    }
+    },
+    bucketCounts,
+    acrossCounts
   };
 }
 
@@ -944,10 +1207,35 @@ export async function getCandidatesByIds(ids: string[], viewer?: CandidateListVi
     where: byIdsDepartment ? { AND: [{ id: { in: scoped } }, byIdsDepartment] } : { id: { in: scoped } },
     include: {
       candidateTags: { include: { tag: { select: { label: true, color: true } } } },
-      applications: { select: { job: { select: { department: true } } } },
+      // Same shape the list query uses, so a saved view renders identical rows.
+      applications: {
+        select: {
+          id: true,
+          jobId: true,
+          appliedAt: true,
+          status: true,
+          disposition: true,
+          offerStatus: true,
+          origin: true,
+          historicalJobTitle: true,
+          job: { select: { title: true, department: true } }
+        }
+      },
       _count: { select: { notes: true, files: true, applications: true } }
     }
   });
+
+  const viewTypeRatings = await prisma.candidateMetric.findMany({
+    where: { candidateId: { in: rows.map((r) => r.id) }, key: "type_ratings", status: { not: "DISMISSED" } },
+    select: { candidateId: true, valueText: true }
+  });
+  const viewTypeRatingsById = new Map<string, string[]>(
+    viewTypeRatings.map((r) => [r.candidateId, splitListValue(r.valueText)])
+  );
+
+  // Same chosen groups the list uses, so a saved view and the list it was picked
+  // from never disagree about what a reason means.
+  const dispositionOverrides = await getDispositionOverrides();
 
   const byId = new Map(rows.map((row) => [row.id, row]));
   // Preserve the saved order rather than the database's — the view was picked in
@@ -958,7 +1246,24 @@ export async function getCandidatesByIds(ids: string[], viewer?: CandidateListVi
   return scoped
     .map((id) => byId.get(id))
     .filter((row): row is NonNullable<typeof row> => Boolean(row))
-    .map((candidate) => ({
+    .map((candidate) => {
+      const applications: CandidateListApplication[] = sortApplicationsForDisplay(
+        candidate.applications
+      ).map((a) => {
+        const outcome = applicationOutcome(a.status, a.disposition, a.offerStatus);
+        return {
+          id: a.id,
+          jobId: a.jobId,
+          jobTitle: a.job?.title ?? a.historicalJobTitle ?? null,
+          appliedAt: a.appliedAt ? a.appliedAt.toISOString() : null,
+          statusText: a.status,
+          outcome,
+          group: dispositionGroup(a.status, outcome, dispositionOverrides),
+          historical: a.origin === "JAZZ"
+        };
+      });
+
+      return {
       id: candidate.id,
       displayName: candidate.displayName,
       currentTitle: candidate.currentTitle,
@@ -984,8 +1289,12 @@ export async function getCandidatesByIds(ids: string[], viewer?: CandidateListVi
         candidate.applications.map((a) => a.job?.department)
       ),
       docMatch: null,
-      paycomLink: candidate.paycomLink
-    }));
+      paycomLink: candidate.paycomLink,
+      bucket: bucketOf(applications, candidate.origin === "JAZZ" && candidate.archivedAt !== null),
+      applications,
+      typeRatings: viewTypeRatingsById.get(candidate.id) ?? []
+      };
+    });
 }
 
 /**

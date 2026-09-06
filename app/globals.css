@@ -20,6 +20,21 @@
      container un-clipped so the bloom has room. Tables can't carry a box-shadow,
      so table rows use `.row-wash` instead. */
   --glow: inset 0 0 0 9999px rgba(234, 170, 0, 0.03), 0 0 0 1px rgba(234, 170, 0, 0.85), 0 0 18px 3px rgba(234, 170, 0, 0.55);
+
+  /* Candidate segment-rail STAGE colours. One per stage, carried on the rule
+     above each group, its label, and the stripe down every item in it — so
+     Working, Decided and Archive read apart instead of running together as one
+     list. Drawn from the palette already in use rather than new hues.
+
+     They live here, as variables, rather than as Tailwind classes because dark
+     mode is CLASS-based: an inline style cannot carry a dark: variant, and these
+     are applied inline (the stage is data, not a fixed class). Defined here and
+     overridden in .dark below, one element reference works in both themes. */
+  --stage-working: #0369a1; /* in play */
+  --stage-decided: #047857; /* settled */
+  --stage-archive: #63666a; /* dormant */
+  --stage-across: #6d28d9; /* cuts through the buckets */
+  --stage-manage: #466481; /* admin, not a bucket */
 }
 
 @layer components {
@@ -57,6 +72,13 @@
      the 3% gold inset fill is invisible on deep navy, so lift the fill to ~6% and
      ease the ring/bloom down a touch so it doesn't scream. */
   --glow: inset 0 0 0 9999px rgba(234, 170, 0, 0.06), 0 0 0 1px rgba(234, 170, 0, 0.65), 0 0 18px 3px rgba(234, 170, 0, 0.45);
+  /* Stage colours lightened to hold on the navy panel — the light-mode values
+     are far too dark to read there. */
+  --stage-working: #7dd3fc;
+  --stage-decided: #6ee7b7;
+  --stage-archive: #93a7bb;
+  --stage-across: #c4b5fd;
+  --stage-manage: #8fb3d6;
   /* Tell the UA to render form controls, native <select> option lists, and
      default scrollbars in their dark variants so they don't flash light. */
   color-scheme: dark;

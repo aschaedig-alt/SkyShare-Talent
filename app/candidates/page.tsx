@@ -2,12 +2,21 @@ import { CandidatesWorkspace } from "@/components/candidates/CandidatesWorkspace
 import { getCandidateListData, getCandidateTagOptions } from "@/lib/data/candidates";
 import { CANDIDATE_LIST_LIMIT, CANDIDATE_PAGE_SIZES } from "@/lib/candidates/list-config";
 import { isCandidateDepartmentKey } from "@/lib/candidates/departments";
+import { isCandidateAcross, isCandidateBucket } from "@/lib/candidates/buckets";
+import { getStageList } from "@/lib/data/candidate-stages";
 import { requireModulePageAccess } from "@/lib/data/module-access";
-import { getPageLayout } from "@/lib/data/page-layout";
 import { isAdminOrRecruiter } from "@/lib/auth/roles";
 
 type CandidatesPageProps = {
-  searchParams?: Promise<{ q?: string; from?: string; tags?: string; depts?: string; size?: string }>;
+  searchParams?: Promise<{
+    q?: string;
+    from?: string;
+    tags?: string;
+    depts?: string;
+    size?: string;
+    bucket?: string;
+    across?: string;
+  }>;
 };
 
 /** ?tags=Hot+lead,Veteran — comma-separated so the filter survives a copied URL. */
@@ -39,10 +48,17 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
   // rather than calling resolveViewerScope again. Same object either way — the
   // resolver is React-cached per request — but one caller means one place to
   // look when asking what this page scoped itself to.
-  const [data, layout, tagOptions] = await Promise.all([
-    getCandidateListData(query, access.viewer, activeTags, activeDepartments, pageSize),
-    getPageLayout("candidates"),
-    getCandidateTagOptions()
+  // An unknown ?bucket= is dropped rather than passed through, so a hand-edited
+  // URL cannot produce an empty list that looks like a bug — same rule the
+  // department param above follows.
+  const bucketParam = params?.bucket?.trim() ?? "";
+  const activeBucket = isCandidateBucket(bucketParam) ? bucketParam : null;
+  const acrossParam = params?.across?.trim() ?? "";
+  const activeAcross = isCandidateAcross(acrossParam) ? acrossParam : null;
+  const [data, tagOptions, stageList] = await Promise.all([
+    getCandidateListData(query, access.viewer, activeTags, activeDepartments, pageSize, activeBucket, activeAcross),
+    getCandidateTagOptions(),
+    getStageList()
   ]);
   console.log(
     `[perf] /candidates page: access check ${afterAccess - pageStart}ms, data+layout ${Date.now() - afterAccess}ms, total ${Date.now() - pageStart}ms`
@@ -57,8 +73,9 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
       activeDepartments={activeDepartments}
       canEdit={isAdminOrRecruiter(access.role)}
       onboardingIntent={params?.from === "onboarding"}
-      savedLayout={layout.layout}
-      savedWidgets={layout.widgets}
+      activeBucket={activeBucket}
+      activeAcross={activeAcross}
+      stageList={stageList}
     />
   );
 }

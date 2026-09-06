@@ -1,19 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, Send, StickyNote, Mail, Phone, Search, X, Check, BarChart3, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Search, X, Check, BarChart3, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import type { CandidateListItem } from "@/lib/data/candidates";
 import { CANDIDATE_DEPARTMENTS } from "@/lib/candidates/departments";
-import { CandidateStageCell } from "@/components/candidates/CandidateStageCell";
-import { CandidateTagCell } from "@/components/candidates/CandidateTagCell";
+import { CandidateRow } from "@/components/candidates/CandidateRow";
+import type { CandidateStage } from "@/lib/candidates/stages";
 import { Button } from "@/components/ui";
-import { formatMomentDate } from "@/lib/dates/display";
 
-function formatDate(value: string) {
-  return formatMomentDate(value);
-}
+/**
+ * Column geometry, named once because the expanded application rows have to
+ * emit exactly this many cells with the job title under the job column. Two
+ * places counting columns independently is how the expanded block came to sit
+ * under the wrong headings the first time.
+ */
+const COLUMN_COUNT = 7;
+const JOB_COLUMN_INDEX = 3; // checkbox 1, Candidate 2, Last applied to 3
 
 /** Wrap occurrences of query in <mark> for highlighted snippets. */
 function highlight(text: string, query: string) {
@@ -63,11 +66,14 @@ function initials(name: string) {
 export function SelectableCandidateTable({
   candidates,
   query,
-  canEdit
+  canEdit,
+  stageList
 }: {
   candidates: CandidateListItem[];
   query: string;
   canEdit: boolean;
+  /** The live stage vocabulary, edited at /candidates/manage. */
+  stageList?: CandidateStage[];
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -88,6 +94,7 @@ export function SelectableCandidateTable({
   // pushed into the query, and department is DERIVED from the jobs applied to
   // rather than stored on the row, so there is no column to ORDER BY yet.
   const [deptSort, setDeptSort] = useState<"none" | "asc" | "desc">("none");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const rows = useMemo(() => {
     if (deptSort === "none") return candidates;
@@ -118,14 +125,32 @@ export function SelectableCandidateTable({
   }, [candidates, deptSort]);
   const allShownSelected = shownIds.length > 0 && shownIds.every((id) => selected.has(id));
 
-  function toggle(id: string) {
+  // useCallback is LOAD-BEARING on both of these, not a habit. CandidateRow is
+  // memoised so that expanding one row does not re-render the other ninety-nine
+  // (each of which owns a select and a tag list). A fresh function identity every
+  // render would break that memo and put the lag straight back.
+  const toggle = useCallback((id: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  }
+  }, []);
+
+  /**
+   * Which rows have their applications open. Page-local on purpose: it is a
+   * "let me look at this one" gesture, not a filter, and carrying it in the URL
+   * would make a shared link open somebody else's expanded rows.
+   */
+  const toggleExpanded = useCallback((id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   function toggleAllShown() {
     setSelected((prev) => {
@@ -234,10 +259,15 @@ export function SelectableCandidateTable({
       <div>
         {candidates.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1000px] border-collapse text-left text-sm">
+            {/* No min-width, and no horizontal scroll. The table is FIXED-layout
+                on percentage widths, and narrow screens drop the columns that
+                matter least rather than squeezing every one until the names
+                truncate. A min-w-[1000px] here used to force a sideways
+                scrollbar under 1000px, which this layout exists to avoid. */}
+            <table className="w-full table-fixed border-collapse text-left text-sm">
               <thead className="bg-brand-cloudDancer/60 text-[11px] uppercase tracking-[0.16em] text-brand-grey dark:bg-white/5 dark:text-slate-400">
                 <tr>
-                  <th className="w-10 px-3 py-3">
+                  <th className="w-[5%] py-3 pl-5 pr-2">
                     <input
                       type="checkbox"
                       checked={allShownSelected}
@@ -247,8 +277,7 @@ export function SelectableCandidateTable({
                       className="h-4 w-4 cursor-pointer rounded border-brand-lea/30 accent-brand-lea"
                     />
                   </th>
-                  <th className="px-5 py-3 font-bold">Candidate</th>
-                  <th className="px-4 py-3 font-bold">
+                  <th className="w-[19%] px-4 py-3 font-bold leading-[1.35] [overflow-wrap:anywhere] max-[1320px]:w-[31%] max-[1020px]:w-[38%] max-[760px]:w-[53%]">
                     <button
                       type="button"
                       onClick={() => setDeptSort((s) => (s === "none" ? "asc" : s === "asc" ? "desc" : "none"))}
@@ -261,155 +290,65 @@ export function SelectableCandidateTable({
                       }
                       className="inline-flex items-center gap-1 font-bold uppercase tracking-[0.16em] transition hover:text-brand-lea dark:hover:text-slate-100"
                     >
-                      Department
+                      Candidate
                       {deptSort === "none" ? (
-                        <ArrowUpDown className="h-3 w-3 opacity-40" />
+                        <ArrowUpDown className="h-[9px] w-[9px] opacity-40" />
                       ) : deptSort === "asc" ? (
-                        <ArrowUp className="h-3 w-3" />
+                        <ArrowUp className="h-[9px] w-[9px] text-brand-gold" />
                       ) : (
-                        <ArrowDown className="h-3 w-3" />
+                        <ArrowDown className="h-[9px] w-[9px] text-brand-gold" />
                       )}
                     </button>
                   </th>
-                  <th className="px-4 py-3 font-bold">Stage</th>
-                  <th className="px-4 py-3 font-bold">Contact</th>
-                  <th className="px-4 py-3 font-bold">Tags</th>
-                  <th className="px-4 py-3 font-bold">Activity</th>
-                  <th className="px-4 py-3 font-bold">Updated</th>
+                  {/* Widths are per breakpoint and each set must total 100 with
+                      the columns still showing: 5+19+20+16+11+20+9 full,
+                      5+31+27+20+17 at 1320 (Types, Activity gone),
+                      5+38+33+24 at 1020 (Tags gone), 5+53+42 at 760 (Status
+                      gone). A set that does not add up is not a visible bug —
+                      table-fixed silently redistributes the remainder — which is
+                      exactly why it is written down. */}
+                  <th className="w-[20%] px-4 py-3 font-bold leading-[1.35] [overflow-wrap:anywhere] max-[1320px]:w-[27%] max-[1020px]:w-[33%] max-[760px]:w-[42%]">
+                    Last applied to
+                  </th>
+                  <th className="w-[16%] px-4 py-3 font-bold leading-[1.35] [overflow-wrap:anywhere] max-[1320px]:w-[20%] max-[1020px]:w-[24%] max-[760px]:hidden">
+                    Status
+                  </th>
+                  {/* Types and Activity shed first: both are repeated inside the
+                      expanded row, so nothing is actually lost at narrow widths. */}
+                  <th className="w-[11%] px-4 py-3 font-bold leading-[1.35] max-[1320px]:hidden">Types</th>
+                  {/* Tags takes the width freed by narrowing Candidate and
+                      Activity — it is the column that most often ran out of room
+                      and pushed chips onto a fourth line. */}
+                  <th className="w-[20%] px-4 py-3 font-bold leading-[1.35] max-[1320px]:w-[17%] max-[1020px]:hidden">
+                    Tags
+                  </th>
+                  {/* Right-aligned: the counters below sit as a 2-up block against
+                      the table's right edge, so the column only needs the width of
+                      two chips rather than three in a row. */}
+                  <th className="w-[9%] py-3 pl-4 pr-5 text-right font-bold leading-[1.35] max-[1320px]:hidden">
+                    Activity
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-brand-lea/10 dark:divide-white/10">
-                {rows.map((candidate) => {
-                  const isSelected = selected.has(candidate.id);
-                  return (
-                    <tr
-                      key={candidate.id}
-                      className={`row-wash align-top ${isSelected ? "bg-brand-sweet/20 dark:bg-brand-gold/10" : ""}`}
-                    >
-                      <td className="px-3 py-4">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggle(candidate.id)}
-                          aria-label={`Select ${candidate.displayName}`}
-                          className="h-4 w-4 cursor-pointer rounded border-brand-lea/30 accent-brand-lea"
-                        />
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex gap-3">
-                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-lea/10 text-xs font-bold text-brand-lea dark:text-slate-100">
-                            {initials(candidate.displayName) || "—"}
-                          </span>
-                          <div className="min-w-0">
-                            <span className="inline-flex items-center gap-1.5">
-                              <Link href={`/candidates/${candidate.id}`} prefetch={false} className="font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-100">
-                                {candidate.displayName}
-                              </Link>
-                              {candidate.paycomLink && (
-                                <a
-                                  href={candidate.paycomLink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  title="Open in Paycom"
-                                  aria-label={`Open ${candidate.displayName} in Paycom`}
-                                  className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] text-[8px] font-black leading-none text-white transition hover:brightness-110"
-                                  style={{ backgroundColor: "#2E9E5B" }}
-                                >
-                                  P
-                                </a>
-                              )}
-                              {/* Why this row is here twice.
-                                  Search deliberately spans archived and historical records so
-                                  legacy Jazz candidates stay findable, which means one person
-                                  can come back as two rows: the record people work, and a
-                                  tombstone a merge left behind. Without this badge those looked
-                                  identical, so a resolved duplicate read as an unfixed one —
-                                  reported after two Matt Smiths kept appearing in search. Only
-                                  ever set on a row outside the live pool, so the default list
-                                  never shows it. */}
-                              {candidate.archivedAs && (
-                                <span
-                                  title={
-                                    candidate.archivedAs === "MERGED"
-                                      ? "Merged into another record and kept for history. Not in the live pool."
-                                      : "Archived. Not in the live pool."
-                                  }
-                                  className="shrink-0 rounded border border-brand-lea/15 bg-brand-cloudDancer/70 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:border-white/15 dark:bg-white/10 dark:text-slate-300"
-                                >
-                                  {candidate.archivedAs === "MERGED" ? "merged" : "archived"}
-                                </span>
-                              )}
-                            </span>
-                            <div className="text-xs text-brand-grey dark:text-slate-400">{candidate.currentTitle ?? "No current role"}</div>
-                            {candidate.docMatch && (
-                              <div className="mt-1.5 max-w-[380px] rounded border border-brand-lea/10 bg-brand-cloudDancer/50 px-2.5 py-1.5 text-[11px] leading-5 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-                                <span className="font-semibold text-brand-lea dark:text-slate-100">{candidate.docMatch.filename}: </span>
-                                {highlight(candidate.docMatch.snippet, query)}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        {/* Derived from the jobs they applied to, never stored.
-                            More than one chip means they applied across
-                            departments, which is real. */}
-                        <div className="flex flex-wrap gap-1">
-                          {candidate.departments.map((key) => {
-                            const dept = CANDIDATE_DEPARTMENTS.find((d) => d.key === key);
-                            if (!dept) return null;
-                            return (
-                              <span
-                                key={key}
-                                className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[11px] font-semibold ${dept.chip}`}
-                              >
-                                {dept.label}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <CandidateStageCell
-                          candidateId={candidate.id}
-                          candidateName={candidate.displayName}
-                          stage={candidate.stage}
-                          pillClass={stagePill(candidate.stage)}
-                          canEdit={canEdit}
-                        />
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="space-y-1 text-xs text-brand-grey dark:text-slate-400">
-                          <div className="flex items-center gap-1.5">
-                            <Mail className="h-3 w-3 shrink-0 text-brand-lea/50" />
-                            <span className="min-w-0 truncate">{candidate.primaryEmail ?? "No email"}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <Phone className="h-3 w-3 shrink-0 text-brand-lea/50" />
-                            <span>{candidate.primaryPhone ?? "No phone"}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <CandidateTagCell chips={candidate.tagChips} />
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex flex-wrap gap-1.5 text-[11px] font-medium text-brand-grey dark:text-slate-400">
-                          <span className="inline-flex items-center gap-1 rounded bg-amber-50 dark:bg-amber-500/15 px-1.5 py-0.5 text-amber-700 dark:text-amber-300" title="Files">
-                            <FileText className="h-3 w-3" /> {candidate.fileCount}
-                          </span>
-                          <span className="inline-flex items-center gap-1 rounded bg-brand-cloudDancer/70 px-1.5 py-0.5 text-brand-lea dark:bg-white/5 dark:text-slate-100" title="Notes">
-                            <StickyNote className="h-3 w-3" /> {candidate.noteCount}
-                          </span>
-                          <span className="inline-flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300" title="Applications">
-                            <Send className="h-3 w-3" /> {candidate.applicationCount}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-xs text-brand-grey dark:text-slate-400">{formatDate(candidate.updatedAt)}</td>
-                    </tr>
-                  );
-                })}
+                {rows.map((candidate) => (
+                  <CandidateRow
+                    key={candidate.id}
+                    candidate={candidate}
+                    query={query}
+                    canEdit={canEdit}
+                    isSelected={selected.has(candidate.id)}
+                    isOpen={expanded.has(candidate.id)}
+                    columnCount={COLUMN_COUNT}
+                    jobColumnIndex={JOB_COLUMN_INDEX}
+                    onToggleSelect={toggle}
+                    onToggleExpanded={toggleExpanded}
+                    highlight={highlight}
+                    stagePill={stagePill}
+                    initials={initials}
+                    stageList={stageList}
+                  />
+                ))}
               </tbody>
             </table>
           </div>

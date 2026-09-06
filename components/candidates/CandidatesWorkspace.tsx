@@ -1,13 +1,5 @@
 import Link from "next/link";
-import {
-  Users,
-  UserCheck,
-  FileText,
-  Send,
-  CalendarClock,
-  Archive,
-  ArrowRight
-} from "lucide-react";
+import { UserCheck } from "lucide-react";
 import type { CandidateListData, CandidateTagOption } from "@/lib/data/candidates";
 import { SelectableCandidateTable } from "@/components/candidates/SelectableCandidateTable";
 import { CandidateTagFilter } from "@/components/candidates/CandidateTagFilter";
@@ -18,8 +10,9 @@ import { ResumeIntake } from "@/components/candidates/ResumeIntake";
 import { DocumentIntake } from "@/components/candidates/DocumentIntake";
 import { CandidateViewTabs } from "@/components/candidates/CandidateViewTabs";
 import { CandidateSearchBox } from "@/components/candidates/CandidateSearchBox";
-import { EditableGrid, type GridItem } from "@/components/shared/EditableGrid";
-import type { WidgetInstance } from "@/lib/data/page-layout";
+import { CandidateSegmentTiles } from "@/components/candidates/CandidateSegmentTiles";
+import { BUCKET_LABEL, type CandidateAcross, type CandidateBucket } from "@/lib/candidates/buckets";
+import type { CandidateStage } from "@/lib/candidates/stages";
 
 type CandidatesWorkspaceProps = {
   data: CandidateListData;
@@ -31,55 +24,27 @@ type CandidatesWorkspaceProps = {
   /** Departments currently narrowing the list, from ?depts= in the URL. */
   activeDepartments?: string[];
   canEdit?: boolean;
-  savedLayout?: GridItem[] | null;
-  savedWidgets?: WidgetInstance[] | null;
   // Set when the user arrived here via "Start from a candidate" on New hires, so
   // the list carries the intent instead of dropping them onto an anonymous page.
   onboardingIntent?: boolean;
+  /** Segment currently selected in the bar, from ?bucket= in the URL. */
+  activeBucket?: CandidateBucket | null;
+  /** Cross-cutting filter from ?across= in the URL. */
+  activeAcross?: CandidateAcross | null;
+  /** The live stage vocabulary, edited at /candidates/manage. */
+  stageList?: CandidateStage[];
 };
 
-// Default arrangement of the resizable boxes.
+// NO EDITABLE GRID ON THIS PAGE.
 //
-// "records" USED TO LIVE HERE and no longer does — it is rendered below the grid
-// in ordinary page flow instead. Read this before putting it back.
-//
-// EditableGrid is react-grid-layout: every item gets an ABSOLUTE pixel slot
-// (h * rowHeight 28 + gaps of 12) and its content is stuck with it. At the old
-// default of h:26 that is 26*28 + 25*12 = 1028px, which a 100-row result set
-// overflows about six times over — so the table scrolled inside a fixed box on
-// the busiest page in the app while the page itself refused to grow. The live
-// saved layout showed what that costs: someone had dragged the slot to h:230
-// (~9188px) to stop the inner scrollbar, which just traded it for thousands of
-// pixels of empty white box under a 45-row list.
-//
-// There is no "grow to content" for a react-grid-layout item, so the honest fix
-// is for the table not to be one. The stats strip stays — it is genuinely a
-// dashboard row of fixed-height tiles — so "Edit layout" and widgets still work.
-// A stale "records" entry in a saved layout is harmless: buildInitial only looks
-// up ids that are actually in the panels array.
-const CANDIDATES_DEFAULT_LAYOUT: GridItem[] = [
-  { i: "stats", x: 0, y: 0, w: 12, h: 4 }
-];
+// It carried the statistics strip, which the segment tiles replaced; asked to
+// drop "Edit layout" as well, since there is nothing on this page worth
+// rearranging. Checked before removing rather than assumed: the saved
+// page-layout row for "candidates" held widgets: [] and two stale entries
+// ("stats", "records") naming panels that no longer exist, so nothing a person
+// had arranged was lost. The row is left in the database untouched — it is
+// harmless, and deleting live data to tidy up is not worth it.
 
-type StatConfig = {
-  key: keyof CandidateListData["stats"];
-  label: string;
-  icon: typeof Users;
-  accent: string; // background tint + text for the icon chip
-};
-
-// "Total candidates" used to count every record ever imported, so the page
-// announced 3,213 above a list of 45 and read as though candidates had gone
-// missing. Every tile now counts what this page actually shows; the historical
-// import is its own clearly-labelled tile.
-const statConfig: StatConfig[] = [
-  { key: "total", label: "Candidates here", icon: Users, accent: "bg-brand-lea/10 text-brand-lea dark:text-slate-100" },
-  { key: "active", label: "Active", icon: UserCheck, accent: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" },
-  { key: "withFiles", label: "With files", icon: FileText, accent: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" },
-  { key: "withApplications", label: "With applications", icon: Send, accent: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300" },
-  { key: "scheduledInterviews", label: "Scheduled interviews", icon: CalendarClock, accent: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-500/15 dark:text-fuchsia-300" },
-  { key: "archived", label: "In historical archive", icon: Archive, accent: "bg-slate-200 text-slate-700 dark:bg-white/10 dark:text-slate-300" }
-];
 
 export function CandidatesWorkspace({
   data,
@@ -88,54 +53,52 @@ export function CandidatesWorkspace({
   activeTags = [],
   activeDepartments = [],
   canEdit = false,
-  savedLayout = null,
-  savedWidgets = null,
-  onboardingIntent = false
+  onboardingIntent = false,
+  activeBucket = null,
+  activeAcross = null,
+  stageList
 }: CandidatesWorkspaceProps) {
-  const statsPanel = (
-    <section className="grid h-full content-start gap-3 grid-cols-[repeat(auto-fit,minmax(150px,1fr))]">
-      {statConfig.map(({ key, label, icon: Icon, accent }) => (
-        <div key={key} className="flex items-center gap-3 rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 transition hover:ring-brand-gold/40 dark:bg-brand-panel dark:ring-white/10">
-          <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded ${accent}`}>
-            <Icon className="h-5 w-5" />
-          </span>
-          <div className="min-w-0">
-            <div className="text-xl font-semibold leading-none text-brand-lea dark:text-slate-100">{data.stats[key]}</div>
-            <div className="mt-1 truncate text-[11px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">{label}</div>
-          </div>
-        </div>
-      ))}
-      {/* Sits in the stat row but reads as a DOOR, not a number — navy fill
-          instead of the white card, no count, an arrow instead of a value. The
-          other tiles say what IS; this one says where to go. A real Link since
-          it loads a different page. */}
-      <Link
-        href="/candidates/recent-interviews"
-        className="flex items-center gap-3 rounded bg-brand-lea p-4 shadow-panel ring-1 ring-brand-lea transition hover:bg-brand-eden hover:shadow-glow"
-      >
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded bg-white/15 text-brand-gold">
-          <CalendarClock className="h-5 w-5" />
-        </span>
-        <div className="min-w-0">
-          <div className="text-sm font-semibold leading-tight text-white">Recent interviews</div>
-          <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-white/70">
-            Who you&apos;re working on <ArrowRight className="h-3 w-3" />
-          </div>
-        </div>
-      </Link>
-      {/* Make the archive reachable from the number, so "where did the rest go"
-          has an answer on screen rather than needing to be asked. */}
-      {data.stats.archived > 0 && (
-        <p className="col-span-full -mt-1 text-[11px] text-brand-grey dark:text-slate-400">
-          The working list holds your live candidates. {data.stats.archived.toLocaleString()} older records from the
-          JazzHR import live in the{" "}
-          <Link href="/archive" className="font-semibold text-brand-lea underline hover:text-brand-gold dark:text-slate-100">
-            historical archive
-          </Link>{" "}
-          — and searching here finds them too.
-        </p>
-      )}
-    </section>
+  // Everything the segment bar must carry through when you switch segment, so a
+  // search and its filters survive the click instead of silently resetting.
+  const segmentParams: Record<string, string | undefined> = {
+    q: query || undefined,
+    tags: activeTags.length ? activeTags.join(",") : undefined,
+    depts: activeDepartments.length ? activeDepartments.join(",") : undefined,
+    size: data.listLimit !== 100 ? String(data.listLimit) : undefined,
+    // Carried so the two axes survive each other: switching segment keeps the
+    // cross-cutting filter, and toggling that keeps the segment. The bar strips
+    // whichever key it is rewriting.
+    bucket: activeBucket ?? undefined,
+    across: activeAcross ?? undefined
+  };
+  // WAS the statistics strip. The segments ARE the counts now, so one row does
+  // both jobs instead of two rows showing counts of the same people.
+  //
+  // In ordinary page flow, NOT a fixed slot. It briefly sat in the grid panel
+  // the strip had used and inherited its 148px, which fit at full width and
+  // overflowed by 18px at 1100px and below, where the filter row under the tiles
+  // wraps — spilling silently over whatever sat beneath.
+  const segmentTiles = (
+    <CandidateSegmentTiles
+      counts={data.bucketCounts}
+      acrossCounts={data.acrossCounts}
+      active={activeBucket ?? null}
+      activeAcross={activeAcross ?? null}
+      searchParams={segmentParams}
+    />
+  );
+
+  // The archive pointer moved out of the stat strip and under the segments —
+  // "where did the rest go" still has an answer on screen.
+  const archiveNote = data.stats.archived > 0 && (
+    <p className="text-[11px] text-brand-grey dark:text-slate-400">
+      The working list holds your live candidates. {data.stats.archived.toLocaleString()} older records from the
+      JazzHR import live in the{" "}
+      <Link href="/archive" className="font-semibold text-brand-lea underline hover:text-brand-gold dark:text-slate-100">
+        historical archive
+      </Link>{" "}
+      — and searching here finds them too.
+    </p>
   );
 
   const recordsPanel = (
@@ -145,7 +108,12 @@ export function CandidatesWorkspace({
     <section className="flex flex-col rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b border-brand-lea/10 px-5 py-4 dark:border-white/10">
         <div>
-          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Candidate records</h2>
+          {/* Names the SEGMENT when one is picked. A heading that stayed
+              "Candidate records" while the rail said Talent pool leaves the
+              count looking wrong rather than filtered. */}
+          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">
+            {activeBucket ? BUCKET_LABEL[activeBucket] : "Candidate records"}
+          </h2>
           {/* Say plainly when the list is a subset. "Showing up to 100" left you
               to work out whether 45 meant "that is all of them" or "the rest are
               hidden" — which is the confusion that made this look like data loss. */}
@@ -175,7 +143,7 @@ export function CandidatesWorkspace({
           </span>
         </div>
       </div>
-      <SelectableCandidateTable candidates={data.candidates} query={query} canEdit={canEdit} />
+      <SelectableCandidateTable candidates={data.candidates} query={query} canEdit={canEdit} stageList={stageList} />
     </section>
   );
 
@@ -223,16 +191,20 @@ export function CandidatesWorkspace({
 
       <CandidateViewTabs active="list" />
 
-      <EditableGrid
-        pageKey="candidates"
-        canEdit={canEdit}
-        savedLayout={savedLayout}
-        savedWidgets={savedWidgets}
-        defaultLayout={CANDIDATES_DEFAULT_LAYOUT}
-        panels={[{ id: "stats", title: "Statistics", node: statsPanel }]}
-      />
+      {/* The segments are in ORDINARY PAGE FLOW, not a grid slot.
+          They were briefly the grid's panel, inheriting the statistics strip's
+          fixed 148px. That fit at full width and overflowed by 18px at 1100px
+          and below, where the row of filters under the tiles wraps — spilling
+          silently over whatever sat beneath it, which is the exact failure the
+          calendar hit. A saved layout still carries the old height, so raising
+          the default would not have fixed it for anyone who has arranged this
+          page. Out of the grid it simply grows to its content.
+          The grid stays for WIDGETS, which are independent of panels — "Edit
+          layout" and anything already added still work. */}
+      {segmentTiles}
+      {archiveNote}
 
-      {/* Outside the grid on purpose — see CANDIDATES_DEFAULT_LAYOUT above. */}
+
       {recordsPanel}
     </div>
   );

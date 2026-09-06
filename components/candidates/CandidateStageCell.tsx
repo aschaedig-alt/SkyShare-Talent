@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { stageOptionsFor } from "@/lib/candidates/stages";
+import { stageOptionsFor, type CandidateStage } from "@/lib/candidates/stages";
 
 // Change a candidate's stage from the LIST, without opening their profile.
 //
@@ -21,7 +21,8 @@ export function CandidateStageCell({
   candidateName,
   stage,
   pillClass,
-  canEdit
+  canEdit,
+  stageList
 }: {
   candidateId: string;
   candidateName: string;
@@ -29,6 +30,8 @@ export function CandidateStageCell({
   /** The colour classes the read-only pill uses, so both look the same. */
   pillClass: string;
   canEdit: boolean;
+  /** The live vocabulary, edited at /candidates/manage. */
+  stageList?: CandidateStage[];
 }) {
   const router = useRouter();
   const [value, setValue] = useState(stage ?? "");
@@ -72,11 +75,24 @@ export function CandidateStageCell({
         disabled={saving}
         onChange={(e) => void change(e.target.value)}
         aria-label={`Stage for ${candidateName}`}
-        title={`Change ${candidateName}'s stage`}
-        className={`w-full max-w-[170px] cursor-pointer rounded border px-2 py-1 text-xs font-semibold outline-none transition focus:ring-2 focus:ring-brand-gold/50 disabled:opacity-60 ${pillClass}`}
+        /* Carries the value, because at this width the longest stage truncates
+           and hover is then the only way to read it in full. */
+        title={value ? `${value} — click to change` : `Set ${candidateName}'s stage`}
+        /* A FIXED width, not w-full, and sized to the SECOND-longest label.
+           Stretching to the cell made this the widest thing in the row for no
+           reason. Measured at 11px in the page's own font: "Prescreen Complete"
+           is 108px and every other stage is 83px or less, so that one label was
+           charging all twelve rows 25px of width. It is on 8 candidates out of
+           497 with a stage set, it ellipsizes rather than disappearing, the open
+           dropdown shows it in full, and the title above carries it — so the
+           trade is 8 rows hovering against every row being narrower.
+           Fixed also means the box does not resize as the word changes, which is
+           what makes a column of these scannable. If "Prescreen Complete" is
+           ever renamed to something shorter this can go tighter again. */
+        className={`w-[116px] max-w-full cursor-pointer truncate rounded border px-1.5 py-1 text-[11px] font-semibold outline-none transition focus:ring-2 focus:ring-brand-gold/50 disabled:opacity-60 ${pillClass}`}
       >
         <option value="">No stage</option>
-        {stageOptionsFor(stage).map((group) => (
+        {stageOptionsFor(stage, stageList).map((group) => (
           <optgroup key={group.group} label={group.group}>
             {group.values.map((v) => (
               <option key={v} value={v}>
