@@ -121,13 +121,34 @@ export async function DELETE(request: Request) {
 
   const tag = await prisma.tag.findUnique({
     where: { normalized: label.toLowerCase() },
-    select: { id: true, label: true, _count: { select: { candidates: true } } }
+    select: {
+      id: true,
+      label: true,
+      color: true,
+      // The IDS, not just the count. See the note below — this is what makes the
+      // delete replayable, and reading them has to happen BEFORE the delete
+      // cascades the join rows away.
+      candidates: { select: { candidateId: true } }
+    }
   });
   if (!tag) return NextResponse.json({ message: "That tag does not exist." }, { status: 404 });
 
-  const carried = tag._count.candidates;
+  const candidateIds = tag.candidates.map((c) => c.candidateId);
+  const carried = candidateIds.length;
   await prisma.tag.delete({ where: { id: tag.id } });
 
+  // WHY THE IDS GO IN THE LOG, and this is not hypothetical. On 2026-09-06 eight
+  // real tags were deleted in under a minute, taking 915 candidate links with them
+  // — 650 on "2.2 Pilot App Complete" alone. The log recorded each name and each
+  // count and NOTHING ELSE, so there was no way to answer "put it back": the names
+  // were known, the people were not. Legacy JazzHR labels on archived records, so
+  // no harm done that time, but the same handler on a live tag would have been
+  // unrecoverable.
+  //
+  // Cheap insurance: the label, the colour and every candidate id go into the
+  // activity metadata, so a delete can be replayed from the log alone. Written
+  // AFTER the delete succeeds, so a failed delete leaves no record claiming
+  // otherwise, and read BEFORE it, because the cascade is what removes them.
   await logActivity({
     userId: auth.user?.id,
     userEmail: auth.user?.email || undefined,
@@ -136,7 +157,8 @@ export async function DELETE(request: Request) {
       `Deleted the tag "${tag.label}" — it was on ${carried} candidate${carried === 1 ? "" : "s"}, ` +
       `who no longer carry it`,
     entityType: "Workspace",
-    entityId: "tags"
+    entityId: "tags",
+    metadata: { label: tag.label, color: tag.color, candidateIds }
   });
 
   return NextResponse.json({ ok: true, removedFrom: carried });
