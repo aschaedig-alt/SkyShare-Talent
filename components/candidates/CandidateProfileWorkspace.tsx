@@ -28,6 +28,7 @@ import { AiSummaryCard } from "@/components/candidates/AiSummaryCard";
 import { CandidateCommunications } from "@/components/candidates/CandidateCommunications";
 import { FlightProfilePanel } from "@/components/candidates/FlightProfilePanel";
 import { EditableGrid, type EditablePanel, type GridItem } from "@/components/shared/EditableGrid";
+import { ApplicationStatusPicker } from "@/components/candidates/ApplicationStatusPicker";
 import { TravelPanel } from "@/components/travel/TravelPanel";
 import type { WidgetInstance } from "@/lib/data/page-layout";
 import type { CandidateProfileData } from "@/lib/data/candidates";
@@ -630,9 +631,21 @@ export function CandidateProfileWorkspace({
                           ) : (
                             <div className="font-semibold text-brand-lea dark:text-slate-100">Unlinked job</div>
                           )}
+                          {/* The STATUS is no longer part of this line, because it
+                              is now editable directly below — printing it twice
+                              would repeat itself the way the candidates list used
+                              to say "Hired" under a Hired pill. */}
                           <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">
-                            {[application.stage, application.status, application.job?.location].filter(Boolean).join(" · ")}
+                            {[application.stage, application.job?.location].filter(Boolean).join(" · ")}
                           </div>
+                          {/* Mark this application hired, rejected or saved for
+                              later without leaving the person's own page. */}
+                          <ApplicationStatusPicker
+                            applicationId={application.id}
+                            candidateId={candidate.id}
+                            value={application.status ?? null}
+                            canEdit={canEdit}
+                          />
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
                           {application.pilotRequirement ? (
