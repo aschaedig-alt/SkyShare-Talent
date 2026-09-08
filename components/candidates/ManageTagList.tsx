@@ -62,6 +62,27 @@ export function ManageTagList({
     }
   }
 
+  async function setArchived(labels: string[], archived: boolean) {
+    setBusy(labels[0] ?? null);
+    setError(null);
+    try {
+      const res = await fetch("/api/tags/archive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ labels, archived })
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { message?: string };
+        throw new Error(data.message ?? "Could not change that.");
+      }
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not change that.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function remove(label: string) {
     const n = tags.find((t) => t.label === label)?.total ?? 0;
     // Deleting takes the label off everyone who has it — unlike merge, which
@@ -132,11 +153,18 @@ export function ManageTagList({
     }
   }
 
-  // Tags nobody has ever applied by hand are shown apart: 38 came in from the
-  // import carrying most of the links, and mixing them in buries the handful of
-  // labels somebody actually chose.
-  const chosen = tags.filter((t) => !t.historical);
-  const imported = tags.filter((t) => t.historical);
+  // Three groups, because they answer different questions. Archived first out
+  // of the way; then the handful somebody actually chose; then the imported
+  // vocabulary, which is most of the list and almost none of the use.
+  const live = tags.filter((t) => !t.archived);
+  const chosen = live.filter((t) => !t.historical);
+  const imported = live.filter((t) => t.historical);
+  const archivedList = tags.filter((t) => t.archived);
+
+  /** The JazzHR workflow steps — "1.2 …", "3.4 …" — as one selectable set. */
+  const workflowLabels = live
+    .filter((t) => /^\d+\.\d+\s/.test(t.label))
+    .map((t) => t.label);
 
   async function recolour(label: string, color: TagColor) {
     const previous = colors[label] ?? null;
@@ -255,6 +283,18 @@ export function ManageTagList({
             </button>
             <button
               type="button"
+              onClick={() => void setArchived([tag.label], !tag.archived)}
+              title={
+                tag.archived
+                  ? `Bring "${tag.label}" back into the list and the filter.`
+                  : `Put "${tag.label}" away — everyone keeps it, it just stops filling the Tags column and the filter.`
+              }
+              className="rounded border border-brand-lea/15 px-2 py-0.5 text-[11px] font-semibold text-brand-grey transition hover:text-brand-lea dark:border-white/15 dark:text-slate-400 dark:hover:text-slate-100"
+            >
+              {tag.archived ? "Restore" : "Archive"}
+            </button>
+            <button
+              type="button"
               onClick={() => void remove(tag.label)}
               title={`Delete "${tag.label}" and take it off everyone carrying it.`}
               className="rounded border border-brand-lea/15 px-2 py-0.5 text-[11px] font-semibold text-brand-grey transition hover:text-brand-red dark:border-white/15 dark:text-slate-400 dark:hover:text-red-300"
@@ -325,13 +365,41 @@ export function ManageTagList({
 
       {imported.length > 0 && (
         <>
-          <div className="border-y border-brand-lea/10 bg-brand-cloudDancer/60 px-5 py-2 dark:border-white/10 dark:bg-white/5">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-y border-brand-lea/10 bg-brand-cloudDancer/60 px-5 py-2 dark:border-white/10 dark:bg-white/5">
             <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">
               From the import · {imported.length}
             </span>
+            {canEdit && workflowLabels.length > 0 && (
+              <button
+                type="button"
+                onClick={() => void setArchived(workflowLabels, true)}
+                title="The numbered JazzHR steps record where somebody sat in a pipeline the app now tracks itself. Everyone keeps them."
+                className="rounded border border-brand-lea/15 px-2 py-0.5 text-[11px] font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/15 dark:text-slate-100"
+              >
+                Archive the {workflowLabels.length} numbered steps
+              </button>
+            )}
           </div>
           <div className="divide-y divide-brand-lea/10 dark:divide-white/10">
             {imported.map((t) => (
+              <Row key={t.label} tag={t} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {archivedList.length > 0 && (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-y border-brand-lea/10 bg-brand-cloudDancer/60 px-5 py-2 dark:border-white/10 dark:bg-white/5">
+            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">
+              Archived · {archivedList.length}
+            </span>
+            <span className="text-[11px] text-brand-grey dark:text-slate-400">
+              Still on everyone who had them — just out of the list and the filter
+            </span>
+          </div>
+          <div className="divide-y divide-brand-lea/10 opacity-70 dark:divide-white/10">
+            {archivedList.map((t) => (
               <Row key={t.label} tag={t} />
             ))}
           </div>

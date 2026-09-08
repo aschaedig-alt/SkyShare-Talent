@@ -10,6 +10,7 @@ import { ManageStageList } from "@/components/candidates/ManageStageList";
 import { getStageList, getStageUsage } from "@/lib/data/candidate-stages";
 import { getDispositionOverrides } from "@/lib/data/disposition-groups";
 import { ManageReasonList, type ReasonWording } from "@/components/candidates/ManageReasonList";
+import { stageForWording } from "@/lib/candidates/disposition-vocabulary";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,7 @@ export default async function CandidatesManagePage() {
         // lands rather than where the pattern would have put it.
         group: dispositionGroup(raw, outcome, overrides),
         chosen: Boolean(overrides[key]),
+        stage: stageForWording(raw),
         count
       };
     })

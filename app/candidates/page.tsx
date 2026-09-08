@@ -64,11 +64,16 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
     `[perf] /candidates page: access check ${afterAccess - pageStart}ms, data+layout ${Date.now() - afterAccess}ms, total ${Date.now() - pageStart}ms`
   );
 
+  // Archived tags are dropped from the FILTER here rather than inside
+  // getCandidateTagOptions, because the manage page needs the full list — that
+  // is where you go to see what has been put away and restore it.
+  const visibleTagOptions = tagOptions.filter((t) => !t.archived);
+
   return (
     <CandidatesWorkspace
       data={data}
       query={query}
-      tagOptions={tagOptions}
+      tagOptions={visibleTagOptions}
       activeTags={activeTags}
       activeDepartments={activeDepartments}
       canEdit={isAdminOrRecruiter(access.role)}

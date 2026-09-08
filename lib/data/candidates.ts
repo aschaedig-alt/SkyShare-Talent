@@ -25,6 +25,8 @@ import {
 } from "@/lib/auth/candidate-scope";
 import type { TagChip } from "@/lib/tags/colors";
 import { getDispositionOverrides } from "@/lib/data/disposition-groups";
+import { parseTypeRatings } from "@/lib/candidates/aircraft-types";
+import { getArchivedTags } from "@/lib/data/tag-archive";
 import {
   applicationOutcome,
   bucketOf,
@@ -217,8 +219,26 @@ export type CandidateListItem = {
    * order and cannot disagree about which one is "last applied to".
    */
   applications: CandidateListApplication[];
-  /** Type ratings off the confirmed extraction, for the Types column. */
+  /**
+   * Type ratings for the Types column, as CANONICAL designators.
+   *
+   * Normalised on read through lib/candidates/aircraft-types.ts, never stored
+   * that way: the raw resume text stays on the record, so a wrong entry in the
+   * reference list is fixed by editing that file rather than re-migrating
+   * anybody. Class ratings and endorsements (AMEL, Instrument, Tailwheel) are
+   * dropped here — real information, but not an answer to "what are they typed
+   * on", which is the question this column asks.
+   */
   typeRatings: string[];
+  /**
+   * False when nobody has checked the extraction yet.
+   *
+   * 86 of 116 records are unreviewed LLM guesses, and they used to render
+   * identically to the 30 a person had confirmed — so the column could not be
+   * trusted for a decision. Per-candidate rather than per-rating because the
+   * status lives on the metric row, which holds the whole set.
+   */
+  typeRatingsConfirmed: boolean;
 };
 
 /** One application as the list needs it — deliberately narrower than the model. */
@@ -500,7 +520,16 @@ export type CandidateProfileData = {
  */
 function mergeTagChips(
   jsonTags: string[],
-  normalized: Array<{ label: string; color: string | null; source: string | null }>
+  normalized: Array<{ label: string; color: string | null; source: string | null }>,
+  /**
+   * Archived labels, lowercased.
+   *
+   * Dropped from the ROW only. The candidate still carries the tag, the manage
+   * page still lists and counts it, and the filter can still be pointed at it
+   * deliberately — putting a tag away is about what you read every day, not
+   * about losing it. That is the whole difference from Delete.
+   */
+  archivedTags?: Set<string>
 ): TagChip[] {
   const seen = new Set<string>();
   const out: TagChip[] = [];
@@ -513,6 +542,7 @@ function mergeTagChips(
   for (const chip of all) {
     const trimmed = chip.label.trim();
     const key = trimmed.toLowerCase();
+    if (archivedTags?.has(key)) continue;
     if (trimmed && !seen.has(key)) {
       seen.add(key);
       out.push({ ...chip, label: trimmed });
@@ -570,6 +600,13 @@ export type CandidateTagOption = {
    * actually chose is not buried under 38 imported workflow labels.
    */
   historical: boolean;
+  /**
+   * Put away. Hidden from the Tags column and from the filter's normal list,
+   * but still on every candidate that carries it and still listed on the manage
+   * page — the difference from Delete, which takes it off everybody.
+   * See lib/data/tag-archive.ts.
+   */
+  archived: boolean;
 };
 
 export async function getCandidateTagOptions(): Promise<CandidateTagOption[]> {
@@ -584,6 +621,8 @@ export async function getCandidateTagOptions(): Promise<CandidateTagOption[]> {
       }
     }
   });
+
+  const archivedTags = await getArchivedTags();
 
   // One extra query rather than pulling every link: which tags have at least one
   // hand-applied use.
@@ -600,7 +639,8 @@ export async function getCandidateTagOptions(): Promise<CandidateTagOption[]> {
       color: t.color,
       live: t.candidates.length,
       total: t._count.candidates,
-      historical: !manualLabels.has(t.label)
+      historical: !manualLabels.has(t.label),
+      archived: archivedTags.has(t.label.toLowerCase())
     }))
     .sort(
       (a, b) =>
@@ -849,7 +889,7 @@ export async function getCandidateListData(
     )
   };
 
-  const [bucketRows, typeRatedRows, dispositionOverrides] = await Promise.all([
+  const [bucketRows, typeRatedRows, dispositionOverrides, archivedTags] = await Promise.all([
     prisma.candidate.findMany({
       where: bucketPopulationWhere,
       select: {
@@ -867,7 +907,9 @@ export async function getCandidateListData(
       distinct: ["candidateId"]
     }),
     // A chosen group beats the pattern matcher — see lib/data/disposition-groups.
-    getDispositionOverrides()
+    getDispositionOverrides(),
+    // Archived tags are hidden from the row — see lib/data/tag-archive.ts.
+    getArchivedTags()
   ]);
   const typeRatedIds = new Set(typeRatedRows.map((r) => r.candidateId));
 
@@ -1019,11 +1061,17 @@ export async function getCandidateListData(
           // was wrong, which is worse than showing nothing.
           status: { not: "DISMISSED" }
         },
-        select: { candidateId: true, valueText: true }
+        select: { candidateId: true, valueText: true, status: true }
       })
     : [];
-  const typeRatingsById = new Map<string, string[]>(
-    typeRatingRows.map((r) => [r.candidateId, splitListValue(r.valueText)])
+  // parseTypeRatings, NOT splitListValue. The generic splitter breaks on "/",
+  // which turned "GV/550/500/450" into the orphan chips 550, 500 and 450 on ten
+  // people's rows — the numbers are Gulfstreams that lost their letter.
+  const typeRatingsById = new Map<string, { types: string[]; confirmed: boolean }>(
+    typeRatingRows.map((r) => [
+      r.candidateId,
+      { types: parseTypeRatings(r.valueText).types, confirmed: r.status === "CONFIRMED" }
+    ])
   );
 
   const candidates: CandidateListItem[] = candidateRows.map((candidate) => {
@@ -1095,7 +1143,8 @@ export async function getCandidateListData(
           candidate as typeof candidate & {
             candidateTags?: Array<{ source: string | null; tag: { label: string; color: string | null } }>;
           }
-        ).candidateTags?.map((ct) => ({ label: ct.tag.label, color: ct.tag.color, source: ct.source })) ?? []
+        ).candidateTags?.map((ct) => ({ label: ct.tag.label, color: ct.tag.color, source: ct.source })) ?? [],
+        archivedTags
       ),
       updatedAt: candidate.updatedAt.toISOString(),
       noteCount: candidate._count.notes,
@@ -1111,7 +1160,8 @@ export async function getCandidateListData(
       paycomLink: candidate.paycomLink,
       bucket: bucketOf(listApplications, isHistorical),
       applications: listApplications,
-      typeRatings: typeRatingsById.get(candidate.id) ?? []
+      typeRatings: typeRatingsById.get(candidate.id)?.types ?? [],
+      typeRatingsConfirmed: typeRatingsById.get(candidate.id)?.confirmed ?? false
     };
   });
 
@@ -1227,10 +1277,15 @@ export async function getCandidatesByIds(ids: string[], viewer?: CandidateListVi
 
   const viewTypeRatings = await prisma.candidateMetric.findMany({
     where: { candidateId: { in: rows.map((r) => r.id) }, key: "type_ratings", status: { not: "DISMISSED" } },
-    select: { candidateId: true, valueText: true }
+    select: { candidateId: true, valueText: true, status: true }
   });
-  const viewTypeRatingsById = new Map<string, string[]>(
-    viewTypeRatings.map((r) => [r.candidateId, splitListValue(r.valueText)])
+  // Same normalisation the list uses, so a saved view and the list it was
+  // picked from never show a candidate's types differently.
+  const viewTypeRatingsById = new Map<string, { types: string[]; confirmed: boolean }>(
+    viewTypeRatings.map((r) => [
+      r.candidateId,
+      { types: parseTypeRatings(r.valueText).types, confirmed: r.status === "CONFIRMED" }
+    ])
   );
 
   // Same chosen groups the list uses, so a saved view and the list it was picked
@@ -1292,7 +1347,8 @@ export async function getCandidatesByIds(ids: string[], viewer?: CandidateListVi
       paycomLink: candidate.paycomLink,
       bucket: bucketOf(applications, candidate.origin === "JAZZ" && candidate.archivedAt !== null),
       applications,
-      typeRatings: viewTypeRatingsById.get(candidate.id) ?? []
+      typeRatings: viewTypeRatingsById.get(candidate.id)?.types ?? [],
+      typeRatingsConfirmed: viewTypeRatingsById.get(candidate.id)?.confirmed ?? false
       };
     });
 }

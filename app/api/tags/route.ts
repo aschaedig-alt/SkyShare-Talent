@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { isTagColor } from "@/lib/tags/colors";
 import { logActivity } from "@/lib/activity/logger";
+import { getArchivedTags, saveArchivedTags } from "@/lib/data/tag-archive";
 import { getCandidateTagOptions } from "@/lib/data/candidates";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,20 @@ export const dynamic = "force-dynamic";
  *         this deliberately changes it everywhere at once; that is what makes
  *         "colour Hot lead red" a one-time action rather than a per-person one.
  */
+
+/**
+ * Take a label out of the archive list.
+ *
+ * Called wherever a tag stops existing. The archive list is keyed by label, so a
+ * deleted or merged-away tag would otherwise leave its name behind for ever —
+ * and anything later created with that name would come into the world silently
+ * archived, which is a confusing thing to debug.
+ */
+async function dropFromArchive(label: string) {
+  const archived = await getArchivedTags();
+  if (!archived.delete(label.toLowerCase())) return;
+  await saveArchivedTags([...archived]);
+}
 
 export async function GET() {
   const auth = await requireApiPermission("candidates:read");
@@ -136,6 +151,7 @@ export async function DELETE(request: Request) {
   const candidateIds = tag.candidates.map((c) => c.candidateId);
   const carried = candidateIds.length;
   await prisma.tag.delete({ where: { id: tag.id } });
+  await dropFromArchive(tag.label);
 
   // WHY THE IDS GO IN THE LOG, and this is not hypothetical. On 2026-09-06 eight
   // real tags were deleted in under a minute, taking 915 candidate links with them
@@ -219,6 +235,7 @@ export async function POST(request: Request) {
     await tx.tag.delete({ where: { id: source.id } });
     return { linkCount: links.length, created: toCreate.length };
   });
+  await dropFromArchive(source.label);
 
   await logActivity({
     userId: auth.user?.id,

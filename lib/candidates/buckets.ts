@@ -167,9 +167,50 @@ export function dispositionGroup(
   const d = reasonKey(disposition);
 
   // A CHOSEN group wins over every pattern below. The patterns are a good guess
-  // at 39 wordings nobody wrote for us; when one of them guesses wrong, this is
-  // how it gets corrected without editing code.
+  // at wordings nobody wrote for us; when one of them guesses wrong, this is how
+  // it gets corrected without editing code.
   if (d && overrides && overrides[d]) return overrides[d];
+
+  // THE HOUSE VOCABULARY, matched exactly.
+  //
+  // The patterns below were written against Paycom's long wordings ("Not
+  // Selected - Position Closed/On Hold"). Once those were shortened to the
+  // house names ("Closed / On Hold") most of them stopped matching and 687
+  // applications fell into Other — including every Failed Interview, which
+  // would have emptied that filter. Exact matches, because these are short and
+  // deliberately chosen: a substring rule on a word like "Other" would catch
+  // things nobody meant.
+  const HOUSE: Record<string, DispositionGroup> = {
+    "prescreen disqualification": "notqualified",
+    "does not meet mins": "notqualified",
+    "not best qualified": "notqualified",
+    "future consideration": "evergreen",
+    "knocked out": "knockout",
+    "closed / on hold": "positionfilled",
+    filled: "positionfilled",
+    "moved application": "admin",
+    "failed interview": "interview",
+    "no show": "interview",
+    "no response": "withdrew",
+    "no longer interested": "withdrew",
+    "comp & benefits": "withdrew",
+    location: "withdrew",
+    salary: "withdrew",
+    schedule: "withdrew",
+    // "Other" is short for "Withdrew - Other", which is where it came from and
+    // where the sheet files it.
+    other: "withdrew",
+    "contract only": "noteligible",
+    "ineligible - passport": "noteligible",
+    "ineligible - prd": "noteligible",
+    "declined offer": "declined",
+    hired: "hired"
+    // "Rescind Offer" is deliberately absent: the company withdrawing an offer
+    // is not the candidate declining one, and filing it under "Declined the
+    // offer" would put a rejection on the record of somebody who did nothing.
+    // It groups as Other until there is a group that actually means it.
+  };
+  if (d && HOUSE[d]) return HOUSE[d];
 
   if (!d) {
     if (outcome === "Hired") return "hired";

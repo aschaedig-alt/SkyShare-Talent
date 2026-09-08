@@ -18,6 +18,8 @@ export type ReasonWording = {
   /** True when a person chose that group rather than the pattern guessing it. */
   chosen: boolean;
   count: number;
+  /** The stage this reason implies, from the house vocabulary. */
+  stage: string | null;
 };
 
 const GROUPS = Object.keys(DISPOSITION_LABEL) as DispositionGroup[];
@@ -168,6 +170,26 @@ export function ManageReasonList({
               <span className="shrink-0 text-xs tabular-nums text-brand-grey dark:text-slate-400">
                 {w.count.toLocaleString()}
               </span>
+
+              {/* The stage this reason implies — "Failed Interview" means the
+                  person is Rejected. Read-only: it is a property of the
+                  vocabulary (lib/candidates/disposition-vocabulary.ts), not a
+                  per-row choice, and nothing applies it automatically yet. */}
+              {w.stage ? (
+                <span
+                  title={`This reason means the candidate is ${w.stage}`}
+                  className="shrink-0 rounded border border-brand-lea/15 bg-brand-cloudDancer/60 px-1.5 py-px text-[11px] font-semibold text-brand-grey dark:border-white/15 dark:bg-white/5 dark:text-slate-400"
+                >
+                  {w.stage}
+                </span>
+              ) : (
+                <span
+                  title="The vocabulary has no stage for this wording — add it to WORDING_TO_STAGE."
+                  className="shrink-0 text-[11px] italic text-brand-grey/70 dark:text-slate-500"
+                >
+                  no stage
+                </span>
+              )}
 
               {canEdit ? (
                 <select

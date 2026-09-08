@@ -243,7 +243,20 @@ function CandidateRowInner({
               {candidate.typeRatings.map((rating) => (
                 <span
                   key={rating}
-                  className="inline-flex items-center gap-[3px] rounded border border-brand-lea/15 px-1.5 py-px text-[11px] font-semibold text-brand-grey dark:border-white/15 dark:text-slate-400"
+                  /* CONFIRMED reads solid; an unchecked extraction is dashed and
+                     dimmed. 86 of 116 records are guesses nobody has looked at,
+                     and rendering them identically to the 30 a person confirmed
+                     made the whole column untrustworthy for a decision. */
+                  title={
+                    candidate.typeRatingsConfirmed
+                      ? `${rating} — confirmed`
+                      : `${rating} — read from a resume, not yet confirmed`
+                  }
+                  className={`inline-flex items-center gap-[3px] rounded px-1.5 py-px text-[11px] font-semibold ${
+                    candidate.typeRatingsConfirmed
+                      ? "border border-brand-lea/25 text-brand-lea dark:border-white/25 dark:text-slate-200"
+                      : "border border-dashed border-brand-lea/25 text-brand-grey/80 dark:border-white/20 dark:text-slate-500"
+                  }`}
                 >
                   {rating}
                 </span>
