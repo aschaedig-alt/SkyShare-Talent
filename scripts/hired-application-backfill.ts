@@ -151,6 +151,19 @@ async function buildProposals() {
     if (hasApp) {
       const pick = (() => {
         const apps = c.applications;
+        // ONE APPLICATION IS THE ONE, whatever it is titled. His point on Sep 8,
+        // about Dayton James and Erik Schwerman: "he only applied to one job".
+        // There is nothing to choose between, and the application is HOW somebody
+        // came in — Rob Patrick applied for Aircraft Maintenance Technician and is
+        // now a Base Manager, but that application still ended in a hire. A title
+        // that has since moved on is not a reason to leave the record open.
+        //
+        // This is only safe BECAUSE it is a single application. With two or more,
+        // picking the wrong one writes a job somebody never held, which is why the
+        // ladder below still refuses rather than guessing.
+        if (apps.length === 1) {
+          return { app: apps[0], how: "their only application" };
+        }
         const exactA = apps.filter((a) => norm(a.job?.title) === norm(position));
         if (exactA.length === 1) return { app: exactA[0], how: "job title equals the position" };
         const air = aircraftOf(position);

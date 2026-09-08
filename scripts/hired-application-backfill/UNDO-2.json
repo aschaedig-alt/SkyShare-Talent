@@ -1,5 +1,5 @@
 {
-  "writtenAt": "2026-09-08T18:20:12.633Z",
+  "writtenAt": "2026-09-08T18:11:01.330Z",
   "closed": [
     {
       "candidateId": "cmrwi6mtk000o04jyy1iusx6l",
@@ -19,11 +19,6 @@
     {
       "candidateId": "cmrwicnbe001h04jyzy2m47es",
       "applicationId": "cmtszfj5g000a2wrm9usgj6fo",
-      "previousStatus": "Hired"
-    },
-    {
-      "candidateId": "cmrwiflkn002b04jyoibxmmvi",
-      "applicationId": "cmtszfj69000b2wrmbzjuhht6",
       "previousStatus": "Hired"
     },
     {
@@ -87,11 +82,6 @@
       "previousStatus": "Hired"
     },
     {
-      "candidateId": "cms3n2yzc0028bkrmsbw9es71",
-      "applicationId": "cmtszjsyk0000bkrmqhdkmm6j",
-      "previousStatus": "Hired"
-    },
-    {
       "candidateId": "cmq5ncsic000j04l4n6t3sn8s",
       "applicationId": "cmq5ncsp8000k04l46a7ig2sx",
       "previousStatus": "Hired"
@@ -102,11 +92,6 @@
       "previousStatus": "Hired"
     },
     {
-      "candidateId": "cmrwigcpt002d04jyfs0w79ii",
-      "applicationId": "cmsi0ksqx006704l107a8fvzk",
-      "previousStatus": "New"
-    },
-    {
       "candidateId": "cmrwihfw5002l04jyp3guudrq",
       "applicationId": "cmtszfje3000l2wrmjy0db097",
       "previousStatus": "Hired"
@@ -115,11 +100,6 @@
       "candidateId": "cmrwi6wf9000v04jyfmvy15ho",
       "applicationId": "cmtszfjet000m2wrmw3lylcpy",
       "previousStatus": "Hired"
-    },
-    {
-      "candidateId": "cmrnxhy6d000004jt5mmvjudk",
-      "applicationId": "cmsjfy146000204ktimzgbdae",
-      "previousStatus": "New"
     },
     {
       "candidateId": "cmrtlf1tp000628rmbf0bhzcl",
@@ -142,11 +122,6 @@
       "previousStatus": "Hired"
     },
     {
-      "candidateId": "cmrwi4pnq000a04jyxj9dld99",
-      "applicationId": "cmtszsbsn000504jxboc9anqe",
-      "previousStatus": "New"
-    },
-    {
       "candidateId": "cmrwifevg002904jyl7remfea",
       "applicationId": "cmtszfjga000o2wrmjsx796sb",
       "previousStatus": "Hired"
@@ -159,11 +134,6 @@
     {
       "candidateId": "cmrwie0ea002304jyinof1hnd",
       "applicationId": "cmtszfjh1000p2wrmd8r0lr85",
-      "previousStatus": "Hired"
-    },
-    {
-      "candidateId": "cmrwihv8b002p04jyd94nkryg",
-      "applicationId": "cmtszfjhs000q2wrm66q7g96v",
       "previousStatus": "Hired"
     },
     {
@@ -262,19 +232,9 @@
       "previousStatus": "Hired"
     },
     {
-      "candidateId": "cmrwif9au002704jyvtwmm7dc",
-      "applicationId": "cmtszfjup00182wrm4ag7f2mx",
-      "previousStatus": "Hired"
-    },
-    {
       "candidateId": "cmrwicttd001l04jy5sews94u",
       "applicationId": "cmtszfjvd00192wrmt3h98617",
       "previousStatus": "Hired"
-    },
-    {
-      "candidateId": "cms6jwlfu000504i73c5ho2oh",
-      "applicationId": "cmsi0jmwr002204l1xbm59zb5",
-      "previousStatus": "New"
     },
     {
       "candidateId": "cmrwidsrp001x04jyxy1mu57u",
@@ -312,11 +272,6 @@
       "previousStatus": "Hired"
     },
     {
-      "candidateId": "cmrwigqxq002h04jynj4ph9t4",
-      "applicationId": "cmsi0kj40005304l1mf4rdzqz",
-      "previousStatus": "New"
-    },
-    {
       "candidateId": "cmrwihbap002j04jymaq9u7uf",
       "applicationId": "cmtszfjzy001f2wrmqgubf6s7",
       "previousStatus": "Hired"
@@ -337,6 +292,8 @@
       "previousStatus": "Hired"
     }
   ],
-  "createdFor": [],
+  "createdFor": [
+    "cms3n2yzc0028bkrmsbw9es71"
+  ],
   "createdJobIds": []
 }
