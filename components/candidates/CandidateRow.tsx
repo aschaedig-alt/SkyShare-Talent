@@ -67,7 +67,24 @@ function CandidateRowInner({
   // cell and the expanded rows below cannot disagree about which application is
   // being described.
   const lead = candidate.applications[0] ?? null;
-  const leadReason = lead ? reasonLine(lead.group, lead.statusText, lead.outcome) : null;
+  const rawLeadReason = lead ? reasonLine(lead.group, lead.statusText, lead.outcome) : null;
+  // A HIRED PERSON NEEDS NO DISPOSITION, his words on 2026-09-08: "often i see
+  // Hired and then Hired below it again". DISPOSITION_LABEL.hired is the string
+  // "Hired" and the stage pill directly above already says Hired, so the row spent
+  // two lines saying one thing. A disposition answers "why did this end", and
+  // "they took the job" is not a reason anybody needs told twice.
+  //
+  // Written as a general rule rather than a special case for the word hired,
+  // because the same collision returns the moment a stage is renamed to match a
+  // label on the manage page: if the reason would only restate the pill, drop it.
+  // The EXPANDED rows keep their outcome - there it sits under a Status heading
+  // beside a job title, so "Hired" says which job they were hired for rather than
+  // repeating the pill.
+  const leadReason =
+    rawLeadReason &&
+    rawLeadReason.trim().toLowerCase() === (candidate.stage ?? "").trim().toLowerCase()
+      ? null
+      : rawLeadReason;
 
   // The stage's own colour beats the keyword guess. stagePill() reads words out
   // of the stage NAME — "hire" means green, "reject" means grey — which quietly
