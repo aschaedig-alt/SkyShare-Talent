@@ -123,10 +123,19 @@ export function toHouseWording(wording: string | null | undefined): string | nul
   return LEGACY_TO_HOUSE[legacyKey(raw)] ?? raw;
 }
 
-/** Every house wording, for the manage page and for validation. */
-export const HOUSE_WORDINGS: string[] = [
-  ...new Set(Object.values(LEGACY_TO_HOUSE))
-].sort();
+/**
+ * Every house wording, IN THE ORDER IT WAS WRITTEN ABOVE.
+ *
+ * Not sorted, and that is the point - asked for on 2026-09-08. LEGACY_TO_HOUSE is
+ * grouped deliberately (did not meet requirements, keep for later, knocked out,
+ * position filled, withdrew, did not pass interview, not eligible, moved, hired,
+ * offer outcomes), and alphabetising threw that away. Insertion order on a
+ * string-keyed object is guaranteed for non-numeric keys, so the authored grouping
+ * reaches the screen for free.
+ *
+ * Adding a wording therefore puts it where you write it. Put it in its group.
+ */
+export const HOUSE_WORDINGS: string[] = [...new Set(Object.values(LEGACY_TO_HOUSE))];
 
 /**
  * Which stage a disposition implies.
