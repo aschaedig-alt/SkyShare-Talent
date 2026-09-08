@@ -420,8 +420,16 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
           <h2 className="text-xl font-semibold text-brand-lea dark:text-slate-100">Upgrades &amp; transitions</h2>
           <p className="mt-1 max-w-2xl text-sm text-brand-grey dark:text-slate-400">
             {s.advanced} of {s.tracked} {denomLabel} ({s.pctAdvanced}%) upgraded or transitioned{year === "all" ? "" : ` in ${year}`}. An{" "}
-            <span className="font-medium text-brand-eden dark:text-slate-300">upgrade</span> is FO → Captain on the same aircraft; a{" "}
-            <span className="font-medium text-brand-eden dark:text-slate-300">transition</span> is a move to a new aircraft.
+            {/* This sentence said "on the same aircraft" until 2026-09-08 and was the
+                honest description of a miscount: an upgrade only counted when the type
+                did not change. His rule is that ANY FO to Captain change is an upgrade,
+                so it now says so — and says plainly that one step can be both, which is
+                the only way the counts below make sense (upgrades + transitions is
+                larger than moves). */}
+            <span className="font-medium text-brand-eden dark:text-slate-300">upgrade</span> is any FO → Captain change,
+            on the same aircraft or a new one; a{" "}
+            <span className="font-medium text-brand-eden dark:text-slate-300">transition</span> is a move to a new
+            aircraft. One step can be both, and counts once as a move.
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
