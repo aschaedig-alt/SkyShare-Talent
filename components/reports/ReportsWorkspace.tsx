@@ -249,12 +249,30 @@ function PilotJourney({ steps }: { steps: UpgradePilot["steps"] }) {
 
 type Bucket = "advanced" | "once" | "twice" | "thrice" | "captain" | "stayed";
 
+/**
+ * The tenure ladder, 1 through 10 years.
+ *
+ * Asked for on 2026-09-08: it offered 1+, 2+ and 5+ only, so the 3+ and 4+ bands
+ * were missing entirely and nothing past 5 could be asked at all - which is the
+ * band that matters most for a fractional operator, where the long-tenure captains
+ * are the bench everything else depends on.
+ *
+ * GENERATED rather than listed, so the next change is one number. 365 days a year
+ * is deliberate and slightly wrong: it drifts about 2.4 days per decade against
+ * leap years, which cannot move anybody between whole-year bands, and matching the
+ * "/ 365" the tenure column already displays matters more than calendar precision -
+ * a pilot shown as 5.0 yr must be inside the 5+ filter.
+ */
+const TENURE_YEARS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+const tenureDaysFor = (years: number) => years * 365;
+
 export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"] }) {
   const [scope, setScope] = useState<"all" | "active">("active");
   // Default to the SkyShare / fractional shared pool — managed-account pilots
   // aren't on a promote-by-date path, so they're hidden until you toggle "All fleets".
   const [poolFilter, setPoolFilter] = useState<"fractional" | "all">("fractional");
-  const [tenure, setTenure] = useState<0 | 365 | 730 | 1825>(0);
+  // 0 means no filter. Otherwise a day count from TENURE_YEARS above.
+  const [tenure, setTenure] = useState<number>(0);
   const [year, setYear] = useState<number | "all">("all");
   const [bucket, setBucket] = useState<Bucket>("advanced");
 
@@ -350,7 +368,9 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
               : r.moves >= 1;
   const filtered = s.rows.filter(bucketTest);
   const activeTile = tiles.find((t) => t.key === bucket);
-  const tenureLabel = tenure === 365 ? "1+ yr" : tenure === 730 ? "2+ yr" : tenure === 1825 ? "5+ yr" : null;
+  // Derived, so a new band cannot be added to the dropdown and forgotten here -
+  // which is exactly what the old three-way ternary invited.
+  const tenureLabel = tenure > 0 ? `${Math.round(tenure / 365)}+ yr` : null;
   const poolWord = poolFilter === "fractional" ? "fractional " : "";
   const denomLabel =
     (year === "all"
@@ -423,14 +443,16 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
           </div>
           <select
             value={tenure}
-            onChange={(e) => setTenure(Number(e.target.value) as 0 | 365 | 730 | 1825)}
+            onChange={(e) => setTenure(Number(e.target.value))}
             aria-label="Filter by tenure"
             className="rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
           >
             <option value={0}>Any tenure</option>
-            <option value={365}>1+ yr tenure</option>
-            <option value={730}>2+ yr tenure</option>
-            <option value={1825}>5+ yr tenure</option>
+            {TENURE_YEARS.map((y) => (
+              <option key={y} value={tenureDaysFor(y)}>
+                {y}+ yr tenure
+              </option>
+            ))}
           </select>
           <select
             value={year}
