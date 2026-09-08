@@ -5,7 +5,7 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import { Download } from "lucide-react";
 import type { ReportsData } from "@/lib/data/reports";
-import type { UpgradePilot } from "@/lib/data/employee-journey";
+import { SKYSHARE_LADDER, ladderRank, type UpgradePilot } from "@/lib/data/employee-journey";
 import { formatUsd, travelPurposeLabel, travelStatusLabel } from "@/lib/travel/constants";
 import { ReportShareButton } from "@/components/reports/ReportShareButton";
 import { formatCalendarDay, formatMomentDate } from "@/lib/dates/display";
@@ -35,28 +35,10 @@ function fmtSpan(days: number | null): string {
   return `${(days / 365).toFixed(1)} yr`;
 }
 
-// SkyShare's SHARED pilot-pool career ladder, smallest -> largest. Managed
-// aircraft (Legacy 650, Phenom, M2, 560XLS+, and the dedicated managed G450 in
-// HND) are NOT progression targets — a managed seat isn't a shared-fleet upgrade.
-// G450 and GV share one type rating, so they're the same top rung ("G450/GV").
-const SKYSHARE_LADDER = ["PC-12", "CJ2", "560XL", "G200", "G450/GV"];
-function ladderRank(aircraft: string | null): number {
-  switch (aircraft) {
-    case "PC-12":
-      return 0;
-    case "CJ2":
-      return 1;
-    case "560XL":
-      return 2;
-    case "G200":
-      return 3;
-    case "G450":
-    case "GV":
-      return 4;
-    default:
-      return -1; // off the shared-fleet ladder (managed / other)
-  }
-}
+// The ladder moved into lib/data/employee-journey.ts, because it now decides
+// CLASSIFICATION as well as what to suggest next — "almost any aircraft to a larger
+// aircraft is an upgrade" needs an ordering, and a second copy here would be a
+// second answer to whether a pilot advanced. Imported so there is one.
 
 // The pilot's most recent FLYING role — a management title (e.g. Assistant
 // Director of Training) doesn't change which aircraft they fly, so upgrades are
@@ -97,14 +79,28 @@ function ClimbChart({ pilots }: { pilots: UpgradePilot[] }) {
     const perYear = new Map<number, { up: number; tr: number }>();
     for (const p of pilots) {
       // Count each upgrade/transition event, dated by its start.
+      //
+      // AN UPGRADE IS READ OFF THE SEAT here too. This chart used to test
+      // kind === "upgrade", which is only ever set when the aircraft did not
+      // change — so after the upgrade rule was corrected on 2026-09-08 the chart
+      // silently disagreed with the tiles above it: a CJ2 First Officer moving to
+      // the PC-12 as a Captain counted as an upgrade in the tiles and as a
+      // transition in this line. Two panels, one dataset, two answers.
+      //
+      // A step that is BOTH increments both series, which is right for a chart
+      // whose own label is "upgrades + transitions" — it is a sum of two event
+      // types, not a count of moves, and the headline above states those two
+      // numbers separately for the same reason.
       for (let i = 1; i < p.steps.length; i++) {
-        const k = p.steps[i].kind;
-        if (k !== "upgrade" && k !== "transition") continue;
-        const y = yearOf(p.steps[i].date);
+        const step = p.steps[i];
+        const isTransition = step.kind === "transition";
+        const isUpgrade = step.upgrade;
+        if (!isTransition && !isUpgrade) continue;
+        const y = yearOf(step.date);
         if (y === null) continue;
         const b = perYear.get(y) ?? { up: 0, tr: 0 };
-        if (k === "upgrade") b.up += 1;
-        else b.tr += 1;
+        if (isUpgrade) b.up += 1;
+        if (isTransition) b.tr += 1;
         perYear.set(y, b);
       }
     }
@@ -231,10 +227,13 @@ function PilotJourney({ steps }: { steps: UpgradePilot["steps"] }) {
         <Fragment key={i}>
           {i > 0 && (
             <span
-              className={clsx("text-sm leading-none", s.kind === "upgrade" ? "font-bold text-brand-gold" : s.kind === "transition" ? "font-bold text-brand-eden dark:text-[#8fb3d6]" : "text-brand-grey/50")}
+              // A seat advance shows the upgrade arrow even when the aircraft changed
+              // too, so the strip agrees with the tiles and the chart. Reading kind
+              // alone drew a plain transition arrow over a real upgrade.
+              className={clsx("text-sm leading-none", s.upgrade ? "font-bold text-brand-gold" : s.kind === "transition" ? "font-bold text-brand-eden dark:text-[#8fb3d6]" : "text-brand-grey/50")}
               aria-hidden
             >
-              {s.kind === "upgrade" ? "↗" : "→"}
+              {s.upgrade ? "↗" : "→"}
             </span>
           )}
           <span className={clsx("inline-flex flex-col rounded border px-2 py-1 transition", STEP_CHIP[s.kind])}>
@@ -305,15 +304,19 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
       // up + tr would count that step twice and claim a pilot moved more times
       // than things actually happened to them.
       let mv = 0;
+      let capt = 0;
       for (let i = 1; i < p.steps.length; i++) {
         const step = p.steps[i];
         if (!inYear(step.date)) continue;
         const isTransition = step.kind === "transition";
-        if (step.seatUp) up++;
+        // up counts UPGRADES under the full rules; capt counts only the seat
+        // advance, because "Made Captain" has to mean made captain.
+        if (step.upgrade) up++;
+        if (step.seatUp) capt++;
         if (isTransition) tr++;
-        if (step.seatUp || isTransition) mv++;
+        if (step.upgrade || isTransition) mv++;
       }
-      return { p, up, tr, moves: mv };
+      return { p, up, tr, moves: mv, capt };
     });
     const advanced = rows.filter((r) => r.moves >= 1);
     const tracked = pool.length;
@@ -340,7 +343,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
       transitionsTotal: rows.reduce((a, r) => a + r.tr, 0),
       // r.up is now the seat advance, so a First Officer who upgraded onto a
       // DIFFERENT type is counted. That was the miscount.
-      madeCaptain: rows.filter((r) => r.up >= 1).length,
+      madeCaptain: rows.filter((r) => r.capt >= 1).length,
       once: rows.filter((r) => r.moves === 1).length,
       twice: rows.filter((r) => r.moves >= 2).length,
       thrice: rows.filter((r) => r.moves >= 3).length,
@@ -365,7 +368,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
   ];
   const maxTile = Math.max(...tiles.map((t) => t.value), 1);
 
-  const bucketTest = (r: { moves: number; up: number }) =>
+  const bucketTest = (r: { moves: number; up: number; capt: number }) =>
     bucket === "once"
       ? r.moves === 1
       : bucket === "twice"
@@ -373,7 +376,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
         : bucket === "thrice"
           ? r.moves >= 3
           : bucket === "captain"
-            ? r.up >= 1
+            ? r.capt >= 1
             : bucket === "stayed"
               ? r.moves === 0
               : r.moves >= 1;

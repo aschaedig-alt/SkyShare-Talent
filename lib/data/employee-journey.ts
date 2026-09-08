@@ -227,6 +227,17 @@ export type UpgradePilotStep = {
    * reads this flag.
    */
   seatUp: boolean;
+  /**
+   * This step is an UPGRADE under the house rules — a seat advance OR a move to a
+   * larger aircraft with the seat not lowered. See isUpgradeStep.
+   *
+   * SEPARATE FROM seatUp, and the separation is the point. Once "a larger aircraft
+   * is an upgrade" was added, 24 of the 38 upgrades on file became same-seat moves
+   * up the ladder by pilots who were ALREADY captains — so a single flag made the
+   * "Made Captain" tile read 33 when only 12 pilots have ever moved from the right
+   * seat to the left. One flag cannot mean both "advanced" and "became a captain".
+   */
+  upgrade: boolean;
 };
 
 export type UpgradePilot = {
@@ -281,12 +292,18 @@ function airframeOf(title: string, aircraft: string | null): string | null {
     // Those pilots sat in "Stayed put" no matter how far they had actually moved.
     // The Challenger 350's type rating is CL-30 (confirmed by him Aug 28), so the
     // pattern accepts either spelling.
-    // A BARE "Challenger" COUNTS, because that is what the live records actually
-    // say: the only Challenger rows on file read "Challenger Pilot", with no model
-    // number and no seat. Safe for this operator — there is exactly one Challenger
-    // type in the fleet, the 350 — and without it this pattern would have matched
-    // nothing that exists.
-    [/\bchallenger\b|\bcl-?30\b/i, "Challenger 350"],
+    // THE MODEL NUMBER IS REQUIRED, and a bare "Challenger" deliberately does NOT
+    // match. It briefly did, on the reasoning that the only Challenger rows on file
+    // read "Challenger Pilot" with no model — but he confirmed 2026-09-08 that the
+    // Challenger 350 and Praetor 600 are NEW aircraft, which makes those two rows a
+    // DIFFERENT and much older Challenger. Matching them would have put pilots on a
+    // type that did not exist when they flew. Both of those records are terminated
+    // and he has said to disregard them.
+    //
+    // So this pattern is here for the crews yet to be assigned to the new tails,
+    // and it wants the model: 350, or the CL-30 type rating (his confirmation,
+    // Aug 28).
+    [/\bchallenger ?350\b|\bcl-?30\b/i, "Challenger 350"],
     [/\bpraetor ?600\b/i, "Praetor 600"],
     [/\bg450\b/i, "G450"],
     [/\bg200\b/i, "G200"],
@@ -303,6 +320,76 @@ function airframeOf(title: string, aircraft: string | null): string | null {
   ];
   for (const [re, code] of AF) if (re.test(t)) return code;
   return null;
+}
+
+/**
+ * The SkyShare shared-pool ladder, smallest to largest.
+ *
+ * Lives here rather than in the report because it now decides CLASSIFICATION, not
+ * just what to suggest next — "almost any aircraft to a larger aircraft is an
+ * upgrade" (his rule, 2026-09-08) needs an ordering, and two copies of an ordering
+ * is two answers to "did this pilot advance".
+ *
+ * Managed aircraft are deliberately absent: a managed seat is not a shared-fleet
+ * progression target. Anything off the ladder returns -1 and CANNOT produce a
+ * size upgrade — which is the "almost" in his rule, and is the honest answer when
+ * we have no basis to call one aircraft larger than another.
+ *
+ * NOT YET PLACED: the Challenger 350 and Praetor 600. Both are new aircraft, both
+ * are off the ladder until somebody says where they sit, and until then a move
+ * onto one counts as a transition rather than an upgrade.
+ */
+export const SKYSHARE_LADDER = ["PC-12", "CJ2", "560XL", "G200", "G450/GV"] as const;
+
+export function ladderRank(aircraft: string | null): number {
+  switch (aircraft) {
+    case "PC-12":
+      return 0;
+    case "CJ2":
+      return 1;
+    case "560XL":
+      return 2;
+    case "G200":
+      return 3;
+    case "G450":
+    case "GV":
+      return 4;
+    default:
+      return -1; // off the shared-fleet ladder (managed / other / not yet placed)
+  }
+}
+
+/** PIC outranks SIC. null when the seat is not recorded, which is common on older rows. */
+function seatRank(seat: string | null): number | null {
+  return seat === "PIC" ? 1 : seat === "SIC" ? 0 : null;
+}
+
+/**
+ * Is this step an UPGRADE? His four rules, 2026-09-08, verbatim:
+ *
+ *   "any sic to pic is an upgrade"
+ *   "almost any aircraft to a larger aircraft is an upgrade"
+ *   "a lateral same seat move is a transistion"
+ *   "a seat change (lower) and aircraft change is usually a transition"
+ *
+ * So: a seat advance is always an upgrade whatever the aircraft did; and a move up
+ * the ladder is an upgrade UNLESS the seat went down, in which case rule four wins
+ * and it is a transition. A same-seat lateral or a step down the ladder is not an
+ * upgrade, which leaves it a transition by virtue of the aircraft changing.
+ *
+ * Kept separate from StepKind on purpose: kind is one value and "transition" has to
+ * keep winning it, or an aircraft change would vanish from the transition totals
+ * and the top-paths chart. A step can genuinely be both, and moves counts it once.
+ */
+function isUpgradeStep(prevSeat: string | null, prevAf: string | null, seat: string | null, af: string | null): boolean {
+  const ps = seatRank(prevSeat);
+  const cs = seatRank(seat);
+  if (ps === 0 && cs === 1) return true; // SIC -> PIC, any aircraft
+  const seatWentDown = ps === 1 && cs === 0;
+  if (seatWentDown) return false; // rule four
+  const pr = ladderRank(prevAf);
+  const cr = ladderRank(af);
+  return pr >= 0 && cr >= 0 && cr > pr; // a larger aircraft, seat not lowered
 }
 
 function classifyStep(prevSeat: string | null, prevAf: string | null, seat: string | null, af: string | null): StepKind {
@@ -382,9 +469,13 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
     // UpgradePilotStep.seatUp for why a step has to be able to be both an
     // aircraft transition AND a seat advance.
     const seatUps: boolean[] = [];
+    const upgradeFlags: boolean[] = [];
     ordered.forEach((r, i) => {
       kinds.push(i === 0 ? "hire" : classifyStep(prevSeat, prevAf, seats[i], frames[i]));
+      // seatUps is the SEAT fact only (SIC -> PIC) and drives "Made Captain".
+      // upgradeFlags is the full rule set and drives the upgrade counts.
       seatUps.push(i !== 0 && prevSeat === "SIC" && seats[i] === "PIC");
+      upgradeFlags.push(i !== 0 && isUpgradeStep(prevSeat, prevAf, seats[i], frames[i]));
       if (frames[i] !== null) prevAf = frames[i];
       if (seats[i] !== null) prevSeat = seats[i];
     });
@@ -398,7 +489,7 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
     // Same rule as the count above: the first time the SEAT advanced, whatever the
     // aircraft did. Kept separate from firstIdx because that one tests step kind.
     const firstSeatUpIdx = (() => {
-      const i = seatUps.findIndex((v, idx) => idx > 0 && v);
+      const i = upgradeFlags.findIndex((v, idx) => idx > 0 && v);
       return i === -1 ? null : daysFrom(i);
     })();
 
@@ -409,13 +500,13 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
     // the aircraft is unchanged, so the commonest upgrade here - a CJ2 First
     // Officer moving to the 560XL as a Captain - was counted as a transition and
     // as no upgrade at all.
-    const upgrades = seatUps.filter(Boolean).length;
+    const upgrades = upgradeFlags.filter(Boolean).length;
     const transitions = kinds.filter((k) => k === "transition").length;
     const laterals = kinds.filter((k) => k === "lateral").length;
     // ONE STEP IS ONE MOVE. A step can now be an upgrade AND a transition at once,
     // so upgrades + transitions would count that step twice and inflate a pilot's
     // move count past the number of things that actually happened to them.
-    const moves = kinds.filter((k, i) => i > 0 && (k === "transition" || seatUps[i])).length;
+    const moves = kinds.filter((k, i) => i > 0 && (k === "transition" || upgradeFlags[i])).length;
     const info = infoOf.get(hireId);
     // Only ACTIVE counts as an active pilot — CONTRACT/TERMINATED are treated as past.
     const active = info?.employmentStatus === "ACTIVE";
@@ -447,6 +538,9 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
       moves,
       laterals,
       seatUpgrades: seatUps.filter(Boolean).length,
+      // MADE CAPTAIN MEANS MADE CAPTAIN — the seat fact, not the full upgrade rule.
+      // Driving it off upgrades made it count pilots who moved up the ladder while
+      // already in the left seat.
       // Driven by the SEAT rather than by same-aircraft upgrades, so a First
       // Officer who upgraded onto a different type is counted. That was the whole
       // miscount: the commonest real upgrade here changes aircraft at the same
@@ -463,7 +557,8 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
         aircraft: frames[i],
         date: iso(r.startDate),
         kind: kinds[i],
-        seatUp: seatUps[i]
+        seatUp: seatUps[i],
+        upgrade: upgradeFlags[i]
       }))
     });
   }
