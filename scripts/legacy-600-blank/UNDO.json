@@ -1,0 +1,44 @@
+{
+  "appliedAt": "2026-09-08T22:39:07.672Z",
+  "newHirePositions": [
+    {
+      "id": "cmr5dxc88009k0orm358di4dn",
+      "name": "Ty Gunnlaugsson",
+      "from": "Legacy 600 Pilot"
+    },
+    {
+      "id": "cmr5dxb0y008z0ormip0ci4ac",
+      "name": "Rick Albin",
+      "from": "Legacy 600 Pilot"
+    },
+    {
+      "id": "cmr18a3na000x04jqvvpa3dmg",
+      "name": "Mark Killpack",
+      "from": "Legacy 600 Captain"
+    }
+  ],
+  "roleTitles": [
+    {
+      "id": "cmr5jfp8z004otcrmp0rnb5yw",
+      "name": "Ty Gunnlaugsson",
+      "from": "Legacy 600 Pilot"
+    },
+    {
+      "id": "cmr5dxb5g00920ormetx9p6p5",
+      "name": "Rick Albin",
+      "from": "Legacy 600 Pilot"
+    },
+    {
+      "id": "cmr5dyuz400296grmp4t4ic9n",
+      "name": "Mark Killpack",
+      "from": "Legacy 600 Captain"
+    }
+  ],
+  "roleAircraft": [
+    {
+      "id": "cmr5dyuz400296grmp4t4ic9n",
+      "name": "Mark Killpack",
+      "from": "Legacy 600"
+    }
+  ]
+}
