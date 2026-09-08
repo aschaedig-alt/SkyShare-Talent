@@ -1,45 +1,130 @@
 {
-  "writtenAt": "2026-09-08T18:07:41.906Z",
+  "writtenAt": "2026-09-08T18:11:01.330Z",
   "closed": [
+    {
+      "candidateId": "cmrwi6mtk000o04jyy1iusx6l",
+      "applicationId": "cmtszfj2t00072wrmzizkkj4c",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwidhd7001t04jyi7xt2nyf",
+      "applicationId": "cmtszfj4100082wrm7smkh82r",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwi6ey2000i04jyspgj05m7",
+      "applicationId": "cmtszfj4s00092wrmfg6acgcq",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwicnbe001h04jyzy2m47es",
+      "applicationId": "cmtszfj5g000a2wrm9usgj6fo",
+      "previousStatus": "Hired"
+    },
     {
       "candidateId": "cmrtl3tov000004jveah892gp",
       "applicationId": "cmrtlfpkf000d04l1eyvdei90",
-      "previousStatus": "New"
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwicfvy001f04jyr5xhtaoi",
+      "applicationId": "cmtszfj73000c2wrm5wwbjtli",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwic5s6001d04jyhbuoc1ur",
+      "applicationId": "cmtszfj80000d2wrm2fv316g4",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwi784r001104jy7rm9gccr",
+      "applicationId": "cmtszfj8q000e2wrmpxc7a7cs",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwidjgh001v04jy5v0vt7rx",
+      "applicationId": "cmtszfj9g000f2wrmfa93wnr5",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwidfe0001r04jyz4qre7wz",
+      "applicationId": "cmtszfjai000g2wrmprwdus42",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwiae24001304jypxesi4lw",
+      "applicationId": "cmtszfjb8000h2wrmngu0cjyj",
+      "previousStatus": "Hired"
     },
     {
       "candidateId": "cmrr4y5l7000004jr65s3n4e6",
       "applicationId": "cmrr4zvxy000604jrkci799mj",
-      "previousStatus": "New"
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwi6yjd000x04jy555d7fhl",
+      "applicationId": "cmtszfjc0000i2wrmpszuntbw",
+      "previousStatus": "Hired"
     },
     {
       "candidateId": "cmq5ncrhh000a04l4miy6x3gb",
       "applicationId": "cmq5ncrof000b04l4l7dnv3b1",
-      "previousStatus": null
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwihppb002n04jybju78q95",
+      "applicationId": "cmtszfjcp000j2wrmyqmm1et2",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwi6hm5000k04jyn4kncawy",
+      "applicationId": "cmtszfjdf000k2wrmmume3pza",
+      "previousStatus": "Hired"
     },
     {
       "candidateId": "cmq5ncsic000j04l4n6t3sn8s",
       "applicationId": "cmq5ncsp8000k04l46a7ig2sx",
-      "previousStatus": null
+      "previousStatus": "Hired"
     },
     {
       "candidateId": "cms3mwaza00007crmuyqwmisf",
       "applicationId": "cmsnja7rb000004l7aae9qo30",
-      "previousStatus": "New"
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwihfw5002l04jyp3guudrq",
+      "applicationId": "cmtszfje3000l2wrmjy0db097",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwi6wf9000v04jyfmvy15ho",
+      "applicationId": "cmtszfjet000m2wrmw3lylcpy",
+      "previousStatus": "Hired"
     },
     {
       "candidateId": "cmrtlf1tp000628rmbf0bhzcl",
       "applicationId": "cmrtp07md000r04l4nxbrwoo7",
-      "previousStatus": "New"
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwi6tzl000t04jya10dqzpt",
+      "applicationId": "cmtszfjfj000n2wrmlj9g4195",
+      "previousStatus": "Hired"
     },
     {
       "candidateId": "cmrtlf1pi000328rmzal2lch7",
       "applicationId": "cmrtoi73t000q04juqkewy29k",
-      "previousStatus": "New"
+      "previousStatus": "Hired"
     },
     {
       "candidateId": "cmqfwz8e1000d04l42hav2k0r",
       "applicationId": "cmro0sx320000ywrmy42mpu6a",
-      "previousStatus": "New"
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwifevg002904jyl7remfea",
+      "applicationId": "cmtszfjga000o2wrmjsx796sb",
+      "previousStatus": "Hired"
     },
     {
       "candidateId": "cmq5nctuq000v04l4iok6o72e",
@@ -47,91 +132,168 @@
       "previousStatus": "Hired"
     },
     {
+      "candidateId": "cmrwie0ea002304jyinof1hnd",
+      "applicationId": "cmtszfjh1000p2wrmd8r0lr85",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwi51oe000e04jy3cabv17y",
+      "applicationId": "cmtszfjik000r2wrmf0vm5j9s",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwi2ip8000204jydlua2jdf",
+      "applicationId": "cmtszfjj9000s2wrml0lku1nm",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwicxna001n04jyo84v3n1t",
+      "applicationId": "cmtszfjk0000t2wrmjuq5pwje",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwi53zn000g04jyawqdgway",
+      "applicationId": "cmtszfjkr000u2wrm1onpg6ka",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwiajqj001504jyjkdx9cav",
+      "applicationId": "cmtszfjlh000v2wrmtyp1t1ej",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwiamdu001704jyanh1wq26",
+      "applicationId": "cmtszfjm6000w2wrmbd0f5hid",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwie31m002504jyo4m7wo8j",
+      "applicationId": "cmtszfjmv000x2wrmm47u1zd8",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwib0b6001904jyg8hu7ihw",
+      "applicationId": "cmtszfjnl000y2wrmgwirfd9c",
+      "previousStatus": "Hired"
+    },
+    {
       "candidateId": "cmrtlf1kx000028rmteibvsbw",
       "applicationId": "cmrtotsvk000a04l4acnjk6xu",
-      "previousStatus": "New"
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwidvom001z04jyn7tmv32c",
+      "applicationId": "cmtszfjoc000z2wrmu8l6096z",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwigk9c002f04jyrcrntb9v",
+      "applicationId": "cmtszfjp000102wrm9h4jl29b",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwidxu7002104jywvtq0u2n",
+      "applicationId": "cmtszfjpo00112wrmkfq94byn",
+      "previousStatus": "Hired"
     },
     {
       "candidateId": "cmrtsd0sk00000srmnh5ffg26",
       "applicationId": "cms83csqr000204iebprz6giv",
-      "previousStatus": "New"
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwi6pcp000q04jyer0npbry",
+      "applicationId": "cmtszfjqf00122wrm009k6k6y",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwi6k9n000m04jyjb06qruy",
+      "applicationId": "cmtszfjr400132wrmlicnl4gp",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwi42nj000604jyqd2bjwpg",
+      "applicationId": "cmtszfjru00142wrmmy8v2yo8",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwi75ll000z04jy4p0yg439",
+      "applicationId": "cmtszfjsk00152wrmd5km3x8a",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwidd6a001p04jylwuw73a9",
+      "applicationId": "cmtszfjta00162wrmdf8udayv",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwi6rpg000s04jy1q111mia",
+      "applicationId": "cmtszfjtz00172wrmslz2qlkn",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwicttd001l04jy5sews94u",
+      "applicationId": "cmtszfjvd00192wrmt3h98617",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwidsrp001x04jyxy1mu57u",
+      "applicationId": "cmtszfjw6001a2wrml9w6zawx",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwic3i6001b04jyozk7gr6c",
+      "applicationId": "cmtszfjww001b2wrmosgtupp0",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwi458e000804jyzjyn9cc1",
+      "applicationId": "cmtszfjxl001c2wrmmyjzbibx",
+      "previousStatus": "Hired"
     },
     {
       "candidateId": "cmt95sjhz000004l6zjtezk2h",
       "applicationId": "cmt95u2qq000c04l6ssdwj6zr",
-      "previousStatus": "New"
+      "previousStatus": "Hired"
     },
     {
       "candidateId": "cmqvr4wm00f54xcrmaykh29k1",
       "applicationId": "cmsi0lkx9009l04l158xybcm5",
-      "previousStatus": null
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwi4v4z000c04jyikdlp3gf",
+      "applicationId": "cmtszfjya001d2wrm9iekr3hr",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwicrf4001j04jywookx9ak",
+      "applicationId": "cmtszfjz7001e2wrmcuq6iyql",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwihbap002j04jymaq9u7uf",
+      "applicationId": "cmtszfjzy001f2wrmqgubf6s7",
+      "previousStatus": "Hired"
     },
     {
       "candidateId": "cmrtqwuhz000004i81r6h6qiu",
       "applicationId": "cmrtqylqu000g04i8630hg9jx",
-      "previousStatus": "New"
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrwi2m14000404jyuv1ym512",
+      "applicationId": "cmtszfk0n001g2wrmekkde896",
+      "previousStatus": "Hired"
     },
     {
       "candidateId": "cmq5nd18j002p04l49ixfc06t",
       "applicationId": "cmtsxetv0000704if91gic78x",
-      "previousStatus": "New"
+      "previousStatus": "Hired"
     }
   ],
   "createdFor": [
-    "cmrwi6mtk000o04jyy1iusx6l",
-    "cmrwidhd7001t04jyi7xt2nyf",
-    "cmrwi6ey2000i04jyspgj05m7",
-    "cmrwicnbe001h04jyzy2m47es",
-    "cmrwiflkn002b04jyoibxmmvi",
-    "cmrwicfvy001f04jyr5xhtaoi",
-    "cmrwic5s6001d04jyhbuoc1ur",
-    "cmrwi784r001104jy7rm9gccr",
-    "cmrwidjgh001v04jy5v0vt7rx",
-    "cmrwidfe0001r04jyz4qre7wz",
-    "cmrwiae24001304jypxesi4lw",
-    "cmrwi6yjd000x04jy555d7fhl",
-    "cmrwihppb002n04jybju78q95",
-    "cmrwi6hm5000k04jyn4kncawy",
-    "cmrwihfw5002l04jyp3guudrq",
-    "cmrwi6wf9000v04jyfmvy15ho",
-    "cmrwi6tzl000t04jya10dqzpt",
-    "cmrwifevg002904jyl7remfea",
-    "cmrwie0ea002304jyinof1hnd",
-    "cmrwihv8b002p04jyd94nkryg",
-    "cmrwi51oe000e04jy3cabv17y",
-    "cmrwi2ip8000204jydlua2jdf",
-    "cmrwicxna001n04jyo84v3n1t",
-    "cmrwi53zn000g04jyawqdgway",
-    "cmrwiajqj001504jyjkdx9cav",
-    "cmrwiamdu001704jyanh1wq26",
-    "cmrwie31m002504jyo4m7wo8j",
-    "cmrwib0b6001904jyg8hu7ihw",
-    "cmrwidvom001z04jyn7tmv32c",
-    "cmrwigk9c002f04jyrcrntb9v",
-    "cmrwidxu7002104jywvtq0u2n",
-    "cmrwi6pcp000q04jyer0npbry",
-    "cmrwi6k9n000m04jyjb06qruy",
-    "cmrwi42nj000604jyqd2bjwpg",
-    "cmrwi75ll000z04jy4p0yg439",
-    "cmrwidd6a001p04jylwuw73a9",
-    "cmrwi6rpg000s04jy1q111mia",
-    "cmrwif9au002704jyvtwmm7dc",
-    "cmrwicttd001l04jy5sews94u",
-    "cmrwidsrp001x04jyxy1mu57u",
-    "cmrwic3i6001b04jyozk7gr6c",
-    "cmrwi458e000804jyzjyn9cc1",
-    "cmrwi4v4z000c04jyikdlp3gf",
-    "cmrwicrf4001j04jywookx9ak",
-    "cmrwihbap002j04jymaq9u7uf",
-    "cmrwi2m14000404jyuv1ym512"
+    "cms3n2yzc0028bkrmsbw9es71"
   ],
-  "createdJobIds": [
-    "cmtszfht500002wrm5vit4wwy",
-    "cmtszfhuj00012wrmzbqz6uzs",
-    "cmtszfhxx00022wrm8nvk8t7l",
-    "cmtszfhzm00032wrmtv4ysccf",
-    "cmtszfi0t00042wrm1pn5slhy",
-    "cmtszfi2l00052wrmgmithp4h",
-    "cmtszfi3o00062wrmw8c5eg9q"
-  ]
+  "createdJobIds": []
 }

@@ -492,6 +492,18 @@ async function runApply() {
   }
   void undoRows;
   if (!existsSync(OUT_DIR)) mkdirSync(OUT_DIR, { recursive: true });
+  // A SECOND RUN MUST NOT DESTROY THE FIRST RUN'S UNDO RECORD. The 46
+  // applications and 7 jobs from the Sep 8 run are only reversible because that
+  // file exists; overwriting it to add one more person would trade all of it for
+  // the one. Existing records are rolled to UNDO-1.json, UNDO-2.json and so on,
+  // oldest kept, and the newest stays at UNDO.json so --undo needs no argument.
+  if (existsSync(UNDO)) {
+    let n = 1;
+    while (existsSync(UNDO.replace(/[.]json$/, `-${n}.json`))) n++;
+    const rolled = UNDO.replace(/[.]json$/, `-${n}.json`);
+    writeFileSync(rolled, readFileSync(UNDO, "utf8"));
+    console.log(`previous undo record kept as ${rolled}`);
+  }
   writeFileSync(
     UNDO,
     JSON.stringify(

@@ -1,0 +1,137 @@
+{
+  "writtenAt": "2026-09-08T18:07:41.906Z",
+  "closed": [
+    {
+      "candidateId": "cmrtl3tov000004jveah892gp",
+      "applicationId": "cmrtlfpkf000d04l1eyvdei90",
+      "previousStatus": "New"
+    },
+    {
+      "candidateId": "cmrr4y5l7000004jr65s3n4e6",
+      "applicationId": "cmrr4zvxy000604jrkci799mj",
+      "previousStatus": "New"
+    },
+    {
+      "candidateId": "cmq5ncrhh000a04l4miy6x3gb",
+      "applicationId": "cmq5ncrof000b04l4l7dnv3b1",
+      "previousStatus": null
+    },
+    {
+      "candidateId": "cmq5ncsic000j04l4n6t3sn8s",
+      "applicationId": "cmq5ncsp8000k04l46a7ig2sx",
+      "previousStatus": null
+    },
+    {
+      "candidateId": "cms3mwaza00007crmuyqwmisf",
+      "applicationId": "cmsnja7rb000004l7aae9qo30",
+      "previousStatus": "New"
+    },
+    {
+      "candidateId": "cmrtlf1tp000628rmbf0bhzcl",
+      "applicationId": "cmrtp07md000r04l4nxbrwoo7",
+      "previousStatus": "New"
+    },
+    {
+      "candidateId": "cmrtlf1pi000328rmzal2lch7",
+      "applicationId": "cmrtoi73t000q04juqkewy29k",
+      "previousStatus": "New"
+    },
+    {
+      "candidateId": "cmqfwz8e1000d04l42hav2k0r",
+      "applicationId": "cmro0sx320000ywrmy42mpu6a",
+      "previousStatus": "New"
+    },
+    {
+      "candidateId": "cmq5nctuq000v04l4iok6o72e",
+      "applicationId": "cmqvr38rq05tsxcrm8i73d7ch",
+      "previousStatus": "Hired"
+    },
+    {
+      "candidateId": "cmrtlf1kx000028rmteibvsbw",
+      "applicationId": "cmrtotsvk000a04l4acnjk6xu",
+      "previousStatus": "New"
+    },
+    {
+      "candidateId": "cmrtsd0sk00000srmnh5ffg26",
+      "applicationId": "cms83csqr000204iebprz6giv",
+      "previousStatus": "New"
+    },
+    {
+      "candidateId": "cmt95sjhz000004l6zjtezk2h",
+      "applicationId": "cmt95u2qq000c04l6ssdwj6zr",
+      "previousStatus": "New"
+    },
+    {
+      "candidateId": "cmqvr4wm00f54xcrmaykh29k1",
+      "applicationId": "cmsi0lkx9009l04l158xybcm5",
+      "previousStatus": null
+    },
+    {
+      "candidateId": "cmrtqwuhz000004i81r6h6qiu",
+      "applicationId": "cmrtqylqu000g04i8630hg9jx",
+      "previousStatus": "New"
+    },
+    {
+      "candidateId": "cmq5nd18j002p04l49ixfc06t",
+      "applicationId": "cmtsxetv0000704if91gic78x",
+      "previousStatus": "New"
+    }
+  ],
+  "createdFor": [
+    "cmrwi6mtk000o04jyy1iusx6l",
+    "cmrwidhd7001t04jyi7xt2nyf",
+    "cmrwi6ey2000i04jyspgj05m7",
+    "cmrwicnbe001h04jyzy2m47es",
+    "cmrwiflkn002b04jyoibxmmvi",
+    "cmrwicfvy001f04jyr5xhtaoi",
+    "cmrwic5s6001d04jyhbuoc1ur",
+    "cmrwi784r001104jy7rm9gccr",
+    "cmrwidjgh001v04jy5v0vt7rx",
+    "cmrwidfe0001r04jyz4qre7wz",
+    "cmrwiae24001304jypxesi4lw",
+    "cmrwi6yjd000x04jy555d7fhl",
+    "cmrwihppb002n04jybju78q95",
+    "cmrwi6hm5000k04jyn4kncawy",
+    "cmrwihfw5002l04jyp3guudrq",
+    "cmrwi6wf9000v04jyfmvy15ho",
+    "cmrwi6tzl000t04jya10dqzpt",
+    "cmrwifevg002904jyl7remfea",
+    "cmrwie0ea002304jyinof1hnd",
+    "cmrwihv8b002p04jyd94nkryg",
+    "cmrwi51oe000e04jy3cabv17y",
+    "cmrwi2ip8000204jydlua2jdf",
+    "cmrwicxna001n04jyo84v3n1t",
+    "cmrwi53zn000g04jyawqdgway",
+    "cmrwiajqj001504jyjkdx9cav",
+    "cmrwiamdu001704jyanh1wq26",
+    "cmrwie31m002504jyo4m7wo8j",
+    "cmrwib0b6001904jyg8hu7ihw",
+    "cmrwidvom001z04jyn7tmv32c",
+    "cmrwigk9c002f04jyrcrntb9v",
+    "cmrwidxu7002104jywvtq0u2n",
+    "cmrwi6pcp000q04jyer0npbry",
+    "cmrwi6k9n000m04jyjb06qruy",
+    "cmrwi42nj000604jyqd2bjwpg",
+    "cmrwi75ll000z04jy4p0yg439",
+    "cmrwidd6a001p04jylwuw73a9",
+    "cmrwi6rpg000s04jy1q111mia",
+    "cmrwif9au002704jyvtwmm7dc",
+    "cmrwicttd001l04jy5sews94u",
+    "cmrwidsrp001x04jyxy1mu57u",
+    "cmrwic3i6001b04jyozk7gr6c",
+    "cmrwi458e000804jyzjyn9cc1",
+    "cmrwi4v4z000c04jyikdlp3gf",
+    "cmrwicrf4001j04jywookx9ak",
+    "cmrwihbap002j04jymaq9u7uf",
+    "cmrwi2m14000404jyuv1ym512"
+  ],
+  "createdJobIds": [
+    "cmtszfht500002wrm5vit4wwy",
+    "cmtszfhuj00012wrmzbqz6uzs",
+    "cmtszfhxx00022wrm8nvk8t7l",
+    "cmtszfhzm00032wrmtv4ysccf",
+    "cmtszfi0t00042wrm1pn5slhy",
+    "cmtszfi2l00052wrmgmithp4h",
+    "cmtszfi3o00062wrmw8c5eg9q"
+  ]
+}
