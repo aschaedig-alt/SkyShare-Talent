@@ -12,6 +12,7 @@ import { BatchAddCandidatesToJob } from "@/components/recruiting-jobs/BatchAddCa
 import { NewJobButton } from "@/components/recruiting-jobs/NewJobButton";
 import { PaycomReqField } from "@/components/recruiting-jobs/PaycomReqField";
 import { JobActiveToggle } from "@/components/recruiting-jobs/JobActiveToggle";
+import { JobTitleField } from "@/components/recruiting-jobs/JobTitleField";
 import { ResumeIntake } from "@/components/candidates/ResumeIntake";
 import { DocumentIntake } from "@/components/candidates/DocumentIntake";
 import { JobScreeningPanel } from "@/components/recruiting-jobs/JobScreeningPanel";
@@ -94,7 +95,7 @@ function JobDetailHeader({ job, canEdit }: { job: RecruitingJobDetail; canEdit?:
       <div className="flex flex-col gap-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Job detail</p>
-          <h2 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">{job.title}</h2>
+          <JobTitleField key={`title-${job.id}`} jobId={job.id} title={job.title} canEdit={canEdit} />
           <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
             {[job.department, locationLabel(job)].filter(Boolean).join(" - ")}
           </p>
