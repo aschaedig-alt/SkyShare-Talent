@@ -316,7 +316,18 @@ function airframeOf(title: string, aircraft: string | null): string | null {
     [/\bphenom ?100\b/i, "Phenom 100"],
     [/\b560 ?xls\+?\b|\bxls\+?\b/i, "560XLS+"],
     [/\b560 ?xl\b|\bxl\b/i, "560XL"],
+    // THE CJ FAMILY, all one rung on his ladder ("CJ = M2 = CJ2 = CJ3+") but kept
+    // as distinct codes here, because the transition-paths chart should still show
+    // a CJ2 → CJ3+ move as the type change it is: a different type rating and a
+    // real training event, even though it is not an upgrade.
+    //
+    // CJ3+ IS IN LIVE USE — Erik Schwerman is on file as a "CJ3+ Captain". Before
+    // this it resolved to nothing, so his aircraft could not be identified and his
+    // moves could not be classified at all. Ordered longest-first so CJ3+ is not
+    // eaten by a looser CJ pattern.
+    [/\bcj ?3\+?\b/i, "CJ3"],
     [/\bcj ?2\b|\bce-?525\b/i, "CJ2"],
+    [/\bcj ?1\b/i, "CJ1"],
     [/\bm2\b/i, "M2"]
   ];
   for (const [re, code] of AF) if (re.test(t)) return code;

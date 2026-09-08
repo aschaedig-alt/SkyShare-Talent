@@ -20,33 +20,79 @@
  */
 
 /**
- * Smallest to largest. Managed aircraft are deliberately absent: he confirmed the
- * same upgrade rules apply to them, but they are rarely used and none has been
- * placed in this order yet — and an ordering invented here would be a guess about
- * which aeroplane is the bigger job.
+ * The ladder, smallest rung to largest, GIVEN BY HIM on 2026-09-08 verbatim:
  *
- * NOT YET PLACED: Challenger 350, Praetor 600 (both new aircraft), and the managed
- * types — Legacy 650, Phenom 100/300, M2, 560XLS+. Until they are ordered, a move
- * onto one is a transition and never a size upgrade.
+ *   PC-12 = PC-12 NG = PC-12 NGX → CJ = M2 = CJ2 = CJ3+ → Phenom 100 →
+ *   Phenom 300 → 560XL = 560XLS = 560XLS+ → Praetor 600 → Challenger 350 →
+ *   G200 → G450/GV → Legacy 650
+ *
+ * IT IS A PROGRESSION ORDER, NOT A SIZE ORDER, and the difference matters before
+ * anybody "corrects" it: a Phenom 100 sits above the CJ family here, which is not
+ * what a spec sheet would say. This is the order the company promotes through, so
+ * it is the order that decides whether a move was an upgrade. Do not reorder it
+ * from aircraft dimensions — ask him.
+ *
+ * The "=" groups share a rung, so a move between them is a lateral: PC-12 to
+ * PC-12 NGX is not an upgrade, and neither is CJ2 to M2.
+ *
+ * Legacy 650 is the TOP rung, above G450/GV — also his. Legacy 600 is deliberately
+ * NOT placed: he did not name it, and guessing it sits beside the 650 would invent
+ * an upgrade. It stays off the ladder until asked.
  */
-export const SKYSHARE_LADDER = ["PC-12", "CJ2", "560XL", "G200", "G450/GV"] as const;
+export const SKYSHARE_LADDER = [
+  "PC-12",
+  "CJ2/M2",
+  "Phenom 100",
+  "Phenom 300",
+  "560XL",
+  "Praetor 600",
+  "Challenger 350",
+  "G200",
+  "G450/GV",
+  "Legacy 650"
+] as const;
 
-/** Position on the ladder, or -1 for anything not on it. */
+/**
+ * Position on the ladder, or -1 for anything not on it.
+ *
+ * Takes the canonical codes airframeOf produces (see lib/data/employee-journey.ts),
+ * so the equivalence groups above collapse here: every PC-12 variant resolves to
+ * "PC-12" upstream, and the XLS variants to "560XLS+".
+ */
 export function ladderRank(aircraft: string | null): number {
   switch (aircraft) {
     case "PC-12":
       return 0;
+    // One rung: "CJ = M2 = CJ2 = CJ3+".
+    case "CJ1":
     case "CJ2":
+    case "CJ3":
+    case "M2":
       return 1;
-    case "560XL":
+    case "Phenom 100":
       return 2;
-    case "G200":
+    case "Phenom 300":
       return 3;
-    // One type rating covers both, so they share the top rung.
+    // One rung: "560XL = 560XLS = 560XLS+".
+    case "560XL":
+    case "560XLS+":
+      return 4;
+    case "Praetor 600":
+      return 5;
+    case "Challenger 350":
+      return 6;
+    case "G200":
+      return 7;
+    // One type rating covers both, so they share a rung.
     case "G450":
     case "GV":
-      return 4;
+      return 8;
+    case "Legacy 650":
+      return 9;
     default:
+      // Off the ladder — including Legacy 600, which he has not placed. No size
+      // verdict is possible, so a move involving one is a transition and never an
+      // upgrade. That is the "almost" in his second rule.
       return -1;
   }
 }
@@ -61,12 +107,9 @@ export function seatRank(seat: string | null): number | null {
  *
  * A seat advance is always one, whatever the aircraft did. A move up the ladder is
  * one too — UNLESS the seat went down, where his fourth rule wins and the step is a
- * transition instead. A same-seat lateral, or a step down the ladder, is not an
- * upgrade; it stays a transition by virtue of the aircraft having changed.
- *
- * Anything off the ladder cannot be judged larger or smaller, so it yields no size
- * upgrade. That is the "almost" in his second rule, and the honest answer while the
- * managed types and the two new aircraft are unplaced.
+ * transition instead. A same-seat lateral, a move WITHIN a rung, or a step down the
+ * ladder is not an upgrade; it stays a transition by virtue of the aircraft having
+ * changed.
  */
 export function isUpgradeStep(
   prevSeat: string | null,
@@ -80,5 +123,5 @@ export function isUpgradeStep(
   if (ps === 1 && cs === 0) return false; // seat lowered — his rule four
   const pr = ladderRank(prevAircraft);
   const cr = ladderRank(aircraft);
-  return pr >= 0 && cr >= 0 && cr > pr; // larger aircraft, seat not lowered
+  return pr >= 0 && cr >= 0 && cr > pr; // a higher rung, seat not lowered
 }
