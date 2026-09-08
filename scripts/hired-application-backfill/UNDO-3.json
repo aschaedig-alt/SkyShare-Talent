@@ -1,5 +1,5 @@
 {
-  "writtenAt": "2026-09-08T18:24:40.869Z",
+  "writtenAt": "2026-09-08T18:20:12.633Z",
   "closed": [
     {
       "candidateId": "cmrwi6mtk000o04jyy1iusx6l",
@@ -104,7 +104,7 @@
     {
       "candidateId": "cmrwigcpt002d04jyfs0w79ii",
       "applicationId": "cmsi0ksqx006704l107a8fvzk",
-      "previousStatus": "Hired"
+      "previousStatus": "New"
     },
     {
       "candidateId": "cmrwihfw5002l04jyp3guudrq",
@@ -119,7 +119,7 @@
     {
       "candidateId": "cmrnxhy6d000004jt5mmvjudk",
       "applicationId": "cmsjfy146000204ktimzgbdae",
-      "previousStatus": "Hired"
+      "previousStatus": "New"
     },
     {
       "candidateId": "cmrtlf1tp000628rmbf0bhzcl",
@@ -144,7 +144,7 @@
     {
       "candidateId": "cmrwi4pnq000a04jyxj9dld99",
       "applicationId": "cmtszsbsn000504jxboc9anqe",
-      "previousStatus": "Hired"
+      "previousStatus": "New"
     },
     {
       "candidateId": "cmrwifevg002904jyl7remfea",
@@ -155,11 +155,6 @@
       "candidateId": "cmq5nctuq000v04l4iok6o72e",
       "applicationId": "cmqvr38rq05tsxcrm8i73d7ch",
       "previousStatus": "Hired"
-    },
-    {
-      "candidateId": "cmq5ncuj2001104l4ijapezbn",
-      "applicationId": "cmtszzak0000e04jx2bav1zto",
-      "previousStatus": "New"
     },
     {
       "candidateId": "cmrwie0ea002304jyinof1hnd",
@@ -279,7 +274,7 @@
     {
       "candidateId": "cms6jwlfu000504i73c5ho2oh",
       "applicationId": "cmsi0jmwr002204l1xbm59zb5",
-      "previousStatus": "Hired"
+      "previousStatus": "New"
     },
     {
       "candidateId": "cmrwidsrp001x04jyxy1mu57u",
@@ -319,7 +314,7 @@
     {
       "candidateId": "cmrwigqxq002h04jynj4ph9t4",
       "applicationId": "cmsi0kj40005304l1mf4rdzqz",
-      "previousStatus": "Hired"
+      "previousStatus": "New"
     },
     {
       "candidateId": "cmrwihbap002j04jymaq9u7uf",
