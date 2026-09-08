@@ -48,6 +48,7 @@ const prisma = new PrismaClient({
 
 const OUT_DIR = join(process.cwd(), "scripts", "hired-application-backfill");
 const CSV = join(OUT_DIR, "REVIEW.csv");
+const DECISIONS = join(OUT_DIR, "DECISIONS.csv");
 const MD = join(OUT_DIR, "REVIEW.md");
 const UNDO = join(OUT_DIR, "UNDO.json");
 
@@ -242,83 +243,196 @@ async function review() {
     console.log(`  ${k.padEnd(11)} ${v}`);
   }
   console.log(`  ${"TOTAL".padEnd(11)} ${rows.length}`);
+
+  writeDecisions(rows);
 }
 
-async function runApply() {
-  if (!existsSync(CSV)) { console.log(`No ${CSV} — run without --apply first.`); return; }
-  const text = readFileSync(CSV, "utf8").trim().split("\n");
-  const header = text[0].split(",");
-  const idx = (k: string) => header.indexOf(k);
-  const parsed = text.slice(1).map((l) => {
-    // Deliberately simple: the only quoted column is note, which we do not read.
-    const parts = l.split(",");
-    return {
-      action: parts[idx("action")],
-      name: parts[idx("name")],
-      jobId: parts[idx("jobId")],
-      candidateId: parts[idx("candidateId")]
-    };
-  });
-  const usable = parsed.filter((r) => r.candidateId && (r.action === "close-out" || r.jobId));
-  console.log(`${parsed.length} rows in the file, ${usable.length} actionable (a create row needs a jobId).`);
-
-  const undoRows: { candidateId: string; applicationId: string | null; previousStatus: string | null }[] = [];
-  if (!existsSync(OUT_DIR)) mkdirSync(OUT_DIR, { recursive: true });
-
-  for (const r of usable) {
-    if (r.action === "close-out") {
-      const app = await prisma.candidateApplication.findFirst({
-        where: { candidateId: r.candidateId }, select: { id: true, status: true }
-      });
-      if (!app) continue;
-      undoRows.push({ candidateId: r.candidateId, applicationId: app.id, previousStatus: app.status });
-    } else {
-      undoRows.push({ candidateId: r.candidateId, applicationId: null, previousStatus: null });
-    }
+/**
+ * The SHORT file, and the one actually worth filling in.
+ *
+ * REVIEW.csv has one row per person, which is the wrong shape for the work: the
+ * 18 ambiguous rows are four distinct positions, because there are five PC-12
+ * Captain jobs and twelve people hired into one of them. Answering "which PC-12
+ * Captain job is the real one" once settles twelve people, so the decisions file
+ * has ONE ROW PER POSITION and names how many people ride on it.
+ *
+ * Fill in `chooseJobTitle` — paste one of the options verbatim, or type any other
+ * job title, or write SKIP to leave those people alone. --apply resolves the title
+ * against the live job list and fans it out.
+ */
+function writeDecisions(rows: Awaited<ReturnType<typeof buildProposals>>) {
+  const needed = rows.filter((r) => r.confidence === "ambiguous" || r.confidence === "none");
+  const byPosition = new Map<string, { people: string[]; note: string; confidence: string }>();
+  for (const r of needed) {
+    const e = byPosition.get(r.position) ?? { people: [], note: r.note, confidence: r.confidence };
+    e.people.push(r.name);
+    byPosition.set(r.position, e);
   }
-  writeFileSync(UNDO, JSON.stringify({ writtenAt: new Date().toISOString(), rows: undoRows }, null, 2));
+
+  const header = ["position", "peopleCount", "people", "options", "chooseJobTitle"];
+  const lines = [header.join(",")];
+  const sorted = [...byPosition.entries()].sort((a, b) => b[1].people.length - a[1].people.length);
+  for (const [position, e] of sorted) {
+    // The options list is already in the note for an ambiguous row; pull it out so
+    // the column holds only the titles, ready to copy one into the next column.
+    const opts = e.confidence === "ambiguous" ? (e.note.split(" jobs: ")[1] ?? "") : "";
+    lines.push(
+      [position, String(e.people.length), e.people.join("; "), opts, ""].map(csvCell).join(",")
+    );
+  }
+  writeFileSync(DECISIONS, lines.join("\n") + "\n");
+  console.log(`\n  and the SHORT one, which is the file to fill in:`);
+  console.log(`  ${DECISIONS}   ${sorted.length} decisions covering ${needed.length} people`);
+}
+
+/** Split one CSV line, honouring double quotes. */
+function csvSplit(line: string): string[] {
+  const out: string[] = [];
+  let cur = "";
+  let q = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (q) {
+      if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+      else if (ch === '"') q = false;
+      else cur += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === ",") { out.push(cur); cur = ""; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+/**
+ * Apply.
+ *
+ * REBUILDS THE PROPOSALS FROM THE LIVE DATABASE rather than reading REVIEW.csv
+ * back. The review file is a report; the database is the truth, and it has moved
+ * once already while this was being written. DECISIONS.csv is then overlaid on top
+ * — it is the only file anybody edits, and it holds one row per POSITION, so
+ * answering "which PC-12 Captain job" once reaches all twelve people.
+ *
+ * A decision of SKIP, or an empty choice, leaves those people alone.
+ */
+async function runApply() {
+  if (!existsSync(DECISIONS)) {
+    console.log(`No ${DECISIONS} — run without --apply first, then fill it in.`);
+    return;
+  }
+
+  const jobs = await prisma.job.findMany({ select: { id: true, title: true, status: true } });
+  const jobByTitle = new Map(jobs.filter((j) => j.status !== "MERGED").map((j) => [norm(j.title), j]));
+
+  const chosen = new Map<string, { id: string; title: string }>();
+  const skipped: string[] = [];
+  const unresolved: string[] = [];
+  const lines = readFileSync(DECISIONS, "utf8").trim().split(/\r?\n/);
+  const head = csvSplit(lines[0]);
+  const iPos = head.indexOf("position");
+  const iChoice = head.indexOf("chooseJobTitle");
+  for (const line of lines.slice(1)) {
+    const cells = csvSplit(line);
+    const position = (cells[iPos] ?? "").trim();
+    const choice = (cells[iChoice] ?? "").trim();
+    if (!position || !choice) continue;
+    if (/^skip$/i.test(choice)) { skipped.push(position); continue; }
+    const job = jobByTitle.get(norm(choice));
+    if (!job) { unresolved.push(`${position} -> "${choice}"`); continue; }
+    chosen.set(position, { id: job.id, title: job.title });
+  }
+
+  console.log(`decisions read: ${chosen.size} resolved, ${skipped.length} skipped, ${unresolved.length} unresolved`);
+  for (const u of unresolved) console.log(`  UNRESOLVED, no job with that exact title: ${u}`);
+  if (unresolved.length) {
+    console.log("Fix those titles and re-run. Nothing has been written.");
+    return;
+  }
+
+  const rows = await buildProposals();
+  const work = rows
+    .map((r) => {
+      if (r.action === "close-out") return r;
+      if (r.jobId) return r;
+      const pick = chosen.get(r.position);
+      return pick ? { ...r, jobId: pick.id, jobTitle: pick.title } : r;
+    })
+    .filter((r) => r.action === "close-out" || r.jobId);
+
+  const creates = work.filter((r) => r.action === "create");
+  const closes = work.filter((r) => r.action === "close-out");
+  console.log(`\nabout to create ${creates.length} applications and close out ${closes.length}.`);
+  console.log(`leaving alone: ${rows.length - work.length} (skipped or still undecided)`);
+
+  // Undo record BEFORE anything is written, so a crash mid-run is still reversible.
+  const undoRows = closes.map((r) => ({
+    candidateId: r.candidateId,
+    applicationId: r.jobId ? null : null,
+    previousStatus: null as string | null
+  }));
+  const withPrev: { candidateId: string; applicationId: string | null; previousStatus: string | null }[] = [];
+  for (const r of closes) {
+    const app = await prisma.candidateApplication.findFirst({
+      where: { candidateId: r.candidateId },
+      orderBy: { appliedAt: "desc" },
+      select: { id: true, status: true }
+    });
+    if (app) withPrev.push({ candidateId: r.candidateId, applicationId: app.id, previousStatus: app.status });
+  }
+  void undoRows;
+  if (!existsSync(OUT_DIR)) mkdirSync(OUT_DIR, { recursive: true });
+  writeFileSync(
+    UNDO,
+    JSON.stringify({ writtenAt: new Date().toISOString(), closed: withPrev, createdFor: creates.map((c) => c.candidateId) }, null, 2)
+  );
   console.log(`undo record written first: ${UNDO}`);
 
-  let created = 0, closed = 0;
-  for (const r of usable) {
-    if (r.action === "close-out") {
-      const app = await prisma.candidateApplication.findFirst({ where: { candidateId: r.candidateId }, select: { id: true } });
-      if (!app) continue;
-      await prisma.candidateApplication.update({ where: { id: app.id }, data: { status: "Hired" } });
-      closed++;
-    } else {
-      await prisma.candidateApplication.create({
-        data: {
-          candidateId: r.candidateId, jobId: r.jobId, status: "Hired", stage: "Hired",
-          source: "Hired backfill", appliedAt: new Date()
-        }
-      });
-      created++;
-    }
+  let created = 0;
+  for (const r of creates) {
+    await prisma.candidateApplication.create({
+      data: {
+        candidateId: r.candidateId,
+        jobId: r.jobId,
+        status: "Hired",
+        stage: "Hired",
+        source: "Hired backfill",
+        appliedAt: new Date()
+      }
+    });
+    created++;
   }
-  console.log(`created ${created} applications, closed out ${closed}.`);
+  let closed = 0;
+  for (const r of withPrev) {
+    await prisma.candidateApplication.update({ where: { id: r.applicationId as string }, data: { status: "Hired" } });
+    closed++;
+  }
+  console.log(`created ${created}, closed out ${closed}.`);
+
+  const check = await prisma.candidateApplication.count({ where: { source: "Hired backfill" } });
+  console.log(`read back: ${check} applications now carry source "Hired backfill".`);
 }
 
 async function runUndo() {
   if (!existsSync(UNDO)) { console.log(`No undo record at ${UNDO}.`); return; }
   const rec = JSON.parse(readFileSync(UNDO, "utf8")) as {
-    rows: { candidateId: string; applicationId: string | null; previousStatus: string | null }[];
+    closed: { applicationId: string | null; previousStatus: string | null }[];
+    createdFor: string[];
   };
-  let restored = 0, removed = 0;
-  for (const r of rec.rows) {
-    if (r.applicationId) {
-      await prisma.candidateApplication.update({
-        where: { id: r.applicationId }, data: { status: r.previousStatus ?? "New" }
-      });
-      restored++;
-    } else {
-      const del = await prisma.candidateApplication.deleteMany({
-        where: { candidateId: r.candidateId, source: "Hired backfill" }
-      });
-      removed += del.count;
-    }
+  let restored = 0;
+  for (const r of rec.closed ?? []) {
+    if (!r.applicationId) continue;
+    await prisma.candidateApplication.update({
+      where: { id: r.applicationId },
+      data: { status: r.previousStatus ?? "New" }
+    });
+    restored++;
   }
-  console.log(`restored ${restored} statuses, removed ${removed} backfilled applications.`);
+  // Removed by SOURCE as well as by candidate, so an application somebody created
+  // by hand in the meantime is never swept up.
+  const del = await prisma.candidateApplication.deleteMany({
+    where: { candidateId: { in: rec.createdFor ?? [] }, source: "Hired backfill" }
+  });
+  console.log(`restored ${restored} statuses, removed ${del.count} backfilled applications.`);
 }
 
 async function main() {
