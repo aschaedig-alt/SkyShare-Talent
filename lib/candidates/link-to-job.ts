@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { isMergedAway } from "@/lib/candidates/merged-guard";
+import { toHouseWording } from "@/lib/candidates/disposition-vocabulary";
 
 /**
  * ONE definition of "link this candidate to this job".
@@ -42,7 +43,12 @@ export async function linkCandidateToJob(input: {
   jobId: string;
   status?: string | null;
   stage?: string | null;
-  /** Defaults to "Manual entry" — the batch add passes its own label. */
+  /**
+   * Defaults to "Manual entry" — the batch add passes its own label.
+   *
+   * NOTE ON `status`: whatever is passed goes through toHouseWording() before it
+   * is stored. See the note at the write below.
+   */
   source?: string | null;
 }): Promise<LinkToJobResult> {
   const { candidateId, jobId } = input;
@@ -67,7 +73,26 @@ export async function linkCandidateToJob(input: {
         data: {
           candidateId,
           jobId,
-          status: input.status?.trim() || "New",
+          // NORMALISED, so an importer cannot undo the vocabulary by forgetting to.
+          // The 39 Paycom disposition wordings were shortened to 26 house names on
+          // 2026-09-07 across every application. Paycom does not know that, so a sync
+          // writing status straight from its export re-introduces the long wordings
+          // one row at a time, and nobody notices until the reasons page is next
+          // opened. Putting the call HERE rather than in the importer means the
+          // importer cannot forget it, which is the same reasoning that moved the
+          // three link guards into this file.
+          //
+          // A NO-OP TODAY, verified before it shipped: "New", "Applied" and "Hired"
+          // pass through unchanged, so no existing caller changes behaviour; an
+          // unrecognised wording passes through unchanged BY DESIGN, so a new Paycom
+          // wording still surfaces on the manage page instead of being flattened;
+          // and of the 26 wordings currently stored, zero would change if re-run
+          // through the map. It only bites on a genuine re-import.
+          //
+          // It does NOT cover a script that writes CandidateApplication directly —
+          // the tag deletions on 2026-09-07 bypassed the API the same way. The note
+          // in lib/candidates/disposition-vocabulary.ts stays for that case.
+          status: toHouseWording(input.status) ?? "New",
           stage: input.stage?.trim() || "Applied",
           source: input.source?.trim() || "Manual entry",
           appliedAt: new Date()
