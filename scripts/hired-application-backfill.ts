@@ -41,6 +41,16 @@ import { join } from "node:path";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../prisma/generated/client/client";
 import { normalizeAircraftType } from "../lib/candidates/aircraft-types";
+import { detectSeat, extractAircraftTypes, isPilotTitle } from "../lib/imports/job-import";
+
+// A LOCAL COPY, and worth saying why rather than looking like an oversight.
+// normalizeTitle is private to lib/imports/job-import.ts, and app/api/recruiting-jobs
+// already keeps its own identical copy for the same reason. Exporting it would
+// change a shared file for the sake of a script, so this is the third copy - kept
+// character-for-character identical to both, because a job created here has to
+// carry the same normalizedTitle the importer would give it or the duplicate
+// detection stops seeing it.
+const normalizeTitle = (value: string) => value.toLowerCase().replace(/s+/g, " ").trim();
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL as string })
@@ -122,20 +132,70 @@ async function buildProposals() {
     const position = h?.position ?? "";
     const hasApp = c.applications.length > 0;
 
-    // Someone who already has an application needs no job proposed — only a close-out.
+    // Someone who already has an application needs no job proposed — but it does
+    // need saying WHICH application, and that is not "the most recent".
+    //
+    // THE DATE IS THE WRONG ANSWER AND THE LIVE DATA PROVES IT. Bryan Weber and
+    // Gavin Craner were each hired as a Maintenance APPRENTICE while their newest
+    // application is the Technician role; Jerry Harrington was hired as a G200
+    // Captain and none of his three applications is a G200 job at all; Nicholas
+    // Lembo has two applications filed the same day. Closing out by recency would
+    // have written the wrong job onto at least three people and coin-flipped a
+    // fourth.
+    //
+    // So the application is chosen by matching its JOB to the position the person
+    // was actually hired into, using the same ladder as everything else here. When
+    // nothing matches, or more than one does, NOTHING IS TOUCHED and the row says
+    // why — an unclosed application is a small untidiness, the wrong job on
+    // somebody's record is not.
     if (hasApp) {
-      const app = c.applications[0];
+      const pick = (() => {
+        const apps = c.applications;
+        const exactA = apps.filter((a) => norm(a.job?.title) === norm(position));
+        if (exactA.length === 1) return { app: exactA[0], how: "job title equals the position" };
+        const air = aircraftOf(position);
+        const seat = seatOf(position);
+        if (air) {
+          const hit = apps.filter((a) => aircraftOf(a.job?.title ?? "") === air && seatOf(a.job?.title ?? "") === seat);
+          if (hit.length === 1) return { app: hit[0], how: `matched on ${air}${seat ? " " + seat : ""}` };
+        }
+        const want = norm(position).split(" ").filter((w) => w && !STOP.has(w));
+        const tok = apps.filter((a) => {
+          const t = norm(a.job?.title);
+          return want.length > 0 && want.every((w) => t.includes(w));
+        });
+        if (tok.length === 1) return { app: tok[0], how: "every word of the position is in the job title" };
+        return null;
+      })();
+
+      if (!pick) {
+        return {
+          action: "skip",
+          candidateId: c.id,
+          name: c.displayName,
+          position,
+          department: h?.department ?? "",
+          jobId: "",
+          jobTitle: "",
+          jobStatus: "",
+          confidence: "unmatched-existing",
+          note: `${c.applications.length} application(s), none clearly for "${position}": ` +
+            c.applications.map((a) => `${a.job?.title ?? "?"} = ${a.status ?? "null"}`).join(" | ")
+        };
+      }
+
       return {
         action: "close-out",
         candidateId: c.id,
         name: c.displayName,
         position,
         department: h?.department ?? "",
-        jobId: app.jobId,
-        jobTitle: app.job?.title ?? "",
+        jobId: pick.app.jobId,
+        jobTitle: pick.app.job?.title ?? "",
         jobStatus: "",
         confidence: "existing",
-        note: `application currently reads "${app.status}"`
+        applicationId: pick.app.id,
+        note: `${pick.how}; currently reads "${pick.app.status ?? "null"}"`
       };
     }
 
@@ -280,7 +340,23 @@ function writeDecisions(rows: Awaited<ReturnType<typeof buildProposals>>) {
       [position, String(e.people.length), e.people.join("; "), opts, ""].map(csvCell).join(",")
     );
   }
-  writeFileSync(DECISIONS, lines.join("\n") + "\n");
+  // NEVER CLOBBER A FILLED-IN FILE. This overwrote his answers once already, and
+  // only got them back because the copy he sent was still in Downloads. A review
+  // run regenerates proposals, but DECISIONS.csv is the ONE file a person edits by
+  // hand, so if it already carries any answer the fresh proposal goes beside it
+  // under a different name and the answered file is left exactly as it is.
+  const existingText = existsSync(DECISIONS) ? readFileSync(DECISIONS, "utf8") : "";
+  const hasAnswers = existingText
+    .trim()
+    .split(/\r?\n/)
+    .slice(1)
+    .some((l) => (l.split(",").pop() ?? "").trim().length > 0);
+  const target = hasAnswers ? DECISIONS.replace(/[.]csv$/, ".regenerated.csv") : DECISIONS;
+  writeFileSync(target, lines.join("\n") + "\n");
+  if (hasAnswers) {
+    console.log("\n  DECISIONS.csv already has answers in it and was LEFT ALONE.");
+    console.log("  the fresh proposal went to " + target + " instead.");
+  }
   console.log(`\n  and the SHORT one, which is the file to fill in:`);
   console.log(`  ${DECISIONS}   ${sorted.length} decisions covering ${needed.length} people`);
 }
@@ -326,7 +402,7 @@ async function runApply() {
 
   const chosen = new Map<string, { id: string; title: string }>();
   const skipped: string[] = [];
-  const unresolved: string[] = [];
+  const unresolved: { position: string; title: string }[] = [];
   const lines = readFileSync(DECISIONS, "utf8").trim().split(/\r?\n/);
   const head = csvSplit(lines[0]);
   const iPos = head.indexOf("position");
@@ -338,15 +414,48 @@ async function runApply() {
     if (!position || !choice) continue;
     if (/^skip$/i.test(choice)) { skipped.push(position); continue; }
     const job = jobByTitle.get(norm(choice));
-    if (!job) { unresolved.push(`${position} -> "${choice}"`); continue; }
+    if (!job) { unresolved.push({ position, title: choice }); continue; }
     chosen.set(position, { id: job.id, title: job.title });
   }
 
-  console.log(`decisions read: ${chosen.size} resolved, ${skipped.length} skipped, ${unresolved.length} unresolved`);
-  for (const u of unresolved) console.log(`  UNRESOLVED, no job with that exact title: ${u}`);
-  if (unresolved.length) {
-    console.log("Fix those titles and re-run. Nothing has been written.");
-    return;
+  console.log(`decisions read: ${chosen.size} resolved, ${skipped.length} skipped, ${unresolved.length} needing a new job`);
+
+  // A TITLE WITH NO JOB IS CREATED, not refused — asked for directly on 2026-09-08:
+  // "can we create a position for those missing that i added the job title to?".
+  // Seven of the thirteen roles have never had a posted req (Legacy 650 Captain,
+  // Phenom 100, Maintenance Planner, Base Manager and so on), so refusing would
+  // leave eight already-hired people with no application for want of a row.
+  //
+  // CREATED AS RETIRED, deliberately. Every job these people resolve to is RETIRED,
+  // and these are historical records of somebody already hired, not vacancies —
+  // creating them OPEN would put seven phantom openings on the jobs board.
+  //
+  // The derived fields are filled exactly as app/api/recruiting-jobs does it, using
+  // the same helpers, so nothing downstream can tell a backfilled role from one
+  // created in the app.
+  const createdJobs: { id: string; title: string }[] = [];
+  for (const u of unresolved) {
+    const title = u.title;
+    const pilot = isPilotTitle(title);
+    const aircraft = extractAircraftTypes(title);
+    const job = await prisma.job.create({
+      data: {
+        title,
+        normalizedTitle: normalizeTitle(title),
+        status: "RETIRED",
+        source: "Hired backfill",
+        openedDate: null,
+        isPilotRole: pilot,
+        isPilotLeadershipRole: /\b(chief pilot|assistant chief pilot)\b/i.test(title),
+        pilotSeat: pilot ? detectSeat(title) : null,
+        aircraftTypesJson: aircraft.length ? JSON.stringify(aircraft) : null,
+        roleCategory: pilot ? "Pilot" : null
+      },
+      select: { id: true, title: true }
+    });
+    createdJobs.push(job);
+    chosen.set(u.position, { id: job.id, title: job.title });
+    console.log(`  CREATED job "${job.title}" [RETIRED] for ${u.position}`);
   }
 
   const rows = await buildProposals();
@@ -357,6 +466,7 @@ async function runApply() {
       const pick = chosen.get(r.position);
       return pick ? { ...r, jobId: pick.id, jobTitle: pick.title } : r;
     })
+    .filter((r) => r.action !== "skip")
     .filter((r) => r.action === "close-out" || r.jobId);
 
   const creates = work.filter((r) => r.action === "create");
@@ -370,20 +480,30 @@ async function runApply() {
     applicationId: r.jobId ? null : null,
     previousStatus: null as string | null
   }));
+  // The proposal already decided WHICH application, by job rather than by date.
+  // Re-looking it up here by candidate would throw that away and reintroduce the
+  // recency bug the proposal exists to avoid.
   const withPrev: { candidateId: string; applicationId: string | null; previousStatus: string | null }[] = [];
   for (const r of closes) {
-    const app = await prisma.candidateApplication.findFirst({
-      where: { candidateId: r.candidateId },
-      orderBy: { appliedAt: "desc" },
-      select: { id: true, status: true }
-    });
+    const id = (r as { applicationId?: string }).applicationId;
+    if (!id) continue;
+    const app = await prisma.candidateApplication.findUnique({ where: { id }, select: { id: true, status: true } });
     if (app) withPrev.push({ candidateId: r.candidateId, applicationId: app.id, previousStatus: app.status });
   }
   void undoRows;
   if (!existsSync(OUT_DIR)) mkdirSync(OUT_DIR, { recursive: true });
   writeFileSync(
     UNDO,
-    JSON.stringify({ writtenAt: new Date().toISOString(), closed: withPrev, createdFor: creates.map((c) => c.candidateId) }, null, 2)
+    JSON.stringify(
+      {
+        writtenAt: new Date().toISOString(),
+        closed: withPrev,
+        createdFor: creates.map((c) => c.candidateId),
+        createdJobIds: createdJobs.map((j) => j.id)
+      },
+      null,
+      2
+    )
   );
   console.log(`undo record written first: ${UNDO}`);
 
@@ -417,6 +537,7 @@ async function runUndo() {
   const rec = JSON.parse(readFileSync(UNDO, "utf8")) as {
     closed: { applicationId: string | null; previousStatus: string | null }[];
     createdFor: string[];
+    createdJobIds?: string[];
   };
   let restored = 0;
   for (const r of rec.closed ?? []) {
@@ -432,7 +553,20 @@ async function runUndo() {
   const del = await prisma.candidateApplication.deleteMany({
     where: { candidateId: { in: rec.createdFor ?? [] }, source: "Hired backfill" }
   });
-  console.log(`restored ${restored} statuses, removed ${del.count} backfilled applications.`);
+
+  // Jobs created by the backfill go too — but ONLY if nothing else has attached
+  // itself to them since. A job somebody has started using is no longer ours to
+  // delete, and leaving an unused RETIRED row behind is harmless.
+  let removedJobs = 0;
+  const kept: string[] = [];
+  for (const id of rec.createdJobIds ?? []) {
+    const n = await prisma.candidateApplication.count({ where: { jobId: id } });
+    if (n > 0) { kept.push(id); continue; }
+    await prisma.job.delete({ where: { id } });
+    removedJobs++;
+  }
+  console.log(`restored ${restored} statuses, removed ${del.count} backfilled applications, deleted ${removedJobs} backfilled jobs.`);
+  if (kept.length) console.log(`  kept ${kept.length} created job(s) that other applications now point at.`);
 }
 
 async function main() {

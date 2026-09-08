@@ -4,7 +4,7 @@ Nothing has been written. Correct the `jobId` / `jobTitle` columns in REVIEW.csv
 
 | confidence | rows | what it means |
 |---|---|---|
-| existing | 21 | already has an application; only needs closing out |
+| existing | 15 | already has an application; only needs closing out |
 | exact | 6 | the job title equals the position — safe |
 | aircraft | 9 | same aircraft and seat — **check these** |
 | tokens | 4 | every word of the position appears in the title — **check these** |
@@ -84,28 +84,22 @@ Nothing has been written. Correct the `jobId` / `jobTitle` columns in REVIEW.csv
 | Russ Herman | Legacy 650 Captain | — | — | nothing proposed — fill in a job |
 | Truman Nelson | Phenom 100 First Officer | — | — | nothing proposed — fill in a job |
 
-## existing — 21
+## existing — 15
 
 | name | position | proposed job | job status | note |
 |---|---|---|---|---|
-| Axel Leimer | Base Support | Ogden Base Support | — | application currently reads "New" |
-| Bryan Weber | Maintenance Apprentice | Aircraft Maintenance Technician | — | application currently reads "null" |
-| Carl Wiltse | 560XL Captain | Citation 560XL Captain | — | application currently reads "null" |
-| David Gandolfi | 560XL Captain | Citation 560XL Captain | — | application currently reads "null" |
-| Dayten Schureman | G200 First Officer | Gulfstream G200 First Officer | — | application currently reads "New" |
-| Dayton James | Maintenance Apprentice | Aircraft Maintenance Technician | — | application currently reads "New" |
-| Erik Schwerman | CJ3+ Captain | Single-Pilot Jet Captain (SLC, UT) | — | application currently reads "New" |
-| Gavin Craner | Maintenance Apprentice | Aircraft Maintenance Technician | — | application currently reads "null" |
-| Grace Ward | Cabin Attendant | Cabin Attendant | — | application currently reads "New" |
-| Hankyu Park | G200 First Officer | Citation 560XL First Officer | — | application currently reads "null" |
-| Jack Matiasevich | M2 Captain & PC-12 Captain | Gulfstream G450 & GV Captain (Home-Based) | — | application currently reads "New" |
-| Jeremy McGraw | CJ2 Captain | Citation CE525 Captain | — | application currently reads "null" |
-| Jerry Harrington | G200 Captain | Citation CJ2 Captain | — | application currently reads "null" |
-| Luke Webb | Maintenance Technician | Maintenance Technician | — | application currently reads "New" |
-| Nicholas Zachary Lembo | PC-12 First Officer | Ogden Base Support | — | application currently reads "New" |
-| Rob Patrick | Base Manager | Aircraft Maintenance Technician | — | application currently reads "New" |
-| Sabrina Krasnov | Customer Service Representative | Customer Service Representative (Aviation) Part-Time | — | application currently reads "New" |
-| Scott Strahan | Maintenance Technician | Aircraft Management Sales Manager | — | application currently reads "Prescreen Disqualification" |
-| Shawn Stafford | Senior Gulfstream MX Technician | Aircraft Maintenance Technician | — | application currently reads "New" |
-| Tara Ward | Lead Cabin Attendant | Lead Corporate Cabin Attendant | — | application currently reads "New" |
-| Zachery Davis | 560XLS+ Captain | Citation 560XLS+ Captain | — | application currently reads "New" |
+| Axel Leimer | Base Support | Ogden Base Support | — | every word of the position is in the job title; currently reads "New" |
+| Bryan Weber | Maintenance Apprentice | Aircraft Maintenance Apprentice | — | every word of the position is in the job title; currently reads "New" |
+| Carl Wiltse | 560XL Captain | Citation 560XL Captain | — | matched on CE-560XL PIC; currently reads "null" |
+| David Gandolfi | 560XL Captain | Citation 560XL Captain | — | matched on CE-560XL PIC; currently reads "null" |
+| Dayten Schureman | G200 First Officer | Gulfstream G200 First Officer | — | matched on G-200 SIC; currently reads "New" |
+| Gavin Craner | Maintenance Apprentice | Aircraft Maintenance Apprentice | — | every word of the position is in the job title; currently reads "New" |
+| Grace Ward | Cabin Attendant | Cabin Attendant | — | job title equals the position; currently reads "New" |
+| Hankyu Park | G200 First Officer | Gulfstream G200 First Officer | — | matched on G-200 SIC; currently reads "New" |
+| Jeremy McGraw | CJ2 Captain | Citation CJ2 Captain | — | every word of the position is in the job title; currently reads "Hired" |
+| Luke Webb | Maintenance Technician | Maintenance Technician | — | job title equals the position; currently reads "New" |
+| Nicholas Zachary Lembo | PC-12 First Officer | PC-12 First Officer | — | job title equals the position; currently reads "New" |
+| Sabrina Krasnov | Customer Service Representative | Customer Service Representative (Aviation) Part-Time | — | every word of the position is in the job title; currently reads "New" |
+| Scott Strahan | Maintenance Technician | Aircraft Maintenance Technician | — | every word of the position is in the job title; currently reads "null" |
+| Tara Ward | Lead Cabin Attendant | Lead Corporate Cabin Attendant | — | every word of the position is in the job title; currently reads "New" |
+| Zachery Davis | 560XLS+ Captain | Citation 560XLS+ Captain | — | matched on CE-560XL PIC; currently reads "New" |
