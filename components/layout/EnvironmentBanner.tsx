@@ -2,6 +2,29 @@ function getEnvironmentLabel() {
   return process.env.NEXT_PUBLIC_APP_ENV ?? (process.env.NODE_ENV === "production" ? "Production" : "Local development");
 }
 
+/**
+ * The line under the environment name.
+ *
+ * IT MUST NOT PROMISE SAFETY THIS PROJECT DOES NOT HAVE. There is one Neon
+ * database and every environment points at it, and since 2026-07-30 local dev
+ * writes the live S3 bucket too, so there is no environment where a mistake is
+ * contained. Two of the three lines here said otherwise:
+ *
+ *   staging  said "Safe validation environment before production changes", on the
+ *            deployment the TEAM ACTUALLY USES. Removed on his instruction
+ *            2026-09-08, once it turned out journey is the live site and had been
+ *            labelled staging all along.
+ *   local    said "Local workstation data and local file storage". Both halves are
+ *            false and it is the more dangerous of the two, because it is the exact
+ *            belief behind the Jul 27 incident: a backfill run from the laptop wrote
+ *            411 rows into the live database pointing at S3 keys that were never
+ *            uploaded, every one of which showed on a real candidate's profile and
+ *            could not be opened.
+ *
+ * So a detail line now either states a real risk or says nothing at all. If a
+ * genuinely isolated environment is ever set up, give it its own label and its own
+ * honest line rather than reviving these.
+ */
 function getEnvironmentDetail(label: string) {
   const normalized = label.toLowerCase();
 
@@ -10,10 +33,12 @@ function getEnvironmentDetail(label: string) {
   }
 
   if (normalized.includes("staging") || normalized.includes("sandbox")) {
-    return "Safe validation environment before production changes.";
+    // Deliberately nothing. Naming the environment is useful; reassuring anybody
+    // about it is not true here.
+    return null;
   }
 
-  return "Local workstation data and local file storage.";
+  return "Shared live database and live file storage - the same data production uses.";
 }
 
 export function EnvironmentBanner() {
@@ -26,7 +51,9 @@ export function EnvironmentBanner() {
         <div className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-brand-gold" />
           <span className="font-semibold text-brand-lea dark:text-slate-100">{label}</span>
-          <span className="hidden text-brand-grey sm:inline dark:text-slate-400">- {detail}</span>
+          {detail ? (
+            <span className="hidden text-brand-grey sm:inline dark:text-slate-400">- {detail}</span>
+          ) : null}
         </div>
         <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">SkyShare Journey</span>
       </div>
