@@ -1,0 +1,69 @@
+action,name,position,department,confidence,jobId,jobTitle,jobStatus,note,candidateId
+create,Adrienne Vaughn,PC-12 Captain,FlightOps,ambiguous,,,,PC-12 PIC matches 5 jobs: Pilatus PC-12 Captain | (old) PC-12 NGX Lead Captain | (old) Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Captain (GA),cmrwi6mtk000o04jyy1iusx6l
+create,Aleksandar Kostic,G450 & GV Captain,FlightOps,tokens,cmq5lg0wu000104l7wnkoep7q,Gulfstream G450 & GV Captain (Home-Based),OPEN,every word of the position is in the title — CHECK THIS,cmrwidhd7001t04jyi7xt2nyf
+create,Alexander Andrade,PC-12 Captain,FlightOps,ambiguous,,,,PC-12 PIC matches 5 jobs: Pilatus PC-12 Captain | (old) PC-12 NGX Lead Captain | (old) Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Captain (GA),cmrwi6ey2000i04jyspgj05m7
+create,Aman Lal,G200 Captain,FlightOps,aircraft,cmqvr1ysq000lxcrmeogsktg8,Gulfstream G200 Captain,RETIRED,G-200 PIC — CHECK THIS,cmrwicnbe001h04jyzy2m47es
+create,Angel Martinez,Lead Maintenance Technician,Maintenance,none,,,,nothing proposed — fill in a job,cmrwiflkn002b04jyoibxmmvi
+close-out,Axel Leimer,Base Support,Maintenance,existing,cmrtlfey1000b04l1uz22c9rg,Ogden Base Support,,"application currently reads ""New""",cmrtl3tov000004jveah892gp
+create,Bailey Barcelon,560XL First Officer,FlightOps,aircraft,cmqvr1yy7000pxcrm0a6v9kd0,Citation 560XL First Officer,RETIRED,CE-560XL SIC — CHECK THIS,cmrwicfvy001f04jyr5xhtaoi
+create,Ben Fleckenstein,560XL Captain,FlightOps,ambiguous,,,,CE-560XL PIC matches 2 jobs: Citation 560XLS+ Captain | Citation 560XL Captain,cmrwic5s6001d04jyhbuoc1ur
+create,Branigan Hughes,PC-12 First Officer,FlightOps,exact,cms83csgh000104iee7gggxv0,PC-12 First Officer,RETIRED,job title equals the position,cmrwi784r001104jy7rm9gccr
+create,Brett Moreland,G450 & GV Captain,FlightOps,tokens,cmq5lg0wu000104l7wnkoep7q,Gulfstream G450 & GV Captain (Home-Based),OPEN,every word of the position is in the title — CHECK THIS,cmrwidjgh001v04jy5v0vt7rx
+create,Brock Tyler,G450 & GV Captain,FlightOps,tokens,cmq5lg0wu000104l7wnkoep7q,Gulfstream G450 & GV Captain (Home-Based),OPEN,every word of the position is in the title — CHECK THIS,cmrwidfe0001r04jyz4qre7wz
+create,Bryan Thomas,CJ2 Captain,FlightOps,ambiguous,,,,CE-525 PIC matches 4 jobs: Citation CE-525 (CJ2) Captain | Citation CJ2 Captain | (old) - Citation CJ2 Captain (125k-135k + 10k Sign On Bounus) | Citation CE525 Captain,cmrwiae24001304jypxesi4lw
+close-out,Bryan Weber,Maintenance Apprentice,Maintenance,existing,cmqvr1znm001kxcrm0q0t0hri,Aircraft Maintenance Technician,,"application currently reads ""null""",cmrr4y5l7000004jr65s3n4e6
+create,Caleb Green,PC-12 Captain,FlightOps,ambiguous,,,,PC-12 PIC matches 5 jobs: Pilatus PC-12 Captain | (old) PC-12 NGX Lead Captain | (old) Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Captain (GA),cmrwi6yjd000x04jy555d7fhl
+close-out,Carl Wiltse,560XL Captain,FlightOps,existing,cmqvr1ziy001excrmc0fw33bf,Citation 560XL Captain,,"application currently reads ""null""",cmq5ncrhh000a04l4miy6x3gb
+create,Charles Hicks,Maintenance Planner,Maintenance,none,,,,nothing proposed — fill in a job,cmrwihppb002n04jybju78q95
+create,Corby Alexander,PC-12 Captain,FlightOps,ambiguous,,,,PC-12 PIC matches 5 jobs: Pilatus PC-12 Captain | (old) PC-12 NGX Lead Captain | (old) Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Captain (GA),cmrwi6hm5000k04jyn4kncawy
+create,Craig Little,Pilot GV Type PIC,FlightOps,none,,,,nothing proposed — fill in a job,cms3n2yzc0028bkrmsbw9es71
+close-out,David Gandolfi,560XL Captain,FlightOps,existing,cmqvr1ziy001excrmc0fw33bf,Citation 560XL Captain,,"application currently reads ""null""",cmq5ncsic000j04l4n6t3sn8s
+close-out,Dayten Schureman,G200 First Officer,FlightOps,existing,cmqvr1yqc000kxcrmc4owjm83,Gulfstream G200 First Officer,,"application currently reads ""New""",cms3mwaza00007crmuyqwmisf
+close-out,Dayton James,Maintenance Apprentice,Maintenance,existing,cmqvr1znm001kxcrm0q0t0hri,Aircraft Maintenance Technician,,"application currently reads ""New""",cmrwigcpt002d04jyfs0w79ii
+create,Don George,Aircraft Compliance Manager,Maintenance,none,,,,nothing proposed — fill in a job,cmrwihfw5002l04jyp3guudrq
+create,Elijah Hall,PC-12 Captain,FlightOps,ambiguous,,,,PC-12 PIC matches 5 jobs: Pilatus PC-12 Captain | (old) PC-12 NGX Lead Captain | (old) Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Captain (GA),cmrwi6wf9000v04jyfmvy15ho
+close-out,Erik Schwerman,CJ3+ Captain,Pilot,existing,cmsjfy0sk000104ktf0dd0hiu,"Single-Pilot Jet Captain (SLC, UT)",,"application currently reads ""New""",cmrnxhy6d000004jt5mmvjudk
+close-out,Gavin Craner,Maintenance Apprentice,Maintenance,existing,cmqvr1znm001kxcrm0q0t0hri,Aircraft Maintenance Technician,,"application currently reads ""null""",cmrtlf1tp000628rmbf0bhzcl
+create,Gavin Wunderlich,PC-12 Captain,FlightOps,ambiguous,,,,PC-12 PIC matches 5 jobs: Pilatus PC-12 Captain | (old) PC-12 NGX Lead Captain | (old) Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Captain (GA),cmrwi6tzl000t04jya10dqzpt
+close-out,Grace Ward,Cabin Attendant,FlightOps,existing,cmrtoi6ti000p04juk3kgv5zy,Cabin Attendant,,"application currently reads ""New""",cmrtlf1pi000328rmzal2lch7
+close-out,Hankyu Park,G200 First Officer,FlightOps,existing,cmqvr1yy7000pxcrm0a6v9kd0,Citation 560XL First Officer,,"application currently reads ""null""",cmqfwz8e1000d04l42hav2k0r
+close-out,Jack Matiasevich,M2 Captain & PC-12 Captain,FlightOps | Managed Client,existing,cmq5lg0wu000104l7wnkoep7q,Gulfstream G450 & GV Captain (Home-Based),,"application currently reads ""New""",cmrwi4pnq000a04jyxj9dld99
+create,Jeff Gammel,Maintenance Technician,Maintenance,exact,cmrp0ea4k000004l7n1wencyh,Maintenance Technician,RETIRED,job title equals the position,cmrwifevg002904jyl7remfea
+close-out,Jeremy McGraw,CJ2 Captain,FlightOps,existing,cmqvr1z8d0012xcrmgrssagpu,Citation CE525 Captain,,"application currently reads ""null""",cmq5nctuq000v04l4iok6o72e
+close-out,Jerry Harrington,G200 Captain,FlightOps,existing,cmqvr1xy50004xcrmj0newuih,Citation CJ2 Captain,,"application currently reads ""null""",cmq5ncuj2001104l4ijapezbn
+create,Joel Garcia,G450 First Officer,FlightOps,aircraft,cmqvr1ze20019xcrmt9awfkfr,(old) Gulfstream G450 First Officer,RETIRED,G-450 SIC — CHECK THIS,cmrwie0ea002304jyinof1hnd
+create,Joel Hansen,Maintence Control,Maintenance,none,,,,nothing proposed — fill in a job,cmrwihv8b002p04jyd94nkryg
+create,John Bohman,PC-12 Captain,FlightOps,ambiguous,,,,PC-12 PIC matches 5 jobs: Pilatus PC-12 Captain | (old) PC-12 NGX Lead Captain | (old) Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Captain (GA),cmrwi51oe000e04jy3cabv17y
+create,Jonathan Siswick,Phenom 100 Captain,FlightOps,none,,,,nothing proposed — fill in a job,cmrwi2ip8000204jydlua2jdf
+create,Kathleen Larson,G200 Captain,FlightOps,aircraft,cmqvr1ysq000lxcrmeogsktg8,Gulfstream G200 Captain,RETIRED,G-200 PIC — CHECK THIS,cmrwicxna001n04jyo84v3n1t
+create,Kaytlin Francis,PC-12 Captain,FlightOps | Managed Client,ambiguous,,,,PC-12 PIC matches 5 jobs: Pilatus PC-12 Captain | (old) PC-12 NGX Lead Captain | (old) Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Captain (GA),cmrwi53zn000g04jyawqdgway
+create,Kyle Ferrin,CJ2 Captain,FlightOps,ambiguous,,,,CE-525 PIC matches 4 jobs: Citation CE-525 (CJ2) Captain | Citation CJ2 Captain | (old) - Citation CJ2 Captain (125k-135k + 10k Sign On Bounus) | Citation CE525 Captain,cmrwiajqj001504jyjkdx9cav
+create,Kylee Madsen,CJ2 Captain,FlightOps,ambiguous,,,,CE-525 PIC matches 4 jobs: Citation CE-525 (CJ2) Captain | Citation CJ2 Captain | (old) - Citation CJ2 Captain (125k-135k + 10k Sign On Bounus) | Citation CE525 Captain,cmrwiamdu001704jyanh1wq26
+create,Lori Wilson,Cabin Attendant,FlightOps,exact,cmrtoi6ti000p04juk3kgv5zy,Cabin Attendant,RETIRED,job title equals the position,cmrwie31m002504jyo4m7wo8j
+create,Luke Diederich,CJ2 First Officer,FlightOps,ambiguous,,,,CE-525 SIC matches 2 jobs: Citation CJ2 First Officer | Citation M2 First Officer,cmrwib0b6001904jyg8hu7ihw
+close-out,Luke Webb,Maintenance Technician,Maintenance,existing,cmrp0ea4k000004l7n1wencyh,Maintenance Technician,,"application currently reads ""New""",cmrtlf1kx000028rmteibvsbw
+create,Mark Harris,G450 & GV First Officer,FlightOps,aircraft,cmq5lg3ko002804l797f28snr,Gulfstream G450 & GV First Officer (Home-Based),RETIRED,GV SIC — CHECK THIS,cmrwidvom001z04jyn7tmv32c
+create,Mike Hopkins,Maintenance Technician,Maintenance,exact,cmrp0ea4k000004l7n1wencyh,Maintenance Technician,RETIRED,job title equals the position,cmrwigk9c002f04jyrcrntb9v
+create,Nicholas Hastings,G450 & GV First Officer,FlightOps,aircraft,cmq5lg3ko002804l797f28snr,Gulfstream G450 & GV First Officer (Home-Based),RETIRED,GV SIC — CHECK THIS,cmrwidxu7002104jywvtq0u2n
+close-out,Nicholas Zachary Lembo,PC-12 First Officer,FlightOps,existing,cmrtlfey1000b04l1uz22c9rg,Ogden Base Support,,"application currently reads ""New""",cmrtsd0sk00000srmnh5ffg26
+create,Nicholas Zehr,PC-12 Captain,FlightOps,ambiguous,,,,PC-12 PIC matches 5 jobs: Pilatus PC-12 Captain | (old) PC-12 NGX Lead Captain | (old) Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Captain (GA),cmrwi6pcp000q04jyer0npbry
+create,Nick Beine,PC-12 Captain,FlightOps,ambiguous,,,,PC-12 PIC matches 5 jobs: Pilatus PC-12 Captain | (old) PC-12 NGX Lead Captain | (old) Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Captain (GA),cmrwi6k9n000m04jyjb06qruy
+create,Nick Carter,Legacy 650 Captain,FlightOps,none,,,,nothing proposed — fill in a job,cmrwi42nj000604jyqd2bjwpg
+create,Parker Potter,PC-12 First Officer,FlightOps,exact,cms83csgh000104iee7gggxv0,PC-12 First Officer,RETIRED,job title equals the position,cmrwi75ll000z04jy4p0yg439
+create,Patrick Bauder,G450 & GV Captain,FlightOps,tokens,cmq5lg0wu000104l7wnkoep7q,Gulfstream G450 & GV Captain (Home-Based),OPEN,every word of the position is in the title — CHECK THIS,cmrwidd6a001p04jylwuw73a9
+create,Ren Carter,PC-12 Captain,FlightOps,ambiguous,,,,PC-12 PIC matches 5 jobs: Pilatus PC-12 Captain | (old) PC-12 NGX Lead Captain | (old) Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Captain (GA),cmrwi6rpg000s04jy1q111mia
+create,Rich Paden,Dual Base Manager,Maintenance,none,,,,nothing proposed — fill in a job,cmrwif9au002704jyvtwmm7dc
+create,Richard Vance,G200 Captain,FlightOps,aircraft,cmqvr1ysq000lxcrmeogsktg8,Gulfstream G200 Captain,RETIRED,G-200 PIC — CHECK THIS,cmrwicttd001l04jy5sews94u
+close-out,Rob Patrick,Base Manager,Maintenance,existing,cmqvr1znm001kxcrm0q0t0hri,Aircraft Maintenance Technician,,"application currently reads ""New""",cms6jwlfu000504i73c5ho2oh
+create,Robert Allen,G450 & GV First Officer,FlightOps,aircraft,cmq5lg3ko002804l797f28snr,Gulfstream G450 & GV First Officer (Home-Based),RETIRED,GV SIC — CHECK THIS,cmrwidsrp001x04jyxy1mu57u
+create,Robert Bell,560XL Captain,FlightOps,ambiguous,,,,CE-560XL PIC matches 2 jobs: Citation 560XLS+ Captain | Citation 560XL Captain,cmrwic3i6001b04jyozk7gr6c
+create,Russ Herman,Legacy 650 Captain,FlightOps | Managed Client,none,,,,nothing proposed — fill in a job,cmrwi458e000804jyzjyn9cc1
+close-out,Sabrina Krasnov,Customer Service Representative,FBO SVR,existing,cmt95u2f6000b04l6myq67msv,Customer Service Representative (Aviation) Part-Time,,"application currently reads ""New""",cmt95sjhz000004l6zjtezk2h
+close-out,Scott Strahan,Maintenance Technician,Maintenance,existing,cmqvr1yja000dxcrmz8a5f8zj,Aircraft Management Sales Manager,,"application currently reads ""Prescreen Disqualification""",cmqvr4wm00f54xcrmaykh29k1
+create,Shad Guffey,PC-12 Captain,FlightOps | Managed Client,ambiguous,,,,PC-12 PIC matches 5 jobs: Pilatus PC-12 Captain | (old) PC-12 NGX Lead Captain | (old) Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Lead Captain | Pilatus PC-12 NG Captain (GA),cmrwi4v4z000c04jyikdlp3gf
+create,Shawn Schiele,G200 Captain,FlightOps,aircraft,cmqvr1ysq000lxcrmeogsktg8,Gulfstream G200 Captain,RETIRED,G-200 PIC — CHECK THIS,cmrwicrf4001j04jywookx9ak
+close-out,Shawn Stafford,Senior Gulfstream MX Technician,Maintenance,existing,cmqvr1znm001kxcrm0q0t0hri,Aircraft Maintenance Technician,,"application currently reads ""New""",cmrwigqxq002h04jynj4ph9t4
+create,Spencer Olsen,Maintenance Technician,Maintenance,exact,cmrp0ea4k000004l7n1wencyh,Maintenance Technician,RETIRED,job title equals the position,cmrwihbap002j04jymaq9u7uf
+close-out,Tara Ward,Lead Cabin Attendant,FlightOps,existing,cmrtqylgj000f04i8wrjoeof7,Lead Corporate Cabin Attendant,,"application currently reads ""New""",cmrtqwuhz000004i81r6h6qiu
+create,Truman Nelson,Phenom 100 First Officer,FlightOps | Managed Client,none,,,,nothing proposed — fill in a job,cmrwi2m14000404jyuv1ym512
+close-out,Zachery Davis,560XLS+ Captain,FlightOps | Managed Client,existing,cmtsxeth7000604if9q5iwl13,Citation 560XLS+ Captain,,"application currently reads ""New""",cmq5nd18j002p04l49ixfc06t
