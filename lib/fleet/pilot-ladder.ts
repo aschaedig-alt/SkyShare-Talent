@@ -35,13 +35,13 @@
  * The "=" groups share a rung, so a move between them is a lateral: PC-12 to
  * PC-12 NGX is not an upgrade, and neither is CJ2 to M2.
  *
- * Legacy 650 is the TOP rung, above G450/GV — also his. Legacy 600 is deliberately
- * NOT placed: he did not name it, and guessing it sits beside the 650 would invent
- * an upgrade. It stays off the ladder until asked.
+ * Legacy 650 is the TOP rung, above G450/GV — also his. There is no Legacy 600 in this fleet
+ * at all - he confirmed 2026-09-08 that a 600 on a record is an error - so both
+ * spellings resolve to the 650 code and share this top rung.
  */
 export const SKYSHARE_LADDER = [
   "PC-12",
-  "CJ2/M2",
+  "CJ/CJ2/M2",
   "Phenom 100",
   "Phenom 300",
   "560XL",
@@ -64,6 +64,7 @@ export function ladderRank(aircraft: string | null): number {
     case "PC-12":
       return 0;
     // One rung: "CJ = M2 = CJ2 = CJ3+".
+    case "CJ":
     case "CJ1":
     case "CJ2":
     case "CJ3":
@@ -90,9 +91,10 @@ export function ladderRank(aircraft: string | null): number {
     case "Legacy 650":
       return 9;
     default:
-      // Off the ladder — including Legacy 600, which he has not placed. No size
-      // verdict is possible, so a move involving one is a transition and never an
-      // upgrade. That is the "almost" in his second rule.
+      // Off the ladder. Every aircraft code appearing on a real step is now
+      // ranked, so this branch is for something new arriving before anybody places
+      // it: no size verdict is possible, so a move involving one is a transition
+      // and never an upgrade. That is the "almost" in his second rule.
       return -1;
   }
 }

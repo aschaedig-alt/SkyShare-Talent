@@ -309,8 +309,17 @@ function airframeOf(title: string, aircraft: string | null): string | null {
     [/\bg450\b/i, "G450"],
     [/\bg200\b/i, "G200"],
     [/\bgv\b/i, "GV"],
-    [/\blegacy ?650\b/i, "Legacy 650"],
-    [/\blegacy ?600\b/i, "Legacy 600"],
+    // THERE IS NO LEGACY 600 IN THIS FLEET. His words, 2026-09-08: "the Legacy is a
+    // 650. no 600. would have been an error." So a record saying 600 is a typo for
+    // the 650, and both spellings resolve to the same code — rather than the 600
+    // sitting off the ladder and quietly turning real moves into laterals, which is
+    // what it was doing on 2 steps.
+    //
+    // THE UNDERLYING ROWS ARE STILL WRONG and want correcting at source. Three of
+    // them, all on terminated pilots: Ty Gunnlaugsson and Rick Albin, both "Legacy
+    // 600 Pilot", and Mark Killpack, "Legacy 600 Captain" with aircraft "Legacy
+    // 600". Mapping here fixes the report, not the data.
+    [/\blegacy ?6[05]0\b/i, "Legacy 650"],
     [/\bpc-?12\b/i, "PC-12"],
     [/\bphenom ?300\b/i, "Phenom 300"],
     [/\bphenom ?100\b/i, "Phenom 100"],
@@ -328,6 +337,12 @@ function airframeOf(title: string, aircraft: string | null): string | null {
     [/\bcj ?3\+?\b/i, "CJ3"],
     [/\bcj ?2\b|\bce-?525\b/i, "CJ2"],
     [/\bcj ?1\b/i, "CJ1"],
+    // A BARE "CJ" counts too — asked for 2026-09-08, "add CJ before the CJ2 and =
+    // to it" — so it shares the rung with CJ1 / CJ2 / CJ3+ / M2. LAST of the CJ
+    // patterns deliberately: put it first and it would swallow every CJ2 and CJ3+
+    // before either was tested, collapsing three distinct type ratings into one and
+    // erasing the type changes between them from the paths chart.
+    [/\bcj\b/i, "CJ"],
     [/\bm2\b/i, "M2"]
   ];
   for (const [re, code] of AF) if (re.test(t)) return code;
