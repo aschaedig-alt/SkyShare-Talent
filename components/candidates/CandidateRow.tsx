@@ -6,7 +6,8 @@ import { FileText, Send, StickyNote, ChevronRight, ChevronDown } from "lucide-re
 import type { CandidateListItem } from "@/lib/data/candidates";
 import { CANDIDATE_DEPARTMENTS } from "@/lib/candidates/departments";
 import { reasonLine } from "@/lib/candidates/buckets";
-import type { CandidateStage } from "@/lib/candidates/stages";
+import { findStage, isClosedStage, type CandidateStage } from "@/lib/candidates/stages";
+import { tagChipClass } from "@/lib/tags/colors";
 import { CandidateApplicationRows } from "@/components/candidates/CandidateApplicationRows";
 import { CandidateReasonCell } from "@/components/candidates/CandidateReasonCell";
 import { CandidateStageCell } from "@/components/candidates/CandidateStageCell";
@@ -67,6 +68,19 @@ function CandidateRowInner({
   // being described.
   const lead = candidate.applications[0] ?? null;
   const leadReason = lead ? reasonLine(lead.group, lead.statusText, lead.outcome) : null;
+
+  // The stage's own colour beats the keyword guess. stagePill() reads words out
+  // of the stage NAME — "hire" means green, "reject" means grey — which quietly
+  // stops working the moment somebody renames a stage on the manage page.
+  const stageEntry = findStage(candidate.stage, stageList);
+  const stagePillClass = stageEntry?.color
+    ? tagChipClass(candidate.stage ?? "", stageEntry.color)
+    : stagePill(candidate.stage);
+
+  // OUT OF THE PIPELINE, which is a different question from archived. Somebody
+  // Rejected last week is closed and very much not archived, and the list had no
+  // way to show that — so a closed row read exactly like a live one.
+  const closed = isClosedStage(candidate.stage, stageList);
   // Derived from the jobs applied to, never stored. More than one is real —
   // somebody applied across departments — so they are joined rather than one
   // silently winning.
@@ -115,6 +129,18 @@ function CandidateRowInner({
                   >
                     P
                   </a>
+                )}
+                {/* OUT OF THE PIPELINE. Different from archived, and shown only
+                    when the row is not already carrying that badge: a Rejected
+                    candidate is closed but still in the live pool, and until now
+                    their row read exactly like an active one. */}
+                {closed && !candidate.archivedAs && (
+                  <span
+                    title={`Out of the pipeline — ${candidate.stage} is a closed stage.`}
+                    className="shrink-0 rounded border border-brand-lea/15 bg-brand-cloudDancer/70 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:border-white/15 dark:bg-white/10 dark:text-slate-300"
+                  >
+                    closed
+                  </span>
                 )}
                 {/* Why this row is here twice.
                     Search deliberately spans archived and historical records so
@@ -208,7 +234,7 @@ function CandidateRowInner({
             candidateId={candidate.id}
             candidateName={candidate.displayName}
             stage={candidate.stage}
-            pillClass={stagePill(candidate.stage)}
+            pillClass={stagePillClass}
             canEdit={canEdit}
             stageList={stageList}
           />

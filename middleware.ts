@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import {
+  CANDIDATE_VIEW_COOKIE,
+  parseViewPreference,
+  serializeViewPreference,
+  viewPreferenceFromParams
+} from "@/lib/candidates/view-preference";
 
 const protectedPagePrefixes = [
   "/approvals",
@@ -192,6 +198,54 @@ function canonicalHostRedirect(request: NextRequest): URL | null {
   return target;
 }
 
+/**
+ * Remember how somebody last looked at the candidate list.
+ *
+ * The segment and the page size, so a bare /candidates comes back the way it
+ * was left instead of resetting to Everyone at 100. Only ever written when the
+ * URL actually asks for one of them — arriving is not choosing.
+ *
+ * IN MIDDLEWARE ON PURPOSE. The obvious place is a client effect setting
+ * document.cookie once the page mounts, and that is where this started. It is
+ * the wrong place twice over: it cannot work without JavaScript, and it cannot
+ * be verified here at all, because every automated browser available in this
+ * repo hydrates the app shell but never the page inside it — so "did the effect
+ * fire" is unanswerable before shipping. Middleware already runs on every
+ * request to this path, including the RSC requests a client-side navigation
+ * makes, so the cookie rides the response somebody was getting anyway.
+ *
+ * Failure is silent BY DESIGN. If anything here throws, the page still renders;
+ * it just does not remember. This must never be able to break the list.
+ */
+function rememberCandidateView(request: NextRequest, response: NextResponse) {
+  if (request.nextUrl.pathname !== "/candidates") return;
+  // A SEARCH IS NOT A VIEW CHOICE. The search box carries the segment as a
+  // hidden input, and on a candidate profile — where there is no segment — it
+  // sends the "everyone" sentinel so the search is not silently narrowed to
+  // whatever was last remembered. Without this guard, looking somebody up from
+  // a profile would quietly reset the segment you had chosen back to Everyone.
+  if (request.nextUrl.searchParams.has("q")) return;
+  try {
+    const current = parseViewPreference(request.cookies.get(CANDIDATE_VIEW_COOKIE)?.value);
+    const next = viewPreferenceFromParams(request.nextUrl.searchParams, current);
+    if (!next) return;
+    if (next.bucket === current.bucket && next.size === current.size) return;
+
+    response.cookies.set({
+      name: CANDIDATE_VIEW_COOKIE,
+      value: serializeViewPreference(next),
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: "lax"
+      // No secure flag: dev is plain HTTP, and this holds a display preference.
+      // No httpOnly either — nothing reads it from the client today, but there
+      // is nothing here worth protecting and locking it away buys nothing.
+    });
+  } catch {
+    // Remembering is a convenience. Never let it take the page down with it.
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -207,7 +261,15 @@ export async function middleware(request: NextRequest) {
   // like the public /book scheduling surface without the app sidebar.
   const forwardHeaders = new Headers(request.headers);
   forwardHeaders.set("x-pathname", pathname);
-  const passThrough = () => NextResponse.next({ request: { headers: forwardHeaders } });
+  // Every pass-through carries the view cookie. Attached HERE rather than at
+  // each return site because there are several, and the one that gets forgotten
+  // is the one somebody actually uses. The redirect paths below deliberately do
+  // NOT remember: a request that ends at /login never showed anybody a list.
+  const passThrough = () => {
+    const response = NextResponse.next({ request: { headers: forwardHeaders } });
+    rememberCandidateView(request, response);
+    return response;
+  };
 
   if (!isProtectedPath(pathname) || !isAuthRequired()) {
     return passThrough();

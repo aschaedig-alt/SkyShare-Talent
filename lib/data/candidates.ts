@@ -303,6 +303,15 @@ export type CandidateListData = {
    * they cut across all six.
    */
   acrossCounts: Record<CandidateAcross, number>;
+  /**
+   * How many candidates sit on each stage, keyed LOWERCASE — the stored values
+   * predate the stage list and do not all agree on capitalisation.
+   *
+   * Counted over everything narrowing the list EXCEPT the status filter itself,
+   * so the numbers in the menu stay visible while you are standing on one of
+   * them. Clicking a stage returns exactly the number shown next to it.
+   */
+  stageCounts: Record<string, number>;
 };
 
 export type CandidateProfileData = {
@@ -648,42 +657,63 @@ export async function getCandidateTagOptions(): Promise<CandidateTagOption[]> {
     );
 }
 
-export async function getCandidateListData(
-  query = "",
-  viewer?: CandidateListViewer,
+/**
+ * OPTIONS OBJECT, not positional arguments, and deliberately so.
+ *
+ * This grew to eight parameters one filter at a time, and adding the stage
+ * filter in the middle silently slid `pageSize` into it — the call still
+ * compiled shape-wise and would have filtered by a number. Named fields cannot
+ * do that, and the next filter is free to be added anywhere.
+ */
+export type CandidateListQuery = {
+  query?: string;
+  viewer?: CandidateListViewer;
   /**
    * Tag labels to narrow to. Filtering happens in the DATABASE, not in the
    * component: the list is capped at CANDIDATE_LIST_LIMIT, so filtering the
    * returned page client-side would search only the first 100 rows and quietly
    * miss anyone past the cap.
    */
-  tagFilter: string[] = [],
+  tags?: string[];
   /**
-   * Recruiting departments to narrow to, DERIVED from the job each candidate
-   * applied to (see lib/candidates/departments.ts). Like the tag filter this
-   * runs in the database — filtering the returned page would only ever search
-   * the current page and silently miss everyone past the cap.
+   * Recruiting departments, DERIVED from the job each candidate applied to (see
+   * lib/candidates/departments.ts). Runs in the database for the same reason.
    */
-  departmentFilter: CandidateDepartmentKey[] = [],
-  /** Rows per page. Capped at CANDIDATE_LIST_MAX so a typo cannot ask for 50,000. */
-  limit: number = CANDIDATE_LIST_LIMIT,
+  departments?: CandidateDepartmentKey[];
   /**
-   * Which segment of the rail to show, or null for everyone.
+   * Pipeline stages. OR across them, like departments and unlike tags: a
+   * candidate has exactly one stage, so ANDing two returns nobody. Matched
+   * case-insensitively, because the stored values predate the list and do not
+   * all agree on capitalisation.
+   */
+  stages?: string[];
+  /** Rows per page. Capped at CANDIDATE_LIST_MAX so a typo cannot ask for 50,000. */
+  limit?: number;
+  /**
+   * Which segment to show, or null for everyone.
    *
    * A bucket is DERIVED from a person's applications, so there is no column to
    * filter on. It is resolved to a concrete id list first and folded into the
-   * WHERE — never applied to the page after it comes back. Filtering the
-   * returned page would search only the current rows and silently miss everyone
-   * past the cap, which is the same trap the tag filter above documents.
+   * WHERE — never applied to the page after it comes back.
    */
-  bucketFilter: CandidateBucket | null = null,
+  bucket?: CandidateBucket | null;
   /**
    * A cross-cutting filter, or null. Combines WITH the bucket rather than
-   * replacing it — "Active AND type rated" is a real thing to ask for, and the
-   * two are different questions about the same person.
+   * replacing it — "Active AND type rated" is a real thing to ask for.
    */
-  acrossFilter: CandidateAcross | null = null
-): Promise<CandidateListData> {
+  across?: CandidateAcross | null;
+};
+
+export async function getCandidateListData({
+  query = "",
+  viewer,
+  tags: tagFilter = [],
+  departments: departmentFilter = [],
+  stages: stageFilter = [],
+  limit = CANDIDATE_LIST_LIMIT,
+  bucket: bucketFilter = null,
+  across: acrossFilter = null
+}: CandidateListQuery = {}): Promise<CandidateListData> {
   const normalizedQuery = query.trim().toLowerCase();
   const hasQuery = normalizedQuery.length > 0;
   const terms = splitSearchTerms(query);
@@ -850,6 +880,28 @@ export async function getCandidateListData(
     };
   }
 
+  // Stage filter. In the DATABASE, not on the returned page — the list is
+  // capped, so filtering the rows that came back would search only those and
+  // silently miss everyone past the cap. Same trap the tag filter documents.
+  //
+  // Matched case-insensitively: the stored values predate the stage list and do
+  // not all agree on capitalisation.
+  //
+  // The clause is HELD BY REFERENCE so the counts further down can be taken over
+  // a population carrying every other narrowing but not this one. Without that,
+  // picking "Rejected" would zero every other number in the very menu it was
+  // picked from, and there would be no way back to them except clearing it.
+  const stages = stageFilter.map((s) => s.trim()).filter(Boolean);
+  const stageClause = stages.length
+    ? { OR: stages.map((value) => ({ stage: { equals: value, mode: "insensitive" as const } })) }
+    : null;
+  if (stageClause) {
+    candidateWhere = {
+      ...candidateWhere,
+      AND: [...((candidateWhere.AND as unknown[]) ?? []), stageClause]
+    };
+  }
+
   // Only pull document text for matching files when there's a query (keeps the list light).
   // Match on ANY typed term, not the whole string — otherwise a multi-term
   // query never surfaces the document snippet that explains the hit.
@@ -961,6 +1013,22 @@ export async function getCandidateListData(
     };
   }
 
+  // The population the status menu counts over: everything the list is narrowed
+  // by — search, tags, department, the selected segment, the viewer's own scope
+  // — EXCEPT the status filter itself.
+  //
+  // Built here rather than back where the clause was added, because the segment
+  // narrows the WHERE down here: counting earlier would have shown numbers over
+  // everybody while clicking one gave you segment-and-stage, and a count that
+  // does not match what clicking it opens is the exact bug that has now been
+  // fixed three times on this page ("Failed interview 108" opening a list of 3).
+  const stageCountWhere: Record<string, unknown> = stageClause
+    ? {
+        ...candidateWhere,
+        AND: ((candidateWhere.AND as unknown[]) ?? []).filter((clause) => clause !== stageClause)
+      }
+    : candidateWhere;
+
   // BACK TO Promise.all, REVERTED from $transaction. The $transaction attempt
   // (theory: fewer concurrent cold connections) was never actually proven —
   // local measurements were noisy and inconclusive, and swapping it in forced
@@ -979,7 +1047,8 @@ export async function getCandidateListData(
     withFiles,
     withApplications,
     scheduledInterviews,
-    archived
+    archived,
+    stageRows
   ] = await Promise.all([
     prisma.candidate.findMany({
       where: candidateWhere,
@@ -1040,6 +1109,14 @@ export async function getCandidateListData(
     }),
     prisma.candidate.count({
       where: allowlist ? { AND: [{ archivedAt: { not: null } }, allowlist] } : { archivedAt: { not: null } }
+    }),
+    // One grouped count for the status menu, rather than a count per stage —
+    // twelve stages would otherwise be twelve round trips to a remote database
+    // on every load of this page.
+    prisma.candidate.groupBy({
+      by: ["stage"],
+      where: stageCountWhere,
+      _count: { _all: true }
     })
   ]);
   // TEMPORARY diagnostic: the candidates page has been reported slow twice
@@ -1047,6 +1124,17 @@ export async function getCandidateListData(
   // actual production number in the logs on every load, cheap enough to leave
   // in until the real bottleneck is confirmed and fixed, then remove.
   console.log(`[perf] getCandidateListData query time: ${Date.now() - listQueryStart}ms (query="${query}")`);
+
+  // Folded to lowercase and SUMMED, not assigned. The same stage exists in the
+  // data under more than one casing ("Applied" / "applied"), and groupBy returns
+  // those as separate rows — assigning would silently report whichever came
+  // back last instead of the total.
+  const stageCounts = stageRows.reduce<Record<string, number>>((acc, row) => {
+    const key = (row.stage ?? "").trim().toLowerCase();
+    if (!key) return acc; // no stage set — not a stage anyone can filter by
+    acc[key] = (acc[key] ?? 0) + row._count._all;
+    return acc;
+  }, {});
 
   // Type ratings for the Types column, fetched for the CURRENT PAGE only — this
   // one is a separate query rather than an include because CandidateMetric holds
@@ -1178,7 +1266,8 @@ export async function getCandidateListData(
       archived
     },
     bucketCounts,
-    acrossCounts
+    acrossCounts,
+    stageCounts
   };
 }
 

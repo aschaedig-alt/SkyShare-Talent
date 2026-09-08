@@ -10,6 +10,7 @@ import {
   type CandidateBucket,
   type RailStage
 } from "@/lib/candidates/buckets";
+import { BUCKET_ALL } from "@/lib/candidates/list-url";
 
 type CandidateSegmentTilesProps = {
   /** Exact counts across the whole population in scope, not just this page. */
@@ -71,7 +72,11 @@ export function CandidateSegmentTiles({
     }
     const bucket = next.bucket !== undefined ? next.bucket : active;
     const across = next.across !== undefined ? next.across : activeAcross;
-    if (bucket) params.set("bucket", bucket);
+    // ALWAYS sets bucket, using the "all" sentinel for no-segment. Omitting it
+    // would leave a URL indistinguishable from arriving fresh, which the server
+    // answers with the segment you were last on — so the Everyone tile would
+    // bounce you straight back to whichever tile you were trying to leave.
+    params.set("bucket", bucket ?? BUCKET_ALL);
     if (across) params.set("across", across);
     const qs = params.toString();
     return qs ? `/candidates?${qs}` : "/candidates";

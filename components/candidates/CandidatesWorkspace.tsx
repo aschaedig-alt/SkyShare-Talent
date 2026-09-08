@@ -11,7 +11,9 @@ import { DocumentIntake } from "@/components/candidates/DocumentIntake";
 import { CandidateViewTabs } from "@/components/candidates/CandidateViewTabs";
 import { CandidateSearchBox } from "@/components/candidates/CandidateSearchBox";
 import { CandidateSegmentTiles } from "@/components/candidates/CandidateSegmentTiles";
+import { CandidateStatusFilter } from "@/components/candidates/CandidateStatusFilter";
 import { BUCKET_LABEL, type CandidateAcross, type CandidateBucket } from "@/lib/candidates/buckets";
+import { BUCKET_ALL } from "@/lib/candidates/list-url";
 import type { CandidateStage } from "@/lib/candidates/stages";
 
 type CandidatesWorkspaceProps = {
@@ -23,6 +25,8 @@ type CandidatesWorkspaceProps = {
   activeTags?: string[];
   /** Departments currently narrowing the list, from ?depts= in the URL. */
   activeDepartments?: string[];
+  /** Pipeline stages narrowing the list, from ?stages= in the URL. */
+  activeStages?: string[];
   canEdit?: boolean;
   // Set when the user arrived here via "Start from a candidate" on New hires, so
   // the list carries the intent instead of dropping them onto an anonymous page.
@@ -34,6 +38,13 @@ type CandidatesWorkspaceProps = {
   /** The live stage vocabulary, edited at /candidates/manage. */
   stageList?: CandidateStage[];
 };
+
+// WHERE THE REMEMBERED VIEW LIVES, since it is not here and this is where you
+// would look for it. The segment and page size somebody lands on are written to
+// a cookie in middleware.ts and read back in app/candidates/page.tsx. There is
+// deliberately no component for it: an effect setting document.cookie on mount
+// cannot work without JavaScript, and cannot be verified in this repo at all —
+// no browser available here hydrates this app's page content.
 
 // NO EDITABLE GRID ON THIS PAGE.
 //
@@ -52,6 +63,7 @@ export function CandidatesWorkspace({
   tagOptions = [],
   activeTags = [],
   activeDepartments = [],
+  activeStages = [],
   canEdit = false,
   onboardingIntent = false,
   activeBucket = null,
@@ -64,7 +76,11 @@ export function CandidatesWorkspace({
     q: query || undefined,
     tags: activeTags.length ? activeTags.join(",") : undefined,
     depts: activeDepartments.length ? activeDepartments.join(",") : undefined,
-    size: data.listLimit !== 100 ? String(data.listLimit) : undefined,
+    stages: activeStages.length ? activeStages.join(",") : undefined,
+    // Always carried, default included: the server falls back to the REMEMBERED
+    // size when ?size= is absent, so leaving it off at 100 would switch you back
+    // to 500 rows just for clicking a different segment.
+    size: String(data.listLimit),
     // Carried so the two axes survive each other: switching segment keeps the
     // cross-cutting filter, and toggling that keeps the segment. The bar strips
     // whichever key it is rewriting.
@@ -124,20 +140,17 @@ export function CandidatesWorkspace({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <CandidatePageSize size={data.listLimit} query={query} tags={activeTags} departments={activeDepartments} />
-          <CandidateDepartmentFilter
-            active={activeDepartments}
-            query={query}
-            tags={activeTags}
-            size={data.listLimit}
+          {/* Each of these reads the live URL and rewrites exactly one param —
+              they are not handed the other filters any more, which is what used
+              to make adding a filter silently break the ones written before it. */}
+          <CandidatePageSize size={data.listLimit} />
+          <CandidateDepartmentFilter active={activeDepartments} />
+          <CandidateStatusFilter
+            active={activeStages}
+            stages={stageList ?? []}
+            counts={data.stageCounts}
           />
-          <CandidateTagFilter
-            options={tagOptions}
-            active={activeTags}
-            query={query}
-            departments={activeDepartments}
-            size={data.listLimit}
-          />
+          <CandidateTagFilter options={tagOptions} active={activeTags} />
           <span className="rounded bg-brand-cloudDancer/70 px-3 py-1 text-xs font-semibold text-brand-lea dark:bg-white/5 dark:text-slate-100">
             {data.candidates.length} shown
           </span>
@@ -173,6 +186,9 @@ export function CandidatesWorkspace({
               defaultQuery={query}
               tags={activeTags}
               departments={activeDepartments}
+              stages={activeStages}
+              bucket={activeBucket ?? BUCKET_ALL}
+              across={activeAcross ?? undefined}
               size={data.listLimit}
               tone="dark"
             />
@@ -203,8 +219,6 @@ export function CandidatesWorkspace({
           layout" and anything already added still work. */}
       {segmentTiles}
       {archiveNote}
-
-
       {recordsPanel}
     </div>
   );

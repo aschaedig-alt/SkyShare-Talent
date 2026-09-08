@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, Plus, Undo2, X } from "lucide-react";
 import type { CandidateStage } from "@/lib/candidates/stages";
+import { TAG_COLORS, tagChipClass } from "@/lib/tags/colors";
 
 /**
  * The pipeline stage list, editable.
@@ -122,7 +123,9 @@ export function ManageStageList({
                   className="w-[190px] rounded border border-brand-lea/15 bg-white px-2 py-1 text-xs font-semibold text-brand-lea outline-none focus:border-transparent focus:shadow-[0_0_0_2px_rgba(234,170,0,0.5)] dark:border-white/15 dark:bg-brand-field dark:text-slate-100"
                 />
               ) : (
-                <span className="w-[190px] text-xs font-semibold text-brand-lea dark:text-slate-100">
+                <span
+                  className={`inline-flex w-[190px] items-center rounded border px-2 py-1 text-xs font-semibold ${tagChipClass(s.value, s.color)}`}
+                >
                   {s.value}
                 </span>
               )}
@@ -146,6 +149,39 @@ export function ManageStageList({
               </span>
 
               <span className="flex-1" />
+
+              {/* The same palette the tags use, so one vocabulary of colour
+                  covers the page. A stage with no colour falls back to the old
+                  keyword guess, which is why "none" stays on offer. */}
+              {canEdit && (
+                <span className="flex shrink-0 flex-wrap gap-1">
+                  <button
+                    type="button"
+                    onClick={() => update(i, { color: null })}
+                    title="No colour — fall back to the keyword guess"
+                    aria-label={`No colour for ${s.value}`}
+                    className={`h-4 w-4 rounded border text-[9px] leading-none ${
+                      s.color ? "border-brand-lea/20 dark:border-white/20" : "border-brand-lea ring-1 ring-brand-gold"
+                    }`}
+                  >
+                    &times;
+                  </button>
+                  {TAG_COLORS.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => update(i, { color: c.value })}
+                      title={c.label}
+                      aria-label={`${c.label} for ${s.value}`}
+                      className={`h-4 w-4 rounded border transition ${c.dot} ${
+                        s.color === c.value
+                          ? "border-brand-lea ring-1 ring-brand-gold"
+                          : "border-brand-lea/20 dark:border-white/20"
+                      }`}
+                    />
+                  ))}
+                </span>
+              )}
 
               {canEdit && (
                 <span className="flex items-center gap-1">

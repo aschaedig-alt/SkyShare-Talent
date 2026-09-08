@@ -1,5 +1,5 @@
 import { Search } from "lucide-react";
-import { CANDIDATE_LIST_LIMIT } from "@/lib/candidates/list-config";
+import { BUCKET_ALL } from "@/lib/candidates/list-url";
 
 /**
  * The candidate search, as one component that can sit on more than one page.
@@ -19,10 +19,13 @@ import { CANDIDATE_LIST_LIMIT } from "@/lib/candidates/list-config";
  * IT CARRIES THE FILTERS, which the old inline form did not. That form had a
  * single q input, so submitting a search silently dropped ?tags=, ?depts= and
  * ?size= — filter to a tag, search a name, and the tag filter vanished with no
- * sign it had. buildCandidatesHref (lib/candidates/list-url.ts) exists precisely
- * to stop a control clobbering parameters it does not own; the search form never
- * adopted it. Hidden inputs are the native-GET equivalent, and they mirror that
- * builder exactly: comma-joined lists, and size omitted when it is the default.
+ * sign it had. Hidden inputs are the native-GET equivalent of the one-param
+ * rewrite the client controls use (hrefWithParam, lib/candidates/list-url.ts):
+ * lists comma-joined, everything else passed through untouched.
+ *
+ * A hidden input is easy to forget when a filter is added, which is how the
+ * segment and the status filter came to be missing from this list. If you add a
+ * parameter to /candidates, add it here too.
  *
  * NO CLIENT JS ON PURPOSE. It is a plain GET form, so it works before hydration
  * and cannot get stuck in a loading state. Deliberately NOT a typeahead: the
@@ -34,6 +37,14 @@ export function CandidateSearchBox({
   defaultQuery = "",
   tags = [],
   departments = [],
+  stages = [],
+  // Defaults to "everyone" rather than to absent. This box also sits on a
+  // candidate profile, where there is no segment to carry — and an absent
+  // bucket means "use the remembered one", which would answer a search for a
+  // name with an empty list whenever the remembered segment happened not to
+  // contain them. A search should span the list unless something narrows it.
+  bucket = BUCKET_ALL,
+  across,
   size,
   tone = "dark",
   placeholder = "Search name, role, tag, or text inside resumes & pilot apps",
@@ -44,6 +55,15 @@ export function CandidateSearchBox({
   /** Carried through untouched, so searching cannot drop a filter. */
   tags?: string[];
   departments?: string[];
+  stages?: string[];
+  /**
+   * The selected segment, and the "all" sentinel for none. Both are carried for
+   * the same reason the rest are — but the sentinel matters on its own: with no
+   * bucket param at all the server hands back the segment you were last on, so
+   * a search run from Everyone would come back filtered to something else.
+   */
+  bucket?: string;
+  across?: string;
   size?: number;
   /** "dark" sits on the navy header band; "light" on a white panel. */
   tone?: "dark" | "light";
@@ -58,7 +78,13 @@ export function CandidateSearchBox({
           when set, so an empty filter does not put ?tags= in the URL. */}
       {tags.length > 0 && <input type="hidden" name="tags" value={tags.join(",")} />}
       {departments.length > 0 && <input type="hidden" name="depts" value={departments.join(",")} />}
-      {size && size !== CANDIDATE_LIST_LIMIT && <input type="hidden" name="size" value={String(size)} />}
+      {stages.length > 0 && <input type="hidden" name="stages" value={stages.join(",")} />}
+      {bucket && <input type="hidden" name="bucket" value={bucket} />}
+      {across && <input type="hidden" name="across" value={across} />}
+      {/* The default size is sent too, unlike the lists above. An absent ?size=
+          means "I did not choose", which the server answers with the REMEMBERED
+          size — so omitting it at 100 would quietly return 500 rows. */}
+      {size && <input type="hidden" name="size" value={String(size)} />}
 
       <div className="relative min-w-0 flex-1">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-grey" />

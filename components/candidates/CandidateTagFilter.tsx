@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 import { Tag as TagIcon, X, Check, Archive } from "lucide-react";
 import { HISTORICAL_CHIP_CLASS, tagChipClass, tagDotClass } from "@/lib/tags/colors";
 import type { CandidateTagOption } from "@/lib/data/candidates";
-import { buildCandidatesHref } from "@/lib/candidates/list-url";
+import { hrefWithParam } from "@/lib/candidates/list-url";
 
 /** One selectable tag. Historical ones stay grey, matching the pills. */
 function TagRow({ option, on, onToggle }: { option: CandidateTagOption; on: boolean; onToggle: () => void }) {
@@ -65,19 +65,17 @@ function TagRow({ option, on, onToggle }: { option: CandidateTagOption; on: bool
  */
 export function CandidateTagFilter({
   options,
-  active,
-  query,
-  departments = [],
-  size
+  active
 }: {
   options: CandidateTagOption[];
   active: string[];
-  query: string;
-  /** Carried through so picking a tag does not silently drop the other filters. */
-  departments?: string[];
-  size?: number;
 }) {
   const router = useRouter();
+  // The live URL, so this control can only ever change its own parameter. It
+  // used to be handed the other filters by name and rebuild the whole query
+  // string from them, which is how ?bucket= and ?across= came to be dropped:
+  // they were added to the page afterwards and nobody updated this call.
+  const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -97,7 +95,7 @@ export function CandidateTagFilter({
   const [showHistorical, setShowHistorical] = useState(false);
 
   function apply(next: string[]) {
-    router.push(buildCandidatesHref({ query, tags: next, departments, size }));
+    router.push(hrefWithParam(searchParams, "tags", next));
   }
 
   function toggle(label: string) {

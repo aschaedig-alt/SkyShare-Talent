@@ -2,14 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 import { Building2, X, Check } from "lucide-react";
 import {
   CANDIDATE_DEPARTMENTS,
   type CandidateDepartmentKey
 } from "@/lib/candidates/departments";
-import { buildCandidatesHref } from "@/lib/candidates/list-url";
+import { hrefWithParam } from "@/lib/candidates/list-url";
 
 /**
  * Narrow the candidate list by department.
@@ -28,24 +28,21 @@ import { buildCandidatesHref } from "@/lib/candidates/list-url";
  */
 export function CandidateDepartmentFilter({
   active,
-  query,
-  tags,
-  size,
   counts
 }: {
   active: string[];
-  query: string;
-  tags: string[];
-  size: number;
   /** How many candidates each department holds under the CURRENT search/tags. */
   counts?: Partial<Record<CandidateDepartmentKey, number>>;
 }) {
   const router = useRouter();
+  // The live URL, so this control can only ever change its own parameter and a
+  // filter added later cannot be dropped by one that has never heard of it.
+  const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
   const activeSet = useMemo(() => new Set(active), [active]);
 
   function apply(next: string[]) {
-    router.push(buildCandidatesHref({ query, tags, departments: next, size }));
+    router.push(hrefWithParam(searchParams, "depts", next));
   }
 
   function toggle(key: string) {
