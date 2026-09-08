@@ -208,6 +208,25 @@ export type UpgradePilotStep = {
   aircraft: string | null; // canonical airframe code (for same-aircraft comparison)
   date: string | null;
   kind: StepKind;
+  /**
+   * The SEAT advanced SIC -> PIC on this step, whatever the aircraft did.
+   *
+   * Separate from `kind` on purpose, and this is the fix for a real
+   * miscount found 2026-09-08. kind is one value and "transition" wins it, so
+   * the commonest upgrade at a fractional operator - a CJ2 First Officer moving
+   * to the 560XL AS A CAPTAIN - was recorded as a transition and never counted
+   * as an upgrade. That pilot is a captain and the report said they were not.
+   *
+   * Reordering classifyStep to test the seat first was the obvious fix and it is
+   * the wrong one: the step would stop being a transition, and the aircraft move
+   * would vanish from the transition totals and the top-paths chart. A single
+   * step is genuinely both things, so it now carries both facts.
+   *
+   * Counting rule that follows: `moves` still comes from kind, so one step is
+   * still one move and nothing double-counts. Only the "reached Captain" question
+   * reads this flag.
+   */
+  seatUp: boolean;
 };
 
 export type UpgradePilot = {
@@ -221,7 +240,13 @@ export type UpgradePilot = {
   transitions: number; // moved to a different aircraft
   moves: number; // upgrades + transitions
   laterals: number; // same-aircraft non-upgrade moves (rare)
-  madeCaptain: boolean; // >= 1 upgrade (reached Captain via FO -> Captain)
+  /** Steps where the seat advanced to PIC, INCLUDING those that also changed
+   *  aircraft. Always >= `upgrades`. See UpgradePilotStep.seatUp. */
+  seatUpgrades: number;
+  /** Reached Captain from the right seat at any point. Now driven by seatUpgrades
+   *  rather than by same-aircraft upgrades only, so a pilot who upgraded onto a
+   *  new type counts. */
+  madeCaptain: boolean;
   daysToFirstMove: number | null;
   daysToFirstUpgrade: number | null;
   daysToFirstTransition: number | null;
@@ -247,6 +272,22 @@ function reportTitle(title: string): string {
 function airframeOf(title: string, aircraft: string | null): string | null {
   const t = `${title} ${aircraft ?? ""}`;
   const AF: [RegExp, string][] = [
+    // CHALLENGER 350 AND PRAETOR 600 WERE MISSING, found 2026-09-08 by a chief-pilot
+    // review of this report. Both went into the fleet registry on Aug 28 and neither
+    // was ever added here, so airframeOf returned null for their crews - which does
+    // not merely mislabel them, it makes their moves invisible: classifyStep needs
+    // BOTH sides non-null to call a transition, so a move onto or off these types
+    // fell through to "lateral", and a lateral is not counted as a move anywhere.
+    // Those pilots sat in "Stayed put" no matter how far they had actually moved.
+    // The Challenger 350's type rating is CL-30 (confirmed by him Aug 28), so the
+    // pattern accepts either spelling.
+    // A BARE "Challenger" COUNTS, because that is what the live records actually
+    // say: the only Challenger rows on file read "Challenger Pilot", with no model
+    // number and no seat. Safe for this operator — there is exactly one Challenger
+    // type in the fleet, the 350 — and without it this pattern would have matched
+    // nothing that exists.
+    [/\bchallenger\b|\bcl-?30\b/i, "Challenger 350"],
+    [/\bpraetor ?600\b/i, "Praetor 600"],
     [/\bg450\b/i, "G450"],
     [/\bg200\b/i, "G200"],
     [/\bgv\b/i, "GV"],
@@ -337,8 +378,13 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
     const kinds: StepKind[] = [];
     let prevAf: string | null = null;
     let prevSeat: string | null = null;
+    // seatUp rides alongside kind rather than inside it — see
+    // UpgradePilotStep.seatUp for why a step has to be able to be both an
+    // aircraft transition AND a seat advance.
+    const seatUps: boolean[] = [];
     ordered.forEach((r, i) => {
       kinds.push(i === 0 ? "hire" : classifyStep(prevSeat, prevAf, seats[i], frames[i]));
+      seatUps.push(i !== 0 && prevSeat === "SIC" && seats[i] === "PIC");
       if (frames[i] !== null) prevAf = frames[i];
       if (seats[i] !== null) prevSeat = seats[i];
     });
@@ -349,10 +395,27 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
       const i = kinds.findIndex((k, idx) => idx > 0 && pred(k));
       return i === -1 ? null : daysFrom(i);
     };
+    // Same rule as the count above: the first time the SEAT advanced, whatever the
+    // aircraft did. Kept separate from firstIdx because that one tests step kind.
+    const firstSeatUpIdx = (() => {
+      const i = seatUps.findIndex((v, idx) => idx > 0 && v);
+      return i === -1 ? null : daysFrom(i);
+    })();
 
-    const upgrades = kinds.filter((k) => k === "upgrade").length;
+    // ANY FIRST OFFICER TO CAPTAIN CHANGE IS AN UPGRADE — his rule, stated
+    // 2026-09-08: "there are multiple ways a pilot can go. but any fo to capt
+    // change should be an upgrade." So the count reads the SEAT, not the step kind.
+    // Previously it read kind === "upgrade", which classifyStep only assigns when
+    // the aircraft is unchanged, so the commonest upgrade here - a CJ2 First
+    // Officer moving to the 560XL as a Captain - was counted as a transition and
+    // as no upgrade at all.
+    const upgrades = seatUps.filter(Boolean).length;
     const transitions = kinds.filter((k) => k === "transition").length;
     const laterals = kinds.filter((k) => k === "lateral").length;
+    // ONE STEP IS ONE MOVE. A step can now be an upgrade AND a transition at once,
+    // so upgrades + transitions would count that step twice and inflate a pilot's
+    // move count past the number of things that actually happened to them.
+    const moves = kinds.filter((k, i) => i > 0 && (k === "transition" || seatUps[i])).length;
     const info = infoOf.get(hireId);
     // Only ACTIVE counts as an active pilot — CONTRACT/TERMINATED are treated as past.
     const active = info?.employmentStatus === "ACTIVE";
@@ -381,11 +444,16 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
       employedYears,
       upgrades,
       transitions,
-      moves: upgrades + transitions,
+      moves,
       laterals,
-      madeCaptain: upgrades > 0,
+      seatUpgrades: seatUps.filter(Boolean).length,
+      // Driven by the SEAT rather than by same-aircraft upgrades, so a First
+      // Officer who upgraded onto a different type is counted. That was the whole
+      // miscount: the commonest real upgrade here changes aircraft at the same
+      // time, and it used to be filed as a transition and nothing else.
+      madeCaptain: seatUps.some(Boolean),
       daysToFirstMove: firstIdx((k) => k === "upgrade" || k === "transition"),
-      daysToFirstUpgrade: firstIdx((k) => k === "upgrade"),
+      daysToFirstUpgrade: firstSeatUpIdx,
       daysToFirstTransition: firstIdx((k) => k === "transition"),
       startDate: iso(ordered[0].startDate),
       latestDate: iso(ordered[ordered.length - 1].startDate),
@@ -394,7 +462,8 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
         seat: seats[i],
         aircraft: frames[i],
         date: iso(r.startDate),
-        kind: kinds[i]
+        kind: kinds[i],
+        seatUp: seatUps[i]
       }))
     });
   }

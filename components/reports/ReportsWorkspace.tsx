@@ -295,16 +295,25 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
     );
     const pool = poolNoYear.filter((p) => year === "all" || p.employedYears.includes(year));
     const rows = pool.map((p) => {
+      // ANY FIRST OFFICER TO CAPTAIN CHANGE IS AN UPGRADE — his rule, 2026-09-08.
+      // So an upgrade is read off the SEAT (step.seatUp) rather than off the step
+      // kind, which only says "upgrade" when the aircraft stayed the same. The
+      // commonest upgrade here changes type at the same moment.
       let up = 0;
       let tr = 0;
+      // ONE STEP IS ONE MOVE. A step can be an upgrade AND a transition, so
+      // up + tr would count that step twice and claim a pilot moved more times
+      // than things actually happened to them.
+      let mv = 0;
       for (let i = 1; i < p.steps.length; i++) {
-        const k = p.steps[i].kind;
-        if ((k === "upgrade" || k === "transition") && inYear(p.steps[i].date)) {
-          if (k === "upgrade") up++;
-          else tr++;
-        }
+        const step = p.steps[i];
+        if (!inYear(step.date)) continue;
+        const isTransition = step.kind === "transition";
+        if (step.seatUp) up++;
+        if (isTransition) tr++;
+        if (step.seatUp || isTransition) mv++;
       }
-      return { p, up, tr, moves: up + tr };
+      return { p, up, tr, moves: mv };
     });
     const advanced = rows.filter((r) => r.moves >= 1);
     const tracked = pool.length;
@@ -329,6 +338,8 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
       pctAdvanced: tracked ? Math.round((advanced.length / tracked) * 100) : 0,
       upgradesTotal: rows.reduce((a, r) => a + r.up, 0),
       transitionsTotal: rows.reduce((a, r) => a + r.tr, 0),
+      // r.up is now the seat advance, so a First Officer who upgraded onto a
+      // DIFFERENT type is counted. That was the miscount.
       madeCaptain: rows.filter((r) => r.up >= 1).length,
       once: rows.filter((r) => r.moves === 1).length,
       twice: rows.filter((r) => r.moves >= 2).length,
