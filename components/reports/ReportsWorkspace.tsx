@@ -5,7 +5,11 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import { Download } from "lucide-react";
 import type { ReportsData } from "@/lib/data/reports";
-import { SKYSHARE_LADDER, ladderRank, type UpgradePilot } from "@/lib/data/employee-journey";
+import type { UpgradePilot } from "@/lib/data/employee-journey";
+// From the PURE ladder module, never from employee-journey — that one imports
+// Prisma, and a value import from a client component pulls it into the browser
+// bundle and 500s the page with "Can not resolve fs".
+import { SKYSHARE_LADDER, ladderRank } from "@/lib/fleet/pilot-ladder";
 import { formatUsd, travelPurposeLabel, travelStatusLabel } from "@/lib/travel/constants";
 import { ReportShareButton } from "@/components/reports/ReportShareButton";
 import { formatCalendarDay, formatMomentDate } from "@/lib/dates/display";
@@ -429,10 +433,18 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
                 so it now says so — and says plainly that one step can be both, which is
                 the only way the counts below make sense (upgrades + transitions is
                 larger than moves). */}
+            {/* THIS SENTENCE HAS NOW BEEN WRONG TWICE IN ONE DAY, both times because the
+                rule moved and the copy did not — first when it still said "on the same
+                aircraft", then when it named only the seat rule and left out the
+                larger-aircraft one, which is 19 of the 26 upgrades in the default view.
+                It has to state BOTH halves of the rule and the tie-break, or the tiles
+                below cannot be reconciled by a reader. */}
             <span className="font-medium text-brand-eden dark:text-slate-300">upgrade</span> is any FO → Captain change,
-            on the same aircraft or a new one; a{" "}
+            or a same-seat move to a larger aircraft on the{" "}
+            {SKYSHARE_LADDER.join(" → ")} ladder; a{" "}
             <span className="font-medium text-brand-eden dark:text-slate-300">transition</span> is a move to a new
-            aircraft. One step can be both, and counts once as a move.
+            aircraft — including a step down a seat. One step can be both an upgrade and a transition, and counts once
+            as a move.
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">

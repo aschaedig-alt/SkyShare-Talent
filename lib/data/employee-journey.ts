@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { positionFor } from "@/lib/fleet/positions";
 import { computeTenure } from "@/lib/data/tenure";
 import { ensureInitialRole } from "@/lib/data/ensure-initial-role";
+import { isUpgradeStep } from "@/lib/fleet/pilot-ladder";
 
 // ---------------------------------------------------------------------------
 // Employee journey — the sequence of roles a person has held at SkyShare, plus
@@ -322,75 +323,11 @@ function airframeOf(title: string, aircraft: string | null): string | null {
   return null;
 }
 
-/**
- * The SkyShare shared-pool ladder, smallest to largest.
- *
- * Lives here rather than in the report because it now decides CLASSIFICATION, not
- * just what to suggest next — "almost any aircraft to a larger aircraft is an
- * upgrade" (his rule, 2026-09-08) needs an ordering, and two copies of an ordering
- * is two answers to "did this pilot advance".
- *
- * Managed aircraft are deliberately absent: a managed seat is not a shared-fleet
- * progression target. Anything off the ladder returns -1 and CANNOT produce a
- * size upgrade — which is the "almost" in his rule, and is the honest answer when
- * we have no basis to call one aircraft larger than another.
- *
- * NOT YET PLACED: the Challenger 350 and Praetor 600. Both are new aircraft, both
- * are off the ladder until somebody says where they sit, and until then a move
- * onto one counts as a transition rather than an upgrade.
- */
-export const SKYSHARE_LADDER = ["PC-12", "CJ2", "560XL", "G200", "G450/GV"] as const;
-
-export function ladderRank(aircraft: string | null): number {
-  switch (aircraft) {
-    case "PC-12":
-      return 0;
-    case "CJ2":
-      return 1;
-    case "560XL":
-      return 2;
-    case "G200":
-      return 3;
-    case "G450":
-    case "GV":
-      return 4;
-    default:
-      return -1; // off the shared-fleet ladder (managed / other / not yet placed)
-  }
-}
-
-/** PIC outranks SIC. null when the seat is not recorded, which is common on older rows. */
-function seatRank(seat: string | null): number | null {
-  return seat === "PIC" ? 1 : seat === "SIC" ? 0 : null;
-}
-
-/**
- * Is this step an UPGRADE? His four rules, 2026-09-08, verbatim:
- *
- *   "any sic to pic is an upgrade"
- *   "almost any aircraft to a larger aircraft is an upgrade"
- *   "a lateral same seat move is a transistion"
- *   "a seat change (lower) and aircraft change is usually a transition"
- *
- * So: a seat advance is always an upgrade whatever the aircraft did; and a move up
- * the ladder is an upgrade UNLESS the seat went down, in which case rule four wins
- * and it is a transition. A same-seat lateral or a step down the ladder is not an
- * upgrade, which leaves it a transition by virtue of the aircraft changing.
- *
- * Kept separate from StepKind on purpose: kind is one value and "transition" has to
- * keep winning it, or an aircraft change would vanish from the transition totals
- * and the top-paths chart. A step can genuinely be both, and moves counts it once.
- */
-function isUpgradeStep(prevSeat: string | null, prevAf: string | null, seat: string | null, af: string | null): boolean {
-  const ps = seatRank(prevSeat);
-  const cs = seatRank(seat);
-  if (ps === 0 && cs === 1) return true; // SIC -> PIC, any aircraft
-  const seatWentDown = ps === 1 && cs === 0;
-  if (seatWentDown) return false; // rule four
-  const pr = ladderRank(prevAf);
-  const cr = ladderRank(af);
-  return pr >= 0 && cr >= 0 && cr > pr; // a larger aircraft, seat not lowered
-}
+// The ladder and the upgrade rules live in lib/fleet/pilot-ladder.ts — a module
+// with NO imports, because the reports page is a client component and needs the
+// same rules. Keeping them here dragged Prisma into the client bundle and 500ed
+// the page. Re-exported so existing importers of this module still resolve.
+export { SKYSHARE_LADDER, ladderRank } from "@/lib/fleet/pilot-ladder";
 
 function classifyStep(prevSeat: string | null, prevAf: string | null, seat: string | null, af: string | null): StepKind {
   if (prevAf && af && prevAf !== af) return "transition";
