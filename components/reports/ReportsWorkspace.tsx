@@ -6,10 +6,11 @@ import { clsx } from "clsx";
 import { Download } from "lucide-react";
 import type { ReportsData } from "@/lib/data/reports";
 import type { UpgradePilot } from "@/lib/data/employee-journey";
+import type { FleetStaffing } from "@/lib/data/fleet-staffing";
 // From the PURE ladder module, never from employee-journey — that one imports
 // Prisma, and a value import from a client component pulls it into the browser
 // bundle and 500s the page with "Can not resolve fs".
-import { SKYSHARE_LADDER, ladderRank } from "@/lib/fleet/pilot-ladder";
+import { SKYSHARE_LADDER, ladderRank, nextRungs } from "@/lib/fleet/pilot-ladder";
 import { formatUsd, travelPurposeLabel, travelStatusLabel } from "@/lib/travel/constants";
 import { ReportShareButton } from "@/components/reports/ReportShareButton";
 import { formatCalendarDay, formatMomentDate } from "@/lib/dates/display";
@@ -39,7 +40,7 @@ function fmtSpan(days: number | null): string {
   return `${(days / 365).toFixed(1)} yr`;
 }
 
-// The ladder moved into lib/data/employee-journey.ts, because it now decides
+// The ladder moved into lib/fleet/pilot-ladder.ts, because it now decides
 // CLASSIFICATION as well as what to suggest next — "almost any aircraft to a larger
 // aircraft is an upgrade" needs an ordering, and a second copy here would be a
 // second answer to whether a pilot advanced. Imported so there is one.
@@ -52,17 +53,80 @@ function lastFlyingStep(p: UpgradePilot): UpgradePilot["steps"][number] | null {
   return p.steps[p.steps.length - 1] ?? null;
 }
 
-// Next moves up the SHARED-fleet ladder: upgrade to Captain if still a First
-// Officer, then transitions up to the larger shared aircraft. A pilot already on
-// a MANAGED / off-ladder seat (Phenom, M2, Legacy 650, the HND managed G450) has
-// no shared-pool progression, so nothing is suggested for them.
-function nextSteps(seat: string | null, aircraft: string | null): { label: string; kind: "upgrade" | "transition" }[] {
+/**
+ * Next moves up the ladder: upgrade to Captain if still a First Officer, then the
+ * next rung or two. A pilot on an off-ladder seat has no suggestion.
+ *
+ * `crewed` is the set of airframe codes the fleet actually crews (from the Crew
+ * roster). Two things depend on it, and both were wrong before it existed:
+ *   - a PC-12 First Officer was handed NINE suggestions ending at the Legacy 650,
+ *     because the list was written for a 5-rung ladder and the ladder now has 10;
+ *   - a G450 captain was told his next step was the Legacy 650, a single managed
+ *     tail, which made him look like a pilot with somewhere to go when he is at
+ *     the top of the shared fleet. That is the difference between "stayed put"
+ *     reading as a choice and reading as a verdict.
+ * With no roster loaded it degrades to the old behaviour, capped at two rungs.
+ */
+function nextSteps(
+  seat: string | null,
+  aircraft: string | null,
+  crewed: ReadonlySet<string>
+): { label: string; kind: "upgrade" | "transition" }[] {
   const rank = ladderRank(aircraft);
   if (rank < 0) return [];
   const out: { label: string; kind: "upgrade" | "transition" }[] = [];
   if (seat === "SIC" && aircraft) out.push({ label: `${aircraft} Captain`, kind: "upgrade" });
-  for (let r = rank + 1; r < SKYSHARE_LADDER.length; r++) out.push({ label: SKYSHARE_LADDER[r], kind: "transition" });
+  for (const rung of nextRungs(rank, crewed)) out.push({ label: rung, kind: "transition" });
   return out;
+}
+
+/**
+ * Gold service stars beside a pilot's name — one per whole year with SkyShare.
+ *
+ * THEY ARE ASTERISK GLYPHS, NOT ICONS, and that is not a shortcut: it is what the
+ * employee profile already renders (NewHireDetailWorkspace, in the header row next
+ * to the name), and this exists so the two surfaces show the same thing. The
+ * title/aria wording is copied from there for the same reason.
+ *
+ * The one deliberate difference is size. The profile sets text-xl against a
+ * text-2xl heading; a roster row's name is body-sized, so the same ratio lands at
+ * text-base. Everything else — the gold token, the weight, leading-none,
+ * tracking-tight, select-none so the asterisks are not caught when someone copies
+ * a name — is unchanged.
+ *
+ * Count comes from UpgradePilot.tenureYears, which is computeTenure's rehire-aware
+ * completedYears rather than tenureDays / 365, so a pilot cannot show five stars
+ * on their profile and four here.
+ */
+function TenureStars({ years }: { years: number }) {
+  if (years <= 0) return null;
+  const label = `${years} year${years === 1 ? "" : "s"}`;
+  return (
+    <span
+      title={`${label} with SkyShare`}
+      aria-label={`${label} of service`}
+      className="select-none text-base font-bold leading-none tracking-tight text-brand-gold"
+    >
+      {"*".repeat(years)}
+    </span>
+  );
+}
+
+/**
+ * The middle value, not the mean.
+ *
+ * Both pilots who reviewed this report asked for a median independently, and
+ * they were right for a reason beyond preference: the mean here was computed
+ * over the pilots who HAD advanced, so it silently improved every time somebody
+ * stalled. A median over the same set is at least a number a First Officer can
+ * be told, and it is reported next to how many are still waiting so the reader
+ * can see what it leaves out.
+ */
+function median(xs: (number | null)[]): number | null {
+  const v = xs.filter((n): n is number => n !== null).sort((a, b) => a - b);
+  if (!v.length) return null;
+  const m = Math.floor(v.length / 2);
+  return v.length % 2 ? v[m] : Math.round((v[m - 1] + v[m]) / 2);
 }
 
 function yearOf(iso: string | null): number | null {
@@ -78,7 +142,7 @@ function yearOf(iso: string | null): number | null {
 // time. One rising area (all progressions) with a Captain-milestone line, so
 // the growth of everyone's advancement reads at a glance.
 // ---------------------------------------------------------------------------
-function ClimbChart({ pilots }: { pilots: UpgradePilot[] }) {
+function ClimbChart({ pilots, highlightYear }: { pilots: UpgradePilot[]; highlightYear?: number | null }) {
   const model = useMemo(() => {
     const perYear = new Map<number, { up: number; tr: number }>();
     for (const p of pilots) {
@@ -153,7 +217,14 @@ function ClimbChart({ pilots }: { pilots: UpgradePilot[] }) {
   const labelEvery = n > 9 ? 2 : 1;
 
   return (
-    <div className="w-full overflow-x-auto">
+    // overflow-y-hidden is NOT redundant, and leaving it off is the documented
+    // trap: per the CSS overflow spec, setting one axis to anything but visible
+    // makes the OTHER axis compute to auto. overflow-x-auto alone therefore turns
+    // on a vertical scrollbar too. The min-width is the last resort of the
+    // scrollbar ladder — a line chart cannot be made to fit 375px and stay
+    // readable, since SVG text scales with the viewBox and 11px becomes 6px — but
+    // it is now low enough that anything from a large phone upward does not scroll.
+    <div className="w-full overflow-x-auto overflow-y-hidden">
       <style>{`
         @keyframes climb-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
         @keyframes climb-draw { to { stroke-dashoffset: 0; } }
@@ -163,7 +234,7 @@ function ClimbChart({ pilots }: { pilots: UpgradePilot[] }) {
           .climb-area, .climb-line { animation: none; opacity: 1; stroke-dashoffset: 0; }
         }
       `}</style>
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full min-w-[520px]" role="img" aria-label="Cumulative pilot progressions over time">
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full min-w-[420px]" role="img" aria-label="Cumulative pilot progressions over time">
         <defs>
           <linearGradient id="climbFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#eaaa00" stopOpacity="0.42" />
@@ -185,12 +256,37 @@ function ClimbChart({ pilots }: { pilots: UpgradePilot[] }) {
         <path d={trPath} fill="none" stroke="#466481" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray="1.5 4" />
         <path d={upPath} fill="none" stroke="#eaaa00" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray="6 4" />
 
+        {/* The selected year, marked. The tiles above already narrow to it, and a
+            chart that never moved while every number around it did was reading as
+            a second, contradicting answer. */}
+        {highlightYear != null && model.points.some((p) => p.year === highlightYear) && (
+          <line
+            x1={x(model.points.findIndex((p) => p.year === highlightYear))}
+            y1={padT}
+            x2={x(model.points.findIndex((p) => p.year === highlightYear))}
+            y2={padT + plotH}
+            stroke="#eaaa00"
+            strokeWidth={1.5}
+            strokeDasharray="3 3"
+          />
+        )}
+
         {model.points.map((p, i) => (
           <g key={p.year}>
-            <circle cx={x(i)} cy={y(p.total)} r={3.5} className="fill-brand-lea dark:fill-white" />
+            <circle
+              cx={x(i)}
+              cy={y(p.total)}
+              r={p.year === highlightYear ? 5 : 3.5}
+              className={p.year === highlightYear ? "fill-brand-gold" : "fill-brand-lea dark:fill-white"}
+            />
             <title>{`${p.year}: ${p.total} total (${p.up} upgrades, ${p.tr} transitions)`}</title>
-            {i % labelEvery === 0 && (
-              <text x={x(i)} y={H - 10} textAnchor="middle" className="fill-brand-grey text-[11px] dark:fill-slate-400">
+            {(i % labelEvery === 0 || p.year === highlightYear) && (
+              <text
+                x={x(i)}
+                y={H - 10}
+                textAnchor="middle"
+                className={clsx("text-[11px]", p.year === highlightYear ? "fill-brand-lea font-bold dark:fill-brand-gold" : "fill-brand-grey dark:fill-slate-400")}
+              >
                 {p.year}
               </text>
             )}
@@ -234,7 +330,7 @@ function PilotJourney({ steps }: { steps: UpgradePilot["steps"] }) {
               // A seat advance shows the upgrade arrow even when the aircraft changed
               // too, so the strip agrees with the tiles and the chart. Reading kind
               // alone drew a plain transition arrow over a real upgrade.
-              className={clsx("text-sm leading-none", s.upgrade ? "font-bold text-brand-gold" : s.kind === "transition" ? "font-bold text-brand-eden dark:text-[#8fb3d6]" : "text-brand-grey/50")}
+              className={clsx("text-sm leading-none", s.upgrade ? "font-bold text-brand-gold" : s.kind === "transition" ? "font-bold text-brand-eden dark:text-brand-edenOnDark" : "text-brand-grey/50")}
               aria-hidden
             >
               {s.upgrade ? "↗" : "→"}
@@ -250,7 +346,49 @@ function PilotJourney({ steps }: { steps: UpgradePilot["steps"] }) {
   );
 }
 
-type Bucket = "advanced" | "once" | "twice" | "thrice" | "captain" | "stayed";
+/**
+ * FOUR EXCLUSIVE BUCKETS, replacing six that overlapped.
+ *
+ * The old six were Advanced (>= 1), Once (= 1), Twice or more (>= 2), 3x or more
+ * (>= 3), Made Captain, and Stayed put — so a three-move pilot was counted in
+ * four of them, and the six summed to 89 against 60 tracked pilots. They render
+ * as bars scaled to the largest tile, which reads as a distribution, and a
+ * distribution whose parts sum to 148% of the whole is not one.
+ *
+ * These four partition the pool: every pilot is in exactly one, and they add up
+ * to `tracked`. "Made Captain" moved to the stat row, where a count that overlaps
+ * everything else belongs; "Advanced" is gone because the headline states it
+ * twice already.
+ */
+type Bucket = "m0" | "m1" | "m2" | "m3";
+
+/**
+ * Why a pilot with no moves has none.
+ *
+ * "Stayed put" was one tile holding four different situations and reading as a
+ * verdict on each person in it. A pilot six weeks in is not a pilot who stalled;
+ * a G450 captain at the top of the shared fleet has nowhere to go; and a captain
+ * who was offered a move and turned it down to stay home-based made a decision.
+ * Measured 2026-09-08: of 39 in the default view, 27 had not been here a year.
+ *
+ * `declined` IS NOT MEASURABLE TODAY and is shown anyway, empty and labelled as
+ * such. Nothing in the schema records whether a move was offered or asked for,
+ * so every declined move is currently sitting in `waiting` looking like a stall.
+ * Leaving the bucket out would hide that; showing it empty says what is missing.
+ */
+type StayReason = "tooNew" | "waiting" | "capped" | "declined";
+
+/**
+ * How long before a pilot could reasonably have moved.
+ *
+ * AN ASSUMPTION, NOT A COMPANY RULE — nobody has stated one, and it is flagged
+ * for him rather than buried. It is load-bearing in two places: the "within N yr"
+ * denominators and the not-yet-eligible split. One year is the smallest band the
+ * tenure filter offers and no pilot in the data has moved in under 8 months, so
+ * it does not currently exclude anybody who did move. Change this one constant
+ * if he sets a real number.
+ */
+const ELIGIBLE_AFTER_DAYS = 365;
 
 /**
  * The tenure ladder, 1 through 10 years.
@@ -265,19 +403,178 @@ type Bucket = "advanced" | "once" | "twice" | "thrice" | "captain" | "stayed";
  * leap years, which cannot move anybody between whole-year bands, and matching the
  * "/ 365" the tenure column already displays matters more than calendar precision -
  * a pilot shown as 5.0 yr must be inside the 5+ filter.
+ *
+ * A DESIGN REVIEW SUGGESTED REPLACING THE 10-OPTION SELECT with a range input or
+ * a cohort split. He asked for the ten options by name, so they ship; the control
+ * is his call and not one to change unasked.
  */
 const TENURE_YEARS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 const tenureDaysFor = (years: number) => years * 365;
 
-export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUpgrades"] }) {
-  const [scope, setScope] = useState<"all" | "active">("active");
+type Scope = "active" | "former" | "all";
+
+const SCOPE_LABEL: Record<Scope, string> = { active: "Active", former: "Former", all: "All" };
+
+// Selected = navy + gold; hover = gold glow. Both segmented controls used bare
+// navy with no gold at all, which is the one combination the locked design system
+// names for a selected state.
+const SEGMENT_ON = "bg-brand-lea text-white ring-1 ring-brand-gold";
+const SEGMENT_OFF = "text-brand-grey hover:text-brand-lea hover:shadow-glow dark:text-slate-400 dark:hover:text-slate-100";
+
+/**
+ * Filled vs target by aircraft type and seat, plus the upgrade bench behind the
+ * open captain seats.
+ *
+ * The single biggest gap in this report, raised unprompted by all four executive
+ * reviews on 2026-09-08: it could say 26 pilots upgraded and not that 7 seats are
+ * open. The numbers are the Crew org chart's roster (see lib/data/fleet-staffing),
+ * so the two pages cannot disagree.
+ */
+function StaffingPanel({
+  staffing,
+  bench,
+  benchIsMeaningful,
+  poolFilter
+}: {
+  staffing: FleetStaffing;
+  bench: Map<string, { ready: number; soon: number }>;
+  benchIsMeaningful: boolean;
+  poolFilter: "fractional" | "all";
+}) {
+  const types = staffing.types.filter((t) => (poolFilter === "all" ? true : t.pool === "SkyShare"));
+  if (types.length === 0) return null;
+  const totals = types.reduce(
+    (a, t) => ({ filled: a.filled + t.filled, training: a.training + t.training, open: a.open + t.open, target: a.target + t.target }),
+    { filled: 0, training: 0, open: 0, target: 0 }
+  );
+  const openPic = types.reduce((a, t) => a + (t.pic?.open ?? 0), 0);
+  const openSic = types.reduce((a, t) => a + (t.sic?.open ?? 0), 0);
+  const readyTotal = [...bench.values()].reduce((a, b) => a + b.ready, 0);
+  const seatCell = (s: { filled: number; training: number; open: number; target: number } | null) =>
+    s ? `${s.filled}/${s.target}${s.open ? ` · ${s.open} open` : ""}${s.training ? ` · ${s.training} training` : ""}` : "—";
+
+  return (
+    <div className="mt-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">
+          Staffing — filled against target
+        </div>
+        <Link href="/fleet/crew" className="text-[11px] font-semibold text-brand-eden transition hover:text-brand-lea dark:text-brand-edenOnDark">
+          Crew org chart &rarr;
+        </Link>
+      </div>
+      <p className="mt-1 text-[11px] text-brand-grey dark:text-slate-400">
+        From the Crew roster. Target is filled + in training + open; seats on hold are excluded, per the rule that a parked
+        seat never counts.
+      </p>
+
+      <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Filled", value: String(totals.filled), sub: `of ${totals.target} target` },
+          { label: "In training", value: String(totals.training), sub: "not yet on the line" },
+          { label: "Open seats", value: String(totals.open), sub: `${openPic} captain · ${openSic} first officer` },
+          {
+            label: "Fill rate",
+            value: totals.target ? `${Math.round((totals.filled / totals.target) * 100)}%` : "—",
+            sub: "filled / target"
+          }
+        ].map((c) => (
+          <div key={c.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
+            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{c.label}</div>
+            <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{c.value}</div>
+            <div className="text-[11px] text-brand-grey dark:text-slate-400">{c.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3 overflow-x-auto overflow-y-hidden">
+        <table className="w-full min-w-[560px] border-collapse text-left text-sm">
+          <thead className="bg-brand-cloudDancer/60 text-[11px] uppercase tracking-[0.14em] text-brand-grey dark:bg-white/5 dark:text-slate-400">
+            <tr>
+              <th className="px-3 py-2 font-bold">Aircraft</th>
+              <th className="px-3 py-2 font-bold">Captains</th>
+              <th className="px-3 py-2 font-bold">First officers</th>
+              <th className="px-3 py-2 text-right font-bold">Open</th>
+              <th className="px-3 py-2 text-right font-bold">Bench</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-brand-lea/10 dark:divide-white/10">
+            {types.map((t) => {
+              const b = t.aircraft ? bench.get(t.aircraft) : undefined;
+              return (
+                <tr key={t.key} className="row-wash">
+                  <td className="px-3 py-2">
+                    <span className="font-semibold text-brand-lea dark:text-slate-100">{t.name}</span>
+                    <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">
+                      {t.pool === "SkyShare" ? "Fractional" : `Managed · ${t.tails} ${t.tails === 1 ? "tail" : "tails"}`}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 tabular-nums text-brand-black/80 dark:text-slate-300">{seatCell(t.pic)}</td>
+                  <td className="px-3 py-2 tabular-nums text-brand-black/80 dark:text-slate-300">{seatCell(t.sic)}</td>
+                  <td className={clsx("px-3 py-2 text-right font-semibold tabular-nums", t.open > 0 ? "text-brand-gold" : "text-brand-grey dark:text-slate-400")}>
+                    {t.open}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums text-brand-grey dark:text-slate-400">
+                    {!benchIsMeaningful ? "—" : b ? `${b.ready} ready${b.soon ? ` · ${b.soon} soon` : ""}` : "0"}
+                  </td>
+                </tr>
+              );
+            })}
+            <tr className="bg-brand-cloudDancer/40 font-semibold dark:bg-white/5">
+              <td className="px-3 py-2 text-brand-lea dark:text-slate-100">Total</td>
+              <td className="px-3 py-2 tabular-nums text-brand-lea dark:text-slate-100">
+                {types.reduce((a, t) => a + (t.pic?.filled ?? 0), 0)}/{types.reduce((a, t) => a + (t.pic?.target ?? 0), 0)}
+              </td>
+              <td className="px-3 py-2 tabular-nums text-brand-lea dark:text-slate-100">
+                {types.reduce((a, t) => a + (t.sic?.filled ?? 0), 0)}/{types.reduce((a, t) => a + (t.sic?.target ?? 0), 0)}
+              </td>
+              <td className="px-3 py-2 text-right tabular-nums text-brand-lea dark:text-slate-100">{totals.open}</td>
+              <td className="px-3 py-2 text-right tabular-nums text-brand-lea dark:text-slate-100">{benchIsMeaningful ? readyTotal : "—"}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* The second-order hole. Asked for by the Chief Pilot and the Director of
+          Ops: every internal upgrade fills a left seat by emptying a right one,
+          and a staffing plan that stops at the first move is short by exactly the
+          number of moves it makes. */}
+      <p className="mt-2 text-[11px] text-brand-grey dark:text-slate-400">
+        {benchIsMeaningful ? (
+          <>
+            <span className="font-semibold text-brand-lea dark:text-slate-200">Bench</span> counts first officers already on
+            type with {Math.round(ELIGIBLE_AFTER_DAYS / 365)}+ {ELIGIBLE_AFTER_DAYS === 365 ? "year" : "years"} of tenure.
+            {openPic > 0
+              ? ` Filling all ${openPic} open captain ${openPic === 1 ? "seat" : "seats"} from inside would open ${openPic} first-officer ${openPic === 1 ? "seat" : "seats"} behind them, on top of the ${openSic} already open.`
+              : " No captain seats are open."}
+          </>
+        ) : (
+          <>Bench is only shown for active pilots — switch the scope back to Active to see who is ready now.</>
+        )}
+      </p>
+    </div>
+  );
+}
+
+export function PilotProgressions({
+  upgrades,
+  staffing
+}: {
+  upgrades: ReportsData["pilotUpgrades"];
+  /** Optional on purpose. The public share link does NOT pass it: open requisitions
+   *  and target headcounts are not something to put behind a token URL without
+   *  him deciding to. */
+  staffing?: FleetStaffing | null;
+}) {
+  const [scope, setScope] = useState<Scope>("active");
   // Default to the SkyShare / fractional shared pool — managed-account pilots
   // aren't on a promote-by-date path, so they're hidden until you toggle "All fleets".
   const [poolFilter, setPoolFilter] = useState<"fractional" | "all">("fractional");
   // 0 means no filter. Otherwise a day count from TENURE_YEARS above.
   const [tenure, setTenure] = useState<number>(0);
   const [year, setYear] = useState<number | "all">("all");
-  const [bucket, setBucket] = useState<Bucket>("advanced");
+  const [bucket, setBucket] = useState<Bucket>("m1");
+  const [stayReason, setStayReason] = useState<StayReason | "any">("any");
 
   // Every year we had pilots on staff, so any year's headcount is selectable.
   const years = useMemo(() => {
@@ -286,16 +583,22 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
     return [...set].sort((a, b) => b - a);
   }, [upgrades.pilots]);
 
+  // Which airframes the fleet actually crews, so a "possible next step" is a seat
+  // that exists. Empty when no roster is loaded, which nextRungs reads as no filter.
+  const crewed = useMemo(
+    () => new Set(poolFilter === "all" ? (staffing?.crewedAll ?? []) : (staffing?.crewedFractional ?? [])),
+    [staffing, poolFilter]
+  );
+
   // Recompute for scope + tenure + timeframe. Move counts respect the timeframe;
   // the "time to advance" stats stay career-wide for the filtered pilot group.
   const s = useMemo(() => {
     const inYear = (iso: string | null) => year === "all" || yearOf(iso) === year;
+    const inScope = (p: UpgradePilot) => (scope === "all" ? true : scope === "active" ? p.active : !p.active);
     // Chart pool = scope + tenure across all years. Denominator pool further
     // restricts to the selected year's headcount, so a year's % is measured
     // against that year's pilots, not today's.
-    const poolNoYear = upgrades.pilots.filter(
-      (p) => (scope === "active" ? p.active : true) && (poolFilter === "all" || !p.managed) && p.tenureDays >= tenure
-    );
+    const poolNoYear = upgrades.pilots.filter((p) => inScope(p) && (poolFilter === "all" || !p.managed) && p.tenureDays >= tenure);
     const pool = poolNoYear.filter((p) => year === "all" || p.employedYears.includes(year));
     const rows = pool.map((p) => {
       // ANY FIRST OFFICER TO CAPTAIN CHANGE IS AN UPGRADE — his rule, 2026-09-08.
@@ -309,6 +612,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
       // than things actually happened to them.
       let mv = 0;
       let capt = 0;
+      let lat = 0;
       for (let i = 1; i < p.steps.length; i++) {
         const step = p.steps[i];
         if (!inYear(step.date)) continue;
@@ -319,16 +623,47 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
         if (step.seatUp) capt++;
         if (isTransition) tr++;
         if (step.upgrade || isTransition) mv++;
+        // A LATERAL IS NOT NOTHING. Captain to Lead Captain, or a move into the
+        // chief pilot's office, is classified lateral and counts as no move — so
+        // the people running the fleet showed as zero-move "stayed put" pilots.
+        // Counted here so the roster can at least say a role change happened.
+        else if (step.kind === "lateral") lat++;
       }
-      return { p, up, tr, moves: mv, capt };
+      const cur = lastFlyingStep(p);
+      const rank = ladderRank(cur?.aircraft ?? null);
+      // Why this pilot has no moves. Only meaningful when moves === 0.
+      //
+      // NOWHERE-LEFT-TO-GO IS TESTED FIRST, and the order is the whole point. A
+      // pilot can be both new AND capped — a G450 captain seven months in is one
+      // — and "under a year" is a fact that expires while "nowhere left to go" is
+      // structural. Testing tenure first would file him as too new today and then
+      // silently promote him to "eligible, waiting" in five months, which is the
+      // exact verdict this split exists to stop the report making.
+      const reason: StayReason =
+        nextSteps(cur?.seat ?? null, cur?.aircraft ?? null, crewed).length === 0
+          ? "capped"
+          : p.tenureDays < ELIGIBLE_AFTER_DAYS
+            ? "tooNew"
+            : "waiting";
+      return { p, up, tr, moves: mv, capt, lat, reason, rank, cur };
     });
     const advanced = rows.filter((r) => r.moves >= 1);
     const tracked = pool.length;
-    const avg = (xs: (number | null)[]) => {
-      const v = xs.filter((n): n is number => n !== null);
-      return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null;
+    const stayedRows = rows.filter((r) => r.moves === 0);
+
+    // BOTH "within N yr" FIGURES HAD THE WRONG DENOMINATOR. The numerator counts
+    // pilots who moved within N years; the denominator was every pilot in scope,
+    // including someone hired last month who could not possibly have qualified.
+    // A hiring wave therefore pushed the number DOWN while nothing about anybody's
+    // progression changed. Measured 2026-09-08 in the default view: 27 of the 60
+    // had not been here a year, so "advanced within 1 yr" read 8% when the honest
+    // figure over the 33 who had the chance is 15%.
+    const withinPct = (days: number) => {
+      const eligible = pool.filter((p) => p.tenureDays >= days);
+      const moved = eligible.filter((p) => p.daysToFirstMove !== null && p.daysToFirstMove <= days).length;
+      return { pct: eligible.length ? Math.round((moved / eligible.length) * 100) : 0, moved, of: eligible.length };
     };
-    const within = (days: number) => advanced.filter((r) => r.p.daysToFirstMove !== null && r.p.daysToFirstMove <= days).length;
+
     const paths = new Map<string, number>();
     for (const p of pool)
       for (let i = 1; i < p.steps.length; i++) {
@@ -336,6 +671,30 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
         const cur = p.steps[i].aircraft;
         if (p.steps[i].kind === "transition" && inYear(p.steps[i].date) && prev && cur) paths.set(`${prev} → ${cur}`, (paths.get(`${prev} → ${cur}`) ?? 0) + 1);
       }
+
+    // Leavers. The report defaulted to active-only and had no former scope at all,
+    // so the question two of the executive reviews actually asked — why do pilots
+    // leave before upgrading — could not be put to it.
+    const formerRows = rows.filter((r) => !r.p.active);
+    const leavers = formerRows.length
+      ? {
+          count: formerRows.length,
+          neverUpgraded: formerRows.filter((r) => r.p.daysToFirstUpgrade === null).length,
+          medianTenure: median(formerRows.map((r) => r.p.tenureDays))
+        }
+      : null;
+
+    // The upgrade bench: first officers already on type. Only meaningful for
+    // pilots who are still here.
+    const bench = new Map<string, { ready: number; soon: number }>();
+    for (const r of rows) {
+      if (!r.p.active || r.cur?.seat !== "SIC" || !r.cur.aircraft) continue;
+      const b = bench.get(r.cur.aircraft) ?? { ready: 0, soon: 0 };
+      if (r.p.tenureDays >= ELIGIBLE_AFTER_DAYS) b.ready += 1;
+      else b.soon += 1;
+      bench.set(r.cur.aircraft, b);
+    }
+
     return {
       pool,
       poolNoYear,
@@ -345,67 +704,102 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
       pctAdvanced: tracked ? Math.round((advanced.length / tracked) * 100) : 0,
       upgradesTotal: rows.reduce((a, r) => a + r.up, 0),
       transitionsTotal: rows.reduce((a, r) => a + r.tr, 0),
-      // r.up is now the seat advance, so a First Officer who upgraded onto a
-      // DIFFERENT type is counted. That was the miscount.
       madeCaptain: rows.filter((r) => r.capt >= 1).length,
-      once: rows.filter((r) => r.moves === 1).length,
-      twice: rows.filter((r) => r.moves >= 2).length,
-      thrice: rows.filter((r) => r.moves >= 3).length,
-      stayed: tracked - advanced.length, // haven't upgraded or transitioned
+      // Exclusive, and they sum to tracked. See the Bucket comment.
+      m0: stayedRows.length,
+      m1: rows.filter((r) => r.moves === 1).length,
+      m2: rows.filter((r) => r.moves === 2).length,
+      m3: rows.filter((r) => r.moves >= 3).length,
+      stayBreakdown: {
+        tooNew: stayedRows.filter((r) => r.reason === "tooNew").length,
+        waiting: stayedRows.filter((r) => r.reason === "waiting").length,
+        capped: stayedRows.filter((r) => r.reason === "capped").length,
+        declined: 0
+      },
+      stayLaterals: stayedRows.filter((r) => r.lat > 0).length,
 
-      avgToMove: avg(advanced.map((r) => r.p.daysToFirstMove)),
-      avgToUpgrade: avg(pool.map((p) => p.daysToFirstUpgrade)),
-      avgToTransition: avg(pool.map((p) => p.daysToFirstTransition)),
-      pct1yr: tracked ? Math.round((within(365) / tracked) * 100) : 0,
-      pct2yr: tracked ? Math.round((within(730) / tracked) * 100) : 0,
+      // MEDIAN, NOT MEAN, and reported with what it leaves out. The old average
+      // dropped nulls, so pilots who never upgraded were excluded from the number
+      // measuring how long an upgrade takes — which means it IMPROVED as people
+      // stalled. Both pilot reviewers asked for a median independently.
+      medToMove: median(pool.map((p) => p.daysToFirstMove)),
+      medToUpgrade: median(pool.map((p) => p.daysToFirstUpgrade)),
+      medToTransition: median(pool.map((p) => p.daysToFirstTransition)),
+      movedCount: pool.filter((p) => p.daysToFirstMove !== null).length,
+      upgradedCount: pool.filter((p) => p.daysToFirstUpgrade !== null).length,
+      transitionedCount: pool.filter((p) => p.daysToFirstTransition !== null).length,
+      waitingMedianTenure: median(pool.filter((p) => p.daysToFirstUpgrade === null).map((p) => p.tenureDays)),
+      within1: withinPct(365),
+      within2: withinPct(730),
+      leavers,
+      bench,
       topPaths: [...paths.entries()].map(([path, count]) => ({ path, count })).sort((a, b) => b.count - a.count).slice(0, 6)
     };
-  }, [upgrades.pilots, scope, poolFilter, tenure, year]);
+  }, [upgrades.pilots, scope, poolFilter, tenure, year, crewed]);
 
-  const tiles: { key: Bucket; label: string; value: number; hint?: string }[] = [
-    { key: "advanced", label: "Advanced", value: s.advanced, hint: "≥ 1 move" },
-    { key: "once", label: "Once", value: s.once, hint: "1 move" },
-    { key: "twice", label: "Twice or more", value: s.twice, hint: "≥ 2 moves" },
-    { key: "thrice", label: "3× or more", value: s.thrice, hint: "≥ 3 moves" },
-    { key: "captain", label: "Made Captain", value: s.madeCaptain, hint: "FO → Captain" },
-    { key: "stayed", label: "Stayed put", value: s.stayed, hint: "no moves yet" }
+  const tiles: { key: Bucket; label: string; value: number; hint: string }[] = [
+    { key: "m0", label: "No moves yet", value: s.m0, hint: "0" },
+    { key: "m1", label: "One move", value: s.m1, hint: "1" },
+    { key: "m2", label: "Two moves", value: s.m2, hint: "2" },
+    { key: "m3", label: "Three or more", value: s.m3, hint: "3+" }
   ];
-  const maxTile = Math.max(...tiles.map((t) => t.value), 1);
 
-  const bucketTest = (r: { moves: number; up: number; capt: number }) =>
-    bucket === "once"
-      ? r.moves === 1
-      : bucket === "twice"
-        ? r.moves >= 2
-        : bucket === "thrice"
-          ? r.moves >= 3
-          : bucket === "captain"
-            ? r.capt >= 1
-            : bucket === "stayed"
-              ? r.moves === 0
-              : r.moves >= 1;
+  const bucketTest = (r: { moves: number; reason: StayReason }) =>
+    bucket === "m0"
+      ? r.moves === 0 && (stayReason === "any" || stayReason === r.reason)
+      : bucket === "m1"
+        ? r.moves === 1
+        : bucket === "m2"
+          ? r.moves === 2
+          : r.moves >= 3;
   const filtered = s.rows.filter(bucketTest);
   const activeTile = tiles.find((t) => t.key === bucket);
   // Derived, so a new band cannot be added to the dropdown and forgotten here -
   // which is exactly what the old three-way ternary invited.
   const tenureLabel = tenure > 0 ? `${Math.round(tenure / 365)}+ yr` : null;
   const poolWord = poolFilter === "fractional" ? "fractional " : "";
+  const scopeWord = scope === "active" ? "active " : scope === "former" ? "former " : "all ";
   const denomLabel =
     (year === "all"
-      ? `${scope === "active" ? "active " : "all "}${poolWord}pilots`
-      : `${poolWord}pilots on staff in ${year}${scope === "active" ? " (still here)" : ""}`) + (tenureLabel ? ` with ${tenureLabel} tenure` : "");
+      ? `${scopeWord}${poolWord}pilots`
+      : `${poolWord}pilots on staff in ${year}${scope === "active" ? " (still here)" : scope === "former" ? " (since left)" : ""}`) +
+    (tenureLabel ? ` with ${tenureLabel} tenure` : "");
+
+  const STAY_LABEL: Record<StayReason, string> = {
+    tooNew: `Under ${Math.round(ELIGIBLE_AFTER_DAYS / 365)} yr`,
+    waiting: "Eligible, waiting",
+    capped: "Nowhere left to go",
+    declined: "Declined a move"
+  };
 
   // Download the current roster (name, position, tenure, START DATE for validating
   // timeframe, moves, and suggested next steps) as CSV.
   const downloadRoster = () => {
     const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-    const header = ["Name", "Current position", "Seat", "Aircraft", "Tenure (yr)", "Start date", "Upgrades", "Transitions", "Possible next steps"];
-    const lines = filtered.map(({ p, up, tr }) => {
+    // Full years is the STAR COUNT — rehire-aware whole anniversary years — and it
+    // is a different number from the decimal tenure beside it, which measures the
+    // span from the first role. Both are exported and both are labelled, because a
+    // spreadsheet with two tenure columns and no explanation is worse than one.
+    const header = ["Name", "Current position", "Seat", "Aircraft", "Full years (service)", "Tenure (yr, from first role)", "Start date", "Left on", "Upgrades", "Transitions", "Why no move", "Possible next steps"];
+    const lines = filtered.map(({ p, up, tr, moves, reason }) => {
       const cur = lastFlyingStep(p);
-      const steps = nextSteps(cur?.seat ?? null, cur?.aircraft ?? null)
+      const steps = nextSteps(cur?.seat ?? null, cur?.aircraft ?? null, crewed)
         .map((sg) => (sg.kind === "upgrade" ? `Upgrade: ${sg.label}` : `To ${sg.label}`))
         .join("; ");
-      return [p.name, cur?.title ?? "", cur?.seat ?? "", cur?.aircraft ?? "", (p.tenureDays / 365).toFixed(1), p.startDate?.slice(0, 10) ?? "", String(up), String(tr), steps];
+      return [
+        p.name,
+        cur?.title ?? "",
+        cur?.seat ?? "",
+        cur?.aircraft ?? "",
+        String(p.tenureYears),
+        (p.tenureDays / 365).toFixed(1),
+        p.startDate?.slice(0, 10) ?? "",
+        p.departedOn?.slice(0, 10) ?? "",
+        String(up),
+        String(tr),
+        moves === 0 ? STAY_LABEL[reason] : "",
+        steps
+      ];
     });
     const csv = [header, ...lines].map((r) => r.map((c) => esc(String(c))).join(",")).join("\r\n");
     const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8" });
@@ -425,39 +819,36 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Fleet progression</p>
           <h2 className="text-xl font-semibold text-brand-lea dark:text-slate-100">Upgrades &amp; transitions</h2>
+          {/* THIS SENTENCE HAS BEEN WRONG TWICE, both times because the rule moved
+              and the copy did not — first when it said "on the same aircraft", then
+              when it named only the seat rule and left out the larger-aircraft one.
+              It has to state BOTH halves or the tiles below cannot be reconciled.
+              It ALSO used to print the whole ten-rung ladder inline, which was
+              accurate and ran to four lines; the ladder now sits in the title
+              attribute, where it is one hover away instead of in everybody's way. */}
           <p className="mt-1 max-w-2xl text-sm text-brand-grey dark:text-slate-400">
             {s.advanced} of {s.tracked} {denomLabel} ({s.pctAdvanced}%) upgraded or transitioned{year === "all" ? "" : ` in ${year}`}. An{" "}
-            {/* This sentence said "on the same aircraft" until 2026-09-08 and was the
-                honest description of a miscount: an upgrade only counted when the type
-                did not change. His rule is that ANY FO to Captain change is an upgrade,
-                so it now says so — and says plainly that one step can be both, which is
-                the only way the counts below make sense (upgrades + transitions is
-                larger than moves). */}
-            {/* THIS SENTENCE HAS NOW BEEN WRONG TWICE IN ONE DAY, both times because the
-                rule moved and the copy did not — first when it still said "on the same
-                aircraft", then when it named only the seat rule and left out the
-                larger-aircraft one, which is 19 of the 26 upgrades in the default view.
-                It has to state BOTH halves of the rule and the tie-break, or the tiles
-                below cannot be reconciled by a reader. */}
-            <span className="font-medium text-brand-eden dark:text-slate-300">upgrade</span> is any FO → Captain change,
-            or a same-seat move to a larger aircraft on the{" "}
-            {SKYSHARE_LADDER.join(" → ")} ladder; a{" "}
-            <span className="font-medium text-brand-eden dark:text-slate-300">transition</span> is a move to a new
-            aircraft — including a step down a seat. One step can be both an upgrade and a transition, and counts once
-            as a move.
+            <span className="font-medium text-brand-eden dark:text-slate-300">upgrade</span> is any FO &rarr; Captain change, or a
+            same-seat move{" "}
+            <span className="cursor-help underline decoration-dotted underline-offset-2" title={SKYSHARE_LADDER.join(" → ")}>
+              up the fleet ladder
+            </span>
+            ; a <span className="font-medium text-brand-eden dark:text-slate-300">transition</span> is a move to a new aircraft.
+            One step can be both, and counts once as a move.
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <div className="inline-flex rounded border border-brand-lea/15 p-0.5 text-xs font-semibold dark:border-white/10">
-            {(["active", "all"] as const).map((v) => (
+            {(["active", "former", "all"] as const).map((v) => (
               <button
                 key={v}
                 type="button"
                 onClick={() => setScope(v)}
                 aria-pressed={scope === v}
-                className={clsx("rounded px-3 py-1.5 transition", scope === v ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400")}
+                title={v === "former" ? "Pilots who have left — the only way to ask why people leave before upgrading" : undefined}
+                className={clsx("rounded px-3 py-1.5 transition", scope === v ? SEGMENT_ON : SEGMENT_OFF)}
               >
-                {v === "active" ? "Active pilots" : "All pilots"}
+                {SCOPE_LABEL[v]}
               </button>
             ))}
           </div>
@@ -469,7 +860,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
                 onClick={() => setPoolFilter(v)}
                 aria-pressed={poolFilter === v}
                 title={v === "fractional" ? "SkyShare / fractional shared pool only" : "Include managed-account pilots"}
-                className={clsx("rounded px-3 py-1.5 transition", poolFilter === v ? "bg-brand-lea text-white" : "text-brand-grey hover:text-brand-lea dark:text-slate-400")}
+                className={clsx("rounded px-3 py-1.5 transition", poolFilter === v ? SEGMENT_ON : SEGMENT_OFF)}
               >
                 {v === "fractional" ? "Fractional" : "All fleets"}
               </button>
@@ -479,7 +870,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
             value={tenure}
             onChange={(e) => setTenure(Number(e.target.value))}
             aria-label="Filter by tenure"
-            className="rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
+            className="rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-brand-field dark:text-slate-100"
           >
             <option value={0}>Any tenure</option>
             {TENURE_YEARS.map((y) => (
@@ -492,7 +883,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
             value={year}
             onChange={(e) => setYear(e.target.value === "all" ? "all" : Number(e.target.value))}
             aria-label="Filter by year"
-            className="rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
+            className="rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-brand-field dark:text-slate-100"
           >
             <option value="all">All time</option>
             {years.map((y) => (
@@ -509,7 +900,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
       ) : (
         <>
           {/* Headline — the shareable "since hire" figure */}
-          <div className="mt-4 rounded bg-brand-lea p-4 text-white">
+          <div className="mt-4 rounded bg-brand-lea p-4 text-white dark:ring-1 dark:ring-brand-gold/25">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="text-3xl font-bold text-brand-gold">{s.pctAdvanced}%</span>
               <span className="text-sm font-medium">
@@ -526,7 +917,11 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { label: "Pilots", value: String(s.tracked), sub: year === "all" ? "tracked" : `on staff in ${year}` },
-              { label: "Avg time to advance", value: fmtSpan(s.avgToMove), sub: "hire → first move" },
+              {
+                label: "Median time to advance",
+                value: fmtSpan(s.medToMove),
+                sub: `${s.movedCount} of ${s.tracked} moved · ${s.tracked - s.movedCount} still waiting`
+              },
               { label: "Upgrades", value: String(s.upgradesTotal), sub: `${s.madeCaptain} made Captain` },
               { label: "Transitions", value: String(s.transitionsTotal), sub: "aircraft changes" }
             ].map((c) => (
@@ -538,40 +933,91 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
             ))}
           </div>
 
-          {/* Secondary timing */}
+          {/* Secondary timing. Every one of these now states its own denominator,
+              because all four used to hide it: the medians exclude pilots who never
+              advanced, and the percentages used to divide by pilots who had not been
+              here long enough to qualify. */}
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { label: "Avg to first upgrade", value: fmtSpan(s.avgToUpgrade) },
-              { label: "Avg to first transition", value: fmtSpan(s.avgToTransition) },
-              { label: "Advanced within 1 yr", value: `${s.pct1yr}%` },
-              { label: "Advanced within 2 yr", value: `${s.pct2yr}%` }
+              {
+                label: "Median to first upgrade",
+                value: fmtSpan(s.medToUpgrade),
+                sub: `${s.upgradedCount} of ${s.tracked}; ${s.tracked - s.upgradedCount} waiting, median ${fmtSpan(s.waitingMedianTenure)} in`
+              },
+              {
+                label: "Median to first transition",
+                value: fmtSpan(s.medToTransition),
+                sub: `${s.transitionedCount} of ${s.tracked} changed aircraft`
+              },
+              { label: "Advanced within 1 yr", value: `${s.within1.pct}%`, sub: `${s.within1.moved} of the ${s.within1.of} here a year or more` },
+              { label: "Advanced within 2 yr", value: `${s.within2.pct}%`, sub: `${s.within2.moved} of the ${s.within2.of} here two years or more` }
             ].map((c) => (
               <div key={c.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
                 <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{c.label}</div>
                 <div className="mt-1 text-xl font-semibold text-brand-lea dark:text-slate-100">{c.value}</div>
+                <div className="text-[11px] text-brand-grey dark:text-slate-400">{c.sub}</div>
               </div>
             ))}
           </div>
+
+          {/* Leavers — only when the scope actually contains any. */}
+          {s.leavers && (
+            <div className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 px-3 py-2 text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+              <span className="font-semibold text-brand-lea dark:text-slate-200">{s.leavers.count} former pilots</span> in this view ·{" "}
+              {s.leavers.neverUpgraded} left without ever upgrading · median tenure at departure {fmtSpan(s.leavers.medianTenure)}.
+            </div>
+          )}
+
+          {/* What this report cannot see. An absence stated out loud, because two
+              reviews asked why pilots leave before upgrading and some leavers are
+              not in the dataset at all — a report that drops them silently answers
+              that question wrongly rather than not answering it. */}
+          {upgrades.excluded.total > 0 && (
+            <p className="mt-2 text-[11px] text-brand-grey dark:text-slate-400">
+              Not shown: {upgrades.excluded.total} pilot-titled {upgrades.excluded.total === 1 ? "employee" : "employees"}
+              {upgrades.excluded.former === upgrades.excluded.total
+                ? ", all of them former,"
+                : upgrades.excluded.former > 0
+                  ? ` (${upgrades.excluded.former} of them former)`
+                  : ""}{" "}
+              whose records state no seat — a title of just &quot;Pilot&quot;, with no aircraft and no fleet position, cannot be
+              classified as a Captain or a First Officer. Fixing the titles on those profiles brings them in.
+            </p>
+          )}
 
           {/* The climb graph */}
           <div className="mt-5 rounded border border-brand-lea/10 bg-gradient-to-b from-brand-cloudDancer/40 to-transparent p-4 dark:border-white/10 dark:from-white/5">
             <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">
               Cumulative upgrades + transitions over time
+              {year !== "all" ? <span className="ml-1 font-semibold text-brand-gold">· {year} marked</span> : null}
             </div>
             <div className="mt-2">
-              <ClimbChart pilots={s.poolNoYear} />
+              {/* s.pool, NOT s.poolNoYear. The chart was passed the year-agnostic
+                  pool, so selecting 2023 changed every tile on the page and left the
+                  chart identical — two panels over one dataset giving two answers.
+                  It now follows the same headcount the tiles do, and marks the year. */}
+              <ClimbChart pilots={s.pool} highlightYear={year === "all" ? null : year} />
             </div>
           </div>
 
-          {/* Clickable buckets */}
-          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          {/* Staffing — filled vs target. Absent from this report entirely until
+              2026-09-08 and asked for by every executive review of it. */}
+          {staffing ? (
+            <StaffingPanel staffing={staffing} bench={s.bench} benchIsMeaningful={scope !== "former"} poolFilter={poolFilter} />
+          ) : null}
+
+          {/* Clickable buckets — exclusive, and they sum to the tracked count. */}
+          <div className="mt-5 grid grid-cols-2 gap-2 lg:grid-cols-4">
             {tiles.map((t) => {
               const active = t.key === bucket;
               return (
                 <button
                   key={t.key}
                   type="button"
-                  onClick={() => setBucket(t.key)}
+                  onClick={() => {
+                    setBucket(t.key);
+                    if (t.key !== "m0") setStayReason("any");
+                  }}
                   aria-pressed={active}
                   className={clsx(
                     "group flex flex-col rounded border p-3 text-left transition",
@@ -584,14 +1030,59 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
                     {t.value}
                   </span>
                   <span className={clsx("text-xs font-semibold", active ? "text-white" : "text-brand-lea dark:text-slate-200")}>{t.label}</span>
-                  <span className={clsx("text-[10px]", active ? "text-white/70" : "text-brand-grey dark:text-slate-400")}>{t.hint}</span>
-                  <span className={clsx("mt-2 h-1 rounded-full", active ? "bg-brand-gold/30" : "bg-brand-gold/20")}>
-                    <span className="block h-1 rounded-full bg-brand-gold" style={{ width: `${Math.max(8, (t.value / maxTile) * 100)}%` }} />
+                  <span className={clsx("text-[10px]", active ? "text-white/70" : "text-brand-grey dark:text-slate-400")}>
+                    {t.hint} · {s.tracked ? Math.round((t.value / s.tracked) * 100) : 0}%
+                  </span>
+                  {/* Scaled to the WHOLE, not to the biggest tile. The old bars were
+                      scaled to maxTile, which made four overlapping counts look like
+                      a distribution; these are four exclusive shares of one pool, so
+                      the bar can honestly be read as a proportion. */}
+                  <span className={clsx("mt-2 h-1 rounded", active ? "bg-brand-gold/30" : "bg-brand-gold/20")}>
+                    <span className="block h-1 rounded bg-brand-gold" style={{ width: `${s.tracked ? Math.max(2, (t.value / s.tracked) * 100) : 0}%` }} />
                   </span>
                 </button>
               );
             })}
           </div>
+
+          {/* Why the no-move pilots have no moves. One tile used to hold four
+              different situations and read as a verdict on each person in it. */}
+          {bucket === "m0" && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+              <span className="text-brand-grey dark:text-slate-400">Because:</span>
+              {(["any", "tooNew", "waiting", "capped", "declined"] as const).map((k) => {
+                const count = k === "any" ? s.m0 : s.stayBreakdown[k];
+                const on = stayReason === k;
+                const dead = k === "declined";
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => !dead && setStayReason(k)}
+                    disabled={dead}
+                    aria-pressed={on}
+                    title={dead ? "Not recorded anywhere — nothing captures whether a move was offered or turned down" : undefined}
+                    className={clsx(
+                      "rounded border px-2 py-0.5 font-semibold transition",
+                      dead
+                        ? "cursor-not-allowed border-dashed border-brand-lea/15 text-brand-grey/60 dark:border-white/10 dark:text-slate-500"
+                        : on
+                          ? "border-brand-gold bg-brand-lea text-white"
+                          : "border-brand-lea/15 text-brand-lea hover:border-brand-gold/50 hover:shadow-glow dark:border-white/10 dark:text-slate-200"
+                    )}
+                  >
+                    {k === "any" ? "All" : STAY_LABEL[k]} {count}
+                    {dead ? " · not recorded" : ""}
+                  </button>
+                );
+              })}
+              {s.stayLaterals > 0 && (
+                <span className="text-brand-grey dark:text-slate-400">
+                  · {s.stayLaterals} of them changed role sideways (a lateral is not counted as a move)
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Roster drill-down */}
           <div className="mt-4">
@@ -604,7 +1095,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
                   <button
                     type="button"
                     onClick={downloadRoster}
-                    className="inline-flex items-center gap-1 rounded border border-brand-lea/20 px-2 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
+                    className="inline-flex items-center gap-1 rounded border border-brand-lea/20 px-2 py-1 text-[11px] font-semibold text-brand-lea transition hover:border-brand-gold/50 hover:shadow-glow dark:border-white/10 dark:text-slate-200"
                   >
                     <Download className="h-3 w-3" /> Download CSV
                   </button>
@@ -618,22 +1109,45 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
                   No pilots in this group yet.
                 </p>
               ) : (
-                filtered.map(({ p, up, tr }) => {
-                  // Stayed-put pilots: show current position, tenure, and where they could go next.
-                  if (bucket === "stayed") {
+                filtered.map(({ p, up, tr, moves, lat, reason }) => {
+                  // No-move pilots: show current position, tenure, WHY they have no
+                  // move, and where they could go next.
+                  if (moves === 0) {
                     const cur = lastFlyingStep(p);
-                    const suggestions = nextSteps(cur?.seat ?? null, cur?.aircraft ?? null);
+                    const suggestions = nextSteps(cur?.seat ?? null, cur?.aircraft ?? null, crewed);
                     return (
-                      <div key={p.hireId} className="rounded border border-brand-lea/10 bg-white p-3 transition hover:border-brand-gold/40 dark:border-white/10 dark:bg-white/5">
+                      <div key={p.hireId} className="rounded border border-brand-lea/10 bg-white p-3 transition hover:border-brand-gold/40 hover:shadow-glow dark:border-white/10 dark:bg-white/5">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <Link
-                            href={`/people/${p.hireId}`}
-                            className="font-semibold text-brand-lea transition hover:text-brand-eden hover:drop-shadow-[0_0_6px_rgba(234,170,0,0.5)] dark:text-slate-100 dark:hover:text-[#8fb3d6]"
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Link
+                              href={`/people/${p.hireId}`}
+                              className="font-semibold text-brand-lea transition hover:text-brand-eden hover:drop-shadow-[0_0_6px_rgba(234,170,0,0.5)] dark:text-slate-100 dark:hover:text-brand-edenOnDark"
+                            >
+                              {p.name}
+                            </Link>
+                            <TenureStars years={p.tenureYears} />
+                            <span className="rounded border border-brand-lea/15 px-1.5 py-0.5 text-[10px] font-semibold text-brand-grey dark:border-white/10 dark:text-slate-400">
+                              {STAY_LABEL[reason]}
+                            </span>
+                            {lat > 0 && (
+                              <span className="rounded bg-brand-eden/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand-eden dark:bg-white/5 dark:text-slate-300">
+                                {lat} lateral role change{lat === 1 ? "" : "s"}
+                              </span>
+                            )}
+                          </div>
+                          {/* "since hire", not "tenure", because it is measured from
+                              the first role and the gold stars beside the name are
+                              measured from continuous SERVICE. They are two clocks and
+                              they disagree for anybody rehired after a gap longer than
+                              three months — one pilot in the default view reads 3.4 yr
+                              here and has no stars, which is right under the rehire rule
+                              and would read as a bug if both said "tenure". */}
+                          <span
+                            className="text-[11px] font-medium text-brand-grey dark:text-slate-400"
+                            title="Measured from their first role. The gold stars count whole years of continuous service, which restarts after a break longer than three months."
                           >
-                            {p.name}
-                          </Link>
-                          <span className="text-[11px] font-medium text-brand-grey dark:text-slate-400">
-                            {cur?.title ?? "—"} · <span className="text-brand-lea dark:text-slate-200">{fmtSpan(p.tenureDays)}</span> tenure
+                            {cur?.title ?? "—"} · <span className="text-brand-lea dark:text-slate-200">{fmtSpan(p.tenureDays)}</span> since hire
+                            {p.departedOn ? <> · left {fmtDate(p.departedOn)}</> : null}
                           </span>
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
@@ -665,14 +1179,17 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
                     );
                   }
                   return (
-                  <div key={p.hireId} className="rounded border border-brand-lea/10 bg-white p-3 transition hover:border-brand-gold/40 dark:border-white/10 dark:bg-white/5">
+                  <div key={p.hireId} className="rounded border border-brand-lea/10 bg-white p-3 transition hover:border-brand-gold/40 hover:shadow-glow dark:border-white/10 dark:bg-white/5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <Link
-                        href={`/people/${p.hireId}`}
-                        className="font-semibold text-brand-lea transition hover:text-brand-eden hover:drop-shadow-[0_0_6px_rgba(234,170,0,0.5)] dark:text-slate-100 dark:hover:text-[#8fb3d6]"
-                      >
-                        {p.name}
-                      </Link>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <Link
+                          href={`/people/${p.hireId}`}
+                          className="font-semibold text-brand-lea transition hover:text-brand-eden hover:drop-shadow-[0_0_6px_rgba(234,170,0,0.5)] dark:text-slate-100 dark:hover:text-brand-edenOnDark"
+                        >
+                          {p.name}
+                        </Link>
+                        <TenureStars years={p.tenureYears} />
+                      </div>
                       <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                         {up > 0 && (
                           <span className="rounded bg-brand-gold/20 px-2 py-0.5 font-semibold text-brand-lea dark:text-brand-gold">
@@ -685,6 +1202,7 @@ export function PilotProgressions({ upgrades }: { upgrades: ReportsData["pilotUp
                           </span>
                         )}
                         <span className="text-brand-grey dark:text-slate-400">{fmtSpan(p.daysToFirstMove)} to 1st</span>
+                        {p.departedOn ? <span className="text-brand-grey dark:text-slate-400">· left {fmtDate(p.departedOn)}</span> : null}
                       </div>
                     </div>
                     <div className="mt-2">
@@ -760,7 +1278,7 @@ function TravelSpend({ travel }: { travel: ReportsData["travelSpend"] }) {
       {travel.totalSpend > 0 && (
         <div className="mt-4">
           <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Where the money goes</div>
-          <div className="mt-2 flex h-3 w-full overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/10">
+          <div className="mt-2 flex h-3 w-full overflow-hidden rounded bg-brand-cloudDancer dark:bg-white/10">
             <div className="h-full bg-emerald-500" style={{ width: `${hiredPct}%` }} title={`Hired travelers · ${formatUsd(travel.hiredSpend)}`} />
             <div className="h-full bg-amber-400" style={{ width: `${notHiredPct}%` }} title={`Not hired · ${formatUsd(travel.notHiredSpend)}`} />
             {otherPct > 0 && <div className="h-full bg-brand-eden/40" style={{ width: `${otherPct}%` }} title="Unassigned" />}
@@ -799,8 +1317,8 @@ function TravelSpend({ travel }: { travel: ReportsData["travelSpend"] }) {
                       </span>
                       <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">{formatUsd(p.spend)}</span>
                     </div>
-                    <div className="mt-2 h-1.5 rounded-full bg-brand-lea/5 dark:bg-white/10">
-                      <div className="h-1.5 rounded-full" style={{ width: `${Math.max(6, (p.spend / maxPurpose) * 100)}%`, backgroundColor: color }} />
+                    <div className="mt-2 h-1.5 rounded bg-brand-lea/5 dark:bg-white/10">
+                      <div className="h-1.5 rounded" style={{ width: `${Math.max(6, (p.spend / maxPurpose) * 100)}%`, backgroundColor: color }} />
                     </div>
                   </button>
 
@@ -816,7 +1334,7 @@ function TravelSpend({ travel }: { travel: ReportsData["travelSpend"] }) {
                                 {t.travelerHref ? (
                                   <Link
                                     href={t.travelerHref}
-                                    className="text-sm font-semibold text-brand-lea transition hover:text-brand-eden hover:drop-shadow-[0_0_6px_rgba(234,170,0,0.5)] dark:text-slate-100 dark:hover:text-[#8fb3d6]"
+                                    className="text-sm font-semibold text-brand-lea transition hover:text-brand-eden hover:drop-shadow-[0_0_6px_rgba(234,170,0,0.5)] dark:text-slate-100 dark:hover:text-brand-edenOnDark"
                                   >
                                     {t.travelerName}
                                   </Link>
@@ -888,7 +1406,9 @@ function DocumentCurrency({ dc }: { dc: ReportsData["documentCurrency"] }) {
       </div>
 
       {dc.upcoming.length > 0 ? (
-        <div className="mt-4 overflow-x-auto">
+        // overflow-y-hidden pins the other axis — setting overflow-x alone makes
+        // overflow-y compute to auto and quietly adds a second scrollbar.
+        <div className="mt-4 overflow-x-auto overflow-y-hidden">
           <table className="w-full min-w-[560px] border-collapse text-left text-sm">
             <thead className="bg-brand-cloudDancer/60 text-[11px] uppercase tracking-[0.14em] text-brand-grey dark:bg-white/5 dark:text-slate-400">
               <tr>
@@ -904,7 +1424,7 @@ function DocumentCurrency({ dc }: { dc: ReportsData["documentCurrency"] }) {
                 return (
                   <tr key={i} className="row-wash">
                     <td className="px-3 py-2">
-                      <Link href={`/candidates/${item.candidateId}`} className="font-semibold text-brand-lea transition hover:text-brand-eden dark:text-slate-100 dark:hover:text-[#8fb3d6]">
+                      <Link href={`/candidates/${item.candidateId}`} className="font-semibold text-brand-lea transition hover:text-brand-eden dark:text-slate-100 dark:hover:text-brand-edenOnDark">
                         {item.candidateName}
                       </Link>
                     </td>
@@ -984,7 +1504,10 @@ export function ReportsWorkspace({ data, logoDataUrl, canShare = false }: Report
         ))}
       </div>
 
-      {tab === "progression" ? <PilotProgressions upgrades={data.pilotUpgrades} /> : null}
+      {/* staffing is passed HERE and deliberately not on the public share link —
+          open requisitions and target headcounts behind a token URL is his call
+          to make, not a side effect of adding the panel. */}
+      {tab === "progression" ? <PilotProgressions upgrades={data.pilotUpgrades} staffing={data.fleetStaffing} /> : null}
       {tab === "travel" ? <TravelSpend travel={data.travelSpend} /> : null}
       {tab === "documents" ? <DocumentCurrency dc={data.documentCurrency} /> : null}
     </div>

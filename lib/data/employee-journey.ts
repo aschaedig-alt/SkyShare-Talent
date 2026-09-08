@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { positionFor } from "@/lib/fleet/positions";
 import { computeTenure } from "@/lib/data/tenure";
 import { ensureInitialRole } from "@/lib/data/ensure-initial-role";
-import { isUpgradeStep } from "@/lib/fleet/pilot-ladder";
+import { airframeOf, isUpgradeStep } from "@/lib/fleet/pilot-ladder";
 
 // ---------------------------------------------------------------------------
 // Employee journey — the sequence of roles a person has held at SkyShare, plus
@@ -247,6 +247,19 @@ export type UpgradePilot = {
   active: boolean; // currently employed (not terminated)
   managed: boolean; // dedicated managed-aircraft pilot (not the SkyShare/fractional pool)
   tenureDays: number; // hire -> now (active) or -> last role end (former)
+  /**
+   * Whole anniversary years of continuous service — the gold asterisks shown
+   * beside a name on the employee profile, now shown on the report too.
+   *
+   * NOT floor(tenureDays / 365), and the difference is deliberate. This is
+   * computeTenure().completedYears, exactly what NewHireDetailWorkspace renders,
+   * so a pilot cannot carry five stars on their profile and four on this report.
+   * That means it is rehire-aware (a return within 3 months bridges, a longer gap
+   * resets the clock) and counted by real anniversaries rather than by dividing
+   * days, and it is anchored on the employment stints rather than on the first
+   * role, which is what tenureDays uses.
+   */
+  tenureYears: number;
   employedYears: number[]; // calendar years the pilot was on staff (for per-year headcount)
   upgrades: number; // FO -> Captain, same aircraft
   transitions: number; // moved to a different aircraft
@@ -264,7 +277,36 @@ export type UpgradePilot = {
   daysToFirstTransition: number | null;
   startDate: string | null;
   latestDate: string | null;
+  /** The day a former pilot left — the end of their last role, or its start when
+   *  no end was recorded. null while they are still here. Needed because
+   *  "why do people leave before upgrading" cannot be asked of a start date. */
+  departedOn: string | null;
   steps: UpgradePilotStep[]; // full role journey, oldest first
+};
+
+/**
+ * Pilot-titled employees the analytics CANNOT see, and why.
+ *
+ * Carried so the page can say so out loud. Two people looked at this report on
+ * 2026-09-08 and asked why pilots leave before upgrading; the honest answer is
+ * that some leavers are not in the dataset at all, and a report that silently
+ * drops them answers the question wrongly rather than not at all.
+ *
+ * The rule that drops them is in getUpgradeAnalytics: a person is a pilot here
+ * only if at least one of their roles resolves to a PIC or SIC seat. A record
+ * titled just "Pilot", with no aircraft and no fleet-position slug, states no
+ * seat — so it cannot be classified and is skipped. Measured 2026-09-08:
+ * 184 pilot-titled or Flight-Ops employees, 162 visible, 22 not.
+ */
+export type ExcludedPilots = {
+  /** Titled as a pilot (or in Flight Ops) but not in `pilots`. */
+  total: number;
+  /** Of those, no longer employed — the ones a leaver question would want. */
+  former: number;
+  /** Of those, the roles exist but none states a seat. The usual cause. */
+  noSeatRecorded: number;
+  /** Of those, no RoleAssignment row at all (never backfilled). */
+  noRoles: number;
 };
 
 // The whole tracked-pilot set (advanced or not); the Reports UI filters
@@ -272,6 +314,7 @@ export type UpgradePilot = {
 export type UpgradeAnalytics = {
   pilots: UpgradePilot[];
   hasData: boolean;
+  excluded: ExcludedPilots;
 };
 
 // Report the CE-525 type rating as its airframe, CJ2.
@@ -279,81 +322,12 @@ function reportTitle(title: string): string {
   return title.replace(/\bCE-?525\b/gi, "CJ2");
 }
 
-// Canonical airframe code from a title (+ aircraft field) so "same aircraft" can
-// be compared. CE-525 collapses to CJ2; XL shorthand to 560XL.
-function airframeOf(title: string, aircraft: string | null): string | null {
-  const t = `${title} ${aircraft ?? ""}`;
-  const AF: [RegExp, string][] = [
-    // CHALLENGER 350 AND PRAETOR 600 WERE MISSING, found 2026-09-08 by a chief-pilot
-    // review of this report. Both went into the fleet registry on Aug 28 and neither
-    // was ever added here, so airframeOf returned null for their crews - which does
-    // not merely mislabel them, it makes their moves invisible: classifyStep needs
-    // BOTH sides non-null to call a transition, so a move onto or off these types
-    // fell through to "lateral", and a lateral is not counted as a move anywhere.
-    // Those pilots sat in "Stayed put" no matter how far they had actually moved.
-    // The Challenger 350's type rating is CL-30 (confirmed by him Aug 28), so the
-    // pattern accepts either spelling.
-    // THE MODEL NUMBER IS REQUIRED, and a bare "Challenger" deliberately does NOT
-    // match. It briefly did, on the reasoning that the only Challenger rows on file
-    // read "Challenger Pilot" with no model — but he confirmed 2026-09-08 that the
-    // Challenger 350 and Praetor 600 are NEW aircraft, which makes those two rows a
-    // DIFFERENT and much older Challenger. Matching them would have put pilots on a
-    // type that did not exist when they flew. Both of those records are terminated
-    // and he has said to disregard them.
-    //
-    // So this pattern is here for the crews yet to be assigned to the new tails,
-    // and it wants the model: 350, or the CL-30 type rating (his confirmation,
-    // Aug 28).
-    [/\bchallenger ?350\b|\bcl-?30\b/i, "Challenger 350"],
-    [/\bpraetor ?600\b/i, "Praetor 600"],
-    [/\bg450\b/i, "G450"],
-    [/\bg200\b/i, "G200"],
-    [/\bgv\b/i, "GV"],
-    // THERE IS NO LEGACY 600 IN THIS FLEET. His words, 2026-09-08: "the Legacy is a
-    // 650. no 600. would have been an error." So a record saying 600 is a typo for
-    // the 650, and both spellings resolve to the same code — rather than the 600
-    // sitting off the ladder and quietly turning real moves into laterals, which is
-    // what it was doing on 2 steps.
-    //
-    // THE UNDERLYING ROWS ARE STILL WRONG and want correcting at source. Three of
-    // them, all on terminated pilots: Ty Gunnlaugsson and Rick Albin, both "Legacy
-    // 600 Pilot", and Mark Killpack, "Legacy 600 Captain" with aircraft "Legacy
-    // 600". Mapping here fixes the report, not the data.
-    [/\blegacy ?6[05]0\b/i, "Legacy 650"],
-    [/\bpc-?12\b/i, "PC-12"],
-    [/\bphenom ?300\b/i, "Phenom 300"],
-    [/\bphenom ?100\b/i, "Phenom 100"],
-    [/\b560 ?xls\+?\b|\bxls\+?\b/i, "560XLS+"],
-    [/\b560 ?xl\b|\bxl\b/i, "560XL"],
-    // THE CJ FAMILY, all one rung on his ladder ("CJ = M2 = CJ2 = CJ3+") but kept
-    // as distinct codes here, because the transition-paths chart should still show
-    // a CJ2 → CJ3+ move as the type change it is: a different type rating and a
-    // real training event, even though it is not an upgrade.
-    //
-    // CJ3+ IS IN LIVE USE — Erik Schwerman is on file as a "CJ3+ Captain". Before
-    // this it resolved to nothing, so his aircraft could not be identified and his
-    // moves could not be classified at all. Ordered longest-first so CJ3+ is not
-    // eaten by a looser CJ pattern.
-    [/\bcj ?3\+?\b/i, "CJ3"],
-    [/\bcj ?2\b|\bce-?525\b/i, "CJ2"],
-    [/\bcj ?1\b/i, "CJ1"],
-    // A BARE "CJ" counts too — asked for 2026-09-08, "add CJ before the CJ2 and =
-    // to it" — so it shares the rung with CJ1 / CJ2 / CJ3+ / M2. LAST of the CJ
-    // patterns deliberately: put it first and it would swallow every CJ2 and CJ3+
-    // before either was tested, collapsing three distinct type ratings into one and
-    // erasing the type changes between them from the paths chart.
-    [/\bcj\b/i, "CJ"],
-    [/\bm2\b/i, "M2"]
-  ];
-  for (const [re, code] of AF) if (re.test(t)) return code;
-  return null;
-}
-
-// The ladder and the upgrade rules live in lib/fleet/pilot-ladder.ts — a module
-// with NO imports, because the reports page is a client component and needs the
-// same rules. Keeping them here dragged Prisma into the client bundle and 500ed
-// the page. Re-exported so existing importers of this module still resolve.
-export { SKYSHARE_LADDER, ladderRank } from "@/lib/fleet/pilot-ladder";
+// The ladder, the upgrade rules and airframeOf all live in
+// lib/fleet/pilot-ladder.ts — a module with NO imports, because the reports page
+// is a client component and needs the same rules. Keeping them here dragged
+// Prisma into the client bundle and 500ed the page. Re-exported so existing
+// importers of this module still resolve.
+export { SKYSHARE_LADDER, ladderRank, airframeOf } from "@/lib/fleet/pilot-ladder";
 
 function classifyStep(prevSeat: string | null, prevAf: string | null, seat: string | null, af: string | null): StepKind {
   if (prevAf && af && prevAf !== af) return "transition";
@@ -378,11 +352,11 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
         createdAt: true
       }
     }),
-    prisma.newHire.findMany({ select: { id: true, name: true, employmentStatus: true, managedPilot: true } }),
+    prisma.newHire.findMany({ select: { id: true, name: true, position: true, department: true, employmentStatus: true, managedPilot: true } }),
     prisma.employmentStint.findMany({ select: { newHireId: true, startDate: true, endDate: true } })
   ])) as [
     (RawRole & { newHireId: string })[],
-    { id: string; name: string; employmentStatus: string; managedPilot: boolean }[],
+    { id: string; name: string; position: string | null; department: string | null; employmentStatus: string; managedPilot: boolean }[],
     { newHireId: string; startDate: Date; endDate: Date | null }[]
   ];
 
@@ -449,9 +423,12 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
       const i = kinds.findIndex((k, idx) => idx > 0 && pred(k));
       return i === -1 ? null : daysFrom(i);
     };
-    // Same rule as the count above: the first time the SEAT advanced, whatever the
-    // aircraft did. Kept separate from firstIdx because that one tests step kind.
-    const firstSeatUpIdx = (() => {
+    // The first UPGRADE under the full house rules — a seat advance or a move up
+    // the ladder. Kept separate from firstIdx because that one tests step kind,
+    // and an upgrade is not a kind. It reads the same upgradeFlags the `upgrades`
+    // count does, so "N upgrades" and "first upgrade after X" can never come from
+    // two different definitions.
+    const firstUpgradeIdx = (() => {
       const i = upgradeFlags.findIndex((v, idx) => idx > 0 && v);
       return i === -1 ? null : daysFrom(i);
     })();
@@ -489,12 +466,22 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
     }
     const employedYears = [...yset].sort((x, y) => x - y);
 
+    // The same rehire-aware count the profile header's gold asterisks use — see
+    // UpgradePilot.tenureYears. Falls back to a single implicit stint from the
+    // first role when none are recorded, which is the same fallback
+    // getEmployeeJourney and lib/data/onboarding both make.
+    const tenureStints = stints.length
+      ? stints
+      : [{ startDate: ordered[0].startDate, endDate: active ? null : new Date(endTime) }];
+    const tenureYears = computeTenure(tenureStints, Date.now()).completedYears;
+
     pilots.push({
       hireId,
       name: info?.name ?? "Unknown",
       active,
       managed: info?.managedPilot ?? false,
       tenureDays,
+      tenureYears,
       employedYears,
       upgrades,
       transitions,
@@ -510,10 +497,13 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
       // time, and it used to be filed as a transition and nothing else.
       madeCaptain: seatUps.some(Boolean),
       daysToFirstMove: firstIdx((k) => k === "upgrade" || k === "transition"),
-      daysToFirstUpgrade: firstSeatUpIdx,
+      daysToFirstUpgrade: firstUpgradeIdx,
       daysToFirstTransition: firstIdx((k) => k === "transition"),
       startDate: iso(ordered[0].startDate),
       latestDate: iso(ordered[ordered.length - 1].startDate),
+      // Same endTime the tenure above is measured to, so "left after N years" and
+      // "left on" can never disagree.
+      departedOn: active ? null : iso(last.endDate ?? last.startDate),
       steps: ordered.map((r, i) => ({
         title: reportTitle(r.title),
         seat: seats[i],
@@ -534,5 +524,25 @@ export async function getUpgradeAnalytics(): Promise<UpgradeAnalytics> {
       a.name.localeCompare(b.name)
   );
 
-  return { pilots, hasData: pilots.some((p) => p.moves > 0) };
+  // Who this report cannot see, counted rather than left silent — see
+  // ExcludedPilots. The title test is deliberately loose: it is looking for
+  // people who OUGHT to be here, so it should over-catch rather than under-catch,
+  // and every hit is then checked against the pilot set we actually built.
+  // Cabin attendants match "attendant" and not this, which is correct — they hold
+  // no pilot seat and are not missing from a pilot report.
+  const PILOT_TITLE = /\b(pilot|captain|first officer|f\/?o|sic|pic|cpt)\b/i;
+  const seen = new Set(pilots.map((p) => p.hireId));
+  const roleCount = new Map<string, number>();
+  for (const r of rows) roleCount.set(r.newHireId, (roleCount.get(r.newHireId) ?? 0) + 1);
+  const excluded: ExcludedPilots = { total: 0, former: 0, noSeatRecorded: 0, noRoles: 0 };
+  for (const n of names) {
+    if (seen.has(n.id)) continue;
+    if (!PILOT_TITLE.test(n.position ?? "")) continue;
+    excluded.total += 1;
+    if (n.employmentStatus !== "ACTIVE") excluded.former += 1;
+    if ((roleCount.get(n.id) ?? 0) === 0) excluded.noRoles += 1;
+    else excluded.noSeatRecorded += 1;
+  }
+
+  return { pilots, hasData: pilots.some((p) => p.moves > 0), excluded };
 }
