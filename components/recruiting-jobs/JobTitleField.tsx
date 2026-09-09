@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 
@@ -21,6 +22,11 @@ import { Pencil } from "lucide-react";
  * would create the duplicate state the merge tooling exists to clear up, and would
  * hide a real job behind another one — so the server returns 409 and this shows
  * what it said. Same rule the tag rename follows.
+ *
+ * The 409 also carries the id of the job holding the name, and the refusal now
+ * links to the two of them on the duplicates page. Telling somebody to merge and
+ * giving them no way to do it was the actual complaint on 2026-09-09: the scan
+ * would not show that pair, so the instruction was a dead end.
  *
  * A RENAME DOES NOT RE-CLASSIFY. isPilotRole, the seat and the aircraft list were
  * derived from the original title and may have been corrected by hand since, so
@@ -43,12 +49,14 @@ export function JobTitleField({
   const [value, setValue] = useState(title);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [clashJobId, setClashJobId] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
 
   function cancel() {
     setValue(title);
     setEditing(false);
     setError(null);
+    setClashJobId(null);
   }
 
   async function save() {
@@ -59,6 +67,7 @@ export function JobTitleField({
     }
     setBusy(true);
     setError(null);
+    setClashJobId(null);
     setWarning(null);
     try {
       const res = await fetch(`/api/recruiting-jobs/${jobId}`, {
@@ -68,11 +77,14 @@ export function JobTitleField({
       });
       const data = (await res.json().catch(() => ({}))) as {
         message?: string;
+        clashJobId?: string;
         classificationLooksStale?: boolean;
         suggested?: { isPilotRole?: boolean; pilotSeat?: string | null };
       };
       if (!res.ok) {
-        // A 409 is the clash, and its message already says to merge instead.
+        // A 409 is the clash. Keep the other job's id so the message can offer the
+        // merge it tells you to do.
+        if (data.clashJobId) setClashJobId(data.clashJobId);
         throw new Error(data.message ?? "Could not rename that job.");
       }
       if (data.classificationLooksStale) {
@@ -151,9 +163,17 @@ export function JobTitleField({
         </button>
       </div>
       {error ? (
-        <p className="mt-1 rounded border border-red-300 bg-red-50 px-2 py-1.5 text-xs font-semibold text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
-          {error}
-        </p>
+        <div className="mt-1 rounded border border-red-300 bg-red-50 px-2 py-1.5 text-xs font-semibold text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
+          <p>{error}</p>
+          {clashJobId ? (
+            <Link
+              href={`/jobs/duplicates?pair=${jobId},${clashJobId}`}
+              className="mt-1 inline-block rounded border border-red-300 bg-white px-2 py-1 font-semibold text-red-800 underline underline-offset-2 transition hover:bg-brand-gold/20 hover:text-brand-lea dark:border-red-500/40 dark:bg-white/5 dark:text-red-200 dark:hover:bg-brand-gold/20"
+            >
+              Merge these two jobs
+            </Link>
+          ) : null}
+        </div>
       ) : null}
       <p className="mt-1 text-[11px] text-brand-grey dark:text-slate-400">
         Renames it everywhere at once. Candidates already linked keep their link.

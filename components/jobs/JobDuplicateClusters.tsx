@@ -8,10 +8,22 @@ import { formatCalendarDay } from "@/lib/dates/display";
 
 interface JobDuplicateClustersProps {
   initialClusters?: DuplicateCluster[] | null;
+  /**
+   * One pair named in the URL, shown above the scan and outside its rules.
+   * The rename clash sends people here, and the pair it names is usually one the
+   * scan will not surface on its own: under the similarity threshold, or dismissed
+   * as not-duplicates at some point in the past. Held in state so a re-scan does
+   * not drop it, and cleared once it has been merged.
+   */
+  pinnedCluster?: DuplicateCluster | null;
 }
 
-export function JobDuplicateClusters({ initialClusters = null }: JobDuplicateClustersProps) {
+export function JobDuplicateClusters({
+  initialClusters = null,
+  pinnedCluster = null,
+}: JobDuplicateClustersProps) {
   const [clusters, setClusters] = useState<DuplicateCluster[] | null>(initialClusters);
+  const [pinned, setPinned] = useState<DuplicateCluster | null>(pinnedCluster);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,7 +71,23 @@ export function JobDuplicateClusters({ initialClusters = null }: JobDuplicateClu
         </div>
       )}
 
-      {clusters && clusters.length === 0 && (
+      {pinned && (
+        <div className="space-y-2">
+          <div className="rounded border border-brand-gold/40 bg-brand-gold/10 px-3 py-2 text-xs text-brand-lea dark:border-brand-gold/30 dark:bg-brand-gold/10 dark:text-slate-200">
+            These two jobs were opened from a rename that was refused because the name is already taken. Pick the one
+            to keep and merge, or just close this page to leave them as they are.
+          </div>
+          <ClusterCard
+            cluster={pinned}
+            onMerged={() => {
+              setPinned(null);
+              void scan();
+            }}
+          />
+        </div>
+      )}
+
+      {clusters && clusters.length === 0 && !pinned && (
         <div className="rounded border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 p-4 text-center text-sm text-emerald-900 dark:text-emerald-300">
           <Check className="mx-auto h-6 w-6" />
           <p className="mt-1 font-medium">All jobs look unique — nothing to merge.</p>

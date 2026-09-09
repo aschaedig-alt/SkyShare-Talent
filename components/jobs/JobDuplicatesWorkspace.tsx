@@ -1,11 +1,20 @@
 import { JobDuplicateClusters } from "@/components/jobs/JobDuplicateClusters";
-import type { DuplicateCluster } from "@/lib/jobs/duplicate-detection";
+import { JobDismissedPairs } from "@/components/jobs/JobDismissedPairs";
+import type { DismissedPair, DuplicateCluster } from "@/lib/jobs/duplicate-detection";
 
 interface JobDuplicatesWorkspaceProps {
   clusters: DuplicateCluster[];
+  /** One pair named in the URL, pinned above the scan. See the page's comment. */
+  pinnedCluster?: DuplicateCluster | null;
+  /** Every "not duplicates" decision on record, so it can be read back and undone. */
+  dismissedPairs?: DismissedPair[];
 }
 
-export function JobDuplicatesWorkspace({ clusters }: JobDuplicatesWorkspaceProps) {
+export function JobDuplicatesWorkspace({
+  clusters,
+  pinnedCluster = null,
+  dismissedPairs = []
+}: JobDuplicatesWorkspaceProps) {
   return (
     <div className="space-y-6 px-5 py-5 lg:px-8">
       <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
@@ -17,7 +26,9 @@ export function JobDuplicatesWorkspace({ clusters }: JobDuplicatesWorkspaceProps
         </p>
       </section>
 
-      <JobDuplicateClusters initialClusters={clusters} />
+      <JobDuplicateClusters initialClusters={clusters} pinnedCluster={pinnedCluster} />
+
+      <JobDismissedPairs initialPairs={dismissedPairs} />
     </div>
   );
 }

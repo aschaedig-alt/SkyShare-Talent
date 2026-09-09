@@ -173,40 +173,43 @@ export interface DuplicateCluster {
 }
 
 /**
- * Scan ALL jobs and group them into duplicate clusters.
- * - Exact clusters: jobs sharing an identical (case-insensitive, trimmed) title
- * - Similar clusters: remaining jobs grouped by >= threshold title similarity
- * Only clusters with 2+ jobs are returned.
+ * The columns a cluster row carries, in one place because the whole-database scan
+ * and the single-pair lookup must hand the UI identically shaped rows.
  */
-export async function findAllDuplicateClusters(
-  similarityThreshold: number = 60
-): Promise<DuplicateCluster[]> {
-  const jobs = await prisma.job.findMany({
-    where: { mergedIntoJobId: null },
-    select: {
-      id: true,
-      title: true,
-      city: true,
-      state: true,
-      department: true,
-      status: true,
-      recruiter: true,
-      jobReqId: true,
-      source: true,
-      openedDate: true,
-      baseLocation: true,
-      pilotSeat: true,
-      roleCategory: true,
-      paySummary: true,
-      scheduleSummary: true,
-      jobDescriptionText: true,
-      rawMinimumRequirements: true,
-      _count: { select: { applications: true, interviews: true } },
-    },
+const CLUSTER_JOB_SELECT = {
+  id: true,
+  title: true,
+  city: true,
+  state: true,
+  department: true,
+  status: true,
+  recruiter: true,
+  jobReqId: true,
+  source: true,
+  openedDate: true,
+  baseLocation: true,
+  pilotSeat: true,
+  roleCategory: true,
+  paySummary: true,
+  scheduleSummary: true,
+  jobDescriptionText: true,
+  rawMinimumRequirements: true,
+  _count: { select: { applications: true, interviews: true } },
+} as const;
+
+/** Merged jobs are never cluster candidates: their name belongs to their survivor. */
+function loadClusterJobs(ids?: string[]) {
+  return prisma.job.findMany({
+    where: ids ? { id: { in: ids }, mergedIntoJobId: null } : { mergedIntoJobId: null },
+    select: CLUSTER_JOB_SELECT,
     orderBy: { title: "asc" },
   });
+}
 
-  const mapJob = (j: (typeof jobs)[number]): DuplicateClusterJob => ({
+type ClusterJobRow = Awaited<ReturnType<typeof loadClusterJobs>>[number];
+
+function mapClusterJob(j: ClusterJobRow): DuplicateClusterJob {
+  return {
     id: j.id,
     title: j.title,
     city: j.city || undefined,
@@ -226,7 +229,60 @@ export async function findAllDuplicateClusters(
     scheduleSummary: j.scheduleSummary || undefined,
     jobDescriptionText: j.jobDescriptionText || undefined,
     rawMinimumRequirements: j.rawMinimumRequirements || undefined,
-  });
+  };
+}
+
+/**
+ * The key a job's title groups on for EXACT matching.
+ *
+ * Deliberately the same expression the rename clash check, the importer and the
+ * create route use for Job.normalizedTitle. It used to be title.trim().toLowerCase()
+ * here, which does NOT collapse runs of inner whitespace, so a job stored with a
+ * double space was a clash the rename endpoint refused and an exact pair this scan
+ * could not see. Two places deciding "same title" differently is how you get told
+ * to merge something the merge screen will not show you.
+ */
+export function normalizeJobTitle(title: string): string {
+  return title.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Scan ALL jobs and group them into duplicate clusters.
+ * - Exact clusters: jobs sharing a normalized title
+ * - Similar clusters: jobs within similarityThreshold of a seed title
+ * Only clusters with 2+ jobs survive.
+ *
+ * TWO THINGS THIS GOT WRONG, both found on 2026-09-09 from a real report: he was
+ * refused a rename because "Line Service Technician (Aviation)" was taken, and the
+ * scan then offered him no way to merge the two.
+ *
+ * 1. A DISCARDED CLUSTER USED TO EAT ITS MEMBERS. Jobs were added to usedJobIds
+ *    while the group was being collected, BEFORE prune() dropped pairs that had
+ *    been dismissed as not-duplicates. When pruning emptied the group the cluster
+ *    was thrown away but its jobs stayed marked as used, so they were invisible for
+ *    the rest of the scan. Dismissing one pair therefore removed BOTH jobs from
+ *    every future scan, not just that pairing. Measured against live data: 66
+ *    dismissal rows had collapsed the scan from 18 clusters to 1. Nothing is marked
+ *    used now until its cluster has actually survived.
+ *
+ * 2. A JOB COULD ONLY EVER JOIN ONE CLUSTER. The first seed to reach a job in
+ *    title order claimed it. So "(old) Line Service Technician (Aviation)" claimed
+ *    "Line Service Technician (Aviation)" at 85 percent, that pair was dismissed,
+ *    the cluster died, and the pair he actually wanted, "Line Service Technician"
+ *    against "Line Service Technician (Aviation)" at 68 percent and never
+ *    dismissed, could not form because both members were already spent. Similarity
+ *    is not transitive, so single membership silently drops real duplicates. Every
+ *    job now seeds a cluster and may appear in as many as it genuinely matches.
+ *
+ * The cost of (2) is overlapping clusters, so identical member sets are collapsed
+ * and any similar cluster wholly contained in a larger one is dropped. Exact
+ * clusters are always kept: they are the stronger signal and are what the rename
+ * check itself refuses on.
+ */
+export async function findAllDuplicateClusters(
+  similarityThreshold: number = 60
+): Promise<DuplicateCluster[]> {
+  const jobs = await loadClusterJobs();
 
   // Load dismissed pairs ("not duplicates" decisions) so we can filter them out.
   const dismissals = await prisma.jobDuplicateDismissal.findMany({
@@ -237,80 +293,114 @@ export async function findAllDuplicateClusters(
     dismissedPairs.add(pairKey(d.jobIdA, d.jobIdB));
   }
 
-  // Remove jobs that no longer have any non-dismissed partner in the group.
-  // Runs to a fixpoint because removing one job can orphan another.
-  function prune(group: typeof jobs): typeof jobs {
-    let current = [...group];
-    let changed = true;
-    while (changed && current.length > 1) {
-      changed = false;
-      current = current.filter((j) => {
-        const hasPartner = current.some(
-          (other) => other.id !== j.id && !dismissedPairs.has(pairKey(j.id, other.id))
-        );
-        if (!hasPartner) changed = true;
-        return hasPartner;
-      });
+  type Row = (typeof jobs)[number];
+
+  /**
+   * Grow a cluster from a seed, admitting a job only when it has NOT been dismissed
+   * against the seed or against anything already admitted. The result therefore
+   * contains no settled pairing anywhere inside it.
+   *
+   * THIS REPLACED A prune() THAT ONLY DROPPED A JOB WITH NO SURVIVING PARTNER AT
+   * ALL. Under that rule a dismissed pair sitting inside an otherwise-live group
+   * was shown again, because both members still had other partners. Measured on
+   * 2026-09-09, 42 of the 140 pairings on offer were ones somebody had already said
+   * no to, including 6 dismissed by Aimee two hours earlier the same afternoon.
+   * Re-asking a settled question is how a review screen loses its credibility, and
+   * it is worse than the miss it was covering for: the answer is already recorded.
+   *
+   * Deterministic, because candidates arrive in title order. Greedy rather than
+   * maximum-clique, which is the right trade here: a job left out of one cluster
+   * still seeds its own.
+   */
+  function growCluster(seed: Row, candidates: Row[]): Row[] {
+    const members = [seed];
+    for (const candidate of candidates) {
+      if (candidate.id === seed.id) continue;
+      if (members.every((m) => !dismissedPairs.has(pairKey(m.id, candidate.id)))) {
+        members.push(candidate);
+      }
     }
-    return current;
+    return members;
   }
 
-  const clusters: DuplicateCluster[] = [];
-  const usedJobIds = new Set<string>();
+  const memberKey = (group: Row[]) =>
+    group
+      .map((j) => j.id)
+      .sort()
+      .join("+");
 
-  // 1. Exact-title clusters
-  const exactGroups = new Map<string, typeof jobs>();
+  const clusters: DuplicateCluster[] = [];
+
+  // 1. Exact-title clusters. No side effect on anything else in the scan: a group
+  //    that does not survive pruning simply is not a cluster.
+  const exactGroups = new Map<string, Row[]>();
   for (const job of jobs) {
-    const key = job.title.trim().toLowerCase();
+    const key = normalizeJobTitle(job.title);
     const group = exactGroups.get(key) ?? [];
     group.push(job);
     exactGroups.set(key, group);
   }
 
   for (const [key, group] of exactGroups) {
-    if (group.length > 1) {
-      group.forEach((j) => usedJobIds.add(j.id));
-      const pruned = prune(group);
-      if (pruned.length > 1) {
-        clusters.push({
-          key: `exact:${key}`,
-          title: pruned[0].title,
-          matchType: "exact",
-          jobs: pruned.map(mapJob),
-        });
+    if (group.length < 2) continue;
+    const members = growCluster(group[0], group);
+    if (members.length < 2) continue;
+    clusters.push({
+      key: `exact:${key}`,
+      title: members[0].title,
+      matchType: "exact",
+      jobs: members.map(mapClusterJob),
+    });
+  }
+
+  // 2. Similar-title clusters. Similarity is computed once per unordered pair and
+  //    held as an adjacency map, because every job now seeds a cluster and the naive
+  //    version would compare each pair twice.
+  const neighbours = new Map<string, Set<string>>();
+  for (const job of jobs) neighbours.set(job.id, new Set<string>());
+  for (let i = 0; i < jobs.length; i += 1) {
+    for (let k = i + 1; k < jobs.length; k += 1) {
+      if (calculateSimilarity(jobs[i].title, jobs[k].title) >= similarityThreshold) {
+        neighbours.get(jobs[i].id)?.add(jobs[k].id);
+        neighbours.get(jobs[k].id)?.add(jobs[i].id);
       }
     }
   }
 
-  // 2. Similar-title clusters (only among jobs not already in an exact cluster)
-  const remaining = jobs.filter((j) => !usedJobIds.has(j.id));
-  for (let i = 0; i < remaining.length; i += 1) {
-    const seed = remaining[i];
-    if (usedJobIds.has(seed.id)) continue;
+  const candidates: { seed: Row; group: Row[] }[] = [];
+  const seenSets = new Set<string>();
+  for (const seed of jobs) {
+    const linked = neighbours.get(seed.id);
+    if (!linked || linked.size === 0) continue;
+    const members = growCluster(seed, jobs.filter((j) => linked.has(j.id)));
+    if (members.length < 2) continue;
+    const setKey = memberKey(members);
+    if (seenSets.has(setKey)) continue;
+    seenSets.add(setKey);
+    candidates.push({ seed, group: members });
+  }
 
-    const matches = [seed];
-    usedJobIds.add(seed.id);
+  // Drop any similar cluster wholly contained in a bigger one. Overlap is the price
+  // of multi-membership; a strict subset is pure noise, since the larger cluster
+  // already offers every merge the smaller one did.
+  const bySizeDesc = [...candidates].sort((a, b) => b.group.length - a.group.length);
+  const kept: { seed: Row; group: Row[]; ids: Set<string> }[] = [];
+  for (const candidate of bySizeDesc) {
+    const ids = new Set(candidate.group.map((j) => j.id));
+    const contained = kept.some(
+      (k) => k.ids.size > ids.size && [...ids].every((id) => k.ids.has(id))
+    );
+    if (contained) continue;
+    kept.push({ ...candidate, ids });
+  }
 
-    for (let k = i + 1; k < remaining.length; k += 1) {
-      const candidate = remaining[k];
-      if (usedJobIds.has(candidate.id)) continue;
-      if (calculateSimilarity(seed.title, candidate.title) >= similarityThreshold) {
-        matches.push(candidate);
-        usedJobIds.add(candidate.id);
-      }
-    }
-
-    if (matches.length > 1) {
-      const pruned = prune(matches);
-      if (pruned.length > 1) {
-        clusters.push({
-          key: `similar:${pruned[0].id}`,
-          title: pruned[0].title,
-          matchType: "similar",
-          jobs: pruned.map(mapJob),
-        });
-      }
-    }
+  for (const { seed, group } of kept) {
+    clusters.push({
+      key: `similar:${memberKey(group)}`,
+      title: seed.title,
+      matchType: "similar",
+      jobs: group.map(mapClusterJob),
+    });
   }
 
   // Sort: exact first, then by cluster size descending
@@ -320,6 +410,116 @@ export async function findAllDuplicateClusters(
   });
 
   return clusters;
+}
+
+/**
+ * Build a cluster for one explicitly named pair, whatever the scan thinks of it.
+ *
+ * This is what the rename clash links to. The 409 that refuses a rename already
+ * knows both job ids, and until now said "merge these instead" while offering no
+ * route to do it. The pair is shown even when it falls below the similarity
+ * threshold or has been dismissed as not-duplicates, because the person asking for
+ * it has just told us the two names collide, and that outranks an earlier guess.
+ */
+export async function buildPairCluster(
+  jobIdA: string,
+  jobIdB: string
+): Promise<DuplicateCluster | null> {
+  if (!jobIdA || !jobIdB || jobIdA === jobIdB) return null;
+
+  const rows = await loadClusterJobs([jobIdA, jobIdB]);
+  if (rows.length !== 2) return null;
+
+  // Keep the order the caller asked for, so the job being renamed reads first.
+  const first = rows.find((j) => j.id === jobIdA);
+  const second = rows.find((j) => j.id === jobIdB);
+  if (!first || !second) return null;
+
+  const identical = normalizeJobTitle(first.title) === normalizeJobTitle(second.title);
+
+  return {
+    key: `pair:${pairKey(jobIdA, jobIdB)}`,
+    title: first.title,
+    matchType: identical ? "exact" : "similar",
+    jobs: [first, second].map(mapClusterJob),
+  };
+}
+
+
+export interface DismissedPair {
+  jobIdA: string;
+  jobIdB: string;
+  titleA: string;
+  titleB: string;
+  statusA: string;
+  statusB: string;
+  locationA?: string;
+  locationB?: string;
+  similarity: number;
+  createdBy?: string;
+  createdAt: string;
+  /** True when the pairing can no longer affect a scan, so restoring it is pointless. */
+  stale: boolean;
+  staleReason?: string;
+}
+
+/**
+ * Every "not duplicates" decision on record, so it can be read back and undone.
+ *
+ * ASKED FOR ON 2026-09-09, and the reason is worth keeping. These decisions were
+ * write-only: 66 of them existed, no screen listed them, and nothing called the
+ * DELETE endpoint that could take one back. That was tolerable only while each one
+ * meant what it appeared to mean. It did not — until the fix in this same change,
+ * dismissing a pair removed BOTH jobs from every later scan rather than hiding that
+ * one pairing. So every one of those 66 was made under a rule nobody intended, some
+ * of them almost certainly just to clear noise off the screen, and they are all
+ * still in force. A decision you cannot see and cannot reverse is not a decision,
+ * it is a trap.
+ *
+ * Pairs whose jobs have since been merged or deleted are returned too, flagged
+ * stale rather than hidden: they cannot affect a scan, but silently dropping rows
+ * from a list that claims to be the whole record is how you get a wrong count.
+ */
+export async function listDismissedPairs(): Promise<DismissedPair[]> {
+  const dismissals = await prisma.jobDuplicateDismissal.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+  if (dismissals.length === 0) return [];
+
+  const ids = [...new Set(dismissals.flatMap((d) => [d.jobIdA, d.jobIdB]))];
+  const jobs = await prisma.job.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, title: true, status: true, city: true, state: true, mergedIntoJobId: true },
+  });
+  const byId = new Map(jobs.map((j) => [j.id, j]));
+  const place = (j?: { city: string | null; state: string | null }) =>
+    j && (j.city || j.state) ? [j.city, j.state].filter(Boolean).join(", ") : undefined;
+
+  return dismissals.map((d) => {
+    const a = byId.get(d.jobIdA);
+    const b = byId.get(d.jobIdB);
+    const missing = !a || !b;
+    const merged = Boolean(a?.mergedIntoJobId || b?.mergedIntoJobId);
+    return {
+      jobIdA: d.jobIdA,
+      jobIdB: d.jobIdB,
+      titleA: a?.title ?? "(job no longer exists)",
+      titleB: b?.title ?? "(job no longer exists)",
+      statusA: a?.status ?? "GONE",
+      statusB: b?.status ?? "GONE",
+      locationA: place(a),
+      locationB: place(b),
+      similarity: a && b ? calculateSimilarity(a.title, b.title) : 0,
+      createdBy: d.createdBy ?? undefined,
+      createdAt: d.createdAt.toISOString(),
+      stale: missing || merged,
+      staleReason: missing
+        ? "One of these jobs no longer exists."
+        : merged
+          ? "One of these jobs has since been merged into another."
+          : undefined,
+    };
+  });
 }
 
 /**
