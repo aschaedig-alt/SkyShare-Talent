@@ -92,7 +92,21 @@ function toListItem(
 ): RecruitingJobListItem {
   return {
     id: job.id,
-    title: canonicalTitle(job.title),
+    // The job's OWN title, not a canonical fleet-position name.
+    //
+    // This used to be canonicalTitle(job.title), which ran every title through
+    // resolveFleetPosition and displayed whatever that returned. 21 of 66 live jobs
+    // showed a name other than the one stored, and renaming one appeared to do
+    // nothing: he renamed a job three times on 2026-09-10, every rename saved, and
+    // the screen kept saying "G450 Captain" because that is the fleet position his
+    // "Gulfstream G450 Maintenance Technician" resolved to. A maintenance job
+    // labelled as a captain, and an edit box that would not show what you had just
+    // typed into it. It also put three different jobs on screen as "CJ2 Captain",
+    // so the one he wanted could not be picked out of the list.
+    //
+    // canonicalTitle still applies to the linked pilot REQUIREMENTS below, which is
+    // what it is for: those really are fleet positions.
+    title: job.title,
     department: job.department,
     status: job.status,
     isActive: job.status === "OPEN",

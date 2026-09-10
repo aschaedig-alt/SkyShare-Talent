@@ -24,6 +24,9 @@ export async function PATCH(request: Request, context: RouteContext) {
       paycomReqId?: string | null;
       status?: string;
       title?: string;
+      department?: string | null;
+      city?: string | null;
+      state?: string | null;
     };
 
     const job = await prisma.job.findUnique({ where: { id } });
@@ -176,6 +179,51 @@ export async function PATCH(request: Request, context: RouteContext) {
         body.isPilotRole !== undefined || body.pilotSeat !== undefined || body.aircraftTypes !== undefined;
       if (!alsoClassifying) {
         return NextResponse.json({ ok: true, paycomReqId: trimmed || null });
+      }
+    }
+
+    // DEPARTMENT / CITY / STATE. Handled on its own and returns early, for the same
+    // reason as the title, status and paycomReqId branches above: everything past
+    // here treats the call as a classification change and sets isPilotRole = true,
+    // so recording a city would quietly turn a maintenance job into a pilot one.
+    //
+    // WHY THIS EXISTS. The create form has taken department, city and state since it
+    // was built, but nothing could change them afterwards, so a location that arrived
+    // wrong from an import was permanent. Asked for on 2026-09-10: "we also need to be
+    // able to manually add it or edit it."
+    if (body.department !== undefined || body.city !== undefined || body.state !== undefined) {
+      const clean = (v: string | null | undefined, max: number) => {
+        const t = (v ?? "").trim();
+        return t ? t.slice(0, max) : null;
+      };
+      const data: { department?: string | null; city?: string | null; state?: string | null } = {};
+      if (body.department !== undefined) data.department = clean(body.department, 100);
+      if (body.city !== undefined) data.city = clean(body.city, 100);
+      if (body.state !== undefined) data.state = clean(body.state, 50);
+
+      const before = { department: job.department, city: job.city, state: job.state };
+      await prisma.job.update({ where: { id }, data });
+
+      // The OLD values go in the log. Same reason the rename logs the old title:
+      // an imported value that gets corrected has no other route back.
+      const changed = (Object.keys(data) as (keyof typeof data)[])
+        .filter((k) => before[k] !== data[k])
+        .map((k) => `${k} "${before[k] ?? ""}" to "${data[k] ?? ""}"`);
+      if (changed.length > 0) {
+        await logActivity({
+          userId: auth.user?.id,
+          userEmail: auth.user?.email || undefined,
+          activityType: "JOB_EDITED",
+          description: `Changed ${changed.join(", ")} on the job "${job.title}"`,
+          entityType: "Job",
+          entityId: id
+        });
+      }
+
+      const alsoClassifying =
+        body.isPilotRole !== undefined || body.pilotSeat !== undefined || body.aircraftTypes !== undefined;
+      if (!alsoClassifying) {
+        return NextResponse.json({ ok: true, ...data });
       }
     }
 

@@ -13,6 +13,7 @@ import { NewJobButton } from "@/components/recruiting-jobs/NewJobButton";
 import { PaycomReqField } from "@/components/recruiting-jobs/PaycomReqField";
 import { JobActiveToggle } from "@/components/recruiting-jobs/JobActiveToggle";
 import { JobTitleField } from "@/components/recruiting-jobs/JobTitleField";
+import { JobDetailsFields } from "@/components/recruiting-jobs/JobDetailsFields";
 import { ResumeIntake } from "@/components/candidates/ResumeIntake";
 import { DocumentIntake } from "@/components/candidates/DocumentIntake";
 import { JobScreeningPanel } from "@/components/recruiting-jobs/JobScreeningPanel";
@@ -50,9 +51,6 @@ const JOBS_DEFAULT_LAYOUT: GridItem[] = [
   { i: "rjobs-screening", x: 0, y: 21, w: 12, h: 14 }
 ];
 
-function locationLabel(job: { city: string | null; state: string | null }) {
-  return [job.city, job.state].filter(Boolean).join(", ") || "No base";
-}
 
 function HeaderPanel({ query, canEdit }: { query: string; canEdit?: boolean }) {
   return (
@@ -96,9 +94,14 @@ function JobDetailHeader({ job, canEdit }: { job: RecruitingJobDetail; canEdit?:
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Job detail</p>
           <JobTitleField key={`title-${job.id}`} jobId={job.id} title={job.title} canEdit={canEdit} />
-          <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-            {[job.department, locationLabel(job)].filter(Boolean).join(" - ")}
-          </p>
+          <JobDetailsFields
+            key={`details-${job.id}`}
+            jobId={job.id}
+            department={job.department}
+            city={job.city}
+            state={job.state}
+            canEdit={canEdit}
+          />
           <JobActiveToggle key={`active-${job.id}`} jobId={job.id} status={job.status} canEdit={canEdit} />
           <JobClassificationEditor
             key={job.id}
