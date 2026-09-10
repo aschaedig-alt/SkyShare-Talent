@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { defaultTaskCreateData } from "@/lib/data/onboarding";
 import { ensureCustomMilestoneTasks } from "@/lib/data/onboarding-milestones";
+import { getChecklistPlacement } from "@/lib/data/onboarding-grid-config";
 import { ensureInitialRole } from "@/lib/data/ensure-initial-role";
 import { parseOfferSteps } from "@/lib/offers/steps";
 import { suggestCompanyEmail } from "@/lib/people/company-email";
@@ -122,6 +123,11 @@ export async function POST(request: Request) {
       if (suggestion.email && !suggestion.takenBy) ssEmail = suggestion.email;
     }
 
+    // The saved checklist layout, read once and used for both halves of this
+    // hire's checklist — the built-ins below and the custom milestones after the
+    // create. Reading it twice could straddle somebody pressing Save order.
+    const placement = await getChecklistPlacement();
+
     const hire = await prisma.newHire.create({
       data: {
         name,
@@ -143,11 +149,11 @@ export async function POST(request: Request) {
         orientationDate: parseDate(body.orientationDate),
         stage: "ACTIVE",
         candidateId,
-        tasks: { create: defaultTaskCreateData(offer?.steps) }
+        tasks: { create: defaultTaskCreateData(placement, offer?.steps) }
       }
     });
 
-    await ensureCustomMilestoneTasks(hire.id);
+    await ensureCustomMilestoneTasks(hire.id, placement);
     // Seed the first role-journey entry from position + start date (if both set).
     await ensureInitialRole(hire.id);
 

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { MILESTONE_KEYS, CUSTOM_GROUP } from "@/lib/onboarding/tasks";
+import { MILESTONE_KEYS, CUSTOM_GROUP, MAINTENANCE_GROUP, type TaskPlacement } from "@/lib/onboarding/tasks";
 
 const SCOPE = "workspace";
 const KEY = "onboarding-milestones";
@@ -76,8 +76,21 @@ export async function addMilestone(label: string): Promise<MilestoneCatalogItem[
   // still onboarding. Same reasoning as the contacts-link backfill, which gave
   // archived and post-onboard hires NA rather than TODO for exactly this reason.
   const hires = await prisma.newHire.findMany({ where: { stage: "ACTIVE" }, select: { id: true } });
+
+  // A brand-new milestone is not in the saved layout yet, so it goes at the END
+  // of the Custom section — which is where getGridChecklist() shows an unlisted
+  // task too, so the row and the screen agree from the moment it is created.
+  // Measured rather than hardcoded at 90: once the checklist can be reordered,
+  // the flat order is whatever the layout makes it, and a fixed 90 would one day
+  // land in the middle of it instead of after the end.
+  const last = await prisma.onboardingTask.aggregate({
+    where: { group: { not: MAINTENANCE_GROUP } },
+    _max: { order: true }
+  });
+  const order = (last._max.order ?? 89) + 1;
+
   await prisma.onboardingTask.createMany({
-    data: hires.map((h) => ({ newHireId: h.id, key, label: trimmed, group: CUSTOM_GROUP, order: 90, status: "TODO" })),
+    data: hires.map((h) => ({ newHireId: h.id, key, label: trimmed, group: CUSTOM_GROUP, order, status: "TODO" })),
     skipDuplicates: true
   });
   return getMilestoneCatalog();
@@ -124,14 +137,41 @@ export async function reorderMilestones(keys: string[]): Promise<MilestoneCatalo
   return getMilestoneCatalog();
 }
 
-/** For newly created hires: create tasks for any catalog milestone that is not a built-in default. */
-export async function ensureCustomMilestoneTasks(hireId: string) {
+/**
+ * For newly created hires: create tasks for any catalog milestone that is not a
+ * built-in default.
+ *
+ * `placement` is the saved layout, passed in by the caller. It has to be a
+ * parameter rather than something this function reads for itself, because the
+ * module that computes the layout (lib/data/onboarding-grid-config.ts) imports
+ * the catalog from THIS file — reaching back the other way would be an import
+ * cycle. The two hire-creation routes read the layout once and hand it to both
+ * halves of the checklist.
+ *
+ * Before this, every custom milestone was written at group CUSTOM, order 90,
+ * whatever the layout said. A custom step deliberately filed into Orientation
+ * therefore appeared in Custom for anybody hired afterwards.
+ */
+export async function ensureCustomMilestoneTasks(hireId: string, placement: Map<string, TaskPlacement>) {
   const stored = await readCatalog();
   if (!stored) return;
   const extras = stored.filter((m) => !DEFAULT_KEYS.has(m.key));
   if (extras.length === 0) return;
   await prisma.onboardingTask.createMany({
-    data: extras.map((m) => ({ newHireId: hireId, key: m.key, label: m.label, group: CUSTOM_GROUP, order: 90, status: "TODO" })),
+    data: extras.map((m) => {
+      // CUSTOM / 90 stays the fallback for a milestone the layout has not seen —
+      // one added since the last save. That is the old behaviour, and it puts the
+      // task at the end rather than nowhere.
+      const at = placement.get(m.key);
+      return {
+        newHireId: hireId,
+        key: m.key,
+        label: at?.label ?? m.label,
+        group: at?.group ?? CUSTOM_GROUP,
+        order: at?.order ?? 90,
+        status: "TODO"
+      };
+    }),
     skipDuplicates: true
   });
 }

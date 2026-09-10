@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { splitCandidateName } from "@/lib/candidates/normalize";
 import { getShareToken, buildShareUrl } from "@/lib/new-hire-contacts/share-link";
 import { frontFetch } from "./client";
+import { cleanEditedBody } from "./sanitize-body";
 
 // The "commonly used SkyShare contacts" email — the day-of-orientation hand-off of
 // the vCard link.
@@ -80,8 +81,16 @@ export type ContactsEmailPreview = {
   cc: string[];
   firstName: string;
   subject: string;
+  /** The per-recipient half — rebuilt from the name, never overridden. */
+  greetingHtml: string;
+  /** The template half, with the live share link injected. This is what the send
+   *  dialog lets her edit. */
+  bodyHtml: string;
+  /** greetingHtml + bodyHtml — what actually goes out. */
   html: string;
   templateName: string;
+  /** True when the body is a hand edit rather than the live template. */
+  edited: boolean;
   /** The link actually embedded, so the confirm dialog can show it. */
   shareUrl: string;
   /** True when the template carried its own link and we replaced it. */
@@ -99,7 +108,20 @@ type HireForEmail = {
  * Build the exact email that would be sent. Used for both the preview and the send,
  * so what the user approves is what actually goes out.
  */
-export async function buildContactsEmail(hire: HireForEmail): Promise<ContactsEmailPreview> {
+export async function buildContactsEmail(
+  hire: HireForEmail,
+  /**
+   * Replace the template body for THIS SEND ONLY — see cleanEditedBody.
+   *
+   * WORTH KNOWING FOR THIS ONE SPECIFICALLY: the share link lives IN the body,
+   * because it is injected into the template at build time so a rotated token
+   * cannot strand a dead URL. An edited body is therefore whatever she typed,
+   * link included — the injection does not run again over it. The dialog says so
+   * next to the box. Everything else is the same rule as the other sends: nothing
+   * is written back to Front, and the next send reads the live template.
+   */
+  bodyOverride?: string | null
+): Promise<ContactsEmailPreview> {
   // COMPANY ADDRESS FIRST — the reverse of the onboarding email, deliberately. That
   // one goes to the personal address because the company Gmail does not exist yet
   // when it is sent. This one goes on the day of orientation, by which point it does,
@@ -138,14 +160,21 @@ export async function buildContactsEmail(hire: HireForEmail): Promise<ContactsEm
   const { firstName } = splitCandidateName(hire.name);
   const first = firstName || hire.name.split(/\s+/)[0] || "there";
 
+  const edited = Boolean(bodyOverride && bodyOverride.trim());
+  const bodyHtml = edited ? cleanEditedBody(bodyOverride as string) : body;
+  const greeting = greetingHtml(first);
+
   return {
     to,
     toSource: hire.ssEmail?.trim() ? "company" : "personal",
     cc: ["hrotasks@skyshare.com"],
     firstName: first,
     subject: tpl.subject,
-    html: greetingHtml(first) + body,
+    greetingHtml: greeting,
+    bodyHtml,
+    html: greeting + bodyHtml,
     templateName: tpl.name,
+    edited,
     shareUrl,
     replacedTemplateLink,
   };
@@ -170,6 +199,9 @@ export type ContactsSendRecord = {
   /** Which send-guard mode was in force, so a redirected test send is not later
       mistaken for a real delivery to the address recorded above. */
   mode?: string;
+  /** Whether the body was hand-edited for that send. Undefined on records written
+      before the edit box existed, which is a third state and not a "no". */
+  edited?: boolean;
 };
 
 type SendMap = Record<string, ContactsSendRecord>;

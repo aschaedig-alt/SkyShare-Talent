@@ -26,11 +26,23 @@
 
 // Per-person order status. Cards are ordered in bulk ahead of orientation, and
 // not everyone gets one, so the state machine is:
-//   NEEDED (default, will remind) → ORDERED → RECEIVED, or NOT_NEEDED.
-export const CARD_STATUSES = ["NEEDED", "ORDERED", "RECEIVED", "NOT_NEEDED"] as const;
+//   NEEDED (default, will remind) → QUEUED → ORDERED → RECEIVED, or NOT_NEEDED.
+//
+// QUEUED — "On the next order" — was asked for on 2026-09-09. Cards go to the
+// printer in batches, so there is a real gap between "this person is on the list
+// for the next batch" and "the order has been placed", and that gap is exactly
+// when she wants to stop thinking about them. Before it existed the only way to
+// call the step finished was to tick the checklist item, which changed nothing
+// here: they stayed NEEDED, stayed in the outstanding bucket and kept setting off
+// the order-by reminder, while the checklist said done. The two pages disagreed.
+//
+// It sits BEFORE ORDERED and never replaces it. Ordered still means it went to
+// the printer, which is the fact the order history is built on.
+export const CARD_STATUSES = ["NEEDED", "QUEUED", "ORDERED", "RECEIVED", "NOT_NEEDED"] as const;
 export type CardStatus = (typeof CARD_STATUSES)[number];
 export const CARD_STATUS_LABEL: Record<CardStatus, string> = {
   NEEDED: "Needed",
+  QUEUED: "On the next order",
   ORDERED: "Ordered",
   RECEIVED: "Received",
   NOT_NEEDED: "Not needed"
@@ -56,6 +68,9 @@ export function cardOrderState(orientationISO: string | null, status: string, no
   const orientation = new Date(orientationISO).getTime();
   const orderBy = orientation - CARD_ORDER_BY_LEAD_DAYS * CARD_DAY;
   const daysUntilOrientation = Math.ceil((orientation - now) / CARD_DAY);
+  // QUEUED is deliberately NOT open. Being on the next order is the answer to
+  // "has anybody dealt with this person", so continuing to flash "overdue" at her
+  // would be the app disagreeing with the thing she just told it.
   const open = status === "NEEDED";
   // Remind once orientation is within the lead window, until a few days after it.
   const inWindow = orientation <= now + CARD_REMIND_LEAD_DAYS * CARD_DAY && daysUntilOrientation >= -3;

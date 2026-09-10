@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { splitCandidateName } from "@/lib/candidates/normalize";
 import { frontFetch } from "./client";
+import { cleanEditedBody } from "./sanitize-body";
 
 // The "Start Your Onboarding Journey" email. The BODY DELIBERATELY LIVES IN FRONT,
 // not here: HR maintains ~50 templates in Front and edits them there, so we fetch the
@@ -30,8 +31,15 @@ export type OnboardingEmailPreview = {
   cc: string[];
   firstName: string;
   subject: string;
+  /** The per-recipient half — rebuilt from the name, never overridden. */
+  greetingHtml: string;
+  /** The template half. This is what the send dialog lets her edit. */
+  bodyHtml: string;
+  /** greetingHtml + bodyHtml — what actually goes out. */
   html: string;
   templateName: string;
+  /** True when the body is a hand edit rather than the live template. */
+  edited: boolean;
 };
 
 type HireForEmail = {
@@ -46,7 +54,17 @@ type HireForEmail = {
  * what the user approves is what actually goes out.
  */
 export async function buildOnboardingEmail(
-  hire: HireForEmail
+  hire: HireForEmail,
+  /**
+   * Replace the template body for THIS SEND ONLY. Nothing is written back to
+   * Front and the next send re-reads the live template. Never touches the
+   * greeting, which is rebuilt from this hire's own name.
+   *
+   * Every send of this email is a person pressing a button in a confirm dialog —
+   * there is no cron path in here — which is the test for whether an edit box is
+   * allowed at all. See the same note on buildOrientationEmail.
+   */
+  bodyOverride?: string | null
 ): Promise<OnboardingEmailPreview> {
   // Personal email first: at this point in the checklist the company Gmail doesn't
   // exist yet — creating it is a LATER task, and this email is what tells them to
@@ -65,14 +83,21 @@ export async function buildOnboardingEmail(
   const { firstName } = splitCandidateName(hire.name);
   const first = firstName || hire.name.split(/\s+/)[0] || "there";
 
+  const edited = Boolean(bodyOverride && bodyOverride.trim());
+  const bodyHtml = edited ? cleanEditedBody(bodyOverride as string) : tpl.body;
+  const greeting = greetingHtml(first);
+
   return {
     to,
     toSource: hire.personalEmail?.trim() ? "personal" : "company",
     cc: ["hrotasks@skyshare.com"],
     firstName: first,
     subject: tpl.subject,
-    html: greetingHtml(first) + tpl.body,
+    greetingHtml: greeting,
+    bodyHtml,
+    html: greeting + bodyHtml,
     templateName: tpl.name,
+    edited,
   };
 }
 
@@ -90,6 +115,9 @@ export type SendRecord = {
   sentAt: string;
   to: string;
   sentBy?: string | null;
+  /** Whether the body was hand-edited for that send. Undefined on records written
+      before the edit box existed, which is a third state and not a "no". */
+  edited?: boolean;
 };
 
 type SendMap = Record<string, SendRecord>;

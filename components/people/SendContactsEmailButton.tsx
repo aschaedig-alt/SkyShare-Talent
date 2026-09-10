@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Modal } from "@/components/ui";
+import { EmailBodyEditor } from "@/components/shared/EmailBodyEditor";
 import { formatMomentDate } from "@/lib/dates/display";
 import {
   previewContactsEmail,
@@ -35,6 +36,9 @@ export function SendContactsEmailButton({ hireId, taskStatus, canEdit, onSent }:
   const [sending, setSending] = useState(false);
   const [preview, setPreview] = useState<ContactsPreviewResult | null>(null);
   const [result, setResult] = useState<ContactsSendResult | null>(null);
+  // Null until the body is actually edited. Null means "send the live template",
+  // which keeps the untouched case byte-identical to what this sent before.
+  const [body, setBody] = useState<string | null>(null);
 
   if (!canEdit) return null;
 
@@ -43,13 +47,14 @@ export function SendContactsEmailButton({ hireId, taskStatus, canEdit, onSent }:
     setLoading(true);
     setPreview(null);
     setResult(null);
+    setBody(null);
     setPreview(await previewContactsEmail(hireId));
     setLoading(false);
   }
 
   async function confirmSend() {
     setSending(true);
-    const res = await sendContactsEmail(hireId);
+    const res = await sendContactsEmail(hireId, body);
     setResult(res);
     setSending(false);
     if (res.ok) onSent();
@@ -64,6 +69,7 @@ export function SendContactsEmailButton({ hireId, taskStatus, canEdit, onSent }:
     setTimeout(() => {
       setPreview(null);
       setResult(null);
+      setBody(null);
     }, 200);
   }
 
@@ -159,25 +165,30 @@ export function SendContactsEmailButton({ hireId, taskStatus, canEdit, onSent }:
             </dl>
 
             <p className="mt-3 text-xs text-brand-grey dark:text-slate-400">
-              Body is the live Front template &ldquo;{p.templateName}&rdquo; &mdash; edit it in
-              Front and this preview updates.{" "}
+              Body is the live Front template &ldquo;{p.templateName}&rdquo;, fetched just now.{" "}
               {p.replacedTemplateLink
                 ? "The link in the template was replaced with the current one, so a stale link cannot go out."
-                : "The template carried no link, so the current one was added at the end."}
+                : "The template carried no link, so the current one was added at the end."}{" "}
+              Change the wording below for this send if you need to &mdash; the template in Front stays as it is.
             </p>
 
-            <iframe
-              title="Email preview"
-              className="mt-2 h-72 w-full rounded border border-brand-lea/15 bg-white dark:border-white/10"
-              srcDoc={`<body style="margin:12px;font-family:Verdana,sans-serif">${p.html}</body>`}
-            />
+            <div className="mt-2">
+              <EmailBodyEditor
+                greeting={p.greetingHtml}
+                template={p.bodyHtml}
+                edited={body}
+                onChange={setBody}
+                disabled={sending}
+                note="The share link is part of this body, so if you replace it, paste the link shown above rather than an older one."
+              />
+            </div>
 
             <div className="mt-5 flex justify-end gap-2">
               <Button variant="secondary" onClick={close} disabled={sending}>
                 Cancel
               </Button>
               <Button onClick={confirmSend} disabled={sending}>
-                {sending ? "Sending…" : `Send to ${p.to}`}
+                {sending ? "Sending…" : body === null ? `Send to ${p.to}` : `Send edited copy to ${p.to}`}
               </Button>
             </div>
           </>

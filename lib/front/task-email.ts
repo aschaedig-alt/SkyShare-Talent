@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { splitCandidateName } from "@/lib/candidates/normalize";
 import { getTaskEmailConfig, type TaskEmailConfig } from "@/lib/onboarding/task-email-config";
 import { fetchTemplate } from "./templates";
+import { cleanEditedBody } from "./sanitize-body";
 
 // The generic "this checklist task sends an email" path.
 //
@@ -29,22 +30,6 @@ function greetingHtml(firstName: string): string {
   );
 }
 
-/**
- * Strip anything that could execute out of a body typed in the send dialog.
- *
- * Lifted verbatim in behaviour from cleanEditedBody() in orientation-email.ts —
- * the same job, on the same kind of contenteditable output, so it does the same
- * thing rather than inventing a second answer.
- */
-export function cleanEditedBody(html: string): string {
-  return html
-    .replace(/<\s*(script|style|iframe|object|embed)\b[\s\S]*?<\s*\/\s*\1\s*>/gi, "")
-    .replace(/<\s*\/?\s*(script|style|iframe|object|embed)\b[^>]*>/gi, "")
-    .replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, "")
-    .replace(/\son[a-z]+\s*=\s*'[^']*'/gi, "")
-    .replace(/\son[a-z]+\s*=\s*[^\s>]+/gi, "")
-    .replace(/javascript:/gi, "");
-}
 
 export type TaskEmailPreview = {
   taskKey: string;

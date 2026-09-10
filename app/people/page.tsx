@@ -6,7 +6,8 @@ import {
   getPostOnboardHires,
   getArchivedRows
 } from "@/lib/data/onboarding";
-import { getGridChecklist } from "@/lib/data/onboarding-grid-config";
+import { getGridChecklist, getCheckinEmailTargets } from "@/lib/data/onboarding-grid-config";
+import { getTaskEmailMap } from "@/lib/onboarding/task-email-config";
 import { PreOnboardingWorkspace, type PeopleTab } from "@/components/people/PreOnboardingWorkspace";
 import { isAdminOrRecruiter } from "@/lib/auth/roles";
 
@@ -36,11 +37,12 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
     return <PreOnboardingWorkspace tab={tab} counts={counts} canManage={canManage} dashboard={await getActiveDashboard()} />;
   }
   if (tab === "grid") {
-    const [grid, checklist] = await Promise.all([getActiveGridHires(), getGridChecklist()]);
-    return <PreOnboardingWorkspace tab={tab} counts={counts} canManage={canManage} grid={grid} checklist={checklist} />;
+    const [grid, checklist, checkins] = await Promise.all([getActiveGridHires(), getGridChecklist(), getCheckinEmailTargets()]);
+    return <PreOnboardingWorkspace tab={tab} counts={counts} canManage={canManage} grid={grid} checklist={checklist} checkins={checkins} />;
   }
   if (tab === "post") {
-    return <PreOnboardingWorkspace tab={tab} counts={counts} canManage={canManage} post={await getPostOnboardHires()} />;
+    const [post, taskEmails] = await Promise.all([getPostOnboardHires(), getTaskEmailMap()]);
+    return <PreOnboardingWorkspace tab={tab} counts={counts} canManage={canManage} post={post} emailTaskKeys={Object.keys(taskEmails)} />;
   }
   return <PreOnboardingWorkspace tab={tab} counts={counts} canManage={canManage} archived={await getArchivedRows()} />;
 }

@@ -10,7 +10,7 @@ import type {
   OnboardingDashboard,
   PostOnboardHire
 } from "@/lib/data/onboarding";
-import type { GridChecklistGroup } from "@/lib/data/onboarding-grid-config";
+import type { GridChecklistGroup, CheckinEmailTarget } from "@/lib/data/onboarding-grid-config";
 import { OnboardingDashboardTab } from "@/components/people/OnboardingDashboardTab";
 import { OnboardingGridTab } from "@/components/people/OnboardingGridTab";
 import { PostOnboardTab } from "@/components/people/PostOnboardTab";
@@ -28,11 +28,15 @@ type Props = {
   dashboard?: OnboardingDashboard;
   grid?: GridHire[];
   checklist?: GridChecklistGroup[];
+  /** Post-onboarding check-ins, so Manage tasks can point one at a template. */
+  checkins?: CheckinEmailTarget[];
+  /** Task keys wired to a Front template, so a Send button can appear on them. */
+  emailTaskKeys?: string[];
   post?: PostOnboardHire[];
   archived?: NewHireRow[];
 };
 
-export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboard, grid, checklist, post, archived }: Props) {
+export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboard, grid, checklist, checkins, emailTaskKeys, post, archived }: Props) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -141,8 +145,8 @@ export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboa
       </div>
 
       {tab === "dashboard" && dashboard ? <OnboardingDashboardTab dashboard={dashboard} /> : null}
-      {tab === "grid" && grid ? <OnboardingGridTab hires={grid} checklist={checklist ?? []} /> : null}
-      {tab === "post" && post ? <PostOnboardTab hires={post} /> : null}
+      {tab === "grid" && grid ? <OnboardingGridTab hires={grid} checklist={checklist ?? []} checkins={checkins ?? []} /> : null}
+      {tab === "post" && post ? <PostOnboardTab hires={post} emailTaskKeys={emailTaskKeys ?? []} /> : null}
       {tab === "archived" && archived ? <OnboardingArchivedTab rows={archived} /> : null}
 
       <Modal open={adding} onClose={() => setAdding(false)} busy={saving}>

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { ChevronDown, ChevronUp, GripVertical, Mail } from "lucide-react";
-import type { GridChecklistGroup, GridTaskDef } from "@/lib/data/onboarding-grid-config";
+import type { GridChecklistGroup, GridTaskDef, CheckinEmailTarget } from "@/lib/data/onboarding-grid-config";
 import { CUSTOM_GROUP } from "@/lib/onboarding/tasks";
 import type { FrontTemplateSummary } from "@/lib/front/templates";
 
@@ -26,6 +26,10 @@ import type { FrontTemplateSummary } from "@/lib/front/templates";
 
 type Props = {
   checklist: GridChecklistGroup[];
+  /** The post-onboarding check-ins. They are not part of the layout above and are
+   *  not reorderable here — a 30/60/90 schedule is a calendar, not a preference —
+   *  but each one can be pointed at a Front template like any other step. */
+  checkins: CheckinEmailTarget[];
   /** Told after a change so the page can refresh the server data. */
   onChanged: () => void;
 };
@@ -70,7 +74,7 @@ function reconcile(staged: Layout, server: Layout): Layout {
   return { sectionOrder, bySection };
 }
 
-export function ChecklistManagePanel({ checklist, onChanged }: Props) {
+export function ChecklistManagePanel({ checklist, checkins, onChanged }: Props) {
   const router = useRouter();
 
   const serverLayout = useMemo(() => layoutOf(checklist), [checklist]);
@@ -82,6 +86,7 @@ export function ChecklistManagePanel({ checklist, onChanged }: Props) {
   const [err, setErr] = useState<string | null>(null);
   const [savingOrder, setSavingOrder] = useState(false);
   const [emailFor, setEmailFor] = useState<string | null>(null);
+  const [checkinEmailFor, setCheckinEmailFor] = useState<string | null>(null);
   const [drag, setDrag] = useState<{ kind: "task" | "section"; key: string } | null>(null);
 
   const tasksByKey = useMemo(() => {
@@ -475,6 +480,63 @@ export function ChecklistManagePanel({ checklist, onChanged }: Props) {
             </div>
           );
         })}
+      </div>
+
+      {/* Post-onboarding check-ins. Email wiring only: these five are a fixed
+          schedule owned by the Post-onboard tab, they never appear on the
+          onboarding checklist, and their order is a calendar rather than
+          something to drag. */}
+      <div className="mt-5 border-t border-brand-lea/10 pt-3 dark:border-white/10">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-brand-gold">Post-onboarding check-ins</p>
+        <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
+          These live on the <b>Post-onboard</b> tab, not on a new hire&apos;s checklist. Point one at a Front template and
+          an envelope appears in that column on the Post-onboard grid, so the email can go from the row you are looking
+          at. Sending it marks the check-in done.
+        </p>
+        <div className="mt-2 space-y-1.5">
+          {checkins.map((c) => (
+            <div key={c.key}>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="min-w-0 flex-1 rounded border border-brand-lea/10 px-3 py-1.5 text-sm text-brand-black dark:border-white/10 dark:text-slate-100">
+                  {c.label}
+                </span>
+                {c.email ? (
+                  <span
+                    title={`Sends the Front template "${c.email.templateName}"`}
+                    className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300"
+                  >
+                    <Mail className="h-3 w-3" /> emails
+                  </span>
+                ) : null}
+                <button
+                  onClick={() => setCheckinEmailFor((k) => (k === c.key ? null : c.key))}
+                  className={clsx(
+                    "rounded border px-3 py-1.5 text-xs font-semibold transition",
+                    checkinEmailFor === c.key
+                      ? "border-brand-lea bg-brand-lea text-white"
+                      : "border-brand-lea/20 text-brand-eden hover:bg-brand-cloudDancer/40 dark:border-white/10 dark:text-slate-200"
+                  )}
+                >
+                  Email
+                </button>
+              </div>
+              {checkinEmailFor === c.key ? (
+                <TaskEmailSetup
+                  task={{ key: c.key, label: c.label, group: "MAINTENANCE", custom: false, hidden: false, email: c.email, emailFixed: false }}
+                  busy={busy}
+                  onSave={async (payload) => {
+                    const ok = await call("/api/onboarding-grid", "POST", { key: c.key, ...payload });
+                    if (ok) setCheckinEmailFor(null);
+                  }}
+                  onClear={async () => {
+                    const ok = await call("/api/onboarding-grid", "POST", { key: c.key, templateId: "" });
+                    if (ok) setCheckinEmailFor(null);
+                  }}
+                />
+              ) : null}
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="mt-4 flex items-center gap-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">

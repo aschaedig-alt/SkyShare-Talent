@@ -9,13 +9,14 @@ import { formatCardText, formatCardsBatch, formatCardHtml, formatCardsHtml, card
 import { copyRich } from "@/lib/business-cards/copy";
 import { BusinessCardVisual } from "@/components/business-cards/BusinessCardVisual";
 
-type View = "all" | "new" | "needs" | "ordered" | "received" | "notNeeded" | "missing";
+type View = "all" | "new" | "needs" | "queued" | "ordered" | "received" | "notNeeded" | "missing";
 
 // The tabs that are just "everyone currently at this order status". Changing a
 // card's status re-derives the rows, so the person drops out of one status tab and
 // appears under the new one automatically.
 const STATUS_VIEW: Partial<Record<View, CardStatus>> = {
   needs: "NEEDED",
+  queued: "QUEUED",
   ordered: "ORDERED",
   received: "RECEIVED",
   notNeeded: "NOT_NEEDED"
@@ -30,7 +31,9 @@ const statusSelectClass = (status: string) =>
     "rounded border px-1.5 py-0.5 text-[11px] font-semibold outline-none transition",
     status === "RECEIVED"
       ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300"
-      : status === "ORDERED"
+      : status === "QUEUED"
+        ? "border-brand-sweet bg-brand-sweet/25 text-brand-lea dark:border-brand-sweet/40 dark:bg-brand-sweet/15 dark:text-brand-sweet"
+        : status === "ORDERED"
         ? "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/15 dark:text-sky-300"
         : status === "NOT_NEEDED"
           ? "border-brand-lea/20 bg-brand-cloudDancer/40 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400"
@@ -71,6 +74,7 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
   const needsCount = peopleWith((c) => c.status === "NEEDED");
   const orderedCount = peopleWith((c) => c.status === "ORDERED");
   const receivedCount = peopleWith((c) => c.status === "RECEIVED");
+  const queuedCount = peopleWith((c) => c.status === "QUEUED");
   const notNeededCount = peopleWith((c) => c.status === "NOT_NEEDED");
   // People whose card can't be finished because their company email is blank —
   // catch these BEFORE the cards go to the printer.
@@ -132,6 +136,9 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
     { key: "all", label: "All staff", count: staffCount },
     { key: "new", label: "New hires", count: newHireCount },
     { key: "needs", label: "Needs cards", count: needsCount, attention: true },
+    // Between "needs" and "ordered" on purpose: the tabs read left to right in the
+    // order the work actually happens, and being on the next order sits there.
+    { key: "queued", label: "On the next order", count: queuedCount },
     { key: "ordered", label: "Ordered", count: orderedCount },
     { key: "received", label: "Received", count: receivedCount },
     { key: "notNeeded", label: "Not needed", count: notNeededCount },

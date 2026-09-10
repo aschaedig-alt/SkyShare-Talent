@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { defaultTaskCreateData } from "@/lib/data/onboarding";
 import { ensureCustomMilestoneTasks } from "@/lib/data/onboarding-milestones";
+import { getChecklistPlacement } from "@/lib/data/onboarding-grid-config";
 import { syncCardStatusFromChecklist } from "@/lib/business-cards/checklist-sync";
 import type { ParsedHireRow } from "@/lib/onboarding/import-hires";
 
@@ -110,6 +111,12 @@ export async function POST(request: Request) {
     let taskChanges = 0;
     let archived = 0;
 
+    // Read the saved checklist layout ONCE for the whole file, deliberately.
+    // Per row would be one query per hire for an answer that cannot change
+    // mid-import, and it would let a long import split across a Save order so
+    // that early rows and late rows disagreed about where a task belongs.
+    const placement = await getChecklistPlacement();
+
     for (const row of rows) {
       const name = strOrNull(row.name);
       if (!name) continue;
@@ -182,7 +189,7 @@ export async function POST(request: Request) {
           stage: terminated ? "ARCHIVED" : "ACTIVE",
           employmentStatus: terminated ? "TERMINATED" : "ACTIVE",
           // Former employees are records-only — skip the onboarding checklist.
-          ...(terminated ? {} : { tasks: { create: defaultTaskCreateData() } })
+          ...(terminated ? {} : { tasks: { create: defaultTaskCreateData(placement) } })
         },
         select: {
           id: true,
@@ -202,7 +209,7 @@ export async function POST(request: Request) {
         }
       });
       if (!terminated) {
-        await ensureCustomMilestoneTasks(hire.id);
+        await ensureCustomMilestoneTasks(hire.id, placement);
         taskChanges += await applyTasks(hire.id, incomingTasks);
       }
 

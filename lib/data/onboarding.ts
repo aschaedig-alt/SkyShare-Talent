@@ -4,7 +4,7 @@ import {
   MAINTENANCE_TASKS,
   MAINTENANCE_GROUP,
   CUSTOM_GROUP,
-  type OnboardingTaskDef
+  type TaskPlacement
 } from "@/lib/onboarding/tasks";
 import { getMilestoneCatalog } from "@/lib/data/onboarding-milestones";
 import { getDashboardHiddenIds } from "@/lib/data/dashboard-hidden";
@@ -785,18 +785,33 @@ export async function getNewHireDetail(id: string): Promise<NewHireDetail | null
 // the Offer group arrives already complete instead of asking someone to tick the
 // same six boxes a second time. Passing nothing gives the old all-TODO behaviour,
 // which is what the CSV importer and a hire with no offer both want.
+//
+// PLACEMENT COMES FROM THE SAVED LAYOUT, not from the order these are written
+// down in here. This used to read ONBOARDING_TASKS directly, which meant a hire
+// created after somebody reordered the checklist got the arrangement as it was
+// BEFORE the reorder — different sections, different order, and the built-in
+// labels rather than the renamed ones. The caller passes the map so the two
+// halves of a new hire's checklist (these built-ins and the custom milestones)
+// are placed from one reading of the layout rather than two.
+// `group` is a plain string rather than OnboardingGroupKey, and that is the
+// point: a built-in task can now be filed into the Custom section (or any other)
+// by the saved layout, so the four code group keys are no longer the full range.
+// OnboardingTask.group is a String column, so nothing downstream narrows it.
 export function defaultTaskCreateData(
+  placement: Map<string, TaskPlacement>,
   offerSteps?: OfferSteps
-): Array<
-  Pick<OnboardingTaskDef, "label" | "group"> & { key: string; order: number; status: string; completedAt?: Date }
-> {
+): Array<{ key: string; label: string; group: string; order: number; status: string; completedAt?: Date }> {
   return ONBOARDING_TASKS.map((t, i) => {
     const doneAt = offerSteps && isOfferStepKey(t.key) ? offerStepCompletedAt(offerSteps, t.key) : null;
+    // The code position is the fallback, not the answer. A key absent from the
+    // layout is one added in code since the last save; it belongs where the code
+    // put it rather than nowhere.
+    const at = placement.get(t.key);
     return {
       key: t.key,
-      label: t.label,
-      group: t.group,
-      order: i,
+      label: at?.label ?? t.label,
+      group: at?.group ?? t.group,
+      order: at?.order ?? i,
       status: doneAt ? "DONE" : "TODO",
       ...(doneAt ? { completedAt: doneAt } : {})
     };

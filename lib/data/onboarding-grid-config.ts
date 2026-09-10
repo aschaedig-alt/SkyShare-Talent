@@ -1,5 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import { ONBOARDING_TASKS, ONBOARDING_GROUPS, CUSTOM_GROUP, MAINTENANCE_GROUP } from "@/lib/onboarding/tasks";
+import {
+  ONBOARDING_TASKS,
+  ONBOARDING_GROUPS,
+  CUSTOM_GROUP,
+  MAINTENANCE_GROUP,
+  MAINTENANCE_TASKS,
+  type TaskPlacement
+} from "@/lib/onboarding/tasks";
 import { getMilestoneCatalog } from "@/lib/data/onboarding-milestones";
 import { getTaskEmailMap, EXCLUDED_TASK_KEYS, type TaskEmailConfig } from "@/lib/onboarding/task-email-config";
 
@@ -192,6 +199,56 @@ export type ChecklistSection = { key: string; label: string };
 export async function getChecklistSections(): Promise<ChecklistSection[]> {
   const ov = await read();
   return applyOrder(SECTION_KEYS, (k) => k, ov.groupOrder).map((key) => ({ key, label: sectionLabel(ov, key) }));
+}
+
+/**
+ * Where every checklist task belongs on a NEW hire's checklist: its section, its
+ * position, and the name it is shown under.
+ *
+ * THIS IS THE HOLE THE FIRST CUT LEFT, and it was live for a week. Reordering
+ * re-stamped every EXISTING hire's rows, and the grid and the detail page both
+ * read the saved layout — but hire creation did neither. It wrote the code order,
+ * the code groups and the code labels straight from lib/onboarding/tasks.ts, so a
+ * hire added after a reorder got the checklist as it looked before it: the one
+ * person created after the Sep 2 reorder had the contacts link in Orientation
+ * where the layout says Onboarding and systems, and all four custom steps
+ * stranded in Custom at order 90, including the two that had been filed into
+ * Orientation on purpose.
+ *
+ * Built by flattening getGridChecklist() in exactly the way
+ * saveChecklistArrangement() flattens it, so a task created here and a task
+ * re-stamped by a save cannot disagree — they are the same computation.
+ */
+export async function getChecklistPlacement(): Promise<Map<string, TaskPlacement>> {
+  const groups = await getGridChecklist();
+  const out = new Map<string, TaskPlacement>();
+  let order = 0;
+  for (const g of groups) {
+    for (const t of g.tasks) out.set(t.key, { group: g.key, order: order++, label: t.label });
+  }
+  return out;
+}
+
+/**
+ * The post-onboarding check-ins (30 / 60 / 90 / benefits / social), so a template
+ * can be pointed at one of them the same way a checklist step can.
+ *
+ * They are NOT part of the layout above and deliberately stay out of it. Those
+ * five are a fixed schedule that belongs to the post-onboard page, they are
+ * excluded from the onboarding checklist everywhere it is rendered, and their
+ * order is a calendar (30 before 60 before 90), not a preference. All they need
+ * from this file is the email wiring.
+ */
+export type CheckinEmailTarget = { key: string; label: string; short: string; email: TaskEmailConfig | null };
+
+export async function getCheckinEmailTargets(): Promise<CheckinEmailTarget[]> {
+  const emails = await getTaskEmailMap();
+  return MAINTENANCE_TASKS.map((m) => ({
+    key: m.key,
+    label: m.label,
+    short: m.short,
+    email: emails[m.key] ?? null
+  }));
 }
 
 /** Just the hidden built-in keys, so grid progress can exclude them from counts. */

@@ -3,6 +3,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { maybeArchiveOnCheckinsComplete } from "@/lib/data/onboarding";
 import { isAuthRequired } from "@/lib/auth/auth-config";
 import { hasPermission, isRoleName } from "@/lib/auth/roles";
 import { getOrientationChannelId } from "@/lib/front/config";
@@ -100,7 +101,7 @@ export async function previewOnboardingEmail(
  * Actually send it. Rebuilds from the same code path the preview used so what was
  * approved is what goes out, then records the Front conversation and ticks the task.
  */
-export async function sendOnboardingEmail(hireId: string): Promise<SendResult> {
+export async function sendOnboardingEmail(hireId: string, bodyOverride?: string | null): Promise<SendResult> {
   if (!(await canEditPeople())) {
     return { ok: false, error: "You don't have permission to send this email." };
   }
@@ -108,7 +109,7 @@ export async function sendOnboardingEmail(hireId: string): Promise<SendResult> {
   if (!hire) return { ok: false, error: "New hire not found." };
 
   try {
-    const email = await buildOnboardingEmail(hire);
+    const email = await buildOnboardingEmail(hire, bodyOverride);
     const channelId = await getOrientationChannelId();
 
     const sent = await sendEmail(channelId, {
@@ -128,6 +129,7 @@ export async function sendOnboardingEmail(hireId: string): Promise<SendResult> {
       sentAt,
       to: email.to,
       sentBy: await actorLabel(),
+      edited: email.edited,
     });
 
     // Forward-only, mirroring how a booked trip ticks travel_complete: a send is
@@ -197,7 +199,7 @@ export async function previewContactsEmail(hireId: string): Promise<ContactsPrev
  * what goes out — including re-reading the share token, so a rotation between preview
  * and send cannot ship a dead link.
  */
-export async function sendContactsEmail(hireId: string): Promise<ContactsSendResult> {
+export async function sendContactsEmail(hireId: string, bodyOverride?: string | null): Promise<ContactsSendResult> {
   if (!(await canEditPeople())) {
     return { ok: false, error: "You don't have permission to send this email." };
   }
@@ -209,7 +211,7 @@ export async function sendContactsEmail(hireId: string): Promise<ContactsSendRes
   let email: ContactsEmailPreview;
   let channelId: string;
   try {
-    email = await buildContactsEmail(hire);
+    email = await buildContactsEmail(hire, bodyOverride);
     channelId = await getOrientationChannelId();
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Could not build the email." };
@@ -255,6 +257,7 @@ export async function sendContactsEmail(hireId: string): Promise<ContactsSendRes
       to: email.to,
       sentBy: await actorLabel(),
       mode: guard.mode,
+      edited: email.edited,
     });
   } catch {
     warnings.push("The email went out, but the send record could not be saved — a re-send will not warn you.");
@@ -446,6 +449,12 @@ export async function sendTaskEmail(
         "This hire has no checklist item with that name, so nothing was ticked. Their onboarding started before the item existed."
       );
     }
+    // A post-onboarding check-in completed by SENDING its email has to behave the
+    // same as one completed by clicking its box, and clicking the box goes through
+    // /api/onboarding-tasks/[id], which calls this. Without it, sending the last
+    // outstanding check-in would tick it and then leave the employee sitting on
+    // the Post-onboard list forever with nothing left to do.
+    if (ticked.count > 0) await maybeArchiveOnCheckinsComplete(hireId);
   } catch {
     warnings.push("The email went out, but the checklist item could not be ticked.");
   }

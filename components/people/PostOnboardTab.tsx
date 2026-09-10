@@ -8,6 +8,7 @@ import { Archive, CalendarClock, Building2, Trash2, ListChecks } from "lucide-re
 import type { Checkin, EmploymentStatus, GridTaskStatus, PostOnboardHire } from "@/lib/data/onboarding";
 import { MAINTENANCE_TASKS } from "@/lib/onboarding/tasks";
 import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
+import { SendTaskEmailButton } from "@/components/people/SendTaskEmailButton";
 import { EmptyState, Input } from "@/components/ui";
 import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
 
@@ -28,11 +29,21 @@ const POST_ONBOARD_BULK_ACTIONS: BulkAction[] = [
   { kind: "delete", key: "delete", label: "Delete", icon: Trash2 }
 ];
 
-export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] }) {
+export function PostOnboardTab({
+  hires: initial,
+  emailTaskKeys
+}: {
+  hires: PostOnboardHire[];
+  /** Check-in keys pointed at a Front template in Manage tasks. Only those get an
+   *  envelope, so this grid stays scannable rather than growing an icon per cell. */
+  emailTaskKeys: string[];
+}) {
   const router = useRouter();
   const [hires, setHires] = useState(initial);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+
+  const emailKeys = useMemo(() => new Set(emailTaskKeys), [emailTaskKeys]);
 
   // Filters. Applied in the browser rather than the server: this list is the
   // post-onboard cohort, which is tens of rows, and it is already fully loaded —
@@ -291,6 +302,7 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
                 </td>
                 {h.checkins.map((c) => (
                   <td key={c.key} className="px-3 py-3 text-center">
+                    <span className="inline-flex items-center gap-0.5">
                     <button
                       type="button"
                       onClick={() => toggle(h.id, c)}
@@ -309,6 +321,34 @@ export function PostOnboardTab({ hires: initial }: { hires: PostOnboardHire[] })
                         <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/30" />
                       )}
                     </button>
+                    {/* Only the check-ins that have been pointed at a template get
+                        an envelope. Putting one on all five would add a column of
+                        icons to a grid whose whole job is being scannable. */}
+                    {emailKeys.has(c.key) ? (
+                      <SendTaskEmailButton
+                        compact
+                        hireId={h.id}
+                        taskKey={c.key}
+                        taskLabel={`${c.short} check-in — ${h.name}`}
+                        taskStatus={c.status}
+                        canEdit
+                        onSent={() =>
+                          setHires((cur) =>
+                            cur.map((x) =>
+                              x.id === h.id
+                                ? {
+                                    ...x,
+                                    checkins: x.checkins.map((y) =>
+                                      y.key === c.key ? { ...y, status: "DONE" as GridTaskStatus, dueSoon: false } : y
+                                    )
+                                  }
+                                : x
+                            )
+                          )
+                        }
+                      />
+                    ) : null}
+                    </span>
                   </td>
                 ))}
               </tr>

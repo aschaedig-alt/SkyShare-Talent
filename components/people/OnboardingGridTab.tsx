@@ -6,7 +6,7 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
 import { CircleCheck, Archive, CalendarClock, Building2, Trash2, Settings2, ClipboardCopy } from "lucide-react";
 import type { GridHire, GridTaskStatus, HireStatus } from "@/lib/data/onboarding";
-import type { GridChecklistGroup } from "@/lib/data/onboarding-grid-config";
+import type { GridChecklistGroup, CheckinEmailTarget } from "@/lib/data/onboarding-grid-config";
 import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
 import { ChecklistManagePanel } from "@/components/people/ChecklistManagePanel";
 import { copyRich } from "@/lib/business-cards/copy";
@@ -63,7 +63,15 @@ function Glyph({ status }: { status: GridTaskStatus }) {
  */
 const COLUMN_RULE = "border-r border-brand-lea/10 dark:border-white/10";
 
-export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHire[]; checklist: GridChecklistGroup[] }) {
+export function OnboardingGridTab({
+  hires: initial,
+  checklist,
+  checkins
+}: {
+  hires: GridHire[];
+  checklist: GridChecklistGroup[];
+  checkins: CheckinEmailTarget[];
+}) {
   const router = useRouter();
   const [hires, setHires] = useState(initial);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -213,7 +221,7 @@ export function OnboardingGridTab({ hires: initial, checklist }: { hires: GridHi
         </button>
       </div>
 
-      {managing && <ChecklistManagePanel checklist={checklist} onChanged={() => router.refresh()} />}
+      {managing && <ChecklistManagePanel checklist={checklist} checkins={checkins} onChanged={() => router.refresh()} />}
 
       {hires.length === 0 ? (
         <EmptyState title="No active hires." />

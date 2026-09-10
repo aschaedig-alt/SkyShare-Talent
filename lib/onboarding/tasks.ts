@@ -91,6 +91,18 @@ export const MILESTONE_KEYS: Array<{ key: string; short: string }> = [
 // fixed checklist groups; they are tracked per hire just like the standard tasks.
 export const CUSTOM_GROUP = "CUSTOM";
 
+/**
+ * Where one checklist task belongs on a hire's own checklist, and what it is
+ * called there — resolved from the SAVED layout, not from the lists above.
+ *
+ * The type lives here, in the module that imports nothing, because the two sides
+ * that need it cannot import each other: the layout is computed in
+ * lib/data/onboarding-grid-config.ts, which already imports the milestone catalog
+ * from lib/data/onboarding-milestones.ts, and the catalog is one of the places
+ * that has to place a new hire's tasks.
+ */
+export type TaskPlacement = { group: string; order: number; label: string };
+
 // Maintenance check-ins for post-onboard employees. Day-based ones drive "due" reminders.
 export const MAINTENANCE_GROUP = "MAINTENANCE";
 export const MAINTENANCE_TASKS: Array<{ key: string; label: string; short: string; dueDays: number | null }> = [

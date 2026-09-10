@@ -8,6 +8,7 @@ import {
   type OrientationTemplateKey
 } from "@/lib/orientation/email-templates-meta";
 import { frontFetch } from "./client";
+import { cleanEditedBody, EDITED_BODY_WARNING } from "./sanitize-body";
 
 // Orientation email, sent from the app using the team's OWN Front templates.
 //
@@ -244,21 +245,9 @@ export function applySessionOverrides(
  * common case where nobody changed a word. What is stripped here is only what
  * can execute, which no email client honours anyway, so nothing legible is lost.
  */
-export function cleanEditedBody(html: string): string {
-  return html
-    .replace(/<\s*(script|style|iframe|object|embed)\b[\s\S]*?<\s*\/\s*\1\s*>/gi, "")
-    .replace(/<\s*\/?\s*(script|style|iframe|object|embed)\b[^>]*>/gi, "")
-    .replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, "")
-    .replace(/\son[a-z]+\s*=\s*'[^']*'/gi, "")
-    .replace(/\son[a-z]+\s*=\s*[^\s>]+/gi, "")
-    .replace(/javascript:/gi, "");
-}
-
-/** The banner the preview and the send record both hang off. One string, so the
-    dialog cannot describe an edited send differently from the history does. */
-export const EDITED_BODY_WARNING =
-  "EDITED FOR THIS SEND — the body below was changed by hand and is no longer the Front template. The change applies to this send only; the template in Front is untouched and every later send reads it fresh.";
-
+// Both of these moved to ./sanitize-body so the four send paths share one copy.
+// Re-exported here because callers already import them from this module.
+export { cleanEditedBody, EDITED_BODY_WARNING } from "./sanitize-body";
 // --- recipients -------------------------------------------------------------
 
 // The standing cc list is an editable SETTING (lib/orientation/email-cc.ts), not a

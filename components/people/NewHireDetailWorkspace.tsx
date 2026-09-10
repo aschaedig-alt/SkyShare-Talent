@@ -17,6 +17,7 @@ import { SendOnboardingEmailButton } from "@/components/people/SendOnboardingEma
 import { SendContactsEmailButton } from "@/components/people/SendContactsEmailButton";
 import { SendTaskEmailButton } from "@/components/people/SendTaskEmailButton";
 import type { ChecklistSection } from "@/lib/data/onboarding-grid-config";
+import { CARD_STATUS_LABEL, isCardStatus } from "@/lib/business-cards/card";
 import { SupervisorPicker } from "@/components/people/SupervisorPicker";
 import { StartNewOnboardingButton } from "@/components/people/StartNewOnboardingButton";
 import { OnboardingHistoryPanel } from "@/components/people/OnboardingHistoryPanel";
@@ -56,6 +57,14 @@ type Props = {
 
 function toDateInput(iso: string | null) {
   return iso ? iso.slice(0, 10) : "";
+}
+
+/** The card statuses that mean somebody has already acted. NEEDED and NOT_NEEDED
+ *  are left off the checklist row: the tick box already says both of those. */
+const CARD_PROGRESS = new Set(["QUEUED", "ORDERED", "RECEIVED"]);
+
+function cardStatusLabel(status: string): string {
+  return isCardStatus(status) ? CARD_STATUS_LABEL[status] : status.toLowerCase().replace(/_/g, " ");
 }
 
 export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journey, onboardingArchives, cardOrders, roleTitleOptions, sections, emailTaskKeys, canEdit }: Props) {
@@ -526,7 +535,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
         ],
         [
           field("Managed aircraft (tail #)", "managedAircraft"),
-          readOnlyField("Business card", hire.businessCardStatus.toLowerCase().replace(/_/g, " "), "the Business cards panel"),
+          readOnlyField("Business card", cardStatusLabel(hire.businessCardStatus), "the Business cards panel"),
           readOnlyField("Card title", hire.businessCardTitle, "the Business cards panel")
         ],
         ...(managedPilotControl ? [[managedPilotControl]] : []),
@@ -576,6 +585,10 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
                 canEdit={canEdit}
                 onSent={() => setTasks((cur) => cur.map((x) => (x.key === "contacts_link_sent" ? { ...x, status: "DONE" } : x)))}
               />
+            ) : t.key === "business_card" && CARD_PROGRESS.has(hire.businessCardStatus) ? (
+              <span className="rounded bg-brand-sweet/25 px-2 py-0.5 text-[10px] font-semibold text-brand-lea dark:bg-brand-sweet/15 dark:text-brand-sweet">
+                {cardStatusLabel(hire.businessCardStatus)}
+              </span>
             ) : emailKeys.has(t.key) ? (
               // Any task she pointed at a Front template in Manage tasks. The two
               // above keep their own buttons because each does more than fill a
@@ -612,7 +625,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     {
       key: "cards",
       label: "Business cards",
-      chip: hire.businessCardStatus.toLowerCase().replace(/_/g, " "),
+      chip: cardStatusLabel(hire.businessCardStatus),
       content: (
         <BusinessCardPanel
           hireId={hire.id}
