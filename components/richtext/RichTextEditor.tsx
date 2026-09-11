@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
 import {
   Bold, Italic, Underline, Strikethrough, List, ListOrdered,
@@ -27,6 +27,21 @@ import { TEXT_COLORS, HIGHLIGHT_COLORS } from "@/lib/richtext/tokens";
  *
  * STRUCTURE IS NORMALISED, not merely filtered — see lib/richtext/normalize.ts
  * for what that fixes and why it runs on load and on blur as well as on paste.
+ *
+ * THE DOM IS THE SOURCE OF TRUTH WHILE THE CARET IS IN IT. The `value` prop
+ * seeds this editor once, on mount, and is never written back into the DOM for
+ * html this component itself emitted. Writing innerHTML under a live caret
+ * collapses it to offset 0 — which is the "cursor jumps to the beginning"
+ * report of Aug 16, Aug 20 and Sep 2. See the effect below before changing how
+ * `value` is consumed.
+ *
+ * DO NOT WRAP THIS COMPONENT IN A <label>. A <label> with no `for` attribute
+ * claims the first *labelable* descendant as its control, and the first one
+ * here is the Bold button — so a click anywhere inside the label, including one
+ * that only meant to place the caret, is forwarded to Bold and turns bold on.
+ * That shipped on 2026-07-29 when a <textarea> already sitting inside a label
+ * was swapped for this editor, and it took three rounds of feedback to find.
+ * Use a plain <div> and pass `ariaLabel` for the accessible name.
  */
 
 export type RichTextEditorProps = {
@@ -36,7 +51,16 @@ export type RichTextEditorProps = {
   minHeight?: number;
   /** Teammates who can be @-mentioned. */
   people?: Array<{ name: string; email: string }>;
+  /**
+   * Accessible name for the editing area. Needed because this must not be
+   * wrapped in a <label> — see the note above.
+   */
+  ariaLabel?: string;
 };
+
+/** Which character formats are live at the caret right now. */
+type Marks = { bold: boolean; italic: boolean; underline: boolean; strike: boolean };
+const NO_MARKS: Marks = { bold: false, italic: false, underline: false, strike: false };
 
 const COLOR_LABELS = ["Navy", "Red", "Green", "Gold", "Blue"] as const;
 const HIGHLIGHT_LABELS = ["Highlight gold", "Highlight red", "Highlight green"] as const;
@@ -56,17 +80,29 @@ const SIZES: Array<{ label: string; style: string }> = [
 const btn =
   "inline-flex h-7 w-7 items-center justify-center rounded border border-transparent text-brand-grey transition hover:border-brand-lea/20 hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100";
 
+/**
+ * On = the house selected treatment, navy filled with a gold edge (the same
+ * pairing ApplicationStatusPicker uses). It exists so the toolbar can say out
+ * loud that bold is armed: with no pressed state at all, text coming out bold
+ * looks like the editor misbehaving rather than a button being on.
+ */
+const btnOn =
+  "inline-flex h-7 w-7 items-center justify-center rounded border border-brand-gold bg-brand-lea text-white transition hover:bg-brand-lea/90 dark:border-brand-gold dark:bg-brand-lea dark:text-white";
+
 export function RichTextEditor({
   value,
   onChange,
   placeholder = "Write or paste here…",
   minHeight = 160,
-  people = []
+  people = [],
+  ariaLabel
 }: RichTextEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const [showColors, setShowColors] = useState(false);
   const [showSizes, setShowSizes] = useState(false);
   const [showPeople, setShowPeople] = useState(false);
+  const [marks, setMarks] = useState<Marks>(NO_MARKS);
 
   // Held in a ref so the effect below can call it without listing it as a
   // dependency — depending on onChange would re-run the seed on every render of
@@ -74,51 +110,142 @@ export function RichTextEditor({
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
-  /** Null until an existing value has been repaired once. */
-  const seededRef = useRef<string | null>(null);
+  /** False until the mount pass has run. A ref, so StrictMode's double-invoke
+   *  of effects in dev does not re-seed. */
+  const mountedRef = useRef(false);
+
+  /**
+   * The last html this component is responsible for: what it seeded the DOM
+   * from on mount, or what it last handed to onChange. Anything else arriving
+   * as `value` is a genuine change from outside (the parent clearing the box
+   * after a save) and is the only thing worth writing into the DOM.
+   */
+  const ownValueRef = useRef<string | null>(null);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
 
-    // Repair stored markup ONCE, when an existing write-up is first handed to
-    // the editor. Deliberately not on every change: normalising mid-typing
-    // would rewrite innerHTML under the caret and throw it to the top of the
-    // document on every keystroke.
-    if (value && seededRef.current === null) {
-      el.innerHTML = normalizeRichHtml(value);
-      // Read back what the browser actually holds rather than what we wrote —
-      // it re-serialises (<br /> becomes <br>), and keeping `value` equal to
-      // el.innerHTML is what stops this effect writing the DOM on every render.
-      const serialized = el.innerHTML;
-      seededRef.current = serialized;
-      if (serialized !== value) onChangeRef.current(serialized);
+    // SEED ONCE, ON MOUNT — and only on mount.
+    //
+    // This used to fire the first time `value` became non-empty, which for an
+    // editor that STARTS empty (the Add a note composer, and a new interview
+    // write-up) is the user's FIRST KEYSTROKE. It then rewrote innerHTML under
+    // a live caret, which collapses the caret to offset 0. Typing "Hello"
+    // produced "elloH"; on a full sentence the caret went from character 43 to
+    // character 0. That is "i cant click on the end of the text because it
+    // moves the cursor back to the beginning" (feedback cmtk7edgg, Sep 2, and
+    // the same complaint on Aug 16 and Aug 20).
+    //
+    // The focus guard added on Aug 20 sat BELOW this branch, which returns
+    // before reaching it, so it never applied on this path. Hence "its still
+    // doing the weird cursor thing".
+    //
+    // Mount-only is also the honest scope: an editor that opens empty has no
+    // stored markup to repair, and handleBlur normalises on the way out.
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      ownValueRef.current = value;
+      if (value) {
+        el.innerHTML = normalizeRichHtml(value);
+        // Read back what the browser actually holds rather than what we wrote —
+        // it re-serialises (<br /> becomes <br>). Telling the parent keeps what
+        // gets saved equal to what is on screen.
+        if (el.innerHTML !== value) onChangeRef.current(el.innerHTML);
+      }
       return;
     }
 
-    // NEVER rewrite the DOM while the caret is inside it.
-    //
-    // This line had no focus guard, and that is the whole bug reported Aug 16
-    // and again Aug 20: "I would click between words, and then my cursor would
-    // go back to the start of the message and would be bold."
-    //
-    // Typing calls emit() on every input, which sends el.innerHTML up to the
-    // parent. React re-renders a beat later, and while it does the DOM has
-    // already moved on — so value is stale, the comparison below says they
-    // differ, and the editor was reassigned its OWN older content. That both
-    // throws the caret to offset 0 and drops whatever was typed in between.
-    // Landing at offset 0 is also why the text came out bold: these write-ups
-    // routinely open with a bold run, so the caret arrives INSIDE it.
-    //
-    // Nothing is lost by skipping: handleBlur normalises and re-emits on the
-    // way out, so an external change reconciles the moment focus leaves.
+    // Our own html coming back around, or a parent that re-rendered without
+    // changing anything. Not a change; never touch the DOM for it. This is the
+    // line that makes typing safe, because emit() records every keystroke here
+    // before onChange sends it up.
+    if (value === ownValueRef.current) return;
+
+    ownValueRef.current = value;
+
+    // NEVER rewrite the DOM while the caret is inside it. Landing at offset 0
+    // is also why text came out bold: stored write-ups routinely open with a
+    // bold run, so the caret arrives INSIDE it. Nothing is lost by skipping —
+    // handleBlur normalises and re-emits on the way out, so an external change
+    // reconciles the moment focus leaves.
     if (document.activeElement === el) return;
 
     if (el.innerHTML !== value) el.innerHTML = value || "";
   }, [value]);
 
+  /**
+   * DEFENCE IN DEPTH against a <label> ancestor stealing our clicks.
+   *
+   * A <label> with no `for` claims the first labelable descendant as its
+   * control; ours is the Bold button, so every click inside the label — even
+   * one that only meant to place the caret — is forwarded to Bold. Label
+   * activation is the click event's DEFAULT ACTION, so preventDefault cancels
+   * it; stopPropagation would not, and would break anything listening upward.
+   *
+   * Detected once on mount and otherwise completely inert, so this changes
+   * nothing at the call sites that are already correct. It is a guard, NOT the
+   * fix: a call site that wraps this editor in a <label> should use a <div>
+   * and pass `ariaLabel`, because the label also hijacks clicks on its own
+   * caption, which happen outside this component and cannot be caught here.
+   */
+  const labelHijackRef = useRef(false);
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const label = root.closest("label") as HTMLLabelElement | null;
+    labelHijackRef.current =
+      !!label && !label.hasAttribute("for") && !!label.control && root.contains(label.control);
+  }, []);
+
+  const blockLabelActivation = (e: React.MouseEvent) => {
+    if (labelHijackRef.current) e.preventDefault();
+  };
+
+  /**
+   * Read the formats live at the caret so the toolbar can show what is armed.
+   * Cheap, and bailing out when nothing changed keeps a selectionchange
+   * listener from re-rendering on every caret move.
+   */
+  const syncMarks = useCallback(() => {
+    const el = ref.current;
+    if (!el || document.activeElement !== el) {
+      setMarks((prev) => (prev === NO_MARKS ? prev : NO_MARKS));
+      return;
+    }
+    let next: Marks;
+    try {
+      next = {
+        bold: document.queryCommandState("bold"),
+        italic: document.queryCommandState("italic"),
+        underline: document.queryCommandState("underline"),
+        strike: document.queryCommandState("strikeThrough")
+      };
+    } catch {
+      return;
+    }
+    setMarks((prev) =>
+      prev.bold === next.bold &&
+      prev.italic === next.italic &&
+      prev.underline === next.underline &&
+      prev.strike === next.strike
+        ? prev
+        : next
+    );
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener("selectionchange", syncMarks);
+    return () => document.removeEventListener("selectionchange", syncMarks);
+  }, [syncMarks]);
+
   function emit() {
-    if (ref.current) onChange(ref.current.innerHTML);
+    const el = ref.current;
+    if (!el) return;
+    // Recorded BEFORE onChange so the effect above recognises the value coming
+    // back as ours and leaves the DOM alone.
+    ownValueRef.current = el.innerHTML;
+    onChange(el.innerHTML);
   }
 
   /**
@@ -135,8 +262,8 @@ export function RichTextEditor({
     if (!el) return;
     const clean = normalizeRichHtml(el.innerHTML);
     if (clean !== el.innerHTML) el.innerHTML = clean;
-    seededRef.current = el.innerHTML;
-    onChange(el.innerHTML);
+    emit();
+    setMarks(NO_MARKS);
   }
 
   function run(command: string, argument?: string) {
@@ -153,6 +280,7 @@ export function RichTextEditor({
     }
     document.execCommand(command, false, argument);
     emit();
+    syncMarks();
   }
 
   /** Wrap the current selection in a span carrying an exact allowed style. */
@@ -242,12 +370,12 @@ export function RichTextEditor({
   const keepFocus = (e: React.MouseEvent) => e.preventDefault();
 
   return (
-    <div className="rounded border border-brand-lea/20 bg-white focus-within:border-brand-gold focus-within:ring-2 focus-within:ring-brand-gold/20 dark:border-white/10 dark:bg-[#0f2033]">
+    <div ref={rootRef} onClick={blockLabelActivation} className="rounded border border-brand-lea/20 bg-white focus-within:border-brand-gold focus-within:ring-2 focus-within:ring-brand-gold/20 dark:border-white/10 dark:bg-[#0f2033]">
       <div className="flex flex-wrap items-center gap-0.5 border-b border-brand-lea/10 px-1.5 py-1 dark:border-white/10">
-        <button type="button" onMouseDown={keepFocus} onClick={() => run("bold")} className={btn} title="Bold" aria-label="Bold"><Bold className="h-3.5 w-3.5" /></button>
-        <button type="button" onMouseDown={keepFocus} onClick={() => run("italic")} className={btn} title="Italic" aria-label="Italic"><Italic className="h-3.5 w-3.5" /></button>
-        <button type="button" onMouseDown={keepFocus} onClick={() => run("underline")} className={btn} title="Underline" aria-label="Underline"><Underline className="h-3.5 w-3.5" /></button>
-        <button type="button" onMouseDown={keepFocus} onClick={() => run("strikeThrough")} className={btn} title="Strikethrough" aria-label="Strikethrough"><Strikethrough className="h-3.5 w-3.5" /></button>
+        <button type="button" onMouseDown={keepFocus} onClick={() => run("bold")} className={marks.bold ? btnOn : btn} title="Bold" aria-label="Bold" aria-pressed={marks.bold}><Bold className="h-3.5 w-3.5" /></button>
+        <button type="button" onMouseDown={keepFocus} onClick={() => run("italic")} className={marks.italic ? btnOn : btn} title="Italic" aria-label="Italic" aria-pressed={marks.italic}><Italic className="h-3.5 w-3.5" /></button>
+        <button type="button" onMouseDown={keepFocus} onClick={() => run("underline")} className={marks.underline ? btnOn : btn} title="Underline" aria-label="Underline" aria-pressed={marks.underline}><Underline className="h-3.5 w-3.5" /></button>
+        <button type="button" onMouseDown={keepFocus} onClick={() => run("strikeThrough")} className={marks.strike ? btnOn : btn} title="Strikethrough" aria-label="Strikethrough" aria-pressed={marks.strike}><Strikethrough className="h-3.5 w-3.5" /></button>
         <button
           type="button"
           onMouseDown={keepFocus}
@@ -266,7 +394,7 @@ export function RichTextEditor({
         <span className="mx-1 h-4 w-px bg-brand-lea/15 dark:bg-white/10" />
 
         <div className="relative">
-          <button type="button" onMouseDown={keepFocus} onClick={() => { setShowColors((v) => !v); setShowSizes(false); setShowPeople(false); }} className={btn} title="Colour" aria-label="Colour"><Palette className="h-3.5 w-3.5" /></button>
+          <button type="button" onMouseDown={keepFocus} onClick={() => { setShowColors((v) => !v); setShowSizes(false); setShowPeople(false); }} className={btn} title="Color" aria-label="Color"><Palette className="h-3.5 w-3.5" /></button>
           {showColors && (
             <div className="absolute left-0 top-8 z-20 w-44 rounded border border-brand-lea/20 bg-white p-1.5 shadow-panel dark:border-white/10 dark:bg-brand-panel">
               {COLORS.map((c) => (
@@ -325,7 +453,9 @@ export function RichTextEditor({
           suppressContentEditableWarning
           role="textbox"
           aria-multiline="true"
+          aria-label={ariaLabel}
           onInput={emit}
+          onFocus={syncMarks}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}

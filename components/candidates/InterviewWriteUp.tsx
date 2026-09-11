@@ -242,6 +242,7 @@ export function InterviewWriteUp({
                 people={people}
                 placeholder="Paste the interview notes here. Formatting is kept."
                 minHeight={200}
+                ariaLabel="Interview notes"
               />
             </div>
           </div>
@@ -472,7 +473,7 @@ function LoggedInterview({
           />
         </label>
         <div className="mt-3">
-          <RichTextEditor value={draft.notesHtml} onChange={(html) => setDraft({ ...draft, notesHtml: html })} people={people} minHeight={160} />
+          <RichTextEditor value={draft.notesHtml} onChange={(html) => setDraft({ ...draft, notesHtml: html })} people={people} minHeight={160} ariaLabel="Interview notes" />
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <div className="flex gap-1.5">
