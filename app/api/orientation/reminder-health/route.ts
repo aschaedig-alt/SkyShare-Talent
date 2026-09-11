@@ -18,6 +18,13 @@ export const dynamic = "force-dynamic";
 //   GET ?preview=YYYY-MM-DD   also dry-run that Mountain day and return the exact
 //                             emails that would go out
 //   GET ?runs=1               also return the recorded run history
+//   GET ?sessionId=<id>       scope the per-session half of the answer
+//                             (`sessionProblems`) to that session. `problems` is
+//                             the cron itself and is never scoped — a stopped
+//                             cron is worth seeing from wherever you are looking.
+//                             Without this the route had no idea which session
+//                             was being viewed, so a warning about one session
+//                             was rendered on every session's page.
 
 export async function GET(request: Request) {
   const auth = await requireApiPermission("candidates:write");
@@ -26,13 +33,14 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const previewDay = url.searchParams.get("preview");
   const wantRuns = url.searchParams.get("runs") === "1";
+  const sessionId = url.searchParams.get("sessionId")?.trim() || undefined;
 
   if (previewDay && !/^\d{4}-\d{2}-\d{2}$/.test(previewDay)) {
     return NextResponse.json({ message: "preview must be YYYY-MM-DD." }, { status: 400 });
   }
 
   try {
-    const health = await getReminderHealth();
+    const health = await getReminderHealth(sessionId);
     const preview = previewDay ? await previewDueReminders(previewDay) : null;
     const runs = wantRuns ? await getReminderRuns() : null;
     return NextResponse.json({ ...health, preview, runs });

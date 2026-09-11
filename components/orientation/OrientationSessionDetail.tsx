@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clsx } from "clsx";
 import { Button } from "@/components/ui";
-import type { AttendeeView, ConfirmStatus, PrepTaskView, SessionCandidate, SessionDetail, TravelStatus } from "@/lib/data/orientation";
+import type { AttendeeView, CardFlagState, ConfirmStatus, PrepTaskView, SessionCandidate, SessionDetail, TravelStatus } from "@/lib/data/orientation";
 
 import { formatUsd } from "@/lib/travel/constants";
 import { OrientationEmailPanel } from "./OrientationEmailPanel";
@@ -253,10 +253,18 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
     updateAttendee(a.id, { travelStatus: v });
     await patchJson(`/api/orientation/attendees/${a.id}`, { travelStatus: v });
   }
-  async function toggleFlag(a: AttendeeView, field: "ipadReady" | "cardReady" | "swagReady") {
+  async function toggleFlag(a: AttendeeView, field: "ipadReady" | "swagReady") {
     const v = !a[field];
     updateAttendee(a.id, { [field]: v } as Partial<AttendeeView>);
     await patchJson(`/api/orientation/attendees/${a.id}`, { [field]: v });
+  }
+  /** The credit card cycles To do → Done → Not needed, the same three states and
+      the same order as the onboarding grid, so "not needed" can be recorded
+      instead of sitting as an empty circle nobody can ever close. */
+  async function cycleCard(a: AttendeeView) {
+    const next = NEXT_CARD_STATE[a.cardState];
+    updateAttendee(a.id, { cardState: next });
+    await patchJson(`/api/orientation/attendees/${a.id}`, { cardState: next });
   }
   async function removeAttendee(id: string) {
     setAttendees((cur) => cur.filter((a) => a.id !== id));
@@ -534,7 +542,11 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                   <th className="px-1 py-2">Confirm</th>
                   <th className="px-1 py-2">Travel</th>
                   <th className="px-1 py-2 text-center">iPad</th>
-                  <th className="px-1 py-2 text-center">Card</th>
+                  {/* "Card" on its own read as the business card to at least one
+                      person. It is the COMPANY CREDIT card — the prep checklist
+                      item is "Company credit cards ready to hand out" — so the
+                      header now says which card it means. */}
+                  <th className="px-1 py-2 text-center">Credit card</th>
                   <th className="px-1 py-2 text-center">Swag</th>
                   <th className="px-1 py-2"></th>
                 </tr>
@@ -546,7 +558,26 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                   <tr key={a.id} className="border-t border-brand-lea/10 dark:border-white/10">
                     <td className="py-2 pr-2">
                       <div className="font-medium text-brand-lea dark:text-slate-100">
-                        {a.name}
+                        {/* The name opens this person's onboarding checklist in a
+                            new tab — asked for from this table, so the session
+                            stays put while you go and look. A real Link, so
+                            ctrl/right-click work too; the tab key is explicit so
+                            it still lands on the checklist if the tabs are ever
+                            reordered. Only the name is a link: the row already
+                            carries two others. */}
+                        {a.newHireId ? (
+                          <Link
+                            href={`/people/${a.newHireId}?tab=checklist`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`Open ${a.name}'s onboarding checklist in a new tab`}
+                            className="underline-offset-2 hover:underline"
+                          >
+                            {a.name}
+                          </Link>
+                        ) : (
+                          a.name
+                        )}
                         {a.isPilot ? <span className="ml-1 rounded bg-sky-50 dark:bg-sky-500/15 px-1 text-[9px] font-semibold text-sky-700 dark:text-sky-300">pilot</span> : null}
                         {a.rescheduleCount > 0 ? <span className="ml-1 rounded bg-brand-gold/15 px-1 text-[9px] font-semibold text-brand-lea dark:text-slate-100" title="Times moved to a later orientation">moved {a.rescheduleCount}×</span> : null}
                       </div>
@@ -589,7 +620,7 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
                       )}
                     </td>
                     <td className="px-1 py-2 text-center">{a.isPilot ? <Flag on={a.ipadReady} onClick={() => toggleFlag(a, "ipadReady")} /> : <span className="text-brand-grey/40">—</span>}</td>
-                    <td className="px-1 py-2 text-center"><Flag on={a.cardReady} onClick={() => toggleFlag(a, "cardReady")} /></td>
+                    <td className="px-1 py-2 text-center"><CardFlag state={a.cardState} name={a.name} onClick={() => cycleCard(a)} /></td>
                     <td className="px-1 py-2 text-center"><Flag on={a.swagReady} onClick={() => toggleFlag(a, "swagReady")} /></td>
                     <td className="px-1 py-2">
                       <div className="flex items-center justify-end gap-1.5">
@@ -700,6 +731,42 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
         />
       ) : null}
     </div>
+  );
+}
+
+/** To do → Done → Not needed → To do. Same order and same three glyphs as the
+    onboarding grid (components/people/OnboardingGridTab.tsx), so the two tables
+    behave identically. */
+const NEXT_CARD_STATE: Record<CardFlagState, CardFlagState> = { TODO: "DONE", DONE: "NA", NA: "TODO" };
+
+const CARD_STATE_LABEL: Record<CardFlagState, string> = { TODO: "To do", DONE: "Done", NA: "Not needed" };
+
+/**
+ * The credit-card cell: three states, not two.
+ *
+ * "Not needed" renders as the same em-dash the iPad column already uses for a
+ * non-pilot, so a row that needs nothing reads the same way across the table.
+ * The title names the NEXT state as well as the current one — a click-to-cycle
+ * control is undiscoverable without it.
+ */
+function CardFlag({ state, name, onClick }: { state: CardFlagState; name: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={`Company credit card for ${name}: ${CARD_STATE_LABEL[state]}. Click for ${CARD_STATE_LABEL[NEXT_CARD_STATE[state]]}.`}
+      title={`Company credit card — ${CARD_STATE_LABEL[state]}. Click for “${CARD_STATE_LABEL[NEXT_CARD_STATE[state]]}”.`}
+      className="inline-flex items-center justify-center rounded p-0.5 transition hover:bg-brand-gold/10"
+    >
+      {state === "DONE" ? (
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+          <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </span>
+      ) : state === "TODO" ? (
+        <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/30" />
+      ) : (
+        <span className="text-brand-grey/40">—</span>
+      )}
+    </button>
   );
 }
 

@@ -1245,7 +1245,11 @@ function InternalSummary({ sessionId, refreshKey }: { sessionId: string; refresh
         <div className="mt-2 max-h-64 overflow-y-auto rounded border border-brand-lea/15 bg-white p-3 dark:border-white/10 dark:bg-[#0f2033]">
           <p className="mb-2 text-[12px] font-semibold text-brand-lea dark:text-slate-100">{state.subject}</p>
           <div
-            className="prose-sm text-[12.5px] text-brand-black dark:text-slate-200"
+            // Same link treatment as EmailBodyEditor, and for the same reason:
+            // prose-sm emits nothing here, so an anchor would render as plain
+            // black text and an orientation email full of links would preview as
+            // one with none. See the note on LINK_PREVIEW in EmailBodyEditor.
+            className="prose-sm text-[12.5px] text-brand-black [&_a]:text-[#0b63ce] [&_a]:underline [&_a]:underline-offset-2 dark:text-slate-200 dark:[&_a]:text-[#7db3ef]"
             dangerouslySetInnerHTML={{ __html: state.html }}
           />
         </div>
@@ -1393,7 +1397,11 @@ function CommunicationHistory({ attendees }: { attendees: AttendeeRow[] }) {
 type ReminderHealth = {
   ranToday: boolean;
   overdueToday: boolean;
+  /** The cron itself — true wherever you are standing. */
   problems: string[];
+  /** This session's own — the route is asked with ?sessionId=, so a warning about
+      another session no longer turns up here. */
+  sessionProblems: string[];
   lastRun: {
     at: string;
     outcome: "sent" | "nothing-due" | "failed" | "crashed";
@@ -1455,10 +1463,15 @@ function ReminderScheduler({
   // whether this session happens to be armed — a stopped cron is worth seeing
   // from wherever you are looking.
   //
+  // The session id is passed so the PER-SESSION warnings can be scoped to the
+  // session on screen. Before this, the route took no id and every session page
+  // showed every armed session's warnings — which is how a red box about the
+  // Aug 4 session came to be sitting on the Sep 1 session's page.
+  //
   // refreshKey: its "N still unsent" count is derived from sentTemplateKeys, so a
   // hand-tick can clear the problem outright and this has to re-ask to notice.
   useEffect(() => {
-    fetch("/api/orientation/reminder-health")
+    fetch(`/api/orientation/reminder-health?sessionId=${encodeURIComponent(sessionId)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setHealth(d && Array.isArray(d.problems) ? d : null))
       .catch(() => setHealth(null));
@@ -1511,9 +1524,13 @@ function ReminderScheduler({
   // A problem with the CRON is not session-scoped, so it must survive this
   // session's own status failing to load — otherwise the one thing worth seeing
   // disappears exactly when something is already wrong.
-  const problemBox = health?.problems.length ? (
+  //
+  // The two lists are rendered together but come back separately: the global ones
+  // are true everywhere, this session's are already scoped by the route.
+  const shownProblems = [...(health?.problems ?? []), ...(health?.sessionProblems ?? [])];
+  const problemBox = shownProblems.length ? (
     <ul className="mt-2 space-y-1 rounded border border-red-300 bg-red-50 p-2.5 text-[11.5px] text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300">
-      {health.problems.map((p) => (
+      {shownProblems.map((p) => (
         <li key={p}>{p}</li>
       ))}
     </ul>

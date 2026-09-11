@@ -1,8 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { isPilotPosition } from "@/lib/orientation/defaults";
 import { getPrepDefaults } from "@/lib/orientation/prep-defaults";
+import { type CardFlagState, cardStateFor, getCardNotNeeded } from "@/lib/orientation/card-state";
 import { officeDayKey } from "@/lib/dates/display";
 import { getOrientationSends } from "@/lib/front/orientation-email";
+
+export type { CardFlagState } from "@/lib/orientation/card-state";
 
 /**
  * The day a CALENDAR DATE falls on. A start date is a day someone picked, stored
@@ -22,6 +25,25 @@ function iso(d: Date | null) {
   return d ? d.toISOString() : null;
 }
 
+/**
+ * Does this attendee's travel still need booking?
+ *
+ * ONE rule, used by the list page and the detail page, because they used to
+ * disagree: the list counted the manual travelStatus flag on its own, so a hire
+ * with a real BOOKED trip whose flag was never moved off NEEDED showed as
+ * "1 travel pending" on /orientation and "Booked · $2,685.96" one click later.
+ * Reported Sep 2 ("why does this say travel pending?"). A REAL trip wins; the
+ * manual flag only answers for somebody who has no trip at all.
+ *
+ * CANCELED trips do not count — a trip that was called off is not a trip.
+ */
+export function travelStillPending(travelStatus: string, tripStatuses: string[]): boolean {
+  const live = tripStatuses.filter((s) => s !== "CANCELED");
+  if (live.length === 0) return travelStatus === "NEEDED";
+  if (live.some((s) => s === "BOOKED" || s === "COMPLETED")) return false;
+  return live.some((s) => s === "NEEDED");
+}
+
 export type SessionListItem = {
   id: string;
   date: string;
@@ -33,29 +55,51 @@ export type SessionListItem = {
   prepTotal: number;
   notConfirmed: number;
   travelPending: number;
+  /** Who travelPending refers to, so the pill can name them instead of leaving
+      "1 travel pending" as a number you have to open the session to decode. */
+  travelPendingNames: string[];
 };
 
 export async function getOrientationSessions(): Promise<{ upcoming: SessionListItem[]; past: SessionListItem[] }> {
   const sessions = await prisma.orientationSession.findMany({
     include: {
-      attendees: { select: { confirmed: true, travelStatus: true } },
+      attendees: {
+        select: {
+          confirmed: true,
+          travelStatus: true,
+          // The name (to say WHOSE travel it is) and the real trips (so the
+          // count matches the detail page) both ride the join that was already
+          // happening — no extra query.
+          newHire: {
+            select: {
+              name: true,
+              travelTrips: { where: { status: { not: "CANCELED" } }, select: { status: true } }
+            }
+          }
+        }
+      },
       prepTasks: { select: { done: true } }
     },
     orderBy: { date: "asc" }
   });
 
-  const items: SessionListItem[] = sessions.map((s) => ({
-    id: s.id,
-    date: s.date.toISOString(),
-    endsAt: iso(s.endsAt),
-    location: s.location,
-    status: s.status as SessionStatus,
-    attendeeCount: s.attendees.length,
-    prepDone: s.prepTasks.filter((t) => t.done).length,
-    prepTotal: s.prepTasks.length,
-    notConfirmed: s.attendees.filter((a) => a.confirmed !== "CONFIRMED").length,
-    travelPending: s.attendees.filter((a) => a.travelStatus === "NEEDED").length
-  }));
+  const items: SessionListItem[] = sessions.map((s) => {
+    // One predicate feeds both the count and the names, so they cannot drift.
+    const pending = s.attendees.filter((a) => travelStillPending(a.travelStatus, a.newHire.travelTrips.map((t) => t.status)));
+    return {
+      id: s.id,
+      date: s.date.toISOString(),
+      endsAt: iso(s.endsAt),
+      location: s.location,
+      status: s.status as SessionStatus,
+      attendeeCount: s.attendees.length,
+      prepDone: s.prepTasks.filter((t) => t.done).length,
+      prepTotal: s.prepTasks.length,
+      notConfirmed: s.attendees.filter((a) => a.confirmed !== "CONFIRMED").length,
+      travelPending: pending.length,
+      travelPendingNames: pending.map((a) => a.newHire.name).sort((x, y) => x.localeCompare(y))
+    };
+  });
 
   const now = Date.now();
   const upcoming = items.filter((s) => s.status !== "COMPLETE" && new Date(s.date).getTime() >= now - 86_400_000);
@@ -75,7 +119,10 @@ export type AttendeeView = {
   // Derived from the hire's real TravelTrips (supersedes the manual flag above).
   travel: { tripCount: number; status: "NONE" | "NEEDED" | "BOOKED"; total: number };
   ipadReady: boolean;
-  cardReady: boolean;
+  /** Company credit card: To do / Done / Not needed. Three states rather than the
+      old on/off circle, because somebody who is not getting one had no way to say
+      so and sat as an empty circle forever. */
+  cardState: CardFlagState;
   swagReady: boolean;
   sentTemplateKeys: string[];
   /** templateKey -> what the APP actually sent. A key in sentTemplateKeys with no
@@ -194,6 +241,9 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
   // What the app really sent, per attendee — read once for the whole session
   // rather than per row.
   const sendMap = await getOrientationSends(s.attendees.map((a) => a.id));
+  // "Credit card not needed" lives beside the boolean rather than in it — see
+  // lib/orientation/card-state.ts for why. Read once for the whole session.
+  const cardNotNeeded = await getCardNotNeeded(s.attendees.map((a) => a.id));
 
   const attendees: AttendeeView[] = s.attendees.map((a) => {
     const trips = a.newHire.travelTrips;
@@ -216,7 +266,7 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
       travelStatus: a.travelStatus as TravelStatus,
       travel,
       ipadReady: a.ipadReady,
-      cardReady: a.cardReady,
+      cardState: cardStateFor(a.cardReady, cardNotNeeded.has(a.id)),
       swagReady: a.swagReady,
       sentTemplateKeys: parseKeys(a.sentTemplateKeys),
       sends: sendMap[a.id] ?? {},
@@ -323,8 +373,9 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
     travelRollup: {
       traveling: attendees.filter((a) => a.travel.tripCount > 0 || a.travelStatus !== "NA").length,
       booked: attendees.filter((a) => a.travel.status === "BOOKED").length,
-      needsBooking: attendees.filter((a) =>
-        a.travel.tripCount > 0 ? a.travel.status === "NEEDED" : a.travelStatus === "NEEDED"
+      // Same rule the /orientation list now uses — see travelStillPending.
+      needsBooking: s.attendees.filter((a) =>
+        travelStillPending(a.travelStatus, a.newHire.travelTrips.map((t) => t.status))
       ).length,
       totalCost: attendees.reduce((sum, a) => sum + a.travel.total, 0)
     },
@@ -515,6 +566,15 @@ export async function completeOrientationSession(id: string) {
   const s = await prisma.orientationSession.findUnique({ where: { id }, select: { attendees: { select: { newHireId: true } } } });
   if (!s) return;
   await prisma.orientationSession.update({ where: { id }, data: { status: "COMPLETE" } });
+  // The reminder's job is finished once the session is, so drop the armed flag.
+  // Leaving it set is what put a red "its reminder will never go out" warning on
+  // the orientation pages for a send that had already succeeded — the Aug 4 2026
+  // session was reminded on Aug 3 (6 emailed by the cron, 1 ticked by hand),
+  // went COMPLETE, and only the flag was left behind. This cannot cause an email:
+  // sessionsDueForReminder only ever sends for UPCOMING sessions, and this runs
+  // after the status is already COMPLETE.
+  const { setReminderArmed } = await import("@/lib/orientation/reminder");
+  await setReminderArmed(id, false);
   const hireIds = s.attendees.map((a) => a.newHireId);
   if (hireIds.length) {
     await prisma.onboardingTask.updateMany({

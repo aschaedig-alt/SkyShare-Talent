@@ -23,6 +23,19 @@ function daysUntil(iso: string) {
 }
 const pad = (n: number) => String(n).padStart(2, "0");
 
+/**
+ * "Dayten Schureman" / "Dayten, Erik +2 more" — who the pending travel belongs to.
+ *
+ * "1 travel pending" was a number with no way to find out whose it was without
+ * opening the session. Two names fit a card at this width; past that the count
+ * carries the rest and the full list is on the pill's tooltip.
+ */
+function travelPendingLabel(names: string[]): string {
+  const shown = names.slice(0, 2).join(", ");
+  const rest = names.length - 2;
+  return rest > 0 ? `${shown} +${rest} more` : shown;
+}
+
 function SessionCard({ s }: { s: SessionListItem }) {
   const soon = new Date(s.date).getTime() - Date.now() <= 7 * 86_400_000 && s.status !== "COMPLETE";
   return (
@@ -46,7 +59,16 @@ function SessionCard({ s }: { s: SessionListItem }) {
       {(s.notConfirmed > 0 || s.travelPending > 0) && s.status !== "COMPLETE" ? (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {s.notConfirmed > 0 ? <span className="rounded bg-red-50 dark:bg-red-500/15 px-2 py-0.5 text-[11px] font-semibold text-red-700 dark:text-red-300">{s.notConfirmed} not confirmed</span> : null}
-          {s.travelPending > 0 ? <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[11px] font-semibold text-brand-lea dark:text-slate-100">{s.travelPending} travel pending</span> : null}
+          {/* Plain text with a title, NOT a link: the whole card is already an
+              <a>, and nesting another one is invalid markup. */}
+          {s.travelPending > 0 ? (
+            <span
+              title={s.travelPendingNames.length ? `Travel still to book: ${s.travelPendingNames.join(", ")}` : undefined}
+              className="rounded bg-brand-gold/15 px-2 py-0.5 text-[11px] font-semibold text-brand-lea dark:text-slate-100"
+            >
+              {s.travelPendingNames.length ? `Travel pending: ${travelPendingLabel(s.travelPendingNames)}` : `${s.travelPending} travel pending`}
+            </span>
+          ) : null}
         </div>
       ) : null}
     </Link>

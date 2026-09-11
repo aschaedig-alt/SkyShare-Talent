@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
+import { isCardFlagState, setCardState } from "@/lib/orientation/card-state";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -14,8 +15,20 @@ export async function PATCH(request: Request, ctx: Ctx) {
 
     if (body.confirmed === "PENDING" || body.confirmed === "TENTATIVE" || body.confirmed === "CONFIRMED" || body.confirmed === "DECLINED") data.confirmed = body.confirmed;
     if (body.travelStatus === "NA" || body.travelStatus === "NEEDED" || body.travelStatus === "ARRANGED") data.travelStatus = body.travelStatus;
-    for (const f of ["ipadReady", "cardReady", "swagReady"]) {
+    for (const f of ["ipadReady", "swagReady"]) {
       if (typeof body[f] === "boolean") data[f] = body[f];
+    }
+
+    // The credit card is three-way — To do / Done / Not needed. "Not needed" has
+    // nowhere to live on a boolean column, so it is stored beside it and both
+    // writes are decided in one place (lib/orientation/card-state.ts). cardReady
+    // stays honest: NA always writes it false.
+    //
+    // A raw cardReady boolean is deliberately NOT accepted any more: it would set
+    // the column without touching the not-needed flag, leaving the two disagreeing
+    // and the cell still showing "not needed" after somebody ticked it ready.
+    if (isCardFlagState(body.cardState)) {
+      data.cardReady = await setCardState(id, body.cardState);
     }
 
     // Toggle an email template as sent / not sent.

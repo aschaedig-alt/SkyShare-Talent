@@ -514,16 +514,34 @@ export type ReminderHealth = {
   }[];
   /** Config that has to be right for the cron to send anything at all. */
   config: { cronSecret: boolean; frontToken: boolean; channel: string | null; channelError: string | null };
-  /** Plain-English problems, worst first. Empty means nothing found. */
+  /**
+   * GLOBAL problems — the cron itself: not firing, no token, no mailbox, a failed
+   * or crashed run. True wherever you are standing, so these show on every
+   * orientation page and are never filtered by session.
+   */
   problems: string[];
+  /**
+   * Problems that belong to ONE session, scoped to the session asked about.
+   *
+   * Kept apart from `problems` because these two were one array, and the array is
+   * served by a route that took no session id — so a warning about the Aug 4
+   * session was rendered on the Sep 1 session's page, and on every other session
+   * page too. Filtering the combined array would have hidden "the cron is not
+   * firing", which is the one thing this file exists to make visible.
+   */
+  sessionProblems: string[];
 };
 
 /**
  * Everything needed to answer "will the reminder go out, and did it".
  *
  * Read-only and safe to call any time — it sends nothing and writes nothing.
+ *
+ * `sessionId` scopes the per-session half of the answer to the session being
+ * looked at. Omit it and every armed session's problems come back, which is what
+ * a whole-workspace check (or a future dashboard) wants.
  */
-export async function getReminderHealth(): Promise<ReminderHealth> {
+export async function getReminderHealth(sessionId?: string): Promise<ReminderHealth> {
   const today = mountainDayKey(new Date());
   const runs = await readRuns();
   const lastRun = runs[0] ?? null;
@@ -605,14 +623,24 @@ export async function getReminderHealth(): Promise<ReminderHealth> {
   if (config.channelError) {
     problems.push(`The send-from mailbox could not be resolved: ${config.channelError}`);
   }
+  // Per-session, and only for the session being looked at.
+  const sessionProblems: string[] = [];
   for (const a of armed) {
-    if (a.status !== "UPCOMING") {
-      problems.push(
+    if (sessionId && a.sessionId !== sessionId) continue;
+    // A COMPLETE session that is still armed is a FINISHED JOB whose flag was
+    // never cleared, not a problem: the reminder went out the day before, and
+    // "its reminder will never go out" is both literally true and useless. It is
+    // no longer warned about at all, and completing a session now clears the flag
+    // (lib/data/orientation.ts, completeOrientationSession). A CANCELED session
+    // still warns — arming one means a send somebody is expecting silently will
+    // not happen, which is the case worth keeping.
+    if (a.status !== "UPCOMING" && a.status !== "COMPLETE") {
+      sessionProblems.push(
         `Session on ${a.dateLabel} is armed but its status is ${a.status}, and only UPCOMING sessions are sent — its reminder will never go out.`
       );
     }
     if (a.sendOnKey < today && a.pendingCount > 0) {
-      problems.push(`Session on ${a.dateLabel} had its send day (${a.sendOnKey}) pass with ${a.pendingCount} still unsent.`);
+      sessionProblems.push(`Session on ${a.dateLabel} had its send day (${a.sendOnKey}) pass with ${a.pendingCount} still unsent.`);
     }
   }
   if (lastRun?.failed.length) {
@@ -624,5 +652,5 @@ export async function getReminderHealth(): Promise<ReminderHealth> {
     problems.push(`The last run crashed: ${lastRun.error ?? "no detail recorded"}`);
   }
 
-  return { today, overdueToday, ranToday, lastRun, armed, config, problems };
+  return { today, overdueToday, ranToday, lastRun, armed, config, problems, sessionProblems };
 }
