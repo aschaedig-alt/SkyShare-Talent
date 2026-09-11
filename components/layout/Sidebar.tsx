@@ -126,15 +126,23 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
         </Link>
 
         {/*
-          The flyout used to render only when the sidebar was COLLAPSED, which
-          made the collapsed rail faster to navigate than the expanded one: the
-          expanded panel shows just the group you are already in, so reaching
-          anything in another group cost two clicks and a page load you did not
-          want (only 7 of 36 destinations were one click from the landing page).
-          It now renders for any group that is not the one already open, so a
-          cross-group jump is one hover and one click in either mode. The active
-          group is excluded because its items are already listed in the panel
-          beside it.
+          COLLAPSED ONLY, as of 2026-09-11, and that is a deliberate reversal.
+
+          It used to render for every group that was not the one already open, so
+          a cross-group jump was one hover and one click in either mode. She asked
+          for it to go: "sometimes if I'm on recruiting and I want to go to one of
+          the items on onboarding, when I hover over it, it's a little finicky.
+          Sometimes it disappears, sometimes it doesn't... I don't know if it
+          delivers enough value." Then: "that left window doesn't need to have a
+          pop-up for any of the sections."
+
+          KEPT FOR THE COLLAPSED RAIL, which is not the thing she was describing.
+          Collapsing hides the items panel altogether, so in that mode the flyout
+          is not a shortcut past a list she can already see — it is the only way to
+          reach anything at all. Removing it there would leave the collapse button
+          as a trap. In the expanded mode she was actually talking about, the panel
+          beside the rail already lists every item in every group she clicks into,
+          so nothing is lost.
 
           IF THIS FLYOUT EVER DISAPPEARS AGAIN, IT IS NOT THE Z-INDEX. It was
           reported "behind the second menu" and the cause was OVERFLOW, not
@@ -147,7 +155,7 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
           against the items panel, and the z-30 on the sticky container is still
           needed against <main> — neither was the bug.
         */}
-        {(collapsed || !groupActive) && (
+        {collapsed && (
           <div className="invisible absolute left-full top-0 z-50 ml-1 w-56 opacity-0 transition group-hover:visible group-hover:opacity-100">
             <div className="rounded border border-white/10 bg-brand-lea p-2 shadow-2xl">
               {group.sections.map((section) => (
@@ -194,6 +202,21 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
       >
         <Menu className="h-5 w-5" />
       </button>
+
+      {/* Mobile feedback trigger.
+
+          FeedbackButton used to have exactly ONE mount — the rail tile below,
+          inside a container that is `hidden ... lg:flex`. Below 1024px that whole
+          rail is display:none, so there was no feedback entry point anywhere in
+          the mobile UI, which is what Aimee reported from her phone on Sep 10.
+
+          It lives out here rather than in the drawer footer beside ThemeToggle on
+          purpose: you are on a page, you see a problem, you report it. Making that
+          cost a nav round trip first is the step that stops people bothering, and
+          on desktop it does not — the rail tile is always on screen. It is
+          therefore a SECOND instance with its own draft state, which is fine
+          because the two are mutually exclusive at every viewport width. */}
+      <FeedbackButton variant="mobile" />
 
       {/* Mobile drawer */}
       {mobileOpen && (
@@ -338,7 +361,9 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
             ))}
           </div>
 
-          <FeedbackButton />
+          {/* Desktop-only by construction: this container is `hidden ... lg:flex`.
+              The mobile counterpart is mounted near the hamburger above. */}
+          <FeedbackButton variant="rail" />
 
           <ThemeToggle collapsed />
 

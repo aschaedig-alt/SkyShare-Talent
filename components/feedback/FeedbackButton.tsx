@@ -74,7 +74,22 @@ function pastedImageName(pathname: string, type: string): string {
   return `screenshot-${slug}.${extension}`;
 }
 
-export function FeedbackButton() {
+/**
+ * Which chrome this instance wears. Same component, two shapes — the convention
+ * ThemeToggle and SignOutButton already use for their `collapsed` prop.
+ *
+ * - "rail"   — the 36x36 white-on-navy tile in the desktop icon rail (>=1024px).
+ * - "mobile" — a labelled trigger pinned beside the mobile hamburger (<1024px),
+ *              which is the only place below the lg breakpoint that feedback is
+ *              reachable at all. See the mount in components/layout/Sidebar.tsx.
+ *
+ * The two are mutually exclusive on screen, so each mount keeps its own draft
+ * and only one is ever visible. That also makes the variant a reliable stand-in
+ * for "is this a phone", which the autoFocus below leans on.
+ */
+type FeedbackVariant = "rail" | "mobile";
+
+export function FeedbackButton({ variant = "rail" }: { variant?: FeedbackVariant }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<FeedbackType>("IDEA");
@@ -234,32 +249,91 @@ export function FeedbackButton() {
     }
   }
 
+  // Only one variant is ever on screen, but both are always MOUNTED — so each
+  // instance's backdrop and panel carry the matching breakpoint class. Without
+  // it, opening the panel on a narrow window and then widening it would leave a
+  // bottom sheet floating over the desktop layout.
+  const chromeAtBreakpoint = variant === "mobile" ? "lg:hidden" : "hidden lg:block";
+
   return (
     <>
-      {/* Rail tile, sitting with the other sidebar utilities. It used to float
-          over the page, which is what let it be dragged off-screen and hide behind
-          dialogs; in the rail neither is possible. The dot marks an unsent draft. */}
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className={clsx(
-          "relative mt-2 flex h-9 w-9 items-center justify-center rounded transition print:hidden",
-          open ? "bg-white/15 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
-        )}
-        aria-label="Send feedback"
-        title="Send feedback"
-      >
-        <MessageSquare className="h-5 w-5" />
-        {hasDraft && !open && (
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-brand-gold" title="You have an unsent draft" />
-        )}
-      </button>
+      {variant === "mobile" ? (
+        /* Mobile trigger. Pinned beside the hamburger rather than buried in the
+           nav drawer: you notice a problem while looking at a page, and having to
+           open the nav first is the step that stops people bothering — which is
+           the desktop behavior, where the rail tile is always on screen.
+
+           h-9 at top-3 is deliberate, not a guess: it matches the hamburger
+           exactly and lands its bottom edge at 48px, which is precisely the h-12
+           spacer AppShell reserves for this row. Anything taller overlaps the
+           page content underneath. The width is where the touch target comes
+           from — it carries a label, so it is both a bigger target and easier to
+           find than a bare icon. */
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className={clsx(
+            "fixed right-3 top-3 z-40 flex h-9 items-center gap-1.5 rounded px-3 text-xs font-semibold text-white shadow-lg transition lg:hidden print:hidden",
+            open ? "bg-brand-eden" : "bg-brand-lea hover:bg-brand-eden hover:shadow-glow"
+          )}
+          aria-label="Send feedback"
+          title="Send feedback"
+        >
+          <MessageSquare className="h-4 w-4 shrink-0" />
+          <span>Feedback</span>
+          {hasDraft && !open && (
+            <span className="h-2 w-2 shrink-0 rounded-full bg-brand-gold" title="You have an unsent draft" />
+          )}
+        </button>
+      ) : (
+        /* Rail tile, sitting with the other sidebar utilities. It used to float
+           over the page, which is what let it be dragged off-screen and hide behind
+           dialogs; in the rail neither is possible. The dot marks an unsent draft. */
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className={clsx(
+            "relative mt-2 flex h-9 w-9 items-center justify-center rounded transition print:hidden",
+            open ? "bg-white/15 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
+          )}
+          aria-label="Send feedback"
+          title="Send feedback"
+        >
+          <MessageSquare className="h-5 w-5" />
+          {hasDraft && !open && (
+            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-brand-gold" title="You have an unsent draft" />
+          )}
+        </button>
+      )}
 
       {/* Click-away backdrop (transparent) */}
-      {open && <div className="fixed inset-0 z-[55]" onClick={minimize} aria-hidden="true" />}
+      {open && <div className={clsx("fixed inset-0 z-[55]", chromeAtBreakpoint)} onClick={minimize} aria-hidden="true" />}
 
-      {/* Panel — anchored to the button's (possibly moved) location. */}
+      {/* Panel — a bottom sheet on a phone, the rail-anchored popover on desktop. */}
       {open && (
-        <div className="fixed bottom-5 left-[76px] z-[60] w-[min(360px,calc(100vw-2.5rem))] rounded border border-brand-lea/15 bg-white shadow-2xl dark:border-white/10 dark:bg-brand-panel">
+        <div
+          className={clsx(
+            // PLACEMENT. left-[76px] is a DESKTOP offset — it clears the 70px icon
+            // rail, which does not exist below lg. The width was already
+            // viewport-aware but the left was not, so on a 375px phone the panel's
+            // right edge landed 36px past the viewport: clipped, plus a horizontal
+            // scrollbar on the page. Below lg it is a full-width bottom sheet with
+            // a 12px inset; at lg and up the desktop placement is unchanged.
+            "fixed bottom-3 left-3 right-3 z-[60] rounded border border-brand-lea/15 bg-white shadow-2xl dark:border-white/10 dark:bg-brand-panel",
+            "lg:bottom-5 lg:left-[76px] lg:right-auto lg:w-[min(360px,calc(100vw-2.5rem))]",
+            // HEIGHT. There was no vertical handling at all, so on a landscape
+            // phone the top of the panel ran off the screen with nothing to scroll
+            // and the type chips and the close X became unreachable. A cap is
+            // normally banned here, but that rule is about data panels inside a
+            // scrolling page; this is a fixed-position overlay, the documented
+            // exception. Fit comes first and usually wins: 85svh of a 667px phone
+            // is 567px against ~380px of content, so in portrait nothing scrolls.
+            // svh, not vh, so the cap respects the browser chrome. BOTH axes are
+            // pinned on purpose — per the CSS overflow spec, setting one to
+            // non-visible makes the other compute to auto, which is what put two
+            // scrollbars on the nav rail.
+            "max-h-[85svh] overflow-y-auto overflow-x-hidden lg:max-h-none lg:overflow-visible",
+            chromeAtBreakpoint
+          )}
+        >
           <div className="flex items-center justify-between border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
             <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">Send feedback</span>
             <button onClick={minimize} data-dialog-close className="text-brand-grey hover:text-brand-lea dark:text-slate-400" aria-label="Close">
@@ -304,7 +378,14 @@ export function FeedbackButton() {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 rows={4}
-                autoFocus
+                // Desktop only. On a phone this opens the software keyboard the
+                // instant the panel appears, and because the panel is
+                // position:fixed iOS pins it to the LAYOUT viewport rather than
+                // the visual one — so the keyboard covers the bottom of the
+                // panel, which is exactly where "Send feedback" is. The variant
+                // is the breakpoint here: "rail" only ever renders at >=1024px.
+                // UNVERIFIED — a real phone cannot be driven from this repo.
+                autoFocus={variant === "rail"}
                 placeholder={
                   type === "BUG"
                     ? "What went wrong? What were you trying to do?"
@@ -357,7 +438,11 @@ export function FeedbackButton() {
                   className="mt-2 flex w-full items-center justify-center gap-1.5 rounded border border-dashed border-brand-lea/25 px-2 py-2 text-[11px] font-medium text-brand-grey transition hover:border-brand-lea hover:shadow-glow dark:border-white/15 dark:text-slate-400"
                 >
                   <ImagePlus className="h-3.5 w-3.5" />
-                  Add a screenshot — or just paste one
+                  {/* A phone has no paste affordance, so promising one there
+                      reads as a missing feature. The picker works on both and on
+                      a phone opens the camera / photo library, which is the thing
+                      worth saying instead. */}
+                  {variant === "rail" ? "Add a screenshot — or just paste one" : "Add a screenshot or photo"}
                 </button>
               )}
 
