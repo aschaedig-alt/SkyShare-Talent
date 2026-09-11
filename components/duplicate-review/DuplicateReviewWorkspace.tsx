@@ -42,7 +42,13 @@ export function DuplicateReviewWorkspace({ data }: DuplicateReviewWorkspaceProps
 
       <JobDuplicateScanCard />
 
-      <section className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+      {/* id matches OPEN_QUEUE_ANCHOR in CandidateDuplicateScanCard. Written out
+          rather than imported: that module is "use client", and a Server Component
+          importing a plain constant from it gets a client reference, not a string. */}
+      <section
+        id="open-review-items"
+        className="scroll-mt-4 rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10"
+      >
         <div className="border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Review queue</p>
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Open review items</h2>
@@ -54,7 +60,8 @@ export function DuplicateReviewWorkspace({ data }: DuplicateReviewWorkspaceProps
             <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-8 text-center dark:border-white/10 dark:bg-white/5">
               <div className="text-lg font-semibold text-brand-lea dark:text-slate-100">No open duplicate reviews</div>
               <p className="mt-2 text-sm text-brand-grey dark:text-slate-400">
-                Run a scan above to check for candidate or job duplicates. Pairs a scan still counts, but that somebody already merged or dismissed, are listed below and can be reopened.
+                Nothing is waiting on a decision. Run a scan above and it lists every pair it finds by name — including
+                the ones already merged or dismissed, which can be reopened from that list and merged here.
               </p>
             </div>
           )}

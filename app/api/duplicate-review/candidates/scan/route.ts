@@ -16,9 +16,21 @@ import { logActivity } from "@/lib/activity/logger";
 // duplicates:write is ADMIN and RECRUITER (lib/auth/roles.ts), which is who the Duplicate
 // Review workflow belongs to, and matches the resolve route exactly.
 //
-// Nothing leaks either way: the response is counts only (scannedCandidates, pairsFound,
-// newReviewItems and friends) and never a name or an email. The problem was the WRITE and
-// the full-table scan it costs, not disclosure.
+// WHAT THIS WRITES, since it is a POST against the one shared live database:
+//   1. a DuplicateReviewItem row (status OPEN) per NEWLY detected pair — zero if every
+//      detected pair was already recorded, which is the case on today's data;
+//   2. status RESOLVED + resolvedAt on any already-OPEN item whose candidate has since
+//      been merged away or deleted, which could never reach a merge anyway;
+//   3. the ActivityLog row written below.
+// It touches no Candidate, merges nobody, and deletes nothing.
+//
+// The response DOES name the pairs (as of 2026-09-11): each detected pair carries both
+// candidates' display name, email, phone and status, so the card can show WHO was found
+// instead of a count with nothing behind it — Aimee, 2026-08-31, "doesn't show me who it
+// is". That is not a new disclosure: duplicates:write is ADMIN + RECRUITER
+// (lib/auth/roles.ts), who can already open the whole candidate list and every profile on
+// it. The earlier "counts only ... never a name or an email" note here described the
+// response, not a rule, and is gone rather than left standing to contradict the code.
 export async function POST() {
   const auth = await requireApiPermission("duplicates:write");
   if (!auth.ok) {
