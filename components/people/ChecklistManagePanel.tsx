@@ -214,9 +214,18 @@ export function ChecklistManagePanel({ checklist, checkins, onChanged }: Props) 
   function dropSectionOn(targetKey: string, movedKey: string) {
     setLayout((l) => {
       if (targetKey === movedKey) return l;
+      // Direction decides which side of the target it lands on. Inserting BEFORE
+      // the target unconditionally — which is what this did — makes the last
+      // position unreachable by dragging: there is nothing below the bottom
+      // section to drop onto, so a section could only ever be moved down with the
+      // arrow button. Dragging DOWN now means "put me after this one", which is
+      // also what every other reorder in the world does.
+      const from = l.sectionOrder.indexOf(movedKey);
+      const to = l.sectionOrder.indexOf(targetKey);
       const order = l.sectionOrder.filter((s) => s !== movedKey);
       const at = order.indexOf(targetKey);
-      order.splice(at < 0 ? order.length : at, 0, movedKey);
+      if (at < 0) order.push(movedKey);
+      else order.splice(to > from ? at + 1 : at, 0, movedKey);
       return { ...l, sectionOrder: order };
     });
   }

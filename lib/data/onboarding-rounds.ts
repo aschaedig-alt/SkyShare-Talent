@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { ONBOARDING_TASKS } from "@/lib/onboarding/tasks";
+import { buildChecklistRows } from "@/lib/data/onboarding-grid-config";
 import { resolveFleetPosition } from "@/lib/fleet/positions";
 import {
   CARRY_OVER_DEFAULTS,
@@ -177,6 +177,13 @@ export async function startOnboardingRound(hireId: string, input: StartRoundInpu
     changes.push("Role journey left alone — the effective date is before their current role began.");
   }
 
+  // Read the saved layout BEFORE the transaction opens — it uses the module-level
+  // prisma client and cannot run inside tx. A second round is a fresh checklist, so
+  // it gets today's arrangement including her custom steps, which is what she asked
+  // for on 2026-09-11: a checklist change applies to every active checklist and
+  // every future one, not just the next new hire.
+  const layout = await buildChecklistRows();
+
   const result = await prisma.$transaction(async (tx) => {
     let createdRoleId: string | null = null;
     let closedRoleId: string | null = null;
@@ -279,7 +286,7 @@ export async function startOnboardingRound(hireId: string, input: StartRoundInpu
 
     await tx.onboardingTask.deleteMany({ where: { newHireId: hireId } });
     await tx.onboardingTask.createMany({
-      data: ONBOARDING_TASKS.map((t, i) => {
+      data: layout.map((t) => {
         const carried = carryOver.has(t.key);
         const previously = completedByKey.get(t.key) ?? null;
         return {
@@ -287,7 +294,7 @@ export async function startOnboardingRound(hireId: string, input: StartRoundInpu
           key: t.key,
           label: t.label,
           group: t.group,
-          order: i,
+          order: t.order,
           status: carried ? "DONE" : "TODO",
           // Keep the date it was ACTUALLY done, so a carried-over tick never
           // claims work happened today that happened months ago.
@@ -322,7 +329,7 @@ export async function startOnboardingRound(hireId: string, input: StartRoundInpu
 
   changes.unshift(
     `Archived their previous checklist (${doneCount} of ${snapshot.length} complete) as round ${sequence}.`,
-    `Started a fresh ${ONBOARDING_TASKS.length}-item checklist${carryOver.size ? ` with ${carryOver.size} item${carryOver.size === 1 ? "" : "s"} carried over as already done` : ""}.`,
+    `Started a fresh ${layout.length}-item checklist${carryOver.size ? ` with ${carryOver.size} item${carryOver.size === 1 ? "" : "s"} carried over as already done` : ""}.`,
     "Moved them back into New hires (in onboarding)."
   );
   if (!isRehire) changes.push("Hire date and tenure left untouched — this is the same period of employment.");
@@ -331,7 +338,7 @@ export async function startOnboardingRound(hireId: string, input: StartRoundInpu
     ok: true,
     archiveId: result.id,
     sequence,
-    taskCount: ONBOARDING_TASKS.length,
+    taskCount: layout.length,
     carriedOver: carryOver.size,
     changes
   };
@@ -429,20 +436,49 @@ export async function restoreOnboardingRound(hireId: string, archiveId: string):
 
   const tasks = parseArchivedTasks(archive.tasksJson);
 
+  // An undo restores what each step's STATUS was, not where the checklist happened
+  // to be arranged at the time. The archive freezes group/order/label alongside the
+  // ticks, and writing those back verbatim put one person visibly out of step with
+  // everybody else — the one restorable archive in the database carries a
+  // pre-reorder arrangement with no contacts-link step and none of the custom ones.
+  // So the ticks come from the archive and the arrangement comes from today's saved
+  // layout, per her rule that a checklist change applies everywhere rather than once.
+  const layout = await buildChecklistRows();
+  const archived = new Map(tasks.map((t) => [t.key, t] as const));
+  const placed = new Set(layout.map((r) => r.key));
+  // A key the layout no longer has is still part of that person's record, so it is
+  // kept rather than dropped — appended after the layout so it cannot disturb it.
+  const orphans = tasks.filter((t) => !placed.has(t.key));
+
+  const rows = [
+    ...layout.map((r) => {
+      const was = archived.get(r.key);
+      return {
+        newHireId: hireId,
+        key: r.key,
+        label: r.label,
+        group: r.group,
+        order: r.order,
+        // A step that did not exist in the archived round starts fresh.
+        status: was?.status ?? "TODO",
+        completedAt: was?.completedAt ? new Date(was.completedAt) : null
+      };
+    }),
+    ...orphans.map((t, i) => ({
+      newHireId: hireId,
+      key: t.key,
+      label: t.label,
+      group: t.group,
+      order: layout.length + i,
+      status: t.status,
+      completedAt: t.completedAt ? new Date(t.completedAt) : null
+    }))
+  ];
+
   await prisma.$transaction(async (tx) => {
     await tx.onboardingTask.deleteMany({ where: { newHireId: hireId } });
-    if (tasks.length) {
-      await tx.onboardingTask.createMany({
-        data: tasks.map((t) => ({
-          newHireId: hireId,
-          key: t.key,
-          label: t.label,
-          group: t.group,
-          order: t.order,
-          status: t.status,
-          completedAt: t.completedAt ? new Date(t.completedAt) : null
-        }))
-      });
+    if (rows.length) {
+      await tx.onboardingTask.createMany({ data: rows });
     }
 
     await tx.newHire.update({

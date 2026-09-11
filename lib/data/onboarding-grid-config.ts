@@ -229,6 +229,36 @@ export async function getChecklistPlacement(): Promise<Map<string, TaskPlacement
   return out;
 }
 
+/** One row of a freshly built checklist: its key, and where the saved layout puts it. */
+export type ChecklistRow = { key: string; label: string; group: string; order: number };
+
+/**
+ * EVERY row a checklist should have — the built-in steps AND the custom
+ * milestones — in the saved layout's order, from one reading.
+ *
+ * This is the single answer to "what does a fresh checklist look like", and it
+ * exists because three different code paths used to answer it three different
+ * ways. Hire creation read the layout; starting a second onboarding round read
+ * the CODE list and skipped custom milestones entirely; restoring a round wrote
+ * back whatever arrangement was frozen months ago. So a checklist change was
+ * authoritative for some people and not others, which is the thing she reported
+ * on 2026-09-05 and restated on 2026-09-11: a change to the checklist should
+ * apply to every active checklist and every future one, not once.
+ *
+ * getChecklistPlacement is the same reading keyed by task; this is the list.
+ * Anything that CREATES checklist rows should use one of the two, never
+ * ONBOARDING_TASKS directly.
+ */
+export async function buildChecklistRows(): Promise<ChecklistRow[]> {
+  const groups = await getGridChecklist();
+  const rows: ChecklistRow[] = [];
+  let order = 0;
+  for (const g of groups) {
+    for (const t of g.tasks) rows.push({ key: t.key, label: t.label, group: g.key, order: order++ });
+  }
+  return rows;
+}
+
 /**
  * The post-onboarding check-ins (30 / 60 / 90 / benefits / social), so a template
  * can be pointed at one of them the same way a checklist step can.

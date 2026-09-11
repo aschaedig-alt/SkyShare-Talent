@@ -6,6 +6,7 @@ import { clsx } from "clsx";
 import { RotateCcw } from "lucide-react";
 import { Button, Input, Modal, Textarea } from "@/components/ui";
 import { ONBOARDING_TASKS, groupLabel } from "@/lib/onboarding/tasks";
+import type { ChecklistRow } from "@/lib/data/onboarding-grid-config";
 import { CARRY_OVER_DEFAULTS, ROUND_REASONS, type RoundReason } from "@/lib/onboarding/rounds";
 
 // Put someone who has already been onboarded through it again — a rehire, or an
@@ -22,6 +23,9 @@ type Props = {
   doneCount: number;
   totalCount: number;
   roleTitleOptions: string[];
+  /** The saved checklist layout — what a fresh round will actually create. Optional
+   *  so a caller that has not been given it yet falls back to the built-in list. */
+  checklistRows?: ChecklistRow[];
 };
 
 function today(): string {
@@ -37,7 +41,8 @@ export function StartNewOnboardingButton({
   employmentStatus,
   doneCount,
   totalCount,
-  roleTitleOptions
+  roleTitleOptions,
+  checklistRows
 }: Props) {
   const router = useRouter();
   const former = employmentStatus === "TERMINATED";
@@ -52,11 +57,20 @@ export function StartNewOnboardingButton({
   const [recordRoleChange, setRecordRoleChange] = useState(true);
   const [carryOver, setCarryOver] = useState<string[]>(CARRY_OVER_DEFAULTS[former ? "REHIRE" : "DEPARTMENT_CHANGE"]);
 
+  // The list this dialog previews is the SAVED layout — her sections, her renamed
+  // labels, and her custom steps — because that is what a fresh round now actually
+  // creates. It used to preview the built-in code list, which quietly promised a
+  // checklist nobody would get. ONBOARDING_TASKS stays only as the fallback for a
+  // caller that has not been given the layout yet.
   const grouped = useMemo(() => {
-    const groups = new Map<string, typeof ONBOARDING_TASKS>();
-    for (const t of ONBOARDING_TASKS) groups.set(t.group, [...(groups.get(t.group) ?? []), t]);
+    const rows: { key: string; label: string; group: string }[] =
+      checklistRows && checklistRows.length
+        ? checklistRows
+        : ONBOARDING_TASKS.map((t) => ({ key: t.key, label: t.label, group: t.group }));
+    const groups = new Map<string, typeof rows>();
+    for (const t of rows) groups.set(t.group, [...(groups.get(t.group) ?? []), t]);
     return [...groups.entries()];
-  }, []);
+  }, [checklistRows]);
 
   function pickReason(next: RoundReason) {
     setReason(next);
