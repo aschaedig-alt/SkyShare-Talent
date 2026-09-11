@@ -1,3 +1,4 @@
+import { normalizeFieldsNotNeeded } from "@/lib/onboarding/optional-fields";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUser } from "@/lib/auth/route-auth";
@@ -68,6 +69,13 @@ export async function PATCH(request: Request, context: RouteContext) {
         if (Number.isFinite(n) && n >= 0) data.seniorityNumber = n;
       }
     }
+    // Unknown keys are dropped rather than stored, so a typo or a key from an
+    // older build cannot sit in the row greying nothing. Sent as a whole list, so
+    // unticking is just a shorter list.
+    if (Array.isArray(body.fieldsNotNeeded)) {
+      data.fieldsNotNeeded = normalizeFieldsNotNeeded(body.fieldsNotNeeded);
+    }
+
     if (typeof body.orientationNotNeeded === "boolean") {
       data.orientationNotNeeded = body.orientationNotNeeded;
     }
@@ -82,6 +90,12 @@ export async function PATCH(request: Request, context: RouteContext) {
     // nothing could write to it. indoc*/training* are the onboarding page's
     // Dates & training row: indoc overrides the travel booking when set, training
     // has no other source at all.
+    //
+    // noticeDate is DELIBERATELY in this plain list and nowhere near the
+    // employmentStatus branch below. It is the day somebody gave notice, not
+    // their last day: it saves like any other date, changes no status, and
+    // closes no role or employment stint. terminationDate remains the only date
+    // that ends an employment, and only through that branch.
     for (const field of [
       "offerSentDate",
       "offerSignedDate",
@@ -90,6 +104,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       "aircraftServiceDate",
       "seniorityDate",
       "birthday",
+      "noticeDate",
       "indocStartDate",
       "indocEndDate",
       "trainingDate"

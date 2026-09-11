@@ -15,10 +15,18 @@ import { NewHireBottomTabs, type BottomTab } from "@/components/people/NewHireBo
 import { BusinessCardPanel } from "@/components/people/BusinessCardPanel";
 import { SendOnboardingEmailButton } from "@/components/people/SendOnboardingEmailButton";
 import { SendContactsEmailButton } from "@/components/people/SendContactsEmailButton";
+import { SendSupervisorContactButton } from "@/components/people/SendSupervisorContactButton";
 import { SendTaskEmailButton } from "@/components/people/SendTaskEmailButton";
-import type { ChecklistSection } from "@/lib/data/onboarding-grid-config";
+import type { ChecklistRow, ChecklistSection } from "@/lib/data/onboarding-grid-config";
 import { CARD_STATUS_LABEL, isCardStatus } from "@/lib/business-cards/card";
 import { SupervisorPicker } from "@/components/people/SupervisorPicker";
+import { MakeContactButton } from "@/components/people/MakeContactButton";
+import {
+  NOT_NEEDED_LABEL,
+  isOptionalField,
+  normalizeFieldsNotNeeded,
+  type OptionalFieldKey
+} from "@/lib/onboarding/optional-fields";
 import { StartNewOnboardingButton } from "@/components/people/StartNewOnboardingButton";
 import { OnboardingHistoryPanel } from "@/components/people/OnboardingHistoryPanel";
 import { roundReasonLabel } from "@/lib/onboarding/rounds";
@@ -47,6 +55,8 @@ type Props = {
   roleTitleOptions: string[];
   /** Checklist sections in their saved order, with their saved names. */
   sections: ChecklistSection[];
+  /** The saved checklist layout, so the new-round dialog previews what it will create. */
+  checklistRows: ChecklistRow[];
   /** Task keys she has pointed at a Front template in Manage tasks. Each one gets
    *  a Send button on its checklist row. Just the keys: the template, the
    *  recipient and the cc list are resolved server-side at send time, so a change
@@ -67,9 +77,15 @@ function cardStatusLabel(status: string): string {
   return isCardStatus(status) ? CARD_STATUS_LABEL[status] : status.toLowerCase().replace(/_/g, " ");
 }
 
-export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journey, onboardingArchives, cardOrders, roleTitleOptions, sections, emailTaskKeys, canEdit }: Props) {
+export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journey, onboardingArchives, cardOrders, roleTitleOptions, sections, checklistRows, emailTaskKeys, canEdit }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskView[]>(hire.tasks);
+  // Lifted for the same reason tasks is: the tab chip, the HR field, the checklist
+  // badge and the Business cards panel all render this ONE value, and the panel is
+  // unmounted whenever another tab is showing — so a copy held inside the panel is
+  // thrown away and re-read from a prop the server was never asked to re-send. That
+  // is what made the status "keep swapping back to needed" until an unrelated Save.
+  const [cardStatus, setCardStatus] = useState(hire.businessCardStatus);
   const [details, setDetails] = useState({
     name: hire.name,
     legalName: hire.legalName ?? "",
@@ -120,6 +136,30 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
   // Kept out of `details` on purpose: that object is all strings and feeds the
   // shared field() helper, which types its value as a string.
   const [orientationNotNeeded, setOrientationNotNeeded] = useState(hire.orientationNotNeeded);
+  // The pilot-specific fields this person does not need. Kept out of `details`
+  // for the same reason orientationNotNeeded is: that object is all strings and
+  // feeds the shared field() helper.
+  const [notNeeded, setNotNeeded] = useState<OptionalFieldKey[]>(() => normalizeFieldsNotNeeded(hire.fieldsNotNeeded));
+
+  // Saved immediately rather than waiting for Save details. Ticking a box is a
+  // complete thought, and the whole point is to stop the section looking
+  // unfinished — leaving the tick unsaved would do the opposite.
+  async function toggleNotNeeded(key: OptionalFieldKey, on: boolean) {
+    const next = on ? normalizeFieldsNotNeeded([...notNeeded, key]) : notNeeded.filter((k) => k !== key);
+    const prev = notNeeded;
+    setNotNeeded(next);
+    try {
+      const res = await fetch(`/api/new-hires/${hire.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fieldsNotNeeded: next })
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      setNotNeeded(prev);
+      setStatus("Could not save that. Try again.");
+    }
+  }
   const [status, setStatus] = useState<string | null>(null);
   const [busyStage, setBusyStage] = useState(false);
   const [termOpen, setTermOpen] = useState(false);
@@ -212,6 +252,14 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
         body: JSON.stringify({ status: next })
       });
       if (!res.ok) throw new Error();
+      // The route already tells us whether ticking this item moved the person's
+      // business-card status (lib/business-cards/checklist-sync.ts). Reading it here
+      // is what stops the Business cards tab from still saying "Needed" after she has
+      // just set the checklist item to N/A — the server was always right, the screen
+      // simply never re-read it. Costs nothing extra: this response is read nowhere
+      // else in this handler.
+      const payload = (await res.json()) as { cardSync?: { from: string; to: string } | null };
+      if (payload?.cardSync) setCardStatus(payload.cardSync.to);
     } catch {
       setTasks(prev);
       setStatus("Could not save that task. Try again.");
@@ -287,17 +335,65 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
   }
 
   function field(label: string, key: keyof typeof details, type: "text" | "date" | "number" = "text", note?: ReactNode) {
+    // Pilot-specific fields can be marked "not needed" so they read as answered
+    // rather than forgotten on somebody who is never going to have one. The value
+    // is deliberately NOT cleared — see lib/onboarding/optional-fields.ts.
+    const optional = isOptionalField(key as string);
+    const off = optional && notNeeded.includes(key as OptionalFieldKey);
     return (
-      <label className="block">
-        <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">{label}</span>
+      <label className={clsx("block", off && "opacity-60")}>
+        {/* THE LABEL ROW IS A FIXED 14px, BOTTOM-ALIGNED, and both halves of that
+            are the fix rather than styling.
+            ----------------------------------------------------------------
+            FIXED HEIGHT, and the same height whether the control is there or not,
+            so a field with a "Not needed" box cannot sit lower than the plain
+            field beside it in the same row. Two earlier attempts failed here: a
+            plain flex row let the checkbox's own margins make the line 20px
+            taller, and absolute positioning fixed the height but floated the
+            control above the words.
+            ITEMS-END, so the control's text and the label's text share one bottom
+            edge — "justify the not needed to the bottom of those other words so
+            they're all lined up" (2026-09-11), which is what she then showed me by
+            moving two of them by hand.
+            leading-none on both is what makes items-end mean the TEXT bottom
+            rather than the bottom of a taller inherited line box. */}
+        <span className="flex h-[14px] items-end justify-between gap-2 leading-none">
+          <span className="truncate text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-brand-grey dark:text-slate-400">
+            {label}
+          </span>
+          {optional && canEdit ? (
+            <span className="flex shrink-0 items-end gap-1 text-[10px] font-normal leading-none text-brand-grey dark:text-slate-400">
+              <input
+                type="checkbox"
+                checked={off}
+                onChange={(e) => toggleNotNeeded(key as OptionalFieldKey, e.target.checked)}
+                aria-label={`${label} is not needed for ${hire.name}`}
+                className="m-0 h-3 w-3 shrink-0"
+              />
+              {NOT_NEEDED_LABEL}
+            </span>
+          ) : null}
+        </span>
         <input
           type={type}
           {...(type === "number" ? { min: 1, step: 1, inputMode: "numeric" as const } : {})}
           value={details[key]}
+          disabled={off}
           onChange={(e) => setDetails({ ...details, [key]: e.target.value })}
-          className="mt-1 w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold focus:shadow-glow dark:border-white/10 dark:bg-brand-field dark:text-slate-100"
+          className={clsx(
+            "mt-1 w-full rounded border px-3 py-2 text-sm outline-none transition",
+            off
+              ? "border-dashed border-brand-lea/15 bg-brand-cloudDancer/40 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-500"
+              : "border-brand-lea/15 bg-white text-brand-lea focus:border-brand-gold focus:shadow-glow dark:border-white/10 dark:bg-brand-field dark:text-slate-100"
+          )}
         />
-        {note}
+        {/* No second caption when it is off. The ticked box on the label already
+            says it, and adding a line under the input made the row taller than the
+            ones beside it — which is the same complaint as the wrap above, just
+            below the box instead. Fields that HAVE a caption (indoc reads off the
+            travel booking) keep it hidden while off, since it would be describing
+            a value nobody is going to fill in. */}
+        {off ? null : note}
       </label>
     );
   }
@@ -469,6 +565,26 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
 
   const filled = (...vals: Array<string | number | null | undefined>) => vals.filter((v) => v !== null && v !== undefined && String(v).trim() !== "").length;
 
+  /**
+   * A section's "n of m", counting only the fields that are still needed.
+   *
+   * Without this the feature only half works: the field greys out but the header
+   * still says three of seven, which is the exact thing being complained about.
+   *
+   * Written as a FILTER rather than by subtracting a count from both sides, which
+   * is what I tried first and got wrong: subtracting from the filled side drops a
+   * field that was empty anyway, so marking an empty Training location not needed
+   * took the section from "3 of 7" to "2 of 6" instead of "3 of 6". A not-needed
+   * field should leave the fraction entirely, whatever was in it.
+   */
+  const progress = (entries: Array<[string, string | number | null | undefined]>) => {
+    const needed = entries.filter(([k]) => !(isOptionalField(k) && notNeeded.includes(k)));
+    return {
+      filled: needed.filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== "").length,
+      total: needed.length
+    };
+  };
+
   const detailSections: DetailSection[] = [
     {
       id: "identity",
@@ -479,22 +595,32 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
       rows: [
         [field("Name", "name"), field("Position", "position"), field("Department", "department"), field("Job location", "location")],
         [field("Phone", "phone"), field("SkyShare email", "ssEmail"), field("Personal email", "personalEmail")],
-        [legalNameControl]
+        [legalNameControl],
+        // Built from the SAVED record, so it is labelled with hire.name rather than
+        // the form's unsaved draft — naming a card that has not shipped yet would be
+        // a small lie on a phone screen.
+        [
+          <div key="make-contact" className="flex items-center gap-3">
+            <MakeContactButton hireId={hire.id} hireName={hire.name} />
+            <span className="text-xs text-brand-grey dark:text-slate-400">
+              Adds them to your phone&apos;s contacts, so you can share the card on from there.
+            </span>
+          </div>
+        ]
       ]
     },
     {
       id: "dates",
       title: "Dates & training",
-      filled: filled(
-        details.offerSentDate,
-        details.offerSignedDate,
-        details.startDate,
-        details.orientationDate,
-        details.indocStartDate || travelIndoc?.start,
-        details.trainingDate,
-        details.trainingLocation
-      ),
-      total: 7,
+      ...progress([
+        ["offerSentDate", details.offerSentDate],
+        ["offerSignedDate", details.offerSignedDate],
+        ["startDate", details.startDate],
+        ["orientationDate", details.orientationDate],
+        ["indocStartDate", details.indocStartDate || travelIndoc?.start],
+        ["trainingDate", details.trainingDate],
+        ["trainingLocation", details.trainingLocation]
+      ]),
       rows: [
         [field("Offer sent", "offerSentDate", "date"), field("Offer signed", "offerSignedDate", "date")],
         [field("Start date", "startDate", "date"), field("Orientation", "orientationDate", "date")],
@@ -510,22 +636,21 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     {
       id: "hr",
       title: "HR",
-      filled: filled(
-        details.birthday,
-        details.seniorityDate,
-        details.seniorityNumber,
-        details.aircraftServiceDate,
-        details.managedAircraft,
-        hire.businessCardStatus,
-        hire.businessCardTitle,
-        details.birthCountry,
-        details.citizenshipCountry,
-        details.supervisorHireId || details.supervisorName,
-        details.supervisor2HireId || details.supervisor2Name,
-        tags.length ? "y" : "",
-        details.notes
-      ),
-      total: 13,
+      ...progress([
+        ["birthday", details.birthday],
+        ["seniorityDate", details.seniorityDate],
+        ["seniorityNumber", details.seniorityNumber],
+        ["aircraftServiceDate", details.aircraftServiceDate],
+        ["managedAircraft", details.managedAircraft],
+        ["businessCardStatus", cardStatus],
+        ["businessCardTitle", hire.businessCardTitle],
+        ["birthCountry", details.birthCountry],
+        ["citizenshipCountry", details.citizenshipCountry],
+        ["supervisor", details.supervisorHireId || details.supervisorName],
+        ["supervisor2", details.supervisor2HireId || details.supervisor2Name],
+        ["tags", tags.length ? "y" : ""],
+        ["notes", details.notes]
+      ]),
       rows: [
         [
           field("Birthday", "birthday", "date"),
@@ -535,7 +660,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
         ],
         [
           field("Managed aircraft (tail #)", "managedAircraft"),
-          readOnlyField("Business card", cardStatusLabel(hire.businessCardStatus), "the Business cards panel"),
+          readOnlyField("Business card", cardStatusLabel(cardStatus), "the Business cards panel"),
           readOnlyField("Card title", hire.businessCardTitle, "the Business cards panel")
         ],
         ...(managedPilotControl ? [[managedPilotControl]] : []),
@@ -585,9 +710,19 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
                 canEdit={canEdit}
                 onSent={() => setTasks((cur) => cur.map((x) => (x.key === "contacts_link_sent" ? { ...x, status: "DONE" } : x)))}
               />
-            ) : t.key === "business_card" && CARD_PROGRESS.has(hire.businessCardStatus) ? (
+            ) : t.key === "supervisor_contact_sent" ? (
+              <SendSupervisorContactButton
+                hireId={hire.id}
+                hireName={hire.name}
+                taskStatus={t.status}
+                canEdit={canEdit}
+                onSent={() =>
+                  setTasks((cur) => cur.map((x) => (x.key === "supervisor_contact_sent" ? { ...x, status: "DONE" } : x)))
+                }
+              />
+            ) : t.key === "business_card" && CARD_PROGRESS.has(cardStatus) ? (
               <span className="rounded bg-brand-sweet/25 px-2 py-0.5 text-[10px] font-semibold text-brand-lea dark:bg-brand-sweet/15 dark:text-brand-sweet">
-                {cardStatusLabel(hire.businessCardStatus)}
+                {cardStatusLabel(cardStatus)}
               </span>
             ) : emailKeys.has(t.key) ? (
               // Any task she pointed at a Front template in Manage tasks. The two
@@ -625,7 +760,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     {
       key: "cards",
       label: "Business cards",
-      chip: cardStatusLabel(hire.businessCardStatus),
+      chip: cardStatusLabel(cardStatus),
       content: (
         <BusinessCardPanel
           hireId={hire.id}
@@ -633,7 +768,8 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
           position={hire.position}
           phone={hire.phone}
           ssEmail={hire.ssEmail}
-          status={hire.businessCardStatus}
+          status={cardStatus}
+          onStatusChange={setCardStatus}
           cardTitle={hire.businessCardTitle}
           orientationDate={hire.orientationDate}
           cardOrders={cardOrders}
@@ -730,6 +866,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
               is to edit that checklist, not to start a second one. */}
           {canEdit && hire.stage !== "ACTIVE" ? (
             <StartNewOnboardingButton
+              checklistRows={checklistRows}
               hireId={hire.id}
               hireName={hire.name}
               position={hire.position}
@@ -827,6 +964,11 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
           {hire.name} comes off:
         </p>
         <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-brand-grey dark:text-slate-400">
+          {/* The checklist line was missing until 2026-09-11, and its absence was
+              the bug: she pressed this button on Matt Smith and he stayed on the
+              checklist looking pending, because the only list that did not honour
+              canceled was the one she was looking at. */}
+          <li>the onboarding checklist, the grid and the dashboard — and their counts</li>
           <li>the employees directory and headcount</li>
           <li>the business-card queue</li>
           <li>the list of people who can be picked as a supervisor</li>
@@ -835,7 +977,9 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
         <p className="mt-3 text-sm text-brand-grey dark:text-slate-400">
           Their record, checklist and history all stay exactly as they are, marked{" "}
           <span className="font-semibold text-brand-lea dark:text-slate-100">Canceled</span> — so if the seat reopens
-          you still have everything. Reversible any time with “They are coming after all.”
+          you still have everything. You will find them under{" "}
+          <span className="font-semibold text-brand-lea dark:text-slate-100">Archived</span>. Reversible any time with
+          “They are coming after all.”
         </p>
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setCancelOpen(false)} disabled={busyCancel}>

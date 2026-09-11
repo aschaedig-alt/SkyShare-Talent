@@ -33,6 +33,7 @@ import { EmployeeJourney } from "@/components/people/EmployeeJourney";
 import { BusinessCardPanel } from "@/components/people/BusinessCardPanel";
 import { SendOnboardingEmailButton } from "@/components/people/SendOnboardingEmailButton";
 import { SendContactsEmailButton } from "@/components/people/SendContactsEmailButton";
+import { SendSupervisorContactButton } from "@/components/people/SendSupervisorContactButton";
 import { SendTaskEmailButton } from "@/components/people/SendTaskEmailButton";
 import { SupervisorPicker } from "@/components/people/SupervisorPicker";
 import { StartNewOnboardingButton } from "@/components/people/StartNewOnboardingButton";
@@ -610,7 +611,21 @@ export function NewHireDetailWorkspaceClassic({ hire, travelTrips, travelLoyalty
                             onSent={() => setTasks((cur) => cur.map((x) => (x.key === "contacts_link_sent" ? { ...x, status: "DONE" } : x)))}
                           />
                         )}
-                        {!["onboarding_journey", "contacts_link_sent"].includes(t.key) && emailKeys.has(t.key) && (
+                        {t.key === "supervisor_contact_sent" && (
+                          <SendSupervisorContactButton
+                            hireId={hire.id}
+                            hireName={hire.name}
+                            taskStatus={t.status}
+                            canEdit={canEdit}
+                            onSent={() =>
+                              setTasks((cur) =>
+                                cur.map((x) => (x.key === "supervisor_contact_sent" ? { ...x, status: "DONE" } : x))
+                              )
+                            }
+                          />
+                        )}
+                        {!["onboarding_journey", "contacts_link_sent", "supervisor_contact_sent"].includes(t.key) &&
+                          emailKeys.has(t.key) && (
                           <SendTaskEmailButton
                             hireId={hire.id}
                             taskKey={t.key}

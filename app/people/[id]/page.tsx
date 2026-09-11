@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { hasPermission } from "@/lib/auth/roles";
 import { getNewHireDetail } from "@/lib/data/onboarding";
-import { getChecklistSections } from "@/lib/data/onboarding-grid-config";
+import { buildChecklistRows, getChecklistSections } from "@/lib/data/onboarding-grid-config";
 import { getTaskEmailMap } from "@/lib/onboarding/task-email-config";
 import { getTravelTripsForNewHire, getNewHireLoyalty } from "@/lib/data/travel";
 import { getEmployeeJourney } from "@/lib/data/employee-journey";
@@ -23,13 +23,14 @@ export default async function NewHirePage({ params }: { params: Promise<{ id: st
   if (!hire) {
     notFound();
   }
-  const [travelTrips, travelLoyalty, journey, onboardingArchives, cardOrders, sections, taskEmails] = await Promise.all([
+  const [travelTrips, travelLoyalty, journey, onboardingArchives, cardOrders, sections, checklistRows, taskEmails] = await Promise.all([
     getTravelTripsForNewHire(id),
     getNewHireLoyalty(id),
     getEmployeeJourney(id),
     getOnboardingArchives(id),
     getCardOrdersForHire(id),
     getChecklistSections(),
+    buildChecklistRows(),
     getTaskEmailMap()
   ]);
 
@@ -43,6 +44,7 @@ export default async function NewHirePage({ params }: { params: Promise<{ id: st
       cardOrders={cardOrders}
       roleTitleOptions={ROLE_TITLE_OPTIONS}
       sections={sections}
+      checklistRows={checklistRows}
       emailTaskKeys={Object.keys(taskEmails)}
       canEdit={hasPermission(access.role, "candidates:write")}
     />

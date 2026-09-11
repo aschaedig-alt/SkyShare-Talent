@@ -62,6 +62,8 @@ export type NewHireRow = {
   seniorityDate: string | null;
   seniorityNumber: number | null;
   orientationNotNeeded: boolean;
+  /** Detail fields marked not needed for this person. See lib/onboarding/optional-fields.ts. */
+  fieldsNotNeeded: string[];
   birthday: string | null;
   /** Indoc OVERRIDE. Empty means the page shows the travel booking instead. */
   indocStartDate: string | null;
@@ -189,6 +191,8 @@ type HireWithTasks = {
   seniorityDate: Date | null;
   seniorityNumber: number | null;
   orientationNotNeeded: boolean;
+  /** Detail fields marked not needed for this person. See lib/onboarding/optional-fields.ts. */
+  fieldsNotNeeded: string[];
   birthday: Date | null;
   indocStartDate: Date | null;
   indocEndDate: Date | null;
@@ -267,6 +271,7 @@ function toRow(hire: HireWithTasks, now: number): NewHireRow {
     seniorityDate: iso(hire.seniorityDate),
     seniorityNumber: hire.seniorityNumber,
     orientationNotNeeded: hire.orientationNotNeeded,
+    fieldsNotNeeded: hire.fieldsNotNeeded ?? [],
     birthday: iso(hire.birthday),
     indocStartDate: iso(hire.indocStartDate),
     indocEndDate: iso(hire.indocEndDate),
@@ -660,6 +665,7 @@ const hireSelect = {
   seniorityDate: true,
   seniorityNumber: true,
   orientationNotNeeded: true,
+  fieldsNotNeeded: true,
   birthday: true,
   indocStartDate: true,
   indocEndDate: true,
@@ -681,16 +687,39 @@ const hireSelect = {
   tasks: { select: { id: true, key: true, label: true, group: true, order: true, status: true, completedAt: true } }
 } as const;
 
+/**
+ * Which hires belong in a stage's list and count.
+ *
+ * A CANCELED HIRE IS NOT ONBOARDING. "Offer fell through" is for somebody who was
+ * going to join and now is not — the offer was withdrawn, or they backed out
+ * before day one. Until 2026-09-11 that flag came off four lists but not this
+ * one, so pressing the button left them sitting on the checklist looking pending.
+ * That is exactly what happened with Matt Smith: the button had been pressed, and
+ * he was still there.
+ *
+ * They move to ARCHIVED rather than disappearing — their record, checklist and
+ * history are untouched, and "They are coming after all" puts them back. A person
+ * who vanished from every list would be worse than one who looked pending.
+ *
+ * ONE FUNCTION, used by all five queries that list or count hires by stage. Five
+ * separate `canceled: false` clauses would be five chances to miss one, which is
+ * how the checklist became the only place they still showed.
+ */
+function hiresInStage(stage: HireStage) {
+  if (stage === "ARCHIVED") return { OR: [{ stage: "ARCHIVED" }, { canceled: true }] };
+  return { stage, canceled: false };
+}
+
 export async function getOnboardingWorkspaceData(stage: HireStage = "ACTIVE"): Promise<OnboardingWorkspaceData> {
   const now = Date.now();
   const [active, post, archived] = await Promise.all([
-    prisma.newHire.count({ where: { stage: "ACTIVE" } }),
-    prisma.newHire.count({ where: { stage: "POST_ONBOARD" } }),
-    prisma.newHire.count({ where: { stage: "ARCHIVED" } })
+    prisma.newHire.count({ where: hiresInStage("ACTIVE") }),
+    prisma.newHire.count({ where: hiresInStage("POST_ONBOARD") }),
+    prisma.newHire.count({ where: hiresInStage("ARCHIVED") })
   ]);
 
   const hires = (await prisma.newHire.findMany({
-    where: { stage },
+    where: hiresInStage(stage),
     select: hireSelect,
     orderBy: [{ startDate: "asc" }, { name: "asc" }]
   })) as HireWithTasks[];
@@ -836,9 +865,9 @@ export async function maybeArchiveOnCheckinsComplete(hireId: string): Promise<bo
 
 export async function getOnboardingCounts() {
   const [active, postOnboard, archived] = await Promise.all([
-    prisma.newHire.count({ where: { stage: "ACTIVE" } }),
-    prisma.newHire.count({ where: { stage: "POST_ONBOARD" } }),
-    prisma.newHire.count({ where: { stage: "ARCHIVED" } })
+    prisma.newHire.count({ where: hiresInStage("ACTIVE") }),
+    prisma.newHire.count({ where: hiresInStage("POST_ONBOARD") }),
+    prisma.newHire.count({ where: hiresInStage("ARCHIVED") })
   ]);
   return { active, postOnboard, archived };
 }
@@ -847,7 +876,7 @@ export async function getActiveDashboard(): Promise<OnboardingDashboard> {
   const now = Date.now();
   const [hires, recentlyOnboarded, hiddenIds] = await Promise.all([
     prisma.newHire.findMany({
-      where: { stage: "ACTIVE" },
+      where: hiresInStage("ACTIVE"),
       select: hireSelect,
       orderBy: [{ startDate: "asc" }, { name: "asc" }]
     }) as Promise<HireWithTasks[]>,
@@ -889,7 +918,7 @@ export async function getActiveGridHires(): Promise<GridHire[]> {
   const now = Date.now();
   const [hires, hiddenKeys] = await Promise.all([
     prisma.newHire.findMany({
-      where: { stage: "ACTIVE" },
+      where: hiresInStage("ACTIVE"),
       select: hireSelect,
       orderBy: [{ startDate: "asc" }, { name: "asc" }]
     }) as Promise<HireWithTasks[]>,
@@ -943,7 +972,7 @@ export async function getActiveMilestoneData(): Promise<MilestoneData> {
   const [catalog, hires] = await Promise.all([
     getMilestoneCatalog(),
     prisma.newHire.findMany({
-      where: { stage: "ACTIVE" },
+      where: hiresInStage("ACTIVE"),
       select: { id: true, name: true, position: true, department: true, tasks: { select: { key: true, status: true } } },
       orderBy: [{ startDate: "asc" }, { name: "asc" }]
     })
@@ -1045,7 +1074,10 @@ export async function getPostOnboardHires(): Promise<PostOnboardHire[]> {
 export async function getArchivedRows(): Promise<NewHireRow[]> {
   const now = Date.now();
   const hires = (await prisma.newHire.findMany({
-    where: { stage: "ARCHIVED" },
+    // hiresInStage, not a bare stage filter — this is the list a canceled hire
+    // MOVES TO. Filtering on stage alone is what made "Offer fell through" look
+    // like a delete: they came off the checklist and turned up nowhere.
+    where: hiresInStage("ARCHIVED"),
     select: hireSelect,
     orderBy: [{ name: "asc" }]
   })) as HireWithTasks[];
