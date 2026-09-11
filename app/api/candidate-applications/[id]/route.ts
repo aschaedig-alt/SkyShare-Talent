@@ -46,17 +46,35 @@ export async function PATCH(request: Request, ctx: Ctx) {
   const body = (await request.json().catch(() => ({}))) as {
     candidateId?: unknown;
     statusText?: unknown;
+    statusNote?: unknown;
   };
   const candidateId = typeof body.candidateId === "string" ? body.candidateId : "";
   if (!candidateId) {
     return NextResponse.json({ message: "candidateId is required." }, { status: 400 });
   }
-  if (typeof body.statusText !== "string") {
+  // Either field can be sent on its own. The panel has two separate controls —
+  // the disposition reason and the free note — and making one require the other
+  // would mean typing a note could silently rewrite the reason.
+  const editingReason = typeof body.statusText === "string";
+  const editingNote = typeof body.statusNote === "string";
+  if (!editingReason && !editingNote) {
+    return NextResponse.json({ message: "Nothing to change." }, { status: 400 });
+  }
+
+  let statusNote: string | null = null;
+  if (editingNote) {
+    statusNote = (body.statusNote as string).trim();
+    if (statusNote.length > 500) {
+      return NextResponse.json({ message: "That note is too long — keep it under 500 characters." }, { status: 400 });
+    }
+  }
+
+  if (editingReason && typeof body.statusText !== "string") {
     return NextResponse.json({ message: "statusText is required." }, { status: 400 });
   }
   // Trimmed, and an empty string clears it rather than storing "". A cleared
   // reason reads as "no reason recorded", which is a real state.
-  const statusText = body.statusText.trim();
+  const statusText = editingReason ? (body.statusText as string).trim() : "";
   if (statusText.length > 200) {
     return NextResponse.json(
       { message: "That reason is too long — keep it under 200 characters." },
@@ -76,11 +94,17 @@ export async function PATCH(request: Request, ctx: Ctx) {
   }
 
   const previous = application.status ?? "";
-  if (previous === statusText) return NextResponse.json({ ok: true, unchanged: true });
+  const previousNote = application.statusNote ?? "";
+  const reasonChanged = editingReason && previous !== statusText;
+  const noteChanged = editingNote && previousNote !== (statusNote ?? "");
+  if (!reasonChanged && !noteChanged) return NextResponse.json({ ok: true, unchanged: true });
 
   await prisma.candidateApplication.update({
     where: { id },
-    data: { status: statusText || null }
+    data: {
+      ...(reasonChanged ? { status: statusText || null } : {}),
+      ...(noteChanged ? { statusNote: statusNote || null } : {})
+    }
   });
 
   await logActivity({
@@ -90,14 +114,16 @@ export async function PATCH(request: Request, ctx: Ctx) {
     // The OLD value goes in the description on purpose — this overwrites a
     // field imported from Paycom, and without it there is no way back to what
     // Paycom actually said.
-    description:
-      `Changed the reason on ${application.candidate.displayName}'s ` +
-      `${application.job?.title ?? "application"} from "${previous || "(none)"}" to "${statusText || "(none)"}"`,
+    description: reasonChanged
+      ? `Changed the reason on ${application.candidate.displayName}'s ` +
+        `${application.job?.title ?? "application"} from "${previous || "(none)"}" to "${statusText || "(none)"}"`
+      : `Changed the note on ${application.candidate.displayName}'s ` +
+        `${application.job?.title ?? "application"} from "${previousNote || "(none)"}" to "${statusNote || "(none)"}"`,
     entityType: "Candidate",
     entityId: candidateId
   });
 
-  return NextResponse.json({ ok: true, statusText });
+  return NextResponse.json({ ok: true, statusText, statusNote });
 }
 
 export async function DELETE(request: Request, ctx: Ctx) {

@@ -7,6 +7,7 @@ import type { CandidateListApplication } from "@/lib/data/candidates";
 import { OUTCOME_LABEL, reasonLine } from "@/lib/candidates/buckets";
 import { duplicateOpenTitles, isOpenOutcome } from "@/lib/candidates/reapplied";
 import { ApplicationStatusPicker } from "@/components/candidates/ApplicationStatusPicker";
+import { ApplicationNote } from "@/components/candidates/ApplicationNote";
 import { formatCalendarDay } from "@/lib/dates/display";
 
 /**
@@ -44,12 +45,16 @@ export function CandidateApplicationsPanel({
   candidateName,
   applications,
   canEdit,
+  topOffset = 0,
   onClose
 }: {
   candidateId: string;
   candidateName: string;
   applications: CandidateListApplication[];
   canEdit: boolean;
+  /** Pixels from the top of the table wrapper, so the panel opens level with the
+   *  row that was clicked rather than at the top of the table. */
+  topOffset?: number;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -79,7 +84,21 @@ export function CandidateApplicationsPanel({
       tabIndex={-1}
       role="dialog"
       aria-label={`Applications for ${candidateName}`}
-      className="absolute right-0 top-0 z-20 w-[340px] max-w-full border-l-[3px] border-brand-gold bg-brand-cloudDancer/80 p-4 shadow-panel outline-none backdrop-blur-[1px] dark:bg-brand-field/95 max-[900px]:w-full max-[900px]:border-l-0"
+      // Three things here were asked for directly on 2026-09-11 and none of them
+      // is cosmetic drift, so do not "restore" them:
+      //
+      //  1. SOLID, not translucent. It was bg-brand-cloudDancer/80 with a
+      //     backdrop-blur, and the candidate rows showed through it — "I can kind
+      //     of see the stuff behind it". A panel you can read the table through is
+      //     hard to read, and on a page full of names it is worse than untidy.
+      //  2. LIGHT GREY, not beige. cloudDancer (#f0eee9) is a warm cream and reads
+      //     as beige against the cool-mist page; slate-100 sits between white and
+      //     the page background in the same cool family.
+      //  3. Positioned beside the ROW, via topOffset, not pinned to the top of the
+      //     table. Opening someone's applications from row 40 used to scroll-jump
+      //     the answer to the top of the page.
+      style={{ top: topOffset }}
+      className="absolute right-0 z-20 w-[340px] max-w-full border-l-[3px] border-brand-gold bg-slate-100 p-4 shadow-panel outline-none dark:bg-brand-panel max-[900px]:w-full max-[900px]:border-l-0"
     >
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -185,6 +204,15 @@ export function CandidateApplicationsPanel({
                   {app.statusText || reason || "Not recorded"}
                 </p>
               )}
+              {/* The note goes on open AND closed applications. A closed one is
+                  precisely where an explanation earns its place — the stored
+                  reason is Paycom's wording, not hers. */}
+              <ApplicationNote
+                applicationId={app.id}
+                candidateId={candidateId}
+                value={app.statusNote}
+                canEdit={canEdit}
+              />
             </div>
           );
         })}

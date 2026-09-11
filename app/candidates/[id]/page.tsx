@@ -62,6 +62,7 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
       // (getCandidateProfileData returns null otherwise), so the only remaining
       // question is whether an admin granted them the annotate right.
       canAnnotate={Boolean(viewer.allowlistCanAnnotate)}
+      viewerIsHr={viewer.isHr}
       savedLayout={layout.layout}
       savedWidgets={layout.widgets}
       travelTrips={travelTrips}

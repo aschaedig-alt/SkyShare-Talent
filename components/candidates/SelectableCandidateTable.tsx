@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X, Check, BarChart3, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import type { CandidateListItem } from "@/lib/data/candidates";
@@ -145,6 +145,13 @@ export function SelectableCandidateTable({
     });
   }, []);
 
+  // How far down the table the open panel sits, in pixels from the top of the
+  // scroll container. Kept in state rather than derived during render because it
+  // is a DOM measurement — the row heights vary with tags, resume snippets and
+  // wrapped job titles, so there is nothing to compute it from.
+  const [panelTop, setPanelTop] = useState(0);
+  const tableWrapRef = useRef<HTMLDivElement | null>(null);
+
   /**
    * Open this person's applications, or close them if they are already open.
    * Page-local on purpose: it is a "let me look at this one" gesture, not a
@@ -152,7 +159,27 @@ export function SelectableCandidateTable({
    * else's panel.
    */
   const toggleExpanded = useCallback((id: string) => {
-    setPanelFor((prev) => (prev === id ? null : id));
+    setPanelFor((prev) => {
+      if (prev === id) return null;
+      // Measure BEFORE the panel mounts, while the row is still where it was
+      // clicked.
+      //
+      // getBoundingClientRect, NOT offsetTop. offsetTop is measured from each
+      // element's own offsetParent, and the row's offsetParent (the table) is not
+      // the wrapper's — so subtracting one from the other mixes two coordinate
+      // systems and lands the panel a few hundred pixels off. Rects are both in
+      // viewport space, so the difference is real; scrollTop puts it back into the
+      // wrapper's content space, which is what `absolute` positions against.
+      const wrap = tableWrapRef.current;
+      const row = wrap?.querySelector<HTMLElement>(`[data-candidate-row="${CSS.escape(id)}"]`);
+      if (!wrap || !row) {
+        setPanelTop(0);
+      } else {
+        const offset = row.getBoundingClientRect().top - wrap.getBoundingClientRect().top + wrap.scrollTop;
+        setPanelTop(Math.max(0, Math.round(offset)));
+      }
+      return id;
+    });
   }, []);
 
   const closePanel = useCallback(() => setPanelFor(null), []);
@@ -267,7 +294,14 @@ export function SelectableCandidateTable({
           to put a tall panel rather than spilling out of the card. */}
       <div>
         {candidates.length > 0 ? (
-          <div className="relative overflow-x-auto" style={panelFor ? { minHeight: 560 } : undefined}>
+          <div
+            ref={tableWrapRef}
+            className="relative overflow-x-auto"
+            // Reserve room BELOW wherever the panel opened, so a row near the
+            // bottom of the list does not open a panel that runs off the end of
+            // the table. Only while one is open, so the page is unchanged otherwise.
+            style={panelFor ? { minHeight: panelTop + 520 } : undefined}
+          >
             {/* No min-width, and no horizontal scroll. The table is FIXED-layout
                 on percentage widths, and narrow screens drop the columns that
                 matter least rather than squeezing every one until the names
@@ -364,6 +398,7 @@ export function SelectableCandidateTable({
                 candidateName={panelCandidate.displayName}
                 applications={panelCandidate.applications}
                 canEdit={canEdit}
+                topOffset={panelTop}
                 onClose={closePanel}
               />
             ) : null}

@@ -115,6 +115,13 @@ function CandidateRowInner({
   return (
     <Fragment>
       <tr
+        // The applications panel floats over the table and has to open BESIDE the
+        // row you clicked, not at the top of the page — asked for directly on
+        // 2026-09-11 ("if I scroll down and then I look at someone's jobs, it can't
+        // open up at the top of the page"). SelectableCandidateTable finds this row
+        // by id to read its offset. A data attribute rather than a ref because the
+        // rows are memoized and a ref per row would defeat that.
+        data-candidate-row={candidate.id}
         className={`row-wash align-top ${
           isOpen ? "bg-brand-sweet/20 dark:bg-brand-gold/10" : isSelected ? "bg-brand-sweet/20 dark:bg-brand-gold/10" : ""
         }`}
@@ -241,7 +248,7 @@ function CandidateRowInner({
               this opens. */}
           {lead ? (
             <div className="flex items-start justify-between gap-2">
-              <span className="min-w-0 text-[13px] text-brand-lea dark:text-slate-100">
+              <span className="min-w-0 text-[11px] text-brand-lea dark:text-slate-100">
                 {lead.jobTitle ?? "No job on record"}
               </span>
               {candidate.applications.length > 0 && (

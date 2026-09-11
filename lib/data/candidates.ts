@@ -51,7 +51,24 @@ export type CandidateListViewer = Pick<
   | "restrictCandidatesToDepartment"
   | "restrictCandidatesToAllowlist"
   | "allowedCandidateIds"
->;
+> &
+  // Optional in the same way and for the same reason allowlistCanAnnotate is in
+  // lib/auth/candidate-scope.ts: several callers hand this function a narrower
+  // literal than a full ViewerScope. Absent reads as "not HR", which is the safe
+  // direction — the note count then omits private notes rather than revealing one.
+  Partial<Pick<ViewerScope, "isHr">>;
+
+/**
+ * The note count for a list row, scoped to what this viewer may actually open.
+ *
+ * A bare count would tell a hiring manager "3 notes" on a candidate whose profile
+ * shows them two — which contradicts "it would just not be there" and points
+ * straight at the private one. Prisma counts the relation with its own where, so
+ * this is the same single query, not a second round trip.
+ */
+function noteCountSelect(viewer?: CandidateListViewer) {
+  return viewer?.isHr ? true : { where: { hrOnly: false } };
+}
 
 // Is the DEPARTMENT restriction on for this viewer? An admin-set exception that
 // only ever applies to a HIRING_MANAGER — ADMIN/RECRUITER are never narrowed.
@@ -250,6 +267,8 @@ export type CandidateListApplication = {
   appliedAt: string | null;
   /** The raw Paycom disposition text, kept for the expanded row's detail line. */
   statusText: string | null;
+  /** A free note somebody typed about THIS application, usually beside a status change. */
+  statusNote: string | null;
   outcome: ApplicationOutcome;
   group: DispositionGroup;
   /** True once this is a Jazz-era record rather than a live Paycom application. */
@@ -1070,6 +1089,7 @@ export async function getCandidateListData({
             jobId: true,
             appliedAt: true,
             status: true,
+            statusNote: true,
             disposition: true,
             offerStatus: true,
             origin: true,
@@ -1081,7 +1101,7 @@ export async function getCandidateListData({
       // left behind; see mergeTagChips.
         _count: {
           select: {
-            notes: true,
+            notes: noteCountSelect(viewer),
             files: true,
             applications: true
           }
@@ -1183,6 +1203,7 @@ export async function getCandidateListData({
           jobId: string | null;
           appliedAt: Date | null;
           status: string | null;
+          statusNote: string | null;
           disposition: string | null;
           offerStatus: string | null;
           origin: string;
@@ -1201,6 +1222,7 @@ export async function getCandidateListData({
         jobTitle: a.job?.title ?? a.historicalJobTitle ?? null,
         appliedAt: a.appliedAt ? a.appliedAt.toISOString() : null,
         statusText: a.status,
+        statusNote: a.statusNote,
         outcome,
         group: dispositionGroup(a.status, outcome, dispositionOverrides),
         historical: a.origin === "JAZZ"
@@ -1351,6 +1373,7 @@ export async function getCandidatesByIds(ids: string[], viewer?: CandidateListVi
           jobId: true,
           appliedAt: true,
           status: true,
+          statusNote: true,
           disposition: true,
           offerStatus: true,
           origin: true,
@@ -1358,7 +1381,7 @@ export async function getCandidatesByIds(ids: string[], viewer?: CandidateListVi
           job: { select: { title: true, department: true } }
         }
       },
-      _count: { select: { notes: true, files: true, applications: true } }
+      _count: { select: { notes: noteCountSelect(viewer), files: true, applications: true } }
     }
   });
 
@@ -1399,6 +1422,7 @@ export async function getCandidatesByIds(ids: string[], viewer?: CandidateListVi
           jobTitle: a.job?.title ?? a.historicalJobTitle ?? null,
           appliedAt: a.appliedAt ? a.appliedAt.toISOString() : null,
           statusText: a.status,
+          statusNote: a.statusNote,
           outcome,
           group: dispositionGroup(a.status, outcome, dispositionOverrides),
           historical: a.origin === "JAZZ"
@@ -1675,6 +1699,11 @@ export async function getCandidateProfileData(
   // assessments are meant to stay private the answer is to not grant the
   // candidate, not to hand over a redacted record.
   const allowlistGrantsCandidate = Boolean(viewer?.restrictCandidatesToAllowlist);
+  // No viewer passed at all means an internal or legacy caller, which every other
+  // gate on this page treats as unrestricted. Private HR notes fail the OTHER way
+  // on purpose: absent a viewer we cannot show the note is being asked for by
+  // somebody entitled to it, and a note that leaks once cannot be un-leaked.
+  const viewerIsHr = Boolean(viewer?.isHr);
   function canSeeContent(authoredByViewer: boolean) {
     return unrestrictedViewer || departmentMatches || allowlistGrantsCandidate || authoredByViewer;
   }
@@ -1893,17 +1922,30 @@ export async function getCandidateProfileData(
       sourceFileId: m.sourceFileId,
       sourceSnippet: m.sourceSnippet
     })),
-    notes: candidate.notes.map((note) => {
-      const visible = canSeeContent(Boolean(viewer?.userId && note.authorId === viewer.userId));
-      return {
-        id: note.id,
-        body: visible ? note.body : PRIVATE_NOTE_PLACEHOLDER,
-        source: note.source,
-        author: note.author?.name ?? note.author?.email ?? null,
-        createdAt: note.createdAt.toISOString(),
-        updatedAt: note.updatedAt.toISOString()
-      };
-    }),
+    // A private HR note is REMOVED, not redacted. Everything else on this page
+    // that hides content leaves a placeholder saying it exists, which is right for
+    // an interview write-up somebody may reasonably ask about. It is wrong here:
+    // her words were "non HR people wouldnt see it, it would just not be there",
+    // and a placeholder announcing that HR wrote something private about this
+    // candidate gives away most of what the note was for.
+    //
+    // Filtered HERE, on the server, where the row is dropped before it is ever
+    // serialized into the page. A note a non-HR viewer can read in a network
+    // response is not private, whatever the UI chooses to render.
+    notes: candidate.notes
+      .filter((note) => !note.hrOnly || viewerIsHr)
+      .map((note) => {
+        const visible = canSeeContent(Boolean(viewer?.userId && note.authorId === viewer.userId));
+        return {
+          id: note.id,
+          body: visible ? note.body : PRIVATE_NOTE_PLACEHOLDER,
+          hrOnly: note.hrOnly,
+          source: note.source,
+          author: note.author?.name ?? note.author?.email ?? null,
+          createdAt: note.createdAt.toISOString(),
+          updatedAt: note.updatedAt.toISOString()
+        };
+      }),
     activity: activityRows.map((row) => ({
       id: row.id,
       activityType: row.activityType,

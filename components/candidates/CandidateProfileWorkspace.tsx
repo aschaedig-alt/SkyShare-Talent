@@ -47,6 +47,8 @@ type CandidateProfileWorkspaceProps = {
   // record interview write-ups on the candidates they were given, without holding
   // candidates:write. Everything else on this profile stays gated on canEdit.
   canAnnotate?: boolean;
+  /** Is the person reading this on the HR team? Gates the private-note controls only. */
+  viewerIsHr?: boolean;
   canDelete?: boolean;
   canCreateJob?: boolean;
   savedLayout?: GridItem[] | null;
@@ -141,6 +143,7 @@ export function CandidateProfileWorkspace({
   candidate: initialCandidate,
   canEdit = false,
   canAnnotate = false,
+  viewerIsHr = false,
   canDelete = false,
   canCreateJob = false,
   savedLayout = null,
@@ -576,15 +579,15 @@ export function CandidateProfileWorkspace({
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={clsx(
-                    "flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-semibold transition hover:shadow-glow",
+                    "flex shrink-0 flex-col items-center gap-0.5 border-b-2 px-2.5 py-1.5 text-xs font-semibold leading-tight transition hover:shadow-glow",
                     active ? "border-brand-lea text-brand-lea" : "border-transparent text-brand-grey hover:text-brand-lea dark:text-slate-400"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
-                  <span className="rounded bg-brand-cloudDancer/70 px-1.5 py-0.5 text-[10px] font-bold text-brand-grey dark:bg-white/5 dark:text-slate-400">
-                    {tab.count}
+                  <span className="flex items-center gap-1">
+                    <Icon className="h-4 w-4" />
+                    <span className="text-[10px] font-bold tabular-nums">{tab.count}</span>
                   </span>
+                  <span>{tab.label}</span>
                 </button>
               );
             })}
@@ -751,6 +754,7 @@ export function CandidateProfileWorkspace({
               initialNotes={candidate.notes}
               people={team}
               interviewWriteUps={candidate.interviews}
+              viewerIsHr={viewerIsHr}
             />
           )}
 
