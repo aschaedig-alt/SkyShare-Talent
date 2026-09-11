@@ -54,17 +54,70 @@ export const CARD_REMIND_LEAD_DAYS = 14;
 export const CARD_ORDER_BY_LEAD_DAYS = 7;
 const CARD_DAY = 24 * 60 * 60 * 1000;
 
+// The third dial, and the only one that counts names instead of days: how many
+// people it is worth sending to the printer at once.
+//
+// Asked for on 2026-09-01 — "there are a minimum number of names that need to be
+// in the order to place it" — without a number attached. Her own order history is
+// the only evidence there is: nine real batches of 3, 4, 4, 6, 6, 7, 11, 11 and 19
+// people, median 6. So 6 is a starting point, not a rule, and the live value is
+// stored in WorkspaceSetting (lib/business-cards/order-batch.ts) so she can move
+// it without a deploy.
+//
+// It is a NUDGE. Nothing blocks on it, nothing refuses to save because of it, and
+// a hire can finish onboarding with their card merely on the next-order list —
+// which is the entire point of the QUEUED state above.
+export const DEFAULT_CARD_ORDER_MIN_BATCH = 6;
+
+/** A sanity ceiling on the stored minimum, not a business rule. */
+export const CARD_ORDER_MIN_BATCH_MAX = 100;
+
+/**
+ * The one line the Business cards page says about the next order. Kept next to
+ * the number it talks about so the wording and the arithmetic cannot drift apart,
+ * and pure so it stays testable without rendering anything.
+ *
+ * Never phrased as a warning: a short batch is a normal state of the world, not a
+ * mistake somebody made.
+ */
+export function describeBatch(queuedCount: number, minBatch: number): string {
+  if (queuedCount === 0) return "Nothing on the next order yet.";
+  const names = `${queuedCount} ${queuedCount === 1 ? "name" : "names"} on the next order`;
+  if (queuedCount >= minBatch) return `${names} — at or past the ${minBatch} target, so this batch is worth placing.`;
+  const short = minBatch - queuedCount;
+  // Within two of the target is where she said she starts asking around, so the
+  // line says that rather than just counting down. It is never a blocker: a single
+  // card can always be printed on its own, it just costs more.
+  if (short <= 2) {
+    return `${names} — ${short} short of the ${minBatch} target. Worth asking the team whether anybody needs a reorder.`;
+  }
+  return `${names} — ${short} more to reach the ${minBatch} target.`;
+}
+
 export type CardOrderState = {
   orderByISO: string | null; // latest date to place the order (orientation − 1 week)
   daysUntilOrientation: number | null;
   needsAction: boolean; // still NEEDED and orientation is within the reminder window
   overdue: boolean; // still NEEDED and past the order-by deadline
+  /**
+   * The order-by date has arrived for this person's orientation — regardless of
+   * what their card status is. `overdue` is this AND still NEEDED.
+   *
+   * Split out so the Business cards page can say, as plain INFORMATION and not
+   * as an alarm, that somebody sitting on the next-order queue is running out of
+   * runway. Being queued is an answer, so it must not start flashing red again
+   * (see the comment on `open` below) — but a queued card that waits for a
+   * bigger batch can miss an orientation in silence, and she should be able to
+   * see that without being nagged about it.
+   */
+  pastOrderBy: boolean;
 };
 
 // Given a person's orientation date + card status, work out whether an order is
 // due (and by when). Only NEEDED people with an upcoming orientation are flagged.
 export function cardOrderState(orientationISO: string | null, status: string, now: number): CardOrderState {
-  if (!orientationISO) return { orderByISO: null, daysUntilOrientation: null, needsAction: false, overdue: false };
+  if (!orientationISO)
+    return { orderByISO: null, daysUntilOrientation: null, needsAction: false, overdue: false, pastOrderBy: false };
   const orientation = new Date(orientationISO).getTime();
   const orderBy = orientation - CARD_ORDER_BY_LEAD_DAYS * CARD_DAY;
   const daysUntilOrientation = Math.ceil((orientation - now) / CARD_DAY);
@@ -78,7 +131,10 @@ export function cardOrderState(orientationISO: string | null, status: string, no
     orderByISO: new Date(orderBy).toISOString(),
     daysUntilOrientation,
     needsAction: open && inWindow,
-    overdue: open && inWindow && now > orderBy
+    overdue: open && inWindow && now > orderBy,
+    // Status-blind on purpose: this is the fact about the calendar, not about
+    // whether anybody has acted. The page decides how loudly to say it.
+    pastOrderBy: now > orderBy
   };
 }
 

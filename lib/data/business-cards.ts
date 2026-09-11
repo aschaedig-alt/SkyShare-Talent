@@ -8,7 +8,7 @@ export type BusinessCardRow = {
   label: string | null; // null = the primary card; else the variant's label
   department: string | null;
   onboarding: boolean;
-  status: string; // per-person order status (NEEDED | ORDERED | RECEIVED | NOT_NEEDED)
+  status: string; // per-person order status — see CARD_STATUSES in lib/business-cards/card.ts
   orientationDate: string | null;
   orderState: CardOrderState;
   card: BusinessCard;

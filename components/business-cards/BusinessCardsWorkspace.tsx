@@ -1,11 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { Search, Copy, Check, CreditCard, ExternalLink, AlertTriangle, Clock } from "lucide-react";
+import { Search, Copy, Check, CreditCard, ExternalLink, AlertTriangle, Clock, Layers } from "lucide-react";
 import type { BusinessCardRow } from "@/lib/data/business-cards";
-import { formatCardText, formatCardsBatch, formatCardHtml, formatCardsHtml, cardOrderState, CARD_STATUSES, CARD_STATUS_LABEL, type CardStatus } from "@/lib/business-cards/card";
+import {
+  formatCardText,
+  formatCardsBatch,
+  formatCardHtml,
+  formatCardsHtml,
+  cardOrderState,
+  describeBatch,
+  CARD_ORDER_MIN_BATCH_MAX,
+  CARD_STATUSES,
+  CARD_STATUS_LABEL,
+  type CardStatus
+} from "@/lib/business-cards/card";
+import { updateCardOrderMinimum } from "@/app/business-cards/actions";
 import { copyRich } from "@/lib/business-cards/copy";
 import { BusinessCardVisual } from "@/components/business-cards/BusinessCardVisual";
 
@@ -40,13 +52,24 @@ const statusSelectClass = (status: string) =>
           : "border-brand-gold/50 bg-brand-gold/15 text-brand-lea dark:text-brand-gold"
   );
 
-export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) {
+export function BusinessCardsWorkspace({ cards, minBatch: minBatchProp }: { cards: BusinessCardRow[]; minBatch: number }) {
   const [items, setItems] = useState(cards);
   const [q, setQ] = useState("");
   const [view, setView] = useState<View>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [bulkMsg, setBulkMsg] = useState<string | null>(null);
+
+  // The minimum batch size, as saved in WorkspaceSetting. Held locally so the
+  // count re-reads the moment she changes it, and re-synced whenever the server
+  // sends a new value.
+  const [minBatch, setMinBatch] = useState(minBatchProp);
+  useEffect(() => {
+    setMinBatch(minBatchProp);
+  }, [minBatchProp]);
+  const [minDraft, setMinDraft] = useState(String(minBatchProp));
+  const [minMsg, setMinMsg] = useState<string | null>(null);
+  const [savingMin, startSaveMin] = useTransition();
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -65,6 +88,39 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
     () => items.filter((r) => r.label === null && r.orderState.needsAction).sort((a, b) => (a.orderState.daysUntilOrientation ?? 0) - (b.orderState.daysUntilOrientation ?? 0)),
     [items]
   );
+
+  // People on the next order whose orientation has already passed the usual
+  // order-by date. Deliberately NOT an alarm: being on the next order is her
+  // answer to "has anybody dealt with this person", and re-flashing it red is the
+  // nagging she asked to stop. It is stated once, as a fact about the calendar,
+  // because the one thing a queue cannot tell her by itself is that somebody on it
+  // is out of runway. Primary cards only, so a person with two cards counts once.
+  const queuedTight = useMemo(
+    () =>
+      items
+        .filter((r) => r.label === null && r.status === "QUEUED" && r.orderState.pastOrderBy && (r.orderState.daysUntilOrientation ?? -99) >= -3)
+        .sort((a, b) => (a.orderState.daysUntilOrientation ?? 0) - (b.orderState.daysUntilOrientation ?? 0)),
+    [items]
+  );
+
+  function saveMinimum() {
+    const next = Number(minDraft);
+    setMinMsg(null);
+    if (!Number.isInteger(next) || next < 1 || next > CARD_ORDER_MIN_BATCH_MAX) {
+      setMinMsg(`Enter a whole number between 1 and ${CARD_ORDER_MIN_BATCH_MAX}.`);
+      return;
+    }
+    startSaveMin(async () => {
+      const res = await updateCardOrderMinimum(next);
+      if (res.ok) {
+        setMinBatch(res.minBatch ?? next);
+        setMinMsg("Saved.");
+        setTimeout(() => setMinMsg(null), 2400);
+      } else {
+        setMinMsg(res.error ?? "Could not save the minimum.");
+      }
+    });
+  }
 
   // Counts are of PEOPLE (deduped across a person's primary + variant cards), since
   // status is shared across a person's cards.
@@ -153,7 +209,7 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
           <CreditCard className="h-6 w-6" /> Business cards
         </h1>
         <p className="mt-1 max-w-3xl text-sm text-brand-grey dark:text-slate-400">
-          Cards are built from each person&apos;s record and ordered in bulk ahead of orientation. Mark each one Needed / Ordered / Received / Not needed, select the ones to order, and copy them straight into your printer email.
+          Cards are built from each person&apos;s record and ordered in bulk ahead of orientation. Mark each one On the next order as it comes up, then Ordered and Received once the batch goes to the printer — or Not needed. Select the ones to order and copy them straight into your printer email.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {tabs.map((t) => (
@@ -218,6 +274,79 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
         </section>
       ) : null}
 
+      {/* The next order — how full the batch is against the size she aims for.
+          A TARGET, never a gate, and that is her wording (2026-09-11): "we can't
+          really have any hard gates either way", because in an emergency the printer
+          will run a single card, it just costs more. So nothing here blocks, a hire
+          can finish onboarding with their card merely on this list, and the count is
+          shown as progress toward a goal rather than a threshold to clear. */}
+      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <Layers className="h-4 w-4 text-brand-eden dark:text-brand-sweet" />
+          <h2 className="text-sm font-bold text-brand-lea dark:text-slate-100">The next order</h2>
+          <p
+            className={clsx(
+              "text-sm",
+              queuedCount >= minBatch && queuedCount > 0 ? "font-semibold text-brand-lea dark:text-slate-100" : "text-brand-grey dark:text-slate-400"
+            )}
+          >
+            {describeBatch(queuedCount, minBatch)}
+          </p>
+          {queuedCount > 0 && view !== "queued" ? (
+            <button onClick={() => setView("queued")} className="text-xs font-semibold text-brand-eden underline dark:text-brand-sweet">
+              Show them
+            </button>
+          ) : null}
+
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <label
+              className="flex items-center gap-2 text-xs font-semibold text-brand-grey dark:text-slate-400"
+              title="A target, not a limit. The printer will run a single card in a hurry — it just costs more."
+            >
+              Target names
+              <input
+                type="number"
+                min={1}
+                max={CARD_ORDER_MIN_BATCH_MAX}
+                value={minDraft}
+                onChange={(e) => setMinDraft(e.target.value)}
+                className="w-16 rounded border border-brand-lea/20 px-2 py-1 text-sm text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-brand-field dark:text-slate-100"
+              />
+            </label>
+            <button
+              onClick={saveMinimum}
+              disabled={savingMin || minDraft === String(minBatch)}
+              className="rounded border border-brand-lea/20 px-2 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-50 dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/5"
+            >
+              {savingMin ? "Saving…" : "Save"}
+            </button>
+            {minMsg ? <span className="text-xs font-medium text-brand-grey dark:text-slate-400">{minMsg}</span> : null}
+          </div>
+        </div>
+
+        {queuedTight.length > 0 ? (
+          <div className="mt-3 border-t border-brand-lea/10 pt-2 dark:border-white/10">
+            <p className="text-xs font-semibold text-brand-grey dark:text-slate-400">
+              Running short on time — already past the usual order-by date, and still waiting on the batch:
+            </p>
+            <ul className="mt-1 space-y-1">
+              {queuedTight.slice(0, 8).map((r) => (
+                <li key={r.personId} className="flex flex-wrap items-center gap-x-2 text-xs text-brand-grey dark:text-slate-400">
+                  <Link href={`/people/${r.personId}`} className="font-semibold text-brand-eden underline dark:text-brand-sweet">
+                    {r.card.name}
+                  </Link>
+                  <span>{r.card.title}</span>
+                  <span className="ml-auto inline-flex items-center gap-1">
+                    <Clock className="h-3 w-3" /> Orientation {fmtDay(r.orientationDate)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {queuedTight.length > 8 ? <p className="mt-1 text-xs text-brand-grey dark:text-slate-500">+ {queuedTight.length - 8} more on the “On the next order” tab.</p> : null}
+          </div>
+        ) : null}
+      </section>
+
       {/* Bulk order bar */}
       <div className="flex flex-wrap items-center gap-2 rounded bg-white px-3 py-2 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <label className="flex items-center gap-2 text-xs font-semibold text-brand-lea dark:text-slate-100">
@@ -229,7 +358,10 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
         {selected.size > 0 ? (
           <div className="flex flex-wrap items-center gap-1.5 border-l border-brand-lea/10 pl-2 dark:border-white/10">
             <span className="text-xs font-semibold text-brand-grey dark:text-slate-400">Mark:</span>
-            {(["RECEIVED", "NEEDED", "ORDERED", "NOT_NEEDED"] as CardStatus[]).map((s) => (
+            {/* QUEUED leads: adding a batch of people to the next order is the
+                action this page is for, and it was the one status you could only
+                set one person at a time. */}
+            {(["QUEUED", "RECEIVED", "NEEDED", "ORDERED", "NOT_NEEDED"] as CardStatus[]).map((s) => (
               <button
                 key={s}
                 onClick={() => bulkSetStatus(s)}
@@ -252,15 +384,19 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
         <div className="rounded border border-brand-lea/10 bg-white p-8 text-center text-sm text-brand-grey shadow-panel dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">
           {view === "needs"
             ? "No one is marked as needing a card."
-            : view === "ordered"
-              ? "No cards are marked ordered."
-              : view === "received"
-                ? "No cards are marked received."
-                : view === "notNeeded"
-                  ? "No one is marked not needed."
-                  : view === "missing"
-                    ? "No one is missing a company email."
-                    : "No matching staff."}
+            : view === "queued"
+              ? "Nothing on the next order yet. Mark people On the next order as their cards come up, and they wait here until the batch is worth placing."
+              : view === "ordered"
+                ? "No cards are marked ordered."
+                : view === "received"
+                  ? "No cards are marked received."
+                  : view === "notNeeded"
+                    ? "No one is marked not needed."
+                    : view === "missing"
+                      ? "No one is missing a company email."
+                      : view === "new"
+                        ? "No one is currently going through onboarding."
+                        : "No matching staff."}
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -293,6 +429,12 @@ export function BusinessCardsWorkspace({ cards }: { cards: BusinessCardRow[] }) 
                     <span className={clsx("inline-flex items-center gap-1 text-[11px] font-medium", r.orderState.overdue ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400")}>
                       {r.orderState.overdue ? <AlertTriangle className="h-3 w-3" /> : null}
                       {r.orderState.overdue ? "Order now" : `Order by ${fmtDay(r.orderState.orderByISO)}`}
+                    </span>
+                  ) : null}
+                  {/* Queued and out of runway — said in gray, once, not in red. */}
+                  {r.status === "QUEUED" && r.orderState.pastOrderBy && (r.orderState.daysUntilOrientation ?? -99) >= -3 ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-brand-grey dark:text-slate-400">
+                      <Clock className="h-3 w-3" /> Orientation {fmtDay(r.orientationDate)}
                     </span>
                   ) : null}
                 </div>

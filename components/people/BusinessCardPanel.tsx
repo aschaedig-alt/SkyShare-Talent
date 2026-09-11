@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { CreditCard, Copy, Check, Plus, Pencil, Trash2, AlertTriangle, ExternalLink } from "lucide-react";
+import { CreditCard, Copy, Check, Plus, Pencil, Trash2, AlertTriangle, ExternalLink, Clock } from "lucide-react";
 import { Modal, Input, Button } from "@/components/ui";
 import {
   buildBusinessCard,
@@ -79,7 +80,8 @@ export function BusinessCardPanel({
   status: statusProp,
   cardTitle: cardTitleProp,
   orientationDate,
-  cardOrders = []
+  cardOrders = [],
+  onStatusChange
 }: {
   hireId: string;
   name: string;
@@ -91,12 +93,46 @@ export function BusinessCardPanel({
   orientationDate: string | null;
   /** This person's own order history. Empty for most new hires. */
   cardOrders?: CardOrderView[];
+  /**
+   * Tell the page that this person's card status just moved, so the other
+   * readouts of the same value (the tab chip, the HR field, the checklist badge)
+   * change with the select instead of arguing with it. Optional: without it the
+   * panel still corrects itself, it just waits for the refresh below.
+   */
+  onStatusChange?: (next: string) => void;
 }) {
+  const router = useRouter();
   const [cardTitle, setCardTitle] = useState<string | null>(cardTitleProp);
   const input: BusinessCardInput = { name, position, phone, ssEmail, cardTitle };
   const primary = buildBusinessCard(input);
 
+  // The card status lives on the server; this select only mirrors it. That mirror
+  // used to go stale, and she reported all of it as one bug on 2026-09-02:
+  //   1. useState(statusProp) took the prop once, at mount, and never looked again.
+  //   2. Ticking "Order business card" to N/A on the Checklist tab DOES move this
+  //      status server-side (lib/business-cards/checklist-sync.ts writes it, and
+  //      the activity log shows it firing) — but nothing asked the server for the
+  //      page again, so the prop kept its page-load value and this said "Needed".
+  //   3. Only the open tab is mounted, so every trip back to this tab re-took the
+  //      snapshot from that same unchanged prop — which is what made her own fix
+  //      "keep swapping back to needed" until she used Save details at the top.
+  // The fix is one value with one owner: follow the prop whenever it moves, hand
+  // the new value up so the rest of the page moves with it, and ask the server for
+  // the page again after a write so the prop itself is true next time.
   const [status, setStatus] = useState(statusProp);
+  useEffect(() => {
+    setStatus(statusProp);
+  }, [statusProp]);
+
+  // The checklist can change this status while this tab is closed, and the page's
+  // data is only fetched on navigation. Opening the tab asks for it again, which
+  // also corrects the tab chip, the HR field and the checklist badge. One refetch
+  // per tab click — deliberately not one per checklist tick, which is what the
+  // task route's own response body is for (see onStatusChange).
+  useEffect(() => {
+    router.refresh();
+  }, [hireId, router]);
+
   const [titleModal, setTitleModal] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const order = cardOrderState(orientationDate, status, Date.now());
@@ -186,14 +222,25 @@ export function BusinessCardPanel({
     }
   }
 
+  // Changing the select IS the save — there is no second Save button here, and
+  // her report was that it behaved as though there were one.
   async function saveStatus(next: string) {
     const prev = status;
     setStatus(next);
+    onStatusChange?.(next);
     try {
       const res = await fetch(`/api/new-hires/${hireId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ businessCardStatus: next }) });
-      if (!res.ok) setStatus(prev);
+      if (!res.ok) {
+        setStatus(prev);
+        onStatusChange?.(prev);
+        return;
+      }
+      // Make the value the page was handed true again, so a later remount of this
+      // panel reads the saved status rather than the one it loaded with.
+      router.refresh();
     } catch {
       setStatus(prev);
+      onStatusChange?.(prev);
     }
   }
 
@@ -249,6 +296,16 @@ export function BusinessCardPanel({
           <span className={clsx("inline-flex items-center gap-1 text-xs font-medium", order.overdue ? "text-red-600 dark:text-red-400" : order.needsAction ? "text-amber-600 dark:text-amber-400" : "text-brand-grey dark:text-slate-400")}>
             {order.overdue ? <AlertTriangle className="h-3.5 w-3.5" /> : null}
             {order.overdue ? `Order now — orientation ${fmtDay(orientationDate)}` : `Order by ${fmtDay(order.orderByISO)} for orientation ${fmtDay(orientationDate)}`}
+          </span>
+        ) : null}
+        {/* Being on the next order is an answer, so it never turns red again. This
+            is the one thing the queue cannot tell her by itself: this person is out
+            of runway. Stated as a fact about the calendar, in the same gray as the
+            rest of the line. */}
+        {status === "QUEUED" && order.pastOrderBy && (order.daysUntilOrientation ?? -99) >= -3 ? (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-brand-grey dark:text-slate-400">
+            <Clock className="h-3.5 w-3.5" />
+            Past the usual order-by date for orientation {fmtDay(orientationDate)}
           </span>
         ) : null}
       </div>
