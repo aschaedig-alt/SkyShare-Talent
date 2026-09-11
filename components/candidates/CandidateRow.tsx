@@ -7,8 +7,8 @@ import type { CandidateListItem } from "@/lib/data/candidates";
 import { CANDIDATE_DEPARTMENTS } from "@/lib/candidates/departments";
 import { reasonLine } from "@/lib/candidates/buckets";
 import { findStage, isClosedStage, type CandidateStage } from "@/lib/candidates/stages";
+import { reapplyInfo } from "@/lib/candidates/reapplied";
 import { tagChipClass } from "@/lib/tags/colors";
-import { CandidateApplicationRows } from "@/components/candidates/CandidateApplicationRows";
 import { CandidateReasonCell } from "@/components/candidates/CandidateReasonCell";
 import { CandidateStageCell } from "@/components/candidates/CandidateStageCell";
 import { CandidateTagCell } from "@/components/candidates/CandidateTagCell";
@@ -19,8 +19,6 @@ type CandidateRowProps = {
   canEdit: boolean;
   isSelected: boolean;
   isOpen: boolean;
-  columnCount: number;
-  jobColumnIndex: number;
   onToggleSelect: (id: string) => void;
   onToggleExpanded: (id: string) => void;
   /** Wrap matches in the document-snippet preview. */
@@ -54,8 +52,6 @@ function CandidateRowInner({
   canEdit,
   isSelected,
   isOpen,
-  columnCount,
-  jobColumnIndex,
   onToggleSelect,
   onToggleExpanded,
   highlight,
@@ -97,7 +93,15 @@ function CandidateRowInner({
   // OUT OF THE PIPELINE, which is a different question from archived. Somebody
   // Rejected last week is closed and very much not archived, and the list had no
   // way to show that — so a closed row read exactly like a live one.
-  const closed = isClosedStage(candidate.stage, stageList);
+  //
+  // BUT NOT WHEN THEY HAVE COME BACK. The badge is computed from the person's
+  // STAGE, and a stage goes stale the moment somebody applies again: eleven
+  // rows were saying "closed" beside an unreviewed application, two columns
+  // from a status reading New. One of them re-applied for the same seat the day
+  // after failing the interview for it. The stage is the thing that is wrong
+  // there, so the badge steps aside and the return is named instead.
+  const reapplied = reapplyInfo(candidate.applications);
+  const closed = isClosedStage(candidate.stage, stageList) && !reapplied;
   // Derived from the jobs applied to, never stored. More than one is real —
   // somebody applied across departments — so they are joined rather than one
   // silently winning.
@@ -157,6 +161,22 @@ function CandidateRowInner({
                     className="shrink-0 rounded border border-brand-lea/15 bg-brand-cloudDancer/70 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:border-white/15 dark:bg-white/10 dark:text-slate-300"
                   >
                     closed
+                  </span>
+                )}
+                {/* THEY CAME BACK. Takes the closed badge's place rather than
+                    sitting beside it, because the two would contradict each
+                    other on one row. Amber, not grey: this is the row on the
+                    page that most wants acting on. */}
+                {reapplied && !candidate.archivedAs && (
+                  <span
+                    title={
+                      reapplied.sameJob
+                        ? `Applied again for the same job${reapplied.daysBetween !== null ? `, ${reapplied.daysBetween} day${reapplied.daysBetween === 1 ? "" : "s"} after the last decision` : ""}. Nobody has reviewed it.`
+                        : "Applied again since the last decision. Nobody has reviewed it."
+                    }
+                    className="shrink-0 rounded border border-amber-300/70 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-300"
+                  >
+                    reapplied
                   </span>
                 )}
                 {/* Why this row is here twice.
@@ -342,15 +362,11 @@ function CandidateRowInner({
           </div>
         </td>
       </tr>
-      {isOpen && (
-        <CandidateApplicationRows
-          applications={candidate.applications}
-          candidateId={candidate.id}
-          canEdit={canEdit}
-          columnCount={columnCount}
-          jobColumnIndex={jobColumnIndex}
-        />
-      )}
+      {/* NOTHING RENDERS UNDER THE ROW ANY MORE. The applications used to expand
+          inline as a full sub-table, which he rejected as slow and space-hungry;
+          they now open in a panel floated over the right of the table, owned by
+          SelectableCandidateTable so only one can be open at a time. This row
+          only reports whether it is the open one, so its button can say so. */}
       </Fragment>
   );
 }

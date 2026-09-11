@@ -351,9 +351,50 @@ export function applicationOutcome(
   if (code === "OFFER" || offerStatus === "SENT" || s === "offered") return "Offered";
   if (s.includes("knock")) return "KnockedOut";
   if (s === "saved for later") return "SavedForLater";
+  // BEFORE the "in hiring process" test below, because Paycom writes the whole
+  // thing as one string: "In Hiring Process - Scheduled to be Denied" is a
+  // denial that has not been actioned yet, and matching the prefix first would
+  // file those people as live.
+  if (s.includes("scheduled to be denied")) return "Denied";
+  // "In Hiring Process" IS Paycom's word for an open application, and this line
+  // was missing: every one of them fell through to the catch-all Denied at the
+  // bottom, so somebody actively being worked read as rejected on their own row.
+  // It went unnoticed because nothing in our data carried that wording until the
+  // Sheet10 export arrived with 311 of them.
+  if (s.startsWith("in hiring process")) return "Active";
   if (s === "new" || code === "APPLIED" || code === "INTERVIEWED") return "Active";
   if (!s && !code) return "Active";
   return "Denied";
+}
+
+/**
+ * Is this candidate an archived import record rather than somebody being worked?
+ *
+ * ONE DEFINITION, because there were three. This rule was written inline in
+ * lib/data/candidates.ts in three separate places, and a rule that exists three
+ * times is a rule that will disagree with itself.
+ *
+ * It used to also require origin JAZZ. That was right while Jazz was the only
+ * bulk import we had ever done, and it stopped being right the moment a second
+ * one arrived: an archived record from any import would otherwise keep its
+ * derived bucket, so thousands of long-closed applications would have landed in
+ * Not selected and Talent pool, swamping the tiles with people nobody is
+ * working. Being ARCHIVED is the thing that makes a record historical; where it
+ * came from is not.
+ *
+ * Checked before changing it: every archived candidate in the database today is
+ * origin JAZZ (3,117 of them, and zero archived records of any other origin), so
+ * dropping the origin test moves nobody who exists now.
+ *
+ * archivedAt is what carries the meaning, NOT origin on its own — a Jazz
+ * candidate pulled back into the live pipeline has archivedAt cleared, and
+ * filing them under Historical would hide somebody actively being worked.
+ */
+export function isHistoricalRecord(
+  _origin: string | null | undefined,
+  archivedAt: Date | null | undefined
+): boolean {
+  return archivedAt !== null && archivedAt !== undefined;
 }
 
 /** One application, reduced to what the bucket ladder needs. */

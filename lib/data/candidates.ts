@@ -31,6 +31,7 @@ import {
   applicationOutcome,
   bucketOf,
   dispositionGroup,
+  isHistoricalRecord,
   sortApplicationsForDisplay,
   BUCKET_ORDER,
   ACROSS_ORDER,
@@ -923,12 +924,9 @@ export async function getCandidateListData({
   // when a segment is selected — narrows the WHERE to those ids so pagination
   // and every count below stay exact.
   //
-  // isHistoricalRecord: ORIGIN ALONE IS NOT ENOUGH. A Jazz candidate pulled back
-  // into the live pipeline has archivedAt cleared, and filing them under
-  // Historical would hide somebody who is actively being worked.
-  const isHistoricalRecord = (origin: string | null, archivedAt: Date | null) =>
-    origin === "JAZZ" && archivedAt !== null;
-
+  // isHistoricalRecord now comes from lib/candidates/buckets.ts. It was written
+  // out by hand here and in two other places in this file, which is three copies
+  // of one rule; the Paycom Sheet10 import needed it changed and found all three.
   // The rail counts EVERYONE in scope, archive included — otherwise Historical
   // is a segment that can never hold anybody. Drops only the archivedAt default
   // added above; every other narrowing (search, tags, departments, the viewer's
@@ -1434,7 +1432,7 @@ export async function getCandidatesByIds(ids: string[], viewer?: CandidateListVi
       ),
       docMatch: null,
       paycomLink: candidate.paycomLink,
-      bucket: bucketOf(applications, candidate.origin === "JAZZ" && candidate.archivedAt !== null),
+      bucket: bucketOf(applications, isHistoricalRecord(candidate.origin, candidate.archivedAt)),
       applications,
       typeRatings: viewTypeRatingsById.get(candidate.id)?.types ?? [],
       typeRatingsConfirmed: viewTypeRatingsById.get(candidate.id)?.confirmed ?? false

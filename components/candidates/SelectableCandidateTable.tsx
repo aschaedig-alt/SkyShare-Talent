@@ -5,18 +5,10 @@ import { useRouter } from "next/navigation";
 import { Search, X, Check, BarChart3, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import type { CandidateListItem } from "@/lib/data/candidates";
 import { CANDIDATE_DEPARTMENTS } from "@/lib/candidates/departments";
+import { CandidateApplicationsPanel } from "@/components/candidates/CandidateApplicationsPanel";
 import { CandidateRow } from "@/components/candidates/CandidateRow";
 import type { CandidateStage } from "@/lib/candidates/stages";
 import { Button } from "@/components/ui";
-
-/**
- * Column geometry, named once because the expanded application rows have to
- * emit exactly this many cells with the job title under the job column. Two
- * places counting columns independently is how the expanded block came to sit
- * under the wrong headings the first time.
- */
-const COLUMN_COUNT = 7;
-const JOB_COLUMN_INDEX = 3; // checkbox 1, Candidate 2, Last applied to 3
 
 /** Wrap occurrences of query in <mark> for highlighted snippets. */
 function highlight(text: string, query: string) {
@@ -94,7 +86,17 @@ export function SelectableCandidateTable({
   // pushed into the query, and department is DERIVED from the jobs applied to
   // rather than stored on the row, so there is no column to ORDER BY yet.
   const [deptSort, setDeptSort] = useState<"none" | "asc" | "desc">("none");
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  /**
+   * The ONE candidate whose applications are open, or null.
+   *
+   * REPLACED A SET OF EXPANDED ROWS. Rows used to expand inline, several at
+   * once and some automatically, and he rejected it: "slow, laggy and took up
+   * too much space". Each expansion rendered a whole sub-table. One panel, one
+   * person, floated over the right of the table — so no row moves, nothing
+   * below jumps, and opening a second person swaps the contents rather than
+   * mounting anything new.
+   */
+  const [panelFor, setPanelFor] = useState<string | null>(null);
 
   const rows = useMemo(() => {
     if (deptSort === "none") return candidates;
@@ -123,6 +125,11 @@ export function SelectableCandidateTable({
       return a.displayName.localeCompare(b.displayName);
     });
   }, [candidates, deptSort]);
+  const panelCandidate = useMemo(
+    () => (panelFor ? (candidates.find((c) => c.id === panelFor) ?? null) : null),
+    [candidates, panelFor]
+  );
+
   const allShownSelected = shownIds.length > 0 && shownIds.every((id) => selected.has(id));
 
   // useCallback is LOAD-BEARING on both of these, not a habit. CandidateRow is
@@ -139,18 +146,16 @@ export function SelectableCandidateTable({
   }, []);
 
   /**
-   * Which rows have their applications open. Page-local on purpose: it is a
-   * "let me look at this one" gesture, not a filter, and carrying it in the URL
-   * would make a shared link open somebody else's expanded rows.
+   * Open this person's applications, or close them if they are already open.
+   * Page-local on purpose: it is a "let me look at this one" gesture, not a
+   * filter, and carrying it in the URL would make a shared link open somebody
+   * else's panel.
    */
   const toggleExpanded = useCallback((id: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setPanelFor((prev) => (prev === id ? null : id));
   }, []);
+
+  const closePanel = useCallback(() => setPanelFor(null), []);
 
   function toggleAllShown() {
     setSelected((prev) => {
@@ -256,9 +261,13 @@ export function SelectableCandidateTable({
           which put a second scrollbar over the table. The inner wrapper below
           keeps HORIZONTAL scrolling only, for the 1000px-min table on a narrow
           screen — that is a real axis of overflow, not a capped height. */}
+      {/* The wrapper below is RELATIVE so the applications panel can float over
+          the right-hand columns without moving a single row, and takes a
+          min-height only while one is open, so a short list still has somewhere
+          to put a tall panel rather than spilling out of the card. */}
       <div>
         {candidates.length > 0 ? (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto" style={panelFor ? { minHeight: 560 } : undefined}>
             {/* No min-width, and no horizontal scroll. The table is FIXED-layout
                 on percentage widths, and narrow screens drop the columns that
                 matter least rather than squeezing every one until the names
@@ -338,9 +347,7 @@ export function SelectableCandidateTable({
                     query={query}
                     canEdit={canEdit}
                     isSelected={selected.has(candidate.id)}
-                    isOpen={expanded.has(candidate.id)}
-                    columnCount={COLUMN_COUNT}
-                    jobColumnIndex={JOB_COLUMN_INDEX}
+                    isOpen={panelFor === candidate.id}
                     onToggleSelect={toggle}
                     onToggleExpanded={toggleExpanded}
                     highlight={highlight}
@@ -351,6 +358,15 @@ export function SelectableCandidateTable({
                 ))}
               </tbody>
             </table>
+            {panelCandidate ? (
+              <CandidateApplicationsPanel
+                candidateId={panelCandidate.id}
+                candidateName={panelCandidate.displayName}
+                applications={panelCandidate.applications}
+                canEdit={canEdit}
+                onClose={closePanel}
+              />
+            ) : null}
           </div>
         ) : (
           <div className="px-4 py-16 text-center">
