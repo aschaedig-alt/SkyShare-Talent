@@ -94,6 +94,7 @@ export default async function UsersPage() {
       role: user.role,
       department: user.department,
       isExecutive: user.isExecutive,
+      hrTeam: user.hrTeam,
       restrictCandidatesToDepartment: user.restrictCandidatesToDepartment,
       restrictCandidatesToAllowlist: user.restrictCandidatesToAllowlist,
       allowlistCanAnnotate: user.allowlistCanAnnotate,

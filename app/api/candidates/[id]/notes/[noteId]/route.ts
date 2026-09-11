@@ -49,7 +49,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     where: { id: noteId },
     include: { candidate: { select: { id: true, displayName: true } } }
   });
-  if (!note || note.candidateId !== id) {
+  // A private HR note answers as if it does not exist for anybody outside HR —
+  // the same 404 an off-allowlist candidate gets, and for the same reason: a 403
+  // would confirm there is something here to be refused.
+  if (!note || note.candidateId !== id || (note.hrOnly && !auth.user?.viewer?.isHr)) {
     return noteNotFound();
   }
 
@@ -58,7 +61,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   // not news to them — only the right to change it is being refused.
   if (!canWriteAnyNote && !wroteIt(auth.user.id, note.authorId)) return forbidden();
 
-  const body = (await request.json().catch(() => ({}))) as { bodyHtml?: unknown };
+  const body = (await request.json().catch(() => ({}))) as { bodyHtml?: unknown; hrOnly?: unknown };
+
+  // Privacy can be changed after the fact, in both directions, by HR only. She
+  // writes notes as she goes and realizes afterwards that one should not be
+  // shared — making that a compose-time-only decision would mean deleting and
+  // retyping it. Undefined leaves it alone, so an ordinary edit is unaffected.
+  const togglingPrivacy = typeof body.hrOnly === "boolean" && body.hrOnly !== note.hrOnly;
+  if (togglingPrivacy && !auth.user?.viewer?.isHr) {
+    return NextResponse.json({ message: "Only the HR team can change whether a note is private." }, { status: 403 });
+  }
   const html = typeof body.bodyHtml === "string" ? sanitizeRichText(body.bodyHtml) : "";
   const text = richTextToPlain(html);
   if (text.trim().length < 1) {
@@ -71,7 +83,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     data: {
       body: text.slice(0, 20000),
       bodyHtml: html.slice(0, 60000),
-      mentionsJson: mentions.length ? JSON.stringify(mentions) : null
+      mentionsJson: mentions.length ? JSON.stringify(mentions) : null,
+      ...(togglingPrivacy ? { hrOnly: body.hrOnly as boolean } : {})
     },
     include: { author: { select: { name: true, email: true } } }
   });
@@ -105,6 +118,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       body: updated.body,
       bodyHtml: updated.bodyHtml,
       source: updated.source,
+      hrOnly: updated.hrOnly,
       author: updated.author?.name ?? updated.author?.email ?? null,
       createdAt: updated.createdAt.toISOString(),
       updatedAt: updated.updatedAt.toISOString()
@@ -125,9 +139,10 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
   const note = await prisma.candidateNote.findUnique({
     where: { id: noteId },
-    select: { id: true, candidateId: true, authorId: true }
+    select: { id: true, candidateId: true, authorId: true, hrOnly: true }
   });
-  if (!note || note.candidateId !== id) {
+  // Same rule as the edit above: outside HR, a private note is not there to delete.
+  if (!note || note.candidateId !== id || (note.hrOnly && !auth.user?.viewer?.isHr)) {
     return noteNotFound();
   }
 

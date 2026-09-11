@@ -40,7 +40,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return forbidden();
   }
 
-  const body = (await request.json().catch(() => ({}))) as { body?: unknown; bodyHtml?: unknown };
+  const body = (await request.json().catch(() => ({}))) as { body?: unknown; bodyHtml?: unknown; hrOnly?: unknown };
+
+  // Only somebody on the HR team can mark a note private, and the check is HERE
+  // rather than only on the button. A non-HR caller posting hrOnly:true would
+  // otherwise create a note they themselves could never see again.
+  const wantsPrivate = body.hrOnly === true;
+  const hrOnly = wantsPrivate && Boolean(auth.user?.viewer?.isHr);
+  if (wantsPrivate && !hrOnly) {
+    return NextResponse.json({ message: "Only the HR team can mark a note private." }, { status: 403 });
+  }
 
   // A formatted note arrives as HTML and is sanitized here — never trusted from
   // the client. `body` keeps a plain-text copy so search and every existing
@@ -71,6 +80,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       bodyHtml: html ? html.slice(0, 60000) : null,
       mentionsJson: mentions.length ? JSON.stringify(mentions) : null,
       source: "Manual",
+      hrOnly,
       authorId
     },
     include: { author: { select: { name: true, email: true } } }
@@ -104,6 +114,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       bodyHtml: note.bodyHtml,
       mentions,
       source: note.source,
+      hrOnly: note.hrOnly,
       author: note.author?.name ?? note.author?.email ?? null,
       createdAt: note.createdAt.toISOString(),
       updatedAt: note.updatedAt.toISOString()

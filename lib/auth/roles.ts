@@ -106,3 +106,22 @@ export function isAdmin(role: RoleName | null | undefined): boolean {
 export function isAdminOrRecruiter(role: RoleName | null | undefined): boolean {
   return role === "ADMIN" || role === "RECRUITER";
 }
+
+/**
+ * Is this person on the HR team? The one question a private HR note asks.
+ *
+ * DELIBERATELY A SEPARATE FUNCTION from isAdminOrRecruiter even though the
+ * default answer is the same today. They mean different things: one is "can edit
+ * candidates", the other is "may read the hiring conversation". Today both are
+ * Aimee, Hannah and Kevin. She said plainly on 2026-09-11 that as the team grows
+ * that will change, and when it does, this function and the per-person switch it
+ * reads are the only things that change — not every call site.
+ *
+ * `hrTeam` is the per-person override: NULL follows the role, TRUE and FALSE are
+ * explicit in each direction. A false override beats the role, so somebody can be
+ * a recruiter without being HR.
+ */
+export function isHrTeam(role: RoleName | null | undefined, hrTeam?: boolean | null): boolean {
+  if (hrTeam === true || hrTeam === false) return hrTeam;
+  return isAdminOrRecruiter(role);
+}

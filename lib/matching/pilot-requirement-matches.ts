@@ -1029,7 +1029,13 @@ export const candidateMatchSelect = {
   primaryEmail: true,
   tagsJson: true,
   foldersJson: true,
-  notes: { select: { body: true }, take: 10 },
+  // Private HR notes are excluded from the scoring text entirely — not scoped to a
+  // viewer, just never read here. Two reasons. The engine has no viewer to scope
+  // against; and a private note is about the hiring CONVERSATION, not about whether
+  // somebody meets a requirement, so feeding it into a match score would be wrong
+  // even if everyone reading the board were HR. Without this, a private note's words
+  // could move a candidate up the Matchboard for a non-HR viewer to see.
+  notes: { where: { hrOnly: false }, select: { body: true }, take: 10 },
   files: { select: { displayFilename: true, originalFilename: true, extractedText: true }, take: 10 },
   applications: { take: 10, select: { job: { select: { title: true, department: true } } } },
   metrics: {

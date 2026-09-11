@@ -21,6 +21,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     role?: string;
     department?: string | null;
     isExecutive?: boolean;
+    hrTeam?: boolean | null;
     restrictCandidatesToDepartment?: boolean;
     restrictCandidatesToAllowlist?: boolean;
     allowlistCanAnnotate?: boolean;
@@ -33,6 +34,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     role?: string;
     department?: string | null;
     isExecutive?: boolean;
+    hrTeam?: boolean | null;
     restrictCandidatesToDepartment?: boolean;
     restrictCandidatesToAllowlist?: boolean;
     allowlistCanAnnotate?: boolean;
@@ -56,6 +58,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       );
     }
     data.department = body.department;
+  }
+  // Tri-state on purpose: true and false are per-person overrides, null clears the
+  // override so the person follows their role again. "hrTeam" in body distinguishes
+  // "set it to null" from "was not sent at all".
+  if ("hrTeam" in body && (typeof body.hrTeam === "boolean" || body.hrTeam === null)) {
+    data.hrTeam = body.hrTeam;
   }
   if (typeof body.isExecutive === "boolean") {
     data.isExecutive = body.isExecutive;

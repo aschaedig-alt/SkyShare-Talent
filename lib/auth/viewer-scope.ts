@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
-import type { RoleName } from "@/lib/auth/roles";
+import { isHrTeam, type RoleName } from "@/lib/auth/roles";
 import type { DeptKey } from "@/lib/calendar/departments";
 import { parseUserModuleOverrides, type UserModuleOverrides } from "@/lib/auth/user-module-access";
 
@@ -28,6 +28,10 @@ export type ViewerScope = {
   // May they write notes/scorecards on the candidates they can see? Only
   // meaningful alongside restrictCandidatesToAllowlist.
   allowlistCanAnnotate: boolean;
+  // On the HR team, for the purposes of a private HR note. Already resolved
+  // through isHrTeam() — the per-person override applied over the role default —
+  // so no caller re-derives it.
+  isHr: boolean;
   // This user's per-user Module Visibility override, already parsed. Null means
   // "follow the role policy", which is every pre-existing account. Carried here
   // so the page gate, the API gate and the sidebar all share ONE database read
@@ -38,11 +42,17 @@ export type ViewerScope = {
 // The unrestricted scope, used for ADMIN/RECRUITER and for the local-dev bypass.
 // Named rather than inlined so there is exactly one definition of "sees
 // everything" to audit.
-function unrestrictedScope(role: RoleName, userId: string | null, email: string | null): ViewerScope {
+function unrestrictedScope(
+  role: RoleName,
+  userId: string | null,
+  email: string | null,
+  hrTeam: boolean | null
+): ViewerScope {
   return {
     role,
     userId,
     email,
+    isHr: isHrTeam(role, hrTeam),
     department: null,
     isExecutive: false,
     restrictCandidatesToDepartment: false,
@@ -64,9 +74,8 @@ export const resolveViewerScope = cache(async function resolveViewerScope(
   userId: string | null,
   email: string | null
 ): Promise<ViewerScope> {
-  if (role === "ADMIN" || role === "RECRUITER" || !userId) {
-    return unrestrictedScope(role, userId, email);
-  }
+  // No user id at all (the local-dev bypass) cannot have an override to read.
+  if (!userId) return unrestrictedScope(role, userId, email, null);
 
   // Read per request rather than caching the allowlist on the JWT. auth.ts puts
   // only id + role on the token, and deliberately so: a token-cached allowlist
@@ -80,10 +89,21 @@ export const resolveViewerScope = cache(async function resolveViewerScope(
       restrictCandidatesToDepartment: true,
       restrictCandidatesToAllowlist: true,
       allowlistCanAnnotate: true,
+      hrTeam: true,
       moduleAccessJson: true,
       allowedCandidates: { select: { candidateId: true } }
     }
   });
+
+  // ADMIN and RECRUITER still see every candidate, but the read above now happens
+  // for them too. It has to: hrTeam is an override in BOTH directions, so a
+  // recruiter deliberately marked "not HR" must actually stop seeing private HR
+  // notes. Short-circuiting before the read would have made that switch silently
+  // do nothing for exactly the people most likely to have it set. It is one
+  // primary-key lookup inside the same request-scoped cache() as before.
+  if (role === "ADMIN" || role === "RECRUITER") {
+    return unrestrictedScope(role, userId, email, user?.hrTeam ?? null);
+  }
 
   // A missing User row means the id on the token does not resolve — auth.ts falls
   // back to the Google subject when no row exists. Treat that as "no scoping
@@ -104,6 +124,7 @@ export const resolveViewerScope = cache(async function resolveViewerScope(
     // mid-session, and null would read as unrestricted downstream.
     allowedCandidateIds: restrictToAllowlist ? (user?.allowedCandidates ?? []).map((row) => row.candidateId) : null,
     allowlistCanAnnotate: restrictToAllowlist ? (user?.allowlistCanAnnotate ?? false) : false,
+    isHr: isHrTeam(role, user?.hrTeam ?? null),
     moduleOverrides: parseUserModuleOverrides(user?.moduleAccessJson)
   };
 });

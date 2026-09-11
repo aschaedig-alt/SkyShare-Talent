@@ -1,3 +1,4 @@
+import { isHrTeam, isRoleName } from "@/lib/auth/roles";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -12,17 +13,32 @@ import { prisma } from "@/lib/prisma";
  * These two were one list until 2026-08-31, which is why hiring managers who do
  * not use the app could not be recorded as having run an interview.
  */
-export type TeamMember = { name: string; email: string };
+export type TeamMember = {
+  name: string;
+  email: string;
+  /** On the HR team. OPTIONAL because getInterviewers also returns booking hosts
+   *  who have no User row at all and therefore no HR membership to report. Absent
+   *  reads as "not HR", which is the safe direction: the composer warns about them
+   *  rather than quietly assuming they can read a private note. */
+  isHr?: boolean;
+};
 
 export async function getTeamMembers(): Promise<TeamMember[]> {
   const users = await prisma.user.findMany({
     where: { email: { not: null } },
-    select: { name: true, email: true },
+    select: { name: true, email: true, role: true, hrTeam: true },
     orderBy: { name: "asc" }
   });
   return users
-    .filter((u): u is { name: string | null; email: string } => Boolean(u.email))
-    .map((u) => ({ name: u.name?.trim() || u.email, email: u.email.toLowerCase() }));
+    .filter((u): u is { name: string | null; email: string; role: string; hrTeam: boolean | null } => Boolean(u.email))
+    .map((u) => ({
+      name: u.name?.trim() || u.email,
+      email: u.email.toLowerCase(),
+      // Carried so the note composer can name who would be mentioned into a note
+      // they will never be able to open. Not a permission check — nothing is gated
+      // on this value, it only picks the wording of a warning.
+      isHr: isHrTeam(isRoleName(u.role) ? u.role : null, u.hrTeam)
+    }));
 }
 
 /**

@@ -83,7 +83,13 @@ export async function searchHistorical(filters: HistoricalSearchFilters): Promis
         { primaryPhone: { contains: normalizePhone(term) ?? term } },
         { applications: { some: { job: { recruiter: ci(term) } } } },
         { interviews: { some: { interviewer: ci(term) } } },
-        { notes: { some: { body: ci(term) } } },
+        // hrOnly is excluded here rather than scoped to the viewer. Matching on a
+        // private note's text would surface the candidate to somebody who cannot
+        // open the note that matched — which tells them a private note exists and
+        // roughly what is in it, from a search box. The cost is real and worth
+        // naming: HR cannot find a candidate by the text of their own private note
+        // either. If she wants that back it needs a viewer threaded through here.
+        { notes: { some: { body: ci(term), hrOnly: false } } },
         { interviews: { some: { notes: ci(term) } } },
         // Jazz identifiers are PREFIX-matched, not substring — "projob_"
         // contains "job_", so substring matching on a partial job id would drag

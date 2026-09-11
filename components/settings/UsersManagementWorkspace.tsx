@@ -8,6 +8,11 @@ import { TeamMemberAccessModal, type AccessDraft } from "@/components/settings/T
 import { SCOPING_DEPARTMENTS } from "@/lib/auth/scoping-options";
 import type { UserModuleOverrides } from "@/lib/auth/user-module-access";
 
+/** Mirrors lib/auth/roles.isHrTeam default, for the label only. Not a gate. */
+function isAdminOrRecruiterRole(role: string): boolean {
+  return role === "ADMIN" || role === "RECRUITER";
+}
+
 type AllowedCandidate = { id: string; displayName: string };
 
 interface UserWithPermissions {
@@ -17,6 +22,8 @@ interface UserWithPermissions {
   role: string;
   department: string | null;
   isExecutive: boolean;
+  /** Per-person HR override. NULL follows the role (Admin and Recruiter are HR). */
+  hrTeam: boolean | null;
   restrictCandidatesToDepartment: boolean;
   restrictCandidatesToAllowlist: boolean;
   allowlistCanAnnotate: boolean;
@@ -215,7 +222,7 @@ export function UsersManagementWorkspace({
   // change, same pattern as the role select.
   const updateScoping = async (
     userId: string,
-    patch: Partial<Pick<UserWithPermissions, "department" | "isExecutive" | "restrictCandidatesToDepartment">>
+    patch: Partial<Pick<UserWithPermissions, "department" | "isExecutive" | "hrTeam" | "restrictCandidatesToDepartment">>
   ) => {
     const previous = users;
     setUsers(users.map((u) => (u.id === userId ? { ...u, ...patch } : u)));
@@ -319,6 +326,30 @@ export function UsersManagementWorkspace({
                             onChange={(e) => updateScoping(user.id, { isExecutive: e.target.checked })}
                           />
                           Executive — sees all employees + interview notes company-wide
+                        </label>
+                        {/* Three states, shown as a select rather than a checkbox,
+                            because "follow the role" is the answer for every existing
+                            account and a checkbox cannot say it. Admin and Recruiter
+                            are HR by default; this is how somebody becomes HR without
+                            that role, or stops being HR while keeping it. */}
+                        <label className="flex items-center gap-1.5 text-xs text-brand-grey dark:text-slate-400">
+                          HR team
+                          <select
+                            value={user.hrTeam === null || user.hrTeam === undefined ? "" : user.hrTeam ? "yes" : "no"}
+                            disabled={saving}
+                            onChange={(e) =>
+                              updateScoping(user.id, {
+                                hrTeam: e.target.value === "" ? null : e.target.value === "yes"
+                              })
+                            }
+                            className="rounded border border-brand-lea/20 bg-white px-2 py-1 text-xs text-brand-lea disabled:opacity-50 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
+                          >
+                            <option value="">
+                              Follow their role{isAdminOrRecruiterRole(user.role) ? " (HR)" : " (not HR)"}
+                            </option>
+                            <option value="yes">Yes — can read private HR notes</option>
+                            <option value="no">No — cannot, even as an admin</option>
+                          </select>
                         </label>
                         <label className="flex items-center gap-1.5 text-xs text-brand-grey dark:text-slate-400">
                           <input
