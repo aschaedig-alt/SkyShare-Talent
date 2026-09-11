@@ -41,3 +41,9 @@ scripts/_*_output/
 # into 9ec4c8f on 2026-06-08). Shared, deliberate rules belong in the committed
 # .claude/settings.json instead.
 .claude/settings.local.json
+
+# Dry-run output of the Paycom import. review.md (the applied record) IS tracked.
+scripts/paycom-sheet10-import/review-dryrun.md
+
+# Dry-run output of the Paycom stage reconciliation. review.md + undo.json ARE tracked.
+scripts/paycom-stage-reconcile/review-dryrun.md

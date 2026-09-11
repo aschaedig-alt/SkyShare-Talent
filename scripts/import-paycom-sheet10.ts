@@ -6,6 +6,7 @@
  *   npx tsx scripts/import-paycom-sheet10.ts --apply       # do it
  *   npx tsx scripts/import-paycom-sheet10.ts --apply --limit 50   # small batch first
  *   npx tsx scripts/import-paycom-sheet10.ts --undo        # remove exactly what it added
+ *   npx tsx scripts/import-paycom-sheet10.ts --file "C:/path/Hiring Metrics.csv"
  *
  * WHAT IT DOES, and the three decisions behind it (his, asked 2026-09-10):
  *
@@ -17,11 +18,21 @@
  *  2. INCOMPLETE APPLICATIONS ARE STILL PEOPLE. The ones who started an
  *     application and never finished are created too, in the archive, so a
  *     repeat applicant is recognised later instead of looking brand new.
- *  3. NAME MATCHING ONLY WHERE IT IS UNAMBIGUOUS. This export carries NO EMAIL
- *     ADDRESS, so matching is on name alone. Where exactly one person we hold
- *     has that name, the applications attach to them. Where two do, the person
- *     is SKIPPED and listed for a human — attaching one person's history to
+ *  3. EMAIL FIRST, NAME ONLY AS A FALLBACK. Where exactly one person we hold
+ *     matches, the applications attach to them. Where two do, the person is
+ *     SKIPPED and listed for a human — attaching one person's history to
  *     somebody else's record is not a mistake you can see afterwards.
+ *
+ *     The 2026-09-10 export carried NO EMAIL COLUMN, so that run matched on name
+ *     alone and left a second row for ten people who were already here: Rob
+ *     Patrick beside Robert Patrick, Ken Figg beside Kenneth Figg, Mike Samson
+ *     beside Michael Samson, Chris Wilde beside Christopher Wilde. The two rows
+ *     then disagreed about the stage — Wilde read Interviewing on one and
+ *     Rejected on the other — which is worse than either answer alone.
+ *
+ *     An email column fixes that, because the address is an exact key and a name
+ *     is a guess. If the export has one it is used; if not, the behaviour is
+ *     unchanged and the review file says so in its first line.
  *
  * REVERSIBLE. Every row it creates is written to a manifest next to the review
  * file, and --undo deletes exactly those ids and nothing else. Every created
@@ -37,11 +48,28 @@ config({ path: ".env" });
 config({ path: ".env.local" });
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { toHouseWording, stageForWording } from "@/lib/candidates/disposition-vocabulary";
+import {
+  type Row,
+  str,
+  parseDate,
+  loadRows,
+  EMAIL_HEADERS,
+  emailFromRow,
+  stageForPerson
+} from "@/lib/paycom/hiring-metrics";
 
-const CSV = "C:/Users/Recruiter/Downloads/Hiring Metrics - Sheet10.csv";
+/**
+ * The export to read. Override with --file "C:/path/to/Hiring Metrics.csv".
+ *
+ * The default is the 2026-09-10 export. A fresh pull lands in Downloads under
+ * whatever name the report builder gives it, and editing this line to run it was
+ * a needless way to dirty a tracked file.
+ */
+const DEFAULT_CSV = "C:/Users/Recruiter/Downloads/Hiring Metrics - Sheet10.csv";
+const fileArg = process.argv.indexOf("--file");
+const CSV = fileArg > -1 && process.argv[fileArg + 1] ? process.argv[fileArg + 1] : DEFAULT_CSV;
 // NOT an underscore-prefixed scratch directory, deliberately. This holds the ONLY
 // file-based undo path for a 13,833-row live write, and every session's handoff
 // carries a "do NOT stage scripts/_*" list — a manifest filed under that naming
@@ -49,8 +77,19 @@ const CSV = "C:/Users/Recruiter/Downloads/Hiring Metrics - Sheet10.csv";
 // reconciliation undo records were moved out of scripts/_reconcile_output/.
 // Tracked and committed on his instruction, 2026-09-11.
 const OUT_DIR = "scripts/paycom-sheet10-import";
-const REVIEW = `${OUT_DIR}/review.md`;
 const MANIFEST = `${OUT_DIR}/manifest.json`;
+
+/**
+ * review.md is the record of the import that was actually APPLIED, and it is
+ * tracked. A DRY RUN writes review-dryrun.md instead, which is gitignored.
+ *
+ * Both used to write review.md, so merely looking at what a run would do
+ * rewrote the committed record of what a previous run did — and left a tracked
+ * file dirty for the next session to puzzle over. Found doing exactly that on
+ * 2026-09-11 while testing the email matching below.
+ */
+const REVIEW_APPLIED = `${OUT_DIR}/review.md`;
+const REVIEW_DRY = `${OUT_DIR}/review-dryrun.md`;
 
 /** The handle on everything this created, independent of the manifest file. */
 const IMPORT_TAG = "System Imported";
@@ -71,8 +110,6 @@ const SOURCE = "Paycom hiring metrics import";
  */
 const LIVE_STATUS = new Set(["In Hiring Process", "Offered", "Hired"]);
 
-type Row = Record<string, string>;
-
 type Manifest = {
   createdAt: string;
   candidateIds: string[];
@@ -83,15 +120,6 @@ type Manifest = {
 // ---------------------------------------------------------------------------
 // Names. The export writes "Last, First" and sometimes worse.
 // ---------------------------------------------------------------------------
-
-/**
- * Cells do not all arrive as strings. The sheet parser hands back a number
- * for a numeric-looking cell however it is configured, and one of those reached
- * .trim() and stopped the run — so every raw cell goes through here first.
- */
-function str(v: unknown): string {
-  return v === null || v === undefined ? "" : String(v);
-}
 
 function flipName(raw: unknown): string {
   const s = str(raw).trim();
@@ -194,47 +222,6 @@ function unusableName(display: string): string | null {
 // ---------------------------------------------------------------------------
 
 /**
- * Excel serial day number -> Date.
- *
- * Day 1 is 1900-01-01, and the numbering carries Excel's own 1900 leap-year
- * bug, which is why the epoch here is 1899-12-30 rather than 1899-12-31.
- */
-function fromExcelSerial(n: number): Date | null {
-  // Above ~80000 is the year 2119 and beyond; anything up there is not a date
-  // from a recruiting export, it is a number that got into a date column.
-  if (!Number.isFinite(n) || n <= 0 || n > 80000) return null;
-  return new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 86400000);
-}
-
-/**
- * A date cell -> Date, or null.
- *
- * THE DATE COLUMNS DO NOT ARRIVE AS TEXT. The sheet reader turns "April 7,
- * 2025" into the Excel serial 45754, and the first version of this function
- * coerced that to the string "45754" and handed it to new Date(), which read it
- * as THE YEAR 45754. Every one of the 8,800 applications was written roughly
- * forty-three thousand years into the future, and the candidates page threw
- * "RangeError: Invalid time value" trying to render one.
- *
- * The string coercion that caused it was added to stop a crash — and that crash
- * was this same bug announcing itself. Worth remembering: a defensive String()
- * around a value you have not identified converts a loud failure into a quiet
- * wrong answer.
- *
- * A bare numeric STRING is treated as a serial too, for the same reason.
- */
-function parseDate(raw: unknown): Date | null {
-  if (raw === null || raw === undefined || raw === "") return null;
-  if (raw instanceof Date) return Number.isNaN(raw.getTime()) ? null : raw;
-  if (typeof raw === "number") return fromExcelSerial(raw);
-  const s = String(raw).trim();
-  if (!s) return null;
-  if (/^\d+(\.\d+)?$/.test(s)) return fromExcelSerial(Number(s));
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-/**
  * "FILLED - Customer Service Rep" -> "Customer Service Rep".
  *
  * These prefixes describe the REQUISITION, not the person. Stamping one on an
@@ -267,71 +254,6 @@ function reqId(raw: unknown): string | null {
 
 // ---------------------------------------------------------------------------
 
-/**
- * Split one CSV line, honouring quotes and doubled quotes inside them.
- *
- * Hand-written on purpose — see loadRows below for why there is no library here.
- */
-function splitCsvLine(line: string): string[] {
-  const out: string[] = [];
-  let cur = "";
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i += 1) {
-    const c = line[i];
-    if (c === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        cur += '"';
-        i += 1;
-      } else inQuotes = !inQuotes;
-    } else if (c === "," && !inQuotes) {
-      out.push(cur);
-      cur = "";
-    } else cur += c;
-  }
-  out.push(cur);
-  return out;
-}
-
-/**
- * Read the export.
- *
- * A .csv IS READ AS TEXT, WITH NO SPREADSHEET LIBRARY, and that is the whole
- * point of this function. The first version handed the CSV to xlsx because it
- * was already a dependency, and xlsx type-guesses: it decided "April 7, 2025"
- * was a date and converted it to the Excel serial 45754. Every one of the 8,800
- * applications was then written about 43,000 years into the future. The file
- * was never wrong — all 8,820 of its date cells are proper text, and a plain
- * read returns them untouched.
- *
- * These exports come out of GOOGLE SHEETS, saved to whatever format is needed,
- * so a real workbook is possible too and xlsx is right for that — a .xlsx holds
- * genuine serial numbers and needs a reader that understands them. The rule is
- * about matching the reader to the file, not about avoiding the library.
- *
- * cellDates asks xlsx for real Date objects rather than serials, so the
- * workbook path does not reintroduce the same conversion.
- */
-async function loadRows(): Promise<Row[]> {
-  if (/\.csv$/i.test(CSV)) {
-    const lines = readFileSync(CSV, "utf8").split(/\r?\n/);
-    const header = splitCsvLine(lines[0]).map((h) => h.trim());
-    const rows: Row[] = [];
-    for (let i = 1; i < lines.length; i += 1) {
-      if (!lines[i].trim()) continue;
-      const fields = splitCsvLine(lines[i]);
-      const row: Row = {};
-      header.forEach((h, j) => {
-        row[h] = fields[j] ?? "";
-      });
-      rows.push(row);
-    }
-    return rows;
-  }
-
-  const wb = XLSX.read(readFileSync(CSV), { cellDates: true });
-  return XLSX.utils.sheet_to_json<Row>(wb.Sheets[wb.SheetNames[0]], { defval: "" });
-}
-
 async function undo() {
   let manifest: Manifest;
   try {
@@ -361,19 +283,31 @@ async function main() {
   const limitArg = process.argv.indexOf("--limit");
   const limit = limitArg > -1 ? Number(process.argv[limitArg + 1]) : Infinity;
 
-  const rows = await loadRows();
+  const rows = loadRows(CSV);
   console.log(`Read ${rows.length} rows from the export.`);
 
-  // Everything we already hold, by normalized name.
+  // Everything we already hold, by normalized name AND by email.
   const existing = await prisma.candidate.findMany({
     where: { status: { not: "MERGED" } },
-    select: { id: true, displayName: true, archivedAt: true }
+    select: { id: true, displayName: true, archivedAt: true, primaryEmail: true, normalizedEmail: true }
   });
   const byName = new Map<string, typeof existing>();
   for (const c of existing) {
     const k = normalize(c.displayName);
     if (!byName.has(k)) byName.set(k, []);
     byName.get(k)!.push(c);
+  }
+  // An address can sit on either column, and they are not always the same.
+  // Both are indexed so a match on either one counts.
+  const byEmail = new Map<string, typeof existing>();
+  for (const c of existing) {
+    for (const raw of [c.normalizedEmail, c.primaryEmail]) {
+      const k = str(raw).trim().toLowerCase();
+      if (!k) continue;
+      if (!byEmail.has(k)) byEmail.set(k, []);
+      const bucket = byEmail.get(k)!;
+      if (!bucket.some((x) => x.id === c.id)) bucket.push(c);
+    }
   }
 
   // Applications we already hold, so a re-run adds nothing twice.
@@ -394,31 +328,75 @@ async function main() {
   const jobByReq = new Map(jobs.map((j) => [j.paycomReqId as string, j.id]));
 
   // Group the file by person.
-  const people = new Map<string, { display: string; rows: Row[] }>();
+  //
+  // Grouping stays on the NAME, not the email. Within one export a person's rows
+  // carry one spelling of their name, so the grouping was never the problem —
+  // the problem was matching that group against what we already hold. The email
+  // is collected here and used for the match below.
+  const people = new Map<string, { display: string; rows: Row[]; emails: Set<string> }>();
   for (const r of rows) {
     const display = fixCasing(flipName(r["Legal Name"] || r["Preferred Name"]));
     const key = normalize(display);
     if (!key) continue;
-    if (!people.has(key)) people.set(key, { display, rows: [] });
-    people.get(key)!.rows.push(r);
+    if (!people.has(key)) people.set(key, { display, rows: [], emails: new Set() });
+    const p = people.get(key)!;
+    p.rows.push(r);
+    const mail = emailFromRow(r);
+    if (mail) p.emails.add(mail);
   }
+  const exportHasEmail = [...people.values()].some((p) => p.emails.size > 0);
 
   const plan = {
     createPeople: [] as Array<{ display: string; archived: boolean; stage: string | null; apps: number }>,
-    attachTo: [] as Array<{ display: string; candidateId: string; apps: number }>,
-    skippedAmbiguous: [] as Array<{ display: string; matches: number }>,
+    attachTo: [] as Array<{ display: string; candidateId: string; apps: number; by: "email" | "name" }>,
+    skippedAmbiguous: [] as Array<{ display: string; matches: number; by: "email" | "name" }>,
     skippedUnusable: [] as Array<{ display: string; why: string }>,
+    /** Matched on email to somebody filed under a different name — the whole point. */
+    emailBeatName: [] as Array<{ display: string; matchedTo: string; email: string }>,
     appsAlreadyHeld: 0,
     appsToCreate: 0
   };
 
-  type NewPerson = { key: string; display: string; archived: boolean; stage: string | null; rows: Row[] };
+  type NewPerson = {
+    key: string;
+    display: string;
+    archived: boolean;
+    stage: string | null;
+    rows: Row[];
+    email: string;
+  };
   const toCreate: NewPerson[] = [];
   type Attach = { candidateId: string; rows: Row[] };
   const toAttach: Attach[] = [];
 
   for (const [key, v] of people) {
-    const hits = byName.get(key) ?? [];
+    // MATCH ON EMAIL FIRST, NAME ONLY AS A FALLBACK.
+    //
+    // The email is an exact key and the name is a guess. Matching on email is
+    // what lets "Robert Patrick" in the export land on the "Rob Patrick" we
+    // already hold instead of becoming a second person. Where the export
+    // carries no address this falls straight through to the old behaviour.
+    const emailHits: typeof existing = [];
+    for (const mail of v.emails) {
+      for (const c of byEmail.get(mail) ?? []) {
+        if (!emailHits.some((x) => x.id === c.id)) emailHits.push(c);
+      }
+    }
+    const nameHits = byName.get(key) ?? [];
+    const matchedByEmail = emailHits.length > 0;
+    const hits = matchedByEmail ? emailHits : nameHits;
+
+    // Worth seeing in the review rather than silently preferring one: the email
+    // resolved to somebody we hold under a different name. That is the case this
+    // change exists for, and it is also the case where a wrong address in Paycom
+    // would attach a stranger's applications to a real person.
+    if (emailHits.length === 1 && normalize(emailHits[0].displayName) !== key) {
+      plan.emailBeatName.push({
+        display: v.display,
+        matchedTo: emailHits[0].displayName,
+        email: [...v.emails][0] ?? ""
+      });
+    }
 
     // Which of this person's rows are actually new to us?
     const newRows = v.rows.filter((r) => {
@@ -432,14 +410,23 @@ async function main() {
     });
 
     if (hits.length > 1) {
-      plan.skippedAmbiguous.push({ display: v.display, matches: hits.length });
+      plan.skippedAmbiguous.push({
+        display: v.display,
+        matches: hits.length,
+        by: matchedByEmail ? "email" : "name"
+      });
       continue;
     }
 
     if (hits.length === 1) {
       if (newRows.length) {
         toAttach.push({ candidateId: hits[0].id, rows: newRows });
-        plan.attachTo.push({ display: v.display, candidateId: hits[0].id, apps: newRows.length });
+        plan.attachTo.push({
+          display: v.display,
+          candidateId: hits[0].id,
+          apps: newRows.length,
+          by: matchedByEmail ? "email" : "name"
+        });
         plan.appsToCreate += newRows.length;
       }
       continue;
@@ -455,7 +442,11 @@ async function main() {
     // list; everybody else goes to the archive.
     const open = v.rows.some((r) => LIVE_STATUS.has(r["Application Status"]));
     const stage = stageForPerson(v.rows);
-    toCreate.push({ key, display: v.display, archived: !open, stage, rows: newRows });
+    // Only ever one address per created person. Where Paycom holds several for
+    // the same applicant the first is stored and the rest are dropped rather
+    // than guessed between — the alternative is a primaryEmail nobody chose.
+    const email = [...v.emails][0] ?? "";
+    toCreate.push({ key, display: v.display, archived: !open, stage, rows: newRows, email });
     plan.createPeople.push({ display: v.display, archived: !open, stage, apps: newRows.length });
     plan.appsToCreate += newRows.length;
   }
@@ -471,6 +462,23 @@ async function main() {
   lines.push(`Source file: ${CSV}`);
   lines.push(`Rows in the file: ${rows.length}`);
   lines.push("");
+  // READ THIS LINE FIRST. Whether the export carries an email address decides
+  // whether people already here are recognised or duplicated, and it is not
+  // visible anywhere else in this file.
+  if (exportHasEmail) {
+    const withMail = [...people.values()].filter((p) => p.emails.size > 0).length;
+    lines.push(
+      `**This export CARRIES EMAIL ADDRESSES** — ${withMail} of ${people.size} people have one. ` +
+        "Those are matched on the address, which is exact. The rest fall back to name matching."
+    );
+  } else {
+    lines.push(
+      "**This export has NO EMAIL COLUMN**, so every match is on name alone. " +
+        "That is what left a second row for ten people already here on 2026-09-10. " +
+        `Re-export with an email column if you can — any of: ${EMAIL_HEADERS.join(", ")}.`
+    );
+  }
+  lines.push("");
   lines.push("## What would happen");
   lines.push("");
   lines.push("| | count |");
@@ -478,6 +486,8 @@ async function main() {
   lines.push(`| People created, into the WORKING LIST (an application still in process) | ${liveCount} |`);
   lines.push(`| People created, into the ARCHIVE (everything closed) | ${archivedCount} |`);
   lines.push(`| People already here, applications attached to them | ${plan.attachTo.length} |`);
+  lines.push(`| &nbsp;&nbsp;of those, matched on EMAIL | ${plan.attachTo.filter((a) => a.by === "email").length} |`);
+  lines.push(`| &nbsp;&nbsp;of those, matched on NAME only | ${plan.attachTo.filter((a) => a.by === "name").length} |`);
   lines.push(`| Applications created | ${plan.appsToCreate} |`);
   lines.push(`| Applications skipped, already held | ${plan.appsAlreadyHeld} |`);
   lines.push(`| SKIPPED, two people share the name | ${plan.skippedAmbiguous.length} |`);
@@ -486,10 +496,28 @@ async function main() {
   lines.push(`Every created candidate is tagged **${IMPORT_TAG}**.`);
   lines.push("");
 
-  lines.push("## Skipped — two people share this name, sort by hand");
+  lines.push("## Matched on email to a DIFFERENT name — check these");
+  lines.push("");
+  lines.push(
+    "The address in Paycom belongs to somebody we hold under another name, so the " +
+      "applications attach to the existing person instead of creating a second one. " +
+      "**This is the case the email column exists for** — and also the only place a " +
+      "wrong address in Paycom would put one person's history on another's record, " +
+      "so it is worth reading rather than skimming."
+  );
+  lines.push("");
+  if (!plan.emailBeatName.length) lines.push("_none_");
+  for (const e of plan.emailBeatName) {
+    lines.push(`- export says **${e.display}** → attaching to **${e.matchedTo}** (\`${e.email}\`)`);
+  }
+  lines.push("");
+
+  lines.push("## Skipped — more than one person matched, sort by hand");
   lines.push("");
   if (!plan.skippedAmbiguous.length) lines.push("_none_");
-  for (const s of plan.skippedAmbiguous) lines.push(`- ${s.display} (matches ${s.matches} existing people)`);
+  for (const s of plan.skippedAmbiguous) {
+    lines.push(`- ${s.display} (matches ${s.matches} existing people, on ${s.by})`);
+  }
   lines.push("");
 
   lines.push("## Skipped — the name field does not hold a name");
@@ -510,18 +538,27 @@ async function main() {
   for (const a of plan.attachTo.slice(0, 200)) lines.push(`- ${a.display} — ${a.apps} application(s)`);
   lines.push("");
 
-  writeFileSync(REVIEW, lines.join("\n"), "utf8");
+  const reviewPath = apply ? REVIEW_APPLIED : REVIEW_DRY;
+  writeFileSync(reviewPath, lines.join("\n"), "utf8");
 
   console.log("");
   console.log(`  create into the working list: ${liveCount}`);
   console.log(`  create into the archive:      ${archivedCount}`);
-  console.log(`  attach to existing people:    ${plan.attachTo.length}`);
+  console.log(
+    `  attach to existing people:    ${plan.attachTo.length}` +
+      ` (${plan.attachTo.filter((a) => a.by === "email").length} on email,` +
+      ` ${plan.attachTo.filter((a) => a.by === "name").length} on name)`
+  );
+  console.log(`  email matched a different name: ${plan.emailBeatName.length}`);
+  if (!exportHasEmail) {
+    console.log("  !! this export has NO EMAIL COLUMN — matching on name alone, duplicates likely");
+  }
   console.log(`  applications to create:       ${plan.appsToCreate}`);
   console.log(`  applications already held:    ${plan.appsAlreadyHeld}`);
   console.log(`  skipped, shared name:         ${plan.skippedAmbiguous.length}`);
   console.log(`  skipped, unusable name:       ${plan.skippedUnusable.length}`);
   console.log("");
-  console.log(`Review file: ${REVIEW}`);
+  console.log(`Review file: ${reviewPath}`);
 
   if (!apply) {
     console.log("");
@@ -573,6 +610,8 @@ async function main() {
         firstName,
         lastName,
         normalizedName: normalize(p.display),
+        primaryEmail: p.email || null,
+        normalizedEmail: p.email || null,
         origin: "PAYCOM",
         source: SOURCE,
         status: "ACTIVE",
@@ -614,23 +653,6 @@ async function main() {
  * not "Rejected" because a different application closed. Otherwise the most
  * recently decided application speaks for them.
  */
-function stageForPerson(rows: Row[]): string | null {
-  // Most advanced first: being hired for one job outranks being interviewed for
-  // another, which outranks any closed application.
-  if (rows.some((r) => r["Application Status"] === "Hired")) return "Hired";
-  if (rows.some((r) => r["Application Status"] === "Offered")) return "Offer";
-  if (rows.some((r) => r["Application Status"] === "In Hiring Process")) return "Applied";
-  const sorted = [...rows].sort((a, b) => {
-    const da = parseDate(a["Disposition Date"])?.getTime() ?? 0;
-    const db = parseDate(b["Disposition Date"])?.getTime() ?? 0;
-    return db - da;
-  });
-  for (const r of sorted) {
-    const stage = stageForWording(toHouseWording(r.Disposition) ?? r.Disposition);
-    if (stage) return stage;
-  }
-  return null;
-}
 
 async function writeApplications(
   candidateId: string,

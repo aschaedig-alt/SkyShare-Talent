@@ -1,0 +1,714 @@
+{
+  "appliedAt": "2026-09-11T22:10:34.685Z",
+  "sourceFile": "C:/Users/Recruiter/Downloads/Hiring Metrics - Sheet14.csv",
+  "changes": [
+    {
+      "candidateId": "cmqvr2e6h01rixcrm1gtu4ut9",
+      "displayName": "Victor Abraham",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr323104wtxcrm2zr8x2j8",
+      "displayName": "Zahid Ahmad",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms3pbhhd000lx0rmcyikxjel",
+      "displayName": "Daniel Alvarez",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms3mwozj000y7crmj7y70y4m",
+      "displayName": "Jack Anders",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr2eut01v4xcrm55z8urhg",
+      "displayName": "Logan Arce",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtogphlo000004lbqhlgf5ve",
+      "displayName": "Alex Bartkowiak",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqfwzazr000o04l44j5fwaos",
+      "displayName": "Andrew Bice",
+      "from": "New",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmsi0ji3b001i04l1hcjtpfc0",
+      "displayName": "Matthew Biddulph",
+      "from": "New",
+      "to": "Hired"
+    },
+    {
+      "candidateId": "cmqvr4zvo0fooxcrmjqgrg8gw",
+      "displayName": "Robert Black",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr2bpk01j6xcrmiwwx00ah",
+      "displayName": "Grant Booker",
+      "from": null,
+      "to": "Knocked Out"
+    },
+    {
+      "candidateId": "cmqvr2bpl01j8xcrmm4s79f8z",
+      "displayName": "John Brown",
+      "from": "Screening",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtah983m001k04jrempyytlt",
+      "displayName": "Michael Calvitto",
+      "from": "New",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms3mwtxq001e7crmpxwcdn0l",
+      "displayName": "Conner Carey",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmsj4sgu2000i04ldmpqaadw5",
+      "displayName": "Preston Carroll",
+      "from": "Screening",
+      "to": "Withdrew"
+    },
+    {
+      "candidateId": "cms3msmsk0000esrmvvvp90zl",
+      "displayName": "Scott Caspary",
+      "from": "Screening",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr41af0a6zxcrmvjrxub0w",
+      "displayName": "Cayden Christensen",
+      "from": "Saved For Later",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr4jxv0cy3xcrmme9zh0d9",
+      "displayName": "Teya Clarke",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw3mvo401ubk4rmecdp1ev0",
+      "displayName": "Sagar Dave",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms3mx2dz001z7crmu08zn9s0",
+      "displayName": "BRYCE DAWSON",
+      "from": "Applied",
+      "to": "Withdrew"
+    },
+    {
+      "candidateId": "cmtw3n0nq01x5k4rmozpvcal2",
+      "displayName": "Christopher Dekker",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw3n13o01xdk4rmehdarcdk",
+      "displayName": "Steven Delgado",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms3mzcc8003n3krmromjsqdq",
+      "displayName": "Gregory Devenport",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtbl2d07000104i8b3g4zlfh",
+      "displayName": "Adam Donovan",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr50pv0ftuxcrm12shbzsj",
+      "displayName": "Kwame Duah",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw3nhpw026gk4rmoowz5noz",
+      "displayName": "Jacob Eason",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms3mzyk800563krmvdedxqk3",
+      "displayName": "Troy ELlis",
+      "from": "Applied",
+      "to": "Withdrew"
+    },
+    {
+      "candidateId": "cmtw3np6p02agk4rmu8ge0duu",
+      "displayName": "Jamie Estrada",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmsj4s3q4000604ldhp6f27lf",
+      "displayName": "Justin Farrer",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms3mso9b0003esrmttvga04q",
+      "displayName": "James Fehrenbacher",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms3mwkvd000o7crmcw669zv6",
+      "displayName": "Blaine Fisher",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmsj4sjus000l04ldjajlo2w9",
+      "displayName": "Felix Flores III",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms3mwvgf001k7crmm0036k7l",
+      "displayName": "Cory Furches",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr49y10biaxcrmlha43z9j",
+      "displayName": "Karina Gaynutdinova",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr3c3n066lxcrm1krnbr37",
+      "displayName": "Martin Goetz",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw3ormk02uyk4rmwkkm53kb",
+      "displayName": "Curtis Goldin",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr2p8q039oxcrm9nxqxvja",
+      "displayName": "ETHAN GRASER",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr4o3t0dmtxcrmpwcexg5v",
+      "displayName": "Derek Greco",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw3p57m032dk4rmsni7o0lj",
+      "displayName": "Carlos Guerrero",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr4gm30cgcxcrmpiwdv35a",
+      "displayName": "William Hargett",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr50pv0ftrxcrmh80z5gl1",
+      "displayName": "Kevin Harper",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr4bhv0brexcrmtqy1xtog",
+      "displayName": "Stephenie Henson",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw3pqdk03dnk4rmwolpbl3e",
+      "displayName": "Vann Henson",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr3tzh08x9xcrmrm9zcj5c",
+      "displayName": "William Herrick",
+      "from": null,
+      "to": "Knocked Out"
+    },
+    {
+      "candidateId": "cmqvr37fm05m3xcrm4m200ub0",
+      "displayName": "Evelyn Hsieh",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms3msq4g0009esrmootws0sp",
+      "displayName": "David Hudson",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw3q7lu03msk4rm0lmu17ep",
+      "displayName": "Kobe Hurt",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr3n4907wyxcrmh23y8tzk",
+      "displayName": "Caulter Jensen",
+      "from": null,
+      "to": "Knocked Out"
+    },
+    {
+      "candidateId": "cmtegmnb3000104l914voeky0",
+      "displayName": "Dukwoo Jeong",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr2chd01lfxcrmodgmwioj",
+      "displayName": "Alex Jeppson",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmt05knwd000004jrzr1yljzh",
+      "displayName": "Jeff Keahey",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr35dc05bexcrm3cjk4hxm",
+      "displayName": "Michael Kennedy",
+      "from": null,
+      "to": "Knocked Out"
+    },
+    {
+      "candidateId": "cmqvr28fp012qxcrm73uw009t",
+      "displayName": "Usman Khan",
+      "from": null,
+      "to": "Knocked Out"
+    },
+    {
+      "candidateId": "cmtw3ra5z047kk4rmyni2gm7w",
+      "displayName": "Justin Kjerulf",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr3scc08oxxcrmbr7rn19i",
+      "displayName": "Michael Klotz",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms3n2fow000nbkrmqfzypkwu",
+      "displayName": "James Lewis",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms3n039m005h3krmpqs6aqgs",
+      "displayName": "YUFAN LIN",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw3s9e804qek4rmttaznuj9",
+      "displayName": "Sheldon Luke",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms863wx8000504jmgjhvine9",
+      "displayName": "Willard Mathews",
+      "from": "New",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr3zq609yzxcrmel96cr16",
+      "displayName": "Ruth Matranga",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtah9dm2002004jrf93c4sh5",
+      "displayName": "Travis May",
+      "from": "New",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr4xr40fbkxcrmj87j8tdw",
+      "displayName": "Stanton Mayer",
+      "from": null,
+      "to": "Knocked Out"
+    },
+    {
+      "candidateId": "cmsq5ncrs000804jvm8nxzbne",
+      "displayName": "Marcellus McCadden",
+      "from": "Applied",
+      "to": "Withdrew"
+    },
+    {
+      "candidateId": "cmqvr4pwv0dy8xcrmfhu3zcdb",
+      "displayName": "Curtis McKean",
+      "from": null,
+      "to": "Knocked Out"
+    },
+    {
+      "candidateId": "cms3mwfgp000b7crm1g90fohy",
+      "displayName": "Jon-Micheal McKoy",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmsrkeujh000404l4fyv63ln3",
+      "displayName": "Chris monk",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmql1yzfh000004ily95d9en1",
+      "displayName": "Connor Morgan",
+      "from": "New",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms507f3i001n04juih92y7wz",
+      "displayName": "Kyle Morris",
+      "from": "New",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr300i04o0xcrmsbs77e2i",
+      "displayName": "Andrew Nielson",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr4vn30eytxcrmbnibrddf",
+      "displayName": "Adam Olsen",
+      "from": null,
+      "to": "Knocked Out"
+    },
+    {
+      "candidateId": "cms863r25000x04l2z5yx7bl4",
+      "displayName": "KRISTOFER ORTEGA",
+      "from": "New",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw3uljo05zmk4rmy6tyy3r2",
+      "displayName": "Eric Ostrom",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms3mwlsg000r7crmfk1y3ljp",
+      "displayName": "Joseph Ouellette",
+      "from": "Saved For Later",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw3unmn060qk4rmajmchz29",
+      "displayName": "Roberto Padron Manrique",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr3svm08qyxcrmczy4ojvq",
+      "displayName": "Paul Palmeri",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms863seo001404l21pc4etih",
+      "displayName": "Milton Parker",
+      "from": "New",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr2f4001wpxcrm969bpqwy",
+      "displayName": "Thomas Pawlik",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr2m0502r2xcrmvgkarvr2",
+      "displayName": "Eliomar Perdomo Rodriguez",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms3myho3001r3krm65i6i8d1",
+      "displayName": "Logan Poore",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr3lpy07ouxcrm8os04je3",
+      "displayName": "Caleb Purvis",
+      "from": null,
+      "to": "Withdrew"
+    },
+    {
+      "candidateId": "cmtw3vlg806jrk4rmd38b30j7",
+      "displayName": "Bracken Quinton",
+      "from": "Saved For Later",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms863l2l000004l27q49pv7b",
+      "displayName": "Andrew Reber",
+      "from": "New",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw3w0n006rzk4rm82ixtkbw",
+      "displayName": "Reynard Rigues",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr4e070c4dxcrmax6x8v4l",
+      "displayName": "Felicia Rindon",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr3epi06j9xcrmbd7tx6gp",
+      "displayName": "Benjamin Robertson",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr30tc04qvxcrmbhen4p7e",
+      "displayName": "Terry Robinette",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw3wgii070ok4rmjbfot93j",
+      "displayName": "Andrey Runceria",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw3wiyp071yk4rmw9fcjr86",
+      "displayName": "Michael Saba",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw3wsoi0774k4rm9qcerm60",
+      "displayName": "Ryan Sawicki",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr2dis01pbxcrmcks7m2c5",
+      "displayName": "Patrick Schindler",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw3x4wz07dyk4rmrahgztec",
+      "displayName": "Chris Sharpe",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr3zq609yyxcrmert72hb0",
+      "displayName": "Saly Shawky",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms3mwuox001h7crm4gwewaww",
+      "displayName": "Jaron Sherwood",
+      "from": "Applied",
+      "to": "Knocked Out"
+    },
+    {
+      "candidateId": "cmtllu2he000404lfpl9s3m3u",
+      "displayName": "Adam Skorcz",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr46g80az4xcrm2rk4q5w2",
+      "displayName": "Jeff Smiel",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr346b055vxcrmq1lgc3k5",
+      "displayName": "Jacob Smith",
+      "from": null,
+      "to": "Knocked Out"
+    },
+    {
+      "candidateId": "cmqvr4w770f2ixcrm64ob6exq",
+      "displayName": "Jared Soga",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms3mxus900073krm760630i3",
+      "displayName": "Walter Sorenson Jr",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr4egj0c6yxcrm7ygf9la9",
+      "displayName": "Adriano Stavole",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr47tg0b8axcrm1ebrd31t",
+      "displayName": "Rodney Stephan",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr3pfk08anxcrmbfw4mob7",
+      "displayName": "Austin Strong",
+      "from": null,
+      "to": "Knocked Out"
+    },
+    {
+      "candidateId": "cmqfwz5l2000004l454vmobbd",
+      "displayName": "Ray Thueson",
+      "from": "New",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr4mrv0ddyxcrm4rvetxlc",
+      "displayName": "Tatyana Trapp",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw3ypyc0897k4rmgbq1363a",
+      "displayName": "Lynae Tucker",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmsi0jsy3002i04l1l243ctn3",
+      "displayName": "Angel Villegas",
+      "from": "New",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms3mxvmp000a3krmp43jbqwd",
+      "displayName": "Hugo Vissepo",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr3taz08tnxcrm1x22j09f",
+      "displayName": "Hasan Wafeeq",
+      "from": null,
+      "to": "Knocked Out"
+    },
+    {
+      "candidateId": "cmqvr3t6108smxcrmd2odl4bb",
+      "displayName": "Michael Waite",
+      "from": null,
+      "to": "Knocked Out"
+    },
+    {
+      "candidateId": "cms3p7mh8001tw4rm7saw3l93",
+      "displayName": "Kevin Wayman",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr2kjt02jwxcrmqyhunxk0",
+      "displayName": "John Wells",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmsi0jvou002u04l14symsajk",
+      "displayName": "Ayden Whitely",
+      "from": "New",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmqvr2vqf0447xcrm7qbanl8u",
+      "displayName": "Robert Wigington",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw404jk08ssk4rm36sdeb9p",
+      "displayName": "Rita Williams",
+      "from": "Applied",
+      "to": "Knocked Out"
+    },
+    {
+      "candidateId": "cmqvr26vo00uoxcrmgg6qn0ab",
+      "displayName": "Dwight Willis",
+      "from": null,
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw407gl08uak4rm7mfg2xz2",
+      "displayName": "Kade Wilson",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cmtw40f3b08ymk4rmbvw935yb",
+      "displayName": "Bereket Wubeshet",
+      "from": "Applied",
+      "to": "Rejected"
+    },
+    {
+      "candidateId": "cms9drcfe000a04l4y9fkgnhb",
+      "displayName": "Daniel Martin",
+      "from": "Screening",
+      "to": "Saved For Later"
+    },
+    {
+      "candidateId": "cmtw3ugg205wuk4rm90653pnh",
+      "displayName": "Ajuma Olonta",
+      "from": "Applied",
+      "to": "Saved For Later"
+    },
+    {
+      "candidateId": "cms5078rc000u04ju4x3ns2y8",
+      "displayName": "Jacob Rebmann",
+      "from": "New",
+      "to": "Saved For Later"
+    }
+  ]
+}
