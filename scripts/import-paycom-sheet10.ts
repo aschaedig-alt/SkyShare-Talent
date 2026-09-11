@@ -42,7 +42,13 @@ import { prisma } from "@/lib/prisma";
 import { toHouseWording, stageForWording } from "@/lib/candidates/disposition-vocabulary";
 
 const CSV = "C:/Users/Recruiter/Downloads/Hiring Metrics - Sheet10.csv";
-const OUT_DIR = "scripts/_paycom_sheet10";
+// NOT an underscore-prefixed scratch directory, deliberately. This holds the ONLY
+// file-based undo path for a 13,833-row live write, and every session's handoff
+// carries a "do NOT stage scripts/_*" list — a manifest filed under that naming
+// reads as scratch and gets skipped, or deleted. Same reason the Aug 28
+// reconciliation undo records were moved out of scripts/_reconcile_output/.
+// Tracked and committed on his instruction, 2026-09-11.
+const OUT_DIR = "scripts/paycom-sheet10-import";
 const REVIEW = `${OUT_DIR}/review.md`;
 const MANIFEST = `${OUT_DIR}/manifest.json`;
 
