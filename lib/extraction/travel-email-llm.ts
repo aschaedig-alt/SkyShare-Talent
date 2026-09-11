@@ -378,7 +378,7 @@ export function auditTravel(travel: LlmTravelEmail): TravelAudit {
   if (!travel.segments.some((s) => s.type === "HOTEL")) {
     observations.push("No accommodation in this email.");
   }
-  if (!travel.traveler_name) warnings.push("No traveller named — this cannot be matched to a person.");
+  if (!travel.traveler_name) warnings.push("No traveler named — this cannot be matched to a person.");
 
   return { problems: warnings, observations };
 }

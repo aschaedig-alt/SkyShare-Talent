@@ -122,7 +122,7 @@ export default async function CandidatesManagePage() {
             <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Tags</h2>
             <p className="text-xs text-brand-grey dark:text-slate-400">
               Live counts are candidates in the working list; total includes the archive. Changing a
-              colour changes it for everyone carrying that tag.
+              color changes it for everyone carrying that tag.
             </p>
           </div>
         </div>

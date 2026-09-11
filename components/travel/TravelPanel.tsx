@@ -577,7 +577,7 @@ function GuestsBlock({ trip, onChange }: { trip: TravelTripView; onChange: (t: T
     <div>
       <p className={labelClass}>
         <Users className="mr-1 inline h-3 w-3" />
-        Guests travelling with them
+        Guests traveling with them
       </p>
       {trip.guests.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">

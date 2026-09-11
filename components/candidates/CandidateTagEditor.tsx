@@ -261,7 +261,7 @@ function CurrentTag({
         {canEdit && !armed ? (
           <button
             onClick={() => setPicking((v) => !v)}
-            title="Change this tag's colour"
+            title="Change this tag's color"
             className={clsx("h-2 w-2 shrink-0 rounded", tagDotClass(tag.label, tag.color))}
             aria-label={`Change the colour of ${tag.label}`}
           />

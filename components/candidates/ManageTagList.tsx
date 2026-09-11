@@ -180,12 +180,12 @@ export function ManageTagList({
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(data.message ?? "Could not change that colour.");
+        throw new Error(data.message ?? "Could not change that color.");
       }
       router.refresh();
     } catch (e) {
       setColors((c) => ({ ...c, [label]: previous }));
-      setError(e instanceof Error ? e.message : "Could not change that colour.");
+      setError(e instanceof Error ? e.message : "Could not change that color.");
     } finally {
       setBusy(null);
     }

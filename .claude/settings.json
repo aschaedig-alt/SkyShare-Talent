@@ -8,7 +8,17 @@
       "Bash(git log *)",
       "Bash(git status *)",
       "Bash(git show *)",
-      "Bash(git diff *)"
+      "Bash(git diff *)",
+      "Bash(npm run lint)",
+      "Bash(npm run build:check)",
+      "Bash(npm run db:generate)",
+      "Bash(NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.json)",
+      "Bash(npx eslint *)",
+      "Bash(npx tsc *)",
+      "Bash(curl -s http://localhost:*)",
+      "Bash(curl -s -o * http://localhost:*)",
+      "Bash(npx prisma migrate diff *)",
+      "Bash(npx prisma validate*)"
     ],
     "deny": [
       "Bash(git add -A*)",

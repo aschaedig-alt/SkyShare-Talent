@@ -171,7 +171,7 @@ export function OrientationCalendarPanel({
     <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Google Calendar invite</h2>
       <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-        Builds the invite from this session — title, date, address, Meet link and the Orientation colour — then lets you
+        Builds the invite from this session — title, date, address, Meet link and the Orientation color — then lets you
         add the attendees as guests. Creating is silent; inviting is what emails them.
       </p>
 

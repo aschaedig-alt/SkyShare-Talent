@@ -156,7 +156,7 @@ export function TravelHubCalendar({ data }: { data: TravelCalendarData }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <CalendarDays className="h-4 w-4 text-brand-gold" />
-          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Who is travelling</h2>
+          <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Who is traveling</h2>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -278,7 +278,7 @@ export function TravelHubCalendar({ data }: { data: TravelCalendarData }) {
           <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.09em] text-brand-grey dark:text-slate-400">
             {inWindow.length === 0
               ? "Nobody in view"
-              : `${inWindow.length} traveller${inWindow.length === 1 ? "" : "s"} in view`}
+              : `${inWindow.length} traveler${inWindow.length === 1 ? "" : "s"} in view`}
           </p>
 
           {inWindow.length === 0 ? (

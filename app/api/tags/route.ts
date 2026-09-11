@@ -103,7 +103,7 @@ export async function PATCH(request: Request) {
   }
 
   // ---- RECOLOUR ----------------------------------------------------------
-  if (!isTagColor(body.color)) return NextResponse.json({ message: "Unknown colour." }, { status: 400 });
+  if (!isTagColor(body.color)) return NextResponse.json({ message: "Unknown color." }, { status: 400 });
 
   const updated = await prisma.tag.update({
     where: { id: tag.id },

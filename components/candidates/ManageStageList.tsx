@@ -158,7 +158,7 @@ export function ManageStageList({
                   <button
                     type="button"
                     onClick={() => update(i, { color: null })}
-                    title="No colour — fall back to the keyword guess"
+                    title="No color — fall back to the keyword guess"
                     aria-label={`No colour for ${s.value}`}
                     className={`h-4 w-4 rounded border text-[9px] leading-none ${
                       s.color ? "border-brand-lea/20 dark:border-white/20" : "border-brand-lea ring-1 ring-brand-gold"

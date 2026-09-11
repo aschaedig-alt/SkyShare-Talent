@@ -33,6 +33,13 @@ scripts/_*_output/
 # from a dead session would ship and be believed.
 .claude/claims/
 
+# Handoff blocks a working session leaves for the commit-and-push agent. Same
+# reasoning as claims: they describe THIS working tree at one moment, they are
+# consumed and then dead, and a stale one committed to the repo would be read as
+# instructions by somebody later. Kept in the repo rather than a temp folder only
+# so the commit agent can open them by a short, predictable path.
+.claude/handoffs/
+
 # PERSONAL, PER-MACHINE Claude Code settings. The tool WRITES to this file itself
 # every time somebody approves a permission, so while it was tracked it was
 # permanently dirty and every session read it as a sibling's uncommitted work and
