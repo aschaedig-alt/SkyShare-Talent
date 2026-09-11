@@ -1,0 +1,58 @@
+Feedback rows by status right now: NEW=19, DONE=46, REVIEWING=1
+Named as done here: 15. Found: 15. Missing: 0
+
+WOULD CHANGE TO DONE
+  NEW -> DONE  cmtvnemon000004l42lzjbvf1
+      Email preview no longer centers the body; Send as test to hrotasks@ added
+      her words: this text is left justified in the front template but centered in this email. Also the way the preview shows w
+  NEW -> DONE  cmtvni1a2000204l45ryc3t3o
+      Checklist step + dialog that sends a hire's contact details to their supervisor
+      her words: we have the option to send new hires the commonly used contacts they will need. i want to have the same option
+  NEW -> DONE  cmtvntro8000004k0ko16ceoa
+      Feedback button on mobile, and Make contact (vCard) on the hire page
+      her words: i cant give feedback from mobile. it would be really nice if i could press a button to "make contact" from thi
+  NEW -> DONE  cmtvpen09000004l6fpada59o
+      Travel spend by month, hired vs not hired, on /travel
+      her words: can we add a visual like in my screenshot for people who were hired vs not for tracking travel spend throughou
+  NEW -> DONE  cmtvpibgm000204l6wknqgzjb
+      Ask about reimbursements — editable Front-template send, template picked in the dialog
+      her words: id like to have a click to send email (front template) to send to people just asking if they are still owed an
+  NEW -> DONE  cmtw239fd000604l2ec1ap816
+      term button on the crew chart: notice date + last day, and the X now asks first
+      her words: how do i mark tommy harvey as leaving? maybe the move > term is an option? being able to give their notice dat
+  NEW -> DONE  cmtw2f85p000h04l2clhocmuk
+      Backup plan panel per seat — internal ladder plus ranked outside candidates
+      her words: for many pilot positions, it might be nice to be able to see "backup plan options" we have our tentative hire,
+  NEW -> DONE  cmtk7edgg000204juepdudvay
+      Note editor cursor jump and the phantom bold, both fixed and driven in a real browser
+      her words: its still doing the weird cursor thing. i cant click on the end of the text becuase it moves the cursor back t
+  NEW -> DONE  cmthjmp2y000304iguobr4r5i
+      Duplicate scan now names every pair it finds, with a Reopen to merge
+      her words: This candidate, Matt Smith, is obviously a duplicate per the matching contact info. The duplicate scan shows m
+  NEW -> DONE  cmtizpmbj000004leuubutmwi
+      Business cards: next-order target line, editable, never a gate
+      her words: i need to be able to mark a business card as "ordered" or "added to next order" or something. here are a minim
+  NEW -> DONE  cmtk7yfmi000304juae332isb
+      Business card status no longer reverts; the checklist N/A now shows through
+      her words: when i changed the business card step on the checklist to N/A it did not change the status from this view and 
+  NEW -> DONE  cmtizg9bx000004l43s1xd0i9
+      The stale red reminder alert is gone and completing a session clears its flag
+      her words: can you make this red alert message go away?
+  NEW -> DONE  cmtiziq3s000004josijy3rf7
+      Credit card column is three-way now, and the header says Credit card
+      her words: i need to be able to mark card "not needed" on orientation/onboarding
+  NEW -> DONE  cmtk9k1tr000204ic31oscym3
+      Travel pending names the people, and the list reads the real trip
+      her words: why does this say travel pending? how do i know whos it is?
+  NEW -> DONE  cmtk9llnv000404ico6j471wz
+      Attendee names link to their checklist in a new tab
+      her words: give me the ability to access this new hires checklist from this area. make it open in a new tab
+
+DELIBERATELY LEFT OPEN
+  NEW  cmtk7a8mt000004juaivhkf88  Private HR note — BUILT, but she has not looked at it yet
+  NEW  cmtngd2ay001704jo205yf9bk  Checklist order — the audit is done and the live bug is fixed, but she still has to confirm the PRD section is where she wants it
+  NEW  cmthwk0a9000004l2rqrh3qv9  Nav scrollbar / pop-out — the pop-out is now collapsed-only, waiting on her to confirm that is what she meant
+  NEW  cmthlyx3z000004l8icennhe5  Orientation email body / time / location — researched, NOT built
+  REVIEWING  cmtg6yl0f000204l3r19h64lb  Jobs page redesign — she wants visuals before anything is built
+
+15 rows would change.
