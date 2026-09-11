@@ -57,8 +57,19 @@ export type TaskEmailConfig = {
 
 export type TaskEmailMap = Record<string, TaskEmailConfig>;
 
-/** Tasks whose send is hand-built and must not be re-wired from here. */
-export const EXCLUDED_TASK_KEYS = new Set(["onboarding_journey", "contacts_link_sent"]);
+/** Tasks whose send is hand-built and must not be re-wired from here.
+ *
+ *  supervisor_contact_sent is excluded even though its template IS configurable —
+ *  the difference is WHERE. It picks a template from the live Front list inside
+ *  its own send dialog, because its email is addressed to the supervisors and
+ *  carries the hire's contact card appended to the body; letting Manage tasks
+ *  re-point it at an arbitrary template with a "send to the hire" audience would
+ *  email somebody their own phone number and tick the step. */
+export const EXCLUDED_TASK_KEYS = new Set([
+  "onboarding_journey",
+  "contacts_link_sent",
+  "supervisor_contact_sent"
+]);
 
 function parseAudience(v: unknown): TaskEmailAudience {
   return v === "company" ? "company" : v === "custom" ? "custom" : "personal";

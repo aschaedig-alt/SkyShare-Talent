@@ -1,0 +1,26 @@
+Hires in the database: 461  (ACTIVE=6, ARCHIVED=428, POST_ONBOARD=27)
+Already have the step: 0
+No checklist at all (skipped): 241
+Out of scope this run: 215 (not ACTIVE)
+
+WOULD CREATE 5 rows, group=SYSTEMS order=21:
+  TODO  Auggie Quintero   [order 21 already used by travel_complete]
+  TODO  Dayten Schureman   [order 21 already used by travel_complete]
+  TODO  Flynn McFarland   [order 21 already used by travel_complete]
+  TODO  Robert Patrick   [order 21 already used by travel_complete]
+  TODO  Ryan Christensen   [order 21 already used by travel_complete]
+
+Not touched (re-run with --all to include them): 215
+  Matt Smith (ACTIVE, canceled)
+  Abbi Kinder (ARCHIVED)
+  Adam Beckman (ARCHIVED)
+  Adam Evans (ARCHIVED)
+  Adriauna Harper (ARCHIVED)
+  Adrienne Vaughn (ARCHIVED)
+  Aimee Schaedig (ARCHIVED)
+  Alex Andrade (ARCHIVED)
+  Alex Kostic (ARCHIVED)
+  Alex Ponomarev (ARCHIVED)
+  Allen Youssef (ARCHIVED)
+  Alvaro Martin (ARCHIVED)
+  ... and 203 more

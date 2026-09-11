@@ -6,12 +6,26 @@ import { prisma } from "@/lib/prisma";
 import { isAuthRequired } from "@/lib/auth/auth-config";
 import { hasPermission, isRoleName } from "@/lib/auth/roles";
 import {
+  formatUsd,
   isTravelItemType,
   isTravelPurpose,
   isTravelReimbursement,
   isTravelStatus,
   ONBOARDING_TRAVEL_PURPOSES
 } from "@/lib/travel/constants";
+import { getOrientationChannelId, ORIENTATION_CHANNEL_ADDRESS } from "@/lib/front/config";
+import { sendEmail, type SentMessage } from "@/lib/front/messages";
+import { guardDecision } from "@/lib/front/send-guard";
+import {
+  buildTravelReimbursementEmail,
+  getReimbursementSendRecord,
+  getReimbursementTemplate,
+  recordReimbursementSend,
+  setReimbursementTemplate,
+  type ReimbursementEmailPreview,
+  type ReimbursementSendRecord,
+  type TravelerForReimbursementEmail
+} from "@/lib/front/travel-reimbursement-email";
 import { parseTravelConfirmation, type ParsedTravel } from "@/lib/extraction/travel-confirmation";
 import {
   isChecklistStatus,
@@ -352,4 +366,294 @@ export async function extractTravelConfirmation(
     return { ok: false, error: "Paste a bit more of the confirmation to extract from." };
   }
   return { ok: true, parsed: parseTravelConfirmation(text) };
+}
+
+// ---------------------------------------------------------------------------
+// "Are you still owed any reimbursements?" — the email to the traveler.
+//
+// Two-step, preview then send, for the same reason every other send in this app
+// is: it is irreversible and lands in a real person's inbox. The body is editable
+// for one send and nothing is written back to Front.
+//
+// It records the send and NOTHING ELSE. It does not advance the reimbursement
+// stage: NOT_STARTED → SUBMITTED → TRAVELER_TOLD → PAYMENT_CONFIRMED →
+// TRAVELER_CONFIRMED, and asking whether anything is still outstanding is none of
+// those — it is the question you ask before you know. Ticking one of them off the
+// back of a question would put a stage on the trip that nobody reached.
+
+export type ReimbursementEmailPreviewResult = {
+  ok: boolean;
+  error?: string;
+  preview?: ReimbursementEmailPreview;
+  alreadySent?: ReimbursementSendRecord | null;
+  /** Returned even when the preview FAILED — the dialog's template picker needs
+   *  it to preselect, and the commonest failure is "no template picked yet",
+   *  which that picker is the fix for. */
+  template?: { templateId: string; templateName: string } | null;
+  travelerName?: string;
+  /** A context line for the dialog: how much this trip still shows as owed. */
+  owedNote?: string;
+};
+
+export type ReimbursementEmailSendResult = {
+  ok: boolean;
+  error?: string;
+  to?: string;
+  sentAt?: string;
+  conversationId?: string;
+  warnings?: string[];
+  /** True when this was a dry run to hrotasks@ rather than a real send. The
+   *  caller MUST read it: a test must not be described as a delivered email and
+   *  nothing about it is recorded. */
+  test?: boolean;
+};
+
+export type ReimbursementEmailStatus = {
+  ok: boolean;
+  error?: string;
+  sent?: ReimbursementSendRecord | null;
+  hasTemplate?: boolean;
+};
+
+/**
+ * Who the trip is for. A trip attaches to EITHER a NewHire or a Candidate, and a
+ * candidate has no NewHire row at all — which is the specific reason the people
+ * module's SendTaskEmailButton could not be reused here.
+ */
+async function loadTripTraveler(
+  tripId: string
+): Promise<
+  | { ok: true; trip: TravelTripView; traveler: TravelerForReimbursementEmail }
+  | { ok: false; error: string }
+> {
+  const trip = await getTravelTripView(tripId);
+  if (!trip) return { ok: false, error: "That trip no longer exists." };
+
+  if (trip.newHireId) {
+    const hire = await prisma.newHire.findUnique({
+      where: { id: trip.newHireId },
+      select: { name: true, ssEmail: true, personalEmail: true }
+    });
+    if (!hire) return { ok: false, error: "This trip points at a new hire record that no longer exists." };
+    return {
+      ok: true,
+      trip,
+      traveler: { kind: "hire", name: hire.name, companyEmail: hire.ssEmail, personalEmail: hire.personalEmail }
+    };
+  }
+
+  if (trip.candidateId) {
+    const candidate = await prisma.candidate.findUnique({
+      where: { id: trip.candidateId },
+      select: { displayName: true, primaryEmail: true }
+    });
+    if (!candidate) return { ok: false, error: "This trip points at a candidate record that no longer exists." };
+    return {
+      ok: true,
+      trip,
+      traveler: {
+        kind: "candidate",
+        name: candidate.displayName,
+        companyEmail: null,
+        personalEmail: candidate.primaryEmail
+      }
+    };
+  }
+
+  return { ok: false, error: "This trip has nobody attached to it, so there is no one to email." };
+}
+
+function owedNoteFor(trip: TravelTripView): string | undefined {
+  const paid = trip.items.filter((i) => i.selfBooked || i.reimbursement === "NEEDED").length;
+  if (paid === 0) return undefined;
+  return (
+    `${paid} item${paid === 1 ? "" : "s"} on this trip ${paid === 1 ? "was" : "were"} paid for by the traveler, ` +
+    `${formatUsd(trip.reimbursementOwed)} of it still marked as owed. The email does not quote an amount — ` +
+    `it asks whether anything is still outstanding.`
+  );
+}
+
+/** Remember which Front template this email sends. Picked in the send window, so
+ *  the day she creates the template in Front the feature works — no deploy. */
+export async function saveReimbursementTemplate(templateId: string, templateName: string): Promise<SimpleResult> {
+  if (!(await canEditTravel())) return { ok: false, error: "You do not have permission to edit travel." };
+  if (typeof templateId !== "string" || !templateId.trim()) return { ok: false, error: "Pick a template first." };
+  await setReimbursementTemplate({
+    templateId: templateId.trim(),
+    templateName: typeof templateName === "string" && templateName.trim() ? templateName.trim() : templateId.trim(),
+    // hrotasks@ is copied on every send in this app, so the thread is findable by
+    // somebody other than whoever pressed the button.
+    cc: [ORIENTATION_CHANNEL_ADDRESS]
+  });
+  return { ok: true };
+}
+
+/** Has this trip already been asked, and is a template set at all. Read by the
+ *  button so it can say "Asked <date>" without opening the dialog. */
+export async function getReimbursementEmailStatus(tripId: string): Promise<ReimbursementEmailStatus> {
+  if (!(await canEditTravel())) return { ok: false, error: "You do not have permission to view travel." };
+  const [sent, cfg] = await Promise.all([getReimbursementSendRecord(tripId), getReimbursementTemplate()]);
+  return { ok: true, sent, hasTemplate: Boolean(cfg) };
+}
+
+/** Build (but do not send) the email, plus whether one already went out. */
+export async function previewReimbursementEmail(tripId: string): Promise<ReimbursementEmailPreviewResult> {
+  if (!(await canEditTravel())) return { ok: false, error: "You do not have permission to send this email." };
+
+  const cfg = await getReimbursementTemplate();
+  const template = cfg ? { templateId: cfg.templateId, templateName: cfg.templateName } : null;
+
+  const loaded = await loadTripTraveler(tripId);
+  // tsconfig has strict:false, so a boolean discriminant does not narrow a union.
+  // The cast is this codebase's own idiom for it — see app/api/new-hires/[id]/route.ts:30.
+  if (!loaded.ok) return { ok: false, error: (loaded as { ok: false; error: string }).error, template };
+
+  try {
+    const [preview, alreadySent] = await Promise.all([
+      buildTravelReimbursementEmail(loaded.traveler),
+      getReimbursementSendRecord(tripId)
+    ]);
+    return {
+      ok: true,
+      preview,
+      alreadySent,
+      template,
+      travelerName: loaded.traveler.name,
+      owedNote: owedNoteFor(loaded.trip)
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Could not build the email.",
+      template,
+      travelerName: loaded.traveler.name
+    };
+  }
+}
+
+/**
+ * Send it. Rebuilds from the same code path the preview used, so what was
+ * approved is what goes out — including re-reading the live Front template, so an
+ * edit made in Front between preview and send is not silently ignored.
+ *
+ * bodyOverride is the wording she typed in the dialog. It applies to THIS SEND
+ * ONLY: nothing is written back to Front, and the next send reads the template
+ * fresh. An untouched body arrives here as null and is never sent back at all.
+ *
+ * opts.test is "send it to me first" — the same shape the checklist-task email
+ * grew on 2026-09-10. It works because the greeting is built from the TRAVELER'S
+ * NAME and not from the recipient address, so swapping the address after the
+ * email has been built leaves "Hi Charlie," exactly where it was. A test writes
+ * no send record, because a record is a claim the traveler was asked, and that
+ * would not be true. It also drops cc: the send guard only passes a message
+ * through untouched when EVERY recipient is an internal mailbox, so one human in
+ * cc would change what was actually sent.
+ */
+export async function sendReimbursementEmail(
+  tripId: string,
+  bodyOverride?: string | null,
+  opts?: { test?: boolean }
+): Promise<ReimbursementEmailSendResult> {
+  if (!(await canEditTravel())) return { ok: false, error: "You do not have permission to send this email." };
+
+  const loaded = await loadTripTraveler(tripId);
+  // See the note in previewReimbursementEmail — strict:false means no narrowing.
+  if (!loaded.ok) return { ok: false, error: (loaded as { ok: false; error: string }).error };
+
+  // STEP 1 — everything that can still be retried safely. A throw here means
+  // nothing left the building.
+  let email: ReimbursementEmailPreview;
+  let channelId: string;
+  try {
+    email = await buildTravelReimbursementEmail(loaded.traveler, bodyOverride);
+    channelId = await getOrientationChannelId();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Could not build the email." };
+  }
+
+  // The one place the addresses are decided. Everything below reads these and
+  // never email.to/cc/subject again — if the guard, the recorded label and the
+  // Front payload could disagree, the record would lie about what was sent.
+  const asTest = opts?.test === true;
+  const intendedLabel = email.to.join(", ") || "nobody";
+  const toList = asTest ? [ORIENTATION_CHANNEL_ADDRESS] : email.to;
+  const ccList = asTest ? [] : email.cc;
+  // Several tests for several travelers land in the same shared inbox, so the
+  // subject has to say which one this is and who it would really have gone to.
+  const subject = asTest ? `[TEST — would have gone to ${intendedLabel}] ${email.subject}` : email.subject;
+
+  // Outside production every recipient is rewritten to FRONT_TEST_INBOX and the
+  // send still succeeds — so without asking, this would record the traveler's real
+  // address for a message they never received.
+  const guard = guardDecision({ to: toList, cc: ccList, subject });
+  const toLabel = toList.join(", ");
+
+  // STEP 2 — the irreversible one, alone in its own try. Nothing else may share
+  // it: a failure in the bookkeeping below must never be reported as "Send
+  // failed", because that reads as "nothing went out" and invites a second REAL
+  // send.
+  let sent: SentMessage;
+  try {
+    sent = await sendEmail(channelId, {
+      to: toList,
+      cc: ccList,
+      subject,
+      // email.html is the greeting + body, unchanged by the test path. That is the
+      // whole point: what lands in hrotasks@ is the email the person would get.
+      body: email.html,
+      archive: false
+    });
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Send failed." };
+  }
+
+  // STEP 3 — bookkeeping. The email is already gone; from here every outcome is a
+  // success with a caveat, never a failure.
+  const sentAt = new Date().toISOString();
+  const warnings: string[] = [];
+
+  // A test addressed only to hrotasks@ comes back "internal", which is not a
+  // caveat — it is the mode that means the message went exactly where it was
+  // addressed, in dev and in production alike.
+  if (guard.mode !== "production" && !(asTest && guard.mode === "internal")) {
+    warnings.push(
+      `This is not the production environment, so the message was ${
+        guard.mode === "redirected" ? "redirected to the test inbox" : `handled as "${guard.mode}"`
+      } rather than delivered to ${toLabel}.`
+    );
+  }
+
+  if (asTest) {
+    // Loud, and on a success, because the whole failure mode here is a test that
+    // is mistaken for the real send.
+    warnings.push(
+      `Test send. It went to ${ORIENTATION_CHANNEL_ADDRESS} with a [TEST] subject line, not to ${intendedLabel}. Nothing was recorded, so this does not count as asked — send it for real when the wording looks right.`
+    );
+  }
+
+  if (!asTest) {
+    try {
+      await recordReimbursementSend(tripId, {
+        conversationId: sent.conversationId,
+        messageId: sent.id,
+        sentAt,
+        to: toLabel,
+        sentBy: await actorLabel(),
+        mode: guard.mode,
+        edited: email.edited,
+        templateName: email.templateName
+      });
+    } catch {
+      warnings.push("The email went out, but the send record could not be saved — a re-send will not warn you.");
+    }
+  }
+
+  return {
+    ok: true,
+    to: toLabel,
+    sentAt,
+    conversationId: sent.conversationId,
+    test: asTest,
+    ...(warnings.length ? { warnings } : {})
+  };
 }

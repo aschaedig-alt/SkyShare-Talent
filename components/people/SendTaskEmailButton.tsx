@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mail } from "lucide-react";
+import { FlaskConical, Mail } from "lucide-react";
 import { Button, Modal } from "@/components/ui";
 import { EmailBodyEditor } from "@/components/shared/EmailBodyEditor";
 import { formatMomentDate } from "@/lib/dates/display";
@@ -21,6 +21,16 @@ import {
 // should still give you a box to change what it says, because a send occasionally
 // needs wording no later send should inherit. It applies to this send only —
 // nothing is written back to Front.
+//
+// SEND AS TEST. Her ask, 2026-09-10: "it should be addressed to the name, in this
+// case Axel, but send the test to hrotasks@skyshare.com always. then if i like it
+// i can send to the candidate." So the test is the real email — same greeting,
+// same body, same template — delivered somewhere safe. It deliberately leaves NO
+// trace: the checklist stays untouched, no send record is written, and onSent() is
+// not called, so the grid cell does not tick. Every one of those would otherwise
+// say the person had been emailed when they had not. `res.test` is what tells the
+// two apart, and it decides both the wording on the result screen and whether the
+// grid updates — if this ever looks like dead defensiveness, it is not.
 
 type Props = {
   hireId: string;
@@ -42,6 +52,8 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  // Which of the two buttons is mid-flight, so only that one says "Sending…".
+  const [testing, setTesting] = useState(false);
   const [preview, setPreview] = useState<TaskEmailPreviewResult | null>(null);
   const [result, setResult] = useState<TaskEmailSendResult | null>(null);
   // Null until the body is actually edited. Null means "send the live template",
@@ -56,16 +68,21 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
     setPreview(null);
     setResult(null);
     setBody(null);
+    setTesting(false);
     setPreview(await previewTaskEmail(hireId, taskKey));
     setLoading(false);
   }
 
-  async function confirmSend() {
+  async function confirmSend(asTest: boolean) {
+    setTesting(asTest);
     setSending(true);
-    const res = await sendTaskEmail(hireId, taskKey, body);
+    const res = await sendTaskEmail(hireId, taskKey, body, asTest ? { test: true } : undefined);
     setResult(res);
     setSending(false);
-    if (res.ok) onSent();
+    // NOT on a test. onSent() is what flips the grid cell to done without a
+    // reload, and a test has ticked nothing on the server — calling it would show
+    // a done check-in that the next refresh silently takes back.
+    if (res.ok && !res.test) onSent();
   }
 
   function close() {
@@ -77,6 +94,7 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
       setPreview(null);
       setResult(null);
       setBody(null);
+      setTesting(false);
     }, 200);
   }
 
@@ -119,7 +137,16 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
         {/* Result screen — replaces the preview once sent. */}
         {result && (
           <div className="mt-3">
-            {result.ok ? (
+            {result.ok && result.test ? (
+              /* Blue, not green. A test really did send, so it is not a failure —
+                 but it is not the thing the green banner means either, and the one
+                 mistake worth designing against here is reading a test as done. */
+              <div className="rounded border border-sky-300 bg-sky-50 px-3 py-2 text-sm text-sky-800 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-300">
+                Test sent to {result.to}
+                {p ? <>, with the greeting still addressed to {p.firstName}</> : null}. Read it over, then come back and
+                send it for real.
+              </div>
+            ) : result.ok ? (
               <div className="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-800 dark:border-green-500/40 dark:bg-green-500/10 dark:text-green-300">
                 Sent to {result.to}. The checklist item is now marked done
                 {result.conversationId ? " and linked to the Front conversation" : ""}.
@@ -140,7 +167,15 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
                 {w}
               </p>
             ))}
-            <div className="mt-5 flex justify-end">
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              {result.ok && result.test ? (
+                /* Back to the SAME preview, with any edited wording still in the
+                   box — "then if i like it i can send to the candidate" only works
+                   if the test does not throw the draft away. */
+                <Button variant="secondary" onClick={() => setResult(null)}>
+                  Back to the email
+                </Button>
+              ) : null}
               <Button onClick={close}>Close</Button>
             </div>
           </div>
@@ -195,12 +230,20 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
               <EmailBodyEditor greeting={p.greetingHtml} template={p.bodyHtml} edited={body} onChange={setBody} disabled={sending} />
             </div>
 
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
+              <p className="mr-auto max-w-xs text-[11px] leading-4 text-brand-grey dark:text-slate-400">
+                A test goes to hrotasks@skyshare.com, still addressed to {p.firstName}. It does not tick the checklist
+                item and is not recorded as sent.
+              </p>
               <Button variant="secondary" onClick={close} disabled={sending}>
                 Cancel
               </Button>
-              <Button onClick={confirmSend} disabled={sending}>
-                {sending
+              <Button variant="secondary" onClick={() => confirmSend(true)} disabled={sending}>
+                <FlaskConical className="h-4 w-4" />
+                {sending && testing ? "Sending test…" : "Send as test to hrotasks@skyshare.com"}
+              </Button>
+              <Button onClick={() => confirmSend(false)} disabled={sending}>
+                {sending && !testing
                   ? "Sending…"
                   : `Send ${body === null ? "" : "edited copy "}to ${
                       p.to.length === 1 ? p.to[0] : `${p.to.length} recipients`

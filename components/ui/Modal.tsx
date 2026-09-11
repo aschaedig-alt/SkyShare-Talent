@@ -24,6 +24,18 @@ import { useDialogClose } from "@/lib/hooks/useDialogClose";
 //
 // Composing content: keep the top-right ~2rem of the panel clear, that corner
 // belongs to the close button.
+//
+// WHY THE PANEL SETS text-left. This does NOT render in a portal — the tree below
+// is returned in place, so the dialog stays a DOM child of whatever opened it.
+// `position: fixed` gives it a new containing block for LAYOUT, but `text-align`
+// is inherited down the DOM regardless, so a modal opened from inside a centered
+// table cell inherited that cell's `text-align: center` and every paragraph in
+// the dialog came out centered. That is how the 30-day check-in email preview
+// (opened from a `text-center` <td> in PostOnboardTab) showed a left-justified
+// Front template as a centered one. Pinning `text-left` here severs the
+// inheritance at the dialog boundary for every modal in the app — a no-op for
+// each of them, since they all compose their own left-aligned content and put
+// their buttons in a `flex justify-end`.
 
 // Everything Tab can land on. Kept in one place so the trap and the initial
 // focus agree on what counts.
@@ -126,7 +138,11 @@ export function Modal({ open, onClose, children, maxWidth = "max-w-md", busy = f
         aria-label={title ?? "Dialog"}
         aria-busy={busy || undefined}
         tabIndex={-1}
-        className={clsx("relative w-full rounded bg-white p-5 shadow-2xl outline-none dark:bg-brand-panel", maxWidth, className)}
+        className={clsx(
+          "relative w-full rounded bg-white p-5 text-left shadow-2xl outline-none dark:bg-brand-panel",
+          maxWidth,
+          className
+        )}
       >
         <button
           type="button"

@@ -44,6 +44,23 @@ import { clsx } from "clsx";
 // edited body safe to reuse across a batch: each recipient's greeting is still
 // rebuilt from their own name, so nobody is emailed with somebody else's name at
 // the top.
+//
+// THE GREETING AND THE BODY ARE ONE SHEET OF PAPER. Her words, 2026-09-10: "the
+// way the preview shows with the box by the persons name im not sure how the
+// actual email will look." The greeting used to sit in its own tinted, bordered
+// box with its own explanatory line inside it, which made the recipient's name
+// read as a separate component of the dialog rather than the first line of the
+// email. It now renders on the same white sheet as the body, same padding, no
+// border and no gap between them, so what is on screen is the shape of the email
+// that will arrive. It is still not editable, and three things say so: the note
+// in the header strip, the fixed rail down its left edge, and a default cursor
+// plus tooltip where the body gives you a caret.
+//
+// text-left is pinned on every surface here on purpose. Modal does not render in
+// a portal, so a dialog opened from a centered table cell inherits that cell's
+// text-align — which is exactly how a left-justified Front template appeared
+// centered in the preview. Modal now pins it too; this is the belt to that brace,
+// and it also covers the editor being used outside a Modal.
 
 export type EmailBodyEditorProps = {
   /** The per-recipient half — rendered, not editable. Empty for templates that
@@ -60,6 +77,26 @@ export type EmailBodyEditorProps = {
    *  the body being edited, so a pasted-over one can go stale. */
   note?: string;
 };
+
+/**
+ * How a hyperlink is drawn inside an email preview.
+ *
+ * WITHOUT THIS A LINK IS INVISIBLE. The preview and the editable body both carry
+ * `prose-sm`, and that class emits NOTHING — @tailwindcss/typography is not
+ * installed and tailwind.config.ts has an empty plugins array. There is no anchor
+ * styling in app/globals.css either, so an anchor rendered here inherits the
+ * surrounding black text and reads as ordinary words.
+ *
+ * That is what "the links are lost in your emails" (2026-09-11) actually was. The
+ * links were never lost. The sent HTML carries every one of them, and they survive
+ * both the sanitizer and a typed edit in the contentEditable — measured against the
+ * real wired templates, anchors and query strings intact. They simply could not be
+ * SEEN, so a template full of links previewed as a template with none.
+ *
+ * Blue and underlined rather than this app's own link treatment, because this box
+ * previews what a MAIL CLIENT will show, not what the app shows.
+ */
+const LINK_PREVIEW = "[&_a]:text-[#0b63ce] [&_a]:underline [&_a]:underline-offset-2 dark:[&_a]:text-[#7db3ef]";
 
 export function EmailBodyEditor({ greeting, template, edited, onChange, disabled, note }: EmailBodyEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -78,9 +115,9 @@ export function EmailBodyEditor({ greeting, template, edited, onChange, disabled
   }, [template, seed, mode]);
 
   return (
-    <div className="rounded border border-brand-lea/15 dark:border-white/10">
+    <div className="rounded border border-brand-lea/15 text-left dark:border-white/10">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-lea/10 px-2.5 py-1.5 dark:border-white/10">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Body</span>
           {edited === null ? (
             <span className="rounded bg-brand-cloudDancer/70 px-1.5 py-0.5 text-[10px] font-semibold text-brand-grey dark:bg-white/5 dark:text-slate-400">
@@ -91,6 +128,13 @@ export function EmailBodyEditor({ greeting, template, edited, onChange, disabled
               Edited for this send
             </span>
           )}
+          {/* Moved out of the email itself. A line of explanation sitting INSIDE
+              the sheet is one more thing that does not look like the email. */}
+          {greeting ? (
+            <span className="text-[10.5px] text-brand-grey dark:text-slate-400">
+              Greeting written per recipient &mdash; not editable
+            </span>
+          ) : null}
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -126,15 +170,25 @@ export function EmailBodyEditor({ greeting, template, edited, onChange, disabled
         </p>
       ) : null}
 
+      {/* The greeting. Same white sheet, same left margin as the body, no border
+          and no gap between the two — the rail and the cursor carry "you cannot
+          type here" so the tinted box does not have to. The 3px rail plus 9px of
+          padding is 12px, which lines the greeting up exactly with the body's
+          px-3. The template's own trailing blank line supplies the space under
+          it, which is why the body drops its top padding when a greeting is
+          present: that gap is then the email's, not the dialog's. */}
       {greeting ? (
-        <div className="border-b border-brand-lea/10 bg-brand-cloudDancer/30 px-3 py-2 dark:border-white/10 dark:bg-white/5">
+        <div
+          title="Written per recipient, so it is not editable here — each person gets their own"
+          className={clsx(
+            "cursor-default select-text border-l-[3px] border-brand-lea/20 bg-white pl-[9px] pr-3 pt-2 text-left",
+            "dark:border-white/20 dark:bg-brand-field"
+          )}
+        >
           <div
-            className="prose-sm text-[12.5px] text-brand-black dark:text-slate-200"
+            className={clsx("prose-sm text-left text-[12.5px] text-brand-black dark:text-slate-200", LINK_PREVIEW)}
             dangerouslySetInnerHTML={{ __html: greeting }}
           />
-          <p className="mt-1 text-[10.5px] text-brand-grey dark:text-slate-400">
-            Written per recipient, so it isn&apos;t editable here — each person gets their own.
-          </p>
         </div>
       ) : null}
 
@@ -148,8 +202,10 @@ export function EmailBodyEditor({ greeting, template, edited, onChange, disabled
           aria-label="The body of this email"
           onInput={(e) => onChange((e.currentTarget as HTMLDivElement).innerHTML)}
           className={clsx(
-            "prose-sm max-h-72 overflow-y-auto overflow-x-hidden bg-white px-3 py-2 text-[12.5px] text-brand-black outline-none transition",
-            "focus:ring-4 focus:ring-brand-sweet/35 dark:bg-[#0f2033] dark:text-slate-200"
+            "prose-sm max-h-72 overflow-y-auto overflow-x-hidden bg-white px-3 text-left text-[12.5px] text-brand-black outline-none transition",
+            LINK_PREVIEW,
+            greeting ? "pb-2 pt-0" : "py-2",
+            "focus:ring-4 focus:ring-brand-sweet/35 dark:bg-brand-field dark:text-slate-200"
           )}
         />
       ) : (
@@ -159,7 +215,7 @@ export function EmailBodyEditor({ greeting, template, edited, onChange, disabled
           disabled={disabled}
           spellCheck={false}
           rows={14}
-          className="block w-full resize-y bg-white px-3 py-2 font-mono text-[11.5px] leading-relaxed text-brand-black outline-none focus:ring-4 focus:ring-brand-sweet/35 dark:bg-[#0f2033] dark:text-slate-200"
+          className="block w-full resize-y bg-white px-3 py-2 text-left font-mono text-[11.5px] leading-relaxed text-brand-black outline-none focus:ring-4 focus:ring-brand-sweet/35 dark:bg-brand-field dark:text-slate-200"
         />
       )}
     </div>

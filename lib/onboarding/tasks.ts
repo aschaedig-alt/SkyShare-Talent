@@ -29,6 +29,23 @@ export const ONBOARDING_TASKS: OnboardingTaskDef[] = [
   { key: "pilot_doc_request", label: "Send Pilot Document Request email via Front", group: "PILOT_DOCS" },
 
   { key: "onboarding_journey", label: "Send “Start Your Onboarding Journey” email via Front", group: "SYSTEMS" },
+  // THE REVERSE OF THE CONTACTS LINK, asked for 2026-09-10: that one hands the new
+  // hire the staff directory, this one hands the new hire's own card — name, title,
+  // mobile, SkyShare email — to the one or two supervisors who will manage them.
+  //
+  // FILED HERE AND NOT UNDER OFFER, although the trigger is the signed offer letter.
+  // What happens on this row is an internal notification, which is what SYSTEMS
+  // already holds (groups_drive, company_gmail); OFFER is the paperwork getting
+  // signed. Placement is hers to overrule from Manage tasks, which re-files it
+  // without a deploy.
+  //
+  // NOT AUTOMATIC, and deliberately. A personal mobile number goes out in this
+  // email, so it is sent from the button on this row after somebody reads exactly
+  // what is being disclosed — never fired by the offer tick with nobody watching.
+  // The Front template it sends is CHOSEN IN THAT DIALOG rather than hard-coded,
+  // so the step works the day she writes the template. See
+  // lib/front/supervisor-contact-email.ts.
+  { key: "supervisor_contact_sent", label: "Send new hire's contact info to their supervisor", group: "SYSTEMS" },
   { key: "company_gmail", label: "Create a Company Gmail and send password to personal email", group: "SYSTEMS" },
   // A background check is THREE steps, and only the last two can be automated.
   // Paycom emails hrotasks@ at each of the two milestones; the first step is a
@@ -75,6 +92,7 @@ export const MILESTONE_KEYS: Array<{ key: string; short: string }> = [
   { key: "pilot_doc_request", short: "Pilot docs requested" },
   { key: "candidate_signed", short: "Candidate signed offer" },
   { key: "onboarding_journey", short: "Onboarding email sent" },
+  { key: "supervisor_contact_sent", short: "Contact info to supervisor" },
   { key: "company_gmail", short: "Company Gmail created" },
   { key: "bg_check_start", short: "Background check started" },
   { key: "bg_check_info", short: "BG info submitted" },

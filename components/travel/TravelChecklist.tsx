@@ -18,6 +18,7 @@ import {
   type ChecklistTick
 } from "@/lib/travel/checklist";
 import { loadChecklist, setChecklistStatus, setVisitField, setReimbursementStage } from "@/app/travel/actions";
+import { SendReimbursementEmailButton } from "@/components/travel/SendReimbursementEmailButton";
 import type { TravelTripView } from "@/lib/data/travel";
 import { formatMomentDateShort } from "@/lib/dates/display";
 
@@ -150,17 +151,24 @@ export function TravelChecklist({ trip }: { trip: TravelTripView }) {
                 {trip.items.filter((i) => i.selfBooked || i.reimbursement === "NEEDED").length} item(s) on this trip were
                 paid for by the traveler.
               </p>
-              <select
-                value={state.reimbursement}
-                onChange={(e) => void saveStage(e.target.value)}
-                className="mt-1.5 w-full rounded border border-brand-lea/20 bg-white px-2 py-1 text-[12px] text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
-              >
-                {REIMBURSEMENT_STAGES.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
+              {/* The stage and the question that precedes it, side by side. The
+                  email deliberately does NOT advance the stage: "are you still
+                  owed anything" maps to none of the five, and ticking one off the
+                  back of a question would claim a step nobody reached. */}
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <select
+                  value={state.reimbursement}
+                  onChange={(e) => void saveStage(e.target.value)}
+                  className="min-w-[11rem] flex-1 rounded border border-brand-lea/20 bg-white px-2 py-1 text-[12px] text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+                >
+                  {REIMBURSEMENT_STAGES.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+                <SendReimbursementEmailButton tripId={trip.id} />
+              </div>
               <p className="mt-1 text-[10.5px] leading-snug text-brand-grey dark:text-slate-400">
                 To reimburse: HR emails payables@skyshare.com with the receipts attached and the trip details
                 &mdash; traveler name, dates, and the purpose of the trip and expenses. HR sends it, not the

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ClipboardList, ChevronDown, ChevronRight, Check, Clock } from "lucide-react";
 import type { TravelChecklistRollup as Rollup, TripChecklistSummary } from "@/lib/travel/rollup";
+import { SendReimbursementEmailButton } from "@/components/travel/SendReimbursementEmailButton";
 import { formatMixedDayShort } from "@/lib/dates/display";
 
 // Across-all-trips checklist view for the Travel page.
@@ -104,12 +105,19 @@ function TripRow({ trip, defaultOpen }: { trip: TripChecklistSummary; defaultOpe
             </div>
           ) : null}
 
-          <Link
-            href={`${trip.travelerHref}#travel`}
-            className="mt-3 inline-block text-xs font-semibold text-brand-lea underline underline-offset-2 dark:text-slate-200"
-          >
-            Open this trip
-          </Link>
+          {/* "Open this trip" changes the whole screen, so it stays a real Link.
+              The reimbursement email is the one thing here that can be DONE from
+              this row, and this is the row she was looking at when she asked for
+              it — so it sits beside the link rather than only on the trip page. */}
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Link
+              href={`${trip.travelerHref}#travel`}
+              className="text-xs font-semibold text-brand-lea underline underline-offset-2 dark:text-slate-200"
+            >
+              Open this trip
+            </Link>
+            <SendReimbursementEmailButton tripId={trip.tripId} />
+          </div>
         </div>
       ) : null}
     </div>
