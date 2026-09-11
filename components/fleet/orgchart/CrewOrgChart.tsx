@@ -1,17 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import type { CrewGroup, Departure, Seat } from "@/lib/fleet/staffing/types";
 import { normSeat, cntSeat } from "@/lib/fleet/staffing/compute";
 import { CREW_GROUPS, CREW_LEADERSHIP, CREW_TRAINING, CREW_PILOT_TURNOVER, turnoverFor } from "@/lib/fleet/staffing/crew-data";
 import { aircraftLabel, positionLabel, isoToday, splitDepartures, isDepartureArchived, DEPARTURE_ARCHIVE_DAYS } from "@/lib/fleet/staffing/labels";
+import { departureDateNote, departuresPastLastDay, shortDate, type PastLastDay } from "@/lib/fleet/staffing/departures";
 import type { TrainingRecord } from "@/lib/fleet/staffing/training";
 import { completedTraining, matchKey, trainingRows } from "@/lib/fleet/staffing/training";
 import { SeatSquares, PersonRow, SlotRow } from "./SeatParts";
 import { LinkPicker, orgLinkBtnStyle } from "./LinkPicker";
 import { PeopleIndex, type IndexEntry } from "./PeopleIndex";
+import { BackupPlan } from "./BackupPlan";
 import { TrainingTab } from "./TrainingTab";
 import { useUnsavedGuard } from "./useUnsavedGuard";
 import styles from "./OrgChart.module.css";
@@ -142,6 +144,28 @@ function moveOptions(allGroups: CrewGroup[], exclude: { gIdx: number; seatKey: S
   ].filter((g) => g.options.length > 0);
 }
 
+// The two date fields in the "leaving" form. .ec-move styles its selects and
+// buttons but has never had a labelled input in it, so these three carry the
+// same borders and sizing the rest of the editor uses. Module-scoped constants
+// rather than inline objects so they are not rebuilt on every keystroke.
+const leaveFieldStyle: CSSProperties = { flex: "1 1 130px", display: "flex", flexDirection: "column", gap: 3 };
+const leaveLabelStyle: CSSProperties = {
+  fontSize: 10,
+  fontWeight: 800,
+  textTransform: "uppercase",
+  letterSpacing: "0.08em",
+  color: "var(--n500)"
+};
+const leaveInputStyle: CSSProperties = {
+  fontSize: 12,
+  padding: "5px 7px",
+  borderRadius: 4,
+  border: "1px solid var(--n300)",
+  background: "var(--color-bg)",
+  color: "inherit",
+  minWidth: 0
+};
+
 /** One editable seat column in the edit-mode modal. Module-scoped so its
     "add name" input keeps focus across the parent's re-renders. */
 function EditCol({
@@ -151,6 +175,8 @@ function EditCol({
   label,
   allGroups,
   movePick,
+  leavePick,
+  today,
   onAdd,
   onRemove,
   onAdjustOpen,
@@ -158,6 +184,8 @@ function EditCol({
   onToggleTrain,
   onSetMove,
   onMove,
+  onSetLeave,
+  onLeave,
   links,
   onLink,
   onUnlink
@@ -168,6 +196,10 @@ function EditCol({
   label: string;
   allGroups: CrewGroup[];
   movePick: MovePick | null;
+  leavePick: MovePick | null;
+  /** Today, or null pre-hydration. Used only to PREFILL the notice date in a
+      handler — never read during render, which would break hydration. */
+  today: string | null;
   onAdd: (name: string, bucket: FillBucket, fillsNamed?: string) => void;
   onRemove: (bucket: FillBucket, name: string) => void;
   onAdjustOpen: (delta: number) => void;
@@ -175,6 +207,8 @@ function EditCol({
   onToggleTrain: (name: string, toTrain: boolean) => void;
   onSetMove: (p: MovePick | null) => void;
   onMove: (from: MovePick, toIdx: number, toSeat: SeatKey, bucket: FillBucket) => void;
+  onSetLeave: (p: MovePick | null) => void;
+  onLeave: (from: MovePick, noticeDate: string, lastDay: string, reason: string) => void;
   links: Record<string, string>;
   onLink: (name: string, candidateId: string) => void;
   onUnlink: (name: string) => void;
@@ -185,8 +219,19 @@ function EditCol({
   const [fillsNamed, setFillsNamed] = useState("");
   const [moveDest, setMoveDest] = useState("");
   const [moveStatus, setMoveStatus] = useState<FillBucket>("line");
+  // The "this pilot is leaving" form, beside the move form and for the same
+  // reason: it belongs to the row that is open, not to the chart.
+  const [leaveNotice, setLeaveNotice] = useState("");
+  const [leaveLast, setLeaveLast] = useState("");
+  const [leaveReason, setLeaveReason] = useState("");
   // Which person's link picker is open.
   const [linkFor, setLinkFor] = useState<string | null>(null);
+  // Which person the ✕ is asking about. Asked for directly on 2026-09-11: the ✕
+  // used to erase somebody on one click, leaving no record they were ever on the
+  // chart — right for a name typed by mistake, wrong for a pilot who resigned, and
+  // indistinguishable at the moment of clicking. It now asks which of the two this
+  // is, and offers the departure form as the other answer rather than just warning.
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const o = normSeat(group[seatKey]);
   const filled = o.line.length + o.train.length;
   const total = filled + o.open + o.openNamed.length + o.cand.length + o.candInt.length + o.offered.length;
@@ -194,6 +239,8 @@ function EditCol({
   const row = (name: string, bucket: FillBucket, tone: string, tag?: string) => {
     const isMoving =
       !!movePick && movePick.gIdx === gIdx && movePick.seatKey === seatKey && movePick.bucket === bucket && movePick.name === name;
+    const isLeaving =
+      !!leavePick && leavePick.gIdx === gIdx && leavePick.seatKey === seatKey && leavePick.bucket === bucket && leavePick.name === name;
     const linkedId = links[name];
     const isLinking = linkFor === name;
     return (
@@ -236,6 +283,29 @@ function EditCol({
             >
               move
             </button>
+            {/* LEAVING GETS ITS OWN BUTTON, and is deliberately not an entry in
+                the Move menu. Every option in that menu is a
+                "<group>|<seat>" DESTINATION and the select beside it is the
+                ARRIVAL status — neither means anything for somebody who is not
+                arriving anywhere. A "term" option in there would also make the
+                Move button sometimes not move anyone, on the one control that
+                has already put a pilot on the wrong tail. */}
+            <button
+              type="button"
+              onClick={() => {
+                if (isLeaving) {
+                  onSetLeave(null);
+                } else {
+                  setLeaveNotice(today ?? "");
+                  setLeaveLast("");
+                  setLeaveReason("");
+                  onSetLeave({ gIdx, seatKey, bucket, name });
+                }
+              }}
+              title="Record that this pilot is leaving"
+            >
+              term
+            </button>
             <button
               type="button"
               style={{ ...orgLinkBtnStyle, borderColor: linkedId ? "var(--green, #2e7d32)" : undefined, color: linkedId ? "var(--green, #2e7d32)" : undefined }}
@@ -244,7 +314,15 @@ function EditCol({
             >
               {linkedId ? "linked" : "link"}
             </button>
-            <button type="button" className="del" onClick={() => onRemove(bucket, name)} title="Remove">
+            <button
+              type="button"
+              className="del"
+              onClick={() => {
+                setConfirmRemove(confirmRemove === name ? null : name);
+                onSetLeave(null);
+              }}
+              title="Take off the chart"
+            >
               ✕
             </button>
           </span>
@@ -302,6 +380,79 @@ function EditCol({
             <button type="button" onClick={() => onSetMove(null)}>
               cancel
             </button>
+          </div>
+        ) : null}
+        {confirmRemove === name && !isLeaving ? (
+          /* The ✕ asks first. Two real answers, not an "are you sure" — the whole
+             problem is that the two look identical at click time, so both are
+             offered by name and the destructive one is not the default. */
+          <div className="ec-move">
+            <div style={{ flex: "1 1 100%", fontSize: 11, color: "var(--n500)" }}>
+              Is {name} <b>leaving</b>, or were they never meant to be here? Taking them off the chart records nothing
+              — no name, no date, no trace they were ever in this seat.
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmRemove(null);
+                setLeaveNotice(today ?? "");
+                setLeaveLast("");
+                setLeaveReason("");
+                onSetLeave({ gIdx, seatKey, bucket, name });
+              }}
+            >
+              They are leaving — record a departure
+            </button>
+            <button
+              type="button"
+              className="del"
+              onClick={() => {
+                setConfirmRemove(null);
+                onRemove(bucket, name);
+              }}
+            >
+              Just take them off, no record
+            </button>
+            <button type="button" onClick={() => setConfirmRemove(null)}>
+              cancel
+            </button>
+          </div>
+        ) : null}
+        {isLeaving ? (
+          /* Reuses .ec-move, which is already the "a row disclosed a form"
+             layout — flex-wrap, full-width controls, buttons sharing the last
+             line. No new CSS, and it looks like the move form because it is the
+             same kind of thing. */
+          <div className="ec-move">
+            <label style={leaveFieldStyle}>
+              <span style={leaveLabelStyle}>Notice given</span>
+              <input type="date" value={leaveNotice} onChange={(e) => setLeaveNotice(e.target.value)} style={leaveInputStyle} />
+            </label>
+            <label style={leaveFieldStyle}>
+              <span style={leaveLabelStyle}>Last day</span>
+              <input type="date" value={leaveLast} onChange={(e) => setLeaveLast(e.target.value)} style={leaveInputStyle} />
+            </label>
+            <input
+              value={leaveReason}
+              onChange={(e) => setLeaveReason(e.target.value)}
+              placeholder="Reason (e.g. heading to an airline)"
+              style={{ ...leaveInputStyle, flex: "1 1 100%" }}
+            />
+            <button
+              type="button"
+              disabled={!leaveNotice}
+              onClick={() => onLeave({ gIdx, seatKey, bucket, name }, leaveNotice, leaveLast, leaveReason)}
+            >
+              Record departure
+            </button>
+            <button type="button" onClick={() => onSetLeave(null)}>
+              cancel
+            </button>
+            <div style={{ flex: "1 1 100%", fontSize: 11, color: "var(--n500)" }}>
+              Takes {name} off the seat and records them transitioning out, leaving the seat open to backfill. Nobody is
+              terminated: the last day is what this page asks about once it has passed. Leave it blank if it is not set
+              yet — an undated departure stays on the card rather than ageing out.
+            </div>
           </div>
         ) : null}
       </div>
@@ -374,7 +525,19 @@ function EditCol({
   );
 }
 
-const depNote = (x: Departure) => (x.to ? `to ${x.to}${x.reason ? ` · ${x.reason}` : ""}` : x.reason || "departing");
+/**
+ * The one-line note under a departing pilot's name.
+ *
+ * The DATES lead when a departure carries them, because "notice 09/11 · last day
+ * 09/25" is the thing somebody scanning this panel is actually after — a pilot
+ * who has given notice but is still flying reads completely differently from one
+ * who has gone. A legacy row with no dates reads exactly as it always has.
+ */
+const depNote = (x: Departure) => {
+  const dates = departureDateNote(x);
+  const rest = x.to ? `to ${x.to}${x.reason ? ` · ${x.reason}` : ""}` : x.reason || (dates ? "" : "departing");
+  return [dates, rest].filter(Boolean).join(" · ");
+};
 
 function Transitions({ d, training, today }: { d: CrewGroup; training: TrainingRecord[]; today: string | null }) {
   const [showOld, setShowOld] = useState(false);
@@ -494,6 +657,26 @@ export default function CrewOrgChart({
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [movePick, setMovePick] = useState<MovePick | null>(null);
+  // Whose "this pilot is leaving" form is open. One at a time, same as movePick.
+  const [leavePick, setLeavePick] = useState<MovePick | null>(null);
+  // The offer to copy a notice date onto the linked employee's record. Opening
+  // it NEVER terminates anybody — see recordLeaving.
+  const [noticePrompt, setNoticePrompt] = useState<{
+    name: string;
+    hireId: string;
+    noticeDate: string;
+    lastDay: string;
+  } | null>(null);
+  const [noticeBusy, setNoticeBusy] = useState(false);
+  const [noticeErr, setNoticeErr] = useState<string | null>(null);
+  // Departures past their last day whose linked employee is still current, and
+  // the ones dismissed for this visit. Same shape and the same reasoning as the
+  // finished-training banner: a dismissal is "not now", not a decision worth
+  // writing to a shared database, and it comes back tomorrow.
+  const [pastDue, setPastDue] = useState<(PastLastDay & { hireId: string })[]>([]);
+  const [dismissedDepartures, setDismissedDepartures] = useState<string[]>([]);
+  const [termBusy, setTermBusy] = useState<string | null>(null);
+  const [termErr, setTermErr] = useState<string | null>(null);
   // When a person LINKED to an employee is moved, we offer to record the matching
   // role change on their journey. Null unless that offer is open.
   const [rolePrompt, setRolePrompt] = useState<{
@@ -739,6 +922,131 @@ export default function CrewOrgChart({
     void offerRoleChange(from.name, toIdx, toSeat);
   };
 
+  /**
+   * Record that a pilot is leaving: take them off the seat, reopen it, and write
+   * a dated departure.
+   *
+   * THE TWO DATES ARE NOT INTERCHANGEABLE. `date` is the LAST day and is the one
+   * that ages the row out of the default view 30 days later (isDepartureArchived).
+   * Writing the notice date into it would archive somebody weeks before they had
+   * left. Notice goes in `noticeDate`; an unknown last day leaves `date` unset,
+   * so a pending departure never ages out — which is the behaviour we want.
+   *
+   * It does NOT terminate the employee. That branch of the new-hires PATCH closes
+   * their open role and employment stint and files them to Archived, and firing
+   * it the day notice is given would end somebody's employment weeks early on a
+   * database production also points at. The last day passing is a reason to ASK —
+   * see the "last day has passed" banner, which is the confirmed half.
+   */
+  const recordLeaving = (from: MovePick, noticeDate: string, lastDay: string, reason: string) => {
+    applyEdit((d) => {
+      const g = d[from.gIdx];
+      const s = g[from.seatKey];
+      if (s) {
+        pull(s, from.bucket, from.name);
+        // Same rule as removePerson and doMove: vacating reopens the seat as a
+        // backfill req, which is the whole reason to record this rather than
+        // just deleting the row.
+        s.open = (s.open ?? 0) + 1;
+        tidySeat(g, from.seatKey);
+      }
+      g.out = [
+        ...(g.out ?? []),
+        {
+          name: from.name,
+          ...(reason.trim() ? { reason: reason.trim() } : {}),
+          noticeDate,
+          ...(lastDay ? { date: lastDay } : {}),
+          fromBucket: from.bucket,
+          fromSeat: from.seatKey
+        }
+      ];
+    });
+    setLeavePick(null);
+    void offerNoticeDate(from.name, noticeDate, lastDay);
+  };
+
+  /**
+   * Offer to copy the notice date onto the linked employee's record — the half
+   * of her ask that was "being able to give their notice date that would fill in
+   * their employee record".
+   *
+   * Same shape as offerRoleChange: look the employee up, and if there is one,
+   * ask. Silent when the chart name is not linked to anybody, because there is
+   * then no record to fill in.
+   */
+  const offerNoticeDate = async (name: string, noticeDate: string, lastDay: string) => {
+    const candidateId = links[name];
+    if (!candidateId) return;
+    try {
+      const res = await fetch(`/api/candidates/${candidateId}/employee`);
+      const data = (await res.json().catch(() => ({}))) as {
+        employee?: { hireId: string; name: string; currentTitle: string | null } | null;
+      };
+      if (!data.employee) return;
+      setNoticeErr(null);
+      setNoticePrompt({ name, hireId: data.employee.hireId, noticeDate, lastDay });
+    } catch {
+      /* the chart departure still stands; we just don't offer the employee edit */
+    }
+  };
+
+  /** Write the notice date and nothing else. employmentStatus is untouched. */
+  const saveNoticeDate = async () => {
+    if (!noticePrompt) return;
+    setNoticeBusy(true);
+    setNoticeErr(null);
+    try {
+      const res = await fetch(`/api/new-hires/${noticePrompt.hireId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ noticeDate: noticePrompt.noticeDate })
+      });
+      const data = (await res.json().catch(() => ({}))) as { message?: string };
+      if (!res.ok) throw new Error(data.message ?? "Could not save the notice date.");
+      setRoleDone(`Recorded ${noticePrompt.name}: notice given ${shortDate(noticePrompt.noticeDate) ?? noticePrompt.noticeDate}. Still an active employee.`);
+      setNoticePrompt(null);
+    } catch (e) {
+      setNoticeErr(e instanceof Error ? e.message : "Could not save the notice date.");
+    } finally {
+      setNoticeBusy(false);
+    }
+  };
+
+  /**
+   * The confirmed half: their last day has passed, so end the employment.
+   *
+   * This is the ONE call here that writes employmentStatus, and it is behind a
+   * button and a confirm because on the other side of it the PATCH closes their
+   * open role and employment stint and moves them to Past employees, live, for
+   * everybody.
+   */
+  const markFormerEmployee = async (row: PastLastDay & { hireId: string }) => {
+    if (
+      !window.confirm(
+        `Mark ${row.name} as a former employee, last day ${shortDate(row.lastDay) ?? row.lastDay}? This closes their current role and employment period and moves them to Past employees.`
+      )
+    )
+      return;
+    setTermBusy(row.hireId);
+    setTermErr(null);
+    try {
+      const res = await fetch(`/api/new-hires/${row.hireId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employmentStatus: "TERMINATED", terminationDate: row.lastDay })
+      });
+      const data = (await res.json().catch(() => ({}))) as { message?: string };
+      if (!res.ok) throw new Error(data.message ?? "Could not mark them as a former employee.");
+      setPastDue((prev) => prev.filter((p) => p.hireId !== row.hireId));
+      setRoleDone(`${row.name} is now a former employee, last day ${shortDate(row.lastDay) ?? row.lastDay}.`);
+    } catch (e) {
+      setTermErr(e instanceof Error ? e.message : "Could not mark them as a former employee.");
+    } finally {
+      setTermBusy(null);
+    }
+  };
+
   // Look up whether the moved person is a linked employee; if so, open the offer.
   const offerRoleChange = async (name: string, toIdx: number, toSeat: SeatKey) => {
     const candidateId = links[name];
@@ -890,6 +1198,7 @@ export default function CrewOrgChart({
     setLinks(savedLinks);
     setTraining(savedTraining);
     setMovePick(null);
+    setLeavePick(null);
     setSaveErr(null);
     setEditMode(false);
   };
@@ -916,6 +1225,7 @@ export default function CrewOrgChart({
     setCardSnapshot(null);
     setCardEdit(null);
     setMovePick(null);
+    setLeavePick(null);
     setDupFrom(null);
     setSaveErr(null);
   };
@@ -925,6 +1235,7 @@ export default function CrewOrgChart({
     setCardSnapshot(null);
     setCardEdit(null);
     setMovePick(null);
+    setLeavePick(null);
     setDupFrom(null);
   };
   /** Open a card. If a DIFFERENT card is mid-edit with unsaved changes, ask
@@ -1053,6 +1364,55 @@ export default function CrewOrgChart({
   const finished = useMemo(
     () => completedTraining(groupsData, training, today).filter((p) => !dismissedTraining.includes(p.name)),
     [groupsData, training, today, dismissedTraining]
+  );
+
+  /**
+   * Departures whose LAST DAY has passed, read from the SAVED roster rather than
+   * the local draft.
+   *
+   * The draft would be wrong here in a way the training banner's is not: typing a
+   * past date into the leaving form would pop a prompt to end somebody's
+   * employment before the departure itself had even been saved. The prompt on the
+   * other side of this writes to a shared live database, so it waits for the
+   * record to be real.
+   */
+  const pastDueRaw = useMemo(() => departuresPastLastDay(savedGroups, today), [savedGroups, today]);
+
+  // Which of those are still on the books as a current employee. Only a linked
+  // name can be checked at all — the chart holds names, not ids — and the
+  // employee endpoint returns null for anyone already terminated, so a departure
+  // that has been filed drops out of the banner by itself.
+  useEffect(() => {
+    let live = true;
+    const rows = pastDueRaw
+      .map((p) => ({ row: p, candidateId: savedLinks[p.name] }))
+      .filter((p) => Boolean(p.candidateId))
+      .slice(0, 10);
+    if (rows.length === 0) {
+      setPastDue([]);
+      return;
+    }
+    void (async () => {
+      const out: (PastLastDay & { hireId: string })[] = [];
+      for (const { row, candidateId } of rows) {
+        try {
+          const res = await fetch(`/api/candidates/${candidateId}/employee`);
+          const data = (await res.json().catch(() => ({}))) as { employee?: { hireId: string } | null };
+          if (data.employee?.hireId) out.push({ ...row, hireId: data.employee.hireId });
+        } catch {
+          /* one failed lookup should not hide the rest of the list */
+        }
+      }
+      if (live) setPastDue(out);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [pastDueRaw, savedLinks]);
+
+  const pastDueShown = useMemo(
+    () => pastDue.filter((p) => !dismissedDepartures.includes(p.hireId)),
+    [pastDue, dismissedDepartures]
   );
 
   const counted = groups.filter((g) => !g.d.noCount);
@@ -1481,6 +1841,74 @@ export default function CrewOrgChart({
         </div>
       ) : null}
 
+      {/* THEIR LAST DAY HAS PASSED — ASK, DO NOT ACT. Deliberately the same
+          shape as the training banner above, and for a sharper version of the
+          same reason: the button here ends somebody's employment, closes their
+          open role and employment period and files them to Past employees, on a
+          database production points at too. A date passing is a reason to ask.
+
+          Only people whose chart name is LINKED and who are still on the books
+          as a current employee appear — once they are filed, the row leaves by
+          itself. */}
+      {pastDueShown.length > 0 ? (
+        <div
+          style={{
+            marginTop: 12,
+            border: "1px solid var(--accent-lt, #f2879a)",
+            borderLeft: "4px solid var(--accent, #d8566b)",
+            borderRadius: 4,
+            background: "var(--cand-bg, #f6d9de)",
+            padding: "10px 12px"
+          }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 700 }}>
+            {pastDueShown.length === 1
+              ? "1 pilot's last day has passed"
+              : `${pastDueShown.length} pilots' last days have passed`}
+          </div>
+          <div style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>
+            They are off the chart but still count as current employees. Nobody is terminated automatically.
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+            {pastDueShown.map((row) => (
+              <div key={row.hireId} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", fontSize: 12.5 }}>
+                <b>{row.name}</b>
+                <span style={{ opacity: 0.8 }}>
+                  {row.aircraft} · last day {shortDate(row.lastDay) ?? row.lastDay}
+                  {row.noticeDate ? ` · notice ${shortDate(row.noticeDate)}` : ""}
+                </span>
+                {canEdit ? (
+                  <button
+                    type="button"
+                    onClick={() => void markFormerEmployee(row)}
+                    disabled={termBusy === row.hireId}
+                    style={{ background: "var(--navy, #0d2c43)", color: "#fff", border: "none", borderRadius: 4, padding: "4px 10px", fontSize: 12, fontWeight: 600, cursor: termBusy === row.hireId ? "default" : "pointer", opacity: termBusy === row.hireId ? 0.6 : 1 }}
+                  >
+                    {termBusy === row.hireId ? "Filing…" : "Mark as former employee"}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => showPerson(row.name, row.gIdx)}
+                  style={{ ...orgLinkBtnStyle, fontSize: 11.5 }}
+                >
+                  show on chart
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDismissedDepartures((prev) => [...prev, row.hireId])}
+                  style={{ background: "none", border: "none", opacity: 0.65, fontSize: 11.5, cursor: "pointer", color: "inherit" }}
+                  title="Hide until the next time this page is loaded"
+                >
+                  not yet
+                </button>
+              </div>
+            ))}
+          </div>
+          {termErr ? <div style={{ color: "var(--accent)", fontSize: 12, marginTop: 8, fontWeight: 600 }}>{termErr}</div> : null}
+        </div>
+      ) : null}
+
       {editMode ? (
         <div className="editbar">
           <div className="eb-msg">
@@ -1705,6 +2133,8 @@ export default function CrewOrgChart({
                     label="Captains"
                     allGroups={groupsData}
                     movePick={movePick}
+                    leavePick={leavePick}
+                    today={today}
                     onAdd={(name, bucket, fillsNamed) => addPerson(openIdx as number, "pic", bucket, name, fillsNamed)}
                     onRemoveNamed={(label) => removeNamedOpening(openIdx as number, "pic", label)}
                     onRemove={(bucket, name) => removePerson(openIdx as number, "pic", bucket, name)}
@@ -1712,6 +2142,8 @@ export default function CrewOrgChart({
                     onToggleTrain={(name, toTrain) => toggleTrain(openIdx as number, "pic", name, toTrain)}
                     onSetMove={setMovePick}
                     onMove={doMove}
+                    onSetLeave={setLeavePick}
+                    onLeave={recordLeaving}
                     links={links}
                     onLink={linkPerson}
                     onUnlink={unlinkPerson}
@@ -1723,6 +2155,8 @@ export default function CrewOrgChart({
                     label="First Officers"
                     allGroups={groupsData}
                     movePick={movePick}
+                    leavePick={leavePick}
+                    today={today}
                     onAdd={(name, bucket, fillsNamed) => addPerson(openIdx as number, "sic", bucket, name, fillsNamed)}
                     onRemoveNamed={(label) => removeNamedOpening(openIdx as number, "sic", label)}
                     onRemove={(bucket, name) => removePerson(openIdx as number, "sic", bucket, name)}
@@ -1730,6 +2164,8 @@ export default function CrewOrgChart({
                     onToggleTrain={(name, toTrain) => toggleTrain(openIdx as number, "sic", name, toTrain)}
                     onSetMove={setMovePick}
                     onMove={doMove}
+                    onSetLeave={setLeavePick}
+                    onLeave={recordLeaving}
                     links={links}
                     onLink={linkPerson}
                     onUnlink={unlinkPerson}
@@ -1742,6 +2178,8 @@ export default function CrewOrgChart({
                       label="Cabin"
                       allGroups={groupsData}
                       movePick={movePick}
+                      leavePick={leavePick}
+                      today={today}
                       onAdd={(name, bucket, fillsNamed) => addPerson(openIdx as number, "cabin", bucket, name, fillsNamed)}
                     onRemoveNamed={(label) => removeNamedOpening(openIdx as number, "cabin", label)}
                       onRemove={(bucket, name) => removePerson(openIdx as number, "cabin", bucket, name)}
@@ -1749,6 +2187,8 @@ export default function CrewOrgChart({
                       onToggleTrain={(name, toTrain) => toggleTrain(openIdx as number, "cabin", name, toTrain)}
                       onSetMove={setMovePick}
                       onMove={doMove}
+                      onSetLeave={setLeavePick}
+                      onLeave={recordLeaving}
                       links={links}
                       onLink={linkPerson}
                       onUnlink={unlinkPerson}
@@ -1768,8 +2208,13 @@ export default function CrewOrgChart({
                         <div className="ec-out-row" key={`${o.name}-${i}`} style={gone ? { opacity: 0.6 } : undefined}>
                           <span className="ec-out-nm">{o.name}</span>
                           <span className="ec-out-note">
-                            {o.to ? `to ${o.to}` : ""}
-                            {o.reason ? `${o.to ? " · " : ""}${o.reason}` : ""}
+                            {/* Notice first: it is the one date this row cannot
+                                be edited to show, and a departure with notice
+                                but no last day is the state that most needs
+                                reading correctly. */}
+                            {o.noticeDate ? `notice ${shortDate(o.noticeDate)}` : ""}
+                            {o.to ? `${o.noticeDate ? " · " : ""}to ${o.to}` : ""}
+                            {o.reason ? `${o.noticeDate || o.to ? " · " : ""}${o.reason}` : ""}
                             {gone ? " · archived" : ""}
                           </span>
                           <label style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11 }}>
@@ -1794,7 +2239,7 @@ export default function CrewOrgChart({
                   </div>
                 ) : null}
                 <div className="m-edithint">
-                  Changes are local until you press <b>{cardEditing ? "Save this aircraft" : "Save all changes"}</b> below. Adding a person fills an open seat; removing one reopens it. <b>Move</b> lets you pick where and how (on-line / training / tentative); a tentative move reopens the old seat and shows the pilot transitioning out here. Tentative — external (red) is an outside candidate; internal (blue) is a SkyShare employee moving in.
+                  Changes are local until you press <b>{cardEditing ? "Save this aircraft" : "Save all changes"}</b> below. Adding a person fills an open seat; removing one reopens it. <b>Move</b> lets you pick where and how (on-line / training / tentative); a tentative move reopens the old seat and shows the pilot transitioning out here. Tentative — external (red) is an outside candidate; internal (blue) is a SkyShare employee moving in. <b>term</b> is how somebody LEAVES: it takes a notice date and a last day and records the departure below. The <b>✕</b> is not that — it now asks which you mean, because taking somebody off the chart leaves no record they were ever here: right for a name typed by mistake, wrong for a pilot who resigned.
                 </div>
               </>
             ) : (
@@ -1841,6 +2286,10 @@ export default function CrewOrgChart({
                   ) : null}
                 </div>
                 <Transitions d={active} training={training} today={today} />
+                {/* Read view only. In edit mode the seat columns are the whole
+                    screen and a shortlist would be answering a question nobody
+                    is asking mid-edit. */}
+                <BackupPlan groups={groupsData} gIdx={openIdx as number} links={links} />
                 <div className="m-photo">
                   {active.photo ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -2017,6 +2466,52 @@ export default function CrewOrgChart({
           <button onClick={() => setRoleDone(null)} style={{ color: "#fff", opacity: 0.8, background: "none", border: "none", cursor: "pointer", fontSize: 13 }}>
             Dismiss
           </button>
+        </div>
+      )}
+
+      {/* "…being able to give their notice date that would fill in their
+          employee record would be good too." — her words. The chart departure
+          and the employee record are separate records, so this offers to put the
+          same date on both, with a confirmation, exactly as a move offers the
+          role change. It writes ONE field and says so: nobody is terminated
+          here, and the button that does terminate is in the banner above, after
+          the last day has actually passed. */}
+      {noticePrompt && (
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 78, background: "rgba(13,44,67,0.4)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          onClick={() => setNoticePrompt(null)}
+        >
+          <div
+            style={{ width: "100%", maxWidth: 380, background: "var(--card, #fff)", color: "var(--ink, #1a2b3c)", borderRadius: 8, padding: 20, boxShadow: "0 12px 40px rgba(0,0,0,.3)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 15, fontWeight: 700 }}>Record the notice date on {noticePrompt.name}&apos;s employee record?</div>
+            <div style={{ fontSize: 12.5, opacity: 0.8, marginTop: 4 }}>
+              {noticePrompt.name} is linked to an employee. This writes the notice date onto their record and nothing
+              else — they stay an active employee until their last day has passed and somebody confirms it.
+            </div>
+            <div style={{ fontSize: 13, margin: "10px 0", fontWeight: 600 }}>
+              Notice given {shortDate(noticePrompt.noticeDate) ?? noticePrompt.noticeDate}
+              {noticePrompt.lastDay ? ` · last day ${shortDate(noticePrompt.lastDay) ?? noticePrompt.lastDay}` : " · last day not set yet"}
+            </div>
+            {noticeErr && <div style={{ color: "#c0392b", fontSize: 12, marginTop: 8 }}>{noticeErr}</div>}
+            <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+              <button
+                onClick={() => void saveNoticeDate()}
+                disabled={noticeBusy}
+                style={{ background: "var(--navy, #0d2c43)", color: "#fff", border: "none", borderRadius: 4, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: noticeBusy ? 0.6 : 1 }}
+              >
+                {noticeBusy ? "Saving…" : "Save notice date"}
+              </button>
+              <button
+                onClick={() => setNoticePrompt(null)}
+                disabled={noticeBusy}
+                style={{ background: "none", border: "none", color: "var(--ink, #1a2b3c)", opacity: 0.7, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+              >
+                Skip
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

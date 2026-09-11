@@ -12,7 +12,7 @@
 // "edit by openings and move pilots around" = the aircraft groups only); they
 // stay sourced from crew-data.ts.
 
-import type { CrewGroup, CrewPool, Departure, Seat } from "./types";
+import type { CrewGroup, CrewPool, Departure, FillBucket, Seat, SeatKey } from "./types";
 import { CREW_GROUPS } from "./crew-data";
 import type { TrainingRecord } from "./training";
 
@@ -95,6 +95,10 @@ function normalizeTags(value: unknown): Record<string, string[]> | undefined {
   return Object.keys(out).length ? out : undefined;
 }
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const FILL_BUCKETS: FillBucket[] = ["line", "train", "cand", "candInt", "offered"];
+const SEAT_KEYS: SeatKey[] = ["pic", "sic", "cabin"];
+
 function normalizeOut(value: unknown): Departure[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const out = value
@@ -112,7 +116,20 @@ function normalizeOut(value: unknown): Departure[] | undefined {
       // Only a real yyyy-mm-dd is kept — a half-parsed date here would archive
       // the wrong departures, so anything else is dropped and the row simply
       // stays visible.
-      if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) dep.date = date;
+      if (date && ISO_DATE.test(date)) dep.date = date;
+      // Notice date gets the IDENTICAL guard, for a sharper version of the same
+      // reason: a half-parsed notice date would be shown to a recruiter as fact
+      // and would drive the "their last day has passed" prompt. Anything that is
+      // not a real yyyy-mm-dd is dropped rather than guessed at.
+      const noticeDate = str(raw.noticeDate);
+      if (noticeDate && ISO_DATE.test(noticeDate)) dep.noticeDate = noticeDate;
+      // Where they came from, whitelisted against the unions rather than cast —
+      // these two come back out of the blob as a bucket and a seat key, and a
+      // stray value would put somebody back into a seat that does not exist.
+      const fromBucket = str(raw.fromBucket);
+      if (fromBucket && (FILL_BUCKETS as string[]).includes(fromBucket)) dep.fromBucket = fromBucket as FillBucket;
+      const fromSeat = str(raw.fromSeat);
+      if (fromSeat && (SEAT_KEYS as string[]).includes(fromSeat)) dep.fromSeat = fromSeat as SeatKey;
       return dep;
     })
     .filter((d): d is Departure => d !== null);

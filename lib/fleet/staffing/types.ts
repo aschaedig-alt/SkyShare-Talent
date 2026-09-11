@@ -31,6 +31,12 @@ export interface Seat {
   parked?: number;
 }
 
+/** The seat blocks a person can sit in on a card. Exported so a Departure can
+    record where somebody came from without the charts re-declaring the union. */
+export type SeatKey = "pic" | "sic" | "cabin";
+/** How a person is held in a seat: on the line, training, or still arriving. */
+export type FillBucket = "line" | "train" | "cand" | "candInt" | "offered";
+
 export interface Departure {
   name: string;
   to?: string;
@@ -40,6 +46,26 @@ export interface Departure {
       because a TENTATIVE move is recorded as a departure and has not happened
       yet — and an undated departure deliberately never ages out. */
   date?: string;
+  /**
+   * The day they GAVE NOTICE, yyyy-mm-dd.
+   *
+   * DELIBERATELY NOT `date`, and the distinction is the whole point of the
+   * field. `date` is their LAST day and is what ages a departure out of the
+   * default view 30 days later — write a notice date into it and the row
+   * disappears while the person is still flying. Notice lives here, the last
+   * day stays in `date`, and a departure with notice but no known last day
+   * therefore never ages out, which is correct for one that has not happened.
+   *
+   * Nothing about this field ends anybody's employment. See the
+   * "last day has passed" prompt in departures.ts for the half that asks.
+   */
+  noticeDate?: string;
+  /** The bucket they were in when notice was given, so the row still says what
+      they were doing — and so an undo can put them back where they were rather
+      than guessing "line". */
+  fromBucket?: FillBucket;
+  /** The seat they vacated, same reason. */
+  fromSeat?: SeatKey;
 }
 
 /** A crew group = an aircraft type (fractional) or a single managed tail. */
