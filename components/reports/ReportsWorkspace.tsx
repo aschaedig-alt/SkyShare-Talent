@@ -12,6 +12,7 @@ import type { FleetStaffing } from "@/lib/data/fleet-staffing";
 // bundle and 500s the page with "Can not resolve fs".
 import { SKYSHARE_LADDER, ladderRank, nextRungs } from "@/lib/fleet/pilot-ladder";
 import { formatUsd, travelPurposeLabel, travelStatusLabel } from "@/lib/travel/constants";
+import { TravelSpendYear } from "@/components/travel/TravelSpendYear";
 import { ReportShareButton } from "@/components/reports/ReportShareButton";
 import { formatCalendarDay, formatMomentDate } from "@/lib/dates/display";
 
@@ -1244,7 +1245,13 @@ const PURPOSE_COLORS: Record<string, string> = {
   OTHER: "#9aa3ad"
 };
 
-function TravelSpend({ travel }: { travel: ReportsData["travelSpend"] }) {
+function TravelSpend({
+  travel,
+  byMonth
+}: {
+  travel: ReportsData["travelSpend"];
+  byMonth: ReportsData["travelSpendByMonth"];
+}) {
   const [openPurpose, setOpenPurpose] = useState<string | null>(travel.byPurpose[0]?.purpose ?? null);
 
   const hiredPct = travel.totalSpend > 0 ? (travel.hiredSpend / travel.totalSpend) * 100 : 0;
@@ -1253,7 +1260,14 @@ function TravelSpend({ travel }: { travel: ReportsData["travelSpend"] }) {
   const maxPurpose = Math.max(...travel.byPurpose.map((p) => p.spend), 1);
 
   return (
-    <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+    <div className="space-y-4">
+      {/* The SAME component the Travel page renders, imported rather than
+          reimplemented. She will decide what leaves the Travel page once she has
+          looked at this, and two copies of the chart would have drifted apart in
+          the meantime. */}
+      <TravelSpendYear data={byMonth} />
+
+      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Travel spend</p>
       <h2 className="text-xl font-semibold text-brand-lea dark:text-slate-100">Recruiting &amp; onboarding travel</h2>
       <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
@@ -1381,7 +1395,21 @@ function TravelSpend({ travel }: { travel: ReportsData["travelSpend"] }) {
           No booked travel yet. Add trips from a candidate or new-hire profile and spend rolls up here.
         </p>
       )}
-    </section>
+      </section>
+
+      {/* NOT BUILT YET, and named so it does not get forgotten. She listed the
+          cuts she will want as this fills up over years: department, hired vs
+          not, purpose, month and year, plus sorting and a download. Three of
+          those five are already on the trip row and are a filter away. DEPARTMENT
+          is the one with real work behind it — a trip has no department, it has a
+          traveler, so it has to be derived through the hire or the job they
+          applied to (lib/candidates/departments.ts), and that derivation is
+          exactly where a wrong number would come from. */}
+      <p className="px-1 text-xs text-brand-grey dark:text-slate-400">
+        Filtering and downloading this is next: by department, hired or not, purpose, and month or
+        year. Say the word once the numbers above look right to you.
+      </p>
+    </div>
   );
 }
 
@@ -1508,7 +1536,7 @@ export function ReportsWorkspace({ data, logoDataUrl, canShare = false }: Report
           open requisitions and target headcounts behind a token URL is his call
           to make, not a side effect of adding the panel. */}
       {tab === "progression" ? <PilotProgressions upgrades={data.pilotUpgrades} staffing={data.fleetStaffing} /> : null}
-      {tab === "travel" ? <TravelSpend travel={data.travelSpend} /> : null}
+      {tab === "travel" ? <TravelSpend travel={data.travelSpend} byMonth={data.travelSpendByMonth} /> : null}
       {tab === "documents" ? <DocumentCurrency dc={data.documentCurrency} /> : null}
     </div>
   );

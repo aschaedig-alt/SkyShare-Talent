@@ -16,6 +16,7 @@ import type {
   TravelCalendarData,
   TravelCalendarTraveler,
   TravelHubData,
+  TravelSpendByMonth,
   TravelTravelerOption
 } from "@/lib/data/travel";
 import { runsFor, runDateLabel, type TripRun } from "@/lib/travel/hub-calendar";
@@ -23,6 +24,7 @@ import { officeDayKey } from "@/lib/dates/display";
 import type { TravelChecklistRollup as TravelChecklistRollupData } from "@/lib/travel/rollup";
 import { TravelChecklistRollup } from "@/components/travel/TravelChecklistRollup";
 import { TravelHubCalendar } from "@/components/travel/TravelHubCalendar";
+import { TravelSpendYear } from "@/components/travel/TravelSpendYear";
 import { useDialogClose } from "@/lib/hooks/useDialogClose";
 import { formatMomentDate } from "@/lib/dates/display";
 
@@ -312,11 +314,13 @@ function TravelerTabs({ travelers }: { travelers: TravelCalendarTraveler[] }) {
 export function TravelHubWorkspace({
   data,
   calendar,
-  rollup
+  rollup,
+  spend
 }: {
   data: TravelHubData;
   calendar?: TravelCalendarData;
   rollup?: TravelChecklistRollupData;
+  spend?: TravelSpendByMonth;
 }) {
   const [status, setStatus] = useState<string>("ALL");
   const [purpose, setPurpose] = useState<string>("ALL");
@@ -381,6 +385,11 @@ export function TravelHubWorkspace({
           second question is the one somebody opens this page to answer. */}
       {rollup ? <TravelChecklistRollup rollup={rollup} /> : null}
 
+      {/* What the year has cost, split by whether the traveler was ultimately
+          hired. A summary, so it sits above the row-level table and below the
+          two operational panels — the calendar's "who is here this week" is the
+          question the page is opened for, and it stays above the fold. */}
+      {spend && spend.years.length > 0 ? <TravelSpendYear data={spend} /> : null}
 
       <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         {/* Filters */}
