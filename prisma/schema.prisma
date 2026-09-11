@@ -161,6 +161,18 @@ model User {
   // ARE allowed to see, without granting candidates:write org-wide. Meaningless unless
   // restrictCandidatesToAllowlist is on - see lib/auth/candidate-scope.ts.
   allowlistCanAnnotate Boolean @default(false)
+  // Is this person on the HR team, for the purposes of a private HR note?
+  //
+  // NULL means "follow the role" - ADMIN and RECRUITER are HR, nobody else is -
+  // which is every existing user, so this column is inert until an admin sets it.
+  // TRUE and FALSE are per-person overrides in each direction.
+  //
+  // It exists as its own switch rather than being read off the role because HR
+  // membership and edit permission are the same three people TODAY and will not
+  // stay that way ("as we grow, that will change", 2026-09-11). Reading it off
+  // candidates:write would mean every future recruiter is silently HR and an HR
+  // person who should not edit candidates cannot be one. See lib/auth/roles.ts.
+  hrTeam      Boolean?
   // Per-user override of the workspace Module Visibility policy, as JSON:
   //   { "candidates": { "showInSidebar": true, "accessLevel": "VIEW_ONLY" }, ... }
   // NULL means "follow the role policy", which is what every existing user has - so this is
@@ -300,6 +312,22 @@ model NewHire {
   // distinction an exempt person sits on the orientation page forever looking
   // like an oversight.
   orientationNotNeeded Boolean @default(false)
+  // Detail fields this person does not need, by field key — "indocStartDate",
+  // "seniorityNumber", "managedAircraft" and so on.
+  //
+  // Asked for on 2026-09-11: most of the Dates & training and HR fields are
+  // PILOT-specific, so on a Customer Service Representative they sit there empty
+  // forever and the section header reads "3 OF 7" as though somebody forgot. Her
+  // words: "I just want to be able to mark it as not needed", and the field itself
+  // does not have to disappear.
+  //
+  // A key LIST rather than a boolean per field, because she said plainly she is
+  // still finding more of them ("I'm trying to see if there are others"). One
+  // column that grows by adding a key to lib/onboarding/optional-fields.ts beats
+  // six columns and a migration every time the list changes. Marking a field not
+  // needed never clears its value — somebody who later moves into a pilot seat
+  // keeps whatever was already typed.
+  fieldsNotNeeded String[]
   // Initial indoc and initial training, as shown on the onboarding page.
   //
   // Indoc is normally authored on the TRAVEL record (TravelTrip.indocStart /
@@ -317,6 +345,13 @@ model NewHire {
   trainingLocation String?
   // Last day with SkyShare — set for former employees (employmentStatus TERMINATED).
   terminationDate DateTime?
+  // The day they GAVE notice. Deliberately distinct from terminationDate, which
+  // is their LAST day: a resignation has both, and the gap between them is the
+  // whole point — it is the window we have to backfill the seat. Setting this
+  // does NOT terminate anybody. employmentStatus stays ACTIVE until the last day
+  // actually passes and a person confirms it, because a date passing is a reason
+  // to ask, never a reason to end somebody's employment on a shared live database.
+  noticeDate      DateTime?
   // Date of birth — dates only, used for recognition/"congrats" (no other PII stored).
   birthday        DateTime?
   // Pilot seniority anchor (from HR). Usually the hire date, but can be kept at
@@ -947,6 +982,11 @@ model CandidateNote {
   mentionsJson String?
   source      String?
   sourceRef   String?
+  // Visible only to the HR team. A private note carries the hiring conversation
+  // that a hiring manager or an interviewer should not read — so it is filtered
+  // OUT of the query for anyone without the HR permission rather than merely
+  // styled differently, because a note you can read is not private.
+  hrOnly      Boolean    @default(false)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -1233,6 +1273,15 @@ model CandidateApplication {
   recruiterName        String?
   hiringManager        String?
   rejectionReason      String?
+  // A free note about THIS application, written by whoever changed its status.
+  //
+  // Asked for on 2026-09-11, from the applications panel: "if I want to add a note
+  // to someone I am giving a different status to, give me the option to put a note
+  // in... in case there is something I need to explain." Distinct from every other
+  // text on the row — rejectionReason is the stored knock-out reason, disposition is
+  // the coded outcome, and a CandidateNote is about the PERSON. This is about this
+  // application, and it is the only one of the four somebody types freely.
+  statusNote           String?
   decidedAt            DateTime?
   historicalSourceId   String?
 
