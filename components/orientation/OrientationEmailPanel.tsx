@@ -355,7 +355,10 @@ export function OrientationEmailPanel({
                             onClick={() => setTarget({ attendee: a, key: t.key })}
                             className="rounded border border-brand-lea/20 px-2 py-0.5 text-[11px] font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
                           >
-                            {sent ? "Resend…" : "Send…"}
+                            {/* record, not sent: "Resend" is a claim that THIS app
+                                already emailed it, which only a send record proves.
+                                A hand-ticked step reads "Send…" — the Sep 09 bug. */}
+                            {record ? "Resend…" : "Send…"}
                           </button>
                         </div>
                         {record ? (

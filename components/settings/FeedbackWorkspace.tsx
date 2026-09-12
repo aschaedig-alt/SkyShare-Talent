@@ -108,9 +108,16 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
     });
   }
 
+  // prisma.feedback.delete is irreversible and FeedbackImage cascades off it, so
+  // this confirms first. The row was also being removed from the list BEFORE the
+  // request with no rollback, which let a 403 or a 500 leave the UI claiming the
+  // report was gone while the record survived.
   async function remove(id: string) {
+    if (!window.confirm("Delete this feedback? The note and any screenshots go with it. This cannot be undone.")) return;
+    const previous = items;
     setItems((prev) => prev.filter((i) => i.id !== id));
-    await fetch(`/api/feedback/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/feedback/${id}`, { method: "DELETE" });
+    if (!res.ok) setItems(previous);
   }
 
   const filtered = items.filter(

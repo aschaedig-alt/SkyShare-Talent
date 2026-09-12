@@ -153,7 +153,7 @@ export function CandidateApplicationsPanel({
                   >
                     {app.jobId ? (
                       <Link
-                        href={`/jobs/${app.jobId}`}
+                        href={`/recruiting-jobs?id=${app.jobId}`}
                         className="border-b border-brand-sweet hover:text-brand-eden dark:hover:text-brand-edenOnDark"
                       >
                         {title}

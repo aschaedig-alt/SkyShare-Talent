@@ -251,7 +251,11 @@ export function NewHireDetailWorkspaceClassic({ hire, travelTrips, travelLoyalty
         body: JSON.stringify({ stage })
       });
       if (!res.ok) throw new Error();
-      router.push(stage === "ACTIVE" ? "/people?stage=active" : stage === "POST_ONBOARD" ? "/people?stage=post" : "/people?stage=archived");
+      // ?tab=, not ?stage=: app/people/page.tsx reads only sp.tab through
+      // tabFromParam, and an unrecognised value falls through to "dashboard" —
+      // so ?stage=post landed on the Dashboard, never on the tab holding the
+      // person who had just been moved.
+      router.push(stage === "ACTIVE" ? "/people?tab=grid" : stage === "POST_ONBOARD" ? "/people?tab=post" : "/people?tab=archived");
     } catch {
       setStatus("Could not change stage.");
       setBusyStage(false);

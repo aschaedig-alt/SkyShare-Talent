@@ -182,7 +182,7 @@ function LinkedCandidates({ job }: { job: RecruitingJobDetail }) {
           job.linkedCandidates.map((candidate) => (
             <Link
               key={candidate.id}
-              href={`/candidates?q=${encodeURIComponent(candidate.displayName)}`}
+              href={`/candidates/${candidate.id}`}
               className="block rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 transition-shadow hover:shadow-glow dark:border-white/10 dark:bg-white/5"
             >
               <div className="font-semibold text-brand-lea dark:text-slate-100">{candidate.displayName}</div>

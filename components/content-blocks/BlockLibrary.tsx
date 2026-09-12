@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui";
 import {
   AlertTriangle,
@@ -847,12 +848,12 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                     {mode === "create" ? "New reusable content block" : selectedBlock?.name}
                   </h2>
                   {mode !== "create" && selectedBlock ? (
-                    <a
+                    <Link
                       href="/settings/content-blocks"
                       className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400"
                     >
                       Used by {selectedBlock.usageCount ?? 0} jobs · manage ›
-                    </a>
+                    </Link>
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2">
@@ -1027,7 +1028,7 @@ export function BlockLibrary({ blocks: initialBlocks, jobs }: BlockLibraryProps)
                   </div>
                 </div>
                 <div>
-                  <label className={labelClass}>Change Note</label>
+                  <label className={labelClass}>Change note</label>
                   <input
                     value={form.changeNote}
                     onChange={(event) => updateForm("changeNote", event.target.value)}
