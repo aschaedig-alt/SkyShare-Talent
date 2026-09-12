@@ -167,8 +167,18 @@ textarea {
   resize: vertical;
 }
 
+/* A 36px minimum tap target for anything you type in or press.
+   NOT for a checkbox or a radio, which have their own intrinsic size and are
+   sized at the call site. Without the exclusion this rule beat every h-3 / h-4
+   in the app, so all 74 of them rendered as a ~10px glyph floating in a 31.5px
+   box. That is invisible under items-center, which is most of them — the glyph
+   centres and the slack is just slack. It is very visible anywhere the row is
+   bottom- or top-aligned: on the new hire page the "Not needed" wording sat on
+   the field label's baseline exactly as asked, while the box beside it appeared
+   to hang 10px above, because the box it lived in was three times its height.
+   Reported 2026-09-11: "you moved the text but didnt move the checkbox". */
 button,
-input,
+input:not([type="checkbox"]):not([type="radio"]),
 select,
 textarea {
   min-height: 2.25rem;
