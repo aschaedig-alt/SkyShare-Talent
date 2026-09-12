@@ -68,7 +68,7 @@ and the links in the body are clickable.
 
 ### 2. Private HR notes have never been loaded by a non-HR viewer
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN — the deploy it was waiting on landed 2026-09-11
 **Added:** 2026-09-11
 
 A note marked private is removed from the query rather than hidden in the page, so
@@ -77,9 +77,11 @@ shape and it is the shape the code has. What has never happened is **somebody wh
 is not HR actually loading the page**: local dev bypasses auth, so every request
 here runs as an admin and the non-HR branch cannot be exercised at all.
 
-**How to check it, after this is deployed:** have somebody with a non-HR login —
-a hiring manager, not Aimee, Hannah or Kevin — open a candidate who has a private
-note on them, and confirm they cannot see it.
+**How to check it:** have somebody with a non-HR login — a hiring manager, not
+Aimee, Hannah or Kevin — open a candidate who has a private note on them, and
+confirm they cannot see it. The code is live: production serves the build from
+commit b06b85c, confirmed by fetching its stylesheet and finding it byte-identical
+to the local build of that commit.
 
 **What would count as a pass:** they do not see the note, and they also do not see
 a gap, a count, or a "1 hidden" marker that tells them one exists.
