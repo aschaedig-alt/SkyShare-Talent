@@ -59,6 +59,7 @@ import {
 } from "@/lib/dates/display";
 import { parseRoute, runsFor, HOME_AIRPORT } from "@/lib/travel/hub-calendar";
 import { zonedWallClockToUtc } from "@/lib/booking/timezone";
+import { mountainWallClockToIso } from "@/lib/calendar/format";
 
 type Props = {
   subjectType: "newHire" | "candidate";
@@ -97,12 +98,22 @@ const inputClass =
 function toDateInput(iso: string | null) {
   return iso ? iso.slice(0, 10) : "";
 }
-function toDateTimeLocal(iso: string | null) {
+// requestedArrival / requestedReturn are real moments, and <input
+// type="datetime-local"> carries NO zone either way. Reading with the browser's
+// local getters and writing the naive string back meant the server parsed it in
+// ITS zone — UTC in production — so a 10:00 requested arrival was stored as 04:00
+// Mountain, and the prefill/save round trip shifted the value six hours earlier
+// on every blur. Read and write MOUNTAIN wall clock, the way ItemWhen below
+// already does, and what leaves the browser is an unambiguous instant.
+function toOfficeDateTimeInput(iso: string | null) {
   if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const day = officeDayKey(iso);
+  return day ? `${day}T${officeTimeValue(iso)}` : "";
+}
+function officeDateTimeInputToIso(value: string) {
+  const [day, time] = value.split("T");
+  if (!day) return "";
+  return mountainWallClockToIso(day, time || "09:00") ?? "";
 }
 // requestedArrival is a real moment (it carries a time of day) so it reads in the
 // office timezone; orientationDate is a chosen calendar day stored at midnight
@@ -723,8 +734,16 @@ function RequestDetails({ trip, onSave }: { trip: TravelTripView; onSave: (field
             <DateField label="Indoc end" defaultValue={toDateInput(trip.indocEnd)} onSave={(v) => onSave("indocEnd", v)} />
           </>
         ) : null}
-        <DateTimeField label="Requested arrival" defaultValue={toDateTimeLocal(trip.requestedArrival)} onSave={(v) => onSave("requestedArrival", v)} />
-        <DateTimeField label="Requested return" defaultValue={toDateTimeLocal(trip.requestedReturn)} onSave={(v) => onSave("requestedReturn", v)} />
+        <DateTimeField
+          label="Requested arrival"
+          defaultValue={toOfficeDateTimeInput(trip.requestedArrival)}
+          onSave={(v) => onSave("requestedArrival", officeDateTimeInputToIso(v))}
+        />
+        <DateTimeField
+          label="Requested return"
+          defaultValue={toOfficeDateTimeInput(trip.requestedReturn)}
+          onSave={(v) => onSave("requestedReturn", officeDateTimeInputToIso(v))}
+        />
         {shown("preferences") ? (
           <>
             <div>

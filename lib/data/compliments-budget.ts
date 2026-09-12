@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { officeDayKey, startOfOfficeDay, OFFICE_TIMEZONE } from "@/lib/dates/display";
 import { dollarsFromPoints } from "@/lib/compliments/constants";
 import { REWARD_CATEGORY_LABELS, type RewardCategory } from "@/lib/compliments/constants";
 import type { ComplimentsSettings } from "@/lib/compliments/settings";
@@ -58,8 +59,18 @@ export type BudgetData = {
   monthly: MonthlyCost[];
 };
 
+// Anchored to the MOUNTAIN month. The local getters this used made the boundary
+// 00:00Z on the 1st on the UTC production host, so the first six hours of every
+// Mountain month were counted against the previous one. The month index is
+// normalised through a running total because monthsBack walks back past January
+// (and forward one, for the bucket's exclusive end).
 function startOfMonth(d: Date, monthsBack = 0): Date {
-  return new Date(d.getFullYear(), d.getMonth() - monthsBack, 1);
+  const [y, m] = officeDayKey(d).split("-").map(Number);
+  const total = y * 12 + (m - 1) - monthsBack;
+  const yy = Math.floor(total / 12);
+  const mm = total - yy * 12 + 1;
+  const key = `${String(yy).padStart(4, "0")}-${String(mm).padStart(2, "0")}-01`;
+  return startOfOfficeDay(key) ?? new Date(Date.UTC(yy, mm - 1, 1));
 }
 
 export async function getBudgetData(settings: ComplimentsSettings): Promise<BudgetData> {
@@ -148,7 +159,9 @@ export async function getBudgetData(settings: ComplimentsSettings): Promise<Budg
       .filter((r) => r.createdAt >= start && r.createdAt < end)
       .reduce((s, r) => s + r.pointsAwarded, 0);
     monthly.push({
-      label: start.toLocaleDateString(undefined, { month: "short" }),
+      // The one date formatter in the codebase with no zone and no locale — both
+      // came from the host, so the bucket label could disagree with the bucket.
+      label: new Intl.DateTimeFormat("en-US", { timeZone: OFFICE_TIMEZONE, month: "short" }).format(start),
       redeemedUsd: usd(redeemed),
       awardedUsd: usd(awarded)
     });

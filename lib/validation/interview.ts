@@ -1,5 +1,33 @@
 import { z } from "zod";
 import { interviewTypes } from "@/lib/calendar/interview-types";
+import { zonedWallClockToUtc } from "@/lib/booking/timezone";
+import { resolveTimezone } from "@/lib/calendar/timezones";
+
+/**
+ * A <input type="datetime-local"> sends "2026-09-15T14:30" with NO zone, and
+ * new Date(naive) resolves that in the RUNTIME's zone — 14:30Z on Vercel, which
+ * displays as 8:30am Mountain. A 2:30pm interview was stored as 2:30pm UTC.
+ *
+ * The schema already knew the right zone (timezone defaults to America/Denver
+ * below); it just was not used for the parse. A value that already carries an
+ * offset or a Z is unambiguous and is left exactly as it is.
+ */
+function wallClockToInstant(value: string, timezone?: string | null): Date | null {
+  const trimmed = value.trim();
+  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{1,2}):(\d{2})/.exec(trimmed);
+  if (!m || /[Zz]$|[+-]\d{2}:?\d{2}$/.test(trimmed)) {
+    const d = new Date(trimmed);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  return zonedWallClockToUtc(
+    Number(m[1]),
+    Number(m[2]) - 1,
+    Number(m[3]),
+    Number(m[4]),
+    Number(m[5]),
+    resolveTimezone(timezone)
+  );
+}
 
 // Built from the one list rather than typed out again. The literal union that
 // used to live here was the third copy of the same seven strings, and it is the
@@ -25,8 +53,8 @@ export const interviewCreateSchema = z
     status: z.enum(["SCHEDULED", "COMPLETED", "CANCELLED"]).default("SCHEDULED")
   })
   .transform((value) => {
-    const start = new Date(value.startDateTime);
-    if (Number.isNaN(start.getTime())) {
+    const start = wallClockToInstant(value.startDateTime, value.timezone);
+    if (!start) {
       throw new z.ZodError([
         {
           code: z.ZodIssueCode.custom,
@@ -72,8 +100,8 @@ export const interviewUpdateSchema = z
     let endDate: Date | undefined;
 
     if (value.startDateTime) {
-      const start = new Date(value.startDateTime);
-      if (Number.isNaN(start.getTime())) {
+      const start = wallClockToInstant(value.startDateTime, value.timezone);
+      if (!start) {
         throw new z.ZodError([
           {
             code: z.ZodIssueCode.custom,

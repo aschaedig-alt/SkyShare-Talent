@@ -3,6 +3,7 @@ import { frontFetch } from "@/lib/front/client";
 import { getMessages, type FrontMessage } from "@/lib/front/inbound";
 import { looksLikeEventEmail } from "@/lib/events/parse-event-email";
 import { extractEventFromEmail, type ExtractedEvent } from "@/lib/events/event-email-ai";
+import { officeDayKey, startOfOfficeDay } from "@/lib/dates/display";
 
 /**
  * Sweep the mailbox for event invitations we have not dealt with yet.
@@ -258,9 +259,10 @@ export async function scanFrontForEvents({ days = 365 } = {}): Promise<ScanResul
   let degraded = false;
   let pastEvents = 0;
 
-  // Midnight today: an event that finished last spring is not a decision to make.
-  const cutoff = new Date();
-  cutoff.setHours(0, 0, 0, 0);
+  // Midnight today IN MOUNTAIN: an event that finished last spring is not a
+  // decision to make. setHours() made this the host's midnight — UTC on Vercel —
+  // so a calendar-day event on today's date was dropped as past from 6pm Mountain.
+  const cutoff = startOfOfficeDay(officeDayKey(new Date())) ?? new Date();
 
   for (const hit of candidates) {
     if (extractions >= MAX_EXTRACTIONS) {

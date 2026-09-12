@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { isMergedAway } from "@/lib/candidates/merged-guard";
+import { officeDayKey } from "@/lib/dates/display";
 
 /**
  * Bring an archived candidate back as a current applicant.
@@ -70,7 +71,10 @@ export async function reactivateArchivedCandidate(
       }
     });
 
-    const archivedOn = previousArchivedAt ? previousArchivedAt.toISOString().slice(0, 10) : "an earlier date";
+    // The Mountain day, not the UTC one. This date is read by a person and is
+    // persisted in the note forever, so a candidate archived at 7pm Mountain
+    // should not be recorded as archived tomorrow.
+    const archivedOn = previousArchivedAt ? officeDayKey(previousArchivedAt) : "an earlier date";
     await tx.candidateNote.create({
       data: {
         candidateId,

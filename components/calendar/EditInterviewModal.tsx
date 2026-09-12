@@ -7,6 +7,7 @@ import { Button, buttonClasses } from "@/components/ui";
 import type { CalendarData } from "@/lib/data/calendar";
 import { interviewTypes, INTERVIEW_TYPE_META, DEFAULT_INTERVIEW_TYPE } from "@/lib/calendar/interview-types";
 import { resolveDepartmentKey } from "@/lib/calendar/departments";
+import { toMountainDateTimeParts } from "@/lib/calendar/format";
 import { InterviewerPicker } from "@/components/calendar/InterviewerPicker";
 import { INTERVIEW_STATUSES } from "@/components/calendar/ScheduleInterviewForm";
 import { useDialogClose } from "@/lib/hooks/useDialogClose";
@@ -21,11 +22,13 @@ interface EditInterviewModalProps {
   onSaved: () => void;
 }
 
-// Convert ISO to datetime-local input value (local time)
+// Convert ISO to a datetime-local input value in MOUNTAIN wall clock — which is
+// how the server now reads the naive string back (lib/validation/interview.ts).
+// The browser-local getters this used disagreed with the server's parse, so
+// opening an interview and saving it unchanged moved it six hours every time.
 function toDateTimeLocal(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const { date, time } = toMountainDateTimeParts(iso);
+  return `${date}T${time}`;
 }
 
 export function EditInterviewModal({ interview, jobs, interviewers = [], onClose, onSaved }: EditInterviewModalProps) {
@@ -135,7 +138,7 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
         <div className="sticky top-0 border-b border-brand-lea/10 bg-white px-6 py-4 dark:border-white/10 dark:bg-brand-panel">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-brand-lea dark:text-slate-100">Edit Interview</h2>
+              <h2 className="text-xl font-semibold text-brand-lea dark:text-slate-100">Edit interview</h2>
               <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">{interview.candidate.displayName}</p>
             </div>
             <div className="flex items-center gap-3">

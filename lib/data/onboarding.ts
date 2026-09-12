@@ -6,6 +6,7 @@ import {
   CUSTOM_GROUP,
   type TaskPlacement
 } from "@/lib/onboarding/tasks";
+import { officeDayKey } from "@/lib/dates/display";
 import { getMilestoneCatalog } from "@/lib/data/onboarding-milestones";
 import { getDashboardHiddenIds } from "@/lib/data/dashboard-hidden";
 import { getGridHiddenKeys } from "@/lib/data/onboarding-grid-config";
@@ -464,8 +465,11 @@ function buildDashboard(
     .sort((a, b) => b.count - a.count);
 
   // Starts grouped into the next 6 weeks, starting this week (Monday).
-  const startOfToday = new Date(now);
-  startOfToday.setUTCHours(0, 0, 0, 0);
+  // The UTC midnight of TODAY IN MOUNTAIN. startDate is a calendar day stored at
+  // UTC midnight, so the rest of this block stays UTC deliberately — only the
+  // anchor was wrong, and it slid the six-week window forward a week early
+  // between 6pm and midnight Mountain on a Sunday, dropping this week's starts.
+  const startOfToday = new Date(`${officeDayKey(new Date(now))}T00:00:00.000Z`);
   const dow = (startOfToday.getUTCDay() + 6) % 7; // 0 = Monday
   const weekStart = startOfToday.getTime() - dow * DAY;
   const startsByWeek: ChartDatum[] = Array.from({ length: 6 }, (_, i) => {

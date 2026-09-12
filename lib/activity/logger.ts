@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { officeDayKey } from "@/lib/dates/display";
 
 export type ActivityType =
   | "CANDIDATE_CREATED"
@@ -129,7 +130,10 @@ export async function getUserActivitySummary(userId: string, days: number = 30) 
     byType[activity.activityType] = (byType[activity.activityType] || 0) + 1;
 
     // Count by date
-    const dateKey = activity.createdAt.toISOString().split("T")[0];
+    // createdAt is a moment, so the UTC day put everything after 6pm Mountain on
+    // tomorrow's bucket. Nothing reads byDate yet; this keeps it honest for
+    // whatever does.
+    const dateKey = officeDayKey(activity.createdAt);
     byDate[dateKey] = (byDate[dateKey] || 0) + 1;
   });
 

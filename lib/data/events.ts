@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { OPEN_EVENT_STATUSES, isEventType, stockState, type StockState } from "@/lib/events/constants";
+import { officeDayKey, startOfOfficeDay } from "@/lib/dates/display";
 import type { ExtractedEvent } from "@/lib/events/event-email-ai";
 
 function iso(d: Date | null | undefined) {
@@ -159,8 +160,11 @@ export async function getEvents(): Promise<{ upcoming: EventListItem[]; past: Ev
 
   // "Past" is about the calendar, not the status — a canceled future event still
   // shows up top so it does not silently vanish from the plan.
-  const cutoff = new Date();
-  cutoff.setHours(0, 0, 0, 0);
+  // Midnight today in MOUNTAIN, not in whatever zone the host happens to run in.
+  // setHours() made this UTC midnight on Vercel and 06:00Z on a dev box, so the
+  // two disagreed about whether today's event still counts as upcoming — and in
+  // production a calendar-day event left Upcoming at 6pm Mountain on its own day.
+  const cutoff = startOfOfficeDay(officeDayKey(new Date())) ?? new Date();
   const isPast = (e: EventListItem) => new Date(e.endsAt ?? e.startsAt) < cutoff || e.status === "COMPLETE";
 
   return {
@@ -282,8 +286,10 @@ export async function getEventDetail(id: string): Promise<EventDetail | null> {
  * has already taken its boxes, and a canceled one gives them back.
  */
 export async function getSupplyItems(): Promise<SupplyItemView[]> {
-  const cutoff = new Date();
-  cutoff.setHours(0, 0, 0, 0);
+  // Midnight today in MOUNTAIN — this one goes into a Prisma range filter against
+  // a UTC column, so a host-local midnight silently changed the committed counts
+  // in the reorder maths depending on where the code ran.
+  const cutoff = startOfOfficeDay(officeDayKey(new Date())) ?? new Date();
 
   const items = await prisma.supplyItem.findMany({
     orderBy: [{ active: "desc" }, { name: "asc" }],

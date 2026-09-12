@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Plane, Building2, Car, Bus, Receipt, Calenda
 import { buildTravelCalendar, spanDays, type TravelEventKind } from "@/lib/travel/schedule";
 import { travelPurposeLabel } from "@/lib/travel/constants";
 import type { TravelTripView } from "@/lib/data/travel";
-import { clockTimeOf } from "@/lib/dates/display";
+import { clockTimeOf, officeDayKey } from "@/lib/dates/display";
 
 const KIND_ICON: Record<TravelEventKind, typeof Plane> = {
   FLIGHT: Plane,
@@ -22,7 +22,11 @@ const KIND_ICON: Record<TravelEventKind, typeof Plane> = {
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const todayKey = () => new Date().toISOString().slice(0, 10);
+// Which square is highlighted as today, and the month to open on. toISOString()
+// gave the UTC day, so from 6pm Mountain this lit TOMORROW — while the sibling
+// TravelHubCalendar.tsx, on the same screen, already used officeDayKey and lit
+// the right one. The two travel calendars disagreed about today.
+const todayKey = () => officeDayKey(new Date());
 const monthLabel = (y: number, m: number) =>
   new Intl.DateTimeFormat("en", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(y, m, 1)));
 // A flight time is a real moment, so it shows in the office timezone. This used

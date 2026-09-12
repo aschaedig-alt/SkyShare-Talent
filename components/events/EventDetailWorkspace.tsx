@@ -14,7 +14,7 @@ import {
   eventTypeLabel
 } from "@/lib/events/constants";
 import type { AttendeeView, EventDetail, SupplyLineView, TaskView } from "@/lib/data/events";
-import { zoneForValue } from "@/lib/dates/display";
+import { officeDayKey, zoneForValue } from "@/lib/dates/display";
 
 const FIELD =
   "w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100";
@@ -582,7 +582,12 @@ export function EventDetailWorkspace({ event }: { event: EventDetail }) {
               </li>
             ) : (
               tasks.map((t) => {
-                const overdue = !t.done && t.dueAt && new Date(t.dueAt) < new Date();
+                // dueAt is a calendar day written by a type="date" input, so it is
+                // stored at midnight UTC. Comparing that to an instant made the task
+                // read overdue from 6pm Mountain the day BEFORE it was due, while the
+                // label beside it still said tomorrow. Compare day keys instead: its
+                // UTC day against today's Mountain day (YYYY-MM-DD sorts with <).
+                const overdue = !t.done && t.dueAt && t.dueAt.slice(0, 10) < officeDayKey(new Date());
                 return (
                   <li key={t.id} className="flex items-start gap-2 text-xs">
                     <input

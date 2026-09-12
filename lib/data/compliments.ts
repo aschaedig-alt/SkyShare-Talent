@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { initialsFromName } from "@/lib/compliments/format";
+import { officeDayKey, startOfOfficeDay } from "@/lib/dates/display";
 import type { RecognitionView, RewardView, RosterPerson } from "@/lib/compliments/types";
 
 import { CURRENT_EMPLOYEE_WHERE } from "@/lib/data/current-employee";
@@ -98,8 +99,15 @@ const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart
 // moment. Dates are stored as dates-only; read via UTC parts to keep the calendar
 // day intact regardless of server timezone.
 export async function getUpcomingCelebrations(windowDays = 45): Promise<CelebrationsData> {
-  const now = new Date();
-  const today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // Midnight of TODAY IN MOUNTAIN, as a local-midnight Date so it lines up with
+  // nextOccurrence's new Date(y, m, d) arithmetic below. Built from the Mountain
+  // day key rather than the host's local getters: production runs UTC, where
+  // getDate() is already tomorrow from 6pm Mountain. nextOccurrence then rolled a
+  // genuinely-today anniversary forward to NEXT year, giving daysUntil 364, which
+  // failed the window test — so today's celebrants dropped out of BOTH the today
+  // and upcoming buckets and vanished from the page for six hours every evening.
+  const [ty, tm, td] = officeDayKey(new Date()).split("-").map(Number);
+  const today0 = new Date(ty, tm - 1, td);
 
   // EVERY CURRENT EMPLOYEE, not just the ones still in an onboarding stage.
   //
@@ -212,19 +220,26 @@ export type DashboardData = {
 
 type LeaderPerson = { name: string; avatarInitials: string | null; department: string | null } | null;
 
-// Local yyyy-mm-dd key for streak bucketing.
+// Office yyyy-mm-dd key for streak bucketing. createdAt is a real moment, and the
+// local getters this used meant the bucket was the HOST's day — so on the UTC
+// production host a recognition given at 7pm Mountain counted toward tomorrow.
 function dayKey(d: Date): string {
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  return officeDayKey(d);
 }
 
 // Consecutive days (ending today) that have at least one recognition.
 function computeStreak(dates: Date[], now: Date): number {
   const days = new Set(dates.map(dayKey));
   let streak = 0;
-  const cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  while (days.has(dayKey(cursor))) {
+  // The cursor must be the office-midnight INSTANT, not a local-midnight Date:
+  // on the UTC host a local midnight reads back through officeDayKey as the
+  // PREVIOUS day, which would skip today and under-count the streak by one.
+  // Stepping back 24h from office midnight always lands inside the previous
+  // office day, in both halves of the DST year, and startOfOfficeDay re-anchors.
+  let cursor = startOfOfficeDay(dayKey(now));
+  while (cursor && days.has(dayKey(cursor))) {
     streak += 1;
-    cursor.setDate(cursor.getDate() - 1);
+    cursor = startOfOfficeDay(dayKey(new Date(cursor.getTime() - CELEB_DAY)));
   }
   return streak;
 }
