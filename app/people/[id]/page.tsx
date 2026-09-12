@@ -20,11 +20,13 @@ const ROLE_TITLE_OPTIONS = FLEET_POSITIONS.map((p) => p.title);
 export default async function NewHirePage({ params }: { params: Promise<{ id: string }> }) {
   const access = await requireModulePageAccess("people");
   const { id } = await params;
-  const hire = await getNewHireDetail(id);
-  if (!hire) {
-    notFound();
-  }
-  const [travelTrips, travelLoyalty, journey, onboardingArchives, cardOrders, sections, checklistRows, taskEmails, sendStatus] = await Promise.all([
+  // The detail fetch joins the group rather than gating it: every one of the
+  // others takes either id (available above) or no arguments, and none reads
+  // hire. The trade: a request for an id that does not exist now pays for the
+  // id-scoped reads before it 404s. They all come back empty, and a 404 here is
+  // rare — this page is reached from a list of hires that exist.
+  const [hire, travelTrips, travelLoyalty, journey, onboardingArchives, cardOrders, sections, checklistRows, taskEmails, sendStatus] = await Promise.all([
+    getNewHireDetail(id),
     getTravelTripsForNewHire(id),
     getNewHireLoyalty(id),
     getEmployeeJourney(id),
@@ -35,6 +37,9 @@ export default async function NewHirePage({ params }: { params: Promise<{ id: st
     getTaskEmailMap(),
     getHireSendStatus(id)
   ]);
+  if (!hire) {
+    notFound();
+  }
 
   return (
     <NewHireDetailWorkspace

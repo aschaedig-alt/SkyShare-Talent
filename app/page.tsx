@@ -14,8 +14,11 @@ export default async function HomePage() {
   if (!isAuthRequired()) {
     redirect(DEFAULT_HOME);
   }
-  const session = await getServerSession(authOptions);
+  // In parallel: getWorkspaceModuleAccessPolicy takes no arguments and reads
+  // nothing from the session. This route renders nothing but a redirect and is
+  // the first thing every user hits, so those round trips are the whole cost of
+  // it — resolveUserHome below genuinely needs both and stays where it is.
+  const [session, policy] = await Promise.all([getServerSession(authOptions), getWorkspaceModuleAccessPolicy()]);
   const role: RoleName = isRoleName(session?.user?.role) ? session.user.role : "VIEWER";
-  const policy = await getWorkspaceModuleAccessPolicy();
   redirect(await resolveUserHome(session?.user?.id, policy, role));
 }

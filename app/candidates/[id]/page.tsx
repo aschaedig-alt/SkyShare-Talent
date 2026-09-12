@@ -16,21 +16,26 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
   const access = await requireModulePageAccess("candidates");
   const { id } = await params;
   const viewer = await resolveViewerScope(access.role, access.userId, access.email);
-  const [candidate, layout] = await Promise.all([getCandidateProfileData(id, viewer), getPageLayout("candidate-profile")]);
-
-  if (!candidate) {
-    notFound();
-  }
-  // TWO lists on purpose. team feeds @-mentions and must stay Users only, so a
-  // mention always reaches somebody who can open the app. interviewers also
-  // includes booking hosts, because hiring managers run interviews long before
-  // they ever sign in. See lib/data/team.ts.
-  const [travelTrips, travelLoyalty, team, interviewers] = await Promise.all([
+  // One group, not two in series: the travel reads take only id, and the two
+  // team reads take no arguments, so none of them needs candidate or layout
+  // back first.
+  //
+  // TWO team lists on purpose. team feeds @-mentions and must stay Users only,
+  // so a mention always reaches somebody who can open the app. interviewers
+  // also includes booking hosts, because hiring managers run interviews long
+  // before they ever sign in. See lib/data/team.ts.
+  const [candidate, layout, travelTrips, travelLoyalty, team, interviewers] = await Promise.all([
+    getCandidateProfileData(id, viewer),
+    getPageLayout("candidate-profile"),
     getTravelTripsForCandidate(id),
     getCandidateLoyalty(id),
     getTeamMembers(),
     getInterviewers()
   ]);
+
+  if (!candidate) {
+    notFound();
+  }
   // Whoever is signed in is pre-selected as the interviewer — the common case
   // is recording your own interview, and it also makes "my recent interviews"
   // work without anyone having to remember to set it.

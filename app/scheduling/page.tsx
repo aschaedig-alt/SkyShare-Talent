@@ -17,14 +17,18 @@ function parseDepartments(json: string | null): string[] {
 export default async function SchedulingPage() {
   await requireModulePageAccess("scheduling");
 
-  const hosts = await prisma.bookingHost.findMany({
-    orderBy: { name: "asc" },
-    include: {
-      weeklyRules: { orderBy: [{ dayOfWeek: "asc" }, { startMinute: "asc" }] },
-      bookingTypes: { orderBy: { sortOrder: "asc" } }
-    }
-  });
-  const overrides = await prisma.availabilityOverride.findMany({ orderBy: { startDate: "asc" } });
+  // Two independent reads — the overrides are keyed to hosts but are mapped by
+  // id on the client, so nothing here needs the hosts to come back first.
+  const [hosts, overrides] = await Promise.all([
+    prisma.bookingHost.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        weeklyRules: { orderBy: [{ dayOfWeek: "asc" }, { startMinute: "asc" }] },
+        bookingTypes: { orderBy: { sortOrder: "asc" } }
+      }
+    }),
+    prisma.availabilityOverride.findMany({ orderBy: { startDate: "asc" } })
+  ]);
 
   const hostData: AdminHost[] = hosts.map((h) => ({
     id: h.id,

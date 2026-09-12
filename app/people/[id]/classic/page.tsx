@@ -25,11 +25,10 @@ const ROLE_TITLE_OPTIONS = FLEET_POSITIONS.map((p) => p.title);
 export default async function NewHireClassicPage({ params }: { params: Promise<{ id: string }> }) {
   const access = await requireModulePageAccess("people");
   const { id } = await params;
-  const hire = await getNewHireDetail(id);
-  if (!hire) {
-    notFound();
-  }
-  const [travelTrips, travelLoyalty, journey, onboardingArchives, sections, taskEmails, sendStatus] = await Promise.all([
+  // Same shape as ../page.tsx: the detail fetch joins the group instead of
+  // gating it, because none of the others reads hire — they take id or nothing.
+  const [hire, travelTrips, travelLoyalty, journey, onboardingArchives, sections, taskEmails, sendStatus] = await Promise.all([
+    getNewHireDetail(id),
     getTravelTripsForNewHire(id),
     getNewHireLoyalty(id),
     getEmployeeJourney(id),
@@ -38,6 +37,9 @@ export default async function NewHireClassicPage({ params }: { params: Promise<{
     getTaskEmailMap(),
     getHireSendStatus(id)
   ]);
+  if (!hire) {
+    notFound();
+  }
 
   return (
     <NewHireDetailWorkspaceClassic

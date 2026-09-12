@@ -958,6 +958,9 @@ export async function getCandidateListData({
     )
   };
 
+  // Timed from HERE, above the bucket-rail query, not from the page query below
+  // — see the [perf] log at the bottom of this function for why that matters.
+  const listQueryStart = Date.now();
   const [bucketRows, typeRatedRows, dispositionOverrides, archivedTags] = await Promise.all([
     prisma.candidate.findMany({
       where: bucketPopulationWhere,
@@ -1056,7 +1059,6 @@ export async function getCandidateListData({
   // transaction timeout as a new failure mode that plain Promise.all never
   // had. Reverting to the known-good behavior and instrumenting it for real
   // numbers (see queryMs below) rather than guessing a third time.
-  const listQueryStart = Date.now();
   const [
     candidateRows,
     total,
@@ -1141,7 +1143,18 @@ export async function getCandidateListData({
   // now on guesses that didn't hold up under real measurement. This puts an
   // actual production number in the logs on every load, cheap enough to leave
   // in until the real bottleneck is confirmed and fixed, then remove.
-  console.log(`[perf] getCandidateListData query time: ${Date.now() - listQueryStart}ms (query="${query}")`);
+  //
+  // The timer starts ABOVE the bucket-rail query, and the label says what it
+  // covers, because it used to do neither. Started below it, the number left
+  // out the one query that reads a row per candidate in scope — the most
+  // expensive thing in this function — so anyone comparing this against the
+  // page-level number in app/candidates/page.tsx saw a gap it could not explain
+  // and went looking for the time outside the queries. It was in them, above
+  // the timer. The name now lists every stage it spans, so a later reading
+  // cannot be mistaken for the page query alone.
+  console.log(
+    `[perf] getCandidateListData bucket-rail + list + counts: ${Date.now() - listQueryStart}ms (query="${query}")`
+  );
 
   // Folded to lowercase and SUMMED, not assigned. The same stage exists in the
   // data under more than one casing ("Applied" / "applied"), and groupBy returns
