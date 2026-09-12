@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Modal } from "@/components/ui";
+import { TickedNotSentNote } from "@/components/shared/TickedNotSentNote";
 import { EmailBodyEditor } from "@/components/shared/EmailBodyEditor";
 import { formatMomentDate } from "@/lib/dates/display";
 import {
@@ -23,6 +24,11 @@ type Props = {
   canEdit: boolean;
   /** Called after a confirmed send so the checklist can tick without a full reload. */
   onSent: () => void;
+  /** When this app last ACTUALLY sent this email, from the send log — null when
+   *  it never has. The button label comes from this and NOT from taskStatus: a
+   *  step ticked by hand is not a send, and reading "Resend" on one is what made
+   *  a hand-ticked PRD step look like a sent email on 2026-09-09. */
+  sentAt?: string | null;
 };
 
 export function SendOnboardingEmailButton({
@@ -31,6 +37,7 @@ export function SendOnboardingEmailButton({
   taskStatus,
   canEdit,
   onSent,
+  sentAt = null,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -79,7 +86,7 @@ export function SendOnboardingEmailButton({
   return (
     <>
       <Button size="sm" variant="secondary" onClick={openPreview}>
-        {taskStatus === "DONE" ? "Resend email" : "Send email"}
+        {sentAt ? "Resend email" : "Send email"}
       </Button>
 
       <Modal open={open} onClose={close} busy={sending} maxWidth="max-w-3xl">
@@ -129,6 +136,9 @@ export function SendOnboardingEmailButton({
                 Sending again will deliver a second copy.
               </p>
             )}
+
+            {/* The other half of the same truth: ticked, but this app never sent it. */}
+            {!preview?.alreadySent && taskStatus === "DONE" ? <TickedNotSentNote what="the onboarding email step" /> : null}
 
             <dl className="mt-3 grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm">
               <dt className="font-semibold text-brand-grey dark:text-slate-400">To</dt>

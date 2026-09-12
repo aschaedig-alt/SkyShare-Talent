@@ -18,6 +18,7 @@ import { SendContactsEmailButton } from "@/components/people/SendContactsEmailBu
 import { SendSupervisorContactButton } from "@/components/people/SendSupervisorContactButton";
 import { SendTaskEmailButton } from "@/components/people/SendTaskEmailButton";
 import type { ChecklistRow, ChecklistSection } from "@/lib/data/onboarding-grid-config";
+import type { HireSendStatus } from "@/lib/front/send-status";
 import { CARD_STATUS_LABEL, isCardStatus } from "@/lib/business-cards/card";
 import { SupervisorPicker } from "@/components/people/SupervisorPicker";
 import { MakeContactButton } from "@/components/people/MakeContactButton";
@@ -53,6 +54,10 @@ type Props = {
   /** This person's own business-card orders. Empty for most new hires. */
   cardOrders: CardOrderView[];
   roleTitleOptions: string[];
+  /** What this app has ACTUALLY emailed this hire, from the send logs. The send
+   *  buttons read their Resend wording from this rather than from the checklist
+   *  tick — a step somebody ticked by hand is not a send. */
+  sendStatus: HireSendStatus;
   /** Checklist sections in their saved order, with their saved names. */
   sections: ChecklistSection[];
   /** The saved checklist layout, so the new-round dialog previews what it will create. */
@@ -77,7 +82,7 @@ function cardStatusLabel(status: string): string {
   return isCardStatus(status) ? CARD_STATUS_LABEL[status] : status.toLowerCase().replace(/_/g, " ");
 }
 
-export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journey, onboardingArchives, cardOrders, roleTitleOptions, sections, checklistRows, emailTaskKeys, canEdit }: Props) {
+export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journey, onboardingArchives, cardOrders, roleTitleOptions, sendStatus, sections, checklistRows, emailTaskKeys, canEdit }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskView[]>(hire.tasks);
   // Lifted for the same reason tasks is: the tab chip, the HR field, the checklist
@@ -699,6 +704,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
                 hireId={hire.id}
                 hireName={hire.name}
                 taskStatus={t.status}
+                sentAt={sendStatus.onboarding}
                 canEdit={canEdit}
                 onSent={() => setTasks((cur) => cur.map((x) => (x.key === "onboarding_journey" ? { ...x, status: "DONE" } : x)))}
               />
@@ -707,6 +713,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
                 hireId={hire.id}
                 hireName={hire.name}
                 taskStatus={t.status}
+                sentAt={sendStatus.contacts}
                 canEdit={canEdit}
                 onSent={() => setTasks((cur) => cur.map((x) => (x.key === "contacts_link_sent" ? { ...x, status: "DONE" } : x)))}
               />
@@ -715,6 +722,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
                 hireId={hire.id}
                 hireName={hire.name}
                 taskStatus={t.status}
+                sentAt={sendStatus.supervisor}
                 canEdit={canEdit}
                 onSent={() =>
                   setTasks((cur) => cur.map((x) => (x.key === "supervisor_contact_sent" ? { ...x, status: "DONE" } : x)))
@@ -733,6 +741,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
                 taskKey={t.key}
                 taskLabel={t.label}
                 taskStatus={t.status}
+                sentAt={sendStatus.tasks[t.key] ?? null}
                 canEdit={canEdit}
                 onSent={() => setTasks((cur) => cur.map((x) => (x.key === t.key ? { ...x, status: "DONE" } : x)))}
               />

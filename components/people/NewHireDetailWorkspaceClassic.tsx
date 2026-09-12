@@ -25,6 +25,7 @@ import { clsx } from "clsx";
 import { FileText } from "lucide-react";
 import { MAINTENANCE_GROUP } from "@/lib/onboarding/tasks";
 import type { ChecklistSection } from "@/lib/data/onboarding-grid-config";
+import type { HireSendStatus } from "@/lib/front/send-status";
 import { OfferControl } from "@/components/candidates/OfferControl";
 import type { NewHireDetail, TaskView } from "@/lib/data/onboarding";
 import { TravelPanel } from "@/components/travel/TravelPanel";
@@ -59,6 +60,10 @@ type Props = {
   /** Previous trips through onboarding — a rehire or a department move has one or more. */
   onboardingArchives: ArchivedRoundView[];
   roleTitleOptions: string[];
+  /** What this app has ACTUALLY emailed this hire, from the send logs. The send
+   *  buttons read their Resend wording from this rather than from the checklist
+   *  tick — a step somebody ticked by hand is not a send. */
+  sendStatus: HireSendStatus;
   /** Checklist sections in their saved order and with their saved names, so this
    *  parked layout cannot show a different checklist from the live one while it
    *  is being compared against it. */
@@ -78,7 +83,7 @@ const STATUS_BTN: Record<TaskView["status"], { label: string; on: string }> = {
   NA: { label: "N/A", on: "bg-brand-grey text-white" }
 };
 
-export function NewHireDetailWorkspaceClassic({ hire, travelTrips, travelLoyalty, journey, onboardingArchives, roleTitleOptions, sections, emailTaskKeys, canEdit }: Props) {
+export function NewHireDetailWorkspaceClassic({ hire, travelTrips, travelLoyalty, journey, onboardingArchives, roleTitleOptions, sendStatus, sections, emailTaskKeys, canEdit }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskView[]>(hire.tasks);
   const [details, setDetails] = useState({
@@ -598,6 +603,7 @@ export function NewHireDetailWorkspaceClassic({ hire, travelTrips, travelLoyalty
                             hireId={hire.id}
                             hireName={hire.name}
                             taskStatus={t.status}
+                            sentAt={sendStatus.onboarding}
                             canEdit={canEdit}
                             onSent={() => setTasks((cur) => cur.map((x) => (x.key === "onboarding_journey" ? { ...x, status: "DONE" } : x)))}
                           />
@@ -607,6 +613,7 @@ export function NewHireDetailWorkspaceClassic({ hire, travelTrips, travelLoyalty
                             hireId={hire.id}
                             hireName={hire.name}
                             taskStatus={t.status}
+                            sentAt={sendStatus.contacts}
                             canEdit={canEdit}
                             onSent={() => setTasks((cur) => cur.map((x) => (x.key === "contacts_link_sent" ? { ...x, status: "DONE" } : x)))}
                           />
@@ -616,6 +623,7 @@ export function NewHireDetailWorkspaceClassic({ hire, travelTrips, travelLoyalty
                             hireId={hire.id}
                             hireName={hire.name}
                             taskStatus={t.status}
+                            sentAt={sendStatus.supervisor}
                             canEdit={canEdit}
                             onSent={() =>
                               setTasks((cur) =>
@@ -631,6 +639,7 @@ export function NewHireDetailWorkspaceClassic({ hire, travelTrips, travelLoyalty
                             taskKey={t.key}
                             taskLabel={t.label}
                             taskStatus={t.status}
+                            sentAt={sendStatus.tasks[t.key] ?? null}
                             canEdit={canEdit}
                             onSent={() => setTasks((cur) => cur.map((x) => (x.key === t.key ? { ...x, status: "DONE" } : x)))}
                           />

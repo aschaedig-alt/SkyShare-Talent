@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FlaskConical, Mail } from "lucide-react";
 import { Button, Modal } from "@/components/ui";
+import { TickedNotSentNote } from "@/components/shared/TickedNotSentNote";
 import { EmailBodyEditor } from "@/components/shared/EmailBodyEditor";
 import { formatMomentDate } from "@/lib/dates/display";
 import type { FrontTemplateSummary } from "@/lib/front/templates";
@@ -55,13 +56,18 @@ type Props = {
   canEdit: boolean;
   /** Called after a confirmed send so the checklist can tick without a reload. */
   onSent: () => void;
+  /** When this app last ACTUALLY sent this email, from the send log — null when
+   *  it never has. The button label comes from this and NOT from taskStatus: a
+   *  step ticked by hand is not a send, and reading "Resend" on one is what made
+   *  a hand-ticked PRD step look like a sent email on 2026-09-09. */
+  sentAt?: string | null;
   /** Icon only, for the post-onboard grid — that table is one small cell per
    *  check-in per person, and a full "Send email" button does not fit in it
    *  without making every row taller for the one column that has an email. */
   compact?: boolean;
 };
 
-export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, canEdit, onSent, compact = false }: Props) {
+export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, canEdit, onSent, compact = false, sentAt = null }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -184,7 +190,7 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
         <button
           type="button"
           onClick={openPreview}
-          aria-label={taskStatus === "DONE" ? `Resend the ${taskLabel} email` : `Send the ${taskLabel} email`}
+          aria-label={sentAt ? `Resend the ${taskLabel} email` : `Send the ${taskLabel} email`}
           title={taskStatus === "DONE" ? "Already done — click to send the email again" : "Send this check-in email"}
           className="inline-flex items-center justify-center rounded p-1 text-brand-eden transition hover:bg-brand-gold/15 dark:text-slate-300 dark:hover:bg-white/10"
         >
@@ -193,7 +199,7 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
       ) : (
         <Button size="sm" variant="secondary" onClick={openPreview}>
           <Mail className="mr-1 h-3.5 w-3.5" />
-          {taskStatus === "DONE" ? "Resend email" : "Send email"}
+          {sentAt ? "Resend email" : "Send email"}
         </Button>
       )}
 
@@ -274,6 +280,9 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
                 Sending again will deliver a second copy.
               </p>
             )}
+
+            {/* The other half of the same truth: ticked, but this app never sent it. */}
+            {!preview?.alreadySent && taskStatus === "DONE" ? <TickedNotSentNote what="this step" /> : null}
 
             {p.fellBack && (
               <p className="mt-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">

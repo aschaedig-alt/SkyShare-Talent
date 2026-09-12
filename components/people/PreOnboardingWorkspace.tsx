@@ -33,10 +33,13 @@ type Props = {
   /** Task keys wired to a Front template, so a Send button can appear on them. */
   emailTaskKeys?: string[];
   post?: PostOnboardHire[];
+  /** hireId -> taskKey -> when this app actually sent that check-in email. Drives
+   *  the Resend wording; absent means it has never been sent from here. */
+  taskSends?: Record<string, Record<string, string>>;
   archived?: NewHireRow[];
 };
 
-export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboard, grid, checklist, checkins, emailTaskKeys, post, archived }: Props) {
+export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboard, grid, checklist, checkins, emailTaskKeys, post, archived, taskSends }: Props) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -146,7 +149,7 @@ export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboa
 
       {tab === "dashboard" && dashboard ? <OnboardingDashboardTab dashboard={dashboard} /> : null}
       {tab === "grid" && grid ? <OnboardingGridTab hires={grid} checklist={checklist ?? []} checkins={checkins ?? []} /> : null}
-      {tab === "post" && post ? <PostOnboardTab hires={post} emailTaskKeys={emailTaskKeys ?? []} /> : null}
+      {tab === "post" && post ? <PostOnboardTab hires={post} emailTaskKeys={emailTaskKeys ?? []} taskSends={taskSends ?? {}} /> : null}
       {tab === "archived" && archived ? <OnboardingArchivedTab rows={archived} /> : null}
 
       <Modal open={adding} onClose={() => setAdding(false)} busy={saving}>

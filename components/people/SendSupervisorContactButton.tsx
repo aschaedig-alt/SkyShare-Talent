@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button, Modal } from "@/components/ui";
+import { TickedNotSentNote } from "@/components/shared/TickedNotSentNote";
 import { EmailBodyEditor } from "@/components/shared/EmailBodyEditor";
 import { formatMomentDate } from "@/lib/dates/display";
 import type { FrontTemplateSummary } from "@/lib/front/templates";
@@ -39,9 +40,14 @@ type Props = {
   canEdit: boolean;
   /** Called after a confirmed send so the checklist can tick without a full reload. */
   onSent: () => void;
+  /** When this app last ACTUALLY sent this email, from the send log — null when
+   *  it never has. The button label comes from this and NOT from taskStatus: a
+   *  step ticked by hand is not a send, and reading "Resend" on one is what made
+   *  a hand-ticked PRD step look like a sent email on 2026-09-09. */
+  sentAt?: string | null;
 };
 
-export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canEdit, onSent }: Props) {
+export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canEdit, onSent, sentAt = null }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -156,7 +162,7 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
   return (
     <>
       <Button size="sm" variant="secondary" onClick={openPreview}>
-        {taskStatus === "DONE" ? "Resend to supervisor" : "Send to supervisor"}
+        {sentAt ? "Resend to supervisor" : "Send to supervisor"}
       </Button>
 
       <Modal open={open} onClose={close} busy={sending} maxWidth="max-w-3xl">
@@ -223,6 +229,9 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
                 copy.
               </p>
             )}
+
+            {/* The other half of the same truth: ticked, but this app never sent it. */}
+            {!res?.alreadySent && taskStatus === "DONE" ? <TickedNotSentNote what="the supervisor step" /> : null}
 
             {targets && (
               <>

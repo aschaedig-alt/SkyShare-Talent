@@ -31,12 +31,17 @@ const POST_ONBOARD_BULK_ACTIONS: BulkAction[] = [
 
 export function PostOnboardTab({
   hires: initial,
-  emailTaskKeys
+  emailTaskKeys,
+  taskSends
 }: {
   hires: PostOnboardHire[];
   /** Check-in keys pointed at a Front template in Manage tasks. Only those get an
    *  envelope, so this grid stays scannable rather than growing an icon per cell. */
   emailTaskKeys: string[];
+  /** hireId -> taskKey -> when this app actually sent that check-in email. A
+   *  check-in ticked by hand is not a send, so the envelope must not offer to
+   *  "resend" one that has never gone out. */
+  taskSends: Record<string, Record<string, string>>;
 }) {
   const router = useRouter();
   const [hires, setHires] = useState(initial);
@@ -329,6 +334,7 @@ export function PostOnboardTab({
                         compact
                         hireId={h.id}
                         taskKey={c.key}
+                        sentAt={taskSends[h.id]?.[c.key] ?? null}
                         taskLabel={`${c.short} check-in — ${h.name}`}
                         taskStatus={c.status}
                         canEdit

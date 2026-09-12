@@ -212,6 +212,31 @@ export async function getTaskSendRecord(hireId: string, taskKey: string): Promis
   return (await readAll())[recordKey(hireId, taskKey)] ?? null;
 }
 
+/**
+ * Every task-email send record, keyed "hireId:taskKey".
+ *
+ * One read for a whole page. The post-onboard grid draws a send button per
+ * check-in per person, and asking per button would be one identical read of the
+ * same JSON blob per cell.
+ */
+export async function getTaskSendMap(): Promise<Record<string, TaskSendRecord>> {
+  return readAll();
+}
+
+/** Split that map into hireId -> taskKey -> sentAt, which is the shape a page
+ *  hands to its buttons. */
+export function taskSendsByHire(map: Record<string, TaskSendRecord>): Record<string, Record<string, string>> {
+  const out: Record<string, Record<string, string>> = {};
+  for (const [composite, rec] of Object.entries(map)) {
+    const at = composite.indexOf(":");
+    if (at <= 0 || !rec?.sentAt) continue;
+    const hireId = composite.slice(0, at);
+    const taskKey = composite.slice(at + 1);
+    (out[hireId] ??= {})[taskKey] = rec.sentAt;
+  }
+  return out;
+}
+
 export async function recordTaskSend(hireId: string, taskKey: string, rec: TaskSendRecord): Promise<void> {
   const all = await readAll();
   all[recordKey(hireId, taskKey)] = rec;

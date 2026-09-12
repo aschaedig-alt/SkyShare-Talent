@@ -4,6 +4,7 @@ import { hasPermission } from "@/lib/auth/roles";
 import { getNewHireDetail } from "@/lib/data/onboarding";
 import { getChecklistSections } from "@/lib/data/onboarding-grid-config";
 import { getTaskEmailMap } from "@/lib/onboarding/task-email-config";
+import { getHireSendStatus } from "@/lib/front/send-status";
 import { getTravelTripsForNewHire, getNewHireLoyalty } from "@/lib/data/travel";
 import { getEmployeeJourney } from "@/lib/data/employee-journey";
 import { getOnboardingArchives } from "@/lib/data/onboarding-rounds";
@@ -28,13 +29,14 @@ export default async function NewHireClassicPage({ params }: { params: Promise<{
   if (!hire) {
     notFound();
   }
-  const [travelTrips, travelLoyalty, journey, onboardingArchives, sections, taskEmails] = await Promise.all([
+  const [travelTrips, travelLoyalty, journey, onboardingArchives, sections, taskEmails, sendStatus] = await Promise.all([
     getTravelTripsForNewHire(id),
     getNewHireLoyalty(id),
     getEmployeeJourney(id),
     getOnboardingArchives(id),
     getChecklistSections(),
-    getTaskEmailMap()
+    getTaskEmailMap(),
+    getHireSendStatus(id)
   ]);
 
   return (
@@ -45,6 +47,7 @@ export default async function NewHireClassicPage({ params }: { params: Promise<{
       journey={journey}
       onboardingArchives={onboardingArchives}
       roleTitleOptions={ROLE_TITLE_OPTIONS}
+      sendStatus={sendStatus}
       sections={sections}
       emailTaskKeys={Object.keys(taskEmails)}
       canEdit={hasPermission(access.role, "candidates:write")}
