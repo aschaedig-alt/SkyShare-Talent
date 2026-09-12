@@ -258,12 +258,12 @@ export const WIDGETS: WidgetDef[] = [
         <Shell icon={ShieldAlert} title="Document currency">
           <div className="mb-2 grid grid-cols-3 gap-1.5 text-center">
             <div className="rounded bg-red-50 dark:bg-red-500/10 py-1"><div className="text-base font-semibold text-red-600 dark:text-red-400">{dc.counts.expired}</div><div className="text-[9px] uppercase text-brand-grey dark:text-slate-400">expired</div></div>
-            <div className="rounded bg-amber-50 py-1"><div className="text-base font-semibold text-amber-600">{dc.counts.due30}</div><div className="text-[9px] uppercase text-brand-grey dark:text-slate-400">≤30d</div></div>
-            <div className="rounded bg-brand-cloudDancer/60 py-1 dark:bg-white/5"><div className="text-base font-semibold text-brand-lea">{dc.counts.due90}</div><div className="text-[9px] uppercase text-brand-grey dark:text-slate-400">≤90d</div></div>
+            <div className="rounded bg-amber-50 dark:bg-amber-500/10 py-1"><div className="text-base font-semibold text-amber-600 dark:text-amber-400">{dc.counts.due30}</div><div className="text-[9px] uppercase text-brand-grey dark:text-slate-400">≤30d</div></div>
+            <div className="rounded bg-brand-cloudDancer/60 py-1 dark:bg-white/5"><div className="text-base font-semibold text-brand-lea dark:text-slate-100">{dc.counts.due90}</div><div className="text-[9px] uppercase text-brand-grey dark:text-slate-400">≤90d</div></div>
           </div>
           <div className="space-y-1">
             {dc.upcoming.slice(0, 6).map((it, i) => {
-              const tone = it.days < 0 ? "text-red-600 dark:text-red-400" : it.days <= 30 ? "text-amber-600" : "text-brand-grey dark:text-slate-400";
+              const tone = it.days < 0 ? "text-red-600 dark:text-red-400" : it.days <= 30 ? "text-amber-600 dark:text-amber-400" : "text-brand-grey dark:text-slate-400";
               return (
                 <div key={i} className="flex items-center justify-between gap-2 text-[11px]">
                   <span className="truncate text-brand-black/80 dark:text-slate-300">{it.candidateName} · {it.documentType ?? "Doc"}</span>

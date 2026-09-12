@@ -171,7 +171,9 @@ export function MonthCalendar({
                 <span
                   className={clsx(
                     "flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold transition",
-                    isToday ? "bg-brand-lea text-white" : "text-brand-lea hover:bg-brand-cloudDancer/50 dark:text-slate-100 dark:bg-white/5"
+                    isToday
+                      ? "bg-brand-lea text-white dark:bg-brand-gold dark:text-brand-lea"
+                      : "text-brand-lea hover:bg-brand-cloudDancer/50 dark:text-slate-100 dark:bg-white/5"
                   )}
                 >
                   {cell.day}

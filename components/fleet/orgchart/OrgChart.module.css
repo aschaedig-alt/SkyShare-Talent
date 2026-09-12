@@ -4,6 +4,19 @@
 
 .wrap {
   --color-bg: #ffffff;
+  /* These four were referenced through var(--x, fallback) from the TSX inline
+     styles and this file, but defined nowhere — so dark mode kept the LIGHT
+     fallback while --ink below flipped to #e9eef5, rendering the Find-a-person
+     panel and both confirm modals as near-white text on white (measured 1.17:1).
+     Each light value here is byte-identical to the fallback it replaces, so light
+     mode is unchanged; the dark overrides are in the html.dark block below. */
+  --card: #ffffff;
+  --line: #cdd7e2;
+  --danger: #a32d2d;
+  /* --sweet is the interview tone dot in PeopleIndex. It is deliberately NOT
+     overridden in dark: pale blue on the dark panel measures ~9.2:1, whereas a
+     darker blue would drop it to ~4.7:1. Inheriting the light value is correct. */
+  --sweet: #a6c9e7;
   --ink: #0d2c43;
   --navy: #0d2c43;
   --eden: #466481;
@@ -235,6 +248,12 @@
 
 :global(html.dark) .wrap {
   --color-bg: #10243a;
+  /* Each of these three is the value a sibling variable in this same block
+     already flips to: --card matches --color-bg, --line matches --n300, --danger
+     matches --open-soft-fg. --sweet is absent on purpose — see the note in .wrap. */
+  --card: #10243a;
+  --line: #33475d;
+  --danger: #f2a8b6;
   --ink: #e9eef5;
   --navy: #16324c;
   --eden: #5b7ea6;

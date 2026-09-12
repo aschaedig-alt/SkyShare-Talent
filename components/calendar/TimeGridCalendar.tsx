@@ -219,7 +219,9 @@ export function TimeGridCalendar({
             <div
               className={clsx(
                 "mx-auto mt-0.5 flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold",
-                isToday(day) ? "bg-brand-lea text-white" : "text-brand-lea dark:text-slate-100"
+                isToday(day)
+                  ? "bg-brand-lea text-white dark:bg-brand-gold dark:text-brand-lea"
+                  : "text-brand-lea dark:text-slate-100"
               )}
             >
               {day.getDate()}

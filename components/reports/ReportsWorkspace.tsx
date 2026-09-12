@@ -1522,9 +1522,7 @@ export function ReportsWorkspace({ data, logoDataUrl, canShare = false }: Report
             aria-pressed={tab === t.id}
             className={clsx(
               "rounded px-4 py-2 text-sm font-semibold transition",
-              tab === t.id
-                ? "bg-brand-lea text-white shadow-sm"
-                : "text-brand-grey hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/5"
+              tab === t.id ? SEGMENT_ON : SEGMENT_OFF
             )}
           >
             {t.label}
