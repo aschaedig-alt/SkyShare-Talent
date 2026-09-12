@@ -25,7 +25,12 @@ export const ONBOARDING_TASKS: OnboardingTaskDef[] = [
   { key: "candidate_signed", label: "Candidate signed offer letter", group: "OFFER" },
 
   { key: "pilot_app", label: "Confirm Pilot App on file (request if missing)", group: "PILOT_DOCS" },
-  { key: "ebco_form", label: "Confirm EBCO form on file (request if missing)", group: "PILOT_DOCS" },
+  // "Insurance form", not EBCO. Renamed 2026-09-11 at her request — EBCO is the
+  // vendor, insurance is what the form IS, and it is what she calls it and what
+  // her Front template is named. The KEY stays ebco_form deliberately: 206 stored
+  // rows, the sheet importer aliases and the task-email config all hang off it,
+  // and renaming a key to match a label would orphan every one of them.
+  { key: "ebco_form", label: "Confirm Insurance form on file (request if missing)", group: "PILOT_DOCS" },
   { key: "pilot_doc_request", label: "Send Pilot Document Request email via Front", group: "PILOT_DOCS" },
 
   { key: "onboarding_journey", label: "Send “Start Your Onboarding Journey” email via Front", group: "SYSTEMS" },
@@ -88,7 +93,7 @@ export const MILESTONE_KEYS: Array<{ key: string; short: string }> = [
   { key: "president_signs", short: "President signs offer" },
   { key: "offer_letter_sent", short: "Offer letter sent" },
   { key: "pilot_app", short: "Pilot app on file" },
-  { key: "ebco_form", short: "EBCO form on file" },
+  { key: "ebco_form", short: "Insurance form on file" },
   { key: "pilot_doc_request", short: "Pilot docs requested" },
   { key: "candidate_signed", short: "Candidate signed offer" },
   { key: "onboarding_journey", short: "Onboarding email sent" },
@@ -145,6 +150,9 @@ export const SHEET_LABEL_TO_KEY: Record<string, string> = {
   "confirm pilot app on file, if missing, send request": "pilot_app",
   "confirm ebco form on file, if missing, send request": "ebco_form",
   "confirm titan form on file, if missing, send request": "ebco_form",
+  // The same step under the name it was renamed to, so a sheet exported after the
+  // rename still maps. The older headings stay — old sheets are still imported.
+  "confirm insurance form on file, if missing, send request": "ebco_form",
   "send pilot document request email via front": "pilot_doc_request",
   "send “start your onboarding journey” email via front": "onboarding_journey",
   "send start your onboarding journey email via front": "onboarding_journey",
