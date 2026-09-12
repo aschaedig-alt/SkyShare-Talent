@@ -5,6 +5,7 @@ import { FlaskConical, Mail } from "lucide-react";
 import { Button, Modal } from "@/components/ui";
 import { EmailBodyEditor } from "@/components/shared/EmailBodyEditor";
 import { formatMomentDate } from "@/lib/dates/display";
+import type { FrontTemplateSummary } from "@/lib/front/templates";
 import {
   previewTaskEmail,
   sendTaskEmail,
@@ -31,6 +32,18 @@ import {
 // say the person had been emailed when they had not. `res.test` is what tells the
 // two apart, and it decides both the wording on the result screen and whether the
 // grid updates — if this ever looks like dead defensiveness, it is not.
+//
+// THE TEMPLATE IS PICKABLE HERE TOO. His ask, 2026-09-11: "the document request
+// template, maintenance and pilot need a different configuration. I saw one of
+// the other emails we send out — we can click the dropdown and choose from the
+// templates. Why can't I do that on this one?" One step, two audiences: the
+// pilot document request and the maintenance one are different emails, and a
+// single configured template cannot be both. So the configured template is the
+// default, not the only option.
+//
+// PER-SEND ONLY, exactly like the edited body — picking the maintenance template
+// for one hire must not become the default for the next pilot. Nothing is written
+// back to the task's settings, which stay in Manage tasks where they belong.
 
 type Props = {
   hireId: string;
@@ -59,8 +72,45 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
   // Null until the body is actually edited. Null means "send the live template",
   // which is what keeps the untouched case byte-identical to before.
   const [body, setBody] = useState<string | null>(null);
+  // The Front templates, for the picker. Null while unfetched.
+  const [templates, setTemplates] = useState<FrontTemplateSummary[] | null>(null);
+  const [templateError, setTemplateError] = useState<string | null>(null);
+  // The template chosen for THIS send. Null means the one the step is configured
+  // with — which keeps an untouched send identical to what it was before there
+  // was a picker at all.
+  const [templateId, setTemplateId] = useState<string | null>(null);
+  // Mid-swap to another template, so the box below is not editable against a body
+  // that is about to be replaced.
+  const [switching, setSwitching] = useState(false);
+  // What the step is CONFIGURED with, captured from the first preview before any
+  // override. Kept so the note can name the template the next send will use.
+  const [configured, setConfigured] = useState<{ id: string; name: string } | null>(null);
 
   if (!canEdit) return null;
+
+  /**
+   * The template list, fetched when the dialog opens rather than on mount.
+   *
+   * The post-onboard grid renders one of these per check-in per person, so a
+   * mount-time fetch would be a burst of identical calls to Front for a dialog
+   * nobody has opened yet. Fetched once per component and then kept.
+   */
+  async function loadTemplates() {
+    if (templates || templateError) return;
+    try {
+      const res = await fetch("/api/front/templates");
+      const data = (await res.json().catch(() => null)) as
+        | { templates?: FrontTemplateSummary[]; message?: string }
+        | null;
+      if (!res.ok) throw new Error(data?.message ?? "Could not load the templates.");
+      setTemplates(data?.templates ?? []);
+    } catch (e) {
+      // Surfaced, not swallowed. The usual cause is a Front token problem, and an
+      // empty dropdown would read as "Front has no other templates" — which is a
+      // different and wrong thing to tell somebody.
+      setTemplateError(e instanceof Error ? e.message : "Could not load the templates.");
+    }
+  }
 
   async function openPreview() {
     setOpen(true);
@@ -69,14 +119,37 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
     setResult(null);
     setBody(null);
     setTesting(false);
-    setPreview(await previewTaskEmail(hireId, taskKey));
+    setTemplateId(null);
+    setConfigured(null);
+    // Not awaited: the preview is what the dialog is for, and the picker filling
+    // in a moment later must not hold it up.
+    void loadTemplates();
+    const res = await previewTaskEmail(hireId, taskKey);
+    setPreview(res);
+    if (res.ok && res.preview) setConfigured({ id: res.preview.templateId, name: res.preview.templateName });
     setLoading(false);
+  }
+
+  /** Rebuild the preview from a different template, for this send only. */
+  async function chooseTemplate(next: string) {
+    if (next === (templateId ?? configured?.id ?? "")) return;
+    // An edited body belongs to the template it was edited from. EmailBodyEditor
+    // re-seeds from "edited ?? template", so keeping it would make the switch do
+    // nothing visible — the old wording would simply win. So the switch discards
+    // it, and says so beforehand rather than after.
+    if (body !== null && !window.confirm("Switching templates replaces the wording you edited here. Continue?")) return;
+    const override = next === configured?.id ? null : next;
+    setTemplateId(override);
+    setBody(null);
+    setSwitching(true);
+    setPreview(await previewTaskEmail(hireId, taskKey, override));
+    setSwitching(false);
   }
 
   async function confirmSend(asTest: boolean) {
     setTesting(asTest);
     setSending(true);
-    const res = await sendTaskEmail(hireId, taskKey, body, asTest ? { test: true } : undefined);
+    const res = await sendTaskEmail(hireId, taskKey, body, { test: asTest, templateOverride: templateId });
     setResult(res);
     setSending(false);
     // NOT on a test. onSent() is what flips the grid cell to done without a
@@ -95,6 +168,11 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
       setResult(null);
       setBody(null);
       setTesting(false);
+      // The per-send template choice goes with the dialog — that is what makes it
+      // per-send. The fetched LIST stays, so re-opening does not re-hit Front.
+      setTemplateId(null);
+      setConfigured(null);
+      setSwitching(false);
     }, 200);
   }
 
@@ -188,8 +266,12 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
               <p className="mt-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
                 Already sent to {preview.alreadySent.to} on {formatMomentDate(preview.alreadySent.sentAt)}
                 {preview.alreadySent.sentBy ? ` by ${preview.alreadySent.sentBy}` : ""}
-                {preview.alreadySent.edited ? ", with the wording edited" : ""}. Sending again will deliver a second
-                copy.
+                {preview.alreadySent.edited ? ", with the wording edited" : ""}
+                {/* Which template it went out on. Worth saying now that the template
+                    can be changed per send — "we sent the pilot one to a mechanic"
+                    is otherwise unanswerable after the fact. */}
+                {preview.alreadySent.templateName ? `, on the “${preview.alreadySent.templateName}” template` : ""}.
+                Sending again will deliver a second copy.
               </p>
             )}
 
@@ -222,12 +304,56 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
               <dd className="text-brand-black dark:text-slate-100">hrotasks@skyshare.com &mdash; SkyShare HR Onboarding</dd>
               <dt className="font-semibold text-brand-grey dark:text-slate-400">Subject</dt>
               <dd className="text-brand-black dark:text-slate-100">{p.subject}</dd>
-              <dt className="font-semibold text-brand-grey dark:text-slate-400">Template</dt>
-              <dd className="text-brand-grey dark:text-slate-400">{p.templateName} &middot; fetched from Front just now</dd>
+              <dt className="self-center font-semibold text-brand-grey dark:text-slate-400">Template</dt>
+              <dd className="text-brand-black dark:text-slate-100">
+                <select
+                  value={templateId ?? p.templateId}
+                  onChange={(e) => void chooseTemplate(e.target.value)}
+                  disabled={!templates || sending || switching}
+                  aria-label="Front template for this send"
+                  className="w-full max-w-md rounded border border-brand-lea/15 bg-white px-2 py-1 text-sm text-brand-black disabled:opacity-70 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
+                >
+                  {/* The template this preview was built from is ALWAYS offered, even
+                      when the live list does not carry it — one renamed or deleted in
+                      Front has to show as what it was rather than silently resetting
+                      the box to somebody else's template. */}
+                  {!templates?.some((t) => t.id === p.templateId) ? (
+                    <option value={p.templateId}>
+                      {p.templateName}
+                      {templates ? " (not found in Front)" : ""}
+                    </option>
+                  ) : null}
+                  {templates?.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-xs text-brand-grey dark:text-slate-400">
+                  {switching
+                    ? "Loading that template from Front…"
+                    : p.templateOverridden && configured
+                      ? `Chosen for this send only — this step still sends “${configured.name}” next time.`
+                      : !templates && !templateError
+                        ? "Fetched from Front just now. Loading the other templates…"
+                        : "Fetched from Front just now. Pick another one to send a different version."}
+                </span>
+                {templateError ? (
+                  <span className="mt-1 block rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
+                    {templateError} This email still sends on {p.templateName}.
+                  </span>
+                ) : null}
+              </dd>
             </dl>
 
             <div className="mt-3">
-              <EmailBodyEditor greeting={p.greetingHtml} template={p.bodyHtml} edited={body} onChange={setBody} disabled={sending} />
+              <EmailBodyEditor
+                greeting={p.greetingHtml}
+                template={p.bodyHtml}
+                edited={body}
+                onChange={setBody}
+                disabled={sending || switching}
+              />
             </div>
 
             <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
@@ -238,11 +364,14 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
               <Button variant="secondary" onClick={close} disabled={sending}>
                 Cancel
               </Button>
-              <Button variant="secondary" onClick={() => confirmSend(true)} disabled={sending}>
+              {/* Both send buttons are held while a different template is loading —
+                  what is on screen during that moment is the template being replaced,
+                  and sending it would send the one she just moved off. */}
+              <Button variant="secondary" onClick={() => confirmSend(true)} disabled={sending || switching}>
                 <FlaskConical className="h-4 w-4" />
                 {sending && testing ? "Sending test…" : "Send as test to hrotasks@skyshare.com"}
               </Button>
-              <Button onClick={() => confirmSend(false)} disabled={sending}>
+              <Button onClick={() => confirmSend(false)} disabled={sending || switching}>
                 {sending && !testing
                   ? "Sending…"
                   : `Send ${body === null ? "" : "edited copy "}to ${

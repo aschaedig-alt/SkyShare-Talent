@@ -40,6 +40,12 @@ const STANDALONE = [
  * per step. Which one is right depends on whether the hire is maintenance or a
  * pilot, which this structure cannot express. Picking one would silently send
  * maintenance staff a pilot document request. That needs her answer first.
+ *
+ * ANSWERED AND CLOSED, 2026-09-11 — do not re-open this. The answer was not
+ * "pick one": the send dialog now carries a template picker, so the configured
+ * template is a default rather than the only option and the maintenance case is
+ * one dropdown away. pilot_doc_request is wired by the follow-up script,
+ * scripts/doc-request-template/wire.ts.
  */
 const TASK_EMAILS: Record<string, { templateId: string; templateName: string; audience: "personal" | "company" | "custom"; to: string[]; cc: string[]; greeting: boolean }> = {
   pilot_app: {

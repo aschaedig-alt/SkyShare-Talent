@@ -339,7 +339,9 @@ async function loadTaskForEmail(hireId: string, taskKey: string) {
 /** Build (but do not send) a task's email, plus whether one already went out. */
 export async function previewTaskEmail(
   hireId: string,
-  taskKey: string
+  taskKey: string,
+  /** Preview a DIFFERENT template for this send. Per-send only; see buildTaskEmail. */
+  templateOverride?: string | null
 ): Promise<TaskEmailPreviewResult> {
   if (!(await canEditPeople())) {
     return { ok: false, error: "You don't have permission to send this email." };
@@ -350,7 +352,7 @@ export async function previewTaskEmail(
 
   try {
     const [preview, alreadySent] = await Promise.all([
-      buildTaskEmail(hire, taskKey, task?.label ?? taskKey),
+      buildTaskEmail(hire, taskKey, task?.label ?? taskKey, null, templateOverride),
       getTaskSendRecord(hireId, taskKey),
     ]);
     return { ok: true, preview, alreadySent };
@@ -393,7 +395,7 @@ export async function sendTaskEmail(
   hireId: string,
   taskKey: string,
   bodyOverride?: string | null,
-  opts?: { test?: boolean }
+  opts?: { test?: boolean; templateOverride?: string | null }
 ): Promise<TaskEmailSendResult> {
   if (!(await canEditPeople())) {
     return { ok: false, error: "You don't have permission to send this email." };
@@ -407,7 +409,7 @@ export async function sendTaskEmail(
   let email: TaskEmailPreview;
   let channelId: string;
   try {
-    email = await buildTaskEmail(hire, taskKey, task?.label ?? taskKey, bodyOverride);
+    email = await buildTaskEmail(hire, taskKey, task?.label ?? taskKey, bodyOverride, opts?.templateOverride);
     channelId = await getOrientationChannelId();
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Could not build the email." };

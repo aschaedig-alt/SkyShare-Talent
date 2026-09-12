@@ -52,6 +52,13 @@ export type TaskEmailPreview = {
   /** greetingHtml + bodyHtml — what actually goes out. */
   html: string;
   templateName: string;
+  /** The template this preview was actually built from — the configured one, or
+   *  the one chosen in the dialog for this send. */
+  templateId: string;
+  /** True when a different template was picked for this send than the one the
+   *  step is configured with. Shown in the dialog and recorded with the send, so
+   *  "which template did that go out with" is answerable afterwards. */
+  templateOverridden: boolean;
   /** True when the body below is a hand edit rather than the live template. */
   edited: boolean;
 };
@@ -101,7 +108,22 @@ export async function buildTaskEmail(
   hire: HireForTaskEmail,
   taskKey: string,
   taskLabel: string,
-  bodyOverride?: string | null
+  bodyOverride?: string | null,
+  /**
+   * Use a DIFFERENT Front template for this one send.
+   *
+   * Asked for on 2026-09-11, and the reasoning is better than the design it
+   * replaces: "the document request, maintenance and pilot need a different
+   * configuration... we can click the dropdown and choose from the templates. Why
+   * cannot I do that on this one?" One step, two audiences - a maintenance hire
+   * and a pilot need different document requests - and a single configured
+   * template cannot express that.
+   *
+   * PER-SEND ONLY, never written back to the config, exactly like the editable
+   * body. Picking the MX template for a maintenance hire must not make it the
+   * default for the next pilot.
+   */
+  templateOverride?: string | null
 ): Promise<TaskEmailPreview> {
   const cfg = await getTaskEmailConfig(taskKey);
   if (!cfg) {
@@ -109,7 +131,11 @@ export async function buildTaskEmail(
   }
 
   const { to, toSource, fellBack } = resolveRecipient(hire, cfg);
-  const tpl = await fetchTemplate(cfg.templateId, cfg.templateName);
+  const chosenId = templateOverride?.trim() || cfg.templateId;
+  // The remembered NAME only helps when the id is the configured one. For an
+  // override we have no remembered name, so fetchTemplate falls back to its
+  // paginated name lookup only when it needs to.
+  const tpl = await fetchTemplate(chosenId, chosenId === cfg.templateId ? cfg.templateName : undefined);
 
   const { firstName } = splitCandidateName(hire.name);
   const first = firstName || hire.name.split(/\s+/)[0] || "there";
@@ -131,6 +157,8 @@ export async function buildTaskEmail(
     bodyHtml,
     html: greeting + bodyHtml,
     templateName: tpl.name,
+    templateId: chosenId,
+    templateOverridden: Boolean(templateOverride && templateOverride.trim() && templateOverride.trim() !== cfg.templateId),
     edited
   };
 }

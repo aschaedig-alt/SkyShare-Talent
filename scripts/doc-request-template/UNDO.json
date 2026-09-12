@@ -1,0 +1,40 @@
+{
+  "custom_request_prd_access_600ce652": {
+    "templateId": "rsp_r7mze",
+    "templateName": "1. PRD Request to Pilot",
+    "audience": "personal",
+    "to": [],
+    "cc": [
+      "hrotasks@skyshare.com"
+    ],
+    "greeting": true
+  },
+  "checkin_30": {
+    "templateId": "rsp_s32sa",
+    "templateName": "1 month employee checkin",
+    "audience": "company",
+    "to": [],
+    "cc": [],
+    "greeting": true
+  },
+  "pilot_app": {
+    "templateId": "rsp_s3c2i",
+    "templateName": "Pilot - Application Webform (Journey)",
+    "audience": "personal",
+    "to": [],
+    "cc": [
+      "hrotasks@skyshare.com"
+    ],
+    "greeting": true
+  },
+  "ebco_form": {
+    "templateId": "rsp_s3byy",
+    "templateName": "Pilot - Insurance Webform (Journey)",
+    "audience": "personal",
+    "to": [],
+    "cc": [
+      "hrotasks@skyshare.com"
+    ],
+    "greeting": true
+  }
+}
