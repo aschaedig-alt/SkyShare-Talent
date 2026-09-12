@@ -263,7 +263,7 @@ function CurrentTag({
             onClick={() => setPicking((v) => !v)}
             title="Change this tag's color"
             className={clsx("h-2 w-2 shrink-0 rounded", tagDotClass(tag.label, tag.color))}
-            aria-label={`Change the colour of ${tag.label}`}
+            aria-label={`Change the color of ${tag.label}`}
           />
         ) : null}
         {armed ? `Remove "${tag.label}"?` : tag.label}

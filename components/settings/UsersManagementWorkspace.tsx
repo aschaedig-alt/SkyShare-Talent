@@ -260,7 +260,7 @@ export function UsersManagementWorkspace({
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
               User Management
             </p>
-            <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Team Members</h1>
+            <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Team members</h1>
             <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">Manage user roles and permissions</p>
           </div>
           <button

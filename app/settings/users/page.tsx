@@ -111,7 +111,7 @@ export default async function UsersPage() {
       <div className="space-y-4 px-5 py-5 lg:px-8">
         <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Admin foundation</p>
-          <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Team Members</h1>
+          <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Team members</h1>
         </section>
 
         <UsersManagementWorkspace

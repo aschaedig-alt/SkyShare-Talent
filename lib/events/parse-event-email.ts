@@ -204,7 +204,7 @@ function findCityState(text: string): { city: string | null; state: string | nul
 function findVenue(text: string): string | null {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const re =
-    /\b(airport|hangar|center|centre|centre|college|university|school|hotel|conference cent|convention cent|campus|fbo|terminal|arena|fairgrounds|pavilion|ballroom)\b/i;
+    /\b(airport|hangar|center|centre|college|university|school|hotel|conference cent|convention cent|campus|fbo|terminal|arena|fairgrounds|pavilion|ballroom)\b/i;
   for (const line of lines) {
     if (line.length > 130 || !re.test(line)) continue;
     // Signature/URL/boilerplate lines match the keywords too but are not venues.

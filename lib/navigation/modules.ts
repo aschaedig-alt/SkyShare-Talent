@@ -255,7 +255,7 @@ export const navigationGroups: readonly NavigationGroup[] = [
         items: [
           { id: "settings", href: "/settings", label: "General", icon: SlidersHorizontal },
           { id: "settings", href: "/settings/command-center", label: "Command Center", icon: LayoutDashboard },
-          { id: "settings", href: "/settings/users", label: "Team Members", icon: Users },
+          { id: "settings", href: "/settings/users", label: "Team members", icon: Users },
           { id: "settings", href: "/settings/activity", label: "Activity", icon: Activity },
           { id: "settings", href: "/settings/feedback", label: "Feedback", icon: MessageSquare },
           { id: "settings", href: "/settings/templates", label: "Templates", icon: FileText },

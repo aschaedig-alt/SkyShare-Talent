@@ -94,7 +94,7 @@ export default async function BudgetPage() {
           <h3 className="text-base font-medium text-brand-lea dark:text-slate-100">Run rate &amp; outlook</h3>
           <dl className="mt-3 space-y-2.5 text-sm">
             <Row label="Projected monthly spend" value={usd2.format(b.projectedMonthlyUsd)} />
-            <Row label="Projected annual spend" value={usd0.format(b.projectedAnnualUsd)} />
+            <Row label="Projected annual spend" value={usd2.format(b.projectedAnnualUsd)} />
             <Row
               label="New points awarded / month"
               value={usd2.format(b.projectedMonthlyAwardedUsd)}
