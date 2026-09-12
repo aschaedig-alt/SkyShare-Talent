@@ -248,13 +248,13 @@ export function TravelSpendYear({ data }: { data: TravelSpendByMonth }) {
           label="Hired"
           value={formatUsd(series.hired)}
           note={`${series.hiredTravelers} ${series.hiredTravelers === 1 ? "traveler" : "travelers"}`}
-          tone="text-emerald-600 dark:text-emerald-300"
+          tone="text-emerald-700 dark:text-emerald-300"
         />
         <StatCard
           label="Not hired"
           value={formatUsd(series.notHired)}
           note={`${series.notHiredTravelers} ${series.notHiredTravelers === 1 ? "traveler" : "travelers"}`}
-          tone="text-amber-600 dark:text-amber-300"
+          tone="text-amber-700 dark:text-amber-300"
         />
         <StatCard
           label="Biggest month"

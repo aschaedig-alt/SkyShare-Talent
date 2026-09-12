@@ -147,6 +147,7 @@ function ImportActionCard({
             type="file"
             accept={accept}
             multiple={multiple}
+            aria-label="Choose files to import"
             className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:file:text-slate-300"
           />
           <button
@@ -316,6 +317,7 @@ export function ResumeFileUploadImportCard() {
             type="file"
             accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,.gif,.webp,.tif,.tiff,.bmp,.html,.htm,.doc,.docx,.txt,.rtf,.csv,.xls,.xlsx"
             multiple
+            aria-label="Choose candidate document files"
             className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:file:text-slate-300"
           />
           <button
@@ -486,6 +488,7 @@ export function JobPdfImportCard() {
             type="file"
             accept=".pdf,application/pdf"
             multiple
+            aria-label="Choose PDF files to import"
             className="w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:file:text-slate-300"
           />
           <button

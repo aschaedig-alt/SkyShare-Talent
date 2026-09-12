@@ -111,6 +111,7 @@ export function CandidateFileUploadButton({ candidateId }: CandidateFileUploadBu
         type="file"
         multiple
         accept={acceptTypes}
+        tabIndex={-1}
         className="sr-only"
         onChange={(event) => uploadFiles(event.currentTarget.files)}
       />

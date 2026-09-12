@@ -102,7 +102,7 @@ function OfferCard({ row }: { row: OfferRow }) {
           </span>
           <Link
             href={`/candidates/${row.candidateId}`}
-            className="inline-flex items-center gap-1 rounded bg-brand-gold px-2.5 py-1 text-[11px] font-semibold text-brand-black transition hover:bg-brand-gold/90 dark:text-slate-100"
+            className="inline-flex items-center gap-1 rounded bg-brand-gold px-2.5 py-1 text-[11px] font-semibold text-brand-black transition hover:bg-brand-gold/90"
           >
             Move them in <ArrowRight className="h-3 w-3" />
           </Link>

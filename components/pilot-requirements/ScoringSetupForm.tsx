@@ -254,6 +254,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
                 </div>
                 <input
                   type="range"
+                  aria-label={`${CATEGORY_LABELS[key]} weight`}
                   min={0}
                   max={100}
                   step={1}
@@ -467,6 +468,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
               <span className="text-sm text-brand-lea dark:text-slate-100">Worth a look ≥</span>
               <input
                 type="range"
+                aria-label="Worth a look threshold"
                 min={0}
                 max={100}
                 value={cfg.readiness.possible}
@@ -485,6 +487,7 @@ export function ScoringSetupForm({ data }: { data: ScoringSetupData }) {
               <span className="text-sm text-brand-lea dark:text-slate-100">Strong signal ≥</span>
               <input
                 type="range"
+                aria-label="Strong signal threshold"
                 min={cfg.readiness.possible}
                 max={100}
                 value={cfg.readiness.strong}
@@ -566,6 +569,7 @@ function PctField({
       </div>
       <input
         type="range"
+        aria-label={label}
         min={0}
         max={max}
         step={1}

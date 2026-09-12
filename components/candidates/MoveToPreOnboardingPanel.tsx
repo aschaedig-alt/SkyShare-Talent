@@ -132,7 +132,7 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
         <button
           onClick={() => void createHire()}
           disabled={busy !== null || (!startDate && !noDateAck)}
-          className="rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50 dark:text-slate-100"
+          className="rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50"
         >
           {busy === "create" ? "Moving…" : "Move to onboarding"}
         </button>
@@ -224,7 +224,7 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
                   <button
                     onClick={() => void linkHire(m.id)}
                     disabled={busy !== null}
-                    className="rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50 dark:text-slate-100"
+                    className="rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50"
                   >
                     {busy === "link" ? "Linking…" : "Link to that record"}
                   </button>
@@ -335,7 +335,7 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
                 disabled={busy !== null}
                 className={
                   prominent
-                    ? "rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50 dark:text-slate-100"
+                    ? "rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50"
                     : "rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-eden transition hover:bg-brand-cloudDancer/40 disabled:opacity-50 dark:border-white/10 dark:text-slate-200"
                 }
               >

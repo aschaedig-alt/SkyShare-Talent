@@ -117,6 +117,7 @@ export function ResumeIntake({
                   type="file"
                   multiple
                   accept={ACCEPT}
+                  aria-label="Choose resume files to upload"
                   onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
                   className="block w-full text-sm text-brand-grey dark:text-slate-400 file:mr-3 file:rounded file:border-0 file:bg-brand-lea file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-eden"
                 />

@@ -157,6 +157,7 @@ function MxEditSection({
         <button
           type="button"
           className="del"
+          aria-label={`Delete the ${sec.label} section`}
           title="Delete this whole section"
           onClick={() => {
             if (window.confirm(`Delete the "${sec.label}" section and everyone in it?`)) onRemoveSection();
@@ -244,7 +245,7 @@ function MxEditSection({
                 >
                   role
                 </button>
-                <button type="button" className="del" onClick={() => onRemove(r.bucket, r.name)} title="Remove">
+                <button type="button" className="del" onClick={() => onRemove(r.bucket, r.name)} aria-label={`Remove ${r.name}`} title="Remove">
                   ✕
                 </button>
               </span>
@@ -352,7 +353,7 @@ function MxEditSection({
               >
                 fill
               </button>
-              <button type="button" className="del" title="Delete this named opening" onClick={() => onRemoveNamed(l)}>
+              <button type="button" className="del" aria-label={`Delete the ${l} opening`} title="Delete this named opening" onClick={() => onRemoveNamed(l)}>
                 ✕
               </button>
             </div>

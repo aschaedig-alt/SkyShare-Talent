@@ -18,7 +18,7 @@ const statLabels: Array<[keyof CommandCenterData["stats"], string, string]> = [
 export function CommandCenterWorkspace({ data }: CommandCenterWorkspaceProps) {
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
-      <main className="space-y-4">
+      <div className="space-y-4">
         <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
             Recruiting command center
@@ -109,7 +109,7 @@ export function CommandCenterWorkspace({ data }: CommandCenterWorkspaceProps) {
             ))}
           </div>
         </section>
-      </main>
+      </div>
 
       {/* Project Checklist */}
       <ProjectChecklistWorkspace />

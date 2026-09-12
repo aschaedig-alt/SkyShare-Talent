@@ -280,13 +280,15 @@ export function EmployeesWorkspace({ employees, counts, initialColumns }: { empl
               <button
                 type="button"
                 onClick={() => { setFiltersOpen((o) => !o); setColsOpen(false); }}
+                aria-expanded={filtersOpen}
+                aria-haspopup="true"
                 className={clsx("inline-flex items-center gap-1.5 rounded border px-2.5 py-2 text-sm font-semibold transition", activeFilterCount > 0 ? "border-brand-gold/60 bg-brand-gold/15 text-brand-lea dark:text-brand-gold" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400")}
               >
                 <SlidersHorizontal className="h-4 w-4" /> Filter{activeFilterCount > 0 ? <span className="rounded shrink-0 bg-brand-gold px-1.5 text-[10px] font-bold text-brand-black">{activeFilterCount}</span> : null}
               </button>
               {filtersOpen ? (
                 <>
-                  <button type="button" aria-hidden className="fixed inset-0 z-10 cursor-default" onClick={() => setFiltersOpen(false)} />
+                  <button type="button" aria-hidden tabIndex={-1} className="fixed inset-0 z-10 cursor-default" onClick={() => setFiltersOpen(false)} />
                   <div className="absolute right-0 z-20 mt-1 w-64 space-y-2.5 rounded border border-brand-lea/15 bg-white p-3 shadow-panel dark:border-white/10 dark:bg-brand-panel">
                     <div>
                       <div className="mb-1 text-[11px] font-semibold text-brand-grey dark:text-slate-400">Pilot pool</div>
@@ -346,13 +348,15 @@ export function EmployeesWorkspace({ employees, counts, initialColumns }: { empl
               <button
                 type="button"
                 onClick={() => { setColsOpen((o) => !o); setFiltersOpen(false); }}
+                aria-expanded={colsOpen}
+                aria-haspopup="true"
                 className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-2.5 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
               >
                 <Columns3 className="h-4 w-4" /> Columns
               </button>
               {colsOpen ? (
                 <>
-                  <button type="button" aria-hidden className="fixed inset-0 z-10 cursor-default" onClick={() => setColsOpen(false)} />
+                  <button type="button" aria-hidden tabIndex={-1} className="fixed inset-0 z-10 cursor-default" onClick={() => setColsOpen(false)} />
                   <div className="absolute right-0 z-20 mt-1 w-52 rounded border border-brand-lea/15 bg-white p-2 shadow-panel dark:border-white/10 dark:bg-brand-panel">
                     <div className="px-1.5 pb-1.5 text-[11px] font-semibold text-brand-grey dark:text-slate-400">Shows for everyone</div>
                     {EMPLOYEE_COLUMN_KEYS.map((key) => (

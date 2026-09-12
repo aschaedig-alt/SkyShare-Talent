@@ -330,7 +330,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
 
   return (
     <section className="flex h-full flex-col rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-      <input ref={fileInputRef} type="file" multiple accept={UPLOAD_ACCEPT} className="sr-only" onChange={(e) => handleUpload(e.currentTarget.files)} />
+      <input ref={fileInputRef} type="file" multiple accept={UPLOAD_ACCEPT} tabIndex={-1} className="sr-only" onChange={(e) => handleUpload(e.currentTarget.files)} />
 
       {/* In-document search */}
       {files.length > 0 && (
@@ -405,7 +405,11 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 <span className="max-w-[150px] truncate">{file.displayFilename}</span>
-                {isMatch && <span className={clsx("h-1.5 w-1.5 shrink-0 rounded-full", active ? "bg-white dark:bg-brand-panel" : "bg-brand-gold")} />}
+                {isMatch && (
+                  <span className={clsx("h-1.5 w-1.5 shrink-0 rounded-full", active ? "bg-white dark:bg-brand-panel" : "bg-brand-gold")}>
+                    <span className="sr-only">matches your search</span>
+                  </span>
+                )}
               </button>
             );
           })}
@@ -545,7 +549,7 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
                     if (e.key === "Enter") handleRename(activeFile.id);
                     if (e.key === "Escape") setRenamingId(null);
                   }}
-                  className="min-w-0 flex-1 rounded border border-brand-lea/30 px-2 py-1 text-sm focus:border-brand-gold focus:outline-none dark:border-white/10 dark:text-slate-100"
+                  className="min-w-0 flex-1 rounded border border-brand-lea/30 px-2 py-1 text-sm focus:border-brand-gold dark:border-white/10 dark:text-slate-100"
                 />
                 <button onClick={() => handleRename(activeFile.id)} disabled={busy} className="rounded p-1 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/15" aria-label="Save name"><Check className="h-4 w-4" /></button>
                 <button onClick={() => setRenamingId(null)} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/40 dark:text-slate-400 dark:bg-white/5" aria-label="Cancel"><X className="h-4 w-4" /></button>

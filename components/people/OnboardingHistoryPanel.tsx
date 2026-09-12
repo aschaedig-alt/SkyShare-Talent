@@ -219,7 +219,7 @@ export function OnboardingHistoryPanel({
                   </span>
                 </button>
                 {saved === a.id && !isEditing ? (
-                  <span className="shrink-0 text-xs font-semibold text-emerald-600 dark:text-emerald-400">Saved</span>
+                  <span className="shrink-0 text-xs font-semibold text-emerald-700 dark:text-emerald-400">Saved</span>
                 ) : null}
                 {canEdit && !isEditing ? (
                   <Button variant="secondary" size="sm" onClick={() => startEditing(a)} className="shrink-0">

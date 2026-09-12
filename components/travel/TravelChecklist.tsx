@@ -86,7 +86,7 @@ export function TravelChecklist({ trip }: { trip: TravelTripView }) {
   return (
     <div className="rounded border border-brand-lea/12 bg-brand-cloudDancer/30 p-3 dark:border-white/10 dark:bg-white/5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-brand-lea dark:text-slate-100">Checklist</h4>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-brand-lea dark:text-slate-100">Checklist</h3>
         <div className="flex items-center gap-2">
           {saveState !== "idle" ? (
             <span
@@ -346,7 +346,7 @@ function VisitField({
         onBlur={() => {
           if (draft.trim() !== value.trim()) onSave(draft);
         }}
-        className="mt-0.5 w-full resize-y rounded border border-brand-lea/15 bg-white px-2 py-1 text-[12px] text-brand-lea placeholder:text-brand-grey/60 focus:border-brand-gold focus:outline-none dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+        className="mt-0.5 w-full resize-y rounded border border-brand-lea/15 bg-white px-2 py-1 text-[12px] text-brand-lea placeholder:text-brand-grey/60 focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
         placeholder="—"
       />
     </label>

@@ -321,6 +321,7 @@ function EditCol({
                 setConfirmRemove(confirmRemove === name ? null : name);
                 onSetLeave(null);
               }}
+              aria-label={`Take ${name} off the chart`}
               title="Take off the chart"
             >
               ✕
@@ -2227,7 +2228,7 @@ export default function CrewOrgChart({
                               style={{ fontSize: 11, padding: "2px 4px", borderRadius: 4, border: "1px solid var(--line, #cdd7e2)", background: "transparent", color: "inherit" }}
                             />
                           </label>
-                          <button type="button" className="del" onClick={() => removeOut(openIdx as number, i)} title="Remove departure">
+                          <button type="button" className="del" onClick={() => removeOut(openIdx as number, i)} aria-label={`Remove the departure for ${o.name}`} title="Remove departure">
                             ✕
                           </button>
                         </div>

@@ -393,7 +393,7 @@ export function FeedbackButton({ variant = "rail" }: { variant?: FeedbackVariant
                       ? "What would you like to know?"
                       : "What would make this better?"
                 }
-                className="w-full resize-none rounded border border-brand-lea/20 px-3 py-2 text-sm focus:border-brand-lea focus:outline-none dark:border-white/10"
+                className="w-full resize-none rounded border border-brand-lea/20 px-3 py-2 text-sm focus:border-brand-lea dark:border-white/10"
               />
 
               {/* Screenshot: pasted or picked. */}

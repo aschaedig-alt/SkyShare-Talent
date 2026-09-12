@@ -157,7 +157,7 @@ export function NewJobButton() {
                 setOpen(false);
                 reset();
               }}
-              className="rounded bg-brand-gold px-2.5 py-1 text-[11px] font-semibold text-brand-black transition hover:bg-brand-gold/90 dark:text-slate-100"
+              className="rounded bg-brand-gold px-2.5 py-1 text-[11px] font-semibold text-brand-black transition hover:bg-brand-gold/90"
             >
               Use “{clash.title}”
             </Link>

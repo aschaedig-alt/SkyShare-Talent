@@ -426,7 +426,7 @@ export function BusinessCardsWorkspace({ cards, minBatch: minBatchProp }: { card
                     ))}
                   </select>
                   {r.orderState.needsAction ? (
-                    <span className={clsx("inline-flex items-center gap-1 text-[11px] font-medium", r.orderState.overdue ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400")}>
+                    <span className={clsx("inline-flex items-center gap-1 text-[11px] font-medium", r.orderState.overdue ? "text-red-600 dark:text-red-400" : "text-amber-700 dark:text-amber-400")}>
                       {r.orderState.overdue ? <AlertTriangle className="h-3 w-3" /> : null}
                       {r.orderState.overdue ? "Order now" : `Order by ${fmtDay(r.orderState.orderByISO)}`}
                     </span>

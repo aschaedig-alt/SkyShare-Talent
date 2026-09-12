@@ -24,6 +24,10 @@ const GRID_BULK_ACTIONS: BulkAction[] = [
 
 const NEXT: Record<GridTaskStatus, GridTaskStatus> = { TODO: "DONE", DONE: "NA", NA: "TODO" };
 
+// The grid shows status as shape + colour only, so the cell button needs the word
+// in its accessible name — "NA" spoken as-is reads as nothing useful.
+const STATUS_WORD: Record<GridTaskStatus, string> = { TODO: "to do", DONE: "done", NA: "not applicable" };
+
 const STATUS_STYLE: Record<HireStatus, string> = {
   Ready: "bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
   "In progress": "bg-brand-gold/15 text-brand-lea dark:text-slate-100",
@@ -42,7 +46,7 @@ function Glyph({ status }: { status: GridTaskStatus }) {
   if (status === "DONE")
     return (
       <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-        <svg width="11" height="11" viewBox="0 0 12 12">
+        <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true">
           <path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </span>
@@ -253,7 +257,7 @@ export function OnboardingGridTab({
             <tr>
               {/* The corner cell pins in BOTH directions, above the header row and
                   the task column, so it never slides out from under either. */}
-              <th className="sticky left-0 top-0 z-30 border-b border-r border-brand-lea/10 bg-white px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">
+              <th scope="col" className="sticky left-0 top-0 z-30 border-b border-r border-brand-lea/10 bg-white px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">
                 <label className="flex items-center gap-1.5">
                   <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all hires" className="h-3.5 w-3.5" />
                   Task
@@ -262,7 +266,7 @@ export function OnboardingGridTab({
               {hires.map((h) => {
                 const pct = h.applicableCount > 0 ? Math.round((h.doneCount / h.applicableCount) * 100) : 0;
                 return (
-                  <th key={h.id} className={clsx("sticky top-0 z-20 border-b px-3 py-2 align-bottom", COLUMN_RULE, selected.has(h.id) ? "bg-brand-eden/10 dark:bg-white/10" : "bg-white dark:bg-brand-panel")} style={{ minWidth: 132 }}>
+                  <th key={h.id} scope="col" className={clsx("sticky top-0 z-20 border-b px-3 py-2 align-bottom", COLUMN_RULE, selected.has(h.id) ? "bg-brand-eden/10 dark:bg-white/10" : "bg-white dark:bg-brand-panel")} style={{ minWidth: 132 }}>
                     <div className="flex justify-center">
                       <input type="checkbox" checked={selected.has(h.id)} onChange={() => toggleOne(h.id)} aria-label={`Select ${h.name}`} className="h-3.5 w-3.5" />
                     </div>
@@ -318,7 +322,10 @@ export function OnboardingGridTab({
                   </tr>
                   {groupTasks.map((def) => (
                     <tr key={def.key} className="row-wash dark:hover:bg-white/5">
-                      <td className="row-wash-sticky sticky left-0 z-10 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right text-brand-black dark:border-white/10 dark:bg-brand-panel dark:text-slate-100">{def.label}</td>
+                      {/* A row HEADER, not a cell: this grid has headers on both axes, and a
+                          <td> here leaves a status cell announcing neither the hire nor the
+                          task. font-normal keeps the <th> looking exactly as it did. */}
+                      <th scope="row" className="row-wash-sticky sticky left-0 z-10 border-b border-r border-brand-lea/10 bg-white px-3 py-1.5 text-right font-normal text-brand-black dark:border-white/10 dark:bg-brand-panel dark:text-slate-100">{def.label}</th>
                       {hires.map((h) => {
                         const task = h.tasks.find((t) => t.key === def.key);
                         if (!task) return <td key={h.id} className={clsx("border-b border-brand-lea/5 text-center text-brand-grey/50 dark:border-white/10", COLUMN_RULE)}>–</td>;
@@ -328,6 +335,7 @@ export function OnboardingGridTab({
                               type="button"
                               onClick={() => cycle(h.id, task.id, task.status)}
                               className="inline-flex h-8 w-full items-center justify-center transition-colors hover:bg-brand-gold/10 dark:hover:bg-white/5"
+                              aria-label={`${def.label} for ${h.name} — ${STATUS_WORD[task.status]}, click to change`}
                               title="Click to change"
                             >
                               <Glyph status={task.status} />

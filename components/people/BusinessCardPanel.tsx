@@ -293,7 +293,7 @@ export function BusinessCardPanel({
           ))}
         </select>
         {status === "NEEDED" && order.orderByISO ? (
-          <span className={clsx("inline-flex items-center gap-1 text-xs font-medium", order.overdue ? "text-red-600 dark:text-red-400" : order.needsAction ? "text-amber-600 dark:text-amber-400" : "text-brand-grey dark:text-slate-400")}>
+          <span className={clsx("inline-flex items-center gap-1 text-xs font-medium", order.overdue ? "text-red-600 dark:text-red-400" : order.needsAction ? "text-amber-700 dark:text-amber-400" : "text-brand-grey dark:text-slate-400")}>
             {order.overdue ? <AlertTriangle className="h-3.5 w-3.5" /> : null}
             {order.overdue ? `Order now — orientation ${fmtDay(orientationDate)}` : `Order by ${fmtDay(order.orderByISO)} for orientation ${fmtDay(orientationDate)}`}
           </span>

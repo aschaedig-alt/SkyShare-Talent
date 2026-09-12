@@ -21,7 +21,7 @@ function TagRow({ option, on, onToggle }: { option: CandidateTagOption; on: bool
       <span
         className={clsx(
           "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border",
-          on ? "border-brand-gold bg-brand-gold text-white" : "border-brand-lea/25 dark:border-white/20"
+          on ? "border-brand-gold bg-brand-gold text-brand-lea" : "border-brand-lea/25 dark:border-white/20"
         )}
       >
         {on ? <Check className="h-2.5 w-2.5" /> : null}
@@ -107,6 +107,8 @@ export function CandidateTagFilter({
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="true"
         className={clsx(
           "inline-flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs font-semibold transition",
           active.length
@@ -140,7 +142,7 @@ export function CandidateTagFilter({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Find a tag…"
-              className="mb-2 w-full rounded border border-brand-lea/15 px-2 py-1 text-xs text-brand-lea placeholder:text-brand-grey/60 focus:border-brand-gold focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+              className="mb-2 w-full rounded border border-brand-lea/15 px-2 py-1 text-xs text-brand-lea placeholder:text-brand-grey/60 focus:border-brand-gold dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
             />
 
             {active.length > 0 ? (

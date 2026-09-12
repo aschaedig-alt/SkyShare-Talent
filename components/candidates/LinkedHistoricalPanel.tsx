@@ -93,7 +93,7 @@ export function LinkedHistoricalPanel({ keepId, link, canEdit }: LinkedHistorica
                     }
                   }}
                   disabled={busy !== null}
-                  className="rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50 dark:text-slate-100"
+                  className="rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:opacity-50"
                 >
                   {busy === "merge" ? "Merging…" : "Merge into this profile"}
                 </button>

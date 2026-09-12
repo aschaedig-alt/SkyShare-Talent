@@ -11,7 +11,7 @@ function Field({ label, value }: { label: string; value: string }) {
       {value ? (
         <div className="text-sm text-brand-black dark:text-slate-100">{value}</div>
       ) : (
-        <div className="text-sm font-medium text-amber-600 dark:text-amber-400">— add on profile</div>
+        <div className="text-sm font-medium text-amber-700 dark:text-amber-400">— add on profile</div>
       )}
     </div>
   );

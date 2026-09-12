@@ -88,7 +88,7 @@ export function FinalReviewWorkspace({ jobs }: FinalReviewWorkspaceProps) {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded bg-brand-gold px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-brand-lea dark:text-slate-100">
+            <span className="inline-flex items-center gap-1.5 rounded bg-brand-gold px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-brand-lea">
               Template Locked
             </span>
             <span
@@ -108,7 +108,7 @@ export function FinalReviewWorkspace({ jobs }: FinalReviewWorkspaceProps) {
       </header>
 
       <div className="grid gap-5 px-5 py-5 lg:px-8 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <main className="space-y-5">
+        <div className="space-y-5">
           <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
             <div className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_minmax(260px,1.3fr)_auto] md:items-end">
               <div>
@@ -161,7 +161,7 @@ export function FinalReviewWorkspace({ jobs }: FinalReviewWorkspaceProps) {
             </div>
             <FormattedJobPost job={selectedJob} showVersionBadges={false} />
           </section>
-        </main>
+        </div>
 
         <aside className="space-y-5 xl:sticky xl:top-5 xl:self-start">
           <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
@@ -216,7 +216,7 @@ export function FinalReviewWorkspace({ jobs }: FinalReviewWorkspaceProps) {
                 <button
                   type="button"
                   onClick={() => copyExport("html")}
-                  className="inline-flex items-center justify-center gap-2 rounded bg-brand-gold px-3 py-2 text-xs font-bold text-brand-lea hover:bg-brand-gold/90 dark:text-slate-100"
+                  className="inline-flex items-center justify-center gap-2 rounded bg-brand-gold px-3 py-2 text-xs font-bold text-brand-lea hover:bg-brand-gold/90"
                 >
                   <Copy className="h-3.5 w-3.5" />
                   {copied === "html" ? "Copied HTML" : "Copy Limited HTML"}

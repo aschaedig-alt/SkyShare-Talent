@@ -55,7 +55,7 @@ export default async function ComplimentsDashboardPage() {
           </div>
           <Link
             href="/compliments/give"
-            className="inline-flex items-center gap-1.5 rounded-element bg-brand-gold px-4 py-2 text-sm font-medium text-brand-lea transition hover:bg-brand-gold/90 dark:text-slate-100"
+            className="inline-flex items-center gap-1.5 rounded-element bg-brand-gold px-4 py-2 text-sm font-medium text-brand-lea transition hover:bg-brand-gold/90"
           >
             <Sparkles className="h-4 w-4" />
             Give recognition

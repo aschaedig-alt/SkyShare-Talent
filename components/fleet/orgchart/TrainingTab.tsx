@@ -347,6 +347,14 @@ export function TrainingTab({
                   style={headStyle}
                   className={`sortable${c.pre ? " pre" : ""}`}
                   onClick={() => toggleSort(c.key)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      toggleSort(c.key);
+                    }
+                  }}
+                  tabIndex={0}
+                  aria-sort={sortKey === c.key ? (sortDir > 0 ? "ascending" : "descending") : "none"}
                   title={`Sort by ${c.label}`}
                 >
                   {c.label}
@@ -402,6 +410,7 @@ export function TrainingTab({
                         <button
                           type="button"
                           onClick={() => onShowPerson(row.name)}
+                          aria-label={`Show ${row.name} on the chart`}
                           title={`Show ${row.name} on the chart`}
                           style={{ flex: "0 0 auto", background: "none", border: "none", cursor: "pointer", fontSize: 11, opacity: 0.6, padding: "0 2px", color: "inherit" }}
                         >
@@ -512,6 +521,7 @@ export function TrainingTab({
                             <button
                               type="button"
                               onClick={() => removeRecord(row.id)}
+                              aria-label={`Delete the training record for ${row.name}`}
                               title="Delete this training record outright"
                               style={{ flex: "0 0 auto", background: "none", border: "none", color: "#c0392b", cursor: "pointer", fontSize: 12, padding: "0 2px", width: "auto" }}
                             >

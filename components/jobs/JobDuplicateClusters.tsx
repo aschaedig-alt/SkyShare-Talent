@@ -267,7 +267,7 @@ function ClusterCard({ cluster, onMerged }: { cluster: DuplicateCluster; onMerge
           <button
             onClick={handleMergeSelected}
             disabled={busy || selectedIds.length === 0}
-            className="flex items-center gap-2 rounded bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-100"
+            className="flex items-center gap-2 rounded bg-brand-gold px-4 py-2 text-sm font-semibold text-brand-black transition hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {merging && <Loader className="h-4 w-4 animate-spin" />}
             {merging ? "Merging…" : `Merge ${selectedIds.length} selected`}

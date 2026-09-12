@@ -170,6 +170,7 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
                         key={item.href}
                         href={item.href}
                         prefetch={false}
+                        aria-current={item.href === activeHref ? "page" : undefined}
                         className={clsx(
                           "flex items-center gap-2.5 rounded-sm px-2.5 py-2 text-sm font-medium transition",
                           item.href === activeHref ? "bg-white text-brand-lea" : "text-white/90 hover:bg-white/10 hover:text-white"
@@ -246,7 +247,7 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
                 <X className="h-5 w-5 text-white/70" />
               </button>
             </div>
-            <nav className="space-y-3 px-3 py-4">
+            <nav className="space-y-3 px-3 py-4" aria-label="Main navigation">
               {groups.flatMap((group) =>
                 group.sections.map((section) => (
                   <SectionBlock
@@ -438,7 +439,7 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
                 is exactly how the icon rail ended up with two bars. Nothing in this
                 panel is positioned outside it, so unlike the rail the clipping is
                 harmless here. */}
-            <nav className="flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden px-2.5 py-2">
+            <nav className="flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden px-2.5 py-2" aria-label="Section navigation">
               {activeGroup.sections.map((section) => (
                 <SectionBlock
                   key={section.id}
@@ -518,6 +519,7 @@ function SectionBlock({ section, activeHref, collapsed, onToggle, collapsible = 
                 // answers "did my click register" now, which was the point of
                 // prefetching a slow page in the first place.
                 prefetch={false}
+                aria-current={active ? "page" : undefined}
                 className={clsx(
                   "flex items-center gap-3 rounded-sm px-3 py-2 text-sm font-medium transition",
                   active ? "bg-white text-brand-lea shadow-sm" : "text-white/90 hover:bg-white/10 hover:text-white"

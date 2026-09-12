@@ -97,7 +97,11 @@ function MiniMonth({ year, month, markers }: { year: number; month: number; mark
               {m ? (
                 <span className="flex items-center gap-0.5">
                   {m.hireCount > 0 ? <span className="text-[8px] font-bold text-brand-lea dark:text-slate-100">{m.hireCount}</span> : null}
-                  {m.sessionId ? <span className="h-1 w-1 shrink-0 rounded-full bg-emerald-500" /> : null}
+                  {m.sessionId ? (
+                    <span className="h-1 w-1 shrink-0 rounded-full bg-emerald-500">
+                      <span className="sr-only">orientation session</span>
+                    </span>
+                  ) : null}
                 </span>
               ) : null}
             </div>

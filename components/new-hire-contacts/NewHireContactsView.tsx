@@ -171,7 +171,7 @@ export function NewHireContactsView({
                       <button
                         type="button"
                         onClick={() => addContacts([contact.key], `skyshare-${contact.fullName}`, token)}
-                        className="flex flex-none items-center gap-1 rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-sweet dark:text-slate-100"
+                        className="flex flex-none items-center gap-1 rounded bg-brand-gold px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-sweet"
                       >
                         <Plus className="h-3.5 w-3.5" />
                         Add
