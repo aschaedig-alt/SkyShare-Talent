@@ -142,6 +142,126 @@ still counted as filling their seat.
 
 ---
 
+### 6. No part of the 2026-09-11/12 overnight fix batch has been seen in dark mode
+
+**Status:** OPEN
+**Added:** 2026-09-12
+
+79 fixes landed overnight and the dark-mode ones are the largest group. Every contrast
+figure behind them is either measured by the Round 1 Chrome pass **before** the fix or
+computed from the WCAG formula on specific hex pairs **after** it. Nobody has looked at the
+result.
+
+The two crew org-chart write-confirmation dialogs are the sharpest case: reaching them
+requires a real production write, so Round 1 deliberately refused and Round 2 could only
+reason that the fix reaches them (no createPortal anywhere in
+`components/fleet/orgchart/`, and both modals render inside the `.wrap` root).
+
+**How to check it, about two minutes:** turn dark mode on and open `/fleet/crew`,
+`/fleet/maintenance`, `/reports`, `/jobs` and any page with a month calendar.
+
+**What would count as a pass:** the org charts' "Find a person" panel is readable rather
+than white-on-white; the Reports tab bar's selected tab has a visible gold ring; today's
+square on a month calendar is the most obvious one rather than the least; the job-post
+preview on `/jobs` is readable. Also glance at the pale-blue interview tone dot on the
+crew chart - that is the one judgement call in the batch, deliberately left alone, and the
+arithmetic says it was already correct.
+
+---
+
+### 7. The interactions behind the overnight wiring fixes were never clicked
+
+**Status:** OPEN
+**Added:** 2026-09-12
+
+All 39 affected routes were confirmed to return 200 with real HTML and no error boundary,
+so the pages render. What no session did was *use* them, and these four are behaviour
+rather than markup:
+
+- the new confirmation step before deleting a feedback item, and before deleting a travel
+  receipt
+- the orientation grid's send button saying **Send** rather than **Resend** on a step that
+  was only hand-ticked
+- "Mark onboarded" landing on the correct People tab now that the dead `?stage=`
+  parameter is gone
+- a linked candidate on a job opening that person's profile instead of a name search
+
+**How to check it:** do each one once, on a real record, in the normal way.
+
+**What would count as a pass:** the confirm appears and cancelling really cancels; the
+orientation button's wording matches whether a send actually happened; the tab you land on
+is the tab you expected.
+
+---
+
+### 8. Two code paths in the batch only run in production and cannot run here
+
+**Status:** OPEN
+**Added:** 2026-09-12
+
+Local dev bypasses auth, so:
+
+- The 403 rollback added to the feedback delete cannot be triggered. That route is
+  `settings:admin` gated, so the restore-on-failure branch is reasoned, not run.
+- The `app/page.tsx` landing-route change cannot be exercised at all. `isAuthRequired()`
+  is false locally, so the function redirects before reaching the edited lines. The local
+  200 on `/` is **not** evidence about that fix.
+
+**How to check it:** after the next deploy, sign in as a non-admin and try to delete a
+feedback item; and confirm the landing redirect still sends each role to the right home.
+
+**What would count as a pass:** the non-admin is refused and the item reappears rather than
+vanishing from the list; every role lands where it did before.
+
+---
+
+### 9. No screen reader has been used on any accessibility fix
+
+**Status:** OPEN
+**Added:** 2026-09-12
+
+The overnight batch added accessible names to icon-only buttons, keyboard paths to
+clickable divs, form labels, and a table header swap on the People onboarding grid. Every
+claim is derived from the HTML and ARIA specifications - aria-label overrides
+name-from-content, title is the last fallback - and not one was heard.
+
+Two specific things were changed by reasoning and never seen rendered: the People
+onboarding grid's row label became a `th` (believed visually identical, with
+`font-normal` added because Tailwind's preflight has no `th` rule), and the training
+table's column headers became focusable, which will now paint a gold focus ring on a header
+styled by a CSS module the agent was not allowed to open.
+
+**How to check it:** VoiceOver or NVDA on `/people` (onboarding grid) and the crew
+chart's Training tab, plus Tab through both.
+
+**What would count as a pass:** a grid cell announces the person and the task rather than
+just "button"; the onboarding grid looks unchanged; the focus ring on a training header
+does not look broken.
+
+---
+
+### 10. An interview stored in a non-Mountain timezone would now be re-read as Mountain
+
+**Status:** OPEN, no live row affected
+**Added:** 2026-09-12
+
+The interview create and update paths now parse a naive `datetime-local` string as
+Mountain wall clock instead of UTC, which is the fix. The residual: a row whose stored
+`timezone` is something other than America/Denver would be re-parsed as Mountain on a
+PATCH, because the edit modal sends no timezone and has no zone picker.
+
+Measured, so the scope is known: of 350 interviews, every non-null timezone value is
+America/Denver (18 seed-demo plus 2 local-calendar) and the other 330 are null. So nothing
+live is wrong today.
+
+**How to check it:** only matters if a non-Mountain interview is ever scheduled. If that
+becomes real, the edit modal needs a timezone picker.
+
+**What would count as a pass:** a non-Mountain interview survives an open-and-save
+unchanged.
+
+---
+
 ## Closed
 
 Nothing yet.
