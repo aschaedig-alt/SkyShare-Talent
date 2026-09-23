@@ -185,7 +185,9 @@ export function resolveLimit(requested: unknown): number {
  */
 function noticeComment(result: ScanRow): string {
   const label = ONBOARDING_TASKS.find((t) => t.key === result.detail)?.label ?? result.detail;
-  const via = result.matchedBy === "nickname" ? ` (Paycom addressed them as "${result.personName}")` : "";
+  // Any match that was not on the name they go by gets Paycom's own wording
+  // alongside, so a legal-name or id match can be checked by whoever reads it.
+  const via = result.matchedBy && result.matchedBy !== "exact" ? ` (Paycom addressed them as "${result.personName}")` : "";
   // Only the offer notice carries a position, and it is worth repeating: it is the
   // one detail that makes a wrong-person tick obvious to somebody reading the
   // thread, which a bare name never does.

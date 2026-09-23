@@ -76,11 +76,23 @@ const NOTICES: NoticeDef[] = [
     // Paycom sends TWO body wordings under this one subject:
     //   "TARA WARD has completed the background check."
     //   "...because JONATHAN SOTO has completed their information for a background check."
-    // Anchor on the SHOUTED name (Paycom always upper-cases it) rather than the
-    // trailing phrase. A looser, case-insensitive pattern swallows the lead-in and
-    // captures "You have received this email because JONATHAN SOTO" — the second
-    // wording has no punctuation to stop it.
-    name: /\b([A-Z][A-Z'’\-]+(?:\s+[A-Z][A-Z'’\-]+){1,3})\s+has\s+completed\b/
+    //
+    // AND THE NAME IS NOT ALWAYS SHOUTED. This used to anchor on an upper-case
+    // name, on the belief that Paycom always upper-cases it. It does not: from
+    // Sep 21 2026 the same notice arrived as "Taylor Goodwin has completed the
+    // background check." — identical wording, ordinary capitals — and every one
+    // was reported as unreadable while the person's checklist sat unticked. The
+    // offer notices had already shown mixed case ("nicholas Zehr", "Little Craig").
+    //
+    // So the name is matched in ANY case, and what stops it swallowing the
+    // lead-in ("You have received this email because JONATHAN SOTO") is an
+    // explicit left edge instead: the start of a line, a sentence or clause
+    // break, or the word "because". Name parts are joined by spaces or tabs
+    // only — never a newline — so a greeting line cannot run into the name.
+    // The lookahead keeps "because" and "Hello" themselves out of the name: the
+    // leftmost match wins, so ", because JONATHAN SOTO has completed" would
+    // otherwise capture three words starting at the comma.
+    name: /(?:^|[\n.,;:]|\bbecause\b)[ \t]*((?!because\b|hello\b)\p{L}[\p{L}'’\-]*\.?(?:[ \t]+\p{L}[\p{L}'’\-]*\.?){1,3})[ \t]+has[ \t]+completed\b/imu
   },
   {
     // Step 3 of 3: the check itself came back. This is the one that means the
@@ -92,8 +104,9 @@ const NOTICES: NoticeDef[] = [
     // review." The name sits BETWEEN "for" and "has been completed", so the
     // step-2 pattern (which expects the name immediately before "has completed")
     // cannot read this one — hence a separate expression rather than a shared,
-    // looser one.
-    name: /\bfor\s+([A-Z][A-Z'’\-]+(?:\s+[A-Z][A-Z'’\-]+){1,3})\s+has\s+been\s+completed\b/
+    // looser one. Any case, for the reason given on step 2: "The background
+    // check for Taylor Goodwin has been completed" arrived on Sep 21 2026.
+    name: /\bfor[ \t]+(\p{L}[\p{L}'’\-]*\.?(?:[ \t]+\p{L}[\p{L}'’\-]*\.?){1,3})[ \t]+has[ \t]+been[ \t]+completed\b/iu
   },
   {
     /**
@@ -186,7 +199,17 @@ const IGNORED: Array<{ subject?: RegExp; body?: RegExp; why: string }> = [
   // whole notice underneath, which is why it reaches this far at all. Without
   // this it reports as unrecognised and fires the rewording alarm every time
   // somebody answers one.
-  { subject: /^\s*re\s*:/i, why: "a reply about a notice, not the notice" }
+  { subject: /^\s*re\s*:/i, why: "a reply about a notice, not the notice" },
+  // Two KINDS of Paycom mail that began arriving in the sweep's 30-day window and
+  // were counted as "couldn't be read" — 31 of the 35 in the Sep 21 2026 report,
+  // which told her Paycom had "probably changed the wording" when it had not.
+  // Neither is a rewording of anything we act on; they are simply mail we have
+  // no step for. Anchored on the full subject so a real notice cannot hide here.
+  //   "New Text Message Received" — a candidate or employee texting HR through
+  //     Paycom ("You received a text message from Carl Hadra (293981).").
+  //   "A Requisition Has Been Posted" — a job going live in Paycom.
+  { subject: /^\s*new\s+text\s+message\s+received\s*$/i, why: "a text message sent through Paycom" },
+  { subject: /^\s*a\s+requisition\s+has\s+been\s+posted\s*$/i, why: "a requisition was posted" }
 ];
 
 /** Known Paycom mail we intentionally skip. Returns why, or null if unknown. */
@@ -204,7 +227,7 @@ export type PaycomNoticeResult = {
   hireId: string | null;
   hireName: string | null;
   /** How we tied the Paycom name to a person — worth showing in the report. */
-  matchedBy?: "exact" | "nickname";
+  matchedBy?: MatchedBy;
   /**
    * The role the offer was for, as Paycom worded it. Reported so a recruiter can
    * eyeball that the tick landed on the right person for the right job — the one
@@ -348,7 +371,27 @@ export function extractName(def: NoticeDef, text: string): string | null {
     .replace(/\b[a-z]/g, (c) => c.toUpperCase());
 }
 
-export type RosterEntry = { id: string; name: string; stage: string };
+export type RosterEntry = {
+  id: string;
+  name: string;
+  stage: string;
+  /** The hire's legal name, where they go by something else ("Henry Flynn McFarland"). */
+  legalName?: string | null;
+  /** Paycom's person id, when the hire's linked candidate carries one. */
+  paycomPersonId?: string | null;
+};
+
+/**
+ * How a Paycom name was tied to a person. Everything other than "exact" is shown
+ * in the report next to the name Paycom used, so a match can be eyeballed.
+ *   exact      the name they go by, or a trimmed form of Paycom's longer one
+ *   legal-name the legal name on their hire record — Paycom always uses it
+ *   paycom-id  Paycom's own person id, stored on their candidate record
+ *   nickname   same surname, first names agree on three letters
+ */
+export type MatchedBy = "exact" | "legal-name" | "paycom-id" | "nickname";
+
+const splitName = (name: string) => normalize(name).split(" ").filter(Boolean);
 
 /**
  * Tie a Paycom name to exactly one person on the roster.
@@ -358,51 +401,102 @@ export type RosterEntry = { id: string; name: string; stage: string };
  * HERMAN" is our Russ Herman, and "JONATHAN DELGADO LEVIN TURNER" is our Jonathan
  * Delgado. Exact-full-name-only missed a third of the notices.
  *
- * Two tiers, both exact comparisons — no fuzzy scoring:
- *   1. exact    — full name; for 3+ word names also first+last and first+second,
- *                 since Paycom carries middle and maternal surnames we don't.
- *   2. nickname — same surname AND the first names agree on their first three
- *                 letters (Nicholas/Nick, Russell/Russ, Christopher/Chris). Three
- *                 letters is the point: it catches the real shortenings while still
- *                 refusing Sarah/Steve Nelson, which a bare initial would tick wrong.
+ * Tiers, all exact comparisons — no fuzzy scoring:
+ *   1. paycom-id  — the notice's person id equals the one on the hire's candidate
+ *                   record, AND the surname agrees. Only the offer notices carry
+ *                   an id. The surname check means a mistyped id on a candidate
+ *                   can never tick a stranger.
+ *   2. exact      — full name; for 3+ word Paycom names also first+last and
+ *                   first+second, since Paycom carries middle and maternal
+ *                   surnames we don't.
+ *      legal-name — the same comparison against the hire's LEGAL name, full and
+ *                   first+last. This tier did not exist until Sep 21 2026, and
+ *                   its absence is why "Henry Mcfarland" — whose legal name
+ *                   "Henry Flynn McFarland" was sitting on his record, beside the
+ *                   "Flynn McFarland" he goes by — was reported as not a current
+ *                   hire, four notices running.
+ *   3. nickname   — same surname AND the first names agree on their first three
+ *                   letters (Nicholas/Nick, Russell/Russ, Christopher/Chris),
+ *                   checked against both names. Three letters is the point: it
+ *                   catches the real shortenings while still refusing Sarah/Steve
+ *                   Nelson, which a bare initial would tick wrong.
  *
- * Either tier must land on exactly ONE person. Two candidates is reported as
+ * Each tier must land on exactly ONE person. Two candidates is reported as
  * ambiguous and changes nothing — a wrong tick puts false compliance state on a
  * real person, which is worse than leaving a box for a human.
  */
 export function matchHire(
   personName: string,
-  roster: RosterEntry[]
-): { matches: RosterEntry[]; matchedBy: "exact" | "nickname" | null } {
-  const parts = normalize(personName).split(" ").filter(Boolean);
+  roster: RosterEntry[],
+  paycomPersonId?: string | null
+): { matches: RosterEntry[]; matchedBy: MatchedBy | null } {
+  const parts = splitName(personName);
   const forms = new Set<string>([parts.join(" ")]);
   if (parts.length > 2) {
     forms.add(`${parts[0]} ${parts[parts.length - 1]}`);
     forms.add(`${parts[0]} ${parts[1]}`);
   }
+  const surname = parts[parts.length - 1] ?? "";
 
-  let matchedBy: "exact" | "nickname" | null = null;
-  let matches = roster.filter((h) => forms.has(normalize(h.name)));
-  if (matches.length) matchedBy = "exact";
+  /** The names a roster entry answers to, as split word lists. */
+  const namesOf = (h: RosterEntry) => [h.name, h.legalName].filter((n): n is string => Boolean(n)).map(splitName);
 
-  if (!matches.length && parts.length >= 2) {
-    const surname = parts[parts.length - 1];
+  const pick = (list: RosterEntry[]): RosterEntry[] => {
+    // The same name twice usually means an old record and a live one — prefer
+    // the person actually in onboarding.
+    if (list.length > 1) {
+      const active = list.filter((h) => h.stage === "ACTIVE");
+      if (active.length === 1) return active;
+    }
+    return list;
+  };
+
+  // 1. Paycom's own id, where the notice carries one.
+  if (paycomPersonId && surname) {
+    const byId = roster.filter(
+      (h) => h.paycomPersonId === paycomPersonId && namesOf(h).some((n) => n[n.length - 1] === surname)
+    );
+    if (byId.length) return { matches: pick(byId), matchedBy: "paycom-id" };
+  }
+
+  // 2. The name they go by, then their legal name.
+  const exact = roster.filter((h) => forms.has(normalize(h.name)));
+  if (exact.length) return { matches: pick(exact), matchedBy: "exact" };
+
+  const legal = roster.filter((h) => {
+    if (!h.legalName) return false;
+    const lp = splitName(h.legalName);
+    if (!lp.length) return false;
+    const legalForms = [lp.join(" ")];
+    if (lp.length > 2) legalForms.push(`${lp[0]} ${lp[lp.length - 1]}`);
+    return legalForms.some((f) => forms.has(f));
+  });
+  if (legal.length) return { matches: pick(legal), matchedBy: "legal-name" };
+
+  // 3. Shortened first names, against either name.
+  if (parts.length >= 2) {
     const stem = parts[0].slice(0, 3);
-    matches = roster.filter((h) => {
-      const hp = normalize(h.name).split(" ").filter(Boolean);
-      return hp.length >= 2 && hp[hp.length - 1] === surname && hp[0].slice(0, 3) === stem;
-    });
-    if (matches.length) matchedBy = "nickname";
+    const nick = roster.filter((h) =>
+      namesOf(h).some((hp) => hp.length >= 2 && hp[hp.length - 1] === surname && hp[0].slice(0, 3) === stem)
+    );
+    if (nick.length) return { matches: pick(nick), matchedBy: "nickname" };
   }
 
-  // The same name twice usually means an old record and a live one — prefer the
-  // person actually in onboarding.
-  if (matches.length > 1) {
-    const active = matches.filter((h) => h.stage === "ACTIVE");
-    if (active.length === 1) matches = active;
-  }
+  return { matches: [], matchedBy: null };
+}
 
-  return { matches, matchedBy };
+/**
+ * A readable line about a notice that could not be placed, for the report.
+ *
+ * The raw text starts with Paycom's letterhead ("SKYSHARE 16856 Background Check
+ * Completed Hello aschaedig,") — which is all the old 160-character excerpt ever
+ * showed, so the one line a person saw never contained the sentence that failed
+ * to parse. This skips to what follows the greeting.
+ */
+function noticeSnippet(subject: string, text: string): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  const afterGreeting = flat.replace(/^.*?\bHello\b[^,]{0,60},\s*/i, "");
+  return `${bareSubject(subject) || "(no subject)"} — "${afterGreeting.slice(0, 110)}" (${text.length} chars)`;
 }
 
 /**
@@ -466,8 +560,9 @@ export async function processPaycomMessage(
 
   const personName = extractName(def, text);
   if (!personName) {
-    // Report enough to tell "body never came back" from "wording differs".
-    return { ...base, kind: def.kind, outcome: "no-name-found", detail: `len=${text.length} :: ${text.slice(0, 160)}` };
+    // Report enough to tell "body never came back" from "wording differs": the
+    // sentence after the greeting, and how long the body was.
+    return { ...base, kind: def.kind, outcome: "no-name-found", detail: noticeSnippet(subject, text) };
   }
 
   // Context, not identity: reported and logged, never matched on.
@@ -477,11 +572,29 @@ export async function processPaycomMessage(
   const extras = { position, requisition, paycomPersonId };
 
   // Match against people who are actually on staff — never former employees.
-  const roster = await prisma.newHire.findMany({
+  // The legal name comes too: Paycom always uses it, and the roster often does
+  // not (see matchHire).
+  const hires = await prisma.newHire.findMany({
     where: { employmentStatus: { not: "TERMINATED" }, canceled: false },
-    select: { id: true, name: true, stage: true }
+    select: { id: true, name: true, legalName: true, stage: true, candidateId: true }
   });
-  const { matches, matchedBy } = matchHire(personName, roster);
+  // Paycom's person id lives on the CANDIDATE, and NewHire.candidateId is a bare
+  // column with no relation to join through — so look the id up directly, and
+  // only when this notice carries one (the offer notices do; the background-check
+  // notices do not).
+  const idHolders = paycomPersonId
+    ? new Set(
+        (await prisma.candidate.findMany({ where: { paycomPersonId }, select: { id: true } })).map((c) => c.id)
+      )
+    : new Set<string>();
+  const roster: RosterEntry[] = hires.map((h) => ({
+    id: h.id,
+    name: h.name,
+    legalName: h.legalName,
+    stage: h.stage,
+    paycomPersonId: h.candidateId && idHolders.has(h.candidateId) ? paycomPersonId : null
+  }));
+  const { matches, matchedBy } = matchHire(personName, roster, paycomPersonId);
 
   if (matches.length === 0) {
     return { ...base, ...extras, kind: def.kind, personName, outcome: "no-match" };

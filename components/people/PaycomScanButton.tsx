@@ -29,7 +29,8 @@ import { Button, Modal } from "@/components/ui";
 type ScanRow = {
   personName: string | null;
   hireName: string | null;
-  matchedBy?: "exact" | "nickname";
+  /** Anything but "exact" is shown beside the name Paycom used. */
+  matchedBy?: "exact" | "legal-name" | "paycom-id" | "nickname";
   /** Which Paycom notice this was — decides which group it is shown under. */
   kind?: "BG_INFO_SUBMITTED" | "BG_CHECK_COMPLETE" | "OFFER_ACCEPTED" | null;
   /** The role, on an offer acceptance. Shown so a wrong match is visible. */
@@ -149,6 +150,13 @@ export function PaycomScanButton() {
     ? result.results.filter((r) => r.outcome === "unrecognised-subject" || r.outcome === "no-name-found")
     : [];
 
+  // "All already recorded" is only true when nothing else happened. On Sep 21
+  // 2026 this box said exactly that while four real notices sat unread below it
+  // and one person's background check was never ticked — a reassurance printed
+  // over a miss. So it now counts what it is describing.
+  const recorded = result ? result.results.filter((r) => r.outcome === "already-done").length : 0;
+  const anythingElse = unmatched.length > 0 || unreadable.length > 0;
+
   return (
     <>
       <Button variant="secondary" onClick={run}>
@@ -198,7 +206,7 @@ export function PaycomScanButton() {
                       {r.position ? (
                         <span className="text-xs text-brand-grey dark:text-slate-400"> — {r.position}</span>
                       ) : null}
-                      {r.matchedBy === "nickname" ? (
+                      {r.matchedBy && r.matchedBy !== "exact" ? (
                         <span className="text-xs text-brand-grey dark:text-slate-400"> (Paycom said &ldquo;{r.personName}&rdquo;)</span>
                       ) : null}
                     </li>
@@ -220,7 +228,7 @@ export function PaycomScanButton() {
                   {tickedChecks.map((r, i) => (
                     <li key={i}>
                       {r.hireName}
-                      {r.matchedBy === "nickname" ? (
+                      {r.matchedBy && r.matchedBy !== "exact" ? (
                         <span className="text-xs text-emerald-700 dark:text-emerald-400"> — Paycom said &ldquo;{r.personName}&rdquo;</span>
                       ) : null}
                     </li>
@@ -231,7 +239,10 @@ export function PaycomScanButton() {
               <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 p-3 dark:border-white/10 dark:bg-white/5">
                 <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">Nothing new</p>
                 <p className="mt-0.5 text-sm text-brand-grey dark:text-slate-400">
-                  {result.noticesFound} {result.noticesFound === 1 ? "notice" : "notices"} found, all already recorded.
+                  {result.noticesFound} {result.noticesFound === 1 ? "notice" : "notices"} found
+                  {anythingElse
+                    ? ` — ${recorded} already on the checklist; the rest are listed below.`
+                    : ", all already on the checklist."}
                 </p>
               </div>
             )}
@@ -240,8 +251,9 @@ export function PaycomScanButton() {
               <div className="mt-3 rounded border border-brand-lea/10 p-3 dark:border-white/10">
                 <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">Left alone</p>
                 <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
-                  Paycom named these people, but they aren&apos;t a current new hire here — usually former staff, or someone who
-                  never made it onto the roster. Nothing was changed for them.
+                  Paycom named these people, and nobody onboarding here goes by that name or has it as their legal name —
+                  usually former staff, or someone who never made it onto the roster. Nothing was changed for them. If one
+                  of them IS a current hire, put the name Paycom uses in their legal name and the next check will find them.
                 </p>
                 <p className="mt-1 text-sm text-brand-lea dark:text-slate-100">{unmatched.join(", ")}</p>
               </div>
@@ -252,11 +264,16 @@ export function PaycomScanButton() {
                 <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
                   {unreadable.length} Paycom {unreadable.length === 1 ? "email" : "emails"} couldn&apos;t be read
                 </p>
+                {/* No guess at the cause. This used to say Paycom had "probably
+                    changed the wording", and on Sep 21 2026 it had not: 31 of the
+                    35 were kinds of mail the app has no step for, and the other 4
+                    were a names-in-capitals assumption on our side. Both are now
+                    handled; what is left here is genuinely unknown. */}
                 <p className="mt-0.5 text-xs text-amber-900/80 dark:text-amber-200/80">
-                  Paycom has probably changed the wording. Nothing was ticked for these — send this to whoever looks after
-                  the app and it&apos;s a small fix.
+                  The app didn&apos;t recognise these, so nothing was ticked for them. Send this to whoever looks after the
+                  app.
                 </p>
-                {[...new Set(unreadable.map((r) => (r.detail ?? "").slice(0, 90)))].slice(0, 3).map((d, i) => (
+                {[...new Set(unreadable.map((r) => (r.detail ?? "").slice(0, 160)))].slice(0, 3).map((d, i) => (
                   <p key={i} className="mt-1 break-words font-mono text-[11px] text-amber-900 dark:text-amber-200">
                     {d}
                   </p>
