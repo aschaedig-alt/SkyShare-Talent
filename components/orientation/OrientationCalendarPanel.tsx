@@ -41,6 +41,9 @@ type Preview = {
         /** true = matches the session, false = stale, null = no baseline recorded. */
         inStep: boolean | null;
         drifted: string[];
+        /** Title / When / Where as last pushed versus as an update would write them. */
+        changes: { field: "Title" | "When" | "Where"; was: string; willBe: string }[] | null;
+        descriptionChanges: boolean | null;
         syncedAt?: string;
       }
     | null;
@@ -338,11 +341,16 @@ export function OrientationCalendarPanel({
 //
 // THREE STATES, and the third is not a rounding error. "In step" and "out of
 // step" are both claims that need a baseline to be true, and events created
-// before the fingerprint shipped have none — Google's events.get returns the
-// summary but not the start, end or location, so there is nothing else to
-// compare against. Those show as unknown and still offer the button, because
-// pushing a correct event again is harmless and asserting it is fine when nobody
-// knows is not.
+// before the fingerprint shipped have none — the app only reads back an event's
+// title and guests (getInviteEvent), so it compares against what it last pushed.
+// Those show as unknown and still offer the button, because pushing a correct
+// event again is harmless and asserting it is fine when nobody knows is not.
+//
+// WHAT WILL CHANGE, NOT JUST THAT SOMETHING DID. When stale, the box lists the
+// title, the when and the where as they were last pushed beside what an update
+// would write, so the choice to email every guest is made looking at what they
+// would be told. And it says plainly that the description is REPLACED: anything
+// typed into the event by hand in Google is overwritten by an update.
 
 function CalendarSyncBox({
   existing,
@@ -406,10 +414,29 @@ function CalendarSyncBox({
         ) : (
           <>
             This event was created before the app started recording what it pushed, so it can&apos;t say whether it
-            matches the session &mdash; Google doesn&apos;t report an event&apos;s time or address back. Updating pushes
-            the session&apos;s current title, description, location and times, which is harmless if it was already right.
+            matches the session. Updating pushes the session&apos;s current title, description, location and times,
+            which is harmless if it was already right.
           </>
         )}
+      </p>
+
+      {stale && existing.changes && existing.changes.length > 0 ? (
+        <dl className="mt-2 space-y-1.5 rounded border border-amber-300/70 bg-white/70 p-2.5 text-[12px] dark:border-amber-500/30 dark:bg-white/5">
+          {existing.changes.map((c) => (
+            <div key={c.field} className="grid gap-x-2 sm:grid-cols-[4rem_minmax(0,1fr)]">
+              <dt className="text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">{c.field}</dt>
+              <dd className="min-w-0 break-words">
+                <span className="text-brand-grey line-through dark:text-slate-500">{c.was}</span>
+                <span className="block font-semibold text-brand-lea dark:text-slate-100">{c.willBe}</span>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+
+      <p className={stale ? "mt-2 text-[11.5px] text-amber-900 dark:text-amber-200" : "mt-2 text-[11.5px] text-brand-grey dark:text-slate-400"}>
+        {stale && existing.descriptionChanges ? "The description is rebuilt from the session too. " : null}
+        The description is <b>replaced</b>, so anything typed into this event by hand in Google is overwritten.
       </p>
 
       <label className="mt-2 flex items-start gap-2 text-[12px] font-semibold text-brand-lea dark:text-slate-100">

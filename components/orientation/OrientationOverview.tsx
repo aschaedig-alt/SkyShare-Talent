@@ -7,6 +7,9 @@ import { clsx } from "clsx";
 import { Button, buttonClasses, Modal } from "@/components/ui";
 import type { Cohort, CalendarDay, SessionListItem, UnscheduledHire } from "@/lib/data/orientation";
 import { formatDateShort, formatDateTimeWithZone, formatTimeRange, mountainWallClockToIso } from "@/lib/calendar/format";
+import { describeOffNormal, USUAL_HOURS, USUAL_PLACE, type UsedPlace } from "@/lib/orientation/places";
+import { OffNormalNotice } from "./OffNormalNotice";
+import { OrientationPlacePicker, placeValueProblem, type PlaceValue } from "./OrientationPlacePicker";
 
 function fmt(iso: string) {
   // Session date/time always shown in Mountain Time (with an "MT" label).
@@ -157,13 +160,16 @@ export function OrientationOverview({
   past,
   cohorts,
   calendar,
-  unscheduled
+  unscheduled,
+  usedPlaces
 }: {
   upcoming: SessionListItem[];
   past: SessionListItem[];
   cohorts: Cohort[];
   calendar: CalendarDay[];
   unscheduled: UnscheduledHire[];
+  /** Places earlier sessions were saved with, for the new-session place picker. */
+  usedPlaces: UsedPlace[];
 }) {
   const router = useRouter();
 
@@ -203,13 +209,43 @@ export function OrientationOverview({
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Defaults to the standard orientation day (9:30 AM – 3:00 PM Mountain) so the
-  // common case is zero typing; both times stay editable.
-  const [form, setForm] = useState({ date: "", time: "09:30", endTime: "15:00", location: "SkyShare HQ, Salt Lake City", address: "", meetLink: "" });
+  // Defaults to the standard orientation day (9:30 AM – 3:00 PM Mountain) at the
+  // usual place, so the common case is zero typing; everything stays editable.
+  //
+  // The address used to start BLANK here while the location name said HQ — the
+  // Sep 11 audit's finding — so every new session was born with no address and
+  // the email's location check had nothing to compare against. The place picker
+  // starts on HQ with its address filled in.
+  // Typed explicitly: USUAL_HOURS is `as const`, so without this the times would
+  // infer as the literals "09:30" and "15:00" and refuse anything typed in.
+  const [form, setForm] = useState<{ date: string; time: string; endTime: string; meetLink: string }>({
+    date: "",
+    time: USUAL_HOURS.start,
+    endTime: USUAL_HOURS.end,
+    meetLink: ""
+  });
+  const [place, setPlace] = useState<PlaceValue>({ location: USUAL_PLACE.name, address: USUAL_PLACE.address });
+  const newStartIso = form.date && form.time ? mountainWallClockToIso(form.date, form.time) : null;
+  const newEndIso = form.date && form.endTime ? mountainWallClockToIso(form.date, form.endTime) : null;
+  const newOffNormal =
+    newStartIso && newEndIso
+      ? describeOffNormal({ date: newStartIso, endsAt: newEndIso, location: place.location, address: place.address })
+      : [];
 
   async function create() {
     if (!form.date) {
       setError("Pick a date.");
+      return;
+    }
+    // Required, not optional: a session with no end time is one whose emails go
+    // out with the template's hours unchecked. The box starts on the usual 3:00.
+    if (!form.endTime) {
+      setError("Set an end time.");
+      return;
+    }
+    const placeProblem = placeValueProblem(place);
+    if (placeProblem) {
+      setError(placeProblem);
       return;
     }
     setSaving(true);
@@ -225,7 +261,13 @@ export function OrientationOverview({
       const res = await fetch("/api/orientation/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: iso, endsAt: endIso, location: form.location, address: form.address, meetLink: form.meetLink })
+        body: JSON.stringify({
+          date: iso,
+          endsAt: endIso,
+          location: place.location.trim(),
+          address: place.address.trim(),
+          meetLink: form.meetLink
+        })
       });
       const p = (await res.json().catch(() => null)) as { id?: string; message?: string } | null;
       if (!res.ok || !p?.id) throw new Error(p?.message ?? "Unable to create session.");
@@ -243,10 +285,14 @@ export function OrientationOverview({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // Cohort dates carry no time — default to the standard orientation day,
-        // 9:30 AM – 3:00 PM Mountain (editable afterwards on the session).
+        // 9:30 AM – 3:00 PM Mountain at the usual place, address included
+        // (editable afterwards on the session). Without the address this path
+        // created sessions with the location name alone, like the form above did.
         body: JSON.stringify({
-          date: mountainWallClockToIso(c.dateISO, "09:30") ?? c.dateISO,
-          endsAt: mountainWallClockToIso(c.dateISO, "15:00"),
+          date: mountainWallClockToIso(c.dateISO, USUAL_HOURS.start) ?? c.dateISO,
+          endsAt: mountainWallClockToIso(c.dateISO, USUAL_HOURS.end),
+          location: USUAL_PLACE.name,
+          address: USUAL_PLACE.address,
           attendeeHireIds: c.hires.map((h) => h.id)
         })
       });
@@ -412,8 +458,8 @@ export function OrientationOverview({
                   <input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="mt-1 w-full min-w-0 rounded border border-brand-lea/15 px-2 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100" />
                 </label>
               </div>
-              <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Location" className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
-              <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Address" className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
+              <OrientationPlacePicker value={place} onChange={setPlace} usedPlaces={usedPlaces} disabled={saving} />
+              <OffNormalNotice lines={newOffNormal} note="That is allowed — the emails and the invite will say so, and each send window lists what it changed." />
               <input value={form.meetLink} onChange={(e) => setForm({ ...form, meetLink: e.target.value })} placeholder="Google Meet link" className="w-full rounded border border-brand-lea/15 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500" />
               {error ? <p className="text-sm font-medium text-red-700 dark:text-red-300">{error}</p> : null}
             </div>

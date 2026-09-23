@@ -76,6 +76,12 @@ export type EmailBodyEditorProps = {
    *  specific to warn about — the contacts email keeps its live share link in
    *  the body being edited, so a pasted-over one can go stale. */
   note?: string;
+  /** Where the unedited body came from. Every caller but one edits a Front
+   *  template, which is the default and changes nothing for them. The exception
+   *  is the orientation internal summary, which the app writes itself: a chip
+   *  there reading "Front template, unchanged" would send somebody into Front
+   *  looking for a template that does not exist. */
+  source?: "front" | "app";
 };
 
 /**
@@ -98,7 +104,7 @@ export type EmailBodyEditorProps = {
  */
 const LINK_PREVIEW = "[&_a]:text-[#0b63ce] [&_a]:underline [&_a]:underline-offset-2 dark:[&_a]:text-[#7db3ef]";
 
-export function EmailBodyEditor({ greeting, template, edited, onChange, disabled, note }: EmailBodyEditorProps) {
+export function EmailBodyEditor({ greeting, template, edited, onChange, disabled, note, source = "front" }: EmailBodyEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [seed, setSeed] = useState(0);
   const [mode, setMode] = useState<"rich" | "html">("rich");
@@ -121,7 +127,7 @@ export function EmailBodyEditor({ greeting, template, edited, onChange, disabled
           <span className="text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">Body</span>
           {edited === null ? (
             <span className="rounded bg-brand-cloudDancer/70 px-1.5 py-0.5 text-[10px] font-semibold text-brand-grey dark:bg-white/5 dark:text-slate-400">
-              Front template, unchanged
+              {source === "app" ? "As the app wrote it, unchanged" : "Front template, unchanged"}
             </span>
           ) : (
             <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900 ring-1 ring-amber-400/50 dark:bg-amber-500/20 dark:text-amber-200">
@@ -164,8 +170,10 @@ export function EmailBodyEditor({ greeting, template, edited, onChange, disabled
 
       {edited !== null ? (
         <p className="border-b border-amber-300/60 bg-amber-50 px-2.5 py-1.5 text-[11.5px] text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200">
-          This wording applies to <b>this send only</b>. The template in Front is untouched, and the next send reads it
-          fresh.
+          This wording applies to <b>this send only</b>.
+          {source === "app"
+            ? " Nothing is saved, and the next send builds it fresh."
+            : " The template in Front is untouched, and the next send reads it fresh."}
           {note ? <> {note}</> : null}
         </p>
       ) : null}

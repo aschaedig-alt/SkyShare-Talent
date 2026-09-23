@@ -456,7 +456,13 @@ export async function previewDueReminders(dayKey?: string): Promise<ReminderPrev
           to: email.to,
           cc: email.cc,
           subject: email.subject,
-          warnings: email.warnings ?? []
+          // The off-normal flag leads. This dry run is the ONLY place a person
+          // sees what the unattended reminder will say before it goes, and the
+          // reminder cannot be edited (nobody is there to approve wording), so a
+          // session at another time or place has to be obvious here — while
+          // there is still time to switch the automatic send off and send it by
+          // hand with the wording fixed.
+          warnings: [...(email.offNormal ?? []).map((line) => `Different than normal: ${line}`), ...(email.warnings ?? [])]
         });
         preview.wouldSend += 1;
       } catch (err) {

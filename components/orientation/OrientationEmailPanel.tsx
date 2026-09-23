@@ -21,6 +21,7 @@ import {
   type SupervisorDigestRow
 } from "@/app/orientation/actions";
 import type { OrientationEmailPreview } from "@/lib/front/orientation-email";
+import { OffNormalNotice } from "./OffNormalNotice";
 
 // Sending orientation email, and tracking who has had what.
 //
@@ -234,7 +235,9 @@ export function OrientationEmailPanel({
       <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Orientation email</h2>
       <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
         Sends the team&apos;s own Front templates, from hrotasks@. The wording is whatever the template says in Front right now —
-        the app fills in the date, the recipients, and strips the red &ldquo;delete this part&rdquo; note.
+        the app fills in the date and the recipients, rewrites the stated hours and the <b>Location:</b> line when this
+        session&apos;s differ from the template (and says so before sending), and strips the red &ldquo;delete this
+        part&rdquo; note. Set the session&apos;s time and place with &ldquo;Change time or place&rdquo; at the top.
       </p>
       <p className="mt-1.5 rounded border border-brand-lea/15 bg-brand-cloudDancer/50 px-2.5 py-1.5 text-[12px] font-semibold text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
         Nothing sends on the first click. &ldquo;Send&hellip;&rdquo; opens the full email &mdash; recipients, subject and body &mdash; and you approve it there.
@@ -500,6 +503,47 @@ export function OrientationEmailPanel({
   );
 }
 
+// --- what the send windows show before the body ------------------------------
+
+/** What the "different than normal" box says in a send window: the flag is about
+    the SESSION, and the amber list under it is what was done about it in THIS
+    email — so the box points at the list rather than repeating it. */
+const OFF_NORMAL_SEND_NOTE =
+  "The notes below say what was changed in this email to match, and anything it could not change for you.";
+
+/**
+ * Split a batch's warnings into the ones EVERY row shares and each row's own.
+ *
+ * The session-level notes — "Adjusted for this session: the time now reads …",
+ * "the body still has the directions to SkyShare HQ" — are identical for every
+ * recipient, and repeating them once per row in a narrow column is how the one
+ * that matters stops being read. So they are shown once, above the table, and a
+ * row keeps only what is true of that person (a personal address, a missing
+ * supervisor email).
+ */
+function splitWarnings(rows: { warnings: string[] }[]): { common: string[]; own: (warnings: string[]) => string[] } {
+  if (rows.length === 0) return { common: [], own: (w) => w };
+  const common = rows[0].warnings.filter((w) => rows.every((r) => r.warnings.includes(w)));
+  const shared = new Set(common);
+  return { common, own: (w) => w.filter((x) => !shared.has(x)) };
+}
+
+function WarningList({ items, className }: { items: string[]; className?: string }) {
+  if (!items.length) return null;
+  return (
+    <ul
+      className={clsx(
+        "space-y-1 rounded border border-amber-300 bg-amber-50 p-2.5 text-[12px] text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200",
+        className
+      )}
+    >
+      {items.map((w, i) => (
+        <li key={i}>{w}</li>
+      ))}
+    </ul>
+  );
+}
+
 // --- supervisors, grouped ---------------------------------------------------
 //
 // Its own dialog rather than a branch inside BatchDialog, because the unit is
@@ -520,6 +564,7 @@ function SupervisorBatchDialog({
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<SupervisorDigestRow[] | null>(null);
   const [noSupervisor, setNoSupervisor] = useState<string[]>([]);
+  const [offNormal, setOffNormal] = useState<string[]>([]);
   const [sample, setSample] = useState<{ subject?: string; html?: string; for?: string; greeting?: string; body?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -542,6 +587,7 @@ function SupervisorBatchDialog({
         }
         setRows(res.rows ?? []);
         setNoSupervisor(res.noSupervisor ?? []);
+        setOffNormal(res.offNormal ?? []);
         setSample({
           subject: res.sampleSubject,
           html: res.sampleHtml,
@@ -560,6 +606,13 @@ function SupervisorBatchDialog({
   const sendable = (rows ?? []).filter((r) => !r.error && (includeAlreadySent || !r.allAlreadySent));
   const blocked = (rows ?? []).filter((r) => r.error);
   const skippedAsSent = (rows ?? []).filter((r) => !r.error && r.allAlreadySent && !includeAlreadySent);
+  // THE ROWS' WARNINGS WERE NEVER DRAWN HERE. The digest builder was fixed on
+  // Aug 31 to report what it rewrote ("Adjusted for this session: the time now
+  // reads …") instead of discarding it — but this dialog, the only way the
+  // grouped supervisors email is sent, rendered name, address and hires and not
+  // the warnings, so the rewrite still reached every supervisor with nothing on
+  // screen. Session-wide ones are shown once above the table, the rest per row.
+  const warningSplit = splitWarnings(sendable);
 
   async function doSend() {
     if (!sendable.length) return;
@@ -621,6 +674,8 @@ function SupervisorBatchDialog({
         </div>
       ) : rows ? (
         <div className="mt-4 space-y-2">
+          <OffNormalNotice lines={offNormal} note={OFF_NORMAL_SEND_NOTE} />
+          <WarningList items={warningSplit.common} />
           {noSupervisor.length ? (
             <div className="rounded border border-amber-300 bg-amber-50 p-2.5 text-[12px] text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200">
               No supervisor on file for {noSupervisor.join(", ")} — nobody to tell about them.
@@ -659,6 +714,9 @@ function SupervisorBatchDialog({
                       <span className="ml-1 text-[10px] text-brand-grey dark:text-slate-400">
                         ({r.hireNames.length})
                       </span>
+                    </td>
+                    <td className="px-2 py-1.5 text-[11px] text-amber-700 dark:text-amber-300">
+                      {warningSplit.own(r.warnings).join(" ")}
                     </td>
                   </tr>
                 ))}
@@ -736,6 +794,7 @@ function BatchDialog({
   const meta = ORIENTATION_TEMPLATE_META.find((t) => t.key === templateKey)!;
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<OrientationBatchRow[] | null>(null);
+  const [offNormal, setOffNormal] = useState<string[]>([]);
   const [sample, setSample] = useState<{ subject?: string; html?: string; for?: string; greeting?: string; body?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -760,6 +819,7 @@ function BatchDialog({
           return;
         }
         setRows(res.rows ?? []);
+        setOffNormal(res.offNormal ?? []);
         setSample({
           subject: res.sampleSubject,
           html: res.sampleHtml,
@@ -778,6 +838,7 @@ function BatchDialog({
   const sendable = (rows ?? []).filter((r) => !r.error && (includeAlreadySent || !r.alreadySent));
   const blocked = (rows ?? []).filter((r) => r.error);
   const skippedAsSent = (rows ?? []).filter((r) => !r.error && r.alreadySent && !includeAlreadySent);
+  const warningSplit = splitWarnings(sendable);
 
   async function doSend() {
     if (!sendable.length) return;
@@ -841,6 +902,8 @@ function BatchDialog({
         </div>
       ) : rows ? (
         <div className="mt-4 space-y-2">
+          <OffNormalNotice lines={offNormal} note={OFF_NORMAL_SEND_NOTE} />
+          <WarningList items={warningSplit.common} />
           {blocked.length ? (
             <ul className="space-y-1 rounded border border-red-300 bg-red-50 p-2.5 text-[12px] text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300">
               {blocked.map((r) => (
@@ -872,7 +935,7 @@ function BatchDialog({
                     <td className="px-2 py-1.5 font-medium text-brand-lea dark:text-slate-100">{r.name}</td>
                     <td className="px-2 py-1.5 text-brand-black dark:text-slate-200">{r.to.join(", ")}</td>
                     <td className="px-2 py-1.5 text-[11px] text-amber-700 dark:text-amber-300">
-                      {r.warnings.length ? r.warnings.join(" ") : ""}
+                      {warningSplit.own(r.warnings).join(" ")}
                     </td>
                   </tr>
                 ))}
@@ -1092,13 +1155,12 @@ function SendDialog({
         </div>
       ) : preview ? (
         <div className="mt-4 space-y-2">
-          {preview.warnings.length > 0 ? (
-            <ul className="space-y-1 rounded border border-amber-300 bg-amber-50 p-2.5 text-[12px] text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200">
-              {preview.warnings.map((w, i) => (
-                <li key={i}>{w}</li>
-              ))}
-            </ul>
-          ) : null}
+          {/* The session first, then what was done to this email about it. This
+              is where her screenshot showed "fix the wording in Front" — the
+              off-normal hours are now flagged as exactly that, and the notes
+              under it say what the email was changed to. */}
+          <OffNormalNotice lines={preview.offNormal} note={OFF_NORMAL_SEND_NOTE} />
+          <WarningList items={preview.warnings} />
 
           <dl className="space-y-1 text-[12.5px]">
             <Row label="To">
@@ -1164,8 +1226,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 function InternalSummary({ sessionId, refreshKey }: { sessionId: string; refreshKey: number }) {
   const [state, setState] = useState<OrientationSummaryResult | null>(null);
-  const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -1180,19 +1241,6 @@ function InternalSummary({ sessionId, refreshKey }: { sessionId: string; refresh
     load();
   }, [load, refreshKey]);
 
-  async function send() {
-    const who = state?.to?.join(", ") ?? "the summary list";
-    if (!confirm(`Send the session summary to ${who}?\n\nOne email, naming everyone attending. This cannot be undone.`)) {
-      return;
-    }
-    setBusy(true);
-    setMsg(null);
-    const res = await sendOrientationSummary(sessionId);
-    setBusy(false);
-    setMsg(res.ok ? `Sent to ${res.to?.join(", ")}.` : (res.error ?? "Send failed."));
-    load();
-  }
-
   if (!state) return null;
   if (!state.ok) {
     return (
@@ -1204,13 +1252,22 @@ function InternalSummary({ sessionId, refreshKey }: { sessionId: string; refresh
     <div className="mt-3 rounded border border-brand-lea/15 p-3 dark:border-white/10">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-brand-lea dark:text-slate-100">Internal summary</h3>
-        <Button onClick={send} disabled={busy}>
-          {busy ? "Sending…" : state.alreadySent ? "Send again" : "Send the summary"}
+        {/* A dialog, like the other three sends, rather than a confirm() straight
+            off the panel: the summary is the one orientation email that had no
+            edit box, and the standing rule is that every email the app builds
+            for somebody to send gets one first. */}
+        <Button
+          onClick={() => {
+            setMsg(null);
+            setDialogOpen(true);
+          }}
+        >
+          {state.alreadySent ? "Send again…" : "Send the summary…"}
         </Button>
       </div>
       <p className="mt-1 text-[11.5px] text-brand-grey dark:text-slate-400">
         One email to {state.to?.join(", ")} naming everyone attending. They are <b>no longer cc&apos;d</b> on the individual
-        emails — that is what produced a copy per new hire.
+        emails — that is what produced a copy per new hire. The wording is editable in the send window, for that send only.
       </p>
 
       {state.alreadySent ? (
@@ -1220,7 +1277,8 @@ function InternalSummary({ sessionId, refreshKey }: { sessionId: string; refresh
             new Date(state.alreadySent.sentAt)
           )}{" "}
           MT, covering {state.alreadySent.attendeeCount} attendee
-          {state.alreadySent.attendeeCount === 1 ? "" : "s"}.
+          {state.alreadySent.attendeeCount === 1 ? "" : "s"}
+          {state.alreadySent.edited ? ", with the wording edited by hand" : ""}.
           {state.stale ? (
             <span className="font-semibold text-amber-700 dark:text-amber-300">
               {" "}
@@ -1230,36 +1288,144 @@ function InternalSummary({ sessionId, refreshKey }: { sessionId: string; refresh
         </p>
       ) : null}
 
-      {state.warnings?.length ? (
-        <ul className="mt-2 space-y-1 rounded border border-amber-300 bg-amber-50 p-2 text-[11.5px] text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200">
-          {state.warnings.map((w, i) => (
-            <li key={i}>{w}</li>
-          ))}
-        </ul>
-      ) : null}
+      <WarningList items={state.warnings ?? []} className="mt-2" />
 
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="mt-2 text-xs font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-slate-300"
-      >
-        {open ? "Hide" : "Show"} what it says
-      </button>
-      {open && state.html ? (
-        <div className="mt-2 max-h-64 overflow-y-auto rounded border border-brand-lea/15 bg-white p-3 dark:border-white/10 dark:bg-[#0f2033]">
-          <p className="mb-2 text-[12px] font-semibold text-brand-lea dark:text-slate-100">{state.subject}</p>
-          <div
-            // Same link treatment as EmailBodyEditor, and for the same reason:
-            // prose-sm emits nothing here, so an anchor would render as plain
-            // black text and an orientation email full of links would preview as
-            // one with none. See the note on LINK_PREVIEW in EmailBodyEditor.
-            className="prose-sm text-[12.5px] text-brand-black [&_a]:text-[#0b63ce] [&_a]:underline [&_a]:underline-offset-2 dark:text-slate-200 dark:[&_a]:text-[#7db3ef]"
-            dangerouslySetInnerHTML={{ __html: state.html }}
+      {msg ? <p className="mt-2 text-[11.5px] font-semibold text-brand-eden dark:text-slate-300">{msg}</p> : null}
+
+      {dialogOpen ? (
+        <SummaryDialog
+          sessionId={sessionId}
+          onClose={() => setDialogOpen(false)}
+          onSent={(to) => {
+            setDialogOpen(false);
+            setMsg(`Sent to ${to}.`);
+            load();
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Preview, edit and send the internal summary.
+ *
+ * The same shape as the other three send windows: nothing goes on the first
+ * click, the whole email is on screen, and the body is editable FOR THIS SEND
+ * ONLY through the one shared editor. It replaces the whole body because there
+ * is no per-recipient greeting to protect — one email goes to the internal list.
+ *
+ * The editor is told the body came from the APP: there is no Front template for
+ * this email, so its usual "Front template, unchanged" would be untrue.
+ *
+ * Built fresh when the window opens (not reused from the panel's status read),
+ * because the attendee count it was built from is handed back on send: an edited
+ * body is frozen text, and the server refuses to send it if the list has changed
+ * since — otherwise the internal list would be told the wrong people are coming.
+ */
+function SummaryDialog({
+  sessionId,
+  onClose,
+  onSent
+}: {
+  sessionId: string;
+  onClose: () => void;
+  onSent: (to: string) => void;
+}) {
+  const [state, setState] = useState<OrientationSummaryResult | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  // Null until the body is touched, and null is sent as null — the server then
+  // rebuilds from the session, so an untouched send is the same send as before.
+  const [body, setBody] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    previewOrientationSummary(sessionId)
+      .then((res) => {
+        if (cancelled) return;
+        if (res.ok) setState(res);
+        else setError(res.error ?? "Couldn't build the summary.");
+      })
+      .catch(() => !cancelled && setError("Couldn't build the summary."))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId]);
+
+  async function doSend() {
+    if (!state?.ok) return;
+    const who = state.to?.join(", ") ?? "the summary list";
+    const editedNote = body !== null ? "\n\nThe body has been EDITED — this is not the summary the app wrote." : "";
+    if (!confirm(`Send the session summary to ${who}?${editedNote}\n\nOne email, naming everyone attending. This cannot be undone.`)) {
+      return;
+    }
+    setSending(true);
+    setError(null);
+    const res = await sendOrientationSummary(sessionId, body, state.attendeeCount ?? null);
+    setSending(false);
+    if (!res.ok) {
+      setError(res.error ?? "Send failed.");
+      return;
+    }
+    onSent(res.to?.join(", ") ?? who);
+  }
+
+  return (
+    <Modal open onClose={onClose} busy={sending} maxWidth="max-w-lg" title="Internal summary">
+      <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Internal summary</h2>
+      <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
+        One email to the internal list, naming everyone attending. Written by the app from this session — there is no
+        Front template for it.
+      </p>
+
+      {loading ? (
+        <p className="mt-4 text-sm text-brand-grey dark:text-slate-400">Building the summary…</p>
+      ) : error && !state ? (
+        <div className="mt-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300">
+          {error}
+        </div>
+      ) : state?.ok ? (
+        <div className="mt-4 space-y-2">
+          <OffNormalNotice
+            lines={state.offNormal ?? []}
+            note="The summary says so in its own text too, for the people setting up the room."
           />
+          <WarningList items={state.warnings ?? []} />
+          <dl className="space-y-1 text-[12.5px]">
+            <Row label="To">{state.to?.join(", ")}</Row>
+            <Row label="Subject">
+              <span className="font-medium">{state.subject}</span>
+            </Row>
+          </dl>
+          <EmailBodyEditor
+            greeting=""
+            template={state.bodyHtml ?? ""}
+            edited={body}
+            onChange={setBody}
+            disabled={sending}
+            source="app"
+          />
+          {error ? (
+            <div className="rounded border border-red-300 bg-red-50 p-2.5 text-[12.5px] text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300">
+              {error}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
-      {msg ? <p className="mt-2 text-[11.5px] font-semibold text-brand-eden dark:text-slate-300">{msg}</p> : null}
-    </div>
+      <div className="mt-5 flex flex-wrap justify-end gap-2">
+        <Button variant="secondary" onClick={onClose} disabled={sending}>
+          Cancel
+        </Button>
+        <Button onClick={() => void doSend()} disabled={sending || loading || !state?.ok}>
+          {sending ? "Sending…" : "Send for real"}
+        </Button>
+      </div>
+    </Modal>
   );
 }
 

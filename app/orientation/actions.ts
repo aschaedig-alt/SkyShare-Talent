@@ -22,7 +22,6 @@ import {
   getOrientationSummaryRecord,
   recordOrientationSummary
 } from "@/lib/front/orientation-summary";
-import { ORIENTATION_NORMAL } from "@/lib/orientation/calendar-event";
 
 // Sending an orientation email. Two steps on purpose — preview, then send —
 // because the send is irreversible and lands in a real new hire's (or their
@@ -246,6 +245,9 @@ export type OrientationBatchPreview = {
       so it is obvious WHY it is not editable. */
   sampleGreetingHtml?: string;
   sampleBodyHtml?: string;
+  /** What is different than normal about the SESSION. The same for every row,
+      so it is carried once rather than repeated per person. */
+  offNormal?: string[];
 };
 
 /** Build every email in the batch WITHOUT sending, so the whole run can be
@@ -263,6 +265,7 @@ export async function previewOrientationEmailBatch(
   let sampleFor: string | undefined;
   let sampleGreetingHtml: string | undefined;
   let sampleBodyHtml: string | undefined;
+  let offNormal: string[] | undefined;
 
   for (const attendeeId of attendeeIds) {
     const a = await loadAttendee(attendeeId);
@@ -292,6 +295,7 @@ export async function previewOrientationEmailBatch(
         sampleFor = a.newHire.name;
         sampleGreetingHtml = preview.greetingHtml;
         sampleBodyHtml = preview.bodyHtml;
+        offNormal = preview.offNormal;
       }
     } catch (err) {
       // One unsendable person must not sink the batch — show why and carry on.
@@ -307,7 +311,7 @@ export async function previewOrientationEmailBatch(
     }
   }
 
-  return { ok: true, rows, sampleSubject, sampleHtml, sampleFor, sampleGreetingHtml, sampleBodyHtml };
+  return { ok: true, rows, sampleSubject, sampleHtml, sampleFor, sampleGreetingHtml, sampleBodyHtml, offNormal };
 }
 
 // --- the one internal summary ------------------------------------------------
@@ -322,9 +326,16 @@ export type OrientationSummaryResult = {
   to?: string[];
   subject?: string;
   html?: string;
+  /** The body as the app built it — what pre-fills the send dialog's edit box. */
+  bodyHtml?: string;
   warnings?: string[];
+  /** Different than normal, in the shared wording. */
+  offNormal?: string[];
+  /** How many attendees the preview was built from. Handed back on send, so an
+      EDITED body cannot go out naming a list that has changed underneath it. */
+  attendeeCount?: number;
   /** Set when it has already gone, so the UI can offer a resend rather than a send. */
-  alreadySent?: { sentAt: string; to: string; attendeeCount: number } | null;
+  alreadySent?: { sentAt: string; to: string; attendeeCount: number; edited?: boolean } | null;
   /** True when attendees were added after the summary went — it is now out of date. */
   stale?: boolean;
 };
@@ -335,6 +346,7 @@ async function summaryInputFor(sessionId: string) {
     select: {
       date: true,
       endsAt: true,
+      location: true,
       address: true,
       attendees: {
         select: {
@@ -362,8 +374,13 @@ async function summaryInputFor(sessionId: string) {
   return {
     sessionDate: s.date.toISOString(),
     endsAt: s.endsAt ? s.endsAt.toISOString() : null,
-    // Same fallback the calendar invite uses, so the two can't disagree on where it is.
-    address: s.address?.trim() || ORIENTATION_NORMAL.address,
+    // RAW, both columns. The builder resolves them through the same resolver the
+    // calendar invite and the attendee emails use (lib/orientation/places.ts),
+    // so the three can't disagree on where it is. This used to apply its own
+    // "or HQ" fallback here, which would have called a session named for another
+    // building HQ whenever its address was blank.
+    location: s.location,
+    address: s.address,
     attendees: s.attendees.map((a) => ({
       name: a.newHire.name,
       position: a.newHire.position,
@@ -388,8 +405,13 @@ export async function previewOrientationSummary(sessionId: string): Promise<Orie
       to: preview.to,
       subject: preview.subject,
       html: preview.html,
+      bodyHtml: preview.bodyHtml,
       warnings: preview.warnings,
-      alreadySent: record ? { sentAt: record.sentAt, to: record.to, attendeeCount: record.attendeeCount } : null,
+      offNormal: preview.offNormal,
+      attendeeCount: input.attendees.length,
+      alreadySent: record
+        ? { sentAt: record.sentAt, to: record.to, attendeeCount: record.attendeeCount, edited: record.edited }
+        : null,
       stale: record ? record.attendeeCount !== input.attendees.length : false
     };
   } catch (err) {
@@ -397,13 +419,37 @@ export async function previewOrientationSummary(sessionId: string): Promise<Orie
   }
 }
 
-export async function sendOrientationSummary(sessionId: string): Promise<OrientationSummaryResult> {
+export async function sendOrientationSummary(
+  sessionId: string,
+  /**
+   * The body as edited in the send dialog, for THIS SEND ONLY. Null (the normal
+   * case) rebuilds from the session exactly as before, so an untouched send is
+   * the same send it always was. Never stored and never reused.
+   */
+  bodyOverride?: string | null,
+  /**
+   * The attendee count the dialog was built from. An untouched body is rebuilt
+   * from the session here, so a late addition simply appears in it. An EDITED
+   * body is frozen text from when the dialog opened, and would go out naming the
+   * old list — so when they disagree, the send is refused and says why, rather
+   * than telling the internal list the wrong people are coming.
+   */
+  previewedAttendeeCount?: number | null
+): Promise<OrientationSummaryResult> {
   if (!(await canSend())) return { ok: false, error: "You don't have permission to send this email." };
   const input = await summaryInputFor(sessionId);
   if (!input) return { ok: false, error: "Session not found." };
 
+  const edited = Boolean(bodyOverride && bodyOverride.trim());
+  if (edited && typeof previewedAttendeeCount === "number" && previewedAttendeeCount !== input.attendees.length) {
+    return {
+      ok: false,
+      error: `Not sent. The session had ${previewedAttendeeCount} attendee${previewedAttendeeCount === 1 ? "" : "s"} when you opened this and has ${input.attendees.length} now, and your edited summary still lists the old ones. Close this, reopen it, and edit again.`
+    };
+  }
+
   try {
-    const email = await buildOrientationSummaryEmail(input);
+    const email = await buildOrientationSummaryEmail({ ...input, bodyOverride });
     const channelId = await getOrientationChannelId();
     const sent = await sendEmail(channelId, {
       to: email.to,
@@ -419,7 +465,11 @@ export async function sendOrientationSummary(sessionId: string): Promise<Orienta
       to: email.to.join(", "),
       subject: email.subject,
       sentBy: await actorLabel(),
-      attendeeCount: input.attendees.length
+      attendeeCount: input.attendees.length,
+      // Recorded for the same reason the per-hire sends record it: "the summary
+      // the app wrote went out" and "somebody retyped it first" are different
+      // facts, and afterwards the only other way to tell is opening Front.
+      edited: email.bodyEdited
     });
     return { ok: true, to: email.to, subject: email.subject };
   } catch (err) {
@@ -459,6 +509,8 @@ export type SupervisorBatchPreview = {
       editable (it names this supervisor and their own hires). */
   sampleGreetingHtml?: string;
   sampleBodyHtml?: string;
+  /** Different than normal, once for the session — see OrientationBatchPreview. */
+  offNormal?: string[];
 };
 
 /** Collapse the selected attendees into one entry per individual supervisor. */
@@ -541,6 +593,7 @@ export async function previewOrientationSupervisorBatch(attendeeIds: string[]): 
   let sampleFor: string | undefined;
   let sampleGreetingHtml: string | undefined;
   let sampleBodyHtml: string | undefined;
+  let offNormal: string[] | undefined;
 
   for (const d of digests) {
     try {
@@ -561,6 +614,7 @@ export async function previewOrientationSupervisorBatch(attendeeIds: string[]): 
         sampleFor = d.supervisorName ?? d.supervisorEmail;
         sampleGreetingHtml = preview.greetingHtml;
         sampleBodyHtml = preview.bodyHtml;
+        offNormal = preview.offNormal;
       }
     } catch (err) {
       out.push({
@@ -577,7 +631,17 @@ export async function previewOrientationSupervisorBatch(attendeeIds: string[]): 
     }
   }
 
-  return { ok: true, rows: out, noSupervisor, sampleSubject, sampleHtml, sampleFor, sampleGreetingHtml, sampleBodyHtml };
+  return {
+    ok: true,
+    rows: out,
+    noSupervisor,
+    sampleSubject,
+    sampleHtml,
+    sampleFor,
+    sampleGreetingHtml,
+    sampleBodyHtml,
+    offNormal
+  };
 }
 
 export type SupervisorBatchSendResult = {

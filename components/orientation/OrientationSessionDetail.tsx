@@ -8,8 +8,12 @@ import { Button } from "@/components/ui";
 import type { AttendeeView, CardFlagState, ConfirmStatus, PrepTaskView, SessionCandidate, SessionDetail, TravelStatus } from "@/lib/data/orientation";
 
 import { formatUsd } from "@/lib/travel/constants";
+import { describeOffNormal, mapsSearchUrl, resolveSessionPlace, type UsedPlace } from "@/lib/orientation/places";
+import { ORIENTATION_TEMPLATE_META } from "@/lib/orientation/email-templates-meta";
 import { OrientationEmailPanel } from "./OrientationEmailPanel";
 import { OrientationCalendarPanel } from "./OrientationCalendarPanel";
+import { OffNormalChip } from "./OffNormalNotice";
+import { SessionTimePlaceEditor } from "./SessionTimePlaceEditor";
 import { formatDateLong, formatTime, formatTimeRange, zoneLabel, toMountainDateTimeParts, mountainWallClockToIso } from "@/lib/calendar/format";
 import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
 
@@ -38,23 +42,28 @@ async function patchJson(url: string, body: unknown, method = "PATCH") {
   return res.ok;
 }
 
-export function OrientationSessionDetail({ session }: { session: SessionDetail }) {
+export function OrientationSessionDetail({
+  session,
+  usedPlaces
+}: {
+  session: SessionDetail;
+  /** Places earlier sessions were saved with, for the place picker. */
+  usedPlaces: UsedPlace[];
+}) {
   const router = useRouter();
   const [attendees, setAttendees] = useState(session.attendees);
   const [prep, setPrep] = useState(session.prepTasks);
   const [busy, setBusy] = useState(false);
-  const [rescheduling, setRescheduling] = useState(false);
-  const [resched, setResched] = useState({ date: "", time: "", endTime: "" });
-  const [savingDate, setSavingDate] = useState(false);
-  const [reschedErr, setReschedErr] = useState<string | null>(null);
+  // The time-and-place editor (it replaced the date-only Reschedule panel).
+  const [editingTimePlace, setEditingTimePlace] = useState(false);
   // Bumped when a save moves something the Google invite renders. The calendar
   // panel fetches its own preview on mount, so router.refresh() alone leaves it
   // showing a picture from before the reschedule — and that picture is what says
   // whether the invite is in step.
   const [calendarKey, setCalendarKey] = useState(0);
   // Its own banner rather than the shared `notice` further down the page: this
-  // has to appear where the Reschedule button is, at the top, because it is
-  // telling you that the save you just made is not finished yet.
+  // has to appear where the "Change time or place" button is, at the top,
+  // because it is telling you that the save you just made is not finished yet.
   const [calendarNotice, setCalendarNotice] = useState<string | null>(null);
 
   // ---- lunch ----
@@ -125,54 +134,49 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
     }
   }
 
-  function openReschedule() {
-    const start = toMountainDateTimeParts(session.date);
-    setResched({ ...start, endTime: session.endsAt ? toMountainDateTimeParts(session.endsAt).time : "" });
-    setReschedErr(null);
-    setRescheduling(true);
-  }
-  async function saveReschedule() {
-    const iso = mountainWallClockToIso(resched.date, resched.time);
-    if (!iso) return;
-    // The end time belongs to the NEW date, so it moves with the session.
-    const endIso = resched.endTime ? mountainWallClockToIso(resched.date, resched.endTime) : null;
-    if (endIso && new Date(endIso).getTime() <= new Date(iso).getTime()) {
-      setReschedErr("The end time has to be after the start time.");
-      return;
-    }
-    setSavingDate(true);
-    setReschedErr(null);
-    // Read the RESPONSE here rather than using patchJson's boolean: it reports
-    // which calendar-relevant fields actually moved, and that is what decides
-    // whether the guests are now holding an invite for a time that no longer
-    // exists. Losing it would put the propagation rule back on somebody's memory.
-    const res = await fetch(`/api/orientation/sessions/${session.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date: iso, endsAt: endIso })
-    });
-    setSavingDate(false);
-    if (res.ok) {
-      const data = (await res.json().catch(() => null)) as { calendarFieldsChanged?: string[] } | null;
-      setRescheduling(false);
-      if (data?.calendarFieldsChanged?.length) {
-        // Re-read the calendar panel so it can say the invite is now stale, and
-        // point at it — the panel is far enough down the page to be missed.
-        setCalendarKey((n) => n + 1);
-        // No timeout: this one stays until it is dealt with. A message saying
-        // "the invite is still wrong" that disappears after eight seconds is
-        // worse than none, because it looks like it was handled.
-        setCalendarNotice(
-          "Session moved — the Google invite still has the old details. Use “Update the invite” in the Google Calendar invite panel below, and decide there whether the guests are emailed about it."
-        );
-      } else {
-        setCalendarNotice(null);
-      }
-      router.refresh();
+  /**
+   * After the time or place is saved.
+   *
+   * The PATCH reports which invite-relevant fields actually moved, and that is
+   * what decides whether anything downstream is now wrong. Two things can be,
+   * and the standing rule is that a change reaches ALL of them:
+   *   - the Google invite (title, description, location, times) — fixed from the
+   *     calendar panel below, where emailing its guests is a separate choice;
+   *   - emails ALREADY SENT with the old details. Those cannot be recalled, and
+   *     nothing re-sends them by itself, so the notice counts who has them.
+   * No timeout on it: a "this is still wrong" that vanishes after eight seconds
+   * looks handled when it is not.
+   */
+  function onTimePlaceSaved(changed: string[]) {
+    setEditingTimePlace(false);
+    if (changed.length) {
+      // Re-read the calendar panel so it can say the invite is now stale, and
+      // point at it — the panel is far enough down the page to be missed.
+      setCalendarKey((n) => n + 1);
+      const already = ORIENTATION_TEMPLATE_META.map((t) => ({
+        label: t.label,
+        count: attendees.filter((a) => a.sentTemplateKeys.includes(t.key)).length
+      })).filter((x) => x.count > 0);
+      const emailed = already.length
+        ? ` Already sent with the old details: ${already.map((x) => `${x.label} (${x.count} ${x.count === 1 ? "attendee" : "attendees"})`).join(", ")}. Those emails do not update themselves — send them again from the email panel if people need the new time or place.`
+        : "";
+      setCalendarNotice(
+        `Saved. If this session has a Google invite, it still shows the old details — use “Update the invite” in the Google Calendar invite panel below, and decide there whether the guests are emailed about it.${emailed}`
+      );
     } else {
-      setReschedErr("Couldn't save the new date.");
+      setCalendarNotice(null);
     }
+    router.refresh();
   }
+
+  // Where the session is, resolved the way the emails and the invite resolve it,
+  // and whether any of it is not the usual. Shown in the header so an off-normal
+  // session reads as one at a glance, before anybody opens a send window.
+  const place = resolveSessionPlace(session);
+  const offNormal = describeOffNormal(session);
+  // Only worth saying while emails can still go: three of the six sessions on
+  // record are finished ones with no end time, and nagging on those is noise.
+  const missingEnd = !session.endsAt && session.status !== "COMPLETE";
 
   const headDone = prep.filter((p) => p.done).length;
   const headcount = {
@@ -334,15 +338,28 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
           <div>
             <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Orientation · {fmtShort(session.date)}</h1>
             <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-              {session.endsAt ? formatTimeRange(session.date, session.endsAt) : fmtTime(session.date)} · {session.location ?? "—"}
-              {session.address ? ` · ${session.address}` : ""}
-              {session.address ? <> · <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(session.address)}`} target="_blank" rel="noreferrer" className="text-brand-lea underline dark:text-slate-100">Map</a></> : null}
+              {session.endsAt ? formatTimeRange(session.date, session.endsAt) : fmtTime(session.date)} · {place.name || "—"}
+              {/* The address the emails and the invite will actually use — for a
+                  session with none on its row, the one its name resolves to. */}
+              {place.address ? ` · ${place.address}` : ""}
+              {place.address ? <> · <a href={mapsSearchUrl(place.address)} target="_blank" rel="noreferrer" className="text-brand-lea underline dark:text-slate-100">Map</a></> : null}
               {session.meetLink ? <> · <a href={session.meetLink} target="_blank" rel="noreferrer" className="text-brand-lea underline dark:text-slate-100">Meet link</a></> : null}
             </p>
+            {offNormal.length || missingEnd ? (
+              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11.5px]">
+                <OffNormalChip lines={offNormal} />
+                {offNormal.length ? <span className="text-amber-800 dark:text-amber-200">{offNormal.join(" ")}</span> : null}
+                {missingEnd ? (
+                  <span className="text-amber-800 dark:text-amber-200">
+                    No end time recorded — the emails&apos; hours go out unchecked until one is set.
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button onClick={() => (rescheduling ? setRescheduling(false) : openReschedule())} className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
-              {rescheduling ? "Cancel" : "Reschedule"}
+            <button onClick={() => setEditingTimePlace((v) => !v)} className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
+              {editingTimePlace ? "Cancel" : "Change time or place"}
             </button>
             {session.status === "COMPLETE" ? (
               <span className="rounded bg-emerald-50 dark:bg-emerald-500/15 px-3 py-1 text-sm font-semibold text-emerald-800 dark:text-emerald-300">Complete</span>
@@ -352,25 +369,13 @@ export function OrientationSessionDetail({ session }: { session: SessionDetail }
           </div>
         </div>
 
-        {rescheduling ? (
-          <div className="mt-3 flex flex-wrap items-end gap-3 rounded border border-brand-lea/15 bg-brand-cloudDancer/40 p-3 dark:border-white/10 dark:bg-white/5">
-            <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">New date</span>
-              <input type="date" value={resched.date} onChange={(e) => setResched({ ...resched, date: e.target.value })} className="mt-1 block rounded border border-brand-lea/20 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100" />
-            </label>
-            <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Start (MT)</span>
-              <input type="time" value={resched.time} onChange={(e) => setResched({ ...resched, time: e.target.value })} className="mt-1 block rounded border border-brand-lea/20 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100" />
-            </label>
-            <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">End (MT)</span>
-              <input type="time" value={resched.endTime} onChange={(e) => setResched({ ...resched, endTime: e.target.value })} className="mt-1 block rounded border border-brand-lea/20 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100" />
-            </label>
-            <Button onClick={saveReschedule} disabled={savingDate || !resched.date}>
-              {savingDate ? "Saving…" : "Save new date"}
-            </Button>
-            {reschedErr ? <span className="text-xs font-semibold text-red-700 dark:text-red-300">{reschedErr}</span> : <span className="text-xs text-brand-grey dark:text-slate-400">Attendees keep their spots; this only moves the session date/time.</span>}
-          </div>
+        {editingTimePlace ? (
+          <SessionTimePlaceEditor
+            session={session}
+            usedPlaces={usedPlaces}
+            onCancel={() => setEditingTimePlace(false)}
+            onSaved={({ calendarFieldsChanged }) => onTimePlaceSaved(calendarFieldsChanged)}
+          />
         ) : null}
 
         {calendarNotice ? (

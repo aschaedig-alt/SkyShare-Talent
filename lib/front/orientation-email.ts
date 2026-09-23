@@ -1,7 +1,17 @@
 import { prisma } from "@/lib/prisma";
 import { splitCandidateName } from "@/lib/candidates/normalize";
-import { formatTimeRange } from "@/lib/calendar/format";
 import { ordinalDayLabel } from "@/lib/dates/ordinal";
+import {
+  describeOffNormal,
+  mountainClock,
+  mountainMinutes,
+  normalizePlaceText,
+  placeLine,
+  resolveSessionPlace,
+  USUAL_END_MINUTES,
+  USUAL_PLACE,
+  USUAL_START_MINUTES
+} from "@/lib/orientation/places";
 import {
   ORIENTATION_TEMPLATE_META,
   orientationTemplateMeta,
@@ -147,6 +157,83 @@ function normalizeTimeRange(value: string): string {
 }
 
 /**
+ * Write the session's hours in the SAME STYLE as the range they replace.
+ *
+ * The template says "9:30am to 3:00pm" in one place and "9:30am-3:00pm" in
+ * another. Replacing both with the app's own "11:00 AM – 4:00 PM" made the email
+ * read as patched by a machine halfway through a sentence somebody wrote by
+ * hand. So the case of am/pm, the space before it, and the separator with its
+ * spacing are all copied from the text being replaced. Anything the parser does
+ * not recognise falls back to the app's format rather than guessing.
+ */
+function writeRangeLike(template: string, startIso: string, endIso: string): string {
+  const start = mountainClock(startIso);
+  const end = mountainClock(endIso);
+  const m = /^(\d{1,2}:\d{2})(\s*)([ap]m)(\s*)(to|-|–)(\s*)(\d{1,2}:\d{2})(\s*)([ap]m)$/i.exec(template.trim());
+  if (!m) return `${start} – ${end}`;
+  const [, , spaceA, suffixA, sepLeft, sep, sepRight, , spaceB, suffixB] = m;
+  const styled = (clock: string, space: string, sample: string) => {
+    const [hm, suffix] = clock.split(" ");
+    return `${hm}${space}${sample === sample.toLowerCase() ? suffix.toLowerCase() : suffix.toUpperCase()}`;
+  };
+  return `${styled(start, spaceA, suffixA)}${sepLeft}${sep}${sepRight}${styled(end, spaceB, suffixB)}`;
+}
+
+/** The body as plain text, for the checks below that look for words rather than
+    rewrite them. Only ever used to FIND things — never sent. */
+function bodyText(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ");
+}
+
+/** "9:30am" standing on its own, as opposed to inside a range. */
+const LONE_TIME_RE = /\b(\d{1,2}):(\d{2})\s*([ap])\.?m\b\.?/gi;
+
+/**
+ * Mentions of the USUAL start or end time that survived the range rewrite.
+ *
+ * The rewrite only touches ranges, because a range is unambiguous. A lone
+ * "doors open at 9:30am" is not — the app cannot tell "the start" from "arrive
+ * fifteen minutes early" — so it is never rewritten. But on a session that does
+ * not start at 9:30, a surviving 9:30am is very likely the old start time, and
+ * that is worth saying out loud rather than sending.
+ */
+function staleUsualTimes(html: string, startIso: string, endIso: string): string[] {
+  const startMoved = mountainMinutes(startIso) !== USUAL_START_MINUTES;
+  const endMoved = mountainMinutes(endIso) !== USUAL_END_MINUTES;
+  const found = new Set<string>();
+  for (const m of bodyText(html).matchAll(LONE_TIME_RE)) {
+    const hour12 = Number(m[1]) % 12;
+    const minutes = (m[3].toLowerCase() === "p" ? hour12 + 12 : hour12) * 60 + Number(m[2]);
+    if ((startMoved && minutes === USUAL_START_MINUTES) || (endMoved && minutes === USUAL_END_MINUTES)) {
+      found.add(m[0].trim());
+    }
+  }
+  return [...found];
+}
+
+/** The template's "Location:" line: the LABEL, any tags straight after it, and
+    the text up to the end of that text node. Anchored on the label so it cannot
+    wander into prose, and stopped at the next tag so it cannot run past one. */
+const LOCATION_LINE_RE = /(Location:\s*(?:<[^>]+>\s*)*)([^<\n]+)/gi;
+
+/**
+ * Words that only describe the way into SkyShare HQ. They come from the HQ
+ * directions — the app's own copy is in lib/orientation/calendar-event.ts, and
+ * the roadmap records the Front templates carrying the same paragraph after
+ * their Location line (hangars, a security gate onto the ramp, park anywhere).
+ * Used to FLAG, never to rewrite: the app has no directions for anywhere else.
+ */
+const HQ_DIRECTIONS_RE = /\b(hangars?|security gate|ramp area|downstairs conference room|lock code)\b/gi;
+
+function escapeInline(s: string): string {
+  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
+}
+
+/**
  * Rewrite the hours and the address in a template body to match THIS session.
  *
  * WHY THIS EXISTS. Hannah, 2026-08-31: "most of our orientations are at the same
@@ -158,8 +245,8 @@ function normalizeTimeRange(value: string): string {
  *
  * Both rewrites are anchored, not guessed:
  *   TIME — the shared regex above matches a written range, and only ranges that
- *     disagree with the session are replaced. A template that already agrees is
- *     untouched.
+ *     disagree with the session are replaced, in the template's own style. A
+ *     template that already agrees is untouched.
  *   ADDRESS — anchored on the "Location:" LABEL the templates use, capturing only
  *     to the end of that text node so it cannot run past a tag. The subject
  *     deliberately does the opposite (see fillSubject): there "Location" is a
@@ -167,23 +254,57 @@ function normalizeTimeRange(value: string): string {
  *
  * Every change is reported so the preview can say what it did. Silent rewriting of
  * somebody's copy would be worse than the problem.
+ *
+ * THE PLACE COMES FROM resolveSessionPlace (lib/orientation/places.ts), the same
+ * resolver the calendar invite and the internal summary use. A session with no
+ * address used to skip this branch entirely and say nothing — the Sep 11 audit's
+ * finding, on a session whose invite and reminder had both already gone. Now a
+ * session with no address is checked against the place its NAME matches (HQ for
+ * every session created before the place picker), and a session whose place is
+ * genuinely unknown says so instead of going quiet.
+ *
+ * `offNormal` is returned separately from `warnings` on purpose. It says what is
+ * different about the SESSION; warnings say what happened to THIS TEMPLATE. The
+ * dialogs show the first once, under its own heading, because his rule is that
+ * off-normal is flagged as exactly that — not as one line among many.
  */
 export function applySessionOverrides(
   html: string,
-  session: { date: string; endsAt: string | null; address?: string | null }
-): { text: string; changes: string[]; warnings: string[] } {
+  session: { date: string; endsAt: string | null; location?: string | null; address?: string | null }
+): { text: string; changes: string[]; warnings: string[]; offNormal: string[] } {
   let text = html;
   const changes: string[] = [];
   const warnings: string[] = [];
+  const offNormal = describeOffNormal(session);
 
   if (session.endsAt) {
-    const actual = formatTimeRange(session.date, session.endsAt).replace(/\s*MT$/, "");
-    const want = normalizeTimeRange(actual);
+    const endsAt = session.endsAt;
+    // Counted before the replace rather than flagged from inside its callback:
+    // TypeScript assumes a callback never assigns an outer `let`, so a flag set in
+    // there reads as permanently false to the type checker.
+    const sawRange = [...text.matchAll(TIME_RANGE_RE)].length > 0;
     text = text.replace(TIME_RANGE_RE, (match) => {
-      if (normalizeTimeRange(match) === want) return match;
-      changes.push(`the time now reads ${actual} (the template said ${match.trim()})`);
-      return actual;
+      const written = writeRangeLike(match, session.date, endsAt);
+      if (normalizeTimeRange(match) === normalizeTimeRange(written)) return match;
+      changes.push(`the time now reads ${written} (the template said ${match.trim()})`);
+      return written;
     });
+
+    const hoursMoved =
+      mountainMinutes(session.date) !== USUAL_START_MINUTES || mountainMinutes(endsAt) !== USUAL_END_MINUTES;
+    if (hoursMoved) {
+      if (!sawRange) {
+        warnings.push(
+          `This template does not write the hours as a range, so nothing in it was changed. This session runs ${mountainClock(session.date)} – ${mountainClock(endsAt)} MT — if the body mentions the time another way, correct it in the box below.`
+        );
+      }
+      const stale = staleUsualTimes(text, session.date, endsAt);
+      if (stale.length) {
+        warnings.push(
+          `The body still mentions ${stale.join(" and ")} on its own. That is the usual time, not this session's (${mountainClock(session.date)} – ${mountainClock(endsAt)} MT), and a time on its own is never rewritten automatically — change it in the box below.`
+        );
+      }
+    }
   } else {
     // NO END TIME ON THE SESSION — and this used to degrade in silence.
     //
@@ -205,17 +326,61 @@ export function applySessionOverrides(
     }
   }
 
-  const address = session.address?.trim();
-  if (address) {
-    text = text.replace(/(Location:\s*(?:<[^>]+>\s*)*)([^<\n]+)/gi, (full, label: string, current: string) => {
-      const shown = current.trim();
-      if (!shown || shown === address) return full;
-      changes.push(`the location now reads ${address} (the template said ${shown})`);
-      return label + address;
+  const place = resolveSessionPlace(session);
+  const where = placeLine(place);
+  if (place.address) {
+    const accepted = new Set([normalizePlaceText(where), normalizePlaceText(place.address)]);
+    const sawLocation = [...text.matchAll(LOCATION_LINE_RE)].some((m) => bodyText(m[2]).trim());
+    text = text.replace(LOCATION_LINE_RE, (full, label: string, current: string) => {
+      const shown = bodyText(current).trim();
+      if (!shown) return full;
+      // Compared flattened, so "180 2400 W, Salt Lake City" written with other
+      // spacing is agreement rather than a rewrite nobody asked for. The bare
+      // address of a named place also counts: it is right, just terse.
+      if (accepted.has(normalizePlaceText(shown))) return full;
+      const why = place.assumed
+        ? ` — this session has no address of its own, so ${place.isUsual ? "the usual place" : `the address on file for ${place.known?.label ?? place.name}`} was used`
+        : "";
+      changes.push(`the location now reads ${where} (the template said ${shown})${why}`);
+      return label + escapeInline(where);
     });
+    if (!sawLocation && !place.isUsual) {
+      warnings.push(
+        `This template has no "Location:" line, so the place was not written into it. Check the body tells them it is at ${where}, and add it in the box below if not.`
+      );
+    }
+  } else {
+    // NO ADDRESS AND NO KNOWN PLACE BY THAT NAME — the mirror of the missing end
+    // time above. There is nothing to check against, so do not guess (guessing
+    // HQ for a session somebody named as elsewhere sends a new hire to the wrong
+    // building); name what is about to go out and say it was not checked.
+    const found = [...new Set([...text.matchAll(LOCATION_LINE_RE)].map((m) => bodyText(m[2]).trim()).filter(Boolean))];
+    warnings.push(
+      found.length
+        ? `This session is at "${place.name}", which has no street address recorded, so the location in this email (${found.join(", ")}) came straight from the Front template and was NOT checked. Set the address on the session.`
+        : `This session is at "${place.name}", which has no street address recorded, and nothing in this email says where it is. Set the address on the session, or say where in the box below.`
+    );
   }
 
-  return { text, changes, warnings };
+  // Directions to a building the session is not in. The address line above can
+  // be corrected mechanically; the paragraph after it cannot, because the app has
+  // no directions for anywhere but HQ. So it is flagged, loudly, while the body is
+  // still editable — the roadmap's Sep 2 open item, closed the way it proposed.
+  if (!place.isUsual) {
+    // A word that is part of THIS place's own name ("SVR Hangar 3") is not a
+    // leftover HQ direction, so it does not count.
+    const own = where.toLowerCase();
+    const hq = [...new Set([...bodyText(text).matchAll(HQ_DIRECTIONS_RE)].map((m) => m[0].toLowerCase()))].filter(
+      (w) => !own.includes(w)
+    );
+    if (hq.length) {
+      warnings.push(
+        `The body still has the directions to ${USUAL_PLACE.label} (it mentions ${hq.join(", ")}), but this session is at ${where}. Rewrite or remove that part in the box below before sending.`
+      );
+    }
+  }
+
+  return { text, changes, warnings, offNormal };
 }
 
 // --- editing the body for one send ------------------------------------------
@@ -274,6 +439,11 @@ export type OrientationEmailPreview = {
   bodyEdited: boolean;
   /** Things the sender should see before approving. */
   warnings: string[];
+  /** What is different than normal about the SESSION — its hours or its place —
+      in the shared wording from lib/orientation/places.ts. Empty for a normal
+      session. Kept apart from `warnings` so a dialog can flag it under its own
+      heading rather than bury it among notes about the template. */
+  offNormal: string[];
 };
 
 type SupervisorFields = {
@@ -494,7 +664,8 @@ export async function buildOrientationEmail(
     bodyHtml: body,
     bodyEdited: edited,
     html: greeting + body,
-    warnings
+    warnings,
+    offNormal: overrides.offNormal
   };
 }
 
@@ -625,7 +796,8 @@ export async function buildSupervisorDigestEmail(
     bodyHtml: body,
     bodyEdited: edited,
     html: greeting + body,
-    warnings
+    warnings,
+    offNormal: digestOverrides.offNormal
   };
 }
 

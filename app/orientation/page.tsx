@@ -1,15 +1,17 @@
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { getOrientationSessions, getOrientationCohorts, getUnscheduledHires } from "@/lib/data/orientation";
+import { getUsedOrientationPlaces } from "@/lib/orientation/places-used";
 import { OrientationOverview } from "@/components/orientation/OrientationOverview";
 
 export const dynamic = "force-dynamic";
 
 export default async function OrientationPage() {
   await requireModulePageAccess("people");
-  const [sessions, cohortData, unscheduled] = await Promise.all([
+  const [sessions, cohortData, unscheduled, usedPlaces] = await Promise.all([
     getOrientationSessions(),
     getOrientationCohorts(),
-    getUnscheduledHires()
+    getUnscheduledHires(),
+    getUsedOrientationPlaces()
   ]);
   return (
     <OrientationOverview
@@ -18,6 +20,7 @@ export default async function OrientationPage() {
       cohorts={cohortData.cohorts}
       calendar={cohortData.calendar}
       unscheduled={unscheduled}
+      usedPlaces={usedPlaces}
     />
   );
 }

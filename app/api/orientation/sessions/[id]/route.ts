@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { completeOrientationSession } from "@/lib/data/orientation";
+import { normalizePlaceText, resolveSessionPlace } from "@/lib/orientation/places";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -104,7 +105,31 @@ export async function PATCH(request: Request, ctx: Ctx) {
       if (a instanceof Date || b instanceof Date) return false;
       return (a ?? null) === (b ?? null);
     };
-    const calendarFieldsChanged = before ? touched.filter((f) => !same(before[f], data[f])) : [];
+    // The PLACE is compared as the invite and the emails will render it — the
+    // resolved place — rather than column by column. The time-and-place editor
+    // always saves both columns, so a session with a null address (which every
+    // surface already treats as HQ) gains HQ's address explicitly the first time
+    // anybody saves it. That is the same building; calling it a move would send
+    // somebody to "update" an invite that is already right.
+    const placeKey = (s: { location: string | null; address: string | null }) => {
+      const p = resolveSessionPlace(s);
+      return { name: normalizePlaceText(p.name), address: normalizePlaceText(p.address) };
+    };
+    const calendarFieldsChanged: string[] = [];
+    if (before) {
+      for (const f of ["date", "endsAt"] as const) {
+        if (f in data && !same(before[f], data[f])) calendarFieldsChanged.push(f);
+      }
+      if ("location" in data || "address" in data) {
+        const was = placeKey(before);
+        const now = placeKey({
+          location: "location" in data ? (data.location as string | null) : before.location,
+          address: "address" in data ? (data.address as string | null) : before.address
+        });
+        if (was.name !== now.name) calendarFieldsChanged.push("location");
+        if (was.address !== now.address) calendarFieldsChanged.push("address");
+      }
+    }
 
     return NextResponse.json({ ok: true, calendarFieldsChanged });
   } catch (error) {

@@ -2,7 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { addInviteAttendees, createInviteEvent, getInviteEvent, updateInviteEvent } from "@/lib/google/calendar";
 import { getUserCalendar } from "@/lib/google/user-calendar";
 import { resolveSupervisors } from "@/lib/front/orientation-email";
-import { buildOrientationEvent, type OrientationEventDraft } from "./calendar-event";
+import { buildOrientationEvent, type OrientationEventDraft, type SessionForCalendar } from "./calendar-event";
+import { mountainClock, resolveSessionPlace } from "./places";
 
 // Creating the orientation calendar invite from the app, and adding the session's
 // attendees to it as guests.
@@ -40,11 +41,16 @@ export type OrientationCalendarRecord = {
    *
    *  Both optional, and the absence is meaningful rather than a default: an event
    *  created before this shipped has no baseline, so the app cannot say whether it
-   *  is in step. It says "unknown" instead of "in step", because Google's own API
-   *  is no help here — events.get returns the summary but not the start, end or
-   *  location, so there is nothing to compare a time or an address against.
-   *  Fingerprinting what we pushed is the only exact answer available without a
-   *  schema change, and this record already lives in a WorkspaceSetting. */
+   *  is in step. It says "unknown" instead of "in step".
+   *
+   *  CORRECTED Sep 22: this used to say Google's events.get does not return the
+   *  start, end or location. It does — the Calendar API returns the whole event.
+   *  What is true is narrower: getInviteEvent in lib/google/calendar.ts only
+   *  reads back the title and the guests, so the app compares against what it
+   *  last PUSHED rather than what Google holds now. A consequence worth knowing:
+   *  an edit made by hand in Google is invisible here, and "Update the invite"
+   *  overwrites it. Fingerprinting what we pushed needs no schema change, and
+   *  this record already lives in a WorkspaceSetting. */
   syncedAt?: string;
   syncedFingerprint?: string;
   syncedBy?: string | null;
@@ -53,9 +59,17 @@ export type OrientationCalendarRecord = {
 /** Everything on a session that the invite renders: the TITLE and DESCRIPTION are
     built from the date, the LOCATION field from the address. Change any of these
     and the event in Google is stale. Deliberately not `location` alone — the
-    standing rule is that a change has to reach all four places at once. */
+    standing rule is that a change has to reach all four places at once.
+
+    The place half is the RESOLVED place (lib/orientation/places.ts), not the raw
+    columns. A session with no address has always been invited to HQ, so saving
+    HQ's address onto it explicitly — which the time-and-place editor does — must
+    not mark a correct invite stale with nothing on it changed. For a session
+    whose address is already on the row the two are identical, which is why the
+    one fingerprint recorded before this (Sep 29) still reads as in step. */
 function sessionFingerprint(s: { date: string; endsAt: string | null; location: string | null; address?: string | null }): string {
-  return [s.date, s.endsAt ?? "", s.location ?? "", s.address ?? ""].join("|");
+  const place = resolveSessionPlace(s);
+  return [s.date, s.endsAt ?? "", place.name, place.address ?? ""].join("|");
 }
 
 /** Which of those fields moved, in words a person can act on. Empty means the
@@ -65,6 +79,65 @@ export function describeCalendarDrift(before: string, after: string): string[] {
   const a = before.split("|");
   const b = after.split("|");
   return LABELS.filter((_, i) => (a[i] ?? "") !== (b[i] ?? ""));
+}
+
+/** The session as it stood when the event was last pushed, read back out of the
+    fingerprint. Null if the fingerprint does not split cleanly — a "|" typed
+    into a place name would do it — and the panel then falls back to naming the
+    fields that moved without their old values. */
+function sessionFromFingerprint(fingerprint: string): SessionForCalendar | null {
+  const parts = fingerprint.split("|");
+  if (parts.length !== 4 || !parts[0] || Number.isNaN(new Date(parts[0]).getTime())) return null;
+  return { date: parts[0], endsAt: parts[1] || null, location: parts[2] || null, address: parts[3] || null };
+}
+
+/** "Tue, Sep 29 · 9:30 AM – 3:00 PM MT" — the WHEN of an event draft. */
+function whenLabel(draft: OrientationEventDraft): string {
+  const day = new Intl.DateTimeFormat("en-US", {
+    timeZone: draft.timeZone,
+    weekday: "short",
+    month: "short",
+    day: "numeric"
+  }).format(new Date(draft.startTime));
+  return `${day} · ${mountainClock(draft.startTime)} – ${mountainClock(draft.endTime)} MT`;
+}
+
+export type CalendarFieldChange = {
+  field: "Title" | "When" | "Where";
+  /** As the app last pushed it. */
+  was: string;
+  /** As "Update the invite" would write it. */
+  willBe: string;
+};
+
+/**
+ * WHAT pressing "Update the invite" would change, field by field.
+ *
+ * The panel used to say only WHICH session fields had moved ("the date and
+ * start time changed"), which left the person deciding whether to email every
+ * guest without seeing what those guests would be told. The old values come
+ * from rebuilding the event from the fingerprint of what was last pushed — the
+ * same pure builder, so an HQ session's title, description and location come out
+ * exactly as they were sent. The description is not diffed line by line; it is
+ * rebuilt whole from the session, which is what the flag says.
+ *
+ * Exported because it is pure and worth exercising on its own: the only other
+ * way to reach the stale path is to write a stale record into the live database.
+ */
+export function describeEventChanges(
+  fingerprint: string,
+  draft: OrientationEventDraft
+): { changes: CalendarFieldChange[]; descriptionChanges: boolean } | null {
+  const before = sessionFromFingerprint(fingerprint);
+  if (!before) return null;
+  const was = buildOrientationEvent(before);
+  const changes: CalendarFieldChange[] = [];
+  if (was.summary !== draft.summary) changes.push({ field: "Title", was: was.summary, willBe: draft.summary });
+  const wasWhen = whenLabel(was);
+  const willWhen = whenLabel(draft);
+  if (wasWhen !== willWhen) changes.push({ field: "When", was: wasWhen, willBe: willWhen });
+  if (was.location !== draft.location) changes.push({ field: "Where", was: was.location, willBe: draft.location });
+  return { changes, descriptionChanges: was.description !== draft.description };
 }
 
 type CalendarMap = Record<string, OrientationCalendarRecord>;
@@ -180,6 +253,11 @@ export type OrientationCalendarPreview = {
         inStep: boolean | null;
         /** What moved since the last push. Empty when in step or unknown. */
         drifted: string[];
+        /** Title / When / Where as last pushed versus as an update would write
+            them. Null when there is no baseline, or it would not parse. */
+        changes: CalendarFieldChange[] | null;
+        /** Whether the rebuilt description differs from the one last pushed. */
+        descriptionChanges: boolean | null;
       })
     | null;
   /** Non-null when the app cannot talk to Google at all — shown instead of a dead button. */
@@ -240,13 +318,16 @@ export async function previewOrientationCalendar(
     // exactly the kind of unfounded assertion that sends nobody to fix a real
     // stale invite.
     const inStep = record.syncedFingerprint === undefined ? null : record.syncedFingerprint === now;
+    const diff = inStep === false ? describeEventChanges(record.syncedFingerprint!, draft) : null;
     existing = {
       ...record,
       liveAttendees: live?.attendees ?? [],
       // Only assert "deleted in Google" when we actually got an answer back.
       missingInGoogle: reachable && live === null,
       inStep,
-      drifted: inStep === false ? describeCalendarDrift(record.syncedFingerprint!, now) : []
+      drifted: inStep === false ? describeCalendarDrift(record.syncedFingerprint!, now) : [],
+      changes: diff?.changes ?? null,
+      descriptionChanges: diff?.descriptionChanges ?? null
     };
   }
 

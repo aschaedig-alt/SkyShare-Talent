@@ -2,7 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { getOrientationCc } from "@/lib/orientation/email-cc";
 import { formatTimeRange } from "@/lib/calendar/format";
 import { ordinalDayLabel } from "@/lib/dates/ordinal";
+import { describeOffNormal, placeLine, resolveSessionPlace } from "@/lib/orientation/places";
 import { nameList } from "./orientation-email";
+import { cleanEditedBody } from "./sanitize-body";
 
 // The ONE internal email about a session, replacing the standing list being cc'd
 // on every single per-hire email.
@@ -28,9 +30,26 @@ export type SummaryAttendee = {
 export type OrientationSummaryPreview = {
   to: string[];
   subject: string;
+  /** What is sent: the built body, or the edited one when there is an edit. */
   html: string;
+  /** The body as the app built it from the session — what pre-fills the edit
+      box. Equal to `html` whenever nothing was edited. */
+  bodyHtml: string;
+  bodyEdited: boolean;
   warnings: string[];
+  /** Different than normal, in the shared wording (lib/orientation/places.ts). */
+  offNormal: string[];
 };
+
+/**
+ * The banner for an edited summary. NOT the shared EDITED_BODY_WARNING: that
+ * one says "the template in Front is untouched", and this email has no Front
+ * template — the app writes it (see the note at the top of this file). A
+ * warning that names a template which does not exist sends somebody looking for
+ * it.
+ */
+export const EDITED_SUMMARY_WARNING =
+  "EDITED FOR THIS SEND — the summary below was changed by hand. The change applies to this send only; nothing is saved, and the next summary is built fresh from the session.";
 
 function esc(s: string): string {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
@@ -50,10 +69,26 @@ const BREAK = `<div><br /></div>`;
 export async function buildOrientationSummaryEmail(input: {
   sessionDate: string;
   endsAt: string | null;
-  address: string;
+  /** The session's two place columns, RAW. Resolved here through the same
+      resolver the invite and the attendee emails use, rather than a fallback
+      of this file's own, so the summary cannot name a different building. */
+  location: string | null;
+  address: string | null;
   attendees: SummaryAttendee[];
   /** Override the recipients — used by a test send. */
   testTo?: string | null;
+  /**
+   * The body as edited in the send dialog, for THIS SEND ONLY.
+   *
+   * The standing rule is that every email the app builds for a person to send
+   * gets an edit box first. This one was the exception: it is written here
+   * rather than fetched from Front, so it was left out of the Aug 31 work rather
+   * than bolted on badly (the roadmap recorded the gap). It replaces the WHOLE
+   * body, because unlike the per-hire emails there is no per-recipient greeting
+   * to protect — one email goes to the whole internal list. Nothing is stored.
+   * Manual sends only: nothing unattended sends this email.
+   */
+  bodyOverride?: string | null;
 }): Promise<OrientationSummaryPreview> {
   const warnings: string[] = [];
   const isTest = Boolean(input.testTo?.trim());
@@ -100,8 +135,30 @@ export async function buildOrientationSummaryEmail(input: {
     })
     .join("");
 
-  const html = [
-    line(`New Hire Orientation is on <b>${esc(day)}</b>, ${esc(when)}, at ${esc(input.address)}.`),
+  // Where, from the shared resolver. A session with no address falls back to the
+  // place its name matches — HQ for every session before the place picker, which
+  // is what this line always said — and one whose place is genuinely unknown
+  // says its name and is flagged, rather than quietly claiming HQ.
+  const place = resolveSessionPlace({ location: input.location, address: input.address });
+  if (!place.address) {
+    warnings.push(
+      `This session's place, "${place.name}", has no street address recorded, so the summary names it without one. Set the address on the session.`
+    );
+  }
+
+  // Different than normal. This summary is the app's own text rather than HR's
+  // Front copy, and its readers are the people who set the room up and present,
+  // so an off-normal session says so IN the email as well as to the sender.
+  const offNormal = describeOffNormal({
+    date: input.sessionDate,
+    endsAt: input.endsAt,
+    location: input.location,
+    address: input.address
+  });
+
+  const built = [
+    line(`New Hire Orientation is on <b>${esc(day)}</b>, ${esc(when)}, at ${esc(placeLine(place))}.`),
+    ...(offNormal.length ? [BREAK, line(`<b>Different than normal:</b> ${esc(offNormal.join(" "))}`)] : []),
     BREAK,
     line(`<b>${count} attending:</b>`),
     `<div style="line-height: 1.5;" dir="ltr"><span style="font-family: Verdana, sans-serif;">` +
@@ -113,11 +170,20 @@ export async function buildOrientationSummaryEmail(input: {
     )
   ].join("");
 
+  // The per-send edit. The warning goes FIRST, for the same reason as in the
+  // attendee builder: everything else in the list describes the body the app
+  // built, which stops being the whole story the moment somebody retypes it.
+  const edited = Boolean(input.bodyOverride && input.bodyOverride.trim());
+  if (edited) warnings.unshift(EDITED_SUMMARY_WARNING);
+
   return {
     to,
     subject: `New Hire Orientation — ${day} — ${count} attending`,
-    html,
-    warnings
+    html: edited ? cleanEditedBody(input.bodyOverride!) : built,
+    bodyHtml: built,
+    bodyEdited: edited,
+    warnings,
+    offNormal
   };
 }
 
@@ -138,6 +204,9 @@ export type SummarySendRecord = {
   /** How many attendees the session had when it went. A later addition means the
       summary is stale, and the UI can say so instead of looking current. */
   attendeeCount: number;
+  /** True when the body was hand-edited for that send. Optional because records
+      written before the summary had an edit box cannot say either way. */
+  edited?: boolean;
 };
 
 type SummaryMap = Record<string, SummarySendRecord>;
