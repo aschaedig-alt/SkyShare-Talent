@@ -354,7 +354,7 @@ the thirteen lines and confirm it is still there after a reload.
 
 ### 18. Nothing on a job's Pilot requirement tab that SAVES has been pressed
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN — deployed 2026-09-23
 **Added:** 2026-09-23
 
 Pilot Requirements is now a tab on each job, and the Role block is the one place a pilot job's
@@ -368,37 +368,45 @@ Keep it active, Set one up, Attach, the requirement editor's Save, the fleet-pos
 the moved Export CSV are typechecked only.
 
 **How to check it, about three minutes:** on one real pilot job whose values you know are right
-- say Gulfstream G200 First Officer - open Pilot requirement, press Edit role, change nothing
-that matters (retype the base exactly as it is), and Save. Then open the Matchboard for that role.
+- say Gulfstream G200 First Officer - open Pilot requirement, press Edit role, add one word to
+the end of the pay text and Save, then take the word out and Save again. (A save that changes
+nothing records nothing, so retyping a value as it was proves nothing - this check said to do
+exactly that until 2026-09-23.) Then open the Matchboard for that role.
 
-**What would count as a pass:** the save sticks after a reload, a Change history row appears
-naming you, and the Matchboard role still scores the same people.
+**What would count as a pass:** both saves stick after a reload, two Change history rows appear
+naming you with the pay text before and after, and the Matchboard role still scores the same
+people.
 
 ---
 
 ### 19. Nobody without admin rights has opened the new Pilot requirement tab
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** BLOCKED ON DEPLOY — the recruiter half changed again on 2026-09-23; needs a login that is not an admin
 **Added:** 2026-09-23
 
-Every write on the tab needs requirements:write, which today only Aimee and Hannah hold - the
-same gate the old requirement editor had. The first build of the tab used jobs:write instead,
-which would have let a recruiter (Kevin Sherman is the only one) change a requirement's
-operator, seat, base and pay text; that was put back before handoff because nobody had approved
-it. Local dev signs everyone in as an admin, so what a recruiter or viewer sees has never
-rendered.
+The Role block's Save - seat, aircraft, base, operator and pay text - needs jobs:write, which the
+admins and the recruiter (Kevin Sherman is the only one) hold. That was his call on 2026-09-23:
+"yes they should be able to but keep a history of who changed what", and every save writes a
+Change history row naming who and each old and new value. Every other write on the tab - Keep it
+active, Make the requirement inactive too, Set one up, Attach and the requirement editor - still
+needs requirements:write, which only Aimee and Hannah hold. Local dev signs everyone in as an
+admin, so what a recruiter or a viewer sees has never rendered.
 
-**How to check it:** sign in as a recruiter or a viewer and open any pilot job's Pilot requirement
-tab.
+**How to check it, about three minutes:** sign in as the recruiter, open a pilot job's Pilot
+requirement tab, press Edit role, add one word to the end of the pay text and Save, then take the
+word out and Save again. (A save that changes nothing records nothing, so retyping a value as it
+was proves nothing.) Then sign in as a hiring manager or a viewer and open the same tab.
 
-**What would count as a pass:** everything is readable, and there is no Edit role, no Keep it
-active or Make the requirement inactive too, and no Set one up or Attach - not even disabled ones.
+**What would count as a pass:** the recruiter sees Edit role, both saves appear in Change history
+naming them with the pay text before and after, and they see no Keep it active, Make the
+requirement inactive too, Set one up or Attach. The hiring manager or viewer sees everything
+read-only, with no Edit role at all - not even a disabled one.
 
 ---
 
 ### 20. The Certificates tick-box editor has never been saved
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN — deployed 2026-09-23
 **Added:** 2026-09-23
 
 The Certificates card in a candidate's review column is now a checklist, and its pencil opens a
@@ -417,7 +425,7 @@ ticked, with its "Also seen" entries unchanged.
 
 ### 21. The Screening preview's Certificates block has not been seen narrow or in dark mode
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN — deployed 2026-09-23
 **Added:** 2026-09-23
 
 The compact checklist in the Screening preview was seen at the width the preview had on this

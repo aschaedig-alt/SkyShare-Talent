@@ -34,11 +34,15 @@ const LINKISH =
   "inline-flex items-center gap-1.5 rounded border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-eden transition hover:border-brand-sweet hover:bg-brand-cloudDancer/60 hover:shadow-glow dark:border-white/10 dark:bg-white/5 dark:text-brand-edenOnDark";
 
 export type RequirementPermissions = {
-  /** jobs:write — the job's own fields. Nothing on this tab writes with it any more. */
+  /**
+   * jobs:write (admins and recruiters) — the job's own fields, and on this tab the
+   * Role block: seat, aircraft, base, operator and pay text. Recruiters were given
+   * the Role on 2026-09-23 (his call), with every save kept in Change history.
+   */
   canEditJob: boolean;
   /**
-   * requirements:write (admins) — everything on this tab that writes: the Role
-   * block, the status match, set up and attach, and the requirement editor.
+   * requirements:write (admins) — everything else on this tab that writes: the
+   * status match, set up and attach, and the requirement editor.
    */
   canEditRequirement: boolean;
   /** Recruiters and admins — fleet position and managed aircraft. */
@@ -423,10 +427,11 @@ export function RequirementPanel({
         key={`role-${requirement.id}`}
         requirement={requirement}
         pageJobId={job?.id ?? null}
-        // The Role block writes the requirement's operator, seat, base and pay
-        // text, which were admin-only before this tab existed. Same gate as the
-        // server action it calls (requirement-actions.ts).
-        canEdit={permissions.canEditRequirement}
+        // The Role block writes the requirement's operator, seat, aircraft, base
+        // and pay text: admins and recruiters since 2026-09-23 (his call), every
+        // save recorded in Change history. Same gate as the server action it
+        // calls (saveRequirementRole in requirement-actions.ts).
+        canEdit={permissions.canEditJob}
         canEditFleetPosition={permissions.canEditScoring}
       />
 

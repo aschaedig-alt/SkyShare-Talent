@@ -14,15 +14,19 @@ import { resolveRequirementHome } from "@/lib/data/pilot-requirements";
 // check sees /recruiting-jobs/... and gates these on the Jobs area, which is where
 // they are used.
 //
-// EVERY ONE NEEDS requirements:write - the same gate the old requirement editor and
-// the old New requirement button used (admins). These writes reach the requirement,
-// and the Role writer includes its operator, seat, base and PAY TEXT, which only
-// admins could change before. The first version of this file gated on jobs:write,
-// which would have quietly handed all of that to recruiters; nobody had approved
-// that, so it went back to the old gate on 2026-09-23 and the question went to him.
-// The cost is real and deliberate: a recruiter can no longer change seat or
-// aircraft on a pilot job that has a requirement (on one without a requirement the
-// job's own classification editor still works).
+// TWO GATES, and which is which was his call.
+//
+// The Role save (saveRequirementRole) needs jobs:write - admins AND recruiters. It
+// writes a requirement's operator, seat, aircraft, base and pay text. Those were
+// admin-only until 2026-09-23, when he answered the question directly: "yes they
+// should be able to but keep a history of who changed what". The history is the
+// PilotRequirementChange row every save writes - who, when, and each field's old
+// and new value - which the tab's Change history shows. Hiring managers and
+// viewers hold neither permission and still see the Role read-only.
+//
+// Everything else here - the status match, set up and attach - still needs
+// requirements:write, the gate the old requirement editor and New requirement
+// button used (admins). He was asked about the five Role fields only.
 
 export type RequirementActionResult = { ok: boolean; error?: string; id?: string; unchanged?: boolean };
 
@@ -54,8 +58,8 @@ function sameList(a: string[], b: string[]) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-async function actor(): Promise<{ id: string | null; email: string | null } | null> {
-  const auth = await requireApiPermission("requirements:write");
+async function actor(permission: "requirements:write" | "jobs:write" = "requirements:write"): Promise<{ id: string | null; email: string | null } | null> {
+  const auth = await requireApiPermission(permission);
   if (!auth.ok) return null;
   return { id: auth.user.id, email: auth.user.email };
 }
@@ -95,7 +99,8 @@ export async function saveRequirementRole(input: {
   payScaleRaw: string | null;
   note?: string | null;
 }): Promise<RequirementActionResult> {
-  const who = await actor();
+  // Recruiters too (his call, 2026-09-23) - see the top of this file.
+  const who = await actor("jobs:write");
   if (!who) return { ok: false, error: REFUSED };
   if (!input?.requirementId) return { ok: false, error: "Missing requirement." };
 

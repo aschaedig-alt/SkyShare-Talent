@@ -116,7 +116,7 @@ function NoRequirementYet({
           </span>
         </div>
       ) : (
-        <p className="mt-3 text-xs text-brand-grey dark:text-slate-400">A recruiter or admin can set one up here.</p>
+        <p className="mt-3 text-xs text-brand-grey dark:text-slate-400">An admin can set one up here.</p>
       )}
       {error ? <p className="mt-2 text-sm font-medium text-red-700 dark:text-red-300">{error}</p> : null}
     </section>
