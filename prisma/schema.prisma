@@ -915,6 +915,15 @@ model Candidate {
   frequentFlyer        String?
   hotelLoyalty         String?
   rentalLoyalty        String?
+  // Onboarding-checklist steps worked BEFORE there is a new hire — the sections
+  // the checklist layout marks as starting on the candidate (the PRD section,
+  // asked for 2026-09-22: "i need to be able to pull a PRD on all pilots before we
+  // officially offer them"). { taskKey: { status: TODO|DONE|NA, at, by } }.
+  // A JSON blob beside the person rather than a table, like offerStepsJson on the
+  // application: it only lives until the move into onboarding, where each status is
+  // copied onto the hire's own task row and that row becomes the one truth. See
+  // lib/onboarding/prehire.ts.
+  preHireTasksJson     String?
   originalFieldsJson   String?
   sourceHistoryJson    String?
   mergeHistoryJson     String?
@@ -1292,8 +1301,9 @@ model CandidateApplication {
   // can be sent AND agreed verbally at the same time, so as a state it would
   // fight SENT; record that as a note or a date instead).
   //
-  // NO PAY AMOUNT LIVES HERE, ON PURPOSE. Paycom owns compensation; this tracks
-  // the workflow only.
+  // NO PAY AMOUNT LIVES IN THESE WORKFLOW FIELDS. Paycom owns compensation. The
+  // single exception, added 2026-09-22 at the user's decision, is
+  // offerDetailsText below — the hiring manager's own message, HR-only.
   //
   // Never set these directly — go through recordOfferStatus() in lib/offers, so
   // that every transition is stamped, audited, and fires the same downstream
@@ -1327,6 +1337,20 @@ model CandidateApplication {
   // offerStatus is DERIVED from these (see lib/offers/steps.ts) — these are the
   // source of truth, and they carry over as completed tasks on the move in.
   offerStepsJson       String?
+
+  // What the hiring manager sent over about this offer, pasted in as they wrote
+  // it. One free-text box, prefilled with the thirteen lines HR already uses.
+  //
+  // THIS IS THE ONE PLACE PAY IS ALLOWED, and it is a deliberate exception the
+  // user made on 2026-09-22, chosen over a version with the pay lines stripped.
+  // The rule everywhere else still stands: Paycom owns compensation and no other
+  // part of this app stores a pay amount. Two consequences that are not optional:
+  // it is HR-only on the way in AND on the way out (see the offer-details route
+  // and OfferDetailsBox), and it is never copied onto the NewHire record, into a
+  // Front email, or into any export.
+  offerDetailsText     String?
+  offerDetailsAt       DateTime?
+  offerDetailsBy       String?
 
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt

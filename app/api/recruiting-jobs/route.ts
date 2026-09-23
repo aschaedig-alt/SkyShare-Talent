@@ -33,11 +33,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const q = new URL(request.url).searchParams.get("q")?.trim() ?? "";
+  const params = new URL(request.url).searchParams;
+  const q = params.get("q")?.trim() ?? "";
+  // ?includeRetired=1 is for linking a PAST application to the job it was for
+  // (components/candidates/LinkApplicationJob.tsx): most of the 8,304 imported
+  // applications belong to roles that are no longer open, so a search limited to
+  // live jobs could not find their job at all. Linking someone NEW (Link to a job)
+  // still sees live jobs only.
+  const includeRetired = params.get("includeRetired") === "1";
 
   const jobs = await prisma.job.findMany({
     where: {
-      status: { notIn: ["MERGED", "RETIRED"] },
+      status: includeRetired ? { not: "MERGED" } : { notIn: ["MERGED", "RETIRED"] },
+      ...(includeRetired ? { mergedIntoJobId: null } : {}),
       ...(q
         ? {
             OR: [

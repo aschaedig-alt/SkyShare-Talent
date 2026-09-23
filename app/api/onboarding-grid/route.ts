@@ -4,7 +4,8 @@ import {
   renameBuiltinTask,
   setBuiltinHidden,
   renameGroup,
-  saveChecklistArrangement
+  saveChecklistArrangement,
+  setSectionCandidateStage
 } from "@/lib/data/onboarding-grid-config";
 import { setTaskEmail, clearTaskEmail, parseAddressList } from "@/lib/onboarding/task-email-config";
 
@@ -22,7 +23,21 @@ export async function PATCH(request: Request) {
     label?: unknown;
     hidden?: unknown;
     groupKey?: unknown;
+    candidateStage?: unknown;
   };
+
+  // Whether a SECTION starts on the candidate (the PRD section, before the offer).
+  if (typeof body.groupKey === "string" && body.groupKey && typeof body.candidateStage === "boolean") {
+    try {
+      await setSectionCandidateStage(body.groupKey, body.candidateStage);
+      return NextResponse.json({ ok: true });
+    } catch (error) {
+      return NextResponse.json(
+        { message: error instanceof Error ? error.message : "Unable to change that section." },
+        { status: 400 }
+      );
+    }
+  }
 
   // Renaming a GROUP heading rather than a task.
   if (typeof body.groupKey === "string" && body.groupKey) {

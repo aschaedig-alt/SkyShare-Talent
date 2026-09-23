@@ -38,7 +38,11 @@ import { TravelChecklistRollup as TravelChecklistRollupPanel } from "@/component
 import { InterviewWriteUp } from "@/components/candidates/InterviewWriteUp";
 import { LinkPendingIndicator } from "@/components/navigation/LinkPendingIndicator";
 import { PaycomLinkControl } from "@/components/candidates/PaycomLinkControl";
-import { formatMomentDate, formatMomentDateTime } from "@/lib/dates/display";
+import { PreHireChecklistPanel } from "@/components/candidates/PreHireChecklistPanel";
+import { LinkApplicationJob, UnlinkApplicationJob } from "@/components/candidates/LinkApplicationJob";
+import type { JobSuggestion } from "@/lib/jobs/paycom-title-match";
+import type { PreHireChecklistView } from "@/lib/data/prehire";
+import { formatMomentDate, formatMomentDateTime, formatMixedDay } from "@/lib/dates/display";
 
 type CandidateProfileWorkspaceProps = {
   candidate: CandidateProfileData;
@@ -56,6 +60,11 @@ type CandidateProfileWorkspaceProps = {
   travelTrips?: TravelTripView[];
   travelRollup?: TravelChecklistRollup;
   travelLoyalty?: TravelerLoyalty;
+  /** The onboarding-checklist sections that start before the offer (PRD), or null
+      when the layout marks none. Rendered on the Checklists tab. */
+  preHire?: PreHireChecklistView | null;
+  /** Suggested jobs for each application that is not linked to one, by id. */
+  jobSuggestions?: Record<string, JobSuggestion[]>;
   /** Everyone who can be recorded as an interviewer or @-mentioned. */
   /** @-mention list: Users only, so a mention reaches somebody who can open the app. */
   team?: Array<{ name: string; email: string }>;
@@ -151,11 +160,29 @@ export function CandidateProfileWorkspace({
   travelTrips = [],
   travelRollup,
   travelLoyalty,
+  preHire = null,
+  jobSuggestions = {},
   team = [],
   interviewers,
   me = null
 }: CandidateProfileWorkspaceProps) {
   const [candidate, setCandidate] = useState<CandidateProfileData>(initialCandidate);
+  // The pre-offer steps still at To do, for the Checklists badge. Kept here so a
+  // click on that tab updates the badge without a reload.
+  const [preHireOutstanding, setPreHireOutstanding] = useState(preHire?.outstanding ?? 0);
+  // The Applied to tab reads newest application first. The query orders by
+  // updatedAt, and every imported row was updated on the day of the import, so
+  // that order said nothing about when anybody applied.
+  const applicationsNewestFirst = useMemo(
+    () =>
+      [...candidate.applications].sort((a, b) => {
+        if (!a.appliedAt && !b.appliedAt) return 0;
+        if (!a.appliedAt) return 1;
+        if (!b.appliedAt) return -1;
+        return b.appliedAt.localeCompare(a.appliedAt);
+      }),
+    [candidate.applications]
+  );
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<ProfileTab>(() => tabFromQuery(searchParams.get("tab")) ?? "documents");
   // Adding, removing, recolouring and the historical group all live in
@@ -268,7 +295,8 @@ export function CandidateProfileWorkspace({
     // Sits next to Travel because that is what it summarises. The count is what
     // is OUTSTANDING, not how many trips exist — a tab reading 3 when everything
     // is done would be noise, and this one is meant to be a nudge.
-    { id: "checklists", label: "Checklists", icon: ClipboardList, count: travelRollup?.totals.outstanding ?? 0 },
+    // Travel steps still open, plus the pre-offer (PRD) steps still at To do.
+    { id: "checklists", label: "Checklists", icon: ClipboardList, count: (travelRollup?.totals.outstanding ?? 0) + preHireOutstanding },
     { id: "activity", label: "Activity", icon: History, count: candidate.activity.length }
   ];
 
@@ -622,25 +650,69 @@ export function CandidateProfileWorkspace({
                 </p>
               )}
               <div className="space-y-2">
-                {candidate.applications.length > 0 ? (
-                  candidate.applications.map((application) => (
+                {applicationsNewestFirst.length > 0 ? (
+                  applicationsNewestFirst.map((application) => (
                     <div key={application.id} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           {application.job ? (
-                            <Link href={`/recruiting-jobs?id=${application.job.id}`} className="font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-100">
-                              {application.job.title}
-                            </Link>
+                            <div className="flex flex-wrap items-baseline gap-x-2">
+                              <Link href={`/recruiting-jobs?id=${application.job.id}`} className="font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-100">
+                                {application.job.title}
+                              </Link>
+                              {/* An imported application linked by hand keeps Paycom's
+                                  own wording in view, so the link can be checked
+                                  against what the person actually applied for. */}
+                              {application.sourceApplicationId && application.historicalJobTitle && application.historicalJobTitle !== application.job.title ? (
+                                <span className="text-xs text-brand-grey dark:text-slate-400">Paycom: {application.historicalJobTitle}</span>
+                              ) : null}
+                              {application.sourceApplicationId ? (
+                                <UnlinkApplicationJob applicationId={application.id} candidateId={candidate.id} canEdit={canEdit} />
+                              ) : null}
+                            </div>
                           ) : (
-                            <div className="font-semibold text-brand-lea dark:text-slate-100">Unlinked job</div>
+                            // WHAT THEY APPLIED FOR, not "Unlinked job". Her words
+                            // (feedback cmubt2fgb, Sep 21): "i really need to know
+                            // what jobs the candidate has applied to before. this info
+                            // is pretty useless." The title was on every imported row
+                            // all along; only the job LINK was missing.
+                            <div className="flex flex-wrap items-baseline gap-2">
+                              <span className="font-semibold text-brand-lea dark:text-slate-100">
+                                {application.historicalJobTitle ?? "Job not recorded"}
+                              </span>
+                              <span className="rounded border border-brand-lea/15 bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">
+                                Not linked to a job here
+                              </span>
+                            </div>
                           )}
                           {/* The STATUS is no longer part of this line, because it
                               is now editable directly below — printing it twice
                               would repeat itself the way the candidates list used
-                              to say "Hired" under a Hired pill. */}
+                              to say "Hired" under a Hired pill. WHEN they applied is
+                              on it now: "applied to before" is a question about
+                              time as much as about which job. */}
                           <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">
-                            {[application.stage, application.job?.location].filter(Boolean).join(" · ")}
+                            {[
+                              application.stage,
+                              application.job?.location,
+                              // appliedAt holds BOTH kinds of date: a calendar day at UTC
+                              // midnight on imported rows, a real moment on rows made
+                              // in the app. formatMixedDay reads each the right way;
+                              // formatDate would put an import on the day before.
+                              application.appliedAt ? `Applied ${formatMixedDay(application.appliedAt)}` : null,
+                              application.sourceApplicationId ? `Paycom application ${application.sourceApplicationId}` : null
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
                           </div>
+                          {!application.job ? (
+                            <LinkApplicationJob
+                              applicationId={application.id}
+                              candidateId={candidate.id}
+                              suggestions={jobSuggestions[application.id] ?? []}
+                              canEdit={canEdit}
+                            />
+                          ) : null}
                           {/* Mark this application hired, rejected or saved for
                               later without leaving the person's own page. */}
                           <ApplicationStatusPicker
@@ -735,7 +807,10 @@ export function CandidateProfileWorkspace({
                           {application.job.title}
                         </Link>
                       ) : (
-                        <div className="font-semibold text-brand-lea dark:text-slate-100">Unlinked job</div>
+                        <div className="font-semibold text-brand-lea dark:text-slate-100">
+                          {application.historicalJobTitle ?? "Job not recorded"}
+                          <span className="ml-2 text-xs font-normal text-brand-grey dark:text-slate-400">not linked to a job here</span>
+                        </div>
                       )}
                       <OfferControl application={application} canEdit={canEdit} />
                     </div>
@@ -782,15 +857,29 @@ export function CandidateProfileWorkspace({
               the Travel tab, so answering "is anything left for them?" meant
               expanding every trip. Shares the Travel page's roll-up component,
               so the two can never disagree. */}
-          {activeTab === "checklists" &&
-            (travelRollup && travelRollup.totals.trips > 0 ? (
-              <TravelChecklistRollupPanel rollup={travelRollup} />
-            ) : (
-              <EmptyState
-                title="No trips to check off"
-                detail="Checklists come from this candidate's travel. Add a trip on the Travel tab and its checklist will show up here."
-              />
-            ))}
+          {/* The pre-offer steps (the PRD section) lead, because they come first
+              in time: they are worked before an offer, and a trip usually comes
+              after one. */}
+          {activeTab === "checklists" && (
+            <div className="space-y-4">
+              {preHire ? (
+                <PreHireChecklistPanel
+                  candidateId={candidate.id}
+                  view={preHire}
+                  canEdit={canEdit}
+                  onOutstandingChange={setPreHireOutstanding}
+                />
+              ) : null}
+              {travelRollup && travelRollup.totals.trips > 0 ? (
+                <TravelChecklistRollupPanel rollup={travelRollup} />
+              ) : (
+                <EmptyState
+                  title="No trips to check off"
+                  detail="Trip checklists come from this candidate's travel. Add a trip on the Travel tab and its checklist will show up here."
+                />
+              )}
+            </div>
+          )}
 
           {activeTab === "activity" && <CandidateActivityTimeline items={candidate.activity} />}
 

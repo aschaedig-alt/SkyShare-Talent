@@ -3,8 +3,9 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { CUSTOM_GROUP, MAINTENANCE_GROUP } from "@/lib/onboarding/tasks";
+import { useCollapsedSections } from "@/lib/hooks/useCollapsedSections";
 import type { TaskView } from "@/lib/data/onboarding";
 import type { ChecklistSection } from "@/lib/data/onboarding-grid-config";
 import { OfferControl } from "@/components/candidates/OfferControl";
@@ -93,6 +94,44 @@ export function OnboardingChecklist({
   const naCount = tasks.length - applicable.length;
   const pct = applicable.length > 0 ? Math.round((doneCount / applicable.length) * 100) : 0;
 
+  /**
+   * Each section's tally, and whether it is FINISHED — nothing left at To do.
+   *
+   * Finished is what unlocks folding a section away (feedback cmuctrf78, Sep 22:
+   * minimise a section once it is complete, and not before). N/A counts as
+   * finished, because a pilot-only section marked N/A for a support hire is as
+   * done as it will ever be — it was reading "0 of 2" in green-less grey while
+   * having nothing left to do, which is also why the count now leaves N/A out of
+   * the denominator, the same way the progress bar above already did.
+   *
+   * The OFFER group is scored on its six task rows, which the stepper keeps in
+   * step; a missing row counts as not finished rather than as done.
+   */
+  const tally = useMemo(() => {
+    const out = new Map<string, { done: number; applicable: number; na: number; complete: boolean }>();
+    for (const g of groups) {
+      const rows = g.key === "OFFER" ? [...OFFER_KEYS].map((k) => tasks.find((t) => t.key === k)) : g.items;
+      const present = rows.filter((t): t is TaskView => Boolean(t));
+      const na = present.filter((t) => t.status === "NA").length;
+      out.set(g.key, {
+        done: present.filter((t) => t.status === "DONE").length,
+        applicable: present.length - na,
+        na,
+        complete: rows.length > 0 && rows.every((t) => t && t.status !== "TODO")
+      });
+    }
+    return out;
+  }, [groups, tasks]);
+
+  const { collapsed, setSections } = useCollapsedSections();
+  // Only a finished section can be folded. A stored fold on a section that has
+  // since gained a To do is ignored, so reopening a step always brings it back
+  // into view rather than leaving it behind a chevron.
+  const isFolded = (key: string) => Boolean(tally.get(key)?.complete) && collapsed.has(key);
+  const foldable = groups.filter((g) => tally.get(g.key)?.complete).map((g) => g.key);
+  const anyFolded = foldable.some((k) => collapsed.has(k));
+  const allFolded = foldable.length > 0 && foldable.every((k) => collapsed.has(k));
+
   // The next thing to do, in checklist order. The offer group is skipped — its
   // steps are ticked on the stepper, not here.
   const next = useMemo(() => {
@@ -171,14 +210,43 @@ export function OnboardingChecklist({
       <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Checklist</h2>
-          <div className="flex items-center gap-2.5">
-            <span className="h-2 w-36 overflow-hidden rounded bg-brand-cloudDancer dark:bg-white/10">
-              <span className={clsx("block h-full rounded", pct === 100 ? "bg-emerald-500" : "bg-gradient-to-r from-brand-eden to-[#5f88ad]")} style={{ width: `${pct}%` }} />
-            </span>
-            <span className="text-sm text-brand-grey dark:text-slate-400">
-              {doneCount} of {applicable.length}
-              {naCount ? ` · ${naCount} n/a` : ""}
-            </span>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {/* "Expand all" / "Collapse all" — her ask was for exactly these two,
+                "or whatever word should be used". Collapse all folds only the
+                FINISHED sections; there is nothing else it is allowed to fold.
+                Hidden until a section is finished, because until then neither
+                button could do anything. */}
+            {foldable.length > 0 ? (
+              <div className="flex items-center gap-1 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setSections(groups.map((g) => g.key), false)}
+                  disabled={!anyFolded}
+                  className="rounded px-1.5 py-0.5 text-brand-eden transition hover:text-brand-lea hover:shadow-glow disabled:cursor-default disabled:text-brand-grey/60 disabled:shadow-none dark:text-brand-edenOnDark dark:hover:text-slate-100 dark:disabled:text-slate-600"
+                >
+                  Expand all
+                </button>
+                <span aria-hidden="true" className="text-brand-grey/50 dark:text-slate-600">·</span>
+                <button
+                  type="button"
+                  onClick={() => setSections(foldable, true)}
+                  disabled={allFolded}
+                  title="Folds every section that has nothing left to do. Sections with work outstanding stay open."
+                  className="rounded px-1.5 py-0.5 text-brand-eden transition hover:text-brand-lea hover:shadow-glow disabled:cursor-default disabled:text-brand-grey/60 disabled:shadow-none dark:text-brand-edenOnDark dark:hover:text-slate-100 dark:disabled:text-slate-600"
+                >
+                  Collapse all
+                </button>
+              </div>
+            ) : null}
+            <div className="flex items-center gap-2.5">
+              <span className="h-2 w-36 overflow-hidden rounded bg-brand-cloudDancer dark:bg-white/10">
+                <span className={clsx("block h-full rounded", pct === 100 ? "bg-emerald-500" : "bg-gradient-to-r from-brand-eden to-[#5f88ad]")} style={{ width: `${pct}%` }} />
+              </span>
+              <span className="text-sm text-brand-grey dark:text-slate-400">
+                {doneCount} of {applicable.length}
+                {naCount ? ` · ${naCount} n/a` : ""}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -188,21 +256,54 @@ export function OnboardingChecklist({
           const items = isOffer ? [] : g.items;
           if (!isOffer && items.length === 0) return null;
 
-          const done = isOffer
-            ? [...OFFER_KEYS].filter((k) => tasks.find((t) => t.key === k)?.status === "DONE").length
-            : items.filter((t) => t.status === "DONE").length;
-          const total = isOffer ? OFFER_KEYS.size : items.length;
+          const score = tally.get(g.key) ?? { done: 0, applicable: 0, na: 0, complete: false };
+          const folded = isFolded(g.key);
+          const count =
+            score.applicable === 0 && score.na > 0
+              ? "n/a"
+              : `${score.done} of ${score.applicable}${score.na ? ` · ${score.na} n/a` : ""}`;
+          const heading = (
+            <>
+              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-gold">{g.label}</span>
+              <span className="flex items-center gap-1.5">
+                <span className={clsx("text-sm", score.complete ? "font-semibold text-emerald-700 dark:text-emerald-400" : "text-brand-grey dark:text-slate-400")}>
+                  {count}
+                </span>
+                {/* The chevron sits on the RIGHT so section names stay in one
+                    column whether or not their section can fold yet. */}
+                {score.complete ? (
+                  folded ? (
+                    <ChevronRight className="h-4 w-4 text-brand-grey dark:text-slate-400" aria-hidden="true" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-brand-grey dark:text-slate-400" aria-hidden="true" />
+                  )
+                ) : null}
+              </span>
+            </>
+          );
 
           return (
             <div key={g.key}>
-              <div className="mb-2 mt-5 flex items-baseline justify-between gap-3">
-                <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-gold">{g.label}</span>
-                <span className={clsx("text-sm", done === total ? "font-semibold text-emerald-700 dark:text-emerald-400" : "text-brand-grey dark:text-slate-400")}>
-                  {done} of {total}
-                </span>
-              </div>
+              {score.complete ? (
+                // A finished section's whole header is the toggle — the thing
+                // people aim at is the name, not a 16px chevron.
+                <button
+                  type="button"
+                  onClick={() => setSections([g.key], !folded)}
+                  aria-expanded={!folded}
+                  title={folded ? `Show ${g.label}` : `Fold ${g.label} away — everything in it is done or not needed`}
+                  className={clsx(
+                    "-mx-1.5 flex w-[calc(100%+0.75rem)] items-baseline justify-between gap-3 rounded px-1.5 py-0.5 text-left transition hover:shadow-glow",
+                    folded ? "mt-3" : "mb-1.5 mt-4"
+                  )}
+                >
+                  {heading}
+                </button>
+              ) : (
+                <div className="mb-2 mt-5 flex items-baseline justify-between gap-3">{heading}</div>
+              )}
 
-              {isOffer ? (
+              {folded ? null : isOffer ? (
                 offer ? (
                   <div className="rounded border border-brand-lea/10 bg-[#fafcfe] p-3 dark:border-white/10 dark:bg-white/5">
                     <OfferControl application={offer} canEdit={canEdit} />

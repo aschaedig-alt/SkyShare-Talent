@@ -96,6 +96,8 @@ export function ChecklistManagePanel({ checklist, checkins, onChanged }: Props) 
   }, [checklist]);
 
   const sectionLabels = useMemo(() => Object.fromEntries(checklist.map((g) => [g.key, g.label])), [checklist]);
+  // Which sections start on the candidate, before the offer (the PRD section).
+  const candidateStage = useMemo(() => new Set(checklist.filter((g) => g.candidateStage).map((g) => g.key)), [checklist]);
 
   // Fold new server data in without losing an unsaved reorder — see reconcile().
   // After a successful save the two agree, so this is a no-op and the dirty
@@ -347,6 +349,27 @@ export function ChecklistManagePanel({ checklist, checkins, onChanged }: Props) 
                     Save name
                   </button>
                 )}
+                {/* Starts on the candidate — asked for 2026-09-22 about PRD. Not
+                    offered on Offer, which already lives on the candidate (their
+                    Offers tab); a second copy there would be the offer asked for
+                    twice. Saves on its own, like a rename. */}
+                {sectionKey !== "OFFER" ? (
+                  <label
+                    title="Also show this section on the candidate's Checklists tab, so it can be worked before the offer. What is ticked there carries onto their onboarding checklist when they move to onboarding."
+                    className="flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded px-1.5 py-1 text-[11px] font-semibold text-brand-grey transition hover:text-brand-lea hover:shadow-glow dark:text-slate-400 dark:hover:text-slate-100"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={candidateStage.has(sectionKey)}
+                      disabled={busy}
+                      onChange={(e) =>
+                        void call("/api/onboarding-grid", "PATCH", { groupKey: sectionKey, candidateStage: e.target.checked })
+                      }
+                      className="h-3.5 w-3.5 rounded border-brand-lea/30 text-brand-gold focus:ring-brand-gold"
+                    />
+                    Starts on the candidate
+                  </label>
+                ) : null}
               </div>
 
               <div className="mt-1.5 space-y-1.5 pl-6">

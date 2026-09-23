@@ -10,6 +10,8 @@ import type { FrontTemplateSummary } from "@/lib/front/templates";
 import {
   previewTaskEmail,
   sendTaskEmail,
+  previewCandidateTaskEmail,
+  sendCandidateTaskEmail,
   type TaskEmailPreviewResult,
   type TaskEmailSendResult,
 } from "@/app/people/actions";
@@ -47,7 +49,12 @@ import {
 // back to the task's settings, which stay in Manage tasks where they belong.
 
 type Props = {
-  hireId: string;
+  /** Whose checklist this step is on: a hire, or — for a step that starts before
+   *  the offer, like Request PRD Access — a candidate who is not a hire yet. The
+   *  candidate actions hand over to the hire ones by themselves once there is a
+   *  hire, so a page left open across the move still sends from the right place. */
+  hireId?: string;
+  candidateId?: string;
   taskKey: string;
   /** Shown in the dialog title so it is obvious which step is sending. */
   taskLabel: string;
@@ -67,7 +74,12 @@ type Props = {
   compact?: boolean;
 };
 
-export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, canEdit, onSent, compact = false, sentAt = null }: Props) {
+export function SendTaskEmailButton({ hireId, candidateId, taskKey, taskLabel, taskStatus, canEdit, onSent, compact = false, sentAt = null }: Props) {
+  // One pair of calls whichever record the step is on, so nothing below branches.
+  const buildPreview = (override?: string | null) =>
+    hireId ? previewTaskEmail(hireId, taskKey, override) : previewCandidateTaskEmail(candidateId ?? "", taskKey, override);
+  const deliverSend = (text: string | null, opts: { test: boolean; templateOverride: string | null }) =>
+    hireId ? sendTaskEmail(hireId, taskKey, text, opts) : sendCandidateTaskEmail(candidateId ?? "", taskKey, text, opts);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -130,7 +142,7 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
     // Not awaited: the preview is what the dialog is for, and the picker filling
     // in a moment later must not hold it up.
     void loadTemplates();
-    const res = await previewTaskEmail(hireId, taskKey);
+    const res = await buildPreview();
     setPreview(res);
     if (res.ok && res.preview) setConfigured({ id: res.preview.templateId, name: res.preview.templateName });
     setLoading(false);
@@ -148,14 +160,14 @@ export function SendTaskEmailButton({ hireId, taskKey, taskLabel, taskStatus, ca
     setTemplateId(override);
     setBody(null);
     setSwitching(true);
-    setPreview(await previewTaskEmail(hireId, taskKey, override));
+    setPreview(await buildPreview(override));
     setSwitching(false);
   }
 
   async function confirmSend(asTest: boolean) {
     setTesting(asTest);
     setSending(true);
-    const res = await sendTaskEmail(hireId, taskKey, body, { test: asTest, templateOverride: templateId });
+    const res = await deliverSend(body, { test: asTest, templateOverride: templateId });
     setResult(res);
     setSending(false);
     // NOT on a test. onSent() is what flips the grid cell to done without a

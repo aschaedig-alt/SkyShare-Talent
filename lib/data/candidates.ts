@@ -452,6 +452,17 @@ export type CandidateProfileData = {
     stage: string | null;
     source: string | null;
     appliedAt: string | null;
+    /**
+     * The job title as the SOURCE worded it, when the application is not linked
+     * to a job here — 8,304 Paycom-imported applications carry only this. Shown
+     * in place of a bare "Unlinked job", which told her nothing about what the
+     * person had applied for (feedback cmubt2fgb, Sep 21 2026).
+     */
+    historicalJobTitle: string | null;
+    /** Paycom's own application id, on imported rows — the stage reconcile's key. */
+    sourceApplicationId: string | null;
+    /** When the source recorded its decision (the Disposition Date in Paycom). */
+    decidedAt: string | null;
     // Offer lives on the application because an offer is always for a job.
     // NONE | PLANNED | STARTED | SENT | SIGNED | DECLINED | NOT_SENT. Never
     // written directly — see lib/offers/record-offer-status.ts.
@@ -1972,6 +1983,9 @@ export async function getCandidateProfileData(
       stage: application.stage,
       source: application.source,
       appliedAt: application.appliedAt?.toISOString() ?? null,
+      historicalJobTitle: application.historicalJobTitle,
+      sourceApplicationId: application.sourceApplicationId,
+      decidedAt: application.decidedAt?.toISOString() ?? null,
       offerStatus: application.offerStatus,
       offerSentAt: application.offerSentAt?.toISOString() ?? null,
       offerSignedAt: application.offerSignedAt?.toISOString() ?? null,

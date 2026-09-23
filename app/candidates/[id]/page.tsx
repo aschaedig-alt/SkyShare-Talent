@@ -1,6 +1,8 @@
 ﻿import { CandidateProfileWorkspace } from "@/components/candidates/CandidateProfileWorkspace";
 import { getCandidateProfileData } from "@/lib/data/candidates";
 import { getTravelTripsForCandidate, getCandidateLoyalty, getChecklistRollupForTrips } from "@/lib/data/travel";
+import { getPreHireChecklist } from "@/lib/data/prehire";
+import { getUnlinkedJobSuggestions } from "@/lib/data/application-job-suggestions";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { getPageLayout } from "@/lib/data/page-layout";
 import { getTeamMembers, getInterviewers } from "@/lib/data/team";
@@ -24,13 +26,18 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
   // so a mention always reaches somebody who can open the app. interviewers
   // also includes booking hosts, because hiring managers run interviews long
   // before they ever sign in. See lib/data/team.ts.
-  const [candidate, layout, travelTrips, travelLoyalty, team, interviewers] = await Promise.all([
+  const [candidate, layout, travelTrips, travelLoyalty, team, interviewers, preHire, jobSuggestions] = await Promise.all([
     getCandidateProfileData(id, viewer),
     getPageLayout("candidate-profile"),
     getTravelTripsForCandidate(id),
     getCandidateLoyalty(id),
     getTeamMembers(),
-    getInterviewers()
+    getInterviewers(),
+    // The checklist sections that start before the offer (PRD). Takes only the id,
+    // so it rides in the same group; null when the layout marks none.
+    getPreHireChecklist(id),
+    // One-click links for applications imported without a job (Applied to tab).
+    getUnlinkedJobSuggestions(id)
   ]);
 
   if (!candidate) {
@@ -73,6 +80,8 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
       travelTrips={travelTrips}
       travelRollup={travelRollup}
       travelLoyalty={travelLoyalty}
+      preHire={preHire}
+      jobSuggestions={jobSuggestions}
     />
   );
 }

@@ -6,6 +6,7 @@ import { canWriteModule } from "@/lib/auth/module-write-access";
 import { isCardStatus } from "@/lib/business-cards/card";
 import { normalizeTags } from "@/lib/employees/columns";
 import { ensureInitialRole } from "@/lib/data/ensure-initial-role";
+import { carryPreHireTicksToHire } from "@/lib/onboarding/prehire";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -170,6 +171,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     // If this update just supplied a position + start date, seed the first
     // role-journey entry (no-op if they already have one).
     await ensureInitialRole(updated.id);
+    // LINKING a candidate to a hire typed in by hand is the other way somebody
+    // "moves to onboarding", so the pre-offer steps worked on the candidate (the
+    // PRD section) come across here too. Only To do rows are filled — a hire that
+    // already exists may have been worked on its own checklist. Never throws.
+    if (typeof data.candidateId === "string") await carryPreHireTicksToHire(data.candidateId, updated.id);
     return NextResponse.json({ ok: true, id: updated.id });
   } catch (error) {
     console.error("New hire update error:", error);

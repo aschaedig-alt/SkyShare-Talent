@@ -35,6 +35,16 @@ const BUILTIN_KEYS = new Set(ONBOARDING_TASKS.map((t) => t.key));
 //               being stranded in the Custom section at the bottom.
 //   taskOrder   task keys within each section, in order. Same rule as groupOrder:
 //               anything unlisted keeps its code position, at the end.
+//
+//   candidateGroups  sections that START ON THE CANDIDATE, before anybody is a
+//               new hire — asked for 2026-09-22 about the PRD section: "i need to
+//               be able to pull a PRD on all pilots before we officially offer
+//               them. so add it on the candidate side, then when they move to
+//               onboarding have it show up exactly where it shows up now." A
+//               section listed here is ALSO worked on the candidate's Checklists
+//               tab, and what was ticked there carries onto the hire's own rows
+//               on the move in (lib/onboarding/prehire.ts). It stays exactly
+//               where it is on the onboarding checklist.
 type Overrides = {
   overrides: Record<string, string>;
   hidden: string[];
@@ -42,9 +52,18 @@ type Overrides = {
   groupOrder: string[];
   taskGroup: Record<string, string>;
   taskOrder: Record<string, string[]>;
+  candidateGroups: string[];
 };
 
-const EMPTY: Overrides = { overrides: {}, hidden: [], groups: {}, groupOrder: [], taskGroup: {}, taskOrder: {} };
+const EMPTY: Overrides = {
+  overrides: {},
+  hidden: [],
+  groups: {},
+  groupOrder: [],
+  taskGroup: {},
+  taskOrder: {},
+  candidateGroups: []
+};
 
 function strings(v: unknown): string[] {
   return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
@@ -68,13 +87,17 @@ async function read(): Promise<Overrides> {
     if (p.taskOrder && typeof p.taskOrder === "object") {
       for (const [g, list] of Object.entries(p.taskOrder as Record<string, unknown>)) taskOrder[g] = strings(list);
     }
+    // EVERY stored key must be read back here, or the next write drops it: write()
+    // stores exactly what this returns. That is how a new key would silently
+    // vanish the first time somebody renamed a step.
     return {
       overrides: stringMap(p.overrides),
       hidden: strings(p.hidden),
       groups: stringMap(p.groups),
       groupOrder: strings(p.groupOrder),
       taskGroup: stringMap(p.taskGroup),
-      taskOrder
+      taskOrder,
+      candidateGroups: strings(p.candidateGroups)
     };
   } catch {
     return { ...EMPTY };
@@ -102,7 +125,13 @@ export type GridTaskDef = {
    *  so it keeps its own button and cannot be re-pointed from Manage tasks. */
   emailFixed: boolean;
 };
-export type GridChecklistGroup = { key: string; label: string; tasks: GridTaskDef[] };
+export type GridChecklistGroup = {
+  key: string;
+  label: string;
+  tasks: GridTaskDef[];
+  /** This section starts on the candidate, before the offer. See candidateGroups. */
+  candidateStage: boolean;
+};
 
 /** Every section a task can be filed under, in code order. */
 const SECTION_KEYS: string[] = [...ONBOARDING_GROUPS.map((g) => g.key), CUSTOM_GROUP];
@@ -177,11 +206,50 @@ export async function getGridChecklist(): Promise<GridChecklistGroup[]> {
   // renderers drop empty groups themselves; Manage mode needs the empty one so
   // there is somewhere to drag a task BACK to after the last custom item has been
   // moved out. Returning only non-empty sections made that a one-way door.
+  const candidateGroups = new Set(ov.candidateGroups);
   return applyOrder(SECTION_KEYS, (k) => k, ov.groupOrder).map((key) => ({
     key,
     label: sectionLabel(ov, key),
-    tasks: applyOrder(all.filter((t) => t.group === key), (t) => t.key, ov.taskOrder[key] ?? [])
+    tasks: applyOrder(all.filter((t) => t.group === key), (t) => t.key, ov.taskOrder[key] ?? []),
+    candidateStage: candidateGroups.has(key)
   }));
+}
+
+/**
+ * The sections that start on the CANDIDATE, in checklist order, holding only the
+ * steps a person can actually work — hidden built-ins are left out, exactly as
+ * they are on a hire's own checklist.
+ *
+ * OFFER is never one of them even if somebody ticks the box: the offer already
+ * has its own home on the candidate (the stepper on the Offers tab, stored on the
+ * application), and a second copy of those six steps here would be the offer
+ * asked for twice — the very duplication the new hire page was rebuilt to remove.
+ */
+export async function getCandidateStageSections(): Promise<GridChecklistGroup[]> {
+  const groups = await getGridChecklist();
+  return groups
+    .filter((g) => g.candidateStage && g.key !== "OFFER")
+    .map((g) => ({ ...g, tasks: g.tasks.filter((t) => !t.hidden) }))
+    .filter((g) => g.tasks.length > 0);
+}
+
+/**
+ * Mark a section as starting on the candidate (or stop it doing so).
+ *
+ * Only the setting changes. Nothing is copied or deleted: a candidate's ticks stay
+ * on their record if a section is switched off, and come back if it is switched on
+ * again — a checkbox in Manage tasks must not be a way to lose somebody's work.
+ */
+export async function setSectionCandidateStage(groupKey: string, on: boolean): Promise<void> {
+  if (!SECTION_KEYS.includes(groupKey)) throw new Error("Not a checklist group.");
+  if (groupKey === "OFFER") {
+    throw new Error("The offer already starts on the candidate — it is worked on their Offers tab.");
+  }
+  const o = await read();
+  o.candidateGroups = on
+    ? [...new Set([...o.candidateGroups, groupKey])]
+    : o.candidateGroups.filter((k) => k !== groupKey);
+  await write(o);
 }
 
 /**

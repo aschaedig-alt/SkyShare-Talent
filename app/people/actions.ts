@@ -27,9 +27,12 @@ import {
   buildTaskEmail,
   getTaskSendRecord,
   recordTaskSend,
+  type HireForTaskEmail,
   type TaskEmailPreview,
   type TaskSendRecord,
 } from "@/lib/front/task-email";
+import { getCandidateStageSections } from "@/lib/data/onboarding-grid-config";
+import { setPreHireTick } from "@/lib/onboarding/prehire";
 import {
   buildSupervisorContactEmail,
   getSupervisorContactSendRecord,
@@ -404,12 +407,73 @@ export async function sendTaskEmail(
   if (!hire) return { ok: false, error: "New hire not found." };
   const task = await loadTaskForEmail(hireId, taskKey);
 
+  return deliverTaskEmail(
+    {
+      recordId: hireId,
+      person: hire,
+      taskLabel: task?.label ?? taskKey,
+      tick: async () => {
+        const warnings: string[] = [];
+        // Forward-only, same as the other two sends: a send is evidence the step
+        // happened, and we never un-tick from here.
+        const ticked = await prisma.onboardingTask.updateMany({
+          where: { newHireId: hireId, key: taskKey, status: { not: "DONE" } },
+          data: { status: "DONE", completedAt: new Date() },
+        });
+        // count 0 means either already done, or NO SUCH TASK ROW — the state every
+        // hire predating the checklist item is in. Claiming "marked done" for a row
+        // that does not exist is how a no-op reads as success.
+        if (ticked.count === 0 && !task) {
+          warnings.push(
+            "This hire has no checklist item with that name, so nothing was ticked. Their onboarding started before the item existed."
+          );
+        }
+        // A post-onboarding check-in completed by SENDING its email has to behave the
+        // same as one completed by clicking its box, and clicking the box goes through
+        // /api/onboarding-tasks/[id], which calls this. Without it, sending the last
+        // outstanding check-in would tick it and then leave the employee sitting on
+        // the Post-onboard list forever with nothing left to do.
+        if (ticked.count > 0) await maybeArchiveOnCheckinsComplete(hireId);
+        return warnings;
+      },
+    },
+    taskKey,
+    bodyOverride,
+    opts
+  );
+}
+
+/**
+ * Who a task email is for, and what a real send of it ticks.
+ *
+ * The send used to be written for a HIRE only. Since 2026-09-22 the same email can
+ * go from a CANDIDATE's page — the PRD section starts before the offer, and its
+ * first step is an email to the pilot — so the part that differs was pulled out
+ * rather than the whole send copied. A copy is the kind of pair where a fix lands
+ * in one and not the other, and this is the send path with the test mode, the
+ * send guard and the never-report-a-sent-email-as-failed ordering in it.
+ */
+type TaskEmailTarget = {
+  /** Keys the send record — the hire id, or the candidate id before there is a hire. */
+  recordId: string;
+  person: HireForTaskEmail;
+  taskLabel: string;
+  /** Tick the step after a REAL send; returns caveats to show. Never run for a test. */
+  tick: () => Promise<string[]>;
+};
+
+async function deliverTaskEmail(
+  target: TaskEmailTarget,
+  taskKey: string,
+  bodyOverride: string | null | undefined,
+  opts: { test?: boolean; templateOverride?: string | null } | undefined
+): Promise<TaskEmailSendResult> {
   // STEP 1 — everything that can still be retried safely. A throw here means
   // nothing left the building.
   let email: TaskEmailPreview;
   let channelId: string;
   try {
-    email = await buildTaskEmail(hire, taskKey, task?.label ?? taskKey, bodyOverride, opts?.templateOverride);
+    email = await buildTaskEmail(target.person, taskKey, target.taskLabel, bodyOverride, opts?.templateOverride);
     channelId = await getOrientationChannelId();
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Could not build the email." };
@@ -483,7 +547,7 @@ export async function sendTaskEmail(
   // for a test, so a test writes none of it.
   if (!asTest) {
     try {
-      await recordTaskSend(hireId, taskKey, {
+      await recordTaskSend(target.recordId, taskKey, {
         conversationId: sent.conversationId,
         messageId: sent.id,
         sentAt,
@@ -498,26 +562,7 @@ export async function sendTaskEmail(
     }
 
     try {
-      // Forward-only, same as the other two sends: a send is evidence the step
-      // happened, and we never un-tick from here.
-      const ticked = await prisma.onboardingTask.updateMany({
-        where: { newHireId: hireId, key: taskKey, status: { not: "DONE" } },
-        data: { status: "DONE", completedAt: new Date() },
-      });
-      // count 0 means either already done, or NO SUCH TASK ROW — the state every
-      // hire predating the checklist item is in. Claiming "marked done" for a row
-      // that does not exist is how a no-op reads as success.
-      if (ticked.count === 0 && !task) {
-        warnings.push(
-          "This hire has no checklist item with that name, so nothing was ticked. Their onboarding started before the item existed."
-        );
-      }
-      // A post-onboarding check-in completed by SENDING its email has to behave the
-      // same as one completed by clicking its box, and clicking the box goes through
-      // /api/onboarding-tasks/[id], which calls this. Without it, sending the last
-      // outstanding check-in would tick it and then leave the employee sitting on
-      // the Post-onboard list forever with nothing left to do.
-      if (ticked.count > 0) await maybeArchiveOnCheckinsComplete(hireId);
+      warnings.push(...(await target.tick()));
     } catch {
       warnings.push("The email went out, but the checklist item could not be ticked.");
     }
@@ -531,6 +576,94 @@ export async function sendTaskEmail(
     to: toLabel,
     warnings: warnings.length ? warnings : undefined,
   };
+}
+
+// ---------------------------------------------------------------------------
+// The same send, from a CANDIDATE's page.
+//
+// The PRD section starts before the offer (2026-09-22: "i need to be able to pull
+// a PRD on all pilots before we officially offer them"), and its first step,
+// Request PRD Access, is an email to the pilot. Before there is a hire it goes to
+// the candidate's own address — the "personal" audience, since a candidate has no
+// SkyShare email yet — is logged against the candidate, and ticks the step on the
+// candidate. The move into onboarding carries both across (lib/onboarding/prehire.ts).
+//
+// ONCE THERE IS A HIRE, both actions hand straight to the hire versions above, so
+// the record and the tick land on the row the hire's checklist reads rather than
+// on the candidate's copy, which by then is history.
+
+async function loadCandidateForTaskEmail(candidateId: string): Promise<HireForTaskEmail | null> {
+  const c = await prisma.candidate.findUnique({
+    where: { id: candidateId },
+    select: { id: true, displayName: true, primaryEmail: true },
+  });
+  return c ? { id: c.id, name: c.displayName, personalEmail: c.primaryEmail, ssEmail: null } : null;
+}
+
+/** The step's name, and proof it is one the layout says is worked on the candidate. */
+async function candidateStageTaskLabel(taskKey: string): Promise<string | null> {
+  const sections = await getCandidateStageSections();
+  return sections.flatMap((s) => s.tasks).find((t) => t.key === taskKey)?.label ?? null;
+}
+
+export async function previewCandidateTaskEmail(
+  candidateId: string,
+  taskKey: string,
+  templateOverride?: string | null
+): Promise<TaskEmailPreviewResult> {
+  if (!(await canEditPeople())) {
+    return { ok: false, error: "You don't have permission to send this email." };
+  }
+  const hire = await prisma.newHire.findFirst({ where: { candidateId }, select: { id: true } });
+  if (hire) return previewTaskEmail(hire.id, taskKey, templateOverride);
+
+  const person = await loadCandidateForTaskEmail(candidateId);
+  if (!person) return { ok: false, error: "Candidate not found." };
+  const label = await candidateStageTaskLabel(taskKey);
+  if (!label) return { ok: false, error: "That step is not one worked on the candidate." };
+
+  try {
+    const [preview, alreadySent] = await Promise.all([
+      buildTaskEmail(person, taskKey, label, null, templateOverride),
+      getTaskSendRecord(candidateId, taskKey),
+    ]);
+    return { ok: true, preview, alreadySent };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Could not build the email." };
+  }
+}
+
+export async function sendCandidateTaskEmail(
+  candidateId: string,
+  taskKey: string,
+  bodyOverride?: string | null,
+  opts?: { test?: boolean; templateOverride?: string | null }
+): Promise<TaskEmailSendResult> {
+  if (!(await canEditPeople())) {
+    return { ok: false, error: "You don't have permission to send this email." };
+  }
+  const hire = await prisma.newHire.findFirst({ where: { candidateId }, select: { id: true } });
+  if (hire) return sendTaskEmail(hire.id, taskKey, bodyOverride, opts);
+
+  const person = await loadCandidateForTaskEmail(candidateId);
+  if (!person) return { ok: false, error: "Candidate not found." };
+  const label = await candidateStageTaskLabel(taskKey);
+  if (!label) return { ok: false, error: "That step is not one worked on the candidate." };
+
+  return deliverTaskEmail(
+    {
+      recordId: candidateId,
+      person,
+      taskLabel: label,
+      tick: async () => {
+        await setPreHireTick(candidateId, taskKey, "DONE", await actorLabel(), { forwardOnly: true });
+        return [];
+      },
+    },
+    taskKey,
+    bodyOverride,
+    opts
+  );
 }
 
 // ---------------------------------------------------------------------------

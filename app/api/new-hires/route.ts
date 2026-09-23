@@ -6,6 +6,7 @@ import { ensureCustomMilestoneTasks } from "@/lib/data/onboarding-milestones";
 import { getChecklistPlacement } from "@/lib/data/onboarding-grid-config";
 import { ensureInitialRole } from "@/lib/data/ensure-initial-role";
 import { parseOfferSteps } from "@/lib/offers/steps";
+import { carryPreHireTicksToHire } from "@/lib/onboarding/prehire";
 import { suggestCompanyEmail } from "@/lib/people/company-email";
 import { toCalendarDay } from "@/lib/dates/display";
 
@@ -154,6 +155,10 @@ export async function POST(request: Request) {
     });
 
     await ensureCustomMilestoneTasks(hire.id, placement);
+    // The steps worked while they were still a candidate (the PRD section) land
+    // on this checklist as they were left — after the custom milestones above,
+    // because those are the rows the PRD steps live on.
+    if (candidateId) await carryPreHireTicksToHire(candidateId, hire.id);
     // Seed the first role-journey entry from position + start date (if both set).
     await ensureInitialRole(hire.id);
 
