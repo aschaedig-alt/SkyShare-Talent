@@ -71,7 +71,7 @@ export function NewJobButton() {
       setOpen(false);
       reset();
       // Land on the new job so the next step — adding the candidate — is right there.
-      router.push(`/recruiting-jobs?id=${data.job.id}`);
+      router.push(`/recruiting-jobs/${data.job.id}`);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to create the job.");
@@ -84,7 +84,7 @@ export function NewJobButton() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="mt-3 inline-flex items-center gap-1.5 rounded bg-brand-lea px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-eden"
+        className="inline-flex items-center gap-1.5 rounded bg-brand-lea px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-eden hover:shadow-glow"
       >
         <Plus className="h-3.5 w-3.5" />
         New job
@@ -105,7 +105,9 @@ export function NewJobButton() {
   );
 
   return (
-    <div className="mt-3 rounded border border-brand-lea/15 bg-white p-3 dark:border-white/10 dark:bg-brand-panel">
+    // w-full so the open form takes a line of its own in the list page's header
+    // row instead of squeezing in beside the filters.
+    <div className="mt-3 w-full rounded border border-brand-lea/15 bg-white p-3 dark:border-white/10 dark:bg-brand-panel">
       <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">New job</p>
 
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -152,7 +154,7 @@ export function NewJobButton() {
               the one you are about to create.
             */}
             <Link
-              href={`/recruiting-jobs?id=${clash.id}`}
+              href={`/recruiting-jobs/${clash.id}`}
               onClick={() => {
                 setOpen(false);
                 reset();
