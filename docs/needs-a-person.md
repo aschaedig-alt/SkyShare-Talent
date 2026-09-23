@@ -262,6 +262,161 @@ unchanged.
 
 ---
 
+### 11. The Paycom mail fix can only prove itself on the first check after it deploys
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-09-22
+
+The Front mail check misread Paycom's background-check notices once names started arriving
+in ordinary capitals ("Taylor Goodwin" where it used to write "TARA WARD"), ignored the legal name on
+a hire's record (so "Henry Mcfarland" was reported as not a current hire although he is
+Flynn McFarland), and counted text-message and requisition-posted mail as "couldn't be
+read". A dry run against the live inbox, re-run at handoff, read 142 threads: 15 notices,
+12 already done, 3 would-ticks — all Taylor Goodwin (information submitted twice, check
+complete once) — and nothing unreadable or left alone. But a dry run ticks nothing, and the
+real proof is the first real run.
+
+**How to check it, about a minute:** after the deploy, open New hires and press **Check
+Front mail** (or wait for the morning run). Then open Taylor Goodwin's checklist.
+
+**What would count as a pass:** the dialog shows no "couldn't be read" box and no "Left
+alone: Henry Mcfarland"; Taylor Goodwin's "Candidate submitted background check info" and
+"Background check complete — clear to hire" are Done.
+
+---
+
+### 12. The pre-offer PRD steps on a candidate have never been used by a real person
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-09-22
+
+The PRD section now also appears on a candidate's Checklists tab, and what is ticked there
+carries onto the hire's checklist on the move into onboarding. Exercised end to end on a
+TEST-tagged throwaway candidate that was then deleted: a tick was stored on the candidate,
+the Request PRD Access preview built from Front and addressed the candidate's own email,
+and the carry-over put the tick on a hire's PRD row with its original time. What was NOT
+done: no email was sent from a candidate page (the preview was cancelled), and the carry
+was run through the same function the routes call rather than through the real Move to
+onboarding button.
+
+**How to check it:** on a real pilot candidate, open Checklists, press Send email on
+Request PRD Access, and use **Send as test to hrotasks@skyshare.com**. Then, the next time
+a pilot moves to onboarding, look at their PRD section on the new hire page.
+
+**What would count as a pass:** the test arrives in HR Onboarding addressed to the
+candidate by first name; after the move, the PRD rows match what was set on the candidate.
+
+---
+
+### 13. Autosave on the hire page has not been used by a viewer without edit rights
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-09-22
+
+Every detail on the new hire page now saves when you leave the field, and the Save
+details button is gone. Round-tripped on a real record locally (a value typed, saved,
+confirmed in the database, cleared, confirmed null again). Local dev bypasses sign-in,
+so the other half cannot be seen here: somebody without edit rights should find the boxes
+disabled rather than typing into fields that then fail to save.
+
+**How to check it:** sign in as a viewer who can see People but not edit it, open any
+new hire.
+
+**What would count as a pass:** the detail boxes are greyed and cannot be typed in.
+
+---
+
+### 14. Orientation's new time and place controls have never sent anything
+
+**Status:** OPEN
+**Added:** 2026-09-22
+
+Change time or place, the place picker, the "different than normal" flag, the rebuilt
+Update the invite preview and the edit box on the internal summary were built and read
+back, and the editor was opened in a browser (the flag appears live when the time
+changes). Nothing was sent and no calendar was touched, and the rewrites were tested on a
+body modelled on the Front templates rather than the live ones.
+
+**How to check it:** the next time a session is at a different time or place, change it
+on the session page and open the invitation's Send window before sending.
+
+**What would count as a pass:** the send window shows the session's own hours and place in
+the body, and says "different than normal"; after Update the invite, the Google event's
+title, time and location match.
+
+---
+
+### 15. The travel spend report's filters, sorting and download have not been clicked, and nothing uses Indoc & orientation yet
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-09-22
+
+Reports now has one travel report. Checked in a browser: clicking July moved the four tiles
+to July ($2,722.13, "2nd-highest out of 4 months"), the request details line up, and an
+empty trip shows its empty state. NOT clicked: the department, hired and purpose filters,
+the column sorting, the breakdown clicks and the CSV download. No trip uses the new
+Indoc & orientation purpose yet, and no real confirmation email has been read with the
+changed prompt. The three trips on file as Orientation are all pilots (Dayten Schureman's
+has an indoc date), so until they are recoded by hand the report counts them as HR cost.
+
+**How to check it, about two minutes:** on Reports → Travel, pick a department, then Hired,
+then sort by cost; download the CSV and open it. Recode Dayten Schureman's trip to
+Indoc & orientation and look at the purpose breakdown.
+
+**What would count as a pass:** each filter narrows the table and the tiles together, the
+CSV holds exactly the rows on screen, and the recoded trip moves to its own Indoc &
+orientation line.
+
+---
+
+### 16. Nobody outside HR has loaded the offer-details box, and it is the one box that holds pay
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-09-22
+
+The hiring manager's offer details now sit on the offer itself, so the candidate's Offers
+tab and the hire's checklist show the same box. It is the ONLY place in this app allowed
+to hold a pay amount — his decision on 2026-09-22, choosing the version WITH the five pay
+lines over the version without. The gate is server-side in both directions: a non-HR
+session is told "allowed: false" and is never sent the text.
+
+Round-tripped locally on a real offer (typed, left the field, read back from the database,
+then cleared — that application holds nothing now). What could NOT be checked here: local
+dev signs everyone in as an admin with no viewer scope, so the HR gate itself has never
+actually refused anybody.
+
+**How to check it, under a minute:** sign in as somebody who is NOT on the HR team
+(hrTeam false, or a role outside admin/recruiter) and open a candidate's Offers tab.
+
+**What would count as a pass:** no "Offer details from the hiring manager" box at all —
+not an empty one, not a greyed one. Then, as HR, paste a real hiring-manager message over
+the thirteen lines and confirm it is still there after a reload.
+
+---
+
+### 17. Nothing on the rebuilt jobs page has been SAVED through
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-09-22
+
+The Recruiting Jobs page is now a card list plus a page per job with real tabs, and
+EditableGrid is off it. Reading was checked hard, in a browser: tabs swap the pane with no
+reload, Back works, old ?id= links land on the job's own page, and no pane has its own
+scrollbar. What was NOT done, deliberately, because the database and the S3 bucket are
+live: nothing was saved. Rename, department and location, the classification editor, the
+Paycom req field, the Active/Inactive toggle, Add candidate, Batch add, resume intake and
+New job were all left untouched. Those components are unchanged and get the same props as
+before, but "unchanged" is an argument, not a test. No production build was run either.
+
+**How to check it, about two minutes:** open one job and save one thing in each place —
+rename it and change it back, toggle Active and back, save the classification, add a
+Paycom req number and clear it.
+
+**What would count as a pass:** each save sticks after a reload, and the job's card on the
+list reflects it.
+
+---
+
 ## Closed
 
 Nothing yet.
