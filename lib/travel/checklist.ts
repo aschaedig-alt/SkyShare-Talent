@@ -120,13 +120,16 @@ const BEFORE: ChecklistItem[] = [
   {
     key: "booked",
     label: "Everything is booked",
-    detail: "Derived from the trip itself — this ticks when nothing is flagged as still needing booking.",
+    detail:
+      "Derived from the trip itself — this ticks once something has been added and nothing is flagged as still needing booking. A hotel or car that was never added is not held against it.",
     derived: true
   },
   {
     key: "itinerary-sent",
     label: "Itinerary sent to the traveler",
-    detail: "Flights, hotel, ground transport and the details below, in whatever they will actually read."
+    // Names no particular item. Not every trip has a flight or a hotel, and this
+    // line used to list them as though every trip did.
+    detail: "Whatever was booked, and the details below, in whatever they will actually read."
   }
 ];
 
@@ -140,32 +143,41 @@ const AFTER: ChecklistItem[] = [
 ];
 
 /**
- * The purpose-specific middle — the part that genuinely differs.
- *
  * ORIENTATION points at the orientation invite rather than restating it: that
  * email already carries the where, when, dress code and meals, and saying it
  * twice in two voices is how the two drift apart.
  */
+const ORIENTATION_DETAILS: ChecklistItem = {
+  key: "orientation-details",
+  label: "Traveler has the orientation details",
+  detail:
+    "Where to be and when, who to contact, the door code, dress code, meals provided and what to expect. Most of this is already in the orientation invitation email — send that rather than writing it again, and only add what the trip changes."
+};
+
+const INDOC_DETAILS: ChecklistItem = {
+  key: "indoc-details",
+  label: "Traveler has the indoc details",
+  detail:
+    "From the Chief Pilot's Office welcome: INDOC is in Ogden at 3715 Airport Rd, Ogden, UT 84405, on site and ready at 0800 on the first day — confirm this session's dates, and send the calendar invite. Arrival: west side main entrance, up the stairs straight ahead, classroom behind the half walls. All assigned online training must be COMPLETED BEFORE they arrive, with their completion times written down. A notebook and pen are provided; their own are welcome. Lunch is provided each day. Phones away during class. Booking airlines and hotels is covered during INDOC itself. Contacts to give them: cpo@skyshare.com for anything Chief Pilot's Office including days off, crewinfo@skyshare.com for all hotel and airline communication, skyops@skyshare.com or 801 516 9189 for flight scheduling, and the on-duty manager on 435 220 4924 for flight-related admin only."
+};
+
+/**
+ * The purpose-specific middle — the part that genuinely differs.
+ *
+ * INDOC_ORIENTATION gets BOTH items, under the same keys the single-purpose
+ * trips use. That is deliberate: a trip recoded from Orientation to Indoc &
+ * orientation (nothing recodes the existing ones; that is done by hand, per
+ * trip) keeps its orientation tick, because the key it was stored under did not
+ * change, and simply gains the indoc item as still to do.
+ */
 function purposeItems(purpose: string): ChecklistItem[] {
   switch (purpose) {
     case "ORIENTATION":
-      return [
-        {
-          key: "orientation-details",
-          label: "Traveler has the orientation details",
-          detail:
-            "Where to be and when, who to contact, the door code, dress code, meals provided and what to expect. Most of this is already in the orientation invitation email — send that rather than writing it again, and only add what the trip changes."
-        }
-      ];
+      return [ORIENTATION_DETAILS];
     case "INDOC":
-      return [
-        {
-          key: "indoc-details",
-          label: "Traveler has the indoc details",
-          detail:
-            "From the Chief Pilot's Office welcome: INDOC is in Ogden at 3715 Airport Rd, Ogden, UT 84405, on site and ready at 0800 on the first day — confirm this session's dates, and send the calendar invite. Arrival: west side main entrance, up the stairs straight ahead, classroom behind the half walls. All assigned online training must be COMPLETED BEFORE they arrive, with their completion times written down. A notebook and pen are provided; their own are welcome. Lunch is provided each day. Phones away during class. Booking airlines and hotels is covered during INDOC itself. Contacts to give them: cpo@skyshare.com for anything Chief Pilot's Office including days off, crewinfo@skyshare.com for all hotel and airline communication, skyops@skyshare.com or 801 516 9189 for flight scheduling, and the on-duty manager on 435 220 4924 for flight-related admin only."
-        }
-      ];
+      return [INDOC_DETAILS];
+    case "INDOC_ORIENTATION":
+      return [ORIENTATION_DETAILS, INDOC_DETAILS];
     case "TRAINING":
       return [
         {
@@ -204,8 +216,15 @@ export function checklistFor(trip: TravelTripView): ChecklistSection[] {
  */
 export function derivedState(trip: TravelTripView, key: string): { done: boolean; note: string } | null {
   if (key !== "booked") return null;
+  // An empty trip is NOT "everything booked", even though nothing on it is
+  // flagged. New trips start with no items at all (she asked for that on Sep 11
+  // — nothing is pre-filled), so "nothing flagged" on an empty trip means
+  // "nothing added yet", and ticking this would claim a booking that does not
+  // exist. Checked before the gap list on purpose, and it holds whatever the
+  // trip's status: findTravelGaps says nothing about a completed trip, but a
+  // completed trip with nothing on it still has nothing booked.
   if (trip.items.length === 0) {
-    return { done: false, note: "Nothing is booked on this trip yet." };
+    return { done: false, note: "Nothing has been added to this trip yet." };
   }
   const open = findTravelGaps(trip).filter((g) => g.severity === "action");
   if (open.length) {
@@ -260,6 +279,10 @@ export type ChecklistTick = { status: ChecklistStatus; at: string; by: string | 
  * same visit as the indoc that follows it — the Aug 31 trip runs six days and
  * covers both — so a rule keyed on purpose would hide the indoc dates on
  * exactly the trips that need them. Somebody who knows the person marks it.
+ * The Indoc & orientation purpose (added after her Sep 11 feedback) is the
+ * right code for that trip, but it does not make a rule safe: the trips already
+ * filed as Orientation stay that way until somebody recodes them by hand, and a
+ * rule would hide their indoc dates in the meantime.
  *
  * NOTHING IS DELETED. Marking a group not needed collapses it; the values, if
  * any, are still on the trip and come straight back when it is restored.

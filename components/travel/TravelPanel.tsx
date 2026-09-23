@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 import {
@@ -92,6 +92,9 @@ const ITEM_ICON: Record<string, typeof Plane> = {
 };
 
 const labelClass = "text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400";
+/** Every request-details row shares these columns, so a box always sits under
+    the box above it. See RequestDetails. */
+const REQUEST_ROW = "grid gap-x-3 gap-y-3 sm:grid-cols-2 lg:grid-cols-4";
 const inputClass =
   "w-full rounded border border-brand-lea/15 bg-white px-2.5 py-1.5 text-sm text-brand-lea outline-none transition focus:border-brand-gold focus:ring-2 focus:ring-brand-gold/20 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100 dark:placeholder:text-slate-500";
 
@@ -678,8 +681,8 @@ function RequestDetails({ trip, onSave }: { trip: TravelTripView; onSave: (field
     else setError(res.error ?? "Could not save that.");
   }
 
-  const text = (field: keyof TravelTripView, label: string) => (
-    <TextField label={label} defaultValue={(trip[field] as string | null) ?? ""} onSave={(v) => onSave(field, v)} />
+  const text = (field: keyof TravelTripView, label: string, action?: ReactNode) => (
+    <TextField label={label} action={action} defaultValue={(trip[field] as string | null) ?? ""} onSave={(v) => onSave(field, v)} />
   );
 
   const shown = (group: NotNeededGroupKey) => !notNeeded[group];
@@ -691,75 +694,76 @@ function RequestDetails({ trip, onSave }: { trip: TravelTripView; onSave: (field
       onClick={() => void mark(group, true)}
       disabled={busy === group}
       title={`Fold ${what} away — this trip does not have them`}
-      className="text-[10px] font-bold uppercase tracking-[0.1em] text-brand-grey underline-offset-2 transition hover:text-brand-lea hover:underline disabled:opacity-50 dark:text-slate-500 dark:hover:text-slate-300"
+      className="text-[10px] font-bold uppercase leading-none tracking-[0.1em] text-brand-grey underline-offset-2 transition hover:text-brand-lea hover:underline disabled:opacity-50 dark:text-slate-500 dark:hover:text-slate-300"
     >
       Not needed
     </button>
   );
 
+  const showDates = shown("orientation") || shown("indoc");
+
   return (
     <div>
       <p className={labelClass}>Request details</p>
-      <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {text("originAirport", "From (airport)")}
-        {text("destinationAirport", "To (airport)")}
-        {shown("orientation") ? (
-          <div>
-            <div className="flex items-baseline justify-between gap-2">
-              <span className={labelClass}>Orientation date</span>
-              {foldAway("orientation", "the orientation date")}
-            </div>
-            <input
-              type="date"
-              defaultValue={toDateInput(trip.orientationDate)}
-              onBlur={(e) => onSave("orientationDate", e.target.value)}
-              className={clsx(inputClass, "mt-1")}
-            />
+      {/* ONE ROW PER KIND OF FACT, on the same four columns, so every box lines
+          up with the one above it. This was a single flowing three-column grid:
+          the fields wrapped wherever they fell, so the route, the event dates and
+          the preferences straddled rows, and folding a group away reshuffled
+          everything after it. Worse, a label carrying a Not needed link was
+          taller than a plain one, which pushed that input a few pixels below
+          its neighbours — what she reported on Sep 21 ("indoc start and
+          requested return are off in placement"). Every label now sits in a
+          fixed-height FieldHead, so an input lands at the same offset whether
+          or not its label has a control on it. */}
+      <div className="mt-2 space-y-3">
+        <div className={REQUEST_ROW}>
+          {text("originAirport", "From (airport)")}
+          {text("destinationAirport", "To (airport)")}
+          <DateTimeField
+            label="Requested arrival"
+            defaultValue={toOfficeDateTimeInput(trip.requestedArrival)}
+            onSave={(v) => onSave("requestedArrival", officeDateTimeInputToIso(v))}
+          />
+          <DateTimeField
+            label="Requested return"
+            defaultValue={toOfficeDateTimeInput(trip.requestedReturn)}
+            onSave={(v) => onSave("requestedReturn", officeDateTimeInputToIso(v))}
+          />
+        </div>
+
+        {showDates ? (
+          <div className={REQUEST_ROW}>
+            {shown("orientation") ? (
+              <DateField
+                label="Orientation date"
+                action={foldAway("orientation", "the orientation date")}
+                defaultValue={toDateInput(trip.orientationDate)}
+                onSave={(v) => onSave("orientationDate", v)}
+              />
+            ) : null}
+            {shown("indoc") ? (
+              <>
+                <DateField
+                  label="Indoc start"
+                  action={foldAway("indoc", "the indoc dates")}
+                  defaultValue={toDateInput(trip.indocStart)}
+                  onSave={(v) => onSave("indocStart", v)}
+                />
+                <DateField label="Indoc end" defaultValue={toDateInput(trip.indocEnd)} onSave={(v) => onSave("indocEnd", v)} />
+              </>
+            ) : null}
           </div>
         ) : null}
-        {shown("indoc") ? (
-          <>
-            <div>
-              <div className="flex items-baseline justify-between gap-2">
-                <span className={labelClass}>Indoc start</span>
-                {foldAway("indoc", "the indoc dates")}
-              </div>
-              <input
-                type="date"
-                defaultValue={toDateInput(trip.indocStart)}
-                onBlur={(e) => onSave("indocStart", e.target.value)}
-                className={clsx(inputClass, "mt-1")}
-              />
-            </div>
-            <DateField label="Indoc end" defaultValue={toDateInput(trip.indocEnd)} onSave={(v) => onSave("indocEnd", v)} />
-          </>
-        ) : null}
-        <DateTimeField
-          label="Requested arrival"
-          defaultValue={toOfficeDateTimeInput(trip.requestedArrival)}
-          onSave={(v) => onSave("requestedArrival", officeDateTimeInputToIso(v))}
-        />
-        <DateTimeField
-          label="Requested return"
-          defaultValue={toOfficeDateTimeInput(trip.requestedReturn)}
-          onSave={(v) => onSave("requestedReturn", officeDateTimeInputToIso(v))}
-        />
+
         {shown("preferences") ? (
-          <>
-            <div>
-              <div className="flex items-baseline justify-between gap-2">
-                <span className={labelClass}>Preferred airline / seat</span>
-                {foldAway("preferences", "the preference fields")}
-              </div>
-              <input
-                defaultValue={trip.preferredAirline ?? ""}
-                onBlur={(e) => onSave("preferredAirline", e.target.value)}
-                className={clsx(inputClass, "mt-1")}
-              />
-            </div>
+          <div className={REQUEST_ROW}>
+            {text("preferredAirline", "Preferred airline / seat", foldAway("preferences", "the preference fields"))}
             {text("preferences", "Hotel / car preferences")}
-            {text("additionalTransport", "Additional transport")}
-          </>
+            {/* Two columns wide: it is the free-text one ("shuttle from the
+                hotel, Uber back"), and it closes the row rather than sitting
+                alone on a line of its own. */}
+            <div className="sm:col-span-2">{text("additionalTransport", "Additional transport")}</div>
+          </div>
         ) : null}
       </div>
 
@@ -958,7 +962,13 @@ function ItemsTable({
           })}
         </div>
       </div>
-      {items.length > 0 && (
+      {/* A trip holds what was ADDED to it and nothing else — Aimee, Sep 11: "Not
+          every trip requires a flight or a hotel." A new trip starts empty,
+          so the empty list has to say what to do rather than sit there as a
+          blank gap under the buttons. It points at both ways in: the buttons
+          beside this label, and the confirmation auto-fill above, which adds
+          the right kind of item by itself. */}
+      {items.length > 0 ? (
         <div className="mt-2 space-y-2">
           {items.map((item) => (
             <ItemRow
@@ -970,6 +980,13 @@ function ItemsTable({
             />
           ))}
         </div>
+      ) : (
+        <p className="mt-2 rounded border border-dashed border-brand-lea/20 bg-white/60 px-3 py-2.5 text-xs leading-snug text-brand-grey dark:border-white/10 dark:bg-transparent dark:text-slate-400">
+          Nothing added to this trip yet. Add only what it needs with the buttons above — not every trip has a flight, a
+          hotel or a car — or paste a confirmation into{" "}
+          <span className="font-semibold text-brand-lea dark:text-slate-200">Auto-fill from a confirmation</span> and it
+          adds the right item for you.
+        </p>
       )}
     </div>
   );
@@ -1073,7 +1090,11 @@ function ItemRow({
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
-      <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      {/* items-start, not the grid's default stretch: when the date cell carries
+          its "Arrives SLC · 3:30 PM" line underneath, stretch made every other
+          box in the row grow to match, so a flight row's confirmation and
+          details boxes came out taller than the cost box beside them. */}
+      <div className="mt-2 grid items-start gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <input
           defaultValue={item.confirmation ?? ""}
           onBlur={(e) => save("confirmation", e.target.value)}
@@ -1242,21 +1263,66 @@ function ReceiptsBlock({
 
 // ---- Small auto-saving field primitives -------------------------------------
 
-function TextField({ label, defaultValue, onSave }: { label: string; defaultValue: string; onSave: (v: string) => void }) {
+/**
+ * A field's label row, at a FIXED height whether or not it carries a control.
+ *
+ * The height is the point. A label with a "Not needed" link beside it was a flex
+ * row sized by the link's own line box, which came out a few pixels taller than
+ * a bare label — so that one input sat lower than every neighbour in its row.
+ * Pinning the row (and zeroing the line-height of both halves) makes every input
+ * start at the same offset, which is what lines a grid of fields up.
+ *
+ * The control lives OUTSIDE the <label>, so clicking it does not also focus the
+ * input the way a click anywhere inside a label does.
+ */
+function FieldHead({ label, htmlFor, action }: { label: string; htmlFor?: string; action?: ReactNode }) {
   return (
-    <label className="block">
-      <span className={labelClass}>{label}</span>
-      <input defaultValue={defaultValue} onBlur={(e) => onSave(e.target.value)} className={clsx(inputClass, "mt-1")} />
-    </label>
+    <div className="flex h-4 items-center justify-between gap-2">
+      <label htmlFor={htmlFor} className={clsx(labelClass, "truncate leading-none")}>
+        {label}
+      </label>
+      {action ? <span className="shrink-0 leading-none">{action}</span> : null}
+    </div>
   );
 }
 
-function DateField({ label, defaultValue, onSave }: { label: string; defaultValue: string; onSave: (v: string) => void }) {
+function TextField({
+  label,
+  defaultValue,
+  onSave,
+  action
+}: {
+  label: string;
+  defaultValue: string;
+  onSave: (v: string) => void;
+  action?: ReactNode;
+}) {
+  const id = useId();
   return (
-    <label className="block">
-      <span className={labelClass}>{label}</span>
-      <input type="date" defaultValue={defaultValue} onBlur={(e) => onSave(e.target.value)} className={clsx(inputClass, "mt-1")} />
-    </label>
+    <div>
+      <FieldHead label={label} htmlFor={id} action={action} />
+      <input id={id} defaultValue={defaultValue} onBlur={(e) => onSave(e.target.value)} className={clsx(inputClass, "mt-1")} />
+    </div>
+  );
+}
+
+function DateField({
+  label,
+  defaultValue,
+  onSave,
+  action
+}: {
+  label: string;
+  defaultValue: string;
+  onSave: (v: string) => void;
+  action?: ReactNode;
+}) {
+  const id = useId();
+  return (
+    <div>
+      <FieldHead label={label} htmlFor={id} action={action} />
+      <input id={id} type="date" defaultValue={defaultValue} onBlur={(e) => onSave(e.target.value)} className={clsx(inputClass, "mt-1")} />
+    </div>
   );
 }
 
@@ -1362,24 +1428,27 @@ function ItemWhen({
 }
 
 function DateTimeField({ label, defaultValue, onSave }: { label: string; defaultValue: string; onSave: (v: string) => void }) {
+  const id = useId();
   return (
-    <label className="block">
-      <span className={labelClass}>{label}</span>
-      <input type="datetime-local" defaultValue={defaultValue} onBlur={(e) => onSave(e.target.value)} className={clsx(inputClass, "mt-1")} />
-    </label>
+    <div>
+      <FieldHead label={label} htmlFor={id} />
+      <input id={id} type="datetime-local" defaultValue={defaultValue} onBlur={(e) => onSave(e.target.value)} className={clsx(inputClass, "mt-1")} />
+    </div>
   );
 }
 
 function TextAreaField({ label, defaultValue, onSave }: { label: string; defaultValue: string | null; onSave: (v: string) => void }) {
+  const id = useId();
   return (
-    <label className="block">
-      <span className={labelClass}>{label}</span>
+    <div>
+      <FieldHead label={label} htmlFor={id} />
       <textarea
+        id={id}
         defaultValue={defaultValue ?? ""}
         onBlur={(e) => onSave(e.target.value)}
         rows={2}
         className={clsx(inputClass, "mt-1 resize-none")}
       />
-    </label>
+    </div>
   );
 }

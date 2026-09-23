@@ -15,7 +15,24 @@ import {
   isHistoricalRecord,
   type CandidateBucket
 } from "@/lib/candidates/buckets";
+import {
+  candidateDepartmentFromRaw,
+  resolveCandidateDepartments,
+  type CandidateDepartmentKey
+} from "@/lib/candidates/departments";
 import { dayKeyOf } from "@/lib/dates/display";
+import { normalizeTravelPurpose } from "@/lib/travel/constants";
+import { buildTravelSpendByMonth, type TravelSpendByMonth, type TravelSpendRow } from "@/lib/travel/spend";
+
+// The spend types live in the pure module so the browser can aggregate a
+// filtered slice with the same code the server uses; re-exported here so the
+// pages that load them keep one import.
+export type {
+  TravelSpendByMonth,
+  TravelSpendMonthPoint,
+  TravelSpendRow,
+  TravelSpendYearSeries
+} from "@/lib/travel/spend";
 
 // ---- View types (serializable; dates as ISO strings) ------------------------
 
@@ -517,6 +534,10 @@ type TravelerVerdict = {
    */
   travelerKey: string | null;
   hired: boolean;
+  /** Whose budget the trip lands on — see the precedence note below. */
+  department: CandidateDepartmentKey;
+  /** Counted under the first of several departments; see TravelSpendRow. */
+  departmentAmbiguous: boolean;
 };
 
 const HIRE_EVIDENCE_SELECT = {
@@ -525,15 +546,33 @@ const HIRE_EVIDENCE_SELECT = {
   canceled: true,
   offerSignedDate: true,
   stage: true,
-  createdAt: true
+  createdAt: true,
+  department: true
 } as const;
 
 /**
- * Resolve every trip to its traveler and whether that traveler was hired.
+ * Resolve every trip to its traveler, whether that traveler was hired, and the
+ * department their travel belongs to.
  *
  * Read-only, and deliberately a separate pass rather than an include: NewHire
  * has no Prisma relation back to Candidate (only a bare candidateId column), so
  * the hop has to be a second query either way.
+ *
+ * DEPARTMENT, because a trip has none of its own — it has a traveler, so it is
+ * derived, in this order:
+ *   1. the department on their NewHire record, when there is one. What somebody
+ *      was HIRED into is the most direct statement of whose budget their travel
+ *      is. Measured read-only when this was written: all 8 non-canceled trips
+ *      have a NewHire behind them, the three recruiting visits included,
+ *      because that row exists from the offer onward.
+ *   2. otherwise the candidate's department, exactly as the candidate list
+ *      derives it (resolveCandidateDepartments: a hand-set override, else the
+ *      department of every job they applied to), so a recruiting visit sits in
+ *      the department the candidate filter would put that person in.
+ *   3. otherwise Unassigned — said, not guessed.
+ * Somebody who applied to more than one department with no hire to settle it is
+ * counted under the first and flagged, rather than split or double-counted:
+ * the report's totals have to add up. Zero live trips hit that case today.
  */
 async function resolveTravelerHiring(trips: TripTravelerLink[]): Promise<Map<string, TravelerVerdict>> {
   const hireIds = [...new Set(trips.map((t) => t.newHireId).filter((v): v is string => Boolean(v)))];
@@ -573,12 +612,16 @@ async function resolveTravelerHiring(trips: TripTravelerLink[]): Promise<Map<str
           id: true,
           origin: true,
           archivedAt: true,
-          applications: { select: { status: true, disposition: true, offerStatus: true } }
+          departmentOverride: true,
+          applications: {
+            select: { status: true, disposition: true, offerStatus: true, job: { select: { department: true } } }
+          }
         }
       })
     : [];
 
   const bucketByCandidate = new Map<string, CandidateBucket>();
+  const departmentsByCandidate = new Map<string, CandidateDepartmentKey[]>();
   for (const c of candidates) {
     const apps = c.applications.map((a) => {
       const outcome = applicationOutcome(a.status, a.disposition, a.offerStatus);
@@ -588,6 +631,13 @@ async function resolveTravelerHiring(trips: TripTravelerLink[]): Promise<Map<str
       return { outcome, group: dispositionGroup(a.status, outcome) };
     });
     bucketByCandidate.set(c.id, bucketOf(apps, isHistoricalRecord(c.origin, c.archivedAt)));
+    departmentsByCandidate.set(
+      c.id,
+      resolveCandidateDepartments(
+        c.departmentOverride,
+        c.applications.map((a) => a.job?.department)
+      )
+    );
   }
 
   const out = new Map<string, TravelerVerdict>();
@@ -601,6 +651,13 @@ async function resolveTravelerHiring(trips: TripTravelerLink[]): Promise<Map<str
         : null;
     const candidateId = t.candidateId ?? hire?.candidateId ?? null;
     const bucket = candidateId ? (bucketByCandidate.get(candidateId) ?? null) : null;
+
+    // Department precedence — see the note above this function.
+    const hireDepartment = candidateDepartmentFromRaw(hire?.department);
+    const candidateDepartments: CandidateDepartmentKey[] =
+      (candidateId ? departmentsByCandidate.get(candidateId) : undefined) ?? ["unassigned"];
+    const fromHire = hireDepartment !== "unassigned";
+
     out.set(t.id, {
       travelerKey: candidateId ? `cand:${candidateId}` : t.newHireId ? `hire:${t.newHireId}` : null,
       hired: travelerWasHired({
@@ -609,179 +666,15 @@ async function resolveTravelerHiring(trips: TripTravelerLink[]): Promise<Map<str
         hireOfferSigned: Boolean(hire?.offerSignedDate),
         hireOnboarded: hire?.stage === "POST_ONBOARD",
         bucket
-      })
+      }),
+      department: fromHire ? hireDepartment : (candidateDepartments[0] ?? "unassigned"),
+      departmentAmbiguous: !fromHire && candidateDepartments.length > 1
     });
   }
   return out;
 }
 
 // ---- Reporting --------------------------------------------------------------
-
-export type TravelSpendTripRow = {
-  tripId: string;
-  travelerName: string;
-  travelerHref: string | null; // /people/[id] or /candidates/[id]
-  travelerType: "newHire" | "candidate" | "unassigned";
-  hired: boolean; // linked to a hire, or a candidate who was ultimately hired
-  purpose: string;
-  route: string | null; // origin → destination
-  status: string;
-  startsAt: string | null;
-  total: number;
-};
-
-export type TravelSpendSummary = {
-  totalSpend: number;
-  tripCount: number;
-  hiredSpend: number; // spend on travelers who were ultimately hired
-  candidateSpend: number; // trips attached to candidate records (hired or not)
-  notHiredSpend: number; // spend on travelers who were not hired
-  costPerHire: number | null; // hiredSpend / distinct hired travelers
-  hiredTravelers: number;
-  byPurpose: { purpose: string; spend: number; trips: number }[];
-  trips: TravelSpendTripRow[]; // per-trip detail for drill-down, richest first
-};
-
-/**
- * Roll up all booked travel spend for budgets.
- *
- * "Hired" is travelerWasHired() above — the same rule the Travel page's year
- * chart uses. It used to be "the trip is linked to a NewHire", which counted a
- * declined offer as a hire and made notHiredSpend read $0.00 against live data.
- * hiredSpend therefore now covers hired candidates' fly-outs as well as hires'
- * trips, and hiredSpend + notHiredSpend + unassigned = totalSpend.
- */
-export async function getTravelSpendSummary(): Promise<TravelSpendSummary> {
-  const trips = await prisma.travelTrip.findMany({
-    where: { status: { not: "CANCELED" } },
-    select: {
-      id: true,
-      newHireId: true,
-      candidateId: true,
-      purpose: true,
-      status: true,
-      originAirport: true,
-      destinationAirport: true,
-      requestedArrival: true,
-      orientationDate: true,
-      indocStart: true,
-      newHire: { select: { id: true, name: true } },
-      candidate: { select: { id: true, displayName: true } },
-      items: { select: { amount: true } }
-    }
-  });
-
-  const verdicts = await resolveTravelerHiring(trips);
-
-  let totalSpend = 0;
-  let hiredSpend = 0;
-  let candidateSpend = 0;
-  let notHiredSpend = 0;
-  const hiredTravelerIds = new Set<string>();
-  const byPurpose = new Map<string, { spend: number; trips: number }>();
-  const tripRows: TravelSpendTripRow[] = [];
-
-  for (const trip of trips) {
-    const tripTotal = trip.items.reduce((sum, i) => sum + (i.amount ?? 0), 0);
-    totalSpend += tripTotal;
-
-    const purpose = byPurpose.get(trip.purpose) ?? { spend: 0, trips: 0 };
-    purpose.spend += tripTotal;
-    purpose.trips += 1;
-    byPurpose.set(trip.purpose, purpose);
-
-    if (trip.candidateId) candidateSpend += tripTotal;
-
-    const verdict = verdicts.get(trip.id);
-    const hired = Boolean(verdict?.hired);
-    if (hired) {
-      hiredSpend += tripTotal;
-      if (verdict?.travelerKey) hiredTravelerIds.add(verdict.travelerKey);
-    } else if (trip.newHireId || trip.candidateId) {
-      // A trip attached to nobody is neither — it stays out of both sides rather
-      // than being quietly filed as not-hired spend.
-      notHiredSpend += tripTotal;
-    }
-
-    const startDate = trip.requestedArrival ?? trip.orientationDate ?? trip.indocStart ?? null;
-    tripRows.push({
-      tripId: trip.id,
-      travelerName: trip.newHire?.name ?? trip.candidate?.displayName ?? "Unassigned",
-      travelerHref: trip.newHire
-        ? `/people/${trip.newHire.id}`
-        : trip.candidate
-          ? `/candidates/${trip.candidate.id}`
-          : null,
-      travelerType: trip.newHire ? "newHire" : trip.candidate ? "candidate" : "unassigned",
-      hired,
-      purpose: trip.purpose,
-      route: [trip.originAirport, trip.destinationAirport].filter(Boolean).join(" → ") || null,
-      status: trip.status,
-      startsAt: startDate ? startDate.toISOString() : null,
-      total: tripTotal
-    });
-  }
-
-  tripRows.sort((a, b) => b.total - a.total);
-
-  return {
-    totalSpend,
-    tripCount: trips.length,
-    hiredSpend,
-    candidateSpend,
-    notHiredSpend,
-    hiredTravelers: hiredTravelerIds.size,
-    // hiredSpend already IS every dollar spent on somebody who was hired, so this
-    // is a plain division now. It used to reconstruct hired-candidate spend as
-    // (candidateSpend - notHiredSpend), which was only ever right by accident.
-    costPerHire: hiredTravelerIds.size > 0 ? hiredSpend / hiredTravelerIds.size : null,
-    byPurpose: [...byPurpose.entries()]
-      .map(([purpose, v]) => ({ purpose, spend: v.spend, trips: v.trips }))
-      .sort((a, b) => b.spend - a.spend),
-    trips: tripRows
-  };
-}
-
-// ---- Spend across the year --------------------------------------------------
-
-export type TravelSpendMonthPoint = {
-  /** 0-11. */
-  month: number;
-  /** "Jan". */
-  label: string;
-  hired: number;
-  notHired: number;
-  /** Trips attached to neither a hire nor a candidate — neither side of the split. */
-  unassigned: number;
-  total: number;
-  trips: number;
-  /** Of those trips, how many landed in this month by a fallback date. */
-  inferred: number;
-};
-
-export type TravelSpendYearSeries = {
-  year: number;
-  /** Always 12, January to December, zero-filled. */
-  months: TravelSpendMonthPoint[];
-  hired: number;
-  notHired: number;
-  unassigned: number;
-  total: number;
-  tripCount: number;
-  hiredTravelers: number;
-  notHiredTravelers: number;
-  /** Trips with no travel dates of their own, placed by a fallback. */
-  inferredTrips: number;
-  /** Booked items carrying no amount, so every total above is a FLOOR. */
-  itemsMissingCost: number;
-};
-
-export type TravelSpendByMonth = {
-  /** Every year that has travel, oldest first. Empty when nothing is logged. */
-  years: TravelSpendYearSeries[];
-};
-
-const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /**
  * When a trip's spend should be counted, and whether we had to guess.
@@ -817,105 +710,102 @@ function tripSpendMonth(trip: {
 }
 
 /**
- * Travel spend by month, split hired vs not hired — the "what did the year cost,
- * and how much of it was on people we did not hire" question.
+ * Every non-canceled trip as one reporting row — the single read behind BOTH
+ * the Travel page's year chart and the Reports travel tab.
  *
- * Same "hired" rule as getTravelSpendSummary (travelerWasHired), so the Travel
- * page and the Reports panel cannot disagree. CANCELED trips are excluded, as
- * they are everywhere else money is totalled.
+ * There used to be two loaders here, one for the monthly series and one for the
+ * per-trip summary, and they did not even agree on a trip's DATE: the summary
+ * read requested arrival / orientation / indoc and nothing else, while the
+ * monthly one fell back to the first booking and then the day the trip was
+ * logged. So a trip with no dates of its own had a month on the chart and none
+ * in the list beside it. One loader, one date rule (tripSpendMonth), one hired
+ * rule (travelerWasHired, through resolveTravelerHiring), one department rule —
+ * and everything downstream is arithmetic over these rows, in
+ * lib/travel/spend.ts.
+ *
+ * CANCELED trips are excluded, as they are everywhere else money is totalled.
  */
-export async function getTravelSpendByMonth(): Promise<TravelSpendByMonth> {
+async function loadTravelSpendRows(): Promise<TravelSpendRow[]> {
   const trips = await prisma.travelTrip.findMany({
     where: { status: { not: "CANCELED" } },
     select: {
       id: true,
       newHireId: true,
       candidateId: true,
+      purpose: true,
+      status: true,
+      originAirport: true,
+      destinationAirport: true,
       requestedArrival: true,
       orientationDate: true,
       indocStart: true,
       createdAt: true,
+      newHire: { select: { id: true, name: true } },
+      candidate: { select: { id: true, displayName: true } },
       items: { select: { amount: true, startsAt: true } }
     }
   });
 
   const verdicts = await resolveTravelerHiring(trips);
 
-  const byYear = new Map<
-    number,
-    {
-      months: TravelSpendMonthPoint[];
-      tripCount: number;
-      inferredTrips: number;
-      itemsMissingCost: number;
-      hiredTravelers: Set<string>;
-      notHiredTravelers: Set<string>;
-    }
-  >();
-
-  for (const trip of trips) {
-    const total = trip.items.reduce((sum, i) => sum + (i.amount ?? 0), 0);
-    const { year, month, inferred } = tripSpendMonth(trip);
+  return trips.map((trip): TravelSpendRow => {
     const verdict = verdicts.get(trip.id);
-    const attached = Boolean(trip.newHireId || trip.candidateId);
-    const hired = Boolean(verdict?.hired);
-
-    const bucket =
-      byYear.get(year) ??
-      {
-        months: MONTH_LABELS.map((label, i) => ({
-          month: i,
-          label,
-          hired: 0,
-          notHired: 0,
-          unassigned: 0,
-          total: 0,
-          trips: 0,
-          inferred: 0
-        })),
-        tripCount: 0,
-        inferredTrips: 0,
-        itemsMissingCost: 0,
-        hiredTravelers: new Set<string>(),
-        notHiredTravelers: new Set<string>()
-      };
-    byYear.set(year, bucket);
-
-    const point = bucket.months[month];
-    if (hired) point.hired += total;
-    else if (attached) point.notHired += total;
-    else point.unassigned += total;
-    point.total += total;
-    point.trips += 1;
-    if (inferred) point.inferred += 1;
-
-    bucket.tripCount += 1;
-    if (inferred) bucket.inferredTrips += 1;
-    bucket.itemsMissingCost += trip.items.filter((i) => i.amount === null).length;
-    if (verdict?.travelerKey) {
-      (hired ? bucket.hiredTravelers : bucket.notHiredTravelers).add(verdict.travelerKey);
-    }
-  }
-
-  const years: TravelSpendYearSeries[] = [...byYear.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([year, b]) => ({
+    const { year, month, inferred } = tripSpendMonth(trip);
+    return {
+      tripId: trip.id,
+      travelerName: trip.newHire?.name ?? trip.candidate?.displayName ?? "Unassigned",
+      travelerHref: trip.newHire
+        ? `/people/${trip.newHire.id}`
+        : trip.candidate
+          ? `/candidates/${trip.candidate.id}`
+          : null,
+      travelerType: trip.newHire ? "newHire" : trip.candidate ? "candidate" : "unassigned",
+      travelerKey: verdict?.travelerKey ?? null,
+      hired: Boolean(verdict?.hired),
+      // Folded here, once, so a retired value can never become a line of its own
+      // in a report that is supposed to add up.
+      purpose: normalizeTravelPurpose(trip.purpose),
+      department: verdict?.department ?? "unassigned",
+      departmentAmbiguous: Boolean(verdict?.departmentAmbiguous),
+      route: [trip.originAirport, trip.destinationAirport].filter(Boolean).join(" → ") || null,
+      status: trip.status,
       year,
-      months: b.months,
-      hired: b.months.reduce((s, m) => s + m.hired, 0),
-      notHired: b.months.reduce((s, m) => s + m.notHired, 0),
-      unassigned: b.months.reduce((s, m) => s + m.unassigned, 0),
-      total: b.months.reduce((s, m) => s + m.total, 0),
-      tripCount: b.tripCount,
-      // A traveler whose fly-out was not hired and whose later trip was (which
-      // cannot happen today, but could) is counted on the hired side only.
-      hiredTravelers: b.hiredTravelers.size,
-      notHiredTravelers: [...b.notHiredTravelers].filter((k) => !b.hiredTravelers.has(k)).length,
-      inferredTrips: b.inferredTrips,
-      itemsMissingCost: b.itemsMissingCost
-    }));
+      month,
+      monthInferred: inferred,
+      total: trip.items.reduce((sum, i) => sum + (i.amount ?? 0), 0),
+      itemsMissingCost: trip.items.filter((i) => i.amount === null).length
+    };
+  });
+}
 
-  return { years };
+/**
+ * Travel spend by month, split hired vs not hired — the "what did the year cost,
+ * and how much of it was on people we did not hire" question, for the Travel
+ * page. The Reports tab builds the same series from the same rows in the
+ * browser, filtered, with the same function.
+ */
+export async function getTravelSpendByMonth(): Promise<TravelSpendByMonth> {
+  return buildTravelSpendByMonth(await loadTravelSpendRows());
+}
+
+export type TravelSpendReport = {
+  /** Every non-canceled trip, richest first. */
+  trips: TravelSpendRow[];
+};
+
+/**
+ * The Reports travel tab: the rows themselves, so the page can slice them by
+ * period, department, hired or not and purpose and have the chart, the tiles
+ * and the table all agree about the slice. PRIVATE — travel spend is for HR and
+ * the executive team (her words, Sep 11); it is served only behind the reports
+ * module check in app/reports/page.tsx. The public fleet-progression share
+ * route also calls getReportsData(), but hands its client component the
+ * progression data alone, so none of this ever reaches a token URL.
+ */
+export async function getTravelSpendReport(): Promise<TravelSpendReport> {
+  const trips = await loadTravelSpendRows();
+  trips.sort((a, b) => b.total - a.total || a.travelerName.localeCompare(b.travelerName));
+  return { trips };
 }
 
 // ---- Checklist roll-up ------------------------------------------------------

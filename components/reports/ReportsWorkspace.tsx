@@ -11,8 +11,7 @@ import type { FleetStaffing } from "@/lib/data/fleet-staffing";
 // Prisma, and a value import from a client component pulls it into the browser
 // bundle and 500s the page with "Can not resolve fs".
 import { SKYSHARE_LADDER, ladderRank, nextRungs } from "@/lib/fleet/pilot-ladder";
-import { formatUsd, travelPurposeLabel, travelStatusLabel } from "@/lib/travel/constants";
-import { TravelSpendYear } from "@/components/travel/TravelSpendYear";
+import { TravelSpendReport } from "@/components/travel/TravelSpendReport";
 import { ReportShareButton } from "@/components/reports/ReportShareButton";
 import { formatCalendarDay, formatMomentDate } from "@/lib/dates/display";
 
@@ -1236,183 +1235,6 @@ export function PilotProgressions({
   );
 }
 
-const PURPOSE_COLORS: Record<string, string> = {
-  ORIENTATION: "#0d2c43",
-  INDOC: "#466481",
-  TRAINING: "#eaaa00",
-  INTERVIEW: "#6b8fb0",
-  RECRUITING_VISIT: "#b98900",
-  OTHER: "#9aa3ad"
-};
-
-function TravelSpend({
-  travel,
-  byMonth
-}: {
-  travel: ReportsData["travelSpend"];
-  byMonth: ReportsData["travelSpendByMonth"];
-}) {
-  const [openPurpose, setOpenPurpose] = useState<string | null>(travel.byPurpose[0]?.purpose ?? null);
-
-  const hiredPct = travel.totalSpend > 0 ? (travel.hiredSpend / travel.totalSpend) * 100 : 0;
-  const notHiredPct = travel.totalSpend > 0 ? (travel.notHiredSpend / travel.totalSpend) * 100 : 0;
-  const otherPct = Math.max(0, 100 - hiredPct - notHiredPct);
-  const maxPurpose = Math.max(...travel.byPurpose.map((p) => p.spend), 1);
-
-  return (
-    <div className="space-y-4">
-      {/* The SAME component the Travel page renders, imported rather than
-          reimplemented. She will decide what leaves the Travel page once she has
-          looked at this, and two copies of the chart would have drifted apart in
-          the meantime. */}
-      <TravelSpendYear data={byMonth} />
-
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Travel spend</p>
-      <h2 className="text-xl font-semibold text-brand-lea dark:text-slate-100">Recruiting &amp; onboarding travel</h2>
-      <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-        {formatUsd(travel.totalSpend)} across {travel.tripCount} {travel.tripCount === 1 ? "trip" : "trips"} (excludes canceled). Click a purpose to see the trips behind it.
-      </p>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { label: "Total spend", value: formatUsd(travel.totalSpend), tone: "text-brand-lea dark:text-slate-100" },
-          { label: "Hired travelers", value: formatUsd(travel.hiredSpend), tone: "text-emerald-600 dark:text-emerald-300" },
-          { label: "Not hired", value: formatUsd(travel.notHiredSpend), tone: "text-amber-600 dark:text-amber-300" },
-          { label: "Cost per hire", value: travel.costPerHire === null ? "—" : formatUsd(travel.costPerHire), tone: "text-brand-lea dark:text-slate-100" }
-        ].map((c) => (
-          <div key={c.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
-            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{c.label}</div>
-            <div className={`mt-1 text-xl font-semibold ${c.tone}`}>{c.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Hired vs not-hired split */}
-      {travel.totalSpend > 0 && (
-        <div className="mt-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">Where the money goes</div>
-          <div className="mt-2 flex h-3 w-full overflow-hidden rounded bg-brand-cloudDancer dark:bg-white/10">
-            <div className="h-full bg-emerald-500" style={{ width: `${hiredPct}%` }} title={`Hired travelers · ${formatUsd(travel.hiredSpend)}`} />
-            <div className="h-full bg-amber-400" style={{ width: `${notHiredPct}%` }} title={`Not hired · ${formatUsd(travel.notHiredSpend)}`} />
-            {otherPct > 0 && <div className="h-full bg-brand-eden/40" style={{ width: `${otherPct}%` }} title="Unassigned" />}
-          </div>
-          <div className="mt-1.5 flex flex-wrap gap-4 text-[11px] font-medium text-brand-grey dark:text-slate-400">
-            <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-500" /> Hired {Math.round(hiredPct)}%</span>
-            <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-amber-400" /> Not hired {Math.round(notHiredPct)}%</span>
-          </div>
-        </div>
-      )}
-
-      {/* By purpose — click to drill into trips */}
-      {travel.byPurpose.length > 0 && (
-        <div className="mt-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">By purpose</div>
-          <div className="mt-2 space-y-1.5">
-            {travel.byPurpose.map((p) => {
-              const open = openPurpose === p.purpose;
-              const tripRows = travel.trips.filter((t) => t.purpose === p.purpose);
-              const color = PURPOSE_COLORS[p.purpose] ?? "#466481";
-              return (
-                <div key={p.purpose} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 dark:border-white/10 dark:bg-white/5">
-                  <button
-                    type="button"
-                    onClick={() => setOpenPurpose(open ? null : p.purpose)}
-                    aria-expanded={open}
-                    className="w-full rounded p-3 text-left transition hover:bg-brand-sweet/10"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="flex items-center gap-2 text-sm font-semibold text-brand-lea dark:text-slate-100">
-                        <span className={clsx("text-brand-grey transition dark:text-slate-400", open && "rotate-90")} aria-hidden>
-                          ▸
-                        </span>
-                        {travelPurposeLabel(p.purpose)}
-                        <span className="font-normal text-brand-grey dark:text-slate-400">· {p.trips} {p.trips === 1 ? "trip" : "trips"}</span>
-                      </span>
-                      <span className="text-sm font-semibold text-brand-lea dark:text-slate-100">{formatUsd(p.spend)}</span>
-                    </div>
-                    <div className="mt-2 h-1.5 rounded bg-brand-lea/5 dark:bg-white/10">
-                      <div className="h-1.5 rounded" style={{ width: `${Math.max(6, (p.spend / maxPurpose) * 100)}%`, backgroundColor: color }} />
-                    </div>
-                  </button>
-
-                  {open && (
-                    <div className="border-t border-brand-lea/10 px-3 py-2 dark:border-white/10">
-                      {tripRows.length === 0 ? (
-                        <p className="py-2 text-xs text-brand-grey dark:text-slate-400">No trip detail recorded.</p>
-                      ) : (
-                        <ul className="divide-y divide-brand-lea/5 dark:divide-white/5">
-                          {tripRows.map((t) => (
-                            <li key={t.tripId} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2">
-                              <div className="min-w-0">
-                                {t.travelerHref ? (
-                                  <Link
-                                    href={t.travelerHref}
-                                    className="text-sm font-semibold text-brand-lea transition hover:text-brand-eden hover:drop-shadow-[0_0_6px_rgba(234,170,0,0.5)] dark:text-slate-100 dark:hover:text-brand-edenOnDark"
-                                  >
-                                    {t.travelerName}
-                                  </Link>
-                                ) : (
-                                  <span className="text-sm font-semibold text-brand-grey dark:text-slate-400">{t.travelerName}</span>
-                                )}
-                                <span className="ml-2 text-xs text-brand-grey dark:text-slate-400">
-                                  {t.route ?? "route TBD"} · {fmtMoment(t.startsAt)}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={clsx(
-                                    "rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
-                                    t.hired ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-amber-400/20 text-amber-700 dark:text-amber-300"
-                                  )}
-                                >
-                                  {travelStatusLabel(t.status)}
-                                </span>
-                                <span className="w-20 text-right text-sm font-semibold tabular-nums text-brand-lea dark:text-slate-100">
-                                  {formatUsd(t.total)}
-                                </span>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      <div className="pt-1 text-right">
-                        <Link href="/travel" className="text-[11px] font-semibold text-brand-eden hover:text-brand-lea dark:text-slate-300">
-                          Open Travel hub →
-                        </Link>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {travel.tripCount === 0 && (
-        <p className="mt-3 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 px-3 py-2 text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-          No booked travel yet. Add trips from a candidate or new-hire profile and spend rolls up here.
-        </p>
-      )}
-      </section>
-
-      {/* NOT BUILT YET, and named so it does not get forgotten. She listed the
-          cuts she will want as this fills up over years: department, hired vs
-          not, purpose, month and year, plus sorting and a download. Three of
-          those five are already on the trip row and are a filter away. DEPARTMENT
-          is the one with real work behind it — a trip has no department, it has a
-          traveler, so it has to be derived through the hire or the job they
-          applied to (lib/candidates/departments.ts), and that derivation is
-          exactly where a wrong number would come from. */}
-      <p className="px-1 text-xs text-brand-grey dark:text-slate-400">
-        Filtering and downloading this is next: by department, hired or not, purpose, and month or
-        year. Say the word once the numbers above look right to you.
-      </p>
-    </div>
-  );
-}
-
 function DocumentCurrency({ dc }: { dc: ReportsData["documentCurrency"] }) {
   return (
     <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
@@ -1534,7 +1356,9 @@ export function ReportsWorkspace({ data, logoDataUrl, canShare = false }: Report
           open requisitions and target headcounts behind a token URL is his call
           to make, not a side effect of adding the panel. */}
       {tab === "progression" ? <PilotProgressions upgrades={data.pilotUpgrades} staffing={data.fleetStaffing} /> : null}
-      {tab === "travel" ? <TravelSpend travel={data.travelSpend} byMonth={data.travelSpendByMonth} /> : null}
+      {/* Travel spend lives beside the year panel it shares with the Travel page
+          (components/travel/TravelSpendReport.tsx), so the two cannot drift. */}
+      {tab === "travel" ? <TravelSpendReport trips={data.travelSpend.trips} /> : null}
       {tab === "documents" ? <DocumentCurrency dc={data.documentCurrency} /> : null}
     </div>
   );

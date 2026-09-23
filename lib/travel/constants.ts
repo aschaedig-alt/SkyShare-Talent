@@ -6,9 +6,19 @@
 // options that behave identically. No data moved — zero trips had used INTERVIEW.
 // Anything arriving as INTERVIEW (an old row, or the email parser) is normalized
 // to RECRUITING_VISIT on the way in; see normalizeTravelPurpose below.
+//
+// INDOC_ORIENTATION IS ITS OWN PURPOSE, not a flag on either of the other two.
+// Aimee's rule (feedback, Sep 11): an orientation-only cost is on the HR side
+// and an indoc cost is on the pilot-hiring side, and most pilots come out for
+// BOTH in one visit. Filing that visit as Orientation put pilot-hiring money on
+// HR's line; filing it as Indoc did the reverse. So the combined trip is a third
+// value, reported as its own line and never folded into either — see
+// components/travel/TravelSpendReport.tsx. Nothing was migrated: a trip already
+// filed as Orientation stays that way until somebody recodes it by hand.
 export const TRAVEL_PURPOSES = [
   { value: "ORIENTATION", label: "Orientation" },
   { value: "INDOC", label: "Indoc" },
+  { value: "INDOC_ORIENTATION", label: "Indoc & orientation" },
   { value: "TRAINING", label: "Training" },
   { value: "CREW", label: "Crew travel" },
   { value: "RECRUITING_VISIT", label: "Recruiting visit" },
@@ -28,8 +38,28 @@ export const TRAVEL_PURPOSES = [
  * orientation travel arranged. Verified against all 8 live trips before it
  * shipped: the four carrying a newHireId are ORIENTATION x3 and TRAINING, so no
  * existing row changes behaviour.
+ *
+ * INDOC_ORIENTATION belongs here as much as either half does — it is the same
+ * onboarding visit, and leaving it out would mean recoding a trip correctly
+ * silently stopped it ticking travel_complete.
  */
-export const ONBOARDING_TRAVEL_PURPOSES = ["ORIENTATION", "INDOC", "TRAINING"] as const;
+export const ONBOARDING_TRAVEL_PURPOSES = ["ORIENTATION", "INDOC", "INDOC_ORIENTATION", "TRAINING"] as const;
+
+/**
+ * Does a trip of this purpose include an orientation day? And an indoc?
+ *
+ * One answer each, because the combined purpose made "is this an orientation
+ * trip" stop being `purpose === "ORIENTATION"`. Every place that decides from the
+ * purpose whether to talk about orientation or indoc — the checklist's
+ * what-to-tell-them items, the hub calendar's markers — asks these instead of
+ * comparing strings, so a fourth combination later is one line here.
+ */
+export function purposeCoversOrientation(purpose: string | null | undefined): boolean {
+  return purpose === "ORIENTATION" || purpose === "INDOC_ORIENTATION";
+}
+export function purposeCoversIndoc(purpose: string | null | undefined): boolean {
+  return purpose === "INDOC" || purpose === "INDOC_ORIENTATION";
+}
 
 /** Purposes no longer offered, kept so an old row still reads as words. */
 const RETIRED_PURPOSE_LABELS: Record<string, string> = {

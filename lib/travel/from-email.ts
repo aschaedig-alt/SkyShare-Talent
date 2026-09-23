@@ -82,7 +82,10 @@ function stripHtml(html: string): string {
 }
 
 /**
- * ORIENTATION and INDOC are both real purposes on the trip; the rest map across.
+ * ORIENTATION, INDOC and INDOC_ORIENTATION are all real purposes on the trip;
+ * the rest map across. The combined one matters most here, because a welcome
+ * email for a pilot usually covers both, and the model used to be told to call
+ * that INDOC — which put the orientation half of the visit on pilot hiring.
  *
  * The parser can still return INTERVIEW — it is left in the model's enum on
  * purpose, because an email really can say "interview" and forcing the model to

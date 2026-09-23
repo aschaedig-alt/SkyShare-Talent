@@ -6,6 +6,7 @@ import { ClipboardList, ChevronDown, ChevronRight, Check, Clock } from "lucide-r
 import type { TravelChecklistRollup as Rollup, TripChecklistSummary } from "@/lib/travel/rollup";
 import { SendReimbursementEmailButton } from "@/components/travel/SendReimbursementEmailButton";
 import { formatMixedDayShort } from "@/lib/dates/display";
+import { travelPurposeLabel, travelTabHref } from "@/lib/travel/constants";
 
 // Across-all-trips checklist view for the Travel page.
 //
@@ -48,7 +49,10 @@ function TripRow({ trip, defaultOpen }: { trip: TripChecklistSummary; defaultOpe
           {trip.travelerName}
         </Link>
         <span className="text-xs text-brand-grey dark:text-slate-400">
-          {trip.purpose.toLowerCase().replace(/_/g, " ")}
+          {/* The purpose's own label, not the stored value lower-cased: that
+              trick read "indoc orientation" for Indoc & orientation and "crew"
+              for Crew travel — a second vocabulary for the same list. */}
+          {travelPurposeLabel(trip.purpose)}
           {trip.destination ? ` · ${trip.destination}` : ""} · {formatDate(trip.startsAt)}
         </span>
 
@@ -110,8 +114,13 @@ function TripRow({ trip, defaultOpen }: { trip: TripChecklistSummary; defaultOpe
               this row, and this is the row she was looking at when she asked for
               it — so it sits beside the link rather than only on the trip page. */}
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+            {/* ?tab=travel&trip=, not #travel. Both profiles pick their tab from
+                the query string (see NewHireBottomTabs and the candidate
+                profile), so the hash landed on the default tab and "Open this
+                trip" opened no trip at all. travelTabHref is the one builder
+                every other way into a trip already uses. */}
             <Link
-              href={`${trip.travelerHref}#travel`}
+              href={travelTabHref(trip.travelerHref, trip.tripId)}
               className="text-xs font-semibold text-brand-lea underline underline-offset-2 dark:text-slate-200"
             >
               Open this trip

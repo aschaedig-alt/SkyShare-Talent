@@ -19,6 +19,7 @@
 import type { TravelTripView } from "@/lib/data/travel";
 import { clockTimeOf, dayKeyOf } from "@/lib/dates/display";
 import { resolveItemStart, tripRange } from "@/lib/travel/schedule";
+import { purposeCoversIndoc, purposeCoversOrientation } from "@/lib/travel/constants";
 
 /**
  * Where "here" is.
@@ -240,13 +241,9 @@ export function buildMonthGrid(
         const leftLeg = legAt(segStart);
         const rightLeg = span > 1 ? legAt(segEnd) : null;
 
-        // A trip-level marker that is not a flight — the orientation itself.
-        const label =
-          run.purpose === "ORIENTATION" && run.trip.orientationDate
-            ? dayKeyOf(run.trip.orientationDate) === segStart
-              ? "Orientation"
-              : null
-            : null;
+        // A trip-level marker that is not a flight — the orientation or the
+        // indoc itself, on the day it starts.
+        const label = eventMarkerOn(run, segStart);
 
         segments.push({
           travelerKey: t.key,
@@ -289,6 +286,27 @@ export function buildMonthGrid(
   }
 
   return weeks;
+}
+
+/**
+ * The non-flight marker for a run on one day: "Orientation" or "Indoc".
+ *
+ * KEYED ON THE PURPOSE, not just on the date being present, and that is the
+ * original reason this ever checked the purpose: the email importer copies the
+ * hire's orientation date onto every trip it files whatever the purpose (the one
+ * live Crew travel trip carries one), so a date alone would mark a line trip as
+ * an orientation. What changed is WHICH purposes count — an Indoc & orientation
+ * trip carries both days and gets both markers, and an Indoc trip now gets its
+ * own, where before only a trip filed as Orientation was ever marked at all.
+ */
+function eventMarkerOn(run: TripRun, day: string): string | null {
+  if (purposeCoversOrientation(run.purpose) && run.trip.orientationDate && dayKeyOf(run.trip.orientationDate) === day) {
+    return "Orientation";
+  }
+  if (purposeCoversIndoc(run.purpose) && run.trip.indocStart && dayKeyOf(run.trip.indocStart) === day) {
+    return "Indoc";
+  }
+  return null;
 }
 
 /**
@@ -394,13 +412,26 @@ export function railItems(run: TripRun): RailItem[] {
     });
   }
 
-  if (run.purpose === "ORIENTATION" && run.trip.orientationDate) {
+  // Both events for a trip that covers both. Before the combined purpose existed
+  // an orientation-and-indoc visit was filed as Orientation and the rail showed
+  // the orientation alone — the same under-statement she asked the purpose to fix.
+  if (purposeCoversOrientation(run.purpose) && run.trip.orientationDate) {
     out.push({
       kind: "event",
       label: "Orientation",
       route: null,
       detail: null,
       time: clockTimeOf(run.trip.orientationDate),
+      amount: null
+    });
+  }
+  if (purposeCoversIndoc(run.purpose) && run.trip.indocStart) {
+    out.push({
+      kind: "event",
+      label: "Indoc",
+      route: null,
+      detail: null,
+      time: clockTimeOf(run.trip.indocStart),
       amount: null
     });
   }

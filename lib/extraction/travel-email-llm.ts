@@ -83,10 +83,17 @@ export type TravelSegment = {
   evidence: string;
 };
 
+/**
+ * INDOC_ORIENTATION is a real value, not a tie-break. The prompt used to say
+ * "if the email names both, choose INDOC", which filed every combined visit on
+ * the pilot-hiring side; since Sep 11 the combined visit is its own purpose,
+ * because orientation is an HR cost and indoc a pilot-hiring one. See
+ * TRAVEL_PURPOSES in lib/travel/constants.ts.
+ */
 export type LlmTravelEmail = {
   traveler_name: string;
   traveler_email: string;
-  purpose: "ORIENTATION" | "INDOC" | "TRAINING" | "INTERVIEW" | "RECRUITING_VISIT" | "OTHER";
+  purpose: "ORIENTATION" | "INDOC" | "INDOC_ORIENTATION" | "TRAINING" | "INTERVIEW" | "RECRUITING_VISIT" | "OTHER";
   segments: TravelSegment[];
   /** Outbound-only mail is the norm here; the caller surfaces it rather than guessing. */
   has_return_leg: boolean;
@@ -130,7 +137,7 @@ function buildSchema() {
       traveler_email: { type: "string" },
       purpose: {
         type: "string",
-        enum: ["ORIENTATION", "INDOC", "TRAINING", "INTERVIEW", "RECRUITING_VISIT", "OTHER"]
+        enum: ["ORIENTATION", "INDOC", "INDOC_ORIENTATION", "TRAINING", "INTERVIEW", "RECRUITING_VISIT", "OTHER"]
       },
       segments: {
         type: "array",
@@ -202,11 +209,16 @@ amount that is not stated. Never invent a value and never write "unknown".
 8. INDOC / ORIENTATION START. If the email states when INDOC or orientation
    begins, put the date in indoc_date (YYYY-MM-DD) and the time in
    indoc_time_local as HH:MM, plus where it starts in indoc_location. This is
-   NOT a travel segment.
+   NOT a travel segment. When the email gives BOTH an orientation start and an
+   INDOC start, indoc_date is the INDOC start — the orientation date is already
+   on the person's record.
 
-9. PURPOSE. INDOC when the email names indoc or initial training; ORIENTATION
-   for a first-day or new-hire orientation; INTERVIEW when they are coming to
-   interview. If the email names both orientation and INDOC, choose INDOC.
+9. PURPOSE. INDOC when the email names indoc or initial training and not
+   orientation; ORIENTATION for a first-day or new-hire orientation with no
+   indoc; INDOC_ORIENTATION when the same trip covers BOTH orientation and
+   INDOC — do not pick one of the two, because orientation costs sit with HR
+   and indoc costs with pilot hiring, and the combined trip is its own
+   category. INTERVIEW when they are coming to interview.
 
 10. traveler_name is the person TRAVELLING, not the sender. The sender goes in
     booked_by. Both as written. traveler_email only if an address for the

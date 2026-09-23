@@ -127,6 +127,16 @@ export async function createTrip(input: {
     ? await getNewHireLoyalty(newHireId)
     : await getCandidateLoyalty(candidateId!);
 
+  // A NEW TRIP IS CREATED WITH NO ITEMS, and that is the rule, not an omission.
+  // Aimee asked for it on Sep 11 ("Not every trip requires a flight or a
+  // hotel... let's not automatically have the items on the list"). This action
+  // never did seed any — read-only check of the live table while this comment
+  // was written: all 26 items on the 9 trips were added individually, 8 seconds
+  // to 12 days after their trip, apart from the one filed by the tagged-email
+  // import alongside its trip. So do not "helpfully" add a flight, hotel and car
+  // here: an item appears when somebody presses an add button (addItem) or a
+  // confirmation is applied, and lib/travel/gaps.ts and the Everything-is-booked
+  // check are written for trips that start empty.
   const trip = await prisma.travelTrip.create({
     data: {
       newHireId,
