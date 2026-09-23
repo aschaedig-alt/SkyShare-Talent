@@ -131,7 +131,25 @@ export function CandidatePreview({
                     lookalike rows. */}
                 {(() => {
                   const total = preview.metrics.find((metric) => metric.key === "total_time");
-                  const rest = preview.metrics.filter((metric) => metric.key !== "total_time");
+                  // The same fact is stored twice for 424 candidates - once under the
+                  // generic time_in_type key and once under time_in_type:<AIRCRAFT> -
+                  // with one label, so the pane read "Time in Type - CHALLENGER350"
+                  // twice. An identical label AND value is one fact; show it once.
+                  // Two rows that share a label but DISAGREE are both kept, because
+                  // that disagreement is worth seeing.
+                  const seen = new Set<string>();
+                  const rest = preview.metrics.filter((metric) => {
+                    if (metric.key === "total_time") return false;
+                    const k = `${metric.label}\u0000${metric.value}`;
+                    if (seen.has(k)) return false;
+                    seen.add(k);
+                    return true;
+                  });
+                  // A list (certificates) or any long value cannot sit in half a
+                  // row: it was set not to shrink, so it ran past its column and
+                  // printed over the neighbouring "Medical" cell. Long values take
+                  // the full width and wrap under their label instead.
+                  const isLong = (value: string) => value.length > 18 || value.includes(", ");
                   return (
                     <>
                       {total ? (
@@ -145,12 +163,21 @@ export function CandidatePreview({
                         </div>
                       ) : null}
                       <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                        {rest.map((metric) => (
-                          <div key={metric.key} className="flex items-center justify-between gap-2 text-xs">
-                            <span className="min-w-0 truncate text-brand-grey dark:text-slate-400">{metric.label}</span>
-                            <span className="shrink-0 font-semibold text-brand-lea dark:text-slate-100">{metric.value}</span>
-                          </div>
-                        ))}
+                        {rest.map((metric) =>
+                          isLong(metric.value) ? (
+                            <div key={metric.key} className="col-span-2 text-xs">
+                              <div className="text-brand-grey dark:text-slate-400">{metric.label}</div>
+                              <div className="break-words font-semibold text-brand-lea dark:text-slate-100">{metric.value}</div>
+                            </div>
+                          ) : (
+                            <div key={metric.key} className="flex items-center justify-between gap-2 text-xs">
+                              <span className="min-w-0 truncate text-brand-grey dark:text-slate-400" title={metric.label}>
+                                {metric.label}
+                              </span>
+                              <span className="shrink-0 font-semibold text-brand-lea dark:text-slate-100">{metric.value}</span>
+                            </div>
+                          )
+                        )}
                       </div>
                     </>
                   );

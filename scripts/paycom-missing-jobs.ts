@@ -87,14 +87,17 @@ const CREATE: Array<{ title: string; department: string | null; city: string | n
   { title: "OpenJet Sales Advisor", department: "Sales", city: null, state: null },
   { title: "Sales Support Manager", department: "Sales", city: null, state: null },
   { title: "Sr. Graphic Designer", department: "Marketing", city: null, state: null },
-  { title: "SVR FBO & Government Affairs Manager", department: "FBO", city: null, state: null }
+  { title: "SVR FBO & Government Affairs Manager", department: "FBO", city: null, state: null },
 
-  // HELD BACK, waiting on him — both would sit next to something that already
-  // exists, and he answered them without being shown it:
-  //   "Single-Pilot Jet Captain | Part 91 | Georgia ($160k - $180k)" (49 rows)
-  //     — "CJ Captain (Part 91, Georgia)" is OPEN with 2 applications.
-  //   "PC-12 SIC (PDP) Evergreen" (57 rows)
-  //     — the "Evergreen PDP" job was already merged INTO "PC-12 First Officer".
+  // --- Third batch, 2026-09-23. Two titles were held back the day before because
+  // he had answered "create" without being shown what already existed. Shown it,
+  // he chose differently for each:
+  //   "Single-Pilot Jet Captain | Part 91 | Georgia" -> LINKED to the existing
+  //     "CJ Captain (Part 91, Georgia)", which was created mid-posting (ALIASES in
+  //     scripts/paycom-app-job-link.ts), so it is NOT created here;
+  //   "PC-12 SIC (PDP) Evergreen" -> created as its own job, even though the old
+  //     "Evergreen PDP" job was once merged into PC-12 First Officer. His call.
+  { title: "PC-12 SIC (PDP) Evergreen", department: "Flight Operations", city: null, state: null }
 ];
 
 type Undo = { at: string; jobIds: string[]; applicationIds: string[] };

@@ -262,32 +262,11 @@ unchanged.
 
 ---
 
-### 11. The Paycom mail fix can only prove itself on the first check after it deploys
 
-**Status:** BLOCKED ON DEPLOY
-**Added:** 2026-09-22
+### 12. The PRD ticks have never carried over on a real move to onboarding
 
-The Front mail check misread Paycom's background-check notices once names started arriving
-in ordinary capitals ("Taylor Goodwin" where it used to write "TARA WARD"), ignored the legal name on
-a hire's record (so "Henry Mcfarland" was reported as not a current hire although he is
-Flynn McFarland), and counted text-message and requisition-posted mail as "couldn't be
-read". A dry run against the live inbox, re-run at handoff, read 142 threads: 15 notices,
-12 already done, 3 would-ticks — all Taylor Goodwin (information submitted twice, check
-complete once) — and nothing unreadable or left alone. But a dry run ticks nothing, and the
-real proof is the first real run.
-
-**How to check it, about a minute:** after the deploy, open New hires and press **Check
-Front mail** (or wait for the morning run). Then open Taylor Goodwin's checklist.
-
-**What would count as a pass:** the dialog shows no "couldn't be read" box and no "Left
-alone: Henry Mcfarland"; Taylor Goodwin's "Candidate submitted background check info" and
-"Background check complete — clear to hire" are Done.
-
----
-
-### 12. The pre-offer PRD steps on a candidate have never been used by a real person
-
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN — half checked
+**Half closed:** 2026-09-23, by him: the test send from a real pilot candidate (Sagar Dave) passed. What is left is the carry-over below.
 **Added:** 2026-09-22
 
 The PRD section now also appears on a candidate's Checklists tab, and what is ticked there
@@ -310,7 +289,7 @@ candidate by first name; after the move, the PRD rows match what was set on the 
 
 ### 13. Autosave on the hire page has not been used by a viewer without edit rights
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN — deployed 2026-09-22; he will test it with a second login
 **Added:** 2026-09-22
 
 Every detail on the new hire page now saves when you leave the field, and the Save
@@ -346,32 +325,10 @@ title, time and location match.
 
 ---
 
-### 15. The travel spend report's filters, sorting and download have not been clicked, and nothing uses Indoc & orientation yet
-
-**Status:** BLOCKED ON DEPLOY
-**Added:** 2026-09-22
-
-Reports now has one travel report. Checked in a browser: clicking July moved the four tiles
-to July ($2,722.13, "2nd-highest out of 4 months"), the request details line up, and an
-empty trip shows its empty state. NOT clicked: the department, hired and purpose filters,
-the column sorting, the breakdown clicks and the CSV download. No trip uses the new
-Indoc & orientation purpose yet, and no real confirmation email has been read with the
-changed prompt. The three trips on file as Orientation are all pilots (Dayten Schureman's
-has an indoc date), so until they are recoded by hand the report counts them as HR cost.
-
-**How to check it, about two minutes:** on Reports → Travel, pick a department, then Hired,
-then sort by cost; download the CSV and open it. Recode Dayten Schureman's trip to
-Indoc & orientation and look at the purpose breakdown.
-
-**What would count as a pass:** each filter narrows the table and the tiles together, the
-CSV holds exactly the rows on screen, and the recoded trip moves to its own Indoc &
-orientation line.
-
----
 
 ### 16. Nobody outside HR has loaded the offer-details box, and it is the one box that holds pay
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN — deployed 2026-09-22; he will test it with a second login
 **Added:** 2026-09-22
 
 The hiring manager's offer details now sit on the offer itself, so the candidate's Offers
@@ -394,9 +351,105 @@ the thirteen lines and confirm it is still there after a reload.
 
 ---
 
-### 17. Nothing on the rebuilt jobs page has been SAVED through
+
+### 18. Nothing on a job's Pilot requirement tab that SAVES has been pressed
 
 **Status:** BLOCKED ON DEPLOY
+**Added:** 2026-09-23
+
+Pilot Requirements is now a tab on each job, and the Role block is the one place a pilot job's
+seat, aircraft, base, operator and pay text are edited - one save writes the job and its
+requirement together, which is the fix for the two drifting apart. Everything was read and
+checked in a browser: old links forward to the right job's tab, the Praetor 600 mismatch flag
+shows, the blocks carry the right numbers, the Requirement 1 of N switcher swaps, and Save stays
+disabled until a person picks which of two disagreeing values is right. What was deliberately
+NOT done, on a live database: pressing any of it. Role Save, Make the requirement inactive too,
+Keep it active, Set one up, Attach, the requirement editor's Save, the fleet-position save and
+the moved Export CSV are typechecked only.
+
+**How to check it, about three minutes:** on one real pilot job whose values you know are right
+- say Gulfstream G200 First Officer - open Pilot requirement, press Edit role, change nothing
+that matters (retype the base exactly as it is), and Save. Then open the Matchboard for that role.
+
+**What would count as a pass:** the save sticks after a reload, a Change history row appears
+naming you, and the Matchboard role still scores the same people.
+
+---
+
+### 19. Nobody without admin rights has opened the new Pilot requirement tab
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-09-23
+
+Every write on the tab needs requirements:write, which today only Aimee and Hannah hold - the
+same gate the old requirement editor had. The first build of the tab used jobs:write instead,
+which would have let a recruiter (Kevin Sherman is the only one) change a requirement's
+operator, seat, base and pay text; that was put back before handoff because nobody had approved
+it. Local dev signs everyone in as an admin, so what a recruiter or viewer sees has never
+rendered.
+
+**How to check it:** sign in as a recruiter or a viewer and open any pilot job's Pilot requirement
+tab.
+
+**What would count as a pass:** everything is readable, and there is no Edit role, no Keep it
+active or Make the requirement inactive too, and no Set one up or Attach - not even disabled ones.
+
+---
+
+## Closed
+
+### 15. No trip uses Indoc & orientation yet
+
+**Status:** CLOSED
+**Closed:** 2026-09-23, by him, in two steps. The filters, sorting and CSV download passed first. The recode had not happened at that point (read back: still Orientation, last changed 2026-08-21), so it stayed half open; he then recoded Dayten Schureman’s trip himself and reported that it worked. Read back afterwards: purpose INDOC_ORIENTATION, changed 2026-09-23 16:33 UTC, so the first trip now uses the new purpose.
+**Added:** 2026-09-22
+
+Reports now has one travel report. Checked in a browser: clicking July moved the four tiles
+to July ($2,722.13, "2nd-highest out of 4 months"), the request details line up, and an
+empty trip shows its empty state. NOT clicked: the department, hired and purpose filters,
+the column sorting, the breakdown clicks and the CSV download. No trip uses the new
+Indoc & orientation purpose yet, and no real confirmation email has been read with the
+changed prompt. The three trips on file as Orientation are all pilots (Dayten Schureman's
+has an indoc date), so until they are recoded by hand the report counts them as HR cost.
+
+**How to check it, about two minutes:** on Reports → Travel, pick a department, then Hired,
+then sort by cost; download the CSV and open it. Recode Dayten Schureman's trip to
+Indoc & orientation and look at the purpose breakdown.
+
+**What would count as a pass:** each filter narrows the table and the tiles together, the
+CSV holds exactly the rows on screen, and the recoded trip moves to its own Indoc &
+orientation line.
+
+---
+
+### 11. The Paycom mail fix can only prove itself on the first check after it deploys
+
+**Status:** CLOSED
+**Added:** 2026-09-22
+
+The Front mail check misread Paycom's background-check notices once names started arriving
+in ordinary capitals ("Taylor Goodwin" where it used to write "TARA WARD"), ignored the legal name on
+a hire's record (so "Henry Mcfarland" was reported as not a current hire although he is
+Flynn McFarland), and counted text-message and requisition-posted mail as "couldn't be
+read". A dry run against the live inbox, re-run at handoff, read 142 threads: 15 notices,
+12 already done, 3 would-ticks — all Taylor Goodwin (information submitted twice, check
+complete once) — and nothing unreadable or left alone. But a dry run ticks nothing, and the
+real proof is the first real run.
+
+**How to check it, about a minute:** after the deploy, open New hires and press **Check
+Front mail** (or wait for the morning run). Then open Taylor Goodwin's checklist.
+
+**What would count as a pass:** the dialog shows no "couldn't be read" box and no "Left
+alone: Henry Mcfarland"; Taylor Goodwin's "Candidate submitted background check info" and
+"Background check complete — clear to hire" are Done.
+
+**Closed:** 2026-09-23, by him. He pressed Check Front mail on the live site after the deploy and reported a pass: nothing under couldn’t be read, no Left alone: Henry Mcfarland.
+
+---
+
+### 17. Nothing on the rebuilt jobs page has been SAVED through
+
+**Status:** CLOSED
 **Added:** 2026-09-22
 
 The Recruiting Jobs page is now a card list plus a page per job with real tabs, and
@@ -415,8 +468,6 @@ Paycom req number and clear it.
 **What would count as a pass:** each save sticks after a reload, and the job's card on the
 list reflects it.
 
+**Closed:** 2026-09-23, by him. He renamed the test job (Sr. Graphic Designer), toggled Active, and added and cleared a Paycom req, reloading each time, and reported a pass. Read back afterwards: the job is Sr. Graphic Designer, RETIRED, no req — exactly as it started.
+
 ---
-
-## Closed
-
-Nothing yet.

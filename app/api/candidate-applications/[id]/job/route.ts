@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiPermission, authFailureResponse } from "@/lib/auth/route-auth";
 import { isCandidateVisible } from "@/lib/auth/candidate-scope";
 import { logActivity } from "@/lib/activity/logger";
+import { combineIntoImported, isCombineRefusal } from "@/lib/candidates/combine-applications";
 
 /**
  * PUT /api/candidate-applications/[id]/job — link THIS application to a job, in
@@ -33,9 +34,6 @@ import { logActivity } from "@/lib/activity/logger";
  */
 
 type Ctx = { params: Promise<{ id: string }> };
-
-/** A status nobody chose — what Link to a job and resume intake write by default. */
-const DEFAULT_STATUSES = new Set(["", "new"]);
 
 export async function PUT(request: Request, ctx: Ctx) {
   const auth = await requireApiPermission("candidates:write");
@@ -123,69 +121,34 @@ export async function PUT(request: Request, ctx: Ctx) {
   }
 
   // ---- Combine ------------------------------------------------------------
-  const importedHasOffer = application.offerStatus !== "NONE";
-  const handMadeHasOffer = handMade.offerStatus !== "NONE";
-  if (importedHasOffer && handMadeHasOffer) {
-    return NextResponse.json(
-      { message: "Both rows carry an offer, so they cannot be combined automatically — remove the one that is wrong first." },
-      { status: 409 }
-    );
+  // The rules for what survives live in ONE place, shared with the bulk run that
+  // cleared the backlog — see lib/candidates/combine-applications.ts.
+  const outcome = await combineIntoImported(id, handMade.id, job.id);
+  if (isCombineRefusal(outcome)) {
+    return NextResponse.json({ message: outcome.message }, { status: 409 });
   }
-  const takeOffer = handMadeHasOffer && !importedHasOffer;
-  const handStatusChosen = !DEFAULT_STATUSES.has((handMade.status ?? "").trim().toLowerCase());
-
-  await prisma.$transaction(async (tx) => {
-    await tx.candidateQuestionnaireAnswer.updateMany({ where: { applicationId: handMade.id }, data: { applicationId: id } });
-    await tx.candidateApplication.delete({ where: { id: handMade.id } });
-    await tx.candidateApplication.update({
-      where: { id },
-      data: {
-        jobId: job.id,
-        pilotRequirementId: application.pilotRequirementId ?? handMade.pilotRequirementId,
-        statusNote: application.statusNote ?? handMade.statusNote,
-        recruiterName: application.recruiterName ?? handMade.recruiterName,
-        hiringManager: application.hiringManager ?? handMade.hiringManager,
-        rejectionReason: application.rejectionReason ?? handMade.rejectionReason,
-        // A status somebody picked in the app is newer than the import's snapshot.
-        ...(handStatusChosen ? { status: handMade.status, stage: handMade.stage ?? application.stage, decidedAt: handMade.decidedAt ?? application.decidedAt } : {}),
-        ...(takeOffer
-          ? {
-              offerStatus: handMade.offerStatus,
-              offerSentAt: handMade.offerSentAt,
-              offerSignedAt: handMade.offerSignedAt,
-              offerDeclinedAt: handMade.offerDeclinedAt,
-              offerDeclineReason: handMade.offerDeclineReason,
-              offerNotSentAt: handMade.offerNotSentAt,
-              offerNotSentReason: handMade.offerNotSentReason,
-              offerStartDate: handMade.offerStartDate,
-              offerSource: handMade.offerSource,
-              offerStepsJson: handMade.offerStepsJson
-            }
-          : {})
-      }
-    });
-  });
 
   // Everything the removed row held is in here, so a combine can be reconstructed
-  // by hand if it ever needs to be — the activity log is the only record of it.
+  // by hand if it ever needs to be. Deliberately NOT the offer-details text: this
+  // log is read outside HR.
   await logActivity({
     ...actor,
     activityType: "CANDIDATE_EDITED",
     description:
       `Combined ${application.candidate.displayName}'s Paycom application "${label}" with the ${job.title} row ` +
-      `made in the app${takeOffer ? ", keeping its offer" : ""}`,
+      `made in the app${outcome.tookOffer ? ", keeping its offer" : ""}`,
     entityType: "Candidate",
     entityId: candidateId,
     metadata: {
       applicationId: id,
       jobId: job.id,
-      removedApplicationId: handMade.id,
-      removedSource: handMade.source,
-      removedStatus: handMade.status,
-      removedStage: handMade.stage,
-      removedAppliedAt: handMade.appliedAt?.toISOString() ?? null,
-      removedOfferStatus: handMade.offerStatus,
-      removedOfferStepsJson: handMade.offerStepsJson
+      removedApplicationId: outcome.removed.id,
+      removedSource: outcome.removed.source,
+      removedStatus: outcome.removed.status,
+      removedStage: outcome.removed.stage,
+      removedAppliedAt: outcome.removed.appliedAt?.toISOString() ?? null,
+      removedOfferStatus: outcome.removed.offerStatus,
+      removedOfferStepsJson: outcome.removed.offerStepsJson
     }
   });
 

@@ -7,6 +7,19 @@
  *   npx tsx scripts/paycom-app-job-link.ts --undo              unlink everything this script linked
  *   add --include-turned-down to also put REJECTED applicants on OPEN jobs (off by default)
  *
+ *   npx tsx scripts/paycom-app-job-link.ts --combine                    DRY RUN of the combine case
+ *   npx tsx scripts/paycom-app-job-link.ts --combine --apply --limit 10 combine a first few
+ *   npx tsx scripts/paycom-app-job-link.ts --undo-combine               put every combine back
+ *
+ * THE COMBINE CASE (--combine, his instruction 2026-09-23: "combine all 183 for me,
+ * with an undo record"). A person who already has a hand-made row on the very job
+ * their Paycom title names is skipped by an ordinary run — linking would leave two
+ * rows for one application. --combine folds the two into the imported row through
+ * lib/candidates/combine-applications.ts, the same function the profile page's
+ * combine answer calls, so the bulk run and the button cannot disagree about what
+ * survives. Each one is written to that person's activity log, and the whole row
+ * that disappears goes into combine-undo.json first.
+ *
  * WHY. The Sep 10 2026 hiring-metrics import left 8,304 applications with a
  * Paycom posting title and no job (see lib/jobs/paycom-title-match.ts). Feedback
  * cmtynseh3 (Sep 12): "it should do a better job autolinking the correct jobs."
@@ -46,10 +59,13 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { prisma } from "../lib/prisma";
 import { confidentJobForTitle, suggestJobsForTitle, type MatchableJob } from "../lib/jobs/paycom-title-match";
+import { combineIntoImported, isCombineRefusal, undoCombine, type CombineUndo } from "../lib/candidates/combine-applications";
+import { logActivity } from "../lib/activity/logger";
 
 const OUT_DIR = path.join("scripts", "paycom-app-job-link");
 const REVIEW = path.join(OUT_DIR, "review.md");
 const UNDO = path.join(OUT_DIR, "undo.json");
+const COMBINE_UNDO = path.join(OUT_DIR, "combine-undo.json");
 
 type UndoRecord = { linkedAt: string; rows: Array<{ applicationId: string; jobId: string }> };
 
@@ -116,8 +132,23 @@ const ALIASES: Record<string, string> = {
   "Base Support": "Ogden Base Support",
   // He answered "create this job" for BOTH of these, and they are one seat. The
   // job is created once under the fuller title (scripts/paycom-missing-jobs.ts)
-  // and the short form points at it.
-  "PC-12 NG Captain": "Pilatus PC-12 NG Captain"
+  // and the short form points at it. He confirmed "keep one job" on 2026-09-23.
+  "PC-12 NG Captain": "Pilatus PC-12 NG Captain",
+
+  // --- His answers of 2026-09-23, given with the application dates in front of him. ---
+  // The Georgia posting ran Jul 20 - Sep 2; the Georgia CJ job was created in the
+  // app on Aug 28, mid-posting, so it is the job these people applied for.
+  "Single-Pilot Jet Captain | Part 91 | Georgia ($160k - $180k)": "CJ Captain (Part 91, Georgia)",
+  // Both fall in the gap between CJ2 Captain's applicants (to Feb 8) and CJ3+
+  // Captain's (from Apr 8); he put both on CJ3+.
+  "Pilot CJ PIC": "CJ3+ Captain",
+  "Citation CE-525 CJ Captain": "CJ3+ Captain",
+  // "Make all of the Line Service Technician jobs one job" - scripts/paycom-lst-merge.ts
+  // folded | DVO into | OGD and renamed it, with the bases as its location, so
+  // every technician posting goes to the one job whatever base it was for.
+  "Line Service Technician (Aviation)": "Line Service Technician",
+  "Line Service Technician": "Line Service Technician",
+  "Line Service Technician - Part Time": "Line Service Technician"
 };
 
 /** A value that may contain a pipe ("Praetor 600 First Officer | OGD, UT") inside a Markdown table cell. */
@@ -156,9 +187,35 @@ async function undo() {
   console.log(`Unlinked ${reverted} of ${rows.length} recorded rows (the rest had been changed since, and were left alone).`);
 }
 
+function readCombineUndo(): CombineUndo[] {
+  if (!existsSync(COMBINE_UNDO)) return [];
+  return JSON.parse(readFileSync(COMBINE_UNDO, "utf8")) as CombineUndo[];
+}
+
+async function undoCombines() {
+  const records = readCombineUndo();
+  if (!records.length) {
+    console.log("No combines recorded — nothing to undo.");
+    return;
+  }
+  let restored = 0;
+  const notes: string[] = [];
+  // Newest first, so a person combined twice unwinds in the order it was built.
+  for (const r of [...records].reverse()) {
+    const res = await undoCombine(r);
+    if (res.restored) restored += 1;
+    else if (res.note) notes.push(res.note);
+  }
+  writeFileSync(COMBINE_UNDO, JSON.stringify([], null, 2));
+  console.log(`Split ${restored} of ${records.length} combines back into two rows.`);
+  for (const n of notes) console.log(`  left alone: ${n}`);
+}
+
 async function main() {
   if (process.argv.includes("--undo")) return undo();
+  if (process.argv.includes("--undo-combine")) return undoCombines();
   const apply = process.argv.includes("--apply");
+  const combineMode = process.argv.includes("--combine");
   const includeTurnedDown = process.argv.includes("--include-turned-down");
   const limit = Number(argValue("--limit") ?? "0") || Infinity;
 
@@ -168,14 +225,23 @@ async function main() {
   const jobById = new Map(jobs.map((j) => [j.id, j]));
   const apps = await prisma.candidateApplication.findMany({
     where: { jobId: null, origin: "PAYCOM", historicalJobTitle: { not: null }, sourceApplicationId: { not: null } },
-    select: { id: true, candidateId: true, historicalJobTitle: true, status: true, stage: true, appliedAt: true }
+    select: { id: true, candidateId: true, historicalJobTitle: true, status: true, stage: true, appliedAt: true, offerStatus: true }
   });
   // Hand-made rows (no Paycom id) per candidate, by job — the combine case.
+  // Oldest first, matching the profile page's own choice when there are several.
   const handMade = await prisma.candidateApplication.findMany({
     where: { jobId: { not: null }, sourceApplicationId: null, origin: { not: "JAZZ" } },
-    select: { candidateId: true, jobId: true }
+    select: { id: true, candidateId: true, jobId: true, offerStatus: true },
+    orderBy: { createdAt: "asc" }
   });
   const handMadeKey = new Set(handMade.map((h) => `${h.candidateId}:${h.jobId}`));
+  const handMadeFirst = new Map<string, { id: string; offerStatus: string }>();
+  for (const h of handMade) {
+    const k = `${h.candidateId}:${h.jobId}`;
+    if (!handMadeFirst.has(k)) handMadeFirst.set(k, { id: h.id, offerStatus: h.offerStatus });
+  }
+  type CombinePlan = { importedId: string; handMadeId: string; jobId: string; candidateId: string; title: string; bothOffers: boolean };
+  const combinePlan: CombinePlan[] = [];
   const currentCounts = new Map(
     (await prisma.candidateApplication.groupBy({ by: ["jobId"], where: { jobId: { not: null } }, _count: { _all: true } })).map(
       (g) => [g.jobId as string, g._count._all]
@@ -224,6 +290,15 @@ async function main() {
     for (const r of rows) {
       if (handMadeKey.has(`${r.candidateId}:${target.jobId}`)) {
         combine += 1;
+        const hm = handMadeFirst.get(`${r.candidateId}:${target.jobId}`)!;
+        combinePlan.push({
+          importedId: r.id,
+          handMadeId: hm.id,
+          jobId: target.jobId,
+          candidateId: r.candidateId,
+          title,
+          bothOffers: (r.offerStatus ?? "NONE") !== "NONE" && hm.offerStatus !== "NONE"
+        });
         continue;
       }
       if (target.status === "OPEN" && !includeTurnedDown && turnedDown(r.status, r.stage)) {
@@ -304,6 +379,72 @@ async function main() {
   writeFileSync(REVIEW, review);
   console.log(`Review written: ${REVIEW}`);
   console.log(`Would link ${plan.length} of ${apps.length} to ${perJob.size} jobs.`);
+
+  // ---- The combine case, run on its own so a link run and a combine run never mix.
+  if (combineMode) {
+    const blocked = combinePlan.filter((c) => c.bothOffers);
+    const doable = combinePlan.filter((c) => !c.bothOffers);
+    console.log(`\nCOMBINE: ${combinePlan.length} rows whose person already holds a hand-made row for the job.`);
+    console.log(`  ${doable.length} can be combined; ${blocked.length} are refused because BOTH rows carry an offer.`);
+    for (const b of blocked) console.log(`    refused: ${b.title} (application ${b.importedId})`);
+    if (!apply) {
+      console.log("DRY RUN — nothing combined. Pass --apply, with --limit for a first few.");
+      return;
+    }
+    const records = readCombineUndo();
+    const consumed = new Set<string>();
+    let combined = 0;
+    let linkedInstead = 0;
+    const refused: string[] = [];
+    for (const c of doable.slice(0, limit)) {
+      // The same hand-made row can be the partner of two imported rows (one person,
+      // one title, applied twice). The first combine uses it up; the second has
+      // nothing left to fold in, so it is an ordinary link.
+      if (consumed.has(c.handMadeId)) {
+        const res = await prisma.candidateApplication.updateMany({ where: { id: c.importedId, jobId: null }, data: { jobId: c.jobId } });
+        if (res.count) {
+          linkedInstead += 1;
+          const linkRecords = readUndo();
+          linkRecords.push({ linkedAt: new Date().toISOString(), rows: [{ applicationId: c.importedId, jobId: c.jobId }] });
+          writeFileSync(UNDO, JSON.stringify(linkRecords, null, 2));
+        }
+        continue;
+      }
+      const outcome = await combineIntoImported(c.importedId, c.handMadeId, c.jobId);
+      if (isCombineRefusal(outcome)) {
+        refused.push(`${c.title} (${c.importedId}): ${outcome.message}`);
+        continue;
+      }
+      consumed.add(c.handMadeId);
+      records.push(outcome.undo);
+      // Written after every combine: an interrupted run must still be fully reversible.
+      writeFileSync(COMBINE_UNDO, JSON.stringify(records, null, 2));
+      combined += 1;
+      await logActivity({
+        activityType: "CANDIDATE_EDITED",
+        description:
+          `Combined the Paycom application "${c.title}" with the row made in the app for the same job` +
+          `${outcome.tookOffer ? ", keeping its offer" : ""} (bulk run, 2026-09-23)`,
+        entityType: "Candidate",
+        entityId: c.candidateId,
+        metadata: {
+          applicationId: c.importedId,
+          jobId: c.jobId,
+          removedApplicationId: outcome.removed.id,
+          removedSource: outcome.removed.source,
+          removedStatus: outcome.removed.status,
+          removedStage: outcome.removed.stage,
+          removedAppliedAt: outcome.removed.appliedAt?.toISOString() ?? null,
+          removedOfferStatus: outcome.removed.offerStatus,
+          bulk: true
+        }
+      });
+    }
+    console.log(`COMBINED ${combined}; linked ${linkedInstead} instead (partner already used); refused ${refused.length}.`);
+    for (const r of refused) console.log(`  refused: ${r}`);
+    console.log(`Undo: npx tsx scripts/paycom-app-job-link.ts --undo-combine   (record: ${COMBINE_UNDO})`);
+    return;
+  }
 
   if (!apply) {
     console.log("DRY RUN — nothing written. Read the review, then --apply --limit 50 for a first batch.");
