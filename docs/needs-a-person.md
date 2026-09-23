@@ -396,6 +396,43 @@ active or Make the requirement inactive too, and no Set one up or Attach - not e
 
 ---
 
+### 20. The Certificates tick-box editor has never been saved
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-09-23
+
+The Certificates card in a candidate's review column is now a checklist, and its pencil opens a
+tick-box editor instead of a line of text. Save (on a confirmed value) and Save & accept (on a
+suggestion) write through the same metric update every other card uses, and the text the editor
+writes was checked to read back as the same lines, 18 of 18. What was deliberately NOT done on a
+live database: pressing either button.
+
+**How to check it, about a minute:** on a candidate whose certificates are waiting in "to review",
+press the pencil, tick or untick one box you know is right, and press Save & accept.
+
+**What would count as a pass:** the card comes back confirmed, showing exactly the boxes you left
+ticked, with its "Also seen" entries unchanged.
+
+---
+
+### 21. The Screening preview's Certificates block has not been seen narrow or in dark mode
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-09-23
+
+The compact checklist in the Screening preview was seen at the width the preview had on this
+machine (575px), in light mode. It is laid out for 330px, the narrowest the preview gets, and it
+has dark-mode colours, but neither has rendered: the Screening tab froze Chrome's page renderer
+every time it was asked to check them.
+
+**How to check it, about a minute:** open a pilot job's Screening tab, click a candidate, narrow
+the window until the preview is at its slimmest, then turn dark mode on.
+
+**What would count as a pass:** no chip or line runs past the preview's edge, and every chip is
+readable in dark mode.
+
+---
+
 ## Closed
 
 ### 15. No trip uses Indoc & orientation yet

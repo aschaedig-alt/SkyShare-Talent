@@ -27,6 +27,8 @@
  * SERVER ONLY — dynamically imports unpdf.
  */
 
+import { formTicksEvidence } from "@/lib/candidates/certificates";
+
 export type FormCell = { text: string; x: number; /** Rendered font size, for header detection. */ size: number };
 export type FormRow = { page: number; y: number; cells: FormCell[] };
 
@@ -58,6 +60,24 @@ function isFurniture(text: string, cellCount: number): boolean {
 
 /** Group a PDF's text items into left-to-right visual rows, top of page first. */
 export async function readPdfRows(bytes: Uint8Array): Promise<FormRow[]> {
+  return (await readPdf(bytes)).rows;
+}
+
+/**
+ * A PDF date ("D:20260120042203-08'00'") as a Date, or null. Only the year is
+ * required by the format; the rest defaults, and no offset means UTC.
+ */
+export function parsePdfDate(raw: unknown): Date | null {
+  const m = /^D:(\d{4})(\d{2})?(\d{2})?(\d{2})?(\d{2})?(\d{2})?(?:([Z+-])(\d{2})?'?(\d{2})?'?)?/.exec(String(raw ?? "").trim());
+  if (!m) return null;
+  const [, y, mo = "01", d = "01", h = "00", mi = "00", s = "00", sign, oh = "00", om = "00"] = m;
+  const zone = !sign || sign === "Z" ? "Z" : `${sign}${oh}:${om}`;
+  const date = new Date(`${y}-${mo}-${d}T${h}:${mi}:${s}${zone}`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** The rows, plus the document's own ModDate — see ParsedForm.modifiedAt. */
+async function readPdf(bytes: Uint8Array): Promise<{ rows: FormRow[]; modifiedAt: Date | null }> {
   const { getDocumentProxy } = await import("unpdf");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdf: any = await getDocumentProxy(bytes);
@@ -90,7 +110,8 @@ export async function readPdfRows(bytes: Uint8Array): Promise<FormRow[]> {
       if (cells.length > 0) out.push({ page, y: bucket.y, cells });
     }
   }
-  return out;
+  const meta = await pdf.getMetadata().catch(() => null);
+  return { rows: out, modifiedAt: parsePdfDate(meta?.info?.ModDate) };
 }
 
 /** The verbatim line a value was read from, for a human to audit against the PDF. */
@@ -215,6 +236,8 @@ export type FormTemplate = {
   /** Cheap check against the whole document before trying to pair anything. */
   detect: (all: string) => boolean;
   fields: FieldSpec[];
+  /** Anything that is not a label beside a value, read its own way — the Pilot Application's certificate boxes. */
+  readExtra?: (rows: FormRow[]) => ExtractedField[];
 };
 
 /**
@@ -246,8 +269,79 @@ const PILOT_APPLICATION: FormTemplate = {
     { metricKey: "recency_12mo", label: /^HRS FLOWN LAST 12 MOS:$/i, kind: "hours" },
     { metricKey: "hours_in_type_applying", label: /^HRS IN AIRCRAFT APPLYING FOR:$/i, kind: "hours" },
     { metricKey: "medical_class", label: /^MEDICAL CLASS:$/i, kind: "text" }
-  ]
+  ],
+  readExtra: (rows) => {
+    const boxes = readCertificateBoxes(rows);
+    if (!boxes) return [];
+    return [
+      {
+        metricKey: "certificates",
+        // The labels exactly as the form prints them, in form order.
+        value: boxes.ticked.join(", "),
+        evidence: formTicksEvidence(boxes.ticked),
+        page: boxes.page
+      }
+    ];
+  }
 };
+
+/**
+ * The eleven boxes under "INDICATE ALL CERTIFICATES YOU CURRENTLY HOLD", as the
+ * form prints them, in form order.
+ */
+export const PILOT_APPLICATION_BOXES = [
+  "COMMERCIAL",
+  "STUDENT",
+  "PRIVATE",
+  "CFI",
+  "MEI",
+  "INSTRUMENT RATING",
+  "SINGLE ENGINE LAND",
+  "MULTI ENGINE LAND",
+  "ATP/CTP COMPLETED",
+  "ATP",
+  "ATP WRITTEN (IF NOT ATP)"
+];
+
+/** A ticked box. Adobe Sign draws the check as the ZapfDingbats glyph "4" (✔); an unticked box draws nothing at all. */
+const TICK = /^(4|✓|✔)$/;
+
+/**
+ * Which certificate boxes are ticked on a signed Pilot Application.
+ *
+ * WHY BY POSITION. In the flattened text the eleven labels print as one run and
+ * every tick on the page comes out later as a separate "4", with nothing tying a
+ * tick to its box — so the model reading that text was guessing. Checked on
+ * 2026-09-23 against the 249 applications behind the stored values: only 9 of
+ * 216 people's stored certificates matched the boxes they actually ticked. By
+ * position the pairing is exact, because the tick is drawn on the same line as
+ * its label, just to its left (tick x≈75, label x≈95 on the V4 form).
+ *
+ * Returns null — "no answer", never "holds nothing" — when the block is missing
+ * or only partly readable (fewer than 9 of the 11 labels found), or when no box
+ * is ticked at all.
+ */
+export function readCertificateBoxes(rows: FormRow[]): { ticked: string[]; page: number } | null {
+  const start = rows.findIndex((row) => row.cells.some((cell) => /INDICATE ALL CERTIFICATES/i.test(cell.text)));
+  if (start < 0) return null;
+  const page = rows[start].page;
+
+  const ticked: string[] = [];
+  let labels = 0;
+  for (const row of rows.slice(start + 1, start + 20)) {
+    if (row.page !== page) break;
+    const label = row.cells.find((cell) => PILOT_APPLICATION_BOXES.includes(cell.text.trim().toUpperCase()));
+    if (!label) continue;
+    labels += 1;
+    // Only a tick just left of the label counts. The aircraft-ratings answers
+    // share these lines further right, and a "4" typed there is not a tick.
+    const tick = row.cells.some((cell) => TICK.test(cell.text.trim()) && cell.x < label.x && label.x - cell.x <= 40);
+    if (tick) ticked.push(label.text.trim().toUpperCase());
+  }
+
+  if (labels < 9 || ticked.length === 0) return null;
+  return { ticked, page };
+}
 
 /**
  * The Paycom application's "Job Level" question block.
@@ -330,7 +424,7 @@ export function detectTemplate(rows: FormRow[]): FormTemplate | null {
 
 export type ExtractedField = {
   metricKey: string;
-  /** Hours come back as a number; text fields (medical class) as a string. */
+  /** Hours come back as a number; text fields (medical class, the ticked certificate boxes) as a string. */
   value: number | string;
   /** The verbatim row it was read from — audit this instead of opening the PDF. */
   evidence: string;
@@ -406,16 +500,24 @@ export type ParsedForm = {
   template: FormTemplate | null;
   fields: ExtractedField[];
   pageCount: number;
+  /**
+   * The PDF's own ModDate. On a signed Pilot Application that is the moment
+   * Adobe Sign completed it: on 2026-09-23 it matched the signature stamp and
+   * the audit report on every file checked. Upload order is NOT signing order —
+   * the Jul 27 backfill loaded a person's applications in no particular order.
+   */
+  modifiedAt: Date | null;
 };
 
-/** Read one PDF end to end: detect the template, pair its fields. */
+/** Read one PDF end to end: detect the template, pair its fields, read anything else it defines. */
 export async function parsePdfForm(bytes: Uint8Array): Promise<ParsedForm> {
-  const rows = await readPdfRows(bytes);
+  const { rows, modifiedAt } = await readPdf(bytes);
   const template = detectTemplate(rows);
   return {
     template,
-    fields: template ? extractFields(rows, template) : [],
-    pageCount: rows.length > 0 ? Math.max(...rows.map((row) => row.page)) : 0
+    fields: template ? [...extractFields(rows, template), ...(template.readExtra?.(rows) ?? [])] : [],
+    pageCount: rows.length > 0 ? Math.max(...rows.map((row) => row.page)) : 0,
+    modifiedAt
   };
 }
 

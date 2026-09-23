@@ -26,6 +26,7 @@ import {
 import type { TagChip } from "@/lib/tags/colors";
 import { getDispositionOverrides } from "@/lib/data/disposition-groups";
 import { parseTypeRatings } from "@/lib/candidates/aircraft-types";
+import { certificateChips } from "@/lib/candidates/certificates";
 import { getArchivedTags } from "@/lib/data/tag-archive";
 import {
   applicationOutcome,
@@ -1558,7 +1559,8 @@ export async function getCandidateComparisonData(
         continue;
       }
       if (metric.key === "certificates") {
-        certificates = splitListValue(metric.valueText);
+        // One chip per line on the checklist, not per slash — see certificateChips.
+        certificates = certificateChips(metric.valueText);
         certificates.forEach((cert) => certificateSet.add(cert));
         continue;
       }

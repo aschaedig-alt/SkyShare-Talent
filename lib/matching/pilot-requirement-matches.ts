@@ -14,6 +14,7 @@ import type { MatchFeedbackEntry, RequirementFeedback } from "@/lib/matching/mat
 import type { OverrideTier, TierOverrides } from "@/lib/matching/tier-override";
 import { KEEP_ON_POSITION, type PositionSkip, type PositionSkipReason, type RequirementSkips } from "@/lib/matching/position-skip";
 import { isScanExclusionReason, type ScanExclusionReason } from "@/lib/candidates/scan-exclusion";
+import { normalizeCertificates } from "@/lib/candidates/certificates";
 import {
   scanPoolWhere,
   currentPoolWhere,
@@ -698,17 +699,21 @@ export function scoreCandidate(
     if (status === "none") continue;
 
     const certsMetric = metricsByKey.get("certificates");
-    const certsText = normalize(certsMetric?.valueText ?? "");
     let fStatus: FactorStatus = "unknown";
     let source: FactorSource = "none";
     let detail = "Not found on file";
 
     if (def.key === "atp_certificate") {
       // A pilot needs EITHER a Commercial certificate OR an ATP — credit either.
-      if (certsText.includes("atp") || certsText.includes("commercial") || certsText.includes("cpl")) {
+      // Read through the checklist's reader, not by its letters: "ATP/CTP
+      // COMPLETED" and "ATP WRITTEN" contain "atp" and are neither. On Sep 23 the
+      // letters put "ATP on file" on 25 people without one, and the re-read of
+      // the signed applications would have put it on 93 of the 333 it re-reads.
+      const certs = normalizeCertificates(certsMetric?.valueText);
+      if (certs.found.has("atp") || certs.found.has("commercial")) {
         fStatus = "met";
         source = "structured";
-        detail = certsText.includes("atp") ? "ATP on file" : "Commercial certificate on file";
+        detail = certs.found.has("atp") ? "ATP on file" : "Commercial certificate on file";
       } else if (/\b(atp|airline transport|commercial pilot|commercial|cpl)\b/.test(text)) {
         fStatus = "met";
         source = "profile-text";

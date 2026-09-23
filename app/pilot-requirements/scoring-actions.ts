@@ -352,6 +352,10 @@ export type CandidatePreview = {
   scanExcludedReason: string | null;
   scanExcludedNote: string | null;
   metrics: Array<{ key: string; label: string; value: string }>;
+  /** The certificates row by key, for the compact checklist (components/candidates/CertificateChecklist). */
+  certificates: { value: string; status: string; evidence: string | null } | null;
+  /** The type_ratings row's text — its class and instructor ratings count on the checklist. */
+  typeRatings: string | null;
   fileCount: number;
   noteCount: number;
   applicationCount: number;
@@ -385,13 +389,31 @@ export async function getCandidatePreview(candidateId: string): Promise<Candidat
         source: true,
         scanExcludedReason: true,
         scanExcludedNote: true,
-        metrics: { select: { key: true, label: true, valueNumber: true, valueText: true, unit: true }, take: 14 },
+        // Every row a person hasn't dismissed, in a fixed order. It used to be
+        // take: 14 with no order at all, which left the certificates row out for
+        // 13 of the 309 people who have one, and showed dismissed rows.
+        metrics: {
+          where: { status: { not: "DISMISSED" } },
+          orderBy: { createdAt: "asc" },
+          select: { key: true, label: true, valueNumber: true, valueText: true, unit: true, status: true, sourceSnippet: true }
+        },
         _count: { select: { files: true, notes: true, applications: true } }
       }
     });
     if (!candidate) return { ok: false, error: "Candidate not found." };
 
-    const metrics = candidate.metrics
+    // The grid still gets at most 14 rows, but the certificates and type-ratings
+    // rows are always among them rather than left to chance.
+    const PINNED = new Set(["certificates", "type_ratings"]);
+    let room = 14 - candidate.metrics.filter((metric) => PINNED.has(metric.key)).length;
+    const gridRows = candidate.metrics.filter((metric) => {
+      if (PINNED.has(metric.key)) return true;
+      room -= 1;
+      return room >= 0;
+    });
+    const certificatesRow = candidate.metrics.find((metric) => metric.key === "certificates" && metric.valueText);
+
+    const metrics = gridRows
       .map((metric) => ({
         key: metric.key,
         label: metric.label,
@@ -417,6 +439,10 @@ export async function getCandidatePreview(candidateId: string): Promise<Candidat
         scanExcludedReason: candidate.scanExcludedReason,
         scanExcludedNote: candidate.scanExcludedNote,
         metrics,
+        certificates: certificatesRow
+          ? { value: certificatesRow.valueText ?? "", status: certificatesRow.status, evidence: certificatesRow.sourceSnippet }
+          : null,
+        typeRatings: candidate.metrics.find((metric) => metric.key === "type_ratings")?.valueText ?? null,
         fileCount: candidate._count.files,
         noteCount: candidate._count.notes,
         applicationCount: candidate._count.applications

@@ -6,6 +6,7 @@ import { X, ExternalLink, Mail, Phone, FileText, StickyNote, Briefcase } from "l
 import { readinessStyles, initials } from "@/components/pilot-requirements/MatchCard";
 import { ScoreSplit } from "@/components/pilot-requirements/ScoreSplit";
 import { SCAN_EXCLUSION_LABELS, isScanExclusionReason } from "@/lib/candidates/scan-exclusion";
+import { CertificateChecklist } from "@/components/candidates/CertificateChecklist";
 import type { CandidatePreview as CandidatePreviewData } from "@/app/pilot-requirements/scoring-actions";
 import type { PilotRequirementCandidateMatch } from "@/lib/matching/pilot-requirement-matches";
 
@@ -137,9 +138,14 @@ export function CandidatePreview({
                   // twice. An identical label AND value is one fact; show it once.
                   // Two rows that share a label but DISAGREE are both kept, because
                   // that disagreement is worth seeing.
+                  // Certificates and Type Ratings are drawn as the checklist below
+                  // instead — but only when there is a certificates value for it to
+                  // draw; otherwise the type ratings keep their row here.
+                  const inChecklist = (key: string) =>
+                    Boolean(preview.certificates) && (key === "certificates" || key === "type_ratings");
                   const seen = new Set<string>();
                   const rest = preview.metrics.filter((metric) => {
-                    if (metric.key === "total_time") return false;
+                    if (metric.key === "total_time" || inChecklist(metric.key)) return false;
                     const k = `${metric.label}\u0000${metric.value}`;
                     if (seen.has(k)) return false;
                     seen.add(k);
@@ -179,6 +185,15 @@ export function CandidatePreview({
                           )
                         )}
                       </div>
+                      <CertificateChecklist
+                        variant="compact"
+                        showTypes
+                        certificates={preview.certificates?.value}
+                        status={preview.certificates?.status}
+                        evidence={preview.certificates?.evidence}
+                        typeRatings={preview.typeRatings}
+                        className="mt-2 border-t border-brand-lea/10 pt-2 dark:border-white/10"
+                      />
                     </>
                   );
                 })()}

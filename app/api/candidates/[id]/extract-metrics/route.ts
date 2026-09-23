@@ -9,6 +9,7 @@ import { normalizeAircraft, timeInTypeKey } from "@/lib/fleet/aircraft-normalize
 const LLM_METRIC_LABEL = new Map(METRIC_DEFS.map((d) => [d.key, d.label]));
 import { extractFileText } from "@/lib/files/pdf-text";
 import { metricsFromForms } from "@/lib/extraction/form-metrics";
+import { planCertificatesFromForm, splitCertificates } from "@/lib/candidates/certificates";
 import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
 import { extractPaycomRegex, extractPaycomApplication, mergePaycomExtract, looksLikePaycomApplication, isPaycomExtractConfigured } from "@/lib/extraction/paycom-application";
 import { normalizeEmail, normalizePhone } from "@/lib/candidates/normalize";
@@ -173,7 +174,15 @@ export async function POST(_request: Request, context: RouteContext) {
       select: { id: true, storageKey: true, mimeType: true, displayFilename: true, originalFilename: true }
     });
     const form = await metricsFromForms(formFiles);
+    // The certificate boxes are not a plain override: the ticks decide the
+    // lines the form asks about, and the model's reading only adds what the
+    // form doesn't ask (CFII, sea, the FCC permit). Held back here and written
+    // by its own rule below.
+    const formCertificates = form.metrics.get("certificates");
+    const scanCertificates = formCertificates ? found.get("certificates") : undefined;
+    if (formCertificates) found.delete("certificates");
     for (const [key, m] of form.metrics) {
+      if (key === "certificates") continue;
       found.set(key, {
         label: m.label,
         valueNumber: m.valueNumber,
@@ -217,6 +226,39 @@ export async function POST(_request: Request, context: RouteContext) {
         }
       });
       suggested += 1;
+    }
+
+    // Certificates from the signed Pilot Application — the one value a scan may
+    // reopen after a person marked it (his call, 2026-09-23). The same rule runs
+    // in scripts/bulk-scan-metrics.ts, so the button and the bulk re-read agree.
+    let certificatesReopened = false;
+    if (formCertificates) {
+      const existing = await prisma.candidateMetric.findUnique({
+        where: { candidateId_key: { candidateId: id, key: "certificates" } }
+      });
+      const plan = planCertificatesFromForm(
+        splitCertificates(formCertificates.valueText),
+        scanCertificates?.valueText ?? null,
+        existing
+      );
+      if (plan.write) {
+        const data = {
+          label: formCertificates.label,
+          valueNumber: null,
+          valueText: plan.valueText,
+          unit: null,
+          status: "SUGGESTED",
+          sourceFileId: formCertificates.sourceFileId,
+          sourceSnippet: plan.sourceSnippet
+        };
+        await prisma.candidateMetric.upsert({
+          where: { candidateId_key: { candidateId: id, key: "certificates" } },
+          create: { candidateId: id, key: "certificates", ...data },
+          update: data
+        });
+        suggested += 1;
+        certificatesReopened = plan.outcome === "reopen-confirmed" || plan.outcome === "reopen-dismissed";
+      }
     }
 
     // Paycom application: pull the candidate Paycom person id + any MISSING
@@ -296,6 +338,9 @@ export async function POST(_request: Request, context: RouteContext) {
     }
     if (paycomFilled.length > 0) parts.push(`Paycom application: filled ${paycomFilled.join(", ")}.`);
     else if (paycomAppFound) parts.push("Paycom application scanned — nothing new to fill.");
+    if (certificatesReopened) {
+      parts.push("Certificates re-read from the signed Pilot Application differ from the marked list, so they are back in “to review”.");
+    }
 
     return NextResponse.json({
       ok: true,

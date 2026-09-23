@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plane, Sparkles, Check, X, Loader, Clock, Pencil, Plus } from "lucide-react";
+import { CertificateChecklist, CertificateTickEditor } from "@/components/candidates/CertificateChecklist";
+import { buildChecklist, checklistCount } from "@/lib/candidates/certificates";
 
 type Metric = {
   id: string;
@@ -82,6 +84,34 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
+      });
+      setEditingId(null);
+      router.refresh();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // The certificates value is drawn as a checklist, not a line of text. Its
+  // class and instructor ratings can sit under Type Ratings too, so the card
+  // reads that value as well; the aircraft stay on their own card.
+  const typeRatingsText = metrics.find((m) => m.key === "type_ratings" && m.status !== "DISMISSED")?.valueText ?? null;
+  const checklistInput = (m: Metric) => ({
+    certificates: m.valueText,
+    typeRatings: typeRatingsText,
+    evidence: m.sourceSnippet,
+    status: m.status
+  });
+
+  // The tick-box editor hands back plain text; it saves through the same PATCH
+  // as every other card, accepting in the same step when the value was a suggestion.
+  async function saveCertificates(m: Metric, valueText: string, accept: boolean) {
+    setBusyId(m.id);
+    try {
+      await fetch(`/api/candidate-metrics/${m.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(accept ? { valueText, action: "accept" } : { valueText })
       });
       setEditingId(null);
       router.refresh();
@@ -199,7 +229,32 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
       {/* Confirmed values */}
       {confirmed.length > 0 && (
         <div className="mt-3 grid grid-cols-2 gap-2">
-          {confirmed.map((m) => (
+          {confirmed.map((m) => m.key === "certificates" ? (
+            <div key={m.id} className="group col-span-2 rounded bg-brand-cloudDancer/45 px-2.5 py-2 dark:bg-white/5">
+              <div className="flex items-center gap-2">
+                <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey dark:text-slate-400">{m.label}</div>
+                <span className="text-[10px] text-brand-grey dark:text-slate-400">{checklistCount(buildChecklist(checklistInput(m)))}</span>
+                {editingId !== m.id && (
+                  <button onClick={() => setEditingId(m.id)} className="ml-auto text-brand-grey opacity-0 transition group-hover:opacity-100 focus:opacity-100 dark:text-slate-400" aria-label="Edit certificates">
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+              <div className="mt-1">
+                {editingId === m.id ? (
+                  <CertificateTickEditor
+                    {...checklistInput(m)}
+                    saveLabel="Save"
+                    busy={busyId === m.id}
+                    onSave={(valueText) => saveCertificates(m, valueText, false)}
+                    onCancel={() => setEditingId(null)}
+                  />
+                ) : (
+                  <CertificateChecklist {...checklistInput(m)} />
+                )}
+              </div>
+            </div>
+          ) : (
             <div key={m.id} className="group rounded bg-brand-cloudDancer/45 px-2.5 py-2 dark:bg-white/5">
               <div className="flex items-center justify-between">
                 <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey dark:text-slate-400">{m.label}</div>
@@ -256,7 +311,42 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
             </button>
           </div>
           <div className="space-y-1.5">
-            {suggested.map((m) => (
+            {suggested.map((m) => m.key === "certificates" ? (
+              <div key={m.id} className="rounded border border-amber-200 dark:border-amber-500/30 bg-amber-50/60 dark:bg-amber-500/15 px-2.5 py-1.5">
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[11px] text-brand-grey dark:text-slate-400">{m.label}</span>{" "}
+                    <span className="text-[10px] text-brand-grey dark:text-slate-400">{checklistCount(buildChecklist(checklistInput(m)))}</span>
+                  </div>
+                  {editingId !== m.id && (
+                    <>
+                      <button onClick={() => setEditingId(m.id)} disabled={busyId === m.id} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/50 dark:text-slate-400 dark:bg-white/5" aria-label="Edit before accepting" title="Edit">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => act(m.id, "accept")} disabled={busyId === m.id} className="rounded p-1 text-emerald-700 hover:bg-emerald-100 dark:text-emerald-400 dark:hover:bg-emerald-500/15" aria-label="Accept">
+                        {busyId === m.id ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                      </button>
+                      <button onClick={() => act(m.id, "dismiss")} disabled={busyId === m.id} className="rounded p-1 text-brand-grey hover:bg-brand-cloudDancer/50 dark:text-slate-400 dark:bg-white/5" aria-label="Dismiss">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </>
+                  )}
+                </div>
+                <div className="mt-1">
+                  {editingId === m.id ? (
+                    <CertificateTickEditor
+                      {...checklistInput(m)}
+                      saveLabel="Save & accept"
+                      busy={busyId === m.id}
+                      onSave={(valueText) => saveCertificates(m, valueText, true)}
+                      onCancel={() => setEditingId(null)}
+                    />
+                  ) : (
+                    <CertificateChecklist {...checklistInput(m)} />
+                  )}
+                </div>
+              </div>
+            ) : (
               <div key={m.id} className="rounded border border-amber-200 dark:border-amber-500/30 bg-amber-50/60 dark:bg-amber-500/15 px-2.5 py-1.5">
                 {editingId === m.id ? (
                   <div className="space-y-1.5">

@@ -25,12 +25,24 @@
  *   npx tsx scripts/bulk-scan-metrics.ts --job <jobId> --apply  # one role only
  *   npx tsx scripts/bulk-scan-metrics.ts --model claude-opus-5  # override model
  *   npx tsx scripts/bulk-scan-metrics.ts --forms-only --apply   # FREE re-read
+ *   npx tsx scripts/bulk-scan-metrics.ts --forms-only --keys certificates   # dry run, one metric
  *   npx tsx scripts/bulk-scan-metrics.ts --undo <file>          # reverse a run
  *
  * --forms-only inverts the target: instead of people with NO metrics, it takes
  * people who already have them and re-reads their documents by layout only. No
  * model call, so it costs nothing, and the signed application's values replace
- * whatever the model read off the flattened text.
+ * whatever the model read off the flattened text. Its dry run reads the forms
+ * too (S3 reads only) and writes every before/after to the review file.
+ *
+ * --keys limits which metric keys a run may write, e.g. --keys certificates.
+ *
+ * CERTIFICATES follow their own rule, shared with the Scan docs route through
+ * planCertificatesFromForm (lib/candidates/certificates.ts): the ticked boxes on
+ * the signed Pilot Application decide the lines the form asks about, even on a
+ * value a person already confirmed or dismissed. A marked value whose list
+ * would change goes back to SUGGESTED with its old value on the evidence line;
+ * the undo file records the old value AND status. Every other metric keeps the
+ * rule of never overwriting a person's decision.
  */
 import { config } from "dotenv";
 // .env.local first so it wins: it holds ANTHROPIC_API_KEY and the S3 credentials,
@@ -55,6 +67,7 @@ import {
 } from "../lib/extraction/paycom-application";
 import { normalizeEmail, normalizePhone } from "../lib/candidates/normalize";
 import { metricsFromForms } from "../lib/extraction/form-metrics";
+import { planCertificatesFromForm, splitCertificates, type CertificatesOutcome } from "../lib/candidates/certificates";
 
 const LLM_METRIC_LABEL = new Map(METRIC_DEFS.map((d) => [d.key, d.label]));
 
@@ -85,6 +98,13 @@ const LIMIT = Number(val("--limit") ?? "0") || 0;
 const JOB = val("--job");
 const CONCURRENCY = Number(val("--concurrency") ?? "4") || 4;
 const OUT = val("--out") ?? "scripts/out";
+// Which metric keys this run may write. Unset means every key the scan finds.
+const KEYS = val("--keys")?.split(",").map((k) => k.trim()).filter(Boolean) ?? null;
+const inScope = (key: string) => !KEYS || KEYS.includes(key);
+
+// Certificates outcomes across the run, and a few marked-row examples, for the review file.
+const certTally: Record<string, number> = {};
+const markedExamples: string[] = [];
 
 type Found = {
   label: string;
@@ -114,7 +134,9 @@ async function scanOne(id: string, name: string, undoPath: string): Promise<stri
     select: { id: true, storageKey: true, mimeType: true, displayFilename: true, originalFilename: true }
   });
   let healed = 0;
-  if (needsText.length > 0 && APPLY) {
+  // Not under --keys: that limits a run to the named metrics, and this write is
+  // neither one of them nor in the undo file.
+  if (needsText.length > 0 && APPLY && !KEYS) {
     const storage = getFileStorageAdapter();
     for (const f of needsText) {
       try {
@@ -144,12 +166,13 @@ async function scanOne(id: string, name: string, undoPath: string): Promise<stri
   const firstFileId = files[0]?.id ?? "";
   const joined = files.map((f) => f.extractedText ?? "").join("\n\n");
 
-  if (!APPLY) {
+  if (!APPLY && !FORMS_ONLY) {
     // Dry run: report only. Nothing is sent to the API and nothing is written.
-    return FORMS_ONLY
-      ? `${name}: would re-read ${files.length} doc(s) by layout — no model call, no cost`
-      : `${name}: would scan ${files.length} doc(s), ${joined.length.toLocaleString()} chars (~${Math.round(joined.length / 4).toLocaleString()} tok)`;
+    return `${name}: would scan ${files.length} doc(s), ${joined.length.toLocaleString()} chars (~${Math.round(joined.length / 4).toLocaleString()} tok)`;
   }
+  // A --forms-only dry run carries on: it reads the forms (S3 reads — no model,
+  // no cost) so the review file can show every before/after. Every write below
+  // sits behind APPLY.
 
   // --forms-only skips the model entirely, so this pass costs NOTHING. That is
   // what makes it the right way to re-apply the layout templates over people the
@@ -256,7 +279,12 @@ async function scanOne(id: string, name: string, undoPath: string): Promise<stri
     select: { id: true, storageKey: true, mimeType: true, displayFilename: true, originalFilename: true }
   });
   const form = await metricsFromForms(formFiles);
+  // The certificate boxes follow their own rule (see the header), written below.
+  const formCertificates = form.metrics.get("certificates");
+  const scanCertificates = formCertificates ? found.get("certificates") : undefined;
+  if (formCertificates) found.delete("certificates");
   for (const [key, m] of form.metrics) {
+    if (key === "certificates") continue;
     found.set(key, {
       label: m.label,
       valueNumber: m.valueNumber,
@@ -268,11 +296,17 @@ async function scanOne(id: string, name: string, undoPath: string): Promise<stri
   }
 
   let suggested = 0;
+  let wouldWrite = 0;
   for (const [key, m] of found) {
+    if (!inScope(key)) continue;
     const existing = await prisma.candidateMetric.findUnique({
       where: { candidateId_key: { candidateId: id, key } }
     });
     if (existing?.status === "CONFIRMED" || existing?.status === "DISMISSED") continue;
+    if (!APPLY) {
+      wouldWrite += 1;
+      continue;
+    }
 
     // Record the BEFORE state so the run can be undone. The previous VALUES are
     // captured too, not just whether the row existed: --forms-only overwrites
@@ -315,6 +349,71 @@ async function scanOne(id: string, name: string, undoPath: string): Promise<stri
       }
     });
     suggested += 1;
+  }
+
+  // Certificates from the signed Pilot Application: the one value this run may
+  // reopen after a person marked it. Same rule as the Scan docs route.
+  let certNote = "";
+  if (formCertificates && inScope("certificates")) {
+    const existing = await prisma.candidateMetric.findUnique({
+      where: { candidateId_key: { candidateId: id, key: "certificates" } }
+    });
+    const plan = planCertificatesFromForm(
+      splitCertificates(formCertificates.valueText),
+      scanCertificates?.valueText ?? null,
+      existing
+    );
+    const outcome: CertificatesOutcome = plan.outcome;
+    certTally[outcome] = (certTally[outcome] ?? 0) + 1;
+    const before = existing?.valueText ?? "(none)";
+    certNote = plan.write ? `certificates ${outcome}: "${before}" → "${plan.valueText}"` : `certificates ${outcome}: "${before}"`;
+    if (plan.write && (outcome === "reopen-confirmed" || outcome === "reopen-dismissed")) {
+      markedExamples.push(`${name} (${id}) — was ${existing?.status}\n    before: ${before}\n    after:  ${plan.valueText}`);
+    }
+    if (plan.write && !APPLY) wouldWrite += 1;
+    if (plan.write && APPLY) {
+      // The old value AND status, so --undo puts a reopened confirmed value back exactly.
+      appendFileSync(
+        undoPath,
+        JSON.stringify({
+          t: "metric",
+          candidateId: id,
+          key: "certificates",
+          existed: Boolean(existing),
+          prev: existing
+            ? {
+                label: existing.label,
+                valueNumber: existing.valueNumber,
+                valueText: existing.valueText,
+                unit: existing.unit,
+                status: existing.status,
+                sourceFileId: existing.sourceFileId,
+                sourceSnippet: existing.sourceSnippet
+              }
+            : null
+        }) + "\n"
+      );
+      const data = {
+        label: formCertificates.label,
+        valueNumber: null,
+        valueText: plan.valueText,
+        unit: null,
+        status: "SUGGESTED",
+        sourceFileId: formCertificates.sourceFileId,
+        sourceSnippet: plan.sourceSnippet
+      };
+      await prisma.candidateMetric.upsert({
+        where: { candidateId_key: { candidateId: id, key: "certificates" } },
+        create: { candidateId: id, key: "certificates", ...data },
+        update: data
+      });
+      suggested += 1;
+    }
+  } else if (inScope("certificates")) {
+    const readForm = form.parsed.some((p) => p.templateId === "pilot-application-v4");
+    const outcome = readForm ? "no-boxes" : "no-pilot-application";
+    certTally[outcome] = (certTally[outcome] ?? 0) + 1;
+    if (readForm) certNote = "certificates no-boxes: Pilot Application read, but not its certificate boxes (missing, partial or nothing ticked) — left as it is";
   }
 
   // Paycom application: fill BLANK identity fields only. Regex first; the LLM is
@@ -369,10 +468,11 @@ async function scanOne(id: string, name: string, undoPath: string): Promise<stri
     }
   }
 
-  const bits = [`${suggested} metric(s)`];
+  const bits = [APPLY ? `${suggested} metric(s)` : `would write ${wouldWrite} metric(s)`];
   if (form.parsed.length) {
     bits.push(`form: ${form.parsed.map((p) => p.templateId).join("+")} → ${form.metrics.size} field(s)`);
   }
+  if (certNote) bits.push(certNote);
   if (healed) bits.push(`${healed} text self-heal`);
   if (paycomFilled.length) bits.push(`Paycom: ${paycomFilled.join(", ")}`);
   if (llmMissed) bits.push(`LLM MISS (${llmMissed}) — regex fallback`);
@@ -476,7 +576,20 @@ async function main() {
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, worker));
 
   lines.sort();
-  writeFileSync(reviewPath, lines.join("\n") + "\n", "utf8");
+  // The certificates summary leads the review, marked values first: those are
+  // the rows a person already decided, which this run would reopen.
+  const header: string[] = [];
+  if (Object.keys(certTally).length > 0) {
+    const tally = Object.entries(certTally).sort(([a], [b]) => a.localeCompare(b)).map(([k, n]) => `${k} ${n}`).join(" · ");
+    header.push(`${APPLY ? "APPLIED" : "DRY RUN"} — certificates: ${tally}`);
+    if (markedExamples.length > 0) header.push("", `Marked values ${APPLY ? "reopened" : "that would reopen"} (${markedExamples.length}):`, ...markedExamples.sort());
+    header.push("", "---", "");
+  }
+  writeFileSync(reviewPath, [...header, ...lines].join("\n") + "\n", "utf8");
+  if (header.length > 0) {
+    console.log(`\n${header[0]}`);
+    markedExamples.slice(0, 5).forEach((example) => console.log(example));
+  }
   console.log(`\nreview: ${reviewPath}`);
   if (APPLY) {
     console.log(`undo:   ${undoPath}`);
