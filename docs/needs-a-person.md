@@ -381,7 +381,7 @@ people.
 
 ### 19. Nobody without admin rights has opened the new Pilot requirement tab
 
-**Status:** BLOCKED ON DEPLOY — the recruiter half changed again on 2026-09-23; needs a login that is not an admin
+**Status:** OPEN — deployed 2026-09-23 with the recruiter split; needs a login that is not an admin
 **Added:** 2026-09-23
 
 The Role block's Save - seat, aircraft, base, operator and pay text - needs jobs:write, which the
