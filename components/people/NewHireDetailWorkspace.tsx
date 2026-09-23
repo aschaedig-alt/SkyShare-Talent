@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { clsx } from "clsx";
 import { FileText } from "lucide-react";
 import type { NewHireDetail, TaskView } from "@/lib/data/onboarding";
@@ -137,7 +137,99 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
   const [hasLegalName, setHasLegalName] = useState(Boolean(hire.legalName));
   const [managedPilot, setManagedPilot] = useState(hire.managedPilot);
   const [tags, setTags] = useState<string[]>(hire.tags ?? []);
-  const [savingDetails, setSavingDetails] = useState(false);
+
+  /**
+   * EVERY DETAIL SAVES ITSELF NOW — there is no Save details button.
+   *
+   * Her feedback, 2026-09-12 (cmtyo947v): "some fields on this page save
+   * automatically while others require you press the save button. while i know
+   * this, it has caused me to lose info ive entered a few times now. id prefer it
+   * auto save but im concerned it will slow things down." The ticks, the tags and
+   * the managed-pilot box already saved on their own; the typed fields, the
+   * supervisor link, the legal-name box and the no-orientation box waited for a
+   * button, so a page left without pressing it lost exactly those.
+   *
+   * A typed field saves when you leave it, and only if it changed — one small
+   * request carrying that one field, in the background. Nothing reloads (the old
+   * button refreshed the whole page, which WAS slow), so it does not get in the
+   * way of typing. The header reads the same values live, so a renamed person is
+   * renamed on the page at once. The one refresh left is after a position or start
+   * date change, because those can create the first entry in the journey band,
+   * which is drawn from the server.
+   *
+   * `saved` is what the server last accepted, so leaving a field you did not
+   * change sends nothing, and a failed save leaves the difference visible for the
+   * retry.
+   */
+  const saved = useRef({ ...details });
+  // The same values as state, for what the page SHOWS (the heading) — a ref does
+  // not re-render anything when it changes.
+  const [savedView, setSavedView] = useState(details);
+  const [saveState, setSaveState] = useState<{ inFlight: number; savedAt: number | null; failed: Record<string, unknown> | null }>({
+    inFlight: 0,
+    savedAt: null,
+    failed: null
+  });
+
+  async function saveFields(patch: Record<string, unknown>, opts: { refresh?: boolean } = {}) {
+    setSaveState((s) => ({ ...s, inFlight: s.inFlight + 1, failed: null }));
+    try {
+      const res = await fetch(`/api/new-hires/${hire.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+        // Finishes even if she closes the tab straight after leaving a field.
+        keepalive: true
+      });
+      if (!res.ok) {
+        const p = (await res.json().catch(() => null)) as { message?: string } | null;
+        throw new Error(p?.message ?? "Could not save.");
+      }
+      for (const [k, v] of Object.entries(patch)) {
+        if (k in saved.current) (saved.current as Record<string, unknown>)[k] = v;
+      }
+      setSavedView({ ...saved.current });
+      setSaveState((s) => ({ inFlight: s.inFlight - 1, savedAt: Date.now(), failed: s.failed }));
+      if (opts.refresh) router.refresh();
+    } catch (e) {
+      setSaveState((s) => ({ inFlight: s.inFlight - 1, savedAt: s.savedAt, failed: patch }));
+      setStatus(e instanceof Error && e.message !== "Could not save." ? e.message : "Could not save that change — use Retry below.");
+    }
+  }
+
+  /** Save one typed field if it differs from what the server last accepted. */
+  function commit(key: keyof typeof details) {
+    const value = details[key];
+    if (value === saved.current[key]) return;
+    if (key === "name" && !value.trim()) {
+      // The name is the one field that cannot be blank. Put it back rather than
+      // sending a save the server will refuse.
+      setDetails((d) => ({ ...d, name: saved.current.name }));
+      setStatus("A name is required, so the last saved one was put back.");
+      return;
+    }
+    void saveFields({ [key]: value }, { refresh: key === "position" || key === "startDate" });
+  }
+
+  // A save still travelling, or a field edited and not yet left: say so before
+  // the page is closed. Leaving a field saves it, so this is a narrow window —
+  // but it is exactly the window the old button left wide open.
+  useEffect(() => {
+    // The linked supervisor's name and address are shown, never sent — they are
+    // read from that person's record — so they can never be "unsaved".
+    const displayOnly = new Set(["supervisorHireName", "supervisorHireEmail", "supervisor2HireName", "supervisor2HireEmail"]);
+    function guard(e: BeforeUnloadEvent) {
+      const dirty = (Object.keys(details) as Array<keyof typeof details>).some(
+        (k) => !displayOnly.has(k) && details[k] !== saved.current[k]
+      );
+      if (saveState.inFlight > 0 || dirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    }
+    window.addEventListener("beforeunload", guard);
+    return () => window.removeEventListener("beforeunload", guard);
+  }, [details, saveState.inFlight]);
   // Kept out of `details` on purpose: that object is all strings and feeds the
   // shared field() helper, which types its value as a string.
   const [orientationNotNeeded, setOrientationNotNeeded] = useState(hire.orientationNotNeeded);
@@ -271,25 +363,6 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     }
   }
 
-  async function saveDetails() {
-    setSavingDetails(true);
-    setStatus(null);
-    try {
-      const res = await fetch(`/api/new-hires/${hire.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...details, orientationNotNeeded })
-      });
-      if (!res.ok) throw new Error();
-      setStatus("Details saved.");
-      router.refresh();
-    } catch {
-      setStatus("Could not save details.");
-    } finally {
-      setSavingDetails(false);
-    }
-  }
-
   async function saveManagedPilot(next: boolean) {
     const prev = managedPilot;
     setManagedPilot(next);
@@ -387,8 +460,10 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
           type={type}
           {...(type === "number" ? { min: 1, step: 1, inputMode: "numeric" as const } : {})}
           value={details[key]}
-          disabled={off}
+          disabled={off || !canEdit}
           onChange={(e) => setDetails({ ...details, [key]: e.target.value })}
+          // Saves itself on the way out of the box — see saveFields.
+          onBlur={() => commit(key)}
           className={clsx(
             "mt-1 w-full rounded border px-3 py-2 text-sm outline-none transition",
             off
@@ -455,9 +530,16 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
         <input
           type="checkbox"
           checked={hasLegalName}
+          disabled={!canEdit}
           onChange={(e) => {
             setHasLegalName(e.target.checked);
-            if (!e.target.checked) setDetails((d) => ({ ...d, legalName: "" }));
+            // Unticking clears the legal name, so it saves now — there is no box
+            // left on screen to leave. Ticking only opens the box; typing in it
+            // saves when you leave it, like every other field.
+            if (!e.target.checked) {
+              setDetails((d) => ({ ...d, legalName: "" }));
+              if (saved.current.legalName !== "") void saveFields({ legalName: "" });
+            }
           }}
         />
         Goes by a different name (add legal name)
@@ -471,7 +553,14 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
       <input
         type="checkbox"
         checked={orientationNotNeeded}
-        onChange={(e) => setOrientationNotNeeded(e.target.checked)}
+        disabled={!canEdit}
+        onChange={(e) => {
+          // A tick is a complete thought, so it saves now — this one used to wait
+          // for the Save details button like the typed fields did.
+          const next = e.target.checked;
+          setOrientationNotNeeded(next);
+          void saveFields({ orientationNotNeeded: next });
+        }}
         className="mt-0.5 h-4 w-4"
       />
       <span className="text-xs text-brand-grey dark:text-slate-400">
@@ -527,7 +616,9 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
       <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Notes</span>
       <textarea
         value={details.notes}
+        disabled={!canEdit}
         onChange={(e) => setDetails({ ...details, notes: e.target.value })}
+        onBlur={() => commit("notes")}
         rows={3}
         className="mt-1 w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold focus:shadow-glow dark:border-white/10 dark:bg-brand-field dark:text-slate-100"
       />
@@ -554,8 +645,17 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
           linkedId={details[linkedIdKey] || null}
           linkedName={details[linkedNameKey] || null}
           linkedEmail={details[linkedEmailKey] || null}
-          onLink={(p) => setDetails((f) => ({ ...f, [linkedIdKey]: p.id, [linkedNameKey]: p.name, [linkedEmailKey]: p.email ?? "" }))}
-          onUnlink={() => setDetails((f) => ({ ...f, [linkedIdKey]: "", [linkedNameKey]: "", [linkedEmailKey]: "" }))}
+          // Linking or unlinking a supervisor is a click, not typing, so it saves
+          // at once. Only the id is stored; the name and address shown beside it
+          // are read from that person's own record.
+          onLink={(p) => {
+            setDetails((f) => ({ ...f, [linkedIdKey]: p.id, [linkedNameKey]: p.name, [linkedEmailKey]: p.email ?? "" }));
+            void saveFields({ [linkedIdKey]: p.id });
+          }}
+          onUnlink={() => {
+            setDetails((f) => ({ ...f, [linkedIdKey]: "", [linkedNameKey]: "", [linkedEmailKey]: "" }));
+            void saveFields({ [linkedIdKey]: "" });
+          }}
         />
         {!details[linkedIdKey] ? (
           <>
@@ -812,7 +912,9 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
       <section className="flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div>
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-            <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">{hire.name}</h1>
+            {/* The live values, not the server's copy, so an edit that has just
+                saved is on the heading without a reload. */}
+            <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">{savedView.name || hire.name}</h1>
             {displayTags(tags, hire.employmentStatus).map((t) => <TagPill key={t} tag={t} />)}
             {hire.tenureYears > 0 ? (
               <span
@@ -824,8 +926,8 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
               </span>
             ) : null}
           </div>
-          {hire.legalName ? (
-            <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">Legal name: {hire.legalName}</p>
+          {savedView.legalName ? (
+            <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">Legal name: {savedView.legalName}</p>
           ) : null}
           {/* The other half of the person. Documents (resume, pilot application)
               and interview history live on the CANDIDATE record, not here — the
@@ -844,8 +946,8 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
             </Link>
           ) : null}
           <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-            {hire.position ?? "Position not set"}
-            {hire.department ? ` · ${hire.department}` : ""}
+            {savedView.position || "Position not set"}
+            {savedView.department ? ` · ${savedView.department}` : ""}
           </p>
           {canceled ? (
             <span className="mt-2 inline-flex items-center gap-1.5 rounded bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:bg-slate-500/20 dark:text-slate-300">
@@ -1009,16 +1111,34 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
       {/* Details — the same fields as before, in three sections instead of one
           column, so the page opens on what you need rather than all of it. */}
       <div className="space-y-2">
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          {status ? <span className="mr-auto text-sm font-semibold text-brand-eden dark:text-brand-edenOnDark">{status}</span> : null}
-          <button
-            onClick={saveDetails}
-            disabled={savingDetails}
-            className="rounded bg-brand-lea px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-eden hover:shadow-glow disabled:opacity-60"
-          >
-            {savingDetails ? "Saving..." : "Save details"}
-          </button>
-        </div>
+        {/* Where the Save details button was. Says what is happening instead of
+            asking to be pressed: saving, saved, or — the one that matters — a
+            change that did not save, with the way to try again right beside it. */}
+        {canEdit ? (
+          <div className="flex flex-wrap items-center justify-end gap-3 text-sm" aria-live="polite">
+            {saveState.failed ? (
+              <>
+                <span className="font-semibold text-red-700 dark:text-red-300">A change did not save.</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const retry = saveState.failed;
+                    if (retry) void saveFields(retry);
+                  }}
+                  className="rounded bg-brand-lea px-3 py-1 text-sm font-semibold text-white transition hover:bg-brand-eden hover:shadow-glow dark:bg-brand-sweet dark:text-brand-lea"
+                >
+                  Retry
+                </button>
+              </>
+            ) : saveState.inFlight > 0 ? (
+              <span className="text-brand-grey dark:text-slate-400">Saving…</span>
+            ) : saveState.savedAt ? (
+              <span className="font-semibold text-emerald-700 dark:text-emerald-400">All changes saved</span>
+            ) : (
+              <span className="text-brand-grey dark:text-slate-400">Changes save as you go</span>
+            )}
+          </div>
+        ) : null}
         <HireDetailsAccordion sections={detailSections} />
       </div>
 
