@@ -11,11 +11,8 @@ import {
   type CandidateDepartmentKey
 } from "@/lib/candidates/departments";
 import { CANDIDATE_LIST_LIMIT, CANDIDATE_LIST_MAX } from "@/lib/candidates/list-config";
-import {
-  historicalTextPredicates,
-  jazzIdentifierPredicates,
-  splitSearchTerms
-} from "@/lib/candidates/search-terms";
+import { ALL_PLACES, parseSearch, type SearchPlace, type SearchTermKind } from "@/lib/candidates/search/query";
+import { countPlaces, runCandidateSearch, searchHits, type SearchHit } from "@/lib/candidates/search/engine";
 import type { ViewerScope } from "@/lib/auth/viewer-scope";
 import {
   candidateScopeWhere,
@@ -224,7 +221,11 @@ export type CandidateListItem = {
    * somebody applied across departments, which is real and should not collapse.
    */
   departments: CandidateDepartmentKey[];
-  docMatch: { filename: string; snippet: string } | null;
+  /**
+   * Where a search found this person - their resume, their application, the job
+   * they applied to - with the words marked. Empty when there is no search.
+   */
+  searchHits: SearchHit[];
   /** Direct link to this person's own record in Paycom, if one has been pasted in. */
   paycomLink: string | null;
   /**
@@ -333,6 +334,30 @@ export type CandidateListData = {
    * them. Clicking a stage returns exactly the number shown next to it.
    */
   stageCounts: Record<string, number>;
+  /** How the search box was read, and where it found people. Null with no search. */
+  search: CandidateSearchSummary | null;
+};
+
+export type CandidateSearchSummary = {
+  terms: Array<{
+    text: string;
+    kind: SearchTermKind;
+    negate: boolean;
+    /** Its own place (resume:...), when it named one. */
+    places: SearchPlace[] | null;
+    aircraft: { type: string; name: string; spellings: string[] } | null;
+    /** Joined to the term before it with OR. */
+    orWithPrevious: boolean;
+  }>;
+  /** The places ticked. */
+  places: SearchPlace[];
+  /**
+   * How many people the search found in each place, over the list's own
+   * population (segment, tags, scope) - with EVERY place considered, so an
+   * unticked place still shows what ticking it would bring in.
+   */
+  placeCounts: Record<SearchPlace, number> | null;
+  ms: number;
 };
 
 export type CandidateProfileData = {
@@ -608,19 +633,6 @@ function mergeTags(jsonTags: string[], normalizedTags: string[]): string[] {
   return out;
 }
 
-/** Build a short excerpt around the first match of query in text. */
-function buildSnippet(text: string, query: string): string {
-  const lowerText = text.toLowerCase();
-  const idx = lowerText.indexOf(query.toLowerCase());
-  if (idx === -1) {
-    return text.slice(0, 140).trim();
-  }
-  const start = Math.max(0, idx - 60);
-  const end = Math.min(text.length, idx + query.length + 90);
-  const prefix = start > 0 ? "…" : "";
-  const suffix = end < text.length ? "…" : "";
-  return `${prefix}${text.slice(start, end).trim()}${suffix}`;
-}
 
 /**
  * Every tag that exists, with how many candidates carry it.
@@ -734,6 +746,8 @@ export type CandidateListQuery = {
    * replacing it — "Active AND type rated" is a real thing to ask for.
    */
   across?: CandidateAcross | null;
+  /** Where the search looks (?in=). Everywhere when absent. */
+  places?: SearchPlace[];
 };
 
 export async function getCandidateListData({
@@ -744,42 +758,34 @@ export async function getCandidateListData({
   stages: stageFilter = [],
   limit = CANDIDATE_LIST_LIMIT,
   bucket: bucketFilter = null,
-  across: acrossFilter = null
+  across: acrossFilter = null,
+  places = ALL_PLACES
 }: CandidateListQuery = {}): Promise<CandidateListData> {
-  const normalizedQuery = query.trim().toLowerCase();
-  const hasQuery = normalizedQuery.length > 0;
-  const terms = splitSearchTerms(query);
   const tags = tagFilter.map((t) => t.trim()).filter(Boolean);
   const pageSize = Math.min(Math.max(1, Math.floor(limit)), CANDIDATE_LIST_MAX);
 
-  // One OR-block per term, ANDed together, so every word the user typed has to
-  // land somewhere. A single `contains` against the whole typed string can only
-  // ever match one field, which made any two-term query return nothing.
-  const termPredicate = (term: string) => {
-    const lower = term.toLowerCase();
-    const digits = lower.replace(/\D/g, "");
-    return {
-      OR: [
-        { normalizedName: { contains: lower } },
-        { normalizedEmail: { contains: lower } },
-        { normalizedPhone: { contains: digits || lower } },
-        { displayName: { contains: term, mode: "insensitive" as const } },
-        { currentTitle: { contains: term, mode: "insensitive" as const } },
-        { stage: { contains: term, mode: "insensitive" as const } },
-        { owner: { contains: term, mode: "insensitive" as const } },
-        { source: { contains: term, mode: "insensitive" as const } },
-        { primaryEmail: { contains: lower, mode: "insensitive" as const } },
-        { primaryPhone: { contains: term } },
-        { tagsJson: { contains: term, mode: "insensitive" as const } },
-        // Search inside document text (resumes, pilot apps, etc.)
-        { files: { some: { extractedText: { contains: term, mode: "insensitive" as const } } } },
-        // Jazz-era identifiers and history. Identifiers are PREFIX-matched —
-        // see lib/candidates/search-terms.ts for why substring is wrong here.
-        ...jazzIdentifierPredicates(term),
-        ...historicalTextPredicates(term)
-      ]
-    };
-  };
+  // THE SEARCH (lib/candidates/search). It is resolved FIRST, to the people it
+  // finds, and folded into the WHERE as an id list - the same way a segment is -
+  // so every count, the rail and the paging below describe exactly the list
+  // shown. It used to be one substring OR-block per typed word, which could not
+  // hold a phrase ("challenger 350" was challenger anywhere AND 350 anywhere,
+  // phone numbers included) or be told where to look.
+  const parsed = parseSearch(query);
+  const hasQuery = !parsed.empty;
+  const run = hasQuery ? await runCandidateSearch(parsed, places, { hrNotes: Boolean(viewer?.isHr) }) : null;
+  // Held BY REFERENCE, like the stage clause below, so the rail's population can
+  // swap it for the everywhere set - see bucketPopulationWhere.
+  const searchClause: Record<string, unknown> | null = run
+    ? parsed.excludeOnly
+      ? { id: { notIn: run.excludedIds } }
+      : { id: { in: run.matchedIds } }
+    : null;
+  const everywhereClause: Record<string, unknown> | null = run
+    ? parsed.excludeOnly
+      ? searchClause
+      : { id: { in: run.everywhereIds } }
+    : null;
+  const matchedSet = run && !parsed.excludeOnly ? new Set(run.matchedIds) : null;
 
   // When searching, span ALL candidates including archived/historical (Jazz)
   // ones so legacy records are findable. With no query, the default list stays
@@ -807,8 +813,8 @@ export async function getCandidateListData({
   // being in the archive. A number that does not match what clicking it shows
   // is worse than no number.
   const archivedDefault = hasQuery || bucketFilter || acrossFilter ? [] : [{ archivedAt: null }];
-  const baseWhere: Record<string, unknown> = hasQuery
-    ? { AND: [notMerged, ...terms.map(termPredicate)] }
+  const baseWhere: Record<string, unknown> = searchClause
+    ? { AND: [notMerged, searchClause] }
     : { AND: [notMerged, ...archivedDefault] };
 
   // Org-wide by default — a HIRING_MANAGER only gets narrowed to their own
@@ -934,21 +940,6 @@ export async function getCandidateListData({
     };
   }
 
-  // Only pull document text for matching files when there's a query (keeps the list light).
-  // Match on ANY typed term, not the whole string — otherwise a multi-term
-  // query never surfaces the document snippet that explains the hit.
-  const filesInclude = hasQuery
-    ? {
-        where: {
-          OR: terms.map((term) => ({
-            extractedText: { contains: term, mode: "insensitive" as const }
-          }))
-        },
-        select: { displayFilename: true, extractedText: true },
-        take: 1
-      }
-    : false;
-
   // Buckets have to be resolved BEFORE the page query, because they are derived
   // and cannot be expressed in SQL. This pulls the ladder's few scalar columns
   // for the whole filtered population, counts every bucket for the rail, and —
@@ -963,11 +954,16 @@ export async function getCandidateListData({
   // added above; every other narrowing (search, tags, departments, the viewer's
   // own scope) still applies, so the counts always describe the list you are
   // looking at.
+  //
+  // With a search, the rail's population is everybody the search finds with
+  // EVERY place considered, not just the ticked ones - that is what lets the
+  // place counts say what an unticked place would bring in. The segment and
+  // cross-cutting counts below still count only the people the list shows.
   const bucketPopulationWhere: Record<string, unknown> = {
     ...candidateWhere,
-    AND: ((candidateWhere.AND as unknown[]) ?? []).filter(
-      (clause) => !(clause && typeof clause === "object" && "archivedAt" in (clause as Record<string, unknown>))
-    )
+    AND: ((candidateWhere.AND as unknown[]) ?? [])
+      .filter((clause) => !(clause && typeof clause === "object" && "archivedAt" in (clause as Record<string, unknown>)))
+      .map((clause) => (clause === searchClause && everywhereClause ? everywhereClause : clause))
   };
 
   // Timed from HERE, above the bucket-rail query, not from the page query below
@@ -1007,6 +1003,9 @@ export async function getCandidateListData({
   );
   const idsInBucket: string[] = [];
   const idsMatchingAcross: string[] = [];
+  // The population the place counts are taken over: the rows the list would
+  // hold with every place ticked, inside the chosen segment and filter.
+  const placePopulation: string[] = [];
 
   for (const row of bucketRows) {
     const apps = row.applications.map((a) => {
@@ -1014,18 +1013,21 @@ export async function getCandidateListData({
       return { outcome, group: dispositionGroup(a.status, outcome, dispositionOverrides) };
     });
     const bucket = bucketOf(apps, isHistoricalRecord(row.origin, row.archivedAt));
+    const failedInterview = apps.some((a) => a.group === "interview");
+    const typeRated = typeRatedIds.has(row.id);
+    const matchesAcross =
+      acrossFilter === "interview" ? failedInterview : acrossFilter === "typed" ? typeRated : false;
+    if ((!bucketFilter || bucket === bucketFilter) && (!acrossFilter || matchesAcross)) placePopulation.push(row.id);
+
+    // Everything below counts only people the list actually shows.
+    if (matchedSet && !matchedSet.has(row.id)) continue;
     bucketCounts[bucket] += 1;
     if (bucketFilter && bucket === bucketFilter) idsInBucket.push(row.id);
 
     // Cross-cutting, so counted over EVERY row regardless of which bucket it
     // landed in — that is the whole point of the axis.
-    const failedInterview = apps.some((a) => a.group === "interview");
-    const typeRated = typeRatedIds.has(row.id);
     if (failedInterview) acrossCounts.interview += 1;
     if (typeRated) acrossCounts.typed += 1;
-
-    const matchesAcross =
-      acrossFilter === "interview" ? failedInterview : acrossFilter === "typed" ? typeRated : false;
     if (acrossFilter && matchesAcross) idsMatchingAcross.push(row.id);
   }
 
@@ -1086,7 +1088,6 @@ export async function getCandidateListData({
       take: pageSize,
       orderBy: [{ updatedAt: "desc" }, { displayName: "asc" }],
       include: {
-        files: filesInclude,
         candidateTags: { include: { tag: { select: { label: true, color: true } } } },
         // The applied-to job's department (which is what the Department column
         // shows, and why no Candidate.department column needs to exist) PLUS the
@@ -1182,19 +1183,28 @@ export async function getCandidateListData({
   // Type ratings for the Types column, fetched for the CURRENT PAGE only — this
   // one is a separate query rather than an include because CandidateMetric holds
   // every extracted metric and we want exactly one key from it.
-  const typeRatingRows = candidateRows.length
-    ? await prisma.candidateMetric.findMany({
-        where: {
-          candidateId: { in: candidateRows.map((c) => c.id) },
-          key: "type_ratings",
-          // DISMISSED means a person looked at this extraction and rejected it.
-          // Showing it anyway puts a rating on somebody that a human already said
-          // was wrong, which is worse than showing nothing.
-          status: { not: "DISMISSED" }
-        },
-        select: { candidateId: true, valueText: true, status: true }
-      })
-    : [];
+  //
+  // Where the search found each person on the page, fetched alongside: the page
+  // only, never the whole list, so it costs the same at 50 matches or 5,000.
+  const pageIds = candidateRows.map((c) => c.id);
+  const [typeRatingRows, hitsById] = await Promise.all([
+    pageIds.length
+      ? prisma.candidateMetric.findMany({
+          where: {
+            candidateId: { in: pageIds },
+            key: "type_ratings",
+            // DISMISSED means a person looked at this extraction and rejected it.
+            // Showing it anyway puts a rating on somebody that a human already said
+            // was wrong, which is worse than showing nothing.
+            status: { not: "DISMISSED" }
+          },
+          select: { candidateId: true, valueText: true, status: true }
+        })
+      : Promise.resolve([]),
+    run && pageIds.length
+      ? searchHits(run, pageIds, { hrNotes: Boolean(viewer?.isHr) })
+      : Promise.resolve(new Map<string, SearchHit[]>())
+  ]);
   // parseTypeRatings, NOT splitListValue. The generic splitter breaks on "/",
   // which turned "GV/550/500/450" into the orphan chips 550, 500 and 450 on ten
   // people's rows — the numbers are Gulfstreams that lost their letter.
@@ -1206,14 +1216,6 @@ export async function getCandidateListData({
   );
 
   const candidates: CandidateListItem[] = candidateRows.map((candidate) => {
-    const matchedFile = hasQuery
-      ? (candidate as typeof candidate & { files?: Array<{ displayFilename: string; extractedText: string | null }> }).files?.[0]
-      : undefined;
-    const docMatch =
-      matchedFile?.extractedText
-        ? { filename: matchedFile.displayFilename, snippet: buildSnippet(matchedFile.extractedText, query) }
-        : null;
-
     const isHistorical = isHistoricalRecord(candidate.origin, candidate.archivedAt);
 
     // Sorted MOST RECENT FIRST here, once, so every consumer — the collapsed
@@ -1289,7 +1291,7 @@ export async function getCandidateListData({
         (candidate as typeof candidate & { applications?: Array<{ job: { department: string | null } | null }> })
           .applications?.map((a) => a.job?.department) ?? []
       ),
-      docMatch,
+      searchHits: hitsById.get(candidate.id) ?? [],
       paycomLink: candidate.paycomLink,
       bucket: bucketOf(listApplications, isHistorical),
       applications: listApplications,
@@ -1312,7 +1314,22 @@ export async function getCandidateListData({
     },
     bucketCounts,
     acrossCounts,
-    stageCounts
+    stageCounts,
+    search: run
+      ? {
+          terms: parsed.terms.map((term) => ({
+            text: term.text,
+            kind: term.kind,
+            negate: term.negate,
+            places: term.places,
+            aircraft: term.aircraft,
+            orWithPrevious: parsed.groups.some((group) => group.indexOf(term) > 0)
+          })),
+          places,
+          placeCounts: parsed.excludeOnly ? null : countPlaces(run, placePopulation),
+          ms: run.ms
+        }
+      : null
   };
 }
 
@@ -1373,7 +1390,7 @@ function splitListValue(value: string | null): string[] {
  * recruiter picked, with nothing on screen to say so. Ids that no longer resolve
  * at all are simply absent, and the caller compares counts to report the gap.
  *
- * No docMatch here: there is no search query behind a saved view.
+ * No search hits here: there is no search query behind a saved view.
  */
 // viewer is optional for the same reason it is elsewhere in this file — internal
 // callers not serving a request pass nothing — but every REQUEST-serving caller
@@ -1479,7 +1496,7 @@ export async function getCandidatesByIds(ids: string[], viewer?: CandidateListVi
         candidate.departmentOverride,
         candidate.applications.map((a) => a.job?.department)
       ),
-      docMatch: null,
+      searchHits: [],
       paycomLink: candidate.paycomLink,
       bucket: bucketOf(applications, isHistoricalRecord(candidate.origin, candidate.archivedAt)),
       applications,

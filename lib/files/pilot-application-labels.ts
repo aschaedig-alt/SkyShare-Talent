@@ -1,0 +1,117 @@
+/**
+ * The printed text of SkyShare's two Pilot Application forms - every label,
+ * question and fine-print line - so candidate search can read a form's ANSWERS
+ * and not its template.
+ *
+ * WHY. The template is on every copy. With it left in, searching "atp" found
+ * everybody who ever filled the form in (the certificate boxes are labelled
+ * ATP), "pic" found everybody ("TOTAL PIC TIME:"), and a search for the Challenger
+ * matched nothing more useful than the rest. What a pilot ticked is not lost: the
+ * ticked boxes are read into the certificates value (Flight data) by
+ * readCertificateBoxes in lib/files/pdf-form.ts.
+ *
+ * HOW THIS LIST WAS MADE, 2026-09-23. Every one of the 1,300 forms on file was
+ * read by layout into cells, and a cell counts as TEMPLATE when it appears on at
+ * least 60% of the forms of its version (801 of v3, 499 of v4). The gap is wide:
+ * every cell at that line was on 90% or more, and below it the most common cell
+ * was on under 40% - "FIRST CLASS", "UT", "200", which are answers. "0" is in the
+ * v4 list because zero hours is on most forms; stripping it costs nothing.
+ *
+ * Compared UPPER-CASED with its spacing collapsed. A new version of the form needs
+ * its own list, made the same way.
+ */
+
+export const V3_LABELS = new Set<string>([
+  "PILOT APPLICATION (COMPLETE ENTIRE FORM)", "PILOT HISTORY", "NAME:", "PHONE:", "ADDRESS:", "E-MAIL:", "CITY:",
+  "STATE:", "ZIP:", "MEDICAL CLASS:", "MEDICAL EXPIRATION:", "PILOT'S CERTIFICATE#:", "WILLING TO RELOCATE:", "YES",
+  "4", "NO", "CURRENT TYPE(S) AIRCRAFT FLYING:", "TOTAL FLIGHT TIME:", "TOTAL MULTI:", "HOURS IN AIRCRAFT LAST 12 MONTHS:",
+  "AIRCRAFT POSITION APPLYING FOR:",
+  "IF THE ANSWER TO QUESTION 1-10 IS YES, AN EXPLANATION IS REQUIRED AT THE BOTTOM OF PAGE 2.",
+  "1. HAVE YOU EVER HAD ANY AIRCRAFT ACCIDENTS OR INCIDENTS?",
+  "2. HAVE YOU EVER BEEN CHARGED OR CONVICTED OF A MISDEMEANOR OR FELONY?",
+  "3. HAVE YOU EVER BEEN CITED FOR VIOLATIONS OF CIVIL/MILITARY AVIATION REGULATIONS?",
+  "4. ARE YOU FLYING SUBJECT TO LIMITATIONS OR A WAIVER?",
+  "5. HAS YOUR PILOT LICENSE EVER BEEN SUSPENDED OR REVOKED?",
+  "6. IN THE LAST 10 YEARS HAVE YOU EVER FAILED AN FAA OR COMPANY CHECK RIDE?",
+  "7. HAS YOUR DRIVER'S LICENSE EVER BEEN SUSPENDED OR REVOKED?",
+  "8. HAVE YOU EVER BEEN ARRESTED FOR OPERATING A VEHICLE WHILE UNDER THE INFLUENCE OF ALCOHOL OR DRUGS?",
+  "9. HAVE YOU EVER FAILED AN ALCOHOL OR DRUG TEST AT A PREVIOUS EMPLOYER?",
+  "10. TO THE BEST OF YOUR KNOWLEDGE, IS THERE ANYTHING THAT WOULD CAUSE YOU TO FAIL THE REQUIRED TSA",
+  "BACKGROUND AND SECURITY CHECK?", "11. HAVE YOU BEEN VACCINATED FOR COVID-19?",
+  "12. IF 11 IS NO, DO YOU PLAN TO GET FULLY VACCINATED FROM COVID-19?", "13. DO YOU HAVE PREVIOUS 135 EXPERIENCE?",
+  "(EXPLANATION NOT REQUIRED)", "14. DO YOU HAVE PREVIOUS 121 EXPERIENCE?", "CERTIFICATES / RATINGS",
+  "INDICATE ALL CERTIFICATES YOU CURRENTLY HOLD:", "STUDENT", "ATP", "SINGLE ENGINE LAND", "PRIVATE", "INSTRUCTOR",
+  "MULTI ENGINE LAND", "COMMERCIAL", "INSTRUMENT RATING", "ATP WRITTEN (IF NO ATP)",
+  "LIST ALL AIRCRAFT TYPE RATINGS YOU CURRENTLY HOLD (INCLUDE SIC TYPE RATINGS):", "PILOTAPPLICATION • V", "3",
+  "PAGE | 1", "CERTIFICATES / RATINGS CONTINUED…", "AIRCRAFT TYPE:", "TOTAL TIME IN TYPE:", "TOTAL PIC TIME IN TYPE:",
+  "DATE/LOCATION OF LAST TRAINING:", "EXPLANATION FOR QUESTIONS 1-10", "CERTIFICATION/SIGNATURE",
+  "I CERTIFY THAT THE INFORMATION I HAVE PROVIDED FOR EMPLOYMENT IS TRUE, ACCURATE, AND CURRENT TO THE BEST OF MY KNOWLEDGE. I",
+  "UNDERSTAND THAT IF HIRED FALSE STATEMENTS, OMISSION, OR MISREPRESENTATIONS MAY RESULT IN MY DISMISSAL.",
+  "APPLICANT SIGNATURE:", "DATE:", "PAGE | 2", "PILOTAPPLICATION", "FINAL AUDIT REPORT", "CREATED:", "BY:", "STATUS:",
+  "SIGNED", "TRANSACTION ID:", "\"PILOTAPPLICATION\" HISTORY", "2022-09-20 - 10:56:53 PM GMT", "AGREEMENT COMPLETED.",
+  "CRAIG RICH (CRICH@SKYSHARE.COM)", "WEB FORM CREATED BY CRAIG RICH (CRICH@SKYSHARE.COM)"
+]);
+
+export const V4_LABELS = new Set<string>([
+  "PILOT APPLICATION", "NAME:", "PHONE:", "EMAIL:", "STREET ADDRESS:", "CITY:", "STATE:", "ZIP:", "PERSONAL",
+  "INFORMATION", "AIRCRAFT POSITION", "WILLING TO", "Y", "|", "N", "APPLYING FOR:", "RELOCATE:", "4", "PILOT",
+  "HRS FLOWN", "HRS IN AIRCRAFT", "CERTIFICATE #:", "LAST 12 MOS:", "MEDICAL", "CLASS:", "EXPIRATION:", "TOTAL",
+  "TOTAL MULTI", "FLIGHT TIME:", "ENGINE FLIGHT TIME:", "TOTAL SINGLE", "PIC TIME:", "SIC TIME:", "PILOT TIME:",
+  "JET TIME:", "TURIBINE TIME:", "INSTRUMENT:", "HISTORY", "PREVIOUS PART 91", "PREVIOUS PART 135", "PREVIOUS PART 121",
+  "EXPERIENCE?", "INDICATE ALL CERTIFICATES", "LIST ALL AIRCRAFT RATINGS YOU CURRENTLY HOLD", "YOU CURRENTLY HOLD",
+  "(INCLUDE PIC & SIC TYPE RATINGS)", "COMMERCIAL", "STUDENT", "PRIVATE", "CFI", "MEI", "INSTRUMENT RATING",
+  "SINGLE ENGINE LAND", "MULTI ENGINE LAND", "ATP/CTP COMPLETED", "ATP", "ATP WRITTEN (IF NOT ATP)", "AIRCRAFT",
+  "TOTAL TIME", "TOTAL PIC", "DATE/LOCATION", "CURRENTLY", "TYPE", "IN TYPE", "TIME IN TYPE", "OF LAST TRAINING",
+  "FLYING", "CERTIFICATES", "AND RATINGS", "PAGE 1/2", "PLEASE INDICATE YES (Y) OR NO (N)", "IF INDICATED (Y) PLEASE EXPLAIN",
+  "1.", "HAVE YOU EVER HAD ANY", "ARICRAFT ACCIDENTS/INCIDENTS?", "2.", "HAVE YOU EVER BEEN CHARGED/CONVICTED",
+  "WITH A MISDEMEANOR OR FELONY?", "3.", "HAVE YOU EVER BEEN CITED FOR VIOLATIONS", "FOR CIVIL/MILITARY AVIATION REGULATIONS?",
+  "4.", "ARE YOU FLYING SUBJECT TO", "LIMITATIONS OR A WAIVER?", "5.", "HAS YOU PILOT LICENSE EVER", "BEEN SUSPENDED/REVOKED?",
+  "6.", "IN THE LAST 10 YEARS HAVE YOU EVER FAILED", "AN FAA OR COMPANY CHECK RIDE?", "7.", "HAVE YOU HAD TWO OR MORE MOVING",
+  "VIOLATIONS WITHIN THE PAST 3 YEARS?", "8.", "HAVE YOU HAD ONE OR MORE AT-", "FAULT AUTOMOBILE ACCIDENTS",
+  "WITHIN THE PAST 3 YEARS?", "9.", "HAS YOUR DRIVERS LICENSE EVER", "10.", "HAVE YOU EVER BEEN ARRESTED FOR",
+  "OPERATING A VEHICLE WHILE UNDER THE", "INFLUENCE OF ALCOHOL OR DRUGS?", "11.", "HAVE YOU EVER FAILED AN ALCOHOL OR",
+  "DRUG TEST AT A PREVIOUS EMPLOYER?", "12.", "TO THE BEST OF YOUR KNOWLEDGE, IS", "THERE ANYTHING THAT WOULD CAUSE",
+  "QUESTIONNAIRE", "YOU TO FAIL THE REQUIRED TSA AND", "BACKGROUND SECURITY CHECK?",
+  "I HERBY CERTIFY THAT THE INFORMATION I HAVE PROVIDED FOR EMPLOYMENT CONSIDERATION",
+  "VIA THIS APPLICATION IS TRUE, ACCURATE, AND CURRENT TO THE BEST OF MY KNOWLEDGE AND",
+  "ABILITY. SUBSEQUENTLY, IF HIRED, I UNDERSTAND THAT FALSE STATEMENTS, OMISSIONS, OR",
+  "MISREPRESENTATIONS MAY RESULT IN MY CONSEQUENT DISMISSAL.", "APPLICANT SIGNATURE", "DATE", "PAGE 2/2",
+  "PILOTAPPLICATION", "FINAL AUDIT REPORT", "CREATED:", "BY:", "CRAIG RICH (CRICH@SKYSHARE.COM)", "STATUS:", "SIGNED",
+  "TRANSACTION ID:", "\"PILOTAPPLICATION\" HISTORY", "WEB FORM CREATED BY CRAIG RICH (CRICH@SKYSHARE.COM)",
+  "2025-05-08 - 10:58:59 PM GMT", "AGREEMENT COMPLETED.", "0"
+]);
+
+/** Which form a layout text is, from its heading. Null when neither. */
+export function pilotApplicationVersion(layoutText: string): "v3" | "v4" | null {
+  const head = layoutText.slice(0, 400).toUpperCase();
+  if (head.includes("PILOT APPLICATION (COMPLETE ENTIRE FORM)")) return "v3";
+  if (head.startsWith("PILOT APPLICATION")) return "v4";
+  return null;
+}
+
+/** Cells in a layout text are separated by this - see pilotApplicationSearchFields. */
+export const CELL_SEPARATOR = "   ";
+
+/**
+ * A Pilot Application's layout text with its template taken out, leaving the
+ * answers. Idempotent: text it cannot place as a form (including text it has
+ * already stripped, whose heading is gone) comes back unchanged.
+ */
+export function answersOnly(layoutText: string): string {
+  const version = pilotApplicationVersion(layoutText);
+  if (!version) return layoutText;
+  const labels = version === "v3" ? V3_LABELS : V4_LABELS;
+  return layoutText
+    .split("\n")
+    .map((line) =>
+      line
+        .split(CELL_SEPARATOR)
+        .filter((cell) => {
+          const key = cell.replace(/\s+/g, " ").trim().toUpperCase();
+          return key.length > 0 && !labels.has(key);
+        })
+        .join(CELL_SEPARATOR)
+    )
+    .filter((line) => line.trim().length > 0)
+    .join("\n");
+}

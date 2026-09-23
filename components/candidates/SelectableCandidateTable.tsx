@@ -10,22 +10,6 @@ import { CandidateRow } from "@/components/candidates/CandidateRow";
 import type { CandidateStage } from "@/lib/candidates/stages";
 import { Button } from "@/components/ui";
 
-/** Wrap occurrences of query in <mark> for highlighted snippets. */
-function highlight(text: string, query: string) {
-  const q = query.trim();
-  if (!q) return text;
-  const parts = text.split(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "ig"));
-  return parts.map((part, i) =>
-    part.toLowerCase() === q.toLowerCase() ? (
-      <mark key={i} className="rounded-sm bg-brand-gold/40 px-0.5 text-brand-lea dark:text-slate-100">
-        {part}
-      </mark>
-    ) : (
-      <span key={i}>{part}</span>
-    )
-  );
-}
-
 /** Color a stage pill by keyword so the pipeline reads at a glance. */
 function stagePill(stage: string | null) {
   const s = (stage ?? "").toLowerCase();
@@ -57,12 +41,10 @@ function initials(name: string) {
  */
 export function SelectableCandidateTable({
   candidates,
-  query,
   canEdit,
   stageList
 }: {
   candidates: CandidateListItem[];
-  query: string;
   canEdit: boolean;
   /** The live stage vocabulary, edited at /candidates/manage. */
   stageList?: CandidateStage[];
@@ -378,13 +360,11 @@ export function SelectableCandidateTable({
                   <CandidateRow
                     key={candidate.id}
                     candidate={candidate}
-                    query={query}
                     canEdit={canEdit}
                     isSelected={selected.has(candidate.id)}
                     isOpen={panelFor === candidate.id}
                     onToggleSelect={toggle}
                     onToggleExpanded={toggleExpanded}
-                    highlight={highlight}
                     stagePill={stagePill}
                     initials={initials}
                     stageList={stageList}

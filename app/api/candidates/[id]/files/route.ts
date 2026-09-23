@@ -9,6 +9,7 @@ import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
 import { isPrivateFileStorageReady, shouldRequirePrivateFileStorage } from "@/lib/files/file-security";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { extractFileText } from "@/lib/files/pdf-text";
+import { searchFieldsForFile } from "@/lib/files/pdf-form";
 import { detectDocumentType } from "@/lib/files/document-types";
 import { MAX_UPLOAD_BYTES, tooLargeMessage } from "@/lib/files/upload-limits";
 
@@ -103,6 +104,9 @@ export async function POST(request: Request, context: RouteContext) {
 
       // Extract searchable text (best-effort; never blocks the upload)
       const extractedText = await extractFileText(bytes, file.type || null, originalFilename);
+      // A Pilot Application is searched by its layout, its position kept apart - see
+      // pilotApplicationSearchFields (lib/files/pdf-form.ts). Empty for anything else.
+      const searchFields = await searchFieldsForFile(bytes, file.type || null, originalFilename);
 
       const linkedAt = new Date().toISOString();
       const created = await prisma.candidateFile.create({
@@ -117,6 +121,7 @@ export async function POST(request: Request, context: RouteContext) {
           documentType: detectDocumentType(originalFilename),
           extractedText: extractedText || null,
           textExtractedAt: extractedText ? new Date() : null,
+          ...searchFields,
           metadataJson: JSON.stringify({
             linkedBy: "direct-candidate-profile",
             linkedAt,

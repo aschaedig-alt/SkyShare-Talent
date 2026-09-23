@@ -15,14 +15,11 @@ import { CandidateTagCell } from "@/components/candidates/CandidateTagCell";
 
 type CandidateRowProps = {
   candidate: CandidateListItem;
-  query: string;
   canEdit: boolean;
   isSelected: boolean;
   isOpen: boolean;
   onToggleSelect: (id: string) => void;
   onToggleExpanded: (id: string) => void;
-  /** Wrap matches in the document-snippet preview. */
-  highlight: (text: string, query: string) => React.ReactNode;
   /** Colour a stage pill by keyword. */
   stagePill: (stage: string | null) => string;
   initials: (name: string) => string;
@@ -48,13 +45,11 @@ type CandidateRowProps = {
  */
 function CandidateRowInner({
   candidate,
-  query,
   canEdit,
   isSelected,
   isOpen,
   onToggleSelect,
   onToggleExpanded,
-  highlight,
   stagePill,
   initials,
   stageList
@@ -230,10 +225,36 @@ function CandidateRowInner({
                   (candidate.currentTitle ?? "Unassigned")
                 )}
               </div>
-              {candidate.docMatch && (
-                <div className="mt-1.5 max-w-[380px] rounded border border-brand-lea/10 bg-brand-cloudDancer/50 px-2.5 py-1.5 text-[11px] leading-5 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-                  <span className="font-semibold text-brand-lea dark:text-slate-100">{candidate.docMatch.filename}: </span>
-                  {highlight(candidate.docMatch.snippet, query)}
+              {/* Where the search found them, their own documents first. The words
+                  arrive already marked by the same patterns the database matched
+                  with, so what is highlighted is exactly what counted. */}
+              {candidate.searchHits.length > 0 && (
+                <div className="mt-1.5 max-w-[420px] space-y-1">
+                  {candidate.searchHits.slice(0, 2).map((hit, i) => (
+                    <div
+                      key={i}
+                      className="rounded border border-brand-lea/10 bg-brand-cloudDancer/50 px-2.5 py-1.5 text-[11px] leading-5 text-brand-grey [overflow-wrap:anywhere] dark:border-white/10 dark:bg-white/5 dark:text-slate-400"
+                    >
+                      <span className="font-semibold text-brand-lea dark:text-slate-100">
+                        {hit.label}
+                        {hit.source ? <span className="font-normal text-brand-grey dark:text-slate-400"> · {hit.source}</span> : null}:{" "}
+                      </span>
+                      {hit.segments.map((segment, j) =>
+                        segment.mark ? (
+                          <mark key={j} className="rounded-sm bg-brand-gold/40 px-0.5 text-brand-lea dark:text-slate-100">
+                            {segment.text}
+                          </mark>
+                        ) : (
+                          <span key={j}>{segment.text}</span>
+                        )
+                      )}
+                    </div>
+                  ))}
+                  {candidate.searchHits.length > 2 ? (
+                    <p className="text-[10px] text-brand-grey dark:text-slate-500">
+                      Also in: {[...new Set(candidate.searchHits.slice(2).map((hit) => hit.label))].join(", ")}
+                    </p>
+                  ) : null}
                 </div>
               )}
             </div>

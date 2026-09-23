@@ -164,8 +164,12 @@ export const AIRCRAFT_TYPES: AircraftType[] = [
   { type: "G-450", name: "Gulfstream G350 / G450", aliases: ["g450", "g350"] },
 
   // ---- Bombardier / Canadair --------------------------------------------
-  { type: "CL-30", name: "Challenger 300 / 350 (BD-100)", aliases: ["challenger3500", "cl3500", "3500", "cl30", "bd100", "challenger300", "challenger350", "chal300", "chal350"] },
-  { type: "CL-600", name: "Challenger 600 / 601 / 604 / 605", aliases: ["cl600", "cl601", "cl604", "cl605", "cl64", "challenger600", "challenger601", "challenger604"] },
+  // cl300 / cl350 / cl35 and the 605 / 650 spellings added 2026-09-23 from the
+  // documents on file: "CL350" 10 times, "CL 350" 7, "CL-300" 2, "CL35" 2,
+  // "Challenger 605" 16, "Challenger 650" 14, "CL650" 12 - none of which this
+  // list recognised, so the search could not find them by type.
+  { type: "CL-30", name: "Challenger 300 / 350 (BD-100)", aliases: ["challenger3500", "cl3500", "3500", "cl30", "cl300", "cl350", "cl35", "bd100", "challenger300", "challenger350", "chal300", "chal350"] },
+  { type: "CL-600", name: "Challenger 600 / 601 / 604 / 605 / 650", aliases: ["cl600", "cl601", "cl604", "cl605", "cl650", "cl64", "challenger600", "challenger601", "challenger604", "challenger605", "challenger650"] },
   { type: "CL-65", name: "Canadair Regional Jet (CRJ)", aliases: ["cl65", "crj", "crj200", "crj700", "crj900"] },
   { type: "BD-700", name: "Global Express / Global 5000–7500", aliases: ["bd700", "globalexpress", "global5000", "global6000", "global7500"] },
   { type: "LR-JET", name: "Learjet 20 / 30 / 50 series", aliases: ["lrjet", "lr20", "lr23", "lr24", "lr25", "lr28", "lr31", "lr35", "lr36", "lr55", "learjet25", "learjet31", "learjet35", "learjet36", "learjet55"] },

@@ -12,6 +12,7 @@ import {
   parseViewPreference
 } from "@/lib/candidates/view-preference";
 import { parseListParam } from "@/lib/candidates/list-url";
+import { parsePlaces } from "@/lib/candidates/search/query";
 
 type CandidatesPageProps = {
   searchParams?: Promise<{
@@ -23,6 +24,11 @@ type CandidatesPageProps = {
     stages?: string;
     bucket?: string;
     across?: string;
+    /**
+     * Where the search looks: "resume,flight", or one param per ticked box from
+     * the search box's picker. Absent means everywhere. See parsePlaces.
+     */
+    in?: string | string[];
   }>;
 };
 
@@ -75,6 +81,7 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
   })();
   const acrossParam = params?.across?.trim() ?? "";
   const activeAcross = isCandidateAcross(acrossParam) ? acrossParam : null;
+  const searchPlaces = parsePlaces(params?.in);
   const [data, tagOptions, stageList] = await Promise.all([
     getCandidateListData({
       query,
@@ -84,7 +91,8 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
       stages: activeStages,
       limit: pageSize,
       bucket: activeBucket,
-      across: activeAcross
+      across: activeAcross,
+      places: searchPlaces
     }),
     getCandidateTagOptions(),
     getStageList()
@@ -111,6 +119,7 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
       activeBucket={activeBucket}
       activeAcross={activeAcross}
       stageList={stageList}
+      searchPlaces={searchPlaces}
     />
   );
 }

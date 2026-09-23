@@ -15,6 +15,8 @@ import { CandidateStatusFilter } from "@/components/candidates/CandidateStatusFi
 import { BUCKET_LABEL, type CandidateAcross, type CandidateBucket } from "@/lib/candidates/buckets";
 import { BUCKET_ALL } from "@/lib/candidates/list-url";
 import type { CandidateStage } from "@/lib/candidates/stages";
+import { CandidateSearchSummary } from "@/components/candidates/CandidateSearchSummary";
+import { ALL_PLACES, placesParam, type SearchPlace } from "@/lib/candidates/search/query";
 
 type CandidatesWorkspaceProps = {
   data: CandidateListData;
@@ -37,6 +39,8 @@ type CandidatesWorkspaceProps = {
   activeAcross?: CandidateAcross | null;
   /** The live stage vocabulary, edited at /candidates/manage. */
   stageList?: CandidateStage[];
+  /** Where the search looks, from ?in= in the URL. Everywhere when absent. */
+  searchPlaces?: SearchPlace[];
 };
 
 // WHERE THE REMEMBERED VIEW LIVES, since it is not here and this is where you
@@ -68,7 +72,8 @@ export function CandidatesWorkspace({
   onboardingIntent = false,
   activeBucket = null,
   activeAcross = null,
-  stageList
+  stageList,
+  searchPlaces = ALL_PLACES
 }: CandidatesWorkspaceProps) {
   // Everything the segment bar must carry through when you switch segment, so a
   // search and its filters survive the click instead of silently resetting.
@@ -85,7 +90,9 @@ export function CandidatesWorkspace({
     // cross-cutting filter, and toggling that keeps the segment. The bar strips
     // whichever key it is rewriting.
     bucket: activeBucket ?? undefined,
-    across: activeAcross ?? undefined
+    across: activeAcross ?? undefined,
+    // Where the search looks, so changing segment keeps it.
+    in: query ? placesParam(searchPlaces) : undefined
   };
   // WAS the statistics strip. The segments ARE the counts now, so one row does
   // both jobs instead of two rows showing counts of the same people.
@@ -135,8 +142,8 @@ export function CandidatesWorkspace({
               hidden" — which is the confusion that made this look like data loss. */}
           <p className="text-xs text-brand-grey dark:text-slate-400">
             {data.matchingTotal > data.candidates.length
-              ? `Showing the first ${data.candidates.length} of ${data.matchingTotal.toLocaleString()}${query ? ` matching "${query}"` : ""} — search to narrow it down.`
-              : `Showing all ${data.candidates.length}${query ? ` matching "${query}"` : ""}.`}
+              ? `Showing the first ${data.candidates.length} of ${data.matchingTotal.toLocaleString()}${query ? " matching the search" : ""} — search to narrow it down.`
+              : `Showing all ${data.candidates.length}${query ? " matching the search" : ""}.`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -156,14 +163,22 @@ export function CandidatesWorkspace({
           </span>
         </div>
       </div>
-      <SelectableCandidateTable candidates={data.candidates} query={query} canEdit={canEdit} stageList={stageList} />
+      {data.search ? (
+        <CandidateSearchSummary
+          search={data.search}
+          params={{ ...segmentParams, bucket: activeBucket ?? BUCKET_ALL, in: undefined }}
+        />
+      ) : null}
+      <SelectableCandidateTable candidates={data.candidates} canEdit={canEdit} stageList={stageList} />
     </section>
   );
 
   return (
     <div className="space-y-5 px-5 py-5 lg:px-8">
       {/* Header */}
-      <section className="overflow-hidden rounded bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
+      {/* No overflow-hidden: the search box's "Search in" picker hangs below this
+          band and was clipped to a sliver. The gradient rounds its own corners. */}
+      <section className="rounded bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Candidate operations</p>
@@ -190,6 +205,7 @@ export function CandidatesWorkspace({
               bucket={activeBucket ?? BUCKET_ALL}
               across={activeAcross ?? undefined}
               size={data.listLimit}
+              places={searchPlaces}
               tone="dark"
             />
           </div>

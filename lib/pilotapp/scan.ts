@@ -12,6 +12,7 @@ import { createCandidateStorageKey, sanitizeFilename } from "@/lib/files/candida
 import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
 import { isPrivateFileStorageReady, shouldRequirePrivateFileStorage } from "@/lib/files/file-security";
 import { extractFileText } from "@/lib/files/pdf-text";
+import { searchFieldsForFile } from "@/lib/files/pdf-form";
 import { detectDocumentType } from "@/lib/files/document-types";
 import { splitCandidateName, normalizeEmail, normalizeName } from "@/lib/candidates/normalize";
 import { readPilotApplication, signedPdf, type PilotAppResult } from "./notices";
@@ -279,6 +280,9 @@ async function fileDocument(
   });
 
   const extractedText = await extractFileText(bytes, "application/pdf", filename);
+  // What candidate search reads for a Pilot Application, and the position they
+  // applied for - see pilotApplicationSearchFields in lib/files/pdf-form.ts.
+  const searchFields = await searchFieldsForFile(bytes, "application/pdf", filename);
 
   const created = await prisma.candidateFile.create({
     data: {
@@ -292,6 +296,7 @@ async function fileDocument(
       documentType: detectDocumentType(filename),
       extractedText: extractedText || null,
       textExtractedAt: extractedText ? new Date() : null,
+      ...searchFields,
       metadataJson: JSON.stringify({
         linkedBy: "front-pilot-application-scan",
         linkedAt: new Date().toISOString(),

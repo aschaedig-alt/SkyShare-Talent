@@ -1062,6 +1062,18 @@ model CandidateFile {
   metadataJson      String?
   extractedText     String?
   textExtractedAt   DateTime?
+  // What candidate search reads INSTEAD of extractedText, when it differs: a
+  // signed Pilot Application read by its layout, cells kept apart - the flattened
+  // text runs its values together ("41901141stChallenger 350 First Officer") so
+  // no word or number can be found cleanly in it - with the position they applied
+  // for taken out. Null means search reads extractedText. Written by
+  // pilotApplicationSearchFields (lib/files/pdf-form.ts). 2026-09-23.
+  searchText        String?
+  // That position: the "AIRCRAFT POSITION APPLYING FOR" answer on a signed Pilot
+  // Application. Search counts it as a job they applied to, never as experience -
+  // otherwise leaving job titles out of a search still finds every applicant
+  // through their own form.
+  appliedForText    String?
   uploadedAt        DateTime  @default(now())
   renamedAt         DateTime?
   archivedAt        DateTime?

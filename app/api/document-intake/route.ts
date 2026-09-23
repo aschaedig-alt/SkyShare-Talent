@@ -5,6 +5,7 @@ import { createCandidateStorageKey, isSupportedCandidateFile, sanitizeFilename }
 import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
 import { isPrivateFileStorageReady, shouldRequirePrivateFileStorage } from "@/lib/files/file-security";
 import { extractFileText } from "@/lib/files/pdf-text";
+import { searchFieldsForFile } from "@/lib/files/pdf-form";
 import { normalizeEmail, normalizeName, normalizePhone } from "@/lib/candidates/normalize";
 import { reactivateArchivedCandidate } from "@/lib/candidates/reactivate";
 import { detectDocumentType } from "@/lib/files/document-types";
@@ -90,6 +91,9 @@ export async function POST(request: Request) {
 
       const bytes = Buffer.from(await file.arrayBuffer());
       const text = await extractFileText(bytes, file.type || null, originalFilename);
+      // A Pilot Application is searched by its layout, its position kept apart - see
+      // pilotApplicationSearchFields (lib/files/pdf-form.ts). Empty for anything else.
+      const searchFields = await searchFieldsForFile(bytes, file.type || null, originalFilename);
       const email = parseEmail(text);
       const phone = parsePhone(text);
 
@@ -183,6 +187,7 @@ export async function POST(request: Request) {
             documentType: detectDocumentType(originalFilename),
             extractedText: text || null,
             textExtractedAt: text ? new Date() : null,
+            ...searchFields,
             metadataJson: JSON.stringify({ linkedBy: "document-intake", matchedBy: basis, reactivatedFromArchive: reactivated || undefined, storageProvider: storage.provider, uploadedByEmail: auth.user.email })
           }
         });
@@ -213,6 +218,7 @@ export async function POST(request: Request) {
             documentType: detectDocumentType(originalFilename),
             extractedText: text || null,
             textExtractedAt: text ? new Date() : null,
+            ...searchFields,
             metadataJson: JSON.stringify({ assignmentStatus: "unassigned", reason: basis === "ambiguous" ? "multiple name matches" : "no candidate match", storageProvider: storage.provider })
           }
         });

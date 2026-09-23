@@ -441,6 +441,45 @@ readable in dark mode.
 
 ---
 
+### 22. Nobody outside HR has searched since the search started reading notes
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-09-23
+
+The candidate search can now look in notes ("Search in" > Notes). A private HR note is searched
+for the HR team only - the same rule every note read follows - so a hiring manager searching a
+word that appears only in someone's private note must not find that person, and must not see
+them counted under Notes. Local dev signs everyone in as an admin, so the non-HR side has never
+run.
+
+**How to check it, about two minutes:** as HR, add a private note with an unusual word
+("zebrafish") to one candidate. Sign in as a hiring manager and search that word. Then delete the
+note.
+
+**What would count as a pass:** the hiring manager's search finds nobody, and the "Found in" row
+shows Notes 0.
+
+---
+
+### 23. No Pilot Application has arrived since search started reading them by layout
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-09-23
+
+Search reads a signed Pilot Application by its answers - read by layout, the form's printed
+labels left out, and the "position applying for" line counted as a job applied to. The 1,300
+already on file were filled in on 2026-09-23. A new one gets the same when it arrives through
+Front, a profile upload or Upload documents - but none has arrived since, so that path has not
+run on a real file.
+
+**How to check it, about a minute:** once a new pilot applicant arrives, search their name.
+
+**What would count as a pass:** their row's match line reads "Pilot application" followed by
+their answers - no "NAME:" or "PHONE:" labels - and a search for the aircraft they applied for,
+with Experience only, does not find them unless their resume or flight data mentions it.
+
+---
+
 ## Closed
 
 ### 15. No trip uses Indoc & orientation yet

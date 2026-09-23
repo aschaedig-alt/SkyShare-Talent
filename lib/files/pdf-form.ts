@@ -28,6 +28,7 @@
  */
 
 import { formTicksEvidence } from "@/lib/candidates/certificates";
+import { answersOnly, CELL_SEPARATOR } from "@/lib/files/pilot-application-labels";
 
 export type FormCell = { text: string; x: number; /** Rendered font size, for header detection. */ size: number };
 export type FormRow = { page: number; y: number; cells: FormCell[] };
@@ -508,6 +509,98 @@ export type ParsedForm = {
    */
   modifiedAt: Date | null;
 };
+
+// ---------------------------------------------------------------------------
+// What candidate search reads for a signed Pilot Application
+// ---------------------------------------------------------------------------
+
+/**
+ * The "AIRCRAFT POSITION / APPLYING FOR:" answer, and the cells it sits in.
+ * The label prints on two lines, the answer beside the second, and "WILLING TO /
+ * RELOCATE:" shares the row further right - so the answer stops at the next
+ * label.
+ */
+function readAppliedFor(rows: FormRow[]): { row: FormRow; cells: FormCell[]; value: string } | null {
+  for (const row of rows) {
+    const at = row.cells.findIndex((cell) => /^(AIRCRAFT\s+POSITION\s+)?APPLYING\s+FOR:?$/i.test(cell.text.trim()));
+    if (at < 0) continue;
+    const cells: FormCell[] = [];
+    for (const cell of row.cells.slice(at + 1)) {
+      const text = cell.text.trim();
+      if (/[:?]$/.test(text) || /^(WILLING\s+TO|RELOCATE)\b/i.test(text)) break;
+      cells.push(cell);
+    }
+    const value = cells.map((cell) => cell.text.trim()).join(" ").replace(/\s+/g, " ").trim();
+    return value ? { row, cells, value: value.slice(0, 200) } : null;
+  }
+  return null;
+}
+
+/**
+ * What candidate search reads for a signed Pilot Application (V3 or V4), or null
+ * for any other document - search then reads its extractedText as before.
+ *
+ * WHY. The flattened text of a filled form runs its answers together: "Hunter
+ * Shane Tueller2386 E Haven Lane3852297212Holladay41901141stChallenger 350 First
+ * Officerhuntertueller11@gmail.com", and "PC-24" glued to its hours as
+ * "PC-24393". No word or number can be found cleanly in that. Read by layout,
+ * every answer is its own cell, so the text search reads is those rows with the
+ * cells spaced apart.
+ *
+ * The one answer taken OUT is the position they applied for. It is what they
+ * applied to, not what they have flown, and leaving it in meant a search that
+ * skipped job titles still found every applicant through their own form. It is
+ * returned separately so search can count it as a job applied to.
+ */
+export async function pilotApplicationSearchFields(
+  bytes: Uint8Array
+): Promise<{ searchText: string; appliedForText: string | null } | null> {
+  const { rows } = await readPdf(bytes);
+  // V4 is today's form. V3 is the JazzHR-era one ("PilotApplication • v3",
+  // 801 files on 2026-09-23): a different layout with the same run-together
+  // answers, and its position line reads "Aircraft Position Applying For:" inline.
+  const v4 = detectTemplate(rows)?.id === "pilot-application-v4";
+  const v3 = !v4 && rows.slice(0, 12).some((row) => /PilotApplication\s*\S?\s*v3\b|PILOT APPLICATION\s*\(COMPLETE ENTIRE FORM\)/i.test(rowText(row)));
+  if (!v4 && !v3) return null;
+  const appliedFor = readAppliedFor(rows);
+  const lines: string[] = [];
+  let page = rows[0]?.page ?? 1;
+  for (const row of rows) {
+    if (row.page !== page) {
+      lines.push("");
+      page = row.page;
+    }
+    const cells = appliedFor && row === appliedFor.row ? row.cells.filter((cell) => !appliedFor.cells.includes(cell)) : row.cells;
+    const line = cells.map((cell) => cell.text.trim()).filter(Boolean).join(CELL_SEPARATOR);
+    if (line) lines.push(line);
+  }
+  // Only the ANSWERS are searched: the form's printed labels are on every copy,
+  // so leaving them in made "atp" or "pic" find everybody who ever filled it in.
+  // See lib/files/pilot-application-labels.ts.
+  return { searchText: answersOnly(lines.join("\n")), appliedForText: appliedFor?.value ?? null };
+}
+
+/**
+ * The same, shaped for a file row being written: empty unless it is a PDF
+ * Pilot Application. Never throws - an upload must not fail because this did.
+ * Works on a COPY of the bytes, because the PDF reader detaches the buffer it is
+ * given and the caller usually still needs them.
+ */
+export async function searchFieldsForFile(
+  bytes: Uint8Array | Buffer,
+  mimeType: string | null | undefined,
+  filename: string | null | undefined
+): Promise<{ searchText?: string; appliedForText?: string }> {
+  const pdf = (mimeType ?? "").includes("pdf") || (filename ?? "").toLowerCase().endsWith(".pdf");
+  if (!pdf) return {};
+  try {
+    const fields = await pilotApplicationSearchFields(new Uint8Array(bytes).slice());
+    if (!fields) return {};
+    return fields.appliedForText ? { searchText: fields.searchText, appliedForText: fields.appliedForText } : { searchText: fields.searchText };
+  } catch {
+    return {};
+  }
+}
 
 /** Read one PDF end to end: detect the template, pair its fields, read anything else it defines. */
 export async function parsePdfForm(bytes: Uint8Array): Promise<ParsedForm> {
