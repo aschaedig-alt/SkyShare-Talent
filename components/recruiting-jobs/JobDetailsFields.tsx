@@ -22,13 +22,21 @@ export function JobDetailsFields({
   department,
   city,
   state,
-  canEdit
+  canEdit,
+  locationOnRequirementTab = false
 }: {
   jobId: string;
   department: string | null;
   city: string | null;
   state: string | null;
   canEdit?: boolean;
+  /**
+   * True when a requirement is linked straight to this job. City and state are
+   * then its base, edited in the Role block on the Pilot requirement tab so the
+   * job and the requirement are saved together; only the department is edited
+   * here, and the save does not send the location at all.
+   */
+  locationOnRequirementTab?: boolean;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -55,7 +63,9 @@ export function JobDetailsFields({
       const res = await fetch(`/api/recruiting-jobs/${jobId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ department: dept, city: town, state: region })
+        body: JSON.stringify(
+          locationOnRequirementTab ? { department: dept } : { department: dept, city: town, state: region }
+        )
       });
       const data = (await res.json().catch(() => ({}))) as { message?: string };
       if (!res.ok) throw new Error(data.message ?? "Could not save those details.");
@@ -75,8 +85,8 @@ export function JobDetailsFields({
         {canEdit ? (
           <button
             onClick={() => setEditing(true)}
-            aria-label="Edit department and location"
-            title="Edit department and location"
+            aria-label={locationOnRequirementTab ? "Edit department" : "Edit department and location"}
+            title={locationOnRequirementTab ? "Edit department" : "Edit department and location"}
             className="shrink-0 rounded p-0.5 text-brand-grey transition hover:bg-brand-cloudDancer/70 hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100"
           >
             <Pencil className="h-3 w-3" />
@@ -105,8 +115,12 @@ export function JobDetailsFields({
     <div className="mt-1">
       <div className="flex flex-wrap items-center gap-2">
         {input(dept, setDept, "Department", "Department", true)}
-        {input(town, setTown, "City", "City", true)}
-        {input(region, setRegion, "State", "State")}
+        {locationOnRequirementTab ? null : (
+          <>
+            {input(town, setTown, "City", "City", true)}
+            {input(region, setRegion, "State", "State")}
+          </>
+        )}
         <button
           onClick={() => void save()}
           disabled={busy}
@@ -128,7 +142,9 @@ export function JobDetailsFields({
         </p>
       ) : null}
       <p className="mt-1 text-[11px] text-brand-grey dark:text-slate-400">
-        Leave a box empty to clear it. Location is shown on the job list and the candidate match.
+        {locationOnRequirementTab
+          ? "Leave the box empty to clear it. The location is the base in the Role block on the Pilot requirement tab, which saves this job and its requirement together."
+          : "Leave a box empty to clear it. Location is shown on the job list and the candidate match."}
       </p>
     </div>
   );

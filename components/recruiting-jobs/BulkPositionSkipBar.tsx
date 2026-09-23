@@ -2,10 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { clsx } from "clsx";
-import { CheckSquare, Undo2, X } from "lucide-react";
+import { CheckSquare, Download, Undo2, X } from "lucide-react";
 import {
+  exportMatchContacts,
   setCandidatePositionSkipBatch,
-  undoCandidatePositionSkipBatch
+  undoCandidatePositionSkipBatch,
+  type MatchContactRow
 } from "@/app/pilot-requirements/scoring-actions";
 import {
   KEEP_ON_POSITION,
@@ -14,6 +16,25 @@ import {
   type PositionDecisionValue,
   type PositionSkip
 } from "@/lib/matching/position-skip";
+
+function csvCell(value: string) {
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
+function downloadCsv(rows: MatchContactRow[]) {
+  const header = ["Name", "Email", "Phone", "Current title", "Matched job"];
+  const body = rows.map((row) => [row.name, row.email, row.phone, row.currentTitle, row.matchedJob].map(csvCell).join(","));
+  const csv = [header.map(csvCell).join(","), ...body].join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `matched-candidates-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
 
 /**
  * One decision, applied to everyone currently ticked.
@@ -31,6 +52,11 @@ import {
  * No confirm dialog, on purpose. Removing clicks is the whole point, the people
  * affected stay on the page (set aside is a group, not a deletion), and the undo
  * below restores their exact prior decisions rather than merely clearing them.
+ *
+ * "Export CSV" came here from the Pilot Requirements page's candidate-fit panel
+ * when that page was folded into the job; it was the only place it existed. The
+ * same server action, the same file (name, email, phone, current title, matched
+ * job), for whoever is ticked.
  */
 export function BulkPositionSkipBar({
   requirementId,
@@ -47,6 +73,7 @@ export function BulkPositionSkipBar({
   const [reason, setReason] = useState<PositionDecisionValue | "">("NOT_A_FIT");
   const [note, setNote] = useState("");
   const [pending, startApply] = useTransition();
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // What the last apply overwrote, kept only long enough to offer the undo.
   const [undo, setUndo] = useState<{
@@ -83,6 +110,20 @@ export function BulkPositionSkipBar({
       onApplied(ids, decision, decision === null ? "" : note);
       onClear();
     });
+  }
+
+  async function exportContacts() {
+    setError(null);
+    setExporting(true);
+    try {
+      const res = await exportMatchContacts({ candidateIds: [...candidateIds], requirementId });
+      if (res.ok && res.rows && res.rows.length > 0) downloadCsv(res.rows);
+      else setError(res.error ?? "Could not export contacts.");
+    } catch {
+      setError("Could not export contacts.");
+    } finally {
+      setExporting(false);
+    }
   }
 
   function revert() {
@@ -154,6 +195,15 @@ export function BulkPositionSkipBar({
             className="inline-flex items-center gap-1.5 rounded-element bg-brand-lea px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-brand-eden hover:shadow-glow disabled:opacity-60"
           >
             {pending ? "Applying…" : `${verb} · ${count}`}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void exportContacts()}
+            disabled={pending || exporting}
+            className="inline-flex items-center gap-1 rounded-element border border-brand-lea/15 px-2 py-1 text-[11px] font-semibold text-brand-eden transition hover:border-brand-sweet hover:bg-brand-cloudDancer/60 hover:shadow-glow disabled:opacity-60 dark:border-white/10 dark:text-brand-edenOnDark dark:hover:bg-white/5"
+          >
+            <Download className="h-3 w-3" /> {exporting ? "Exporting…" : `Export CSV · ${count}`}
           </button>
 
           <button

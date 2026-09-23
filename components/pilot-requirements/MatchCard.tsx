@@ -153,10 +153,10 @@ export function MatchCard({
   selected?: boolean;
   onViewRoles?: (candidateId: string) => void;
   /**
-   * Bulk-triage checkbox. Off by default so the other panel that renders this
-   * card (CandidateTriagePanel) is unchanged — and deliberately separate from
-   * `selected`, which means "this is the card the detail pane is showing".
-   * One card can be both.
+   * Bulk-triage checkbox. Off by default so a caller that offers no bulk triage
+   * renders the card unchanged — and deliberately separate from `selected`,
+   * which means "this is the card the detail pane is showing". One card can be
+   * both.
    */
   selectable?: boolean;
   checked?: boolean;

@@ -3,6 +3,7 @@ import { canonicalTitle } from "@/lib/fleet/positions";
 import { parseStringArray } from "@/lib/json";
 import { candidateScopeWhere } from "@/lib/auth/candidate-scope";
 import type { ViewerScope } from "@/lib/auth/viewer-scope";
+import { getMergedInRequirementCounts } from "@/lib/data/pilot-requirements";
 
 export type RecruitingJobListItem = {
   id: string;
@@ -158,7 +159,7 @@ export async function getRecruitingJobsData(
   // column-shaped helper returns an index-signature Record, which is not worth
   // spreading into a Prisma where clause.
   const scope = candidateScopeWhere(viewer);
-  const [rows, total, open, pilot, withCandidates] = await Promise.all([
+  const [rows, total, open, pilot, withCandidates, mergedInRequirements] = await Promise.all([
     prisma.job.findMany({
       where: { mergedIntoJobId: null },
       orderBy: [{ isPilotRole: "desc" }, { department: "asc" }, { title: "asc" }],
@@ -200,7 +201,8 @@ export async function getRecruitingJobsData(
     prisma.job.count({ where: { mergedIntoJobId: null } }),
     prisma.job.count({ where: { mergedIntoJobId: null, status: "OPEN" } }),
     prisma.job.count({ where: { mergedIntoJobId: null, isPilotRole: true } }),
-    prisma.job.count({ where: { mergedIntoJobId: null, applications: { some: {} } } })
+    prisma.job.count({ where: { mergedIntoJobId: null, applications: { some: {} } } }),
+    getMergedInRequirementCounts()
   ]);
 
   // The applications array is loaded in full (no `take`), so its length IS the
@@ -211,7 +213,14 @@ export async function getRecruitingJobsData(
   // now, and map would have passed it the array index.
   const candidateCountFor = (job: (typeof rows)[number]) =>
     scope ? job.applications.length : job._count.applications;
-  const listItems = rows.map((row) => toListItem(row, candidateCountFor(row)));
+  // A requirement left on a job that was merged into this one is shown on this
+  // job's Pilot requirement tab, so it counts here too — otherwise the tab chip
+  // and the "No requirement" flag disagree with the tab they label.
+  const listItemFor = (row: (typeof rows)[number]): RecruitingJobListItem => {
+    const item = toListItem(row, candidateCountFor(row));
+    return { ...item, requirementCount: item.requirementCount + (mergedInRequirements.get(row.id) ?? 0) };
+  };
+  const listItems = rows.map((row) => listItemFor(row));
   // Active (OPEN) jobs first. Stable sort, so the DB's isPilotRole/department/title
   // order is preserved within the active and inactive groups (Node's sort is stable).
   listItems.sort((a, b) => (a.isActive === b.isActive ? 0 : a.isActive ? -1 : 1));
@@ -226,7 +235,7 @@ export async function getRecruitingJobsData(
   const details: Record<string, RecruitingJobDetail> = {};
   for (const row of rows) {
     details[row.id] = {
-      ...toListItem(row, candidateCountFor(row)),
+      ...listItemFor(row),
       recruiter: row.recruiter,
       jobReqId: row.jobReqId,
       paycomReqId: row.paycomReqId,

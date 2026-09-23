@@ -327,7 +327,15 @@ export function MatchboardWorkspace({
             </section>
           ) : mode === "role" ? (
             selectedId && roleData ? (
-              <JobScreeningPanel data={roleData} onViewCandidate={(candidateId) => go("candidate", candidateId)} />
+              <JobScreeningPanel
+                data={roleData}
+                onViewCandidate={(candidateId) => go("candidate", candidateId)}
+                // The requirement's own address forwards to the job that owns it
+                // (following merges), so the board needs no job id of its own.
+                openJobHref={
+                  roleData.requirementId ? `/recruiting-jobs/requirements/${roleData.requirementId}?tab=overview` : undefined
+                }
+              />
             ) : (
               <EmptyState mode={mode} />
             )

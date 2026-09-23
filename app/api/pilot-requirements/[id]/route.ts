@@ -67,6 +67,16 @@ export async function PATCH(request: Request, context: RouteContext) {
       evidenceText: gate.evidenceText ?? null
     }));
 
+    // Operator, seat, base and pay moved to the Role block on the job's Pilot
+    // requirement tab (saveRequirementRole), which writes the job and this row
+    // together so they cannot drift. The editor no longer sends them, so a field
+    // that is ABSENT means "leave it alone". This used to be `?? null`, which
+    // would now wipe all six on every gate edit. A field that is sent still saves,
+    // including an explicit null to clear it.
+    const role = (value: string | null | undefined) => (value === undefined ? undefined : value ?? null);
+    const roleChanged = (before: string | null, value: string | null | undefined) =>
+      value !== undefined && before !== (value ?? null);
+
     await prisma.$transaction(async (tx) => {
       await tx.pilotRequirement.update({
         where: { id },
@@ -75,12 +85,12 @@ export async function PATCH(request: Request, context: RouteContext) {
           normalizedTitle: normalizeTitle(payload.title),
           status: payload.status,
           reviewStatus: payload.reviewStatus,
-          operatorType: payload.operatorType ?? null,
-          pilotSeat: payload.pilotSeat ?? null,
-          baseCity: payload.baseCity ?? null,
-          baseState: payload.baseState ?? null,
-          baseAirport: payload.baseAirport ?? null,
-          payScaleRaw: payload.payScaleRaw ?? null,
+          operatorType: role(payload.operatorType),
+          pilotSeat: role(payload.pilotSeat),
+          baseCity: role(payload.baseCity),
+          baseState: role(payload.baseState),
+          baseAirport: role(payload.baseAirport),
+          payScaleRaw: role(payload.payScaleRaw),
           manualOverrideNotes: payload.manualOverrideNotes ?? null,
           requirementVersion: { increment: 1 },
           lastReviewedAt: payload.reviewStatus === "APPROVED" ? new Date() : undefined
@@ -109,12 +119,12 @@ export async function PATCH(request: Request, context: RouteContext) {
             title: before.title !== payload.title,
             status: before.status !== payload.status,
             reviewStatus: before.reviewStatus !== payload.reviewStatus,
-            operatorType: before.operatorType !== (payload.operatorType ?? null),
-            pilotSeat: before.pilotSeat !== (payload.pilotSeat ?? null),
-            baseCity: before.baseCity !== (payload.baseCity ?? null),
-            baseState: before.baseState !== (payload.baseState ?? null),
-            baseAirport: before.baseAirport !== (payload.baseAirport ?? null),
-            payScaleRaw: before.payScaleRaw !== (payload.payScaleRaw ?? null),
+            operatorType: roleChanged(before.operatorType, payload.operatorType),
+            pilotSeat: roleChanged(before.pilotSeat, payload.pilotSeat),
+            baseCity: roleChanged(before.baseCity, payload.baseCity),
+            baseState: roleChanged(before.baseState, payload.baseState),
+            baseAirport: roleChanged(before.baseAirport, payload.baseAirport),
+            payScaleRaw: roleChanged(before.payScaleRaw, payload.payScaleRaw),
             gates: changedGates.length
           }),
           previousValuesJson: JSON.stringify({
@@ -130,7 +140,10 @@ export async function PATCH(request: Request, context: RouteContext) {
             gates: before.gates
           }),
           newValuesJson: JSON.stringify({ ...payload, gates: normalizedGates }),
-          changedBy: "local-user"
+          // Who, now that the history is shown on the tab. Every earlier row says
+          // "local-user" because this was a constant; the tab reads that as "not
+          // recorded". It still is under the local-dev bypass, which has no user.
+          changedBy: auth.user.email ?? "local-user"
         }
       });
     });

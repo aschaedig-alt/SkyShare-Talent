@@ -2,9 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ChevronLeft, Plane, Wrench } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plane, Radar, Wrench } from "lucide-react";
 import type { RecruitingJobDetail } from "@/lib/data/recruiting-jobs";
+import type { JobRequirementTabData, JobRequirementView } from "@/lib/data/pilot-requirements";
 import { JobSectionTabs, useJobSection, type JobSectionTab } from "@/components/recruiting-jobs/JobSectionTabs";
+import { JobRequirementTab } from "@/components/recruiting-jobs/JobRequirementTab";
+import type { RequirementPermissions } from "@/components/recruiting-jobs/RequirementPanel";
 import { JobTitleField } from "@/components/recruiting-jobs/JobTitleField";
 import { JobDetailsFields } from "@/components/recruiting-jobs/JobDetailsFields";
 import { JobActiveToggle } from "@/components/recruiting-jobs/JobActiveToggle";
@@ -95,23 +98,61 @@ function CandidateRow({ candidate }: { candidate: RecruitingJobDetail["linkedCan
   );
 }
 
+/**
+ * The way to the Matchboard from a job, landing on this job's role.
+ *
+ * Only an ACTIVE requirement is on the Matchboard, so a job whose requirement is
+ * inactive says so instead of linking to a role the board does not list.
+ */
+function MatchboardStrip({ requirements }: { requirements: JobRequirementView[] }) {
+  if (requirements.length === 0) return null;
+  const onBoard = requirements.find((requirement) => requirement.status === "ACTIVE");
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5">
+      <span className="inline-flex items-center gap-2 text-brand-grey dark:text-slate-400">
+        <Radar className="h-4 w-4 shrink-0 text-brand-gold" />
+        {onBoard
+          ? "The Matchboard checks everyone in the candidate pool against this role."
+          : "Not on the Matchboard: this job's pilot requirement is not Active."}
+      </span>
+      {onBoard ? (
+        <Link
+          href={`/matching?mode=role&id=${onBoard.id}`}
+          prefetch={false}
+          className="inline-flex items-center gap-1 font-semibold text-brand-eden underline-offset-2 transition hover:underline dark:text-brand-sweet"
+        >
+          Open in Matchboard
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
 function OverviewPane({
   job,
   canEdit,
+  requirements,
   onSeeCandidates
 }: {
   job: RecruitingJobDetail;
   canEdit: boolean;
+  requirements: JobRequirementView[];
   onSeeCandidates: () => void;
 }) {
   const recent = job.linkedCandidates.slice(0, 4);
+  // A requirement linked straight to this job is saved together with it, so its
+  // Role block is where seat, aircraft and location are changed.
+  const pairedWithRequirement = requirements.some((requirement) => requirement.pair);
   return (
     <div className="space-y-3">
       <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))]">
         <CountBox label="Candidates" value={job.candidateCount} />
-        <CountBox label="Requirements" value={job.requirementCount} />
+        <CountBox label="Requirements" value={requirements.length} />
         <CountBox label="Pay" value={job.paySummary ?? job.rawPayScale ?? "No pay recorded"} />
       </div>
+
+      <MatchboardStrip requirements={requirements} />
 
       <section className={CARD}>
         <p className={EYEBROW}>Classification</p>
@@ -122,6 +163,7 @@ function OverviewPane({
           isPilotRole={job.isPilotRole}
           pilotSeat={job.pilotSeat}
           aircraftTypes={job.aircraftTypes}
+          seatAndAircraftOnRequirementTab={pairedWithRequirement}
         />
         <PaycomReqField key={`paycom-${job.id}`} jobId={job.id} paycomReqId={job.paycomReqId} canEdit={canEdit} />
       </section>
@@ -154,36 +196,7 @@ function OverviewPane({
   );
 }
 
-function RequirementPane({ job }: { job: RecruitingJobDetail }) {
-  return (
-    <section className={CARD}>
-      <p className={EYEBROW}>Linked requirements</p>
-      <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Pilot requirement profiles</h3>
-      <div className="mt-3 space-y-2">
-        {job.linkedRequirements.length > 0 ? (
-          job.linkedRequirements.map((requirement) => (
-            <Link key={requirement.id} href={`/pilot-requirements?id=${requirement.id}`} className={ROW}>
-              <div className="font-semibold text-brand-lea dark:text-slate-100">{requirement.title}</div>
-              <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">
-                {[requirement.pilotSeat, requirement.status, requirement.reviewStatus].filter(Boolean).join(" - ")}
-              </div>
-            </Link>
-          ))
-        ) : (
-          <p className={EMPTY}>
-            No linked requirement profile yet. Without one there is nothing to score candidates against, so this role is
-            not on the Matchboard.{" "}
-            <Link href="/pilot-requirements" className="font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-brand-sweet">
-              Open Pilot requirements
-            </Link>
-          </p>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function CandidatesPane({ job }: { job: RecruitingJobDetail }) {
+function CandidatesPane({ job, requirements }: { job: RecruitingJobDetail; requirements: JobRequirementView[] }) {
   return (
     <section className={CARD}>
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
@@ -197,6 +210,9 @@ function CandidatesPane({ job }: { job: RecruitingJobDetail }) {
           <AddCandidateToJob jobId={job.id} jobTitle={job.title} />
           <BatchAddCandidatesToJob jobId={job.id} jobTitle={job.title} />
         </div>
+      </div>
+      <div className="mt-3">
+        <MatchboardStrip requirements={requirements} />
       </div>
       {/* No height cap and no scrollbar of its own. 279 applicants make a long
           page, and a long page is the correct answer — one scrollbar per screen. */}
@@ -213,8 +229,23 @@ function CandidatesPane({ job }: { job: RecruitingJobDetail }) {
   );
 }
 
-function SourcePane({ job }: { job: RecruitingJobDetail }) {
+const SOURCE_TEXT =
+  "mt-2 whitespace-pre-wrap rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm leading-6 text-brand-black/78 dark:border-white/10 dark:bg-white/5 dark:text-slate-300";
+
+function SourcePane({ job, requirements }: { job: RecruitingJobDetail; requirements: JobRequirementView[] }) {
   const sourceText = job.rawMinimumRequirements || job.jobDescriptionText;
+  // The posting was often kept ONLY on the pilot requirement: for most of the
+  // active pilot roles the job's own text is empty or a short stub. The
+  // requirement's "Source evidence" box was where it could be read, and that page
+  // is gone, so its copy shows here — unless it is the same text as the job's.
+  const keptOnRequirement = requirements
+    .map((requirement) => ({
+      id: requirement.id,
+      title: requirement.title,
+      text: requirement.rawMinimumRequirements || requirement.originalJobDescriptionText
+    }))
+    .filter((entry) => entry.text && entry.text.trim() !== (sourceText ?? "").trim());
+
   return (
     <section className={CARD}>
       <p className={EYEBROW}>Source record</p>
@@ -225,12 +256,23 @@ function SourcePane({ job }: { job: RecruitingJobDetail }) {
         <div>Source: {job.sourceFilename ?? "Not recorded"}</div>
       </div>
       {sourceText ? (
-        <div className="mt-3 whitespace-pre-wrap rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm leading-6 text-brand-black/78 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-          {sourceText}
+        <div className="mt-3">
+          {keptOnRequirement.length > 0 ? <p className={EYEBROW}>On the job</p> : null}
+          <div className={SOURCE_TEXT}>{sourceText}</div>
         </div>
       ) : (
-        <p className="mt-3 text-sm text-brand-grey dark:text-slate-400">No source text is attached to this job yet.</p>
+        <p className="mt-3 text-sm text-brand-grey dark:text-slate-400">
+          {keptOnRequirement.length > 0
+            ? "The job itself has no posting text. The copy kept on its pilot requirement is below."
+            : "No source text is attached to this job yet."}
+        </p>
       )}
+      {keptOnRequirement.map((entry) => (
+        <div key={entry.id} className="mt-4">
+          <p className={EYEBROW}>Kept on the pilot requirement “{entry.title}”</p>
+          <div className={SOURCE_TEXT}>{entry.text}</div>
+        </div>
+      ))}
     </section>
   );
 }
@@ -238,30 +280,49 @@ function SourcePane({ job }: { job: RecruitingJobDetail }) {
 export function RecruitingJobPage({
   job,
   canEdit = false,
-  requestedTab
+  requestedTab,
+  requirementTab,
+  requestedRequirement,
+  permissions
 }: {
   job: RecruitingJobDetail;
   canEdit?: boolean;
   requestedTab?: string;
+  /** Everything the Pilot requirement tab shows, including requirements left on jobs merged into this one. */
+  requirementTab: JobRequirementTabData;
+  /** ?req= — which requirement to open when the job holds more than one. */
+  requestedRequirement?: string;
+  permissions: RequirementPermissions;
 }) {
-  // A support job with no requirement profile has nothing to put behind the
-  // requirement tab, so it does not get one — but a support job that somehow HAS
-  // one still does, rather than the profile becoming unreachable.
-  const showRequirement = job.isPilotRole || job.linkedRequirements.length > 0;
+  const requirements = requirementTab.requirements;
+  // A support job with no requirement has nothing to put behind the requirement
+  // tab, so it does not get one — but a support job that somehow HAS one still
+  // does, rather than the requirement becoming unreachable.
+  const showRequirement = job.isPilotRole || requirements.length > 0;
+  const requirementCount = requirements.length;
 
   // Stable reference: useJobSection rebuilds its popstate listener whenever this
   // changes.
   const tabs: JobSectionTab[] = useMemo(() => {
     const list: JobSectionTab[] = [{ key: "overview", label: "Overview" }];
-    if (showRequirement) list.push({ key: "requirement", label: "Pilot requirement", chip: String(job.requirementCount) });
+    if (showRequirement) list.push({ key: "requirement", label: "Pilot requirement", chip: String(requirementCount) });
     list.push({ key: "candidates", label: "Candidates", chip: String(job.candidateCount) });
     list.push({ key: "screening", label: "Screening" });
     list.push({ key: "source", label: "Source text" });
     return list;
-  }, [showRequirement, job.requirementCount, job.candidateCount]);
+  }, [showRequirement, requirementCount, job.candidateCount]);
 
   const basePath = `/recruiting-jobs/${job.id}`;
   const [active, select] = useJobSection(tabs, requestedTab, basePath);
+
+  // Which requirement the tab shows, held here rather than in the tab so it
+  // survives a trip to another section and back. Only matters for a job holding
+  // more than one; an old link can name one with ?req=.
+  const [selectedRequirement, setSelectedRequirement] = useState<string | null>(() =>
+    requestedRequirement && requirements.some((requirement) => requirement.id === requestedRequirement)
+      ? requestedRequirement
+      : requirements[0]?.id ?? null
+  );
 
   // Screening is a ranked scan of the whole candidate pool, so it is paid for
   // only once somebody opens the tab — the old page ran it on every job
@@ -315,6 +376,7 @@ export function RecruitingJobPage({
               city={job.city}
               state={job.state}
               canEdit={canEdit}
+              locationOnRequirementTab={requirements.some((requirement) => requirement.pair)}
             />
           </div>
           <JobActiveToggle key={`active-${job.id}`} jobId={job.id} status={job.status} canEdit={canEdit} />
@@ -327,10 +389,24 @@ export function RecruitingJobPage({
 
       <div role="tabpanel">
         {active === "overview" ? (
-          <OverviewPane job={job} canEdit={canEdit} onSeeCandidates={() => select("candidates")} />
+          <OverviewPane
+            job={job}
+            canEdit={canEdit}
+            requirements={requirements}
+            onSeeCandidates={() => select("candidates")}
+          />
         ) : null}
-        {active === "requirement" ? <RequirementPane job={job} /> : null}
-        {active === "candidates" ? <CandidatesPane job={job} /> : null}
+        {active === "requirement" ? (
+          <JobRequirementTab
+            job={{ id: job.id, title: job.title, status: job.status }}
+            basePath={basePath}
+            data={requirementTab}
+            selectedId={selectedRequirement}
+            onSelect={setSelectedRequirement}
+            permissions={permissions}
+          />
+        ) : null}
+        {active === "candidates" ? <CandidatesPane job={job} requirements={requirements} /> : null}
         {active === "screening" ? (
           screening ? (
             <JobScreeningPanel data={screening} />
@@ -340,7 +416,7 @@ export function RecruitingJobPage({
             </div>
           )
         ) : null}
-        {active === "source" ? <SourcePane job={job} /> : null}
+        {active === "source" ? <SourcePane job={job} requirements={requirements} /> : null}
       </div>
     </div>
   );

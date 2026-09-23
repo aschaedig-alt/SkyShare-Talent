@@ -12,6 +12,7 @@ import { SignOutButton } from "@/components/layout/SignOutButton";
 import { LinkPendingIndicator } from "@/components/navigation/LinkPendingIndicator";
 import {
   getVisibleNavigationGroups,
+  menuPathFor,
   type ModuleAccessPolicy,
   type ModuleRuleOverrides,
   type VisibleNavigationGroup,
@@ -82,11 +83,14 @@ export function Sidebar({ role, policy, moduleOverrides, logoDataUrl, userEmail,
 
   // The active item is the one whose href is the LONGEST prefix of the current path.
   // This keeps sibling routes like /settings and /settings/users from both lighting up.
+  // A page belonging to an item kept out of the menu lights its stand-in instead
+  // (Scoring setup lights Jobs), or nothing would match and the menu would vanish.
+  const navPath = menuPathFor(pathname);
   let activeHref: string | null = null;
   for (const group of groups) {
     for (const section of group.sections) {
       for (const item of section.items) {
-        if (matchesPath(pathname, item.href) && item.href.length > (activeHref?.length ?? -1)) {
+        if (matchesPath(navPath, item.href) && item.href.length > (activeHref?.length ?? -1)) {
           activeHref = item.href;
         }
       }

@@ -9,11 +9,25 @@ type Props = {
   isPilotRole: boolean;
   pilotSeat: string | null;
   aircraftTypes: string[];
+  /**
+   * True when a requirement is linked straight to this job. Seat and aircraft
+   * are then edited in the Role block on the Pilot requirement tab, which saves
+   * them to the job and the requirement together. Editing the job's copy here as
+   * well is how 9 of 20 pairs came to list different aircraft, so here they are
+   * read-only; Pilot / Support is still switched here.
+   */
+  seatAndAircraftOnRequirementTab?: boolean;
 };
 
 const SEATS = ["PIC", "SIC", "Lead PIC", "Chief Pilot", "Mixed"];
 
-export function JobClassificationEditor({ jobId, isPilotRole, pilotSeat, aircraftTypes }: Props) {
+export function JobClassificationEditor({
+  jobId,
+  isPilotRole,
+  pilotSeat,
+  aircraftTypes,
+  seatAndAircraftOnRequirementTab = false
+}: Props) {
   const router = useRouter();
   const [pilot, setPilot] = useState(isPilotRole);
   const [seat, setSeat] = useState(pilotSeat ?? "");
@@ -23,9 +37,10 @@ export function JobClassificationEditor({ jobId, isPilotRole, pilotSeat, aircraf
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
+  const locked = seatAndAircraftOnRequirementTab && isPilotRole;
   const dirty =
     pilot !== isPilotRole ||
-    (pilot && (seat !== (pilotSeat ?? "") || JSON.stringify(aircraft) !== JSON.stringify(aircraftTypes)));
+    (pilot && !locked && (seat !== (pilotSeat ?? "") || JSON.stringify(aircraft) !== JSON.stringify(aircraftTypes)));
 
   function addAircraft() {
     const v = draft.trim();
@@ -50,7 +65,7 @@ export function JobClassificationEditor({ jobId, isPilotRole, pilotSeat, aircraf
         const p = (await res.json().catch(() => null)) as { message?: string } | null;
         throw new Error(p?.message ?? "Unable to save.");
       }
-      setMsg(pilot ? "Saved." : "Marked as support — pilot tags cleared and removed from Pilot Requirements.");
+      setMsg(pilot ? "Saved." : "Marked as support. Pilot seat and aircraft cleared, and its pilot requirement deleted.");
       router.refresh();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Unable to save.");
@@ -90,7 +105,22 @@ export function JobClassificationEditor({ jobId, isPilotRole, pilotSeat, aircraf
         </button>
       </div>
 
-      {pilot ? (
+      {pilot && locked ? (
+        <div className="mt-3 text-sm text-brand-lea dark:text-slate-100">
+          <p>
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Seat</span>{" "}
+            {pilotSeat ?? <span className="text-brand-grey dark:text-slate-400">No seat</span>}
+            <span aria-hidden className="mx-2 text-brand-lea/25 dark:text-white/20">
+              ·
+            </span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Aircraft</span>{" "}
+            {aircraftTypes.join(", ") || <span className="text-brand-grey dark:text-slate-400">None</span>}
+          </p>
+          <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
+            Changed in the Role block on the Pilot requirement tab, which saves the job and its requirement together.
+          </p>
+        </div>
+      ) : pilot ? (
         <div className="mt-3 grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
           <label className="block">
             <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Seat</span>
@@ -140,7 +170,8 @@ export function JobClassificationEditor({ jobId, isPilotRole, pilotSeat, aircraf
         </div>
       ) : (
         <p className="mt-3 text-sm text-brand-grey dark:text-slate-400">
-          Support role — pilot seat and aircraft tags are cleared, and it&rsquo;s removed from Pilot Requirements on save.
+          Support role — on save the pilot seat and aircraft are cleared and this job&rsquo;s pilot requirement is
+          deleted, with its hours, certificates, tail numbers and change history.
         </p>
       )}
 

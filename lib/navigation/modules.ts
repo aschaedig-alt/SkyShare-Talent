@@ -85,6 +85,20 @@ export type NavigationItem = {
   href: string;
   label: string;
   icon: ComponentType<{ className?: string }>;
+  /**
+   * False keeps an item OUT OF THE MENU (and so off the "home page" choices)
+   * while it stays in this registry for the two other things that read it: the
+   * path-to-module lookup behind the view-only banner, and the admin access table,
+   * which is the only place that module's access can be changed.
+   */
+  showInMenu?: boolean;
+  /**
+   * For an item kept out of the menu: the href of the VISIBLE item that stands in
+   * for it, so its pages still light something. Without it the sidebar finds no
+   * active item on those pages and the group's second menu disappears entirely -
+   * which is what Scoring setup did the moment Pilot Requirements left the menu.
+   */
+  activeAs?: string;
 };
 
 export type NavigationSection = {
@@ -119,7 +133,21 @@ export const navigationGroups: readonly NavigationGroup[] = [
         items: [
           { id: "candidates", href: "/candidates", label: "Candidates", icon: SearchCheck },
           { id: "recruiting-jobs", href: "/recruiting-jobs", label: "Jobs", icon: BriefcaseBusiness },
-          { id: "pilot-requirements", href: "/pilot-requirements", label: "Pilot Requirements", icon: Plane },
+          // Not in the menu since Sep 23: a pilot requirement is a tab on its job
+          // now, and /pilot-requirements only forwards old links there. Kept here
+          // because the module still gates Scoring setup (/pilot-requirements/
+          // scoring) and /api/pilot-requirements, and this entry is what lists it
+          // in the admin access table and maps those paths back to it.
+          {
+            id: "pilot-requirements",
+            href: "/pilot-requirements",
+            label: "Pilot Requirements",
+            icon: Plane,
+            showInMenu: false,
+            // Scoring setup is reached from a job's Pilot requirement tab now, so
+            // on those pages the Jobs item is the one that lights.
+            activeAs: "/recruiting-jobs"
+          },
           { id: "matching", href: "/matching", label: "Matchboard", icon: Radar },
           // An offer is the last step of recruiting, so it lives here rather than
           // under People. Rides on the candidates module's access (it is a view of
@@ -411,6 +439,25 @@ export function getModuleIdForPath(pathname: string): ModuleId | null {
   return null;
 }
 
+/**
+ * The path the SIDEBAR should light for this page. Usually the page's own path;
+ * for a page that belongs to an item kept out of the menu, the stand-in item it
+ * names with activeAs (see NavigationItem). The access check still uses the real
+ * path through getModuleIdForPath - this only decides what looks selected.
+ */
+export function menuPathFor(pathname: string): string {
+  for (const group of navigationGroups) {
+    for (const section of group.sections) {
+      for (const item of section.items) {
+        if (item.showInMenu === false && item.activeAs && matchesPath(item.href, pathname)) {
+          return item.activeAs;
+        }
+      }
+    }
+  }
+  return pathname;
+}
+
 // A per-user override of the role policy, as stored on User.moduleAccessJson and
 // parsed by lib/auth/user-module-access.ts. Typed structurally here rather than
 // imported, because that module imports THIS one and the cycle would be real.
@@ -467,7 +514,9 @@ export function getVisibleNavigationGroups(
       sections: group.sections
         .map((section) => ({
           ...section,
-          items: section.items.filter((item) => isSidebarVisible(ruleFor(policy, item.id, role, overrides)))
+          items: section.items.filter(
+            (item) => item.showInMenu !== false && isSidebarVisible(ruleFor(policy, item.id, role, overrides))
+          )
         }))
         .filter((section) => section.items.length > 0)
     }))

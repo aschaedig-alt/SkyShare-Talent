@@ -3,10 +3,11 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { Plane, Users, Wrench } from "lucide-react";
+import { ChevronDown, ChevronRight, Plane, Users, Wrench } from "lucide-react";
 import { Button } from "@/components/ui";
 import { NewJobButton } from "@/components/recruiting-jobs/NewJobButton";
 import type { RecruitingJobsData } from "@/lib/data/recruiting-jobs";
+import type { NoJobRequirement } from "@/lib/data/pilot-requirements";
 
 // The jobs list: every role as a card, and every card a real link to that job's
 // own page. The workspace-wide stat tiles that used to sit beside the
@@ -123,14 +124,99 @@ function JobCard({ job }: { job: Job }) {
   );
 }
 
+function sentence(value: string) {
+  return value.charAt(0) + value.slice(1).toLowerCase().replace(/_/g, " ");
+}
+
+/**
+ * Pilot requirements that belong to no live job.
+ *
+ * They used to be found on the Pilot Requirements page. That page is gone —
+ * a requirement is a tab on its job now — so these would otherwise be
+ * unreachable. Measured Sep 23: 9, every one a managed-aircraft role with a tail
+ * number and no job, all Inactive. (The four the mockup counted as "left behind
+ * by a merge" are not here: followed through the merge they belong to a live
+ * job, and show on its tab.)
+ *
+ * Closed by default: these are leftovers, and the page is for jobs. A search
+ * that matches one opens the list, so a search still finds it.
+ */
+function NoJobRequirements({ requirements, query }: { requirements: NoJobRequirement[]; query: string }) {
+  const [open, setOpen] = useState(Boolean(query));
+  if (requirements.length === 0) return null;
+  return (
+    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+      {/* Opens a list in place, so a button rather than a link. */}
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 text-left"
+      >
+        <span>
+          <span className="block text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">No job</span>
+          <span className="block text-base font-semibold text-brand-lea dark:text-slate-100">
+            {requirements.length} pilot requirement{requirements.length === 1 ? " has" : "s have"} no job
+            {query ? " matching this search" : ""}
+          </span>
+        </span>
+        {open ? (
+          <ChevronDown className="h-5 w-5 shrink-0 text-brand-eden dark:text-brand-sweet" />
+        ) : (
+          <ChevronRight className="h-5 w-5 shrink-0 text-brand-eden dark:text-brand-sweet" />
+        )}
+      </button>
+      {open ? (
+        <>
+          <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
+            Kept so their hours, certificates and tail numbers are not lost. Open one to read or edit it; a pilot job with
+            no requirement offers to attach a matching one.
+          </p>
+          <div className="mt-3 grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
+            {requirements.map((requirement) => (
+              <Link
+                key={requirement.id}
+                href={`/recruiting-jobs/requirements/${requirement.id}`}
+                className="block rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 transition hover:shadow-glow dark:border-white/10 dark:bg-white/5"
+              >
+                <span className="flex items-start justify-between gap-2">
+                  <span className="min-w-0 break-words text-sm font-semibold text-brand-lea dark:text-slate-100">{requirement.title}</span>
+                  <span className="shrink-0 rounded bg-brand-cloudDancer px-1.5 py-0.5 text-[11px] font-bold text-brand-grey dark:bg-white/10 dark:text-slate-400">
+                    {sentence(requirement.status)}
+                  </span>
+                </span>
+                <span className="mt-1 block text-xs text-brand-grey dark:text-slate-400">
+                  {[requirement.pilotSeat, requirement.operatorType, requirement.tails.length ? `Tail ${requirement.tails.join(", ")}` : null]
+                    .filter(Boolean)
+                    .join(" · ") || "No seat or operator recorded"}
+                </span>
+                <span className="mt-1 block text-xs text-brand-grey dark:text-slate-400">
+                  {requirement.lostJobTitle
+                    ? `Its job, “${requirement.lostJobTitle}”, was merged into one that no longer exists`
+                    : "Set up without a job"}
+                  {" · "}
+                  {requirement.enabledGateCount} of {requirement.gateCount} requirements on
+                </span>
+              </Link>
+            ))}
+          </div>
+        </>
+      ) : null}
+    </section>
+  );
+}
+
 export function RecruitingJobsList({
   jobs,
   query,
-  canEdit = false
+  canEdit = false,
+  noJobRequirements = []
 }: {
   jobs: Job[];
   query: string;
   canEdit?: boolean;
+  /** Already narrowed by the search box on the server. */
+  noJobRequirements?: NoJobRequirement[];
 }) {
   // Open first, because the roles you are hiring for are the ones you came here
   // for — the old list showed everything and only sorted the closed ones down,
@@ -253,6 +339,8 @@ export function RecruitingJobsList({
           ))}
         </div>
       )}
+
+      <NoJobRequirements requirements={noJobRequirements} query={query} />
     </div>
   );
 }

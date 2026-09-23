@@ -4,18 +4,29 @@ import { requireModulePageAccess } from "@/lib/data/module-access";
 import { getScoringSetupData } from "@/lib/data/scoring-setup";
 import { ScoringSetupForm } from "@/components/pilot-requirements/ScoringSetupForm";
 
-export default async function ScoringSetupPage() {
+type ScoringSetupPageProps = {
+  // The job whose Pilot requirement tab linked here, so "back" goes back to it.
+  searchParams?: Promise<{ job?: string }>;
+};
+
+export default async function ScoringSetupPage({ searchParams }: ScoringSetupPageProps) {
   await requireModulePageAccess("pilot-requirements");
-  const data = await getScoringSetupData();
+  const [data, params] = await Promise.all([getScoringSetupData(), searchParams]);
+  const fromJob = params?.job?.trim();
+  // The Pilot Requirements page this used to link back to is gone — requirements
+  // are a tab on their job now — so back is the job it came from, or the jobs list.
+  const back = fromJob
+    ? { href: `/recruiting-jobs/${encodeURIComponent(fromJob)}?tab=requirement`, label: "Back to the job" }
+    : { href: "/recruiting-jobs", label: "Back to jobs" };
 
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
       <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <Link
-          href="/pilot-requirements"
+          href={back.href}
           className="inline-flex items-center gap-1 text-xs font-semibold text-brand-eden transition hover:text-brand-lea dark:text-slate-100"
         >
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to pilot requirements
+          <ArrowLeft className="h-3.5 w-3.5" /> {back.label}
         </Link>
         <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Candidate fit</p>
         <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Scoring setup</h1>

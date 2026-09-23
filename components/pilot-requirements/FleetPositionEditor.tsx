@@ -2,45 +2,37 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plane, Megaphone, Tags, X, Plus, Layers } from "lucide-react";
+import { Plane, Megaphone, X, Layers } from "lucide-react";
 import { setRequirementFleetPosition } from "@/app/pilot-requirements/scoring-actions";
 import { FLEET_POSITIONS } from "@/lib/fleet/positions";
 
 const TITLE_BY_SLUG = new Map(FLEET_POSITIONS.map((p) => [p.slug, p.title]));
 
+// The aircraft tags that used to be edited here are gone on purpose. They wrote
+// the requirement's aircraft list and nothing else, while the job kept its own
+// copy — one of the two editors behind the job/requirement drift. Aircraft is now
+// edited only in the Role block on the job's Pilot requirement tab, which saves
+// both rows together. Not sending aircraftTypes leaves the list untouched; the
+// action only replaces it when it is given one.
 export function FleetPositionEditor({
   requirementId,
   currentSlug,
   currentAdvertised,
-  currentAircraftTypes,
   currentLinkedSlugs = [],
   rawTitle
 }: {
   requirementId: string;
   currentSlug: string | null;
   currentAdvertised: string | null;
-  currentAircraftTypes: string[];
   currentLinkedSlugs?: string[];
   rawTitle: string | null;
 }) {
   const router = useRouter();
   const [slug, setSlug] = useState(currentSlug ?? "");
   const [advertised, setAdvertised] = useState(currentAdvertised ?? "");
-  const [tags, setTags] = useState<string[]>(currentAircraftTypes);
-  const [newTag, setNewTag] = useState("");
   const [linked, setLinked] = useState<string[]>(currentLinkedSlugs);
   const [pending, start] = useTransition();
   const [notice, setNotice] = useState<string | null>(null);
-
-  function addTag() {
-    const value = newTag.trim();
-    if (value && !tags.includes(value)) setTags((current) => [...current, value]);
-    setNewTag("");
-  }
-
-  function removeTag(tag: string) {
-    setTags((current) => current.filter((t) => t !== tag));
-  }
 
   function save() {
     setNotice(null);
@@ -49,7 +41,6 @@ export function FleetPositionEditor({
         requirementId,
         fleetPositionSlug: slug || null,
         advertisedTitle: advertised || null,
-        aircraftTypes: tags,
         linkedFleetPositionSlugs: linked
       });
       setNotice(res.ok ? "Saved." : res.error ?? "Could not save.");
@@ -98,55 +89,6 @@ export function FleetPositionEditor({
           className="w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-black outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
         />
       </label>
-
-      <div className="mt-3">
-        <span className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">
-          <Tags className="h-3.5 w-3.5" /> Aircraft tags
-        </span>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {tags.length === 0 ? <span className="text-xs text-brand-grey dark:text-slate-400">No tags</span> : null}
-          {tags.map((tag) => (
-            <span
-              key={tag}
-              className="inline-flex items-center gap-1 rounded bg-brand-sweet/20 px-2 py-0.5 text-[11px] font-semibold text-brand-lea dark:text-slate-100"
-            >
-              {tag}
-              <button
-                type="button"
-                onClick={() => removeTag(tag)}
-                disabled={pending}
-                aria-label={`Remove ${tag}`}
-                className="rounded text-brand-grey transition hover:text-value-customerFocus-dark disabled:opacity-60 dark:text-slate-400 dark:hover:text-red-300"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-        <div className="mt-2 flex gap-2">
-          <input
-            value={newTag}
-            disabled={pending}
-            onChange={(event) => setNewTag(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                addTag();
-              }
-            }}
-            placeholder="Add an aircraft tag (e.g. Citation CJ2)"
-            className="min-w-0 flex-1 rounded border border-brand-lea/20 bg-white px-3 py-1.5 text-sm text-brand-black outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
-          />
-          <button
-            type="button"
-            onClick={addTag}
-            disabled={pending || !newTag.trim()}
-            className="inline-flex items-center gap-1 rounded border border-brand-lea/20 px-2.5 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-60 dark:border-white/10 dark:text-slate-100 dark:bg-white/5"
-          >
-            <Plus className="h-3.5 w-3.5" /> Add
-          </button>
-        </div>
-      </div>
 
       <div className="mt-3">
         <span className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-brand-grey dark:text-slate-400">

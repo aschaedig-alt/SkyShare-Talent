@@ -54,6 +54,11 @@ function groupGates(gates: GateFormValue[]) {
   return Array.from(groups.entries()).map(([category, group]) => ({ category, gates: group }));
 }
 
+// Operator, seat, base and pay are NOT edited here any more. They moved to the
+// Role block on the job's Pilot requirement tab, which saves seat, aircraft and
+// base to the job and the requirement together; editing them here as well is
+// exactly how the two rows drifted apart. This form still saves the name, the
+// two statuses and every gate, and the PATCH leaves fields it is not sent alone.
 export function PilotRequirementEditor({ requirement }: PilotRequirementEditorProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -62,12 +67,6 @@ export function PilotRequirementEditor({ requirement }: PilotRequirementEditorPr
   const [title, setTitle] = useState(requirement.title);
   const [status, setStatus] = useState(requirement.status);
   const [reviewStatus, setReviewStatus] = useState(requirement.reviewStatus);
-  const [operatorType, setOperatorType] = useState(requirement.operatorType ?? "Managed");
-  const [pilotSeat, setPilotSeat] = useState(requirement.pilotSeat ?? "PIC");
-  const [baseCity, setBaseCity] = useState(requirement.baseCity ?? "");
-  const [baseState, setBaseState] = useState(requirement.baseState ?? "");
-  const [baseAirport, setBaseAirport] = useState(requirement.baseAirport ?? "");
-  const [payScaleRaw, setPayScaleRaw] = useState(requirement.payScaleRaw ?? "");
   const [manualOverrideNotes, setManualOverrideNotes] = useState("");
   const [gates, setGates] = useState(() => flattenGates(requirement));
   const groupedGates = useMemo(() => groupGates(gates), [gates]);
@@ -100,12 +99,6 @@ export function PilotRequirementEditor({ requirement }: PilotRequirementEditorPr
       title,
       status,
       reviewStatus,
-      operatorType,
-      pilotSeat,
-      baseCity,
-      baseState,
-      baseAirport,
-      payScaleRaw,
       manualOverrideNotes,
       gates: gates.map((gate) => ({
         id: gate.id,
@@ -147,9 +140,10 @@ export function PilotRequirementEditor({ requirement }: PilotRequirementEditorPr
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
               Requirement editor
             </p>
-            <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Role identity</h3>
+            <h3 className="text-base font-semibold text-brand-lea dark:text-slate-100">Name, status and requirements</h3>
             <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
-              Save updates to the structured requirement profile. Original source text remains preserved.
+              Operator, seat, aircraft, base and pay are in the Role block above. Original source text is kept as it
+              was imported.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -194,40 +188,7 @@ export function PilotRequirementEditor({ requirement }: PilotRequirementEditorPr
               ))}
             </select>
           </label>
-          <label className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">Operator</span>
-            <select className={selectClass} value={operatorType} onChange={(event) => setOperatorType(event.target.value)}>
-              <option value="Managed">Managed</option>
-              <option value="SkyShare">SkyShare</option>
-            </select>
-          </label>
-          <label className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">Seat</span>
-            <select className={selectClass} value={pilotSeat} onChange={(event) => setPilotSeat(event.target.value)}>
-              {["PIC", "SIC", "Lead PIC", "Chief Pilot", "Assistant Chief Pilot", "Mixed"].map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">Base city</span>
-            <input className={inputClass} value={baseCity} onChange={(event) => setBaseCity(event.target.value)} />
-          </label>
-          <label className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">Base state</span>
-            <input className={inputClass} value={baseState} onChange={(event) => setBaseState(event.target.value)} />
-          </label>
-          <label className="space-y-1">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">Base airport</span>
-            <input className={inputClass} value={baseAirport} onChange={(event) => setBaseAirport(event.target.value)} />
-          </label>
-          <label className="space-y-1 xl:col-span-2">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">Pay scale</span>
-            <input className={inputClass} value={payScaleRaw} onChange={(event) => setPayScaleRaw(event.target.value)} />
-          </label>
-          <label className="space-y-1 xl:col-span-2">
+          <label className="space-y-1 xl:col-span-4">
             <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-[#8fb3d6]">Change note</span>
             <input
               className={inputClass}

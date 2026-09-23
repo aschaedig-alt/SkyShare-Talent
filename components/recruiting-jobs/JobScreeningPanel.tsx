@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { SlidersHorizontal, RefreshCw, ChevronDown, Lightbulb, Archive, TrendingUp, Search, X } from "lucide-react";
+import { SlidersHorizontal, RefreshCw, ChevronDown, ChevronRight, Lightbulb, Archive, TrendingUp, Search, X } from "lucide-react";
 import { UnverifiedQueuePanel } from "@/components/pilot-requirements/UnverifiedQueuePanel";
 import Link from "next/link";
 import {
@@ -63,10 +63,16 @@ function withBulkDecision(
 
 export function JobScreeningPanel({
   data,
-  onViewCandidate
+  onViewCandidate,
+  openJobHref
 }: {
   data: JobScreeningData;
   onViewCandidate?: (candidateId: string) => void;
+  /**
+   * Where "Open job" goes. Only the Matchboard passes it: on a job's own
+   * Screening tab you are already on the job.
+   */
+  openJobHref?: string;
 }) {
   const router = useRouter();
   const [best, setBest] = useState(data.best);
@@ -439,20 +445,31 @@ export function JobScreeningPanel({
             location.
           </p>
         </div>
-        {data.hasRequirement ? (
-          <Link
-            href="/pilot-requirements/scoring"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-element border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-eden transition hover:border-brand-sweet hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-white/5"
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" /> Scoring setup
-          </Link>
-        ) : null}
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+          {openJobHref ? (
+            <Link
+              href={openJobHref}
+              prefetch={false}
+              className="inline-flex shrink-0 items-center gap-1 rounded-element border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-eden transition hover:border-brand-sweet hover:bg-brand-cloudDancer/60 hover:shadow-glow dark:border-white/10 dark:bg-white/5"
+            >
+              Open job <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          ) : null}
+          {data.hasRequirement ? (
+            <Link
+              href="/pilot-requirements/scoring"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-element border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-eden transition hover:border-brand-sweet hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:bg-white/5"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" /> Scoring setup
+            </Link>
+          ) : null}
+        </div>
       </div>
 
       {!data.hasRequirement ? (
         <div className="mt-4 rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-4 text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-          This job has no linked pilot requirement yet, so there are no aircraft, seat, or hour minimums to score
-          against. Link a requirement profile (see Linked requirements) to enable screening.
+          This job has no pilot requirement yet, so there are no aircraft, seat, or hour minimums to score against. Set
+          one up on the Pilot requirement tab to enable screening.
         </div>
       ) : (
         <div className="mt-3 flex min-h-0 flex-1 flex-col">
