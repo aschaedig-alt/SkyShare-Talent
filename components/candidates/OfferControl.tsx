@@ -6,6 +6,7 @@ import { FileSignature, Check, Ban } from "lucide-react";
 import { clsx } from "clsx";
 import { OFFER_STATUSES, offerStatusLabel } from "@/lib/offers/constants";
 import { OFFER_STEPS, lastOfferStepDone, type OfferApplicationView } from "@/lib/offers/steps";
+import { OfferDetailsBox } from "@/components/candidates/OfferDetailsBox";
 import { formatMomentDate, formatCalendarDay } from "@/lib/dates/display";
 
 // The candidate profile passes its full application object (a superset); the
@@ -370,6 +371,11 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
           </div>
         </div>
       )}
+
+      {/* What the hiring manager sent about this offer. It renders itself only
+          for the HR team and fetches its own text, so neither page has to thread
+          a viewer down to here — see OfferDetailsBox. */}
+      <OfferDetailsBox applicationId={application.id} canEdit={canEdit} />
     </div>
   );
 }
