@@ -443,7 +443,7 @@ readable in dark mode.
 
 ### 22. Nobody outside HR has searched since the search started reading notes
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN — deployed 2026-09-23 (the search in 6b70f75, left-out words in 5aa7610); needs a login that is not HR
 **Added:** 2026-09-23
 
 The candidate search can now look in notes ("Search in" > Notes). A private HR note is searched
@@ -467,7 +467,7 @@ shows Notes 0; and `-zebrafish` reads "not zebrafish anywhere · nobody left out
 
 ### 23. No Pilot Application has arrived since search started reading them by layout
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN — deployed 2026-09-23 with 6b70f75, confirmed live; waits on a Pilot Application arriving
 **Added:** 2026-09-23
 
 Search reads a signed Pilot Application by its answers - read by layout, the form's printed
