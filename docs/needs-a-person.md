@@ -452,12 +452,16 @@ word that appears only in someone's private note must not find that person, and 
 them counted under Notes. Local dev signs everyone in as an admin, so the non-HR side has never
 run.
 
+Since the same day's follow-up, a word with a minus in front ("leave out") looks everywhere,
+notes included, and says how many people it left out - so the same private note must not leave
+anybody out for a hiring manager either, or show in that count.
+
 **How to check it, about two minutes:** as HR, add a private note with an unusual word
-("zebrafish") to one candidate. Sign in as a hiring manager and search that word. Then delete the
-note.
+("zebrafish") to one candidate. Sign in as a hiring manager and search that word, then search
+`-zebrafish`. Then delete the note.
 
 **What would count as a pass:** the hiring manager's search finds nobody, and the "Found in" row
-shows Notes 0.
+shows Notes 0; and `-zebrafish` reads "not zebrafish anywhere · nobody left out".
 
 ---
 

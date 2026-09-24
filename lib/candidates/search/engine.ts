@@ -38,6 +38,12 @@ export type SearchRun = {
   excludedIds: string[];
   /** Who it would find if every place were ticked - the population place counts come from. */
   everywhereIds: string[];
+  /**
+   * Who a left-out term removed: people the search found in the ticked places
+   * and then left out (for an exclude-only search, everybody it leaves out). Kept
+   * so the page can say what each left-out term did.
+   */
+  leftOutIds: string[];
   /** Per person, per place, which terms matched there. */
   masks: Map<string, PlaceMasks>;
   ms: number;
@@ -197,15 +203,25 @@ async function nameQuery(terms: SearchTerm[]): Promise<MaskRow[]> {
   return prisma.$queryRawUnsafe<MaskRow[]>(sql, ...p.values);
 }
 
+/** Did this term match this person in these places? A left-out term looks everywhere - placesFor. */
 function hitIn(masks: PlaceMasks | undefined, term: SearchTerm, places: SearchPlace[]): boolean {
   if (!masks) return false;
   return placesFor(term, places).some((place) => ((masks[place] ?? 0) & term.bit) !== 0);
 }
 
-/** Does this person satisfy the search, looking only in these places? */
+/** Do the terms to FIND all match, looking only in these places? */
+function found(parsed: ParsedSearch, masks: PlaceMasks | undefined, places: SearchPlace[]): boolean {
+  return parsed.groups.every((group) => group.some((term) => hitIn(masks, term, places)));
+}
+
+/** Does a left-out term leave this person out? The ticked places do not narrow it. */
+function leftOut(parsed: ParsedSearch, masks: PlaceMasks | undefined): boolean {
+  return parsed.exclude.some((term) => hitIn(masks, term, ALL_PLACES));
+}
+
+/** Does this person satisfy the search, finding them only in these places? */
 export function satisfies(parsed: ParsedSearch, masks: PlaceMasks | undefined, places: SearchPlace[]): boolean {
-  const found = parsed.groups.every((group) => group.some((term) => hitIn(masks, term, places)));
-  return found && !parsed.exclude.some((term) => hitIn(masks, term, places));
+  return found(parsed, masks, places) && !leftOut(parsed, masks);
 }
 
 export async function runCandidateSearch(
@@ -236,15 +252,41 @@ export async function runCandidateSearch(
   const matchedIds: string[] = [];
   const everywhereIds: string[] = [];
   const excludedIds: string[] = [];
+  const leftOutIds: string[] = [];
   for (const [id, entry] of masks) {
+    const out = leftOut(parsed, entry);
     if (parsed.excludeOnly) {
-      if (parsed.exclude.some((term) => hitIn(entry, term, places))) excludedIds.push(id);
+      if (out) excludedIds.push(id);
       continue;
     }
-    if (satisfies(parsed, entry, places)) matchedIds.push(id);
-    if (satisfies(parsed, entry, ALL_PLACES)) everywhereIds.push(id);
+    if (found(parsed, entry, places)) (out ? leftOutIds : matchedIds).push(id);
+    if (!out && found(parsed, entry, ALL_PLACES)) everywhereIds.push(id);
   }
-  return { parsed, places, matchedIds, excludedIds, everywhereIds, masks, ms: Date.now() - started };
+  return {
+    parsed,
+    places,
+    matchedIds,
+    excludedIds,
+    everywhereIds,
+    leftOutIds: parsed.excludeOnly ? excludedIds : leftOutIds,
+    masks,
+    ms: Date.now() - started
+  };
+}
+
+/**
+ * How many people each left-out term removed, over a population the caller has
+ * narrowed the way the list is (segment, filters, the viewer's own scope) - so
+ * "not cabin attendant, 21 left out" describes the list being looked at. A
+ * person two terms both leave out counts under each. Keyed by term bit.
+ */
+export function countLeftOut(run: SearchRun, population: Iterable<string>): Map<number, number> {
+  const counts = new Map(run.parsed.exclude.map((term) => [term.bit, 0]));
+  for (const id of population) {
+    const entry = run.masks.get(id);
+    for (const term of run.parsed.exclude) if (hitIn(entry, term, ALL_PLACES)) counts.set(term.bit, (counts.get(term.bit) ?? 0) + 1);
+  }
+  return counts;
 }
 
 /**

@@ -11,8 +11,8 @@ import {
   type CandidateDepartmentKey
 } from "@/lib/candidates/departments";
 import { CANDIDATE_LIST_LIMIT, CANDIDATE_LIST_MAX } from "@/lib/candidates/list-config";
-import { ALL_PLACES, parseSearch, type SearchPlace, type SearchTermKind } from "@/lib/candidates/search/query";
-import { countPlaces, runCandidateSearch, searchHits, type SearchHit } from "@/lib/candidates/search/engine";
+import { ALL_PLACES, parseSearch, type SearchPlace, type SearchSuggestion, type SearchTermKind } from "@/lib/candidates/search/query";
+import { countLeftOut, countPlaces, runCandidateSearch, searchHits, type SearchHit } from "@/lib/candidates/search/engine";
 import type { ViewerScope } from "@/lib/auth/viewer-scope";
 import {
   candidateScopeWhere,
@@ -348,7 +348,14 @@ export type CandidateSearchSummary = {
     aircraft: { type: string; name: string; spellings: string[] } | null;
     /** Joined to the term before it with OR. */
     orWithPrevious: boolean;
+    /**
+     * For a left-out term: how many people it removed from this list (segment,
+     * filters and scope applied) - the answer to "did that work?". Null otherwise.
+     */
+    leftOut: number | null;
   }>;
+  /** A likely-meant rewrite of the search - "-cabin attendant" as -"cabin attendant". */
+  suggestion: SearchSuggestion | null;
   /** The places ticked. */
   places: SearchPlace[];
   /**
@@ -780,12 +787,17 @@ export async function getCandidateListData({
       ? { id: { notIn: run.excludedIds } }
       : { id: { in: run.matchedIds } }
     : null;
+  // The rail's population also takes in the people a left-out term removed, so
+  // the summary can say how many each one removed inside this segment; they are
+  // skipped by every count the list itself shows (leftOutSet, below). For an
+  // exclude-only search that makes the population everyone in scope.
   const everywhereClause: Record<string, unknown> | null = run
     ? parsed.excludeOnly
-      ? searchClause
-      : { id: { in: run.everywhereIds } }
+      ? {}
+      : { id: { in: [...run.everywhereIds, ...run.leftOutIds] } }
     : null;
   const matchedSet = run && !parsed.excludeOnly ? new Set(run.matchedIds) : null;
+  const leftOutSet = run && run.leftOutIds.length > 0 ? new Set(run.leftOutIds) : null;
 
   // When searching, span ALL candidates including archived/historical (Jazz)
   // ones so legacy records are findable. With no query, the default list stays
@@ -1006,6 +1018,8 @@ export async function getCandidateListData({
   // The population the place counts are taken over: the rows the list would
   // hold with every place ticked, inside the chosen segment and filter.
   const placePopulation: string[] = [];
+  // And the people a left-out term removed, inside the same segment and filter.
+  const leftOutPopulation: string[] = [];
 
   for (const row of bucketRows) {
     const apps = row.applications.map((a) => {
@@ -1017,7 +1031,14 @@ export async function getCandidateListData({
     const typeRated = typeRatedIds.has(row.id);
     const matchesAcross =
       acrossFilter === "interview" ? failedInterview : acrossFilter === "typed" ? typeRated : false;
-    if ((!bucketFilter || bucket === bucketFilter) && (!acrossFilter || matchesAcross)) placePopulation.push(row.id);
+    const inView = (!bucketFilter || bucket === bucketFilter) && (!acrossFilter || matchesAcross);
+    // Left out by the search: counted for what each left-out term removed, and
+    // for nothing else - they are not on the list.
+    if (leftOutSet?.has(row.id)) {
+      if (inView) leftOutPopulation.push(row.id);
+      continue;
+    }
+    if (inView) placePopulation.push(row.id);
 
     // Everything below counts only people the list actually shows.
     if (matchedSet && !matchedSet.has(row.id)) continue;
@@ -1316,19 +1337,24 @@ export async function getCandidateListData({
     acrossCounts,
     stageCounts,
     search: run
-      ? {
-          terms: parsed.terms.map((term) => ({
-            text: term.text,
-            kind: term.kind,
-            negate: term.negate,
-            places: term.places,
-            aircraft: term.aircraft,
-            orWithPrevious: parsed.groups.some((group) => group.indexOf(term) > 0)
-          })),
-          places,
-          placeCounts: parsed.excludeOnly ? null : countPlaces(run, placePopulation),
-          ms: run.ms
-        }
+      ? (() => {
+          const leftOut = countLeftOut(run, leftOutPopulation);
+          return {
+            terms: parsed.terms.map((term) => ({
+              text: term.text,
+              kind: term.kind,
+              negate: term.negate,
+              places: term.places,
+              aircraft: term.aircraft,
+              orWithPrevious: parsed.groups.some((group) => group.indexOf(term) > 0),
+              leftOut: term.negate ? (leftOut.get(term.bit) ?? 0) : null
+            })),
+            places,
+            placeCounts: parsed.excludeOnly ? null : countPlaces(run, placePopulation),
+            suggestion: parsed.suggestion,
+            ms: run.ms
+          };
+        })()
       : null
   };
 }

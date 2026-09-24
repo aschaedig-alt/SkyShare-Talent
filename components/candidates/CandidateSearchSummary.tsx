@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { clsx } from "clsx";
-import { Plane, Search } from "lucide-react";
+import { Lightbulb, Plane, Search } from "lucide-react";
 import type { CandidateSearchSummary as Summary } from "@/lib/data/candidates";
 import {
   ALL_PLACES,
@@ -18,6 +18,11 @@ import {
  * unticks it, so "134 of these are only here because they applied to the
  * Challenger job" is one click from gone.
  *
+ * Each left-out term says how many people it removed. His first exclusion
+ * (Sep 23, "-cabin") "kind of worked" and nothing on the page could say how
+ * much; "not cabin attendant, anywhere, 21 left out" answers it, and "nobody left
+ * out" says a term did nothing.
+ *
  * Server-rendered links, no client state: every change is a new URL, which is
  * also what makes a search you narrowed shareable.
  */
@@ -32,9 +37,10 @@ export function CandidateSearchSummary({
   /** Everything else in the URL, carried into every link. */
   params: Record<string, string | undefined>;
 }) {
-  const href = (places: SearchPlace[]) => {
+  const href = (places: SearchPlace[], query?: string) => {
     const next = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) if (value) next.set(key, value);
+    if (query) next.set("q", query);
     const value = placesParam(places);
     if (value) next.set("in", value);
     return `/candidates?${next.toString()}`;
@@ -55,9 +61,18 @@ export function CandidateSearchSummary({
             {term.orWithPrevious ? <span className="font-semibold text-brand-grey dark:text-slate-400">or</span> : null}
             <span
               title={
-                term.aircraft
-                  ? `Every spelling of the ${term.aircraft.type} type rating: ${term.aircraft.spellings.join(", ")}. Put it in quotes to search one spelling only.`
-                  : undefined
+                [
+                  term.aircraft
+                    ? `Every spelling of the ${term.aircraft.type} type rating: ${term.aircraft.spellings.join(", ")}. Put it in quotes to search one spelling only.`
+                    : null,
+                  term.negate
+                    ? term.places
+                      ? `Leaves out anybody it matches in ${term.places.map((p) => placeInfo(p).label).join(", ")}.`
+                      : "Leaves out anybody it matches anywhere - resumes, applications, flight data, notes, jobs applied to, title, tags and status, name and contact - whatever is ticked under Search in."
+                    : null
+                ]
+                  .filter(Boolean)
+                  .join(" ") || undefined
               }
               className={clsx(
                 "inline-flex items-center gap-1 rounded border px-2 py-0.5",
@@ -76,12 +91,36 @@ export function CandidateSearchSummary({
               ) : null}
               {term.places ? (
                 <span className="text-brand-grey dark:text-slate-400">in {term.places.map((p) => placeInfo(p).label).join(", ")}</span>
+              ) : term.negate ? (
+                <span className="text-red-700/70 dark:text-red-300/70">anywhere</span>
+              ) : null}
+              {term.leftOut !== null ? (
+                <span className={clsx("tabular-nums", term.leftOut === 0 ? "text-red-700/70 dark:text-red-300/70" : "font-bold")}>
+                  · {term.leftOut === 0 ? "nobody left out" : `${term.leftOut.toLocaleString()} left out`}
+                </span>
               ) : null}
             </span>
           </span>
         ))}
         <span className="ml-auto text-[10px] text-brand-grey dark:text-slate-500">upper and lower case don&apos;t matter</span>
       </div>
+
+      {search.suggestion ? (
+        <p className="flex flex-wrap items-center gap-1.5 text-brand-lea dark:text-slate-200">
+          <Lightbulb className="h-3.5 w-3.5 shrink-0 text-brand-gold" />
+          <span>
+            This left out <span className="font-semibold">“{search.suggestion.leftOut}”</span> and searched for{" "}
+            <span className="font-semibold">{search.suggestion.required.map((word) => `“${word}”`).join(" and ")}</span>. To leave
+            out the phrase <span className="font-semibold">“{search.suggestion.phrase}”</span>, it goes in quotes:
+          </span>
+          <Link
+            href={href(search.places, search.suggestion.query)}
+            className={clsx(CHIP, "border-brand-gold/60 bg-brand-gold/10 font-semibold text-brand-lea dark:text-slate-100")}
+          >
+            {search.suggestion.query}
+          </Link>
+        </p>
+      ) : null}
 
       {search.placeCounts ? (
         <div className="flex flex-wrap items-center gap-1.5">

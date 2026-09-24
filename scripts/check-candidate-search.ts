@@ -13,7 +13,7 @@ config({ path: ".env.local" });
 config({ path: ".env" });
 
 import { prisma } from "../lib/prisma";
-import { parseSearch, parsePlaces, EXPERIENCE_PLACES, ALL_PLACES } from "../lib/candidates/search/query";
+import { parseSearch, parsePlaces, placesFor, EXPERIENCE_PLACES, ALL_PLACES } from "../lib/candidates/search/query";
 
 // query, text the first term MUST match, text it must NOT match
 const CASES: Array<[string, string[], string[]]> = [
@@ -29,7 +29,34 @@ const CASES: Array<[string, string[], string[]]> = [
   ["king air 350", ["King Air 350", "KingAir 350", "BE-350"], ["King Air 200"]],
   ["g450", ["G450", "G-450", "Gulfstream G350"], ["G4500", "G550"]],
   ["385-229-7212", ["(385) 229-7212", "3852297212"], ["38522972120"]],
-  ["hunter@gmail", ["hunter@gmail.com"], ["hunter at gmail"]]
+  ["hunter@gmail", ["hunter@gmail.com"], ["hunter at gmail"]],
+  // His Sep23 exclusion, quoted: the phrase covers "lead cabin attendant" too.
+  ['"cabin attendant"', ["Lead Corporate Cabin Attendant", "cabin attendants", "Cabin-Attendant", "CABIN ATTENDANT", "Cabinattendant"], ["Corporate Flight Attendant", "cabin crew", "attendant cabin"]]
+];
+
+// How the box is READ: query -> what it finds, what it leaves out, and what it offers instead.
+const GRAMMAR: Array<[string, { find: string[][]; out: string[]; suggest: string | null }]> = [
+  // His two Sep23 attempts, and what they should have been.
+  ["cl30 -cabin attendant", { find: [["aircraft:cl30"], ["word:attendant"]], out: ["word:cabin"], suggest: 'cl30 -"cabin attendant"' }],
+  ["cl30 -cabin", { find: [["aircraft:cl30"]], out: ["word:cabin"], suggest: null }],
+  ['cl30 -"cabin attendant" -"flight attendant"', { find: [["aircraft:cl30"]], out: ["phrase:cabin attendant", "phrase:flight attendant"], suggest: null }],
+  ["cl30 -lead cabin attendant", { find: [["aircraft:cl30"], ["word:cabin"], ["word:attendant"]], out: ["word:lead"], suggest: 'cl30 -"lead cabin attendant"' }],
+  ["cl30 -'cabin attendant'", { find: [["aircraft:cl30"], ["word:attendant'"]], out: ["word:'cabin"], suggest: 'cl30 -"cabin attendant"' }],
+  ["cl30 -jobs:cabin attendant", { find: [["aircraft:cl30"], ["word:attendant"]], out: ["word:cabin@jobs"], suggest: 'cl30 -job:"cabin attendant"' }],
+  // The boolean words, in capitals.
+  ['cl30 NOT "cabin attendant"', { find: [["aircraft:cl30"]], out: ["phrase:cabin attendant"], suggest: null }],
+  ["cl30 NOT cabin attendant", { find: [["aircraft:cl30"], ["word:attendant"]], out: ["word:cabin"], suggest: 'cl30 -"cabin attendant"' }],
+  ["cl30 AND g450", { find: [["aircraft:cl30"], ["aircraft:g450"]], out: [], suggest: null }],
+  ["cl30 and captain", { find: [["aircraft:cl30"], ["word:and"], ["word:captain"]], out: [], suggest: null }],
+  // A minus or a place on the first word carries across a whole aircraft name.
+  ["captain -challenger 350", { find: [["word:captain"]], out: ["aircraft:challenger 350"], suggest: null }],
+  ["resume:king air 350", { find: [["aircraft:king air 350@resume"]], out: [], suggest: null }],
+  // Offered, never applied: this one may mean exactly what it says.
+  ["-pilatus captain", { find: [["word:captain"]], out: ["word:pilatus"], suggest: '-"pilatus captain"' }],
+  ["-pilatus g450", { find: [["aircraft:g450"]], out: ["word:pilatus"], suggest: null }],
+  ["-pilatus pc 12", { find: [], out: ["aircraft:pilatus pc 12"], suggest: null }],
+  // To FIND, the lenient reading stays: a maker word is part of the aircraft.
+  ["cessna citation cj3", { find: [["aircraft:cessna citation cj3"]], out: [], suggest: null }]
 ];
 
 async function pg(text: string, pattern: string): Promise<boolean> {
@@ -72,11 +99,26 @@ async function main() {
   });
   if (shape !== want) fail(`the full grammar parsed as ${shape}`);
 
+  const show = (t: { kind: string; text: string; places: string[] | null }) => `${t.kind}:${t.text}${t.places ? `@${t.places}` : ""}`;
+  for (const [query, want] of GRAMMAR) {
+    const read = parseSearch(query);
+    const got = { find: read.groups.map((group) => group.map(show)), out: read.exclude.map(show), suggest: read.suggestion?.query ?? null };
+    if (JSON.stringify(got) !== JSON.stringify(want)) fail(`${query} read as ${JSON.stringify(got)}`);
+  }
+
+  // A left-out term looks everywhere, whatever is ticked, unless it names its own place.
+  const [notCabin] = parseSearch('cl30 -"cabin attendant"').exclude;
+  if (placesFor(notCabin, EXPERIENCE_PLACES).join() !== ALL_PLACES.join()) fail("a left-out term under Experience only does not look everywhere");
+  const [notJobCaptain] = parseSearch("cl30 -jobs:captain").exclude;
+  if (placesFor(notJobCaptain, EXPERIENCE_PLACES).join() !== "jobs") fail("a left-out term with its own place does not keep to it");
+  const [cl30] = parseSearch("cl30").groups[0];
+  if (placesFor(cl30, EXPERIENCE_PLACES).join() !== EXPERIENCE_PLACES.join()) fail("a term to find no longer keeps to the ticked places");
+
   if (parsePlaces(["resume", "experience"]).join() !== EXPERIENCE_PLACES.join()) fail("the Experience preset does not win over ticks");
   if (parsePlaces(["all", "notes"]).join() !== ALL_PLACES.join()) fail("the Everywhere preset does not win over ticks");
   if (parsePlaces([]).join() !== ALL_PLACES.join()) fail("no places ticked should mean everywhere");
 
-  console.log(failures ? `${failures} FAILURE(S)` : `ALL PASS - ${CASES.length} queries in both engines, the grammar, and the presets`);
+  console.log(failures ? `${failures} FAILURE(S)` : `ALL PASS - ${CASES.length} queries in both engines, ${GRAMMAR.length + 1} readings of the box, where left-out terms look, and the presets`);
   await prisma.$disconnect();
   process.exit(failures ? 1 : 0);
 }

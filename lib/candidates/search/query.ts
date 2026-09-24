@@ -16,17 +16,30 @@
  *                      and 350 never matches inside a phone number
  *   "first officer"    a phrase; spacing, hyphens and slashes are forgiven, so
  *                      "pc 12" finds PC-12 and "challenger 350" finds 300/350
- *   -pilatus           leave out anybody it matches
- *   cl350 OR g450      either one (a | works too). Plain words are ANDed
+ *   -pilatus           leave out anybody it matches; NOT pilatus is the same
+ *   -"cabin attendant" leave out a PHRASE. Without the quotes the minus takes one
+ *                      word, and the next is searched FOR (see the suggestion)
+ *   cl350 OR g450      either one (a | works too). Plain words are ANDed, and a
+ *                      typed AND is simply that
  *   resume:"cl 350"    look for this one only in that place; -jobs:captain
  *   challenger 350     an AIRCRAFT the app knows is recognised and searched under
  *                      every spelling of its type rating (CL-30, CL350, Challenger
  *                      300, BD-100 ...), because type-rated on one is typed on all.
  *                      Put it in quotes to search that exact spelling instead.
+ *                      -challenger 350 leaves the whole aircraft out.
  *
  * PLACES. What you tick under "Search in" decides where every term is looked
  * for, unless a term names its own place. His example is simply every place
  * except "Jobs applied to".
+ *
+ * A LEFT-OUT TERM LOOKS EVERYWHERE, whatever is ticked, unless it names its own
+ * place. Ticking decides where the EVIDENCE for a match may come from; leaving
+ * somebody out is about the person. It used to look only in the ticked places,
+ * and his first real exclusion (Sep 23: "CL30, but not anyone who says cabin
+ * attendant", with Experience only) kept every cabin attendant whose resume said
+ * "Corporate Flight Attendant" - the "Cabin Attendant" was in the job they applied
+ * to, which Experience only does not tick. -resume:captain still leaves out only
+ * by what is in a resume.
  */
 
 import { normalizeAircraftType, TYPE_BY_DESIGNATOR } from "@/lib/candidates/aircraft-types";
@@ -292,18 +305,42 @@ export type ParsedSearch = {
   /** True when there is nothing to find, only things to leave out. */
   excludeOnly: boolean;
   empty: boolean;
+  /** What they probably meant, when the box reads one way and was likely meant another. See phraseSuggestion. */
+  suggestion: SearchSuggestion | null;
 };
 
-type Token = { text: string; quoted: boolean; negate: boolean; places: SearchPlace[] | null; orBefore: boolean };
+export type SearchSuggestion = {
+  /** The whole search, rewritten - ready to run. */
+  query: string;
+  /** The phrase it would leave out, for the sentence that offers it. */
+  phrase: string;
+  /** What the box did instead: the word it left out, and the words it searched for. */
+  leftOut: string;
+  required: string[];
+};
+
+type Token = {
+  text: string;
+  quoted: boolean;
+  negate: boolean;
+  places: SearchPlace[] | null;
+  orBefore: boolean;
+  /** Where it sat in the box, a leading minus or NOT included - so a suggestion can rewrite just this part. */
+  start: number;
+  end: number;
+};
 
 /** Postgres int bitmasks, and nobody needs more than this in one box. */
 const MAX_TERMS = 24;
 
 function tokenize(raw: string): Token[] {
   const out: Token[] = [];
+  // Same length as raw, so the positions recorded below index the box as typed.
   const s = raw.replace(/[“”]/g, '"');
   let i = 0;
   let pendingOr = false;
+  // A NOT waiting for the term it negates, and where it started.
+  let pendingNot: number | null = null;
   while (i < s.length) {
     if (/\s/.test(s[i])) {
       i += 1;
@@ -314,6 +351,7 @@ function tokenize(raw: string): Token[] {
       i += 1;
       continue;
     }
+    const start = i;
     let negate = false;
     if (s[i] === "-" && i + 1 < s.length && !/\s/.test(s[i + 1])) {
       negate = true;
@@ -340,34 +378,61 @@ function tokenize(raw: string): Token[] {
     }
     text = text.trim();
     if (!text) continue;
+    // The boolean words recruiters bring from LinkedIn and job boards, in
+    // capitals like OR. Read as words, "cl30 NOT pilatus" would REQUIRE the
+    // word "not" - and "AND" is in nearly every resume.
     if (!quoted && !negate && !places && text === "OR") {
       pendingOr = true;
       continue;
     }
-    out.push({ text, quoted, negate, places, orBefore: pendingOr });
+    if (!quoted && !negate && !places && text === "AND") continue;
+    if (!quoted && !negate && !places && text === "NOT") {
+      pendingNot = start;
+      continue;
+    }
+    out.push({ text, quoted, negate: negate || pendingNot !== null, places, orBefore: pendingOr, start: pendingNot ?? start, end: i });
     pendingOr = false;
+    pendingNot = null;
   }
   return out;
 }
 
+type MergedToken = Token & { aircraft: AircraftMatch | null };
+
+/** Is this word part of how the aircraft is written - "challenger" of a Challenger 350, not "pilatus" of a G450? */
+function partOfName(word: string, aircraft: AircraftMatch): boolean {
+  const key = keyOf(word);
+  if (!key) return false;
+  const aliases = TYPE_BY_DESIGNATOR.get(aircraft.type)?.aliases ?? [];
+  return [aircraft.name, aircraft.type, ...aliases].some((spelling) => keyOf(spelling).includes(key));
+}
+
 /**
  * Pull neighbouring plain words together when they name an aircraft —
- * "challenger 350", "king air 350", "citation cj3" — longest first. Only plain
- * words: a quoted phrase means exactly that spelling, and an OR boundary is
- * never crossed.
+ * "challenger 350", "king air 350", "citation cj3" — longest first. A quoted
+ * phrase means exactly that spelling, and an OR boundary is never crossed. The
+ * FIRST word may carry a minus or a place, which then applies to the whole
+ * aircraft: -challenger 350 leaves the Challenger 350 out, where splitting it
+ * would leave out "challenger" and require a 350.
  */
-function mergeAircraft(tokens: Token[]): Array<Token & { aircraft: AircraftMatch | null }> {
-  const out: Array<Token & { aircraft: AircraftMatch | null }> = [];
+function mergeAircraft(tokens: Token[]): MergedToken[] {
+  const out: MergedToken[] = [];
   const plain = (t: Token | undefined) => Boolean(t && !t.quoted && !t.negate && !t.places);
   for (let i = 0; i < tokens.length; ) {
     let merged = false;
     for (let n = 3; n >= 2; n -= 1) {
       const run = tokens.slice(i, i + n);
-      if (run.length < n || !run.every(plain) || run.slice(1).some((t) => t.orBefore)) continue;
+      if (run.length < n || run[0].quoted || !run.slice(1).every(plain) || run.slice(1).some((t) => t.orBefore)) continue;
       const text = run.map((t) => t.text).join(" ");
       const aircraft = aircraftIn(text);
       if (!aircraft) continue;
-      out.push({ ...run[0], text, aircraft });
+      // Under a minus or a place, every word must be part of the aircraft's own
+      // names. The reader is lenient - it drops maker words, so "pilatus g450"
+      // reads as a G450 - which only widens a term to FIND a little, but would
+      // flip "-pilatus g450" from "leave out Pilatus, find G450s" into "leave
+      // out G450s".
+      if ((run[0].negate || run[0].places) && !run.every((t) => partOfName(t.text, aircraft))) continue;
+      out.push({ ...run[0], text, aircraft, end: run[n - 1].end });
       i += n;
       merged = true;
       break;
@@ -378,6 +443,32 @@ function mergeAircraft(tokens: Token[]): Array<Token & { aircraft: AircraftMatch
     i += 1;
   }
   return out;
+}
+
+/**
+ * "-cabin attendant" reads as: leave out "cabin", and FIND "attendant". That is
+ * the standard reading (Google's too) and not what he meant on Sep 23 - his list
+ * came back as nothing BUT attendants. A minus followed by plain words is offered
+ * the quoted phrase, one click away. The search still runs as typed, because
+ * "-pilatus captain" can mean exactly what it says.
+ */
+function phraseSuggestion(raw: string, tokens: MergedToken[]): SearchSuggestion | null {
+  const plainWord = (t: MergedToken | undefined) =>
+    Boolean(t && !t.quoted && !t.negate && !t.places && !t.orBefore && !t.aircraft && /[a-z]/i.test(t.text) && !t.text.includes("@"));
+  for (let i = 0; i < tokens.length; i += 1) {
+    const first = tokens[i];
+    if (!first.negate || first.quoted || first.aircraft) continue;
+    let j = i + 1;
+    while (plainWord(tokens[j])) j += 1;
+    if (j === i + 1) continue;
+    // Stray single quotes are what -'cabin attendant' leaves on the words.
+    const words = tokens.slice(i, j).map((t) => t.text.replace(/^['‘’]+|['‘’]+$/g, "")).filter(Boolean);
+    const phrase = words.join(" ");
+    const scope = first.places ? `${placeInfo(first.places[0]).prefixes[0]}:` : "";
+    const query = `${raw.slice(0, first.start)}-${scope}"${phrase}"${raw.slice(tokens[j - 1].end)}`.replace(/\s+/g, " ").trim();
+    return { query, phrase, leftOut: first.text, required: tokens.slice(i + 1, j).map((t) => t.text) };
+  }
+  return null;
 }
 
 function digitsOf(text: string): string {
@@ -428,6 +519,7 @@ function buildTerm(token: Token & { aircraft: AircraftMatch | null }, index: num
 
 export function parseSearch(raw: string): ParsedSearch {
   const tokens = mergeAircraft(tokenize(raw ?? "")).slice(0, MAX_TERMS);
+  const suggestion = phraseSuggestion(raw ?? "", tokens);
   const terms: SearchTerm[] = [];
   const groups: SearchTerm[][] = [];
   const exclude: SearchTerm[] = [];
@@ -449,13 +541,17 @@ export function parseSearch(raw: string): ParsedSearch {
     groups,
     exclude,
     excludeOnly: groups.length === 0 && exclude.length > 0,
-    empty: terms.length === 0
+    empty: terms.length === 0,
+    suggestion
   };
 }
 
-/** The places a term is looked for in: its own, or the ones ticked for the search. */
+/**
+ * The places a term is looked for in: its own, or the ones ticked for the search
+ * - or, for a term that LEAVES people out, everywhere (see the header).
+ */
 export function placesFor(term: SearchTerm, places: SearchPlace[]): SearchPlace[] {
-  return term.places ?? places;
+  return term.places ?? (term.negate ? ALL_PLACES : places);
 }
 
 // ---------------------------------------------------------------------------

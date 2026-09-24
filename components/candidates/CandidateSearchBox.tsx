@@ -56,7 +56,7 @@ export function CandidateSearchBox({
   size,
   places = ALL_PLACES,
   tone = "dark",
-  placeholder = 'Search anything - try challenger 350, "first officer", -pilatus',
+  placeholder = 'Search anything - try challenger 350 -"cabin attendant"',
   className = ""
 }: {
   /**
@@ -197,7 +197,15 @@ function PlacePicker({ places, dark }: { places: SearchPlace[]; dark: boolean })
           <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-gold">How to search</p>
           <ul className="mt-1 space-y-0.5">
             <li><code className="font-semibold text-brand-lea dark:text-slate-100">&quot;first officer&quot;</code> an exact phrase</li>
-            <li><code className="font-semibold text-brand-lea dark:text-slate-100">-pilatus</code> leave out anyone it matches</li>
+            <li>
+              <code className="font-semibold text-brand-lea dark:text-slate-100">-pilatus</code> leave out anyone it matches, anywhere - whatever is
+              ticked above. <code className="font-semibold text-brand-lea dark:text-slate-100">NOT pilatus</code> works too
+            </li>
+            <li>
+              <code className="font-semibold text-brand-lea dark:text-slate-100">-&quot;cabin attendant&quot;</code> leave out a phrase. It needs the
+              quotes: <code className="font-semibold text-brand-lea dark:text-slate-100">-cabin attendant</code> leaves out cabin and searches FOR
+              attendant
+            </li>
             <li><code className="font-semibold text-brand-lea dark:text-slate-100">cl350 OR g450</code> either one</li>
             <li><code className="font-semibold text-brand-lea dark:text-slate-100">resume:&quot;cl 350&quot;</code> or <code className="font-semibold text-brand-lea dark:text-slate-100">-jobs:captain</code> one word, one place</li>
             <li>
