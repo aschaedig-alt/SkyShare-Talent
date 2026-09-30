@@ -486,7 +486,7 @@ with Experience only, does not find them unless their resume or flight data ment
 
 ### 24. Nobody has taken anyone off an orientation's Google invite yet
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN — deployed 2026-09-29
 **Added:** 2026-09-29
 
 Removing or moving an attendee now asks who should come off the session's Google Calendar
@@ -506,7 +506,7 @@ and no email went to Sam - removal is silent by his choice (Sep 29).
 
 ### 25. No 30-day check-in has been skipped yet
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN — deployed 2026-09-29
 **Added:** 2026-09-29
 
 The post-onboarding grid's check-in email now has "Skip - don't send" in its dialog; the cell
@@ -524,7 +524,7 @@ person drops out of "Outstanding check-ins only", and after undo the cell is bac
 
 ### 26. No reminder email has been set up or sent yet
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN — deployed 2026-09-29
 **Added:** 2026-09-29
 
 A step's email can now be marked "reminder to somebody else": sending it never ticks the step,
@@ -544,7 +544,7 @@ the grid still shows that pilot's card as to do, with the envelope now offering 
 
 ### 27. The orientation grid's card and iPad circles now write the hire's checklist
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN — deployed 2026-09-29
 **Added:** 2026-09-29
 
 On an orientation session the CREDIT CARD and IPAD columns now show the hire's own checklist
