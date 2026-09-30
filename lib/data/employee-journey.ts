@@ -73,8 +73,9 @@ function iso(d: Date | null): string | null {
 }
 
 // Prefer the stored seat; fall back to resolving it from the title/slug so
-// pre-fleet-registry titles still classify.
-function seatOf(r: { seat: string | null; fleetPositionSlug: string | null; title: string }): "PIC" | "SIC" | null {
+// pre-fleet-registry titles still classify. Exported so every report counts a
+// pilot the same way (lib/data/headcount-history.ts reads it too).
+export function seatOf(r: { seat: string | null; fleetPositionSlug: string | null; title: string }): "PIC" | "SIC" | null {
   // Ground/support roles never hold a pilot seat — guard against bad imports that
   // tagged a maintenance/support role with an aircraft or a "*-captain" fleet slug
   // (e.g. "G450 Maintenance Technician (HND)" carrying slug g450-captain).

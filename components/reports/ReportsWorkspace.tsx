@@ -13,10 +13,14 @@ import type { FleetStaffing } from "@/lib/data/fleet-staffing";
 import { SKYSHARE_LADDER, ladderRank, nextRungs } from "@/lib/fleet/pilot-ladder";
 import { TravelSpendReport } from "@/components/travel/TravelSpendReport";
 import { ReportShareButton } from "@/components/reports/ReportShareButton";
+import { HeadcountTenureReport } from "@/components/reports/HeadcountTenureReport";
+import type { HeadcountHistory } from "@/lib/data/headcount-history";
 import { formatCalendarDay, formatMomentDate } from "@/lib/dates/display";
 
 type ReportsWorkspaceProps = {
   data: ReportsData;
+  /** Headcount and tenure by year - loaded by app/reports only, never the share link. */
+  headcount?: HeadcountHistory | null;
   logoDataUrl?: string | null;
   canShare?: boolean;
 };
@@ -1301,11 +1305,14 @@ function DocumentCurrency({ dc }: { dc: ReportsData["documentCurrency"] }) {
 const REPORT_TABS = [
   { id: "progression", label: "Fleet Progression" },
   { id: "travel", label: "Travel Spend" },
-  { id: "documents", label: "Document Currency" }
+  { id: "documents", label: "Document Currency" },
+  // Aimee, Sep 29: "in 2020 we had xx employees, xx of them were pilots, xx of
+  // those employees are still here."
+  { id: "headcount", label: "Headcount & Tenure" }
 ] as const;
 type ReportTab = (typeof REPORT_TABS)[number]["id"];
 
-export function ReportsWorkspace({ data, logoDataUrl, canShare = false }: ReportsWorkspaceProps) {
+export function ReportsWorkspace({ data, headcount = null, logoDataUrl, canShare = false }: ReportsWorkspaceProps) {
   const [tab, setTab] = useState<ReportTab>("progression");
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
@@ -1360,6 +1367,7 @@ export function ReportsWorkspace({ data, logoDataUrl, canShare = false }: Report
           (components/travel/TravelSpendReport.tsx), so the two cannot drift. */}
       {tab === "travel" ? <TravelSpendReport trips={data.travelSpend.trips} /> : null}
       {tab === "documents" ? <DocumentCurrency dc={data.documentCurrency} /> : null}
+      {tab === "headcount" && headcount ? <HeadcountTenureReport history={headcount} /> : null}
     </div>
   );
 }
