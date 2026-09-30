@@ -206,9 +206,19 @@ export function toTravelTripView(t: TripWithRelations): TravelTripView {
   };
 }
 
+// A PERSON'S trips, not one record's. A trip is saved on whichever record it was
+// booked from, and a candidate who moves to onboarding becomes a second record
+// (NewHire.candidateId points back). So orientation travel booked from the hire
+// page never showed on the candidate profile - "Travel 0" while /travel listed
+// the trip, Hannah's report of Sep 23 on Chris Sharpe - and a fly-out booked
+// while somebody was still a candidate never showed on their hire page. Both
+// profiles now read the trips on either record; a trip that carries both ids
+// comes back once.
+
 export async function getTravelTripsForNewHire(newHireId: string): Promise<TravelTripView[]> {
+  const hire = await prisma.newHire.findUnique({ where: { id: newHireId }, select: { candidateId: true } });
   const trips = await prisma.travelTrip.findMany({
-    where: { newHireId },
+    where: hire?.candidateId ? { OR: [{ newHireId }, { candidateId: hire.candidateId }] } : { newHireId },
     include: tripInclude,
     orderBy: { createdAt: "desc" }
   });
@@ -217,7 +227,7 @@ export async function getTravelTripsForNewHire(newHireId: string): Promise<Trave
 
 export async function getTravelTripsForCandidate(candidateId: string): Promise<TravelTripView[]> {
   const trips = await prisma.travelTrip.findMany({
-    where: { candidateId },
+    where: { OR: [{ candidateId }, { newHire: { candidateId } }] },
     include: tripInclude,
     orderBy: { createdAt: "desc" }
   });
