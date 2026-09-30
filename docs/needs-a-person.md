@@ -561,6 +561,25 @@ the Remote person no longer counts in "Out-of-town", "Travel booked" or "Travel 
 
 ---
 
+### 28. Nobody without admin rights has opened Reports > Sources
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-09-29
+
+Reports > Sources (/reports/sources) lets an admin or recruiter give a source spelling its tidy
+name, or rename a source - "How people found us" on the Reports tab bar. The save route refuses
+anybody without EDIT on Reports, and was checked over HTTP; what was not checked is the page
+itself for somebody without it, because local dev signs everybody in as an admin, so there the
+Rename and Save controls always show.
+
+**How to check it, about a minute:** signed in as a hiring manager (or anyone who is not an admin
+or recruiter), open Reports and click "How people found us".
+
+**What would count as a pass:** the page shows both tables, the "Counts as" column reads as plain
+text, and there are no Rename or Save buttons.
+
+---
+
 ## Closed
 
 ### 15. No trip uses Indoc & orientation yet

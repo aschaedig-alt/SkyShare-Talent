@@ -3,6 +3,7 @@ import { METRIC_DEFS, type MetricKind } from "@/lib/extraction/pilot-metrics";
 import { parseStringArray } from "@/lib/json";
 import { normalizeEmail, normalizeName } from "@/lib/candidates/normalize";
 import { parseOfferSteps } from "@/lib/offers/steps";
+import { applicationSources, loadSourceNames, sourceName, type FoundVia } from "@/lib/data/sources";
 import { suggestCompanyEmail } from "@/lib/people/company-email";
 import { resolveDepartmentKey } from "@/lib/calendar/departments";
 import {
@@ -377,6 +378,13 @@ export type CandidateProfileData = {
   stage: string | null;
   owner: string | null;
   source: string | null;
+  /**
+   * How this person found SkyShare - EVERY source they gave, across every
+   * application, oldest first (lib/data/sources). His rule, 2026-09-29: "if
+   * someone lists more than one source we need to note all of them." Not the same
+   * as `source`, which on a Paycom-era record says how the RECORD got here.
+   */
+  foundUs: Array<{ name: string; first: string | null; times: number }>;
   /** Paycom's person id (e.g. 320080) — the only exact key their emails give us. */
   paycomPersonId: string | null;
   /** Direct link to this person's own record in Paycom, pasted in by hand. */
@@ -494,6 +502,10 @@ export type CandidateProfileData = {
     historicalJobTitle: string | null;
     /** Paycom's own application id, on imported rows — the stage reconcile's key. */
     sourceApplicationId: string | null;
+    /** How they found SkyShare on THIS application: what they said and where they arrived from, by tidy name. */
+    foundVia: FoundVia[];
+    /** Who referred them, as Paycom recorded it. */
+    referralName: string | null;
     /** When the source recorded its decision (the Disposition Date in Paycom). */
     decidedAt: string | null;
     // Offer lives on the application because an offer is always for a job.
@@ -1822,13 +1834,33 @@ export async function getCandidateProfileData(
     }))
   ].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
 
-  // Per-candidate activity history (edits, note add/remove, dedupe, etc.).
-  const activityRows = await prisma.activityLog.findMany({
-    where: { entityType: "Candidate", entityId: candidate.id },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    include: { user: { select: { name: true, email: true } } }
-  });
+  // Per-candidate activity history (edits, note add/remove, dedupe, etc.), and the
+  // tidy source names (~70 rows) that turn each application's spelling into one name.
+  const [activityRows, sourceNames] = await Promise.all([
+    prisma.activityLog.findMany({
+      where: { entityType: "Candidate", entityId: candidate.id },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      include: { user: { select: { name: true, email: true } } }
+    }),
+    loadSourceNames()
+  ]);
+
+  // Every source they gave, oldest first, each once with how many applications
+  // named it. A JazzHR-era record's channel is on the person, not an application.
+  const foundUs = new Map<string, { name: string; first: string | null; times: number }>();
+  const oldestFirst = [...candidate.applications].sort((a, b) => (a.appliedAt?.getTime() ?? Infinity) - (b.appliedAt?.getTime() ?? Infinity));
+  if (candidate.origin === "JAZZ") {
+    const name = sourceName(candidate.source, sourceNames);
+    if (name) foundUs.set(name, { name, first: oldestFirst[0]?.appliedAt?.toISOString() ?? null, times: 1 });
+  }
+  for (const a of oldestFirst) {
+    for (const f of applicationSources(a, sourceNames)) {
+      const seen = foundUs.get(f.name);
+      if (seen) seen.times += 1;
+      else foundUs.set(f.name, { name: f.name, first: a.appliedAt?.toISOString() ?? null, times: 1 });
+    }
+  }
 
   // New candidate ↔ historical (Jazz) cross-link, surfaced on the new profile so
   // the recruiter can view the archived record or merge it in. Only shown on
@@ -1945,6 +1977,7 @@ export async function getCandidateProfileData(
     stage: candidate.stage,
     owner: candidate.owner,
     source: candidate.source,
+    foundUs: [...foundUs.values()],
     paycomPersonId: candidate.paycomPersonId,
     paycomLink: candidate.paycomLink,
     primaryEmail: candidate.primaryEmail,
@@ -2030,6 +2063,8 @@ export async function getCandidateProfileData(
       appliedAt: application.appliedAt?.toISOString() ?? null,
       historicalJobTitle: application.historicalJobTitle,
       sourceApplicationId: application.sourceApplicationId,
+      foundVia: applicationSources(application, sourceNames),
+      referralName: application.referralName,
       decidedAt: application.decidedAt?.toISOString() ?? null,
       offerStatus: application.offerStatus,
       offerSentAt: application.offerSentAt?.toISOString() ?? null,

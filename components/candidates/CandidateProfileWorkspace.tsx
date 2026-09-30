@@ -42,7 +42,7 @@ import { PreHireChecklistPanel } from "@/components/candidates/PreHireChecklistP
 import { LinkApplicationJob, UnlinkApplicationJob } from "@/components/candidates/LinkApplicationJob";
 import type { JobSuggestion } from "@/lib/jobs/paycom-title-match";
 import type { PreHireChecklistView } from "@/lib/data/prehire";
-import { formatMomentDate, formatMomentDateTime, formatMixedDay } from "@/lib/dates/display";
+import { formatMomentDate, formatMomentDateTime, formatMixedDay, zoneForValue } from "@/lib/dates/display";
 
 type CandidateProfileWorkspaceProps = {
   candidate: CandidateProfileData;
@@ -124,6 +124,11 @@ function formatDate(value: string | null) {
 
 function formatDateTime(value: string) {
   return formatMomentDateTime(value);
+}
+
+/** "Dec 2025" - when a source was first named. appliedAt is a calendar day on imports and a moment on app-made rows; zoneForValue reads each right. */
+function formatMonthYear(value: string) {
+  return new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric", timeZone: zoneForValue(value) }).format(new Date(value));
 }
 
 function initials(name: string) {
@@ -636,6 +641,28 @@ export function CandidateProfileWorkspace({
           {/* Applications tab */}
           {activeTab === "applications" && (
             <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+              {/* Every source they gave, across every application - his rule, Sep 29:
+                  "if someone lists more than one source we need to note all of them".
+                  Tidy names from Reports > Sources; each card below says which. */}
+              <p className="mb-3 text-sm text-brand-grey dark:text-slate-400">
+                How they found us:{" "}
+                {candidate.foundUs.length ? (
+                  candidate.foundUs.map((f, i) => (
+                    <span key={f.name}>
+                      {i ? ", " : ""}
+                      <span className="font-semibold text-brand-lea dark:text-slate-100">{f.name}</span>
+                      {f.first || f.times > 1
+                        ? ` (${[f.first ? formatMonthYear(f.first) : null, f.times > 1 ? `${f.times} applications` : null].filter(Boolean).join(", ")})`
+                        : ""}
+                    </span>
+                  ))
+                ) : (
+                  <span>not recorded</span>
+                )}{" "}
+                <Link href="/reports/sources" className="text-xs font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-slate-300">
+                  all sources →
+                </Link>
+              </p>
               {/* Link to a job right here — no detour to the Jobs page. Once linked,
                   the offer for it can be worked on the Offers tab. */}
               {canEdit && (
@@ -705,6 +732,18 @@ export function CandidateProfileWorkspace({
                               .filter(Boolean)
                               .join(" · ")}
                           </div>
+                          {application.foundVia.length || application.referralName ? (
+                            <div className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">
+                              {application.foundVia.map((f, i) => (
+                                <span key={f.name} title={f.spelled ? `Paycom spelled it "${f.spelled}"` : undefined}>
+                                  {i ? " · " : ""}
+                                  {f.how === "Said" ? "Said " : "Arrived from "}
+                                  <span className="font-semibold text-brand-lea dark:text-slate-200">{f.name}</span>
+                                </span>
+                              ))}
+                              {application.referralName ? `${application.foundVia.length ? " · " : ""}Referred by ${application.referralName}` : null}
+                            </div>
+                          ) : null}
                           {!application.job ? (
                             <LinkApplicationJob
                               applicationId={application.id}

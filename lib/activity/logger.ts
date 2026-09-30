@@ -40,7 +40,11 @@ export type ActivityType =
   // Rotating the public new-hire contacts share link. Recorded because it
   // silently breaks a link somebody is already holding — when a new hire reports
   // a dead contacts link, "who rotated it and when" is the question asked.
-  | "SHARE_LINK_ROTATED";
+  | "SHARE_LINK_ROTATED"
+  // A source spelling given a tidy name, or one tidy name folded into another,
+  // on Reports > Sources. SourceAlias keeps only the latest editor; this is the
+  // history, so "who decided bizjet was BizJetJobs" has an answer.
+  | "SOURCE_NAME_CHANGED";
 
 export interface ActivityLogPayload {
   userId?: string;
