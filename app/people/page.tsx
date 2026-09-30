@@ -9,6 +9,7 @@ import {
 import { getGridChecklist, getCheckinEmailTargets } from "@/lib/data/onboarding-grid-config";
 import { getTaskEmailMap } from "@/lib/onboarding/task-email-config";
 import { getTaskSendsByHire } from "@/lib/front/send-status";
+import { getTaskSkipsByHire } from "@/lib/front/task-email";
 import { PreOnboardingWorkspace, type PeopleTab } from "@/components/people/PreOnboardingWorkspace";
 import { isAdminOrRecruiter } from "@/lib/auth/roles";
 
@@ -38,12 +39,12 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
     return <PreOnboardingWorkspace tab={tab} counts={counts} canManage={canManage} dashboard={await getActiveDashboard()} />;
   }
   if (tab === "grid") {
-    const [grid, checklist, checkins] = await Promise.all([getActiveGridHires(), getGridChecklist(), getCheckinEmailTargets()]);
-    return <PreOnboardingWorkspace tab={tab} counts={counts} canManage={canManage} grid={grid} checklist={checklist} checkins={checkins} />;
+    const [grid, checklist, checkins, taskSends] = await Promise.all([getActiveGridHires(), getGridChecklist(), getCheckinEmailTargets(), getTaskSendsByHire()]);
+    return <PreOnboardingWorkspace tab={tab} counts={counts} canManage={canManage} grid={grid} checklist={checklist} checkins={checkins} taskSends={taskSends} />;
   }
   if (tab === "post") {
-    const [post, taskEmails, taskSends] = await Promise.all([getPostOnboardHires(), getTaskEmailMap(), getTaskSendsByHire()]);
-    return <PreOnboardingWorkspace tab={tab} counts={counts} canManage={canManage} post={post} emailTaskKeys={Object.keys(taskEmails)} taskSends={taskSends} />;
+    const [post, taskEmails, taskSends, taskSkips] = await Promise.all([getPostOnboardHires(), getTaskEmailMap(), getTaskSendsByHire(), getTaskSkipsByHire()]);
+    return <PreOnboardingWorkspace tab={tab} counts={counts} canManage={canManage} post={post} emailTaskKeys={Object.keys(taskEmails)} taskSends={taskSends} taskSkips={taskSkips} />;
   }
   return <PreOnboardingWorkspace tab={tab} counts={counts} canManage={canManage} archived={await getArchivedRows()} />;
 }

@@ -11,6 +11,7 @@ import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type 
 import { ChecklistManagePanel } from "@/components/people/ChecklistManagePanel";
 import { copyRich } from "@/lib/business-cards/copy";
 import { buildHireInfoHtml, buildHireInfoText } from "@/lib/onboarding/hire-email-copy";
+import { SendTaskEmailButton } from "@/components/people/SendTaskEmailButton";
 import { EmptyState } from "@/components/ui";
 
 const GRID_BULK_ACTIONS: BulkAction[] = [
@@ -70,11 +71,14 @@ const COLUMN_RULE = "border-r border-brand-lea/10 dark:border-white/10";
 export function OnboardingGridTab({
   hires: initial,
   checklist,
-  checkins
+  checkins,
+  taskSends = {}
 }: {
   hires: GridHire[];
   checklist: GridChecklistGroup[];
   checkins: CheckinEmailTarget[];
+  /** hireId -> taskKey -> when the app last sent that step's email (reminders). */
+  taskSends?: Record<string, Record<string, string>>;
 }) {
   const router = useRouter();
   const [hires, setHires] = useState(initial);
@@ -329,17 +333,38 @@ export function OnboardingGridTab({
                       {hires.map((h) => {
                         const task = h.tasks.find((t) => t.key === def.key);
                         if (!task) return <td key={h.id} className={clsx("border-b border-brand-lea/5 text-center text-brand-grey/50 dark:border-white/10", COLUMN_RULE)}>–</td>;
+                        // A step set up as a REMINDER (Manage tasks) offers its email on each
+                        // person still to do - "accounting, this pilot needs a card" - and
+                        // sending it ticks nothing. Asked for Sep 29 on this section.
+                        const remind = def.email?.reminder === true && task.status === "TODO";
                         return (
                           <td key={h.id} className={clsx("border-b border-brand-lea/5 text-center dark:border-white/10", COLUMN_RULE)}>
-                            <button
-                              type="button"
-                              onClick={() => cycle(h.id, task.id, task.status)}
-                              className="inline-flex h-8 w-full items-center justify-center transition-colors hover:bg-brand-gold/10 dark:hover:bg-white/5"
-                              aria-label={`${def.label} for ${h.name} — ${STATUS_WORD[task.status]}, click to change`}
-                              title="Click to change"
-                            >
-                              <Glyph status={task.status} />
-                            </button>
+                            <div className="flex items-center">
+                              <button
+                                type="button"
+                                onClick={() => cycle(h.id, task.id, task.status)}
+                                className="inline-flex h-8 min-w-0 flex-1 items-center justify-center transition-colors hover:bg-brand-gold/10 dark:hover:bg-white/5"
+                                aria-label={`${def.label} for ${h.name} — ${STATUS_WORD[task.status]}, click to change`}
+                                title="Click to change"
+                              >
+                                <Glyph status={task.status} />
+                              </button>
+                              {remind ? (
+                                <span className="shrink-0 pr-1">
+                                  <SendTaskEmailButton
+                                    compact
+                                    hireId={h.id}
+                                    taskKey={def.key}
+                                    taskLabel={`Reminder: ${def.label} — ${h.name}`}
+                                    taskStatus={task.status}
+                                    sentAt={taskSends[h.id]?.[def.key] ?? null}
+                                    canEdit
+                                    onSent={() => router.refresh()}
+                                    onReminderSent={() => router.refresh()}
+                                  />
+                                </span>
+                              ) : null}
+                            </div>
                           </td>
                         );
                       })}

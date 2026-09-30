@@ -9,6 +9,8 @@ import type { Checkin, EmploymentStatus, GridTaskStatus, PostOnboardHire } from 
 import { MAINTENANCE_TASKS } from "@/lib/onboarding/tasks";
 import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
 import { SendTaskEmailButton } from "@/components/people/SendTaskEmailButton";
+import { undoTaskEmailSkip } from "@/app/people/actions";
+import type { TaskSkipRecord } from "@/lib/front/task-email";
 import { EmptyState, Input } from "@/components/ui";
 import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
 
@@ -32,7 +34,8 @@ const POST_ONBOARD_BULK_ACTIONS: BulkAction[] = [
 export function PostOnboardTab({
   hires: initial,
   emailTaskKeys,
-  taskSends
+  taskSends,
+  taskSkips
 }: {
   hires: PostOnboardHire[];
   /** Check-in keys pointed at a Front template in Manage tasks. Only those get an
@@ -42,6 +45,8 @@ export function PostOnboardTab({
    *  check-in ticked by hand is not a send, so the envelope must not offer to
    *  "resend" one that has never gone out. */
   taskSends: Record<string, Record<string, string>>;
+  /** hireId -> taskKey -> who skipped that email, and when. */
+  taskSkips: Record<string, Record<string, TaskSkipRecord>>;
 }) {
   const router = useRouter();
   const [hires, setHires] = useState(initial);
@@ -49,6 +54,8 @@ export function PostOnboardTab({
   const [busy, setBusy] = useState(false);
 
   const emailKeys = useMemo(() => new Set(emailTaskKeys), [emailTaskKeys]);
+  // Kept here so a skip, or undoing one, shows at once without a reload.
+  const [skips, setSkips] = useState(taskSkips);
 
   // Filters. Applied in the browser rather than the server: this list is the
   // post-onboard cohort, which is tens of rows, and it is already fully loaded —
@@ -69,7 +76,8 @@ export function PostOnboardTab({
     return hires.filter((h) => {
       if (dept && h.department !== dept) return false;
       if (status && h.employmentStatus !== status) return false;
-      if (outstandingOnly && !h.checkins.some((c) => c.status !== "DONE")) return false;
+      // Outstanding = still to do. A skipped (N/A) check-in is handled.
+      if (outstandingOnly && !h.checkins.some((c) => c.status === "TODO")) return false;
       if (!needle) return true;
       return [h.name, h.position, h.department].some((v) => (v ?? "").toLowerCase().includes(needle));
     });
@@ -177,6 +185,46 @@ export function PostOnboardTab({
     } catch {
       setHires(prev);
     }
+  }
+
+  /** Mark a step's email skipped here - the dialog has already done it on the server. */
+  function markSkipped(hireId: string, key: string, rec: TaskSkipRecord, archived: boolean) {
+    if (archived) {
+      setHires((cur) => cur.filter((h) => h.id !== hireId));
+      router.refresh();
+      return;
+    }
+    setSkips((cur) => ({ ...cur, [hireId]: { ...(cur[hireId] ?? {}), [key]: rec } }));
+    setHires((cur) =>
+      cur.map((h) =>
+        h.id === hireId ? { ...h, checkins: h.checkins.map((x) => (x.key === key ? { ...x, status: "NA" as GridTaskStatus, dueSoon: false } : x)) } : h
+      )
+    );
+  }
+
+  async function undoSkip(h: PostOnboardHire, c: Checkin) {
+    if (!confirm(`Undo skipping ${h.name}'s ${c.short} check-in? It goes back to not done.`)) return;
+    const res = await undoTaskEmailSkip(h.id, c.key);
+    if (!res.ok) {
+      alert(res.error ?? "Couldn't undo that.");
+      return;
+    }
+    setSkips((cur) => {
+      const next = { ...cur, [h.id]: { ...(cur[h.id] ?? {}) } };
+      delete next[h.id][c.key];
+      return next;
+    });
+    // Back to not done here too - this grid keeps its own copy of the rows, so a
+    // refresh alone would leave the cell reading N/A. DUE is the server's rule
+    // (getPostOnboardHires): past the start date plus the check-in's days.
+    const due = MAINTENANCE_TASKS.find((m) => m.key === c.key)?.dueDays ?? null;
+    const startMs = h.startDate ? new Date(h.startDate).getTime() : null;
+    const dueSoon = due !== null && startMs !== null && Date.now() >= startMs + due * 86_400_000;
+    setHires((cur) =>
+      cur.map((x) =>
+        x.id === h.id ? { ...x, checkins: x.checkins.map((y) => (y.key === c.key ? { ...y, status: "TODO" as GridTaskStatus, dueSoon } : y)) } : x
+      )
+    );
   }
 
   async function toggle(hireId: string, c: Checkin) {
@@ -305,9 +353,26 @@ export function PostOnboardTab({
                     <option value="TERMINATED">Terminated</option>
                   </select>
                 </td>
-                {h.checkins.map((c) => (
+                {h.checkins.map((c) => {
+                  const skip = skips[h.id]?.[c.key];
+                  return (
                   <td key={c.key} className="px-3 py-3 text-center">
                     <span className="inline-flex items-center gap-0.5">
+                    {c.status === "NA" ? (
+                      // Skipped: says so, and who and when, instead of DUE. One click undoes it.
+                      <button
+                        type="button"
+                        onClick={() => void undoSkip(h, c)}
+                        title={
+                          skip
+                            ? `Skipped${skip.skippedBy ? ` by ${skip.skippedBy}` : ""} on ${formatMomentDateShort(skip.skippedAt)} - click to undo`
+                            : "Not applicable - click to undo"
+                        }
+                        className="inline-flex items-center rounded border border-brand-lea/15 bg-brand-cloudDancer/60 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-grey transition hover:bg-brand-gold/10 hover:text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-400 dark:hover:text-slate-100"
+                      >
+                        {skip ? "Skipped" : "N/A"}
+                      </button>
+                    ) : (
                     <button
                       type="button"
                       onClick={() => toggle(h.id, c)}
@@ -326,10 +391,12 @@ export function PostOnboardTab({
                         <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/30" />
                       )}
                     </button>
+                    )}
                     {/* Only the check-ins that have been pointed at a template get
                         an envelope. Putting one on all five would add a column of
-                        icons to a grid whose whole job is being scannable. */}
-                    {emailKeys.has(c.key) ? (
+                        icons to a grid whose whole job is being scannable. A
+                        skipped one has nothing left to send until it is undone. */}
+                    {emailKeys.has(c.key) && c.status !== "NA" ? (
                       <SendTaskEmailButton
                         compact
                         hireId={h.id}
@@ -338,6 +405,7 @@ export function PostOnboardTab({
                         taskLabel={`${c.short} check-in — ${h.name}`}
                         taskStatus={c.status}
                         canEdit
+                        onSkipped={(rec, archived) => markSkipped(h.id, c.key, rec, archived)}
                         onSent={() =>
                           setHires((cur) =>
                             cur.map((x) =>
@@ -356,7 +424,8 @@ export function PostOnboardTab({
                     ) : null}
                     </span>
                   </td>
-                ))}
+                  );
+                })}
               </tr>
               );
             })}

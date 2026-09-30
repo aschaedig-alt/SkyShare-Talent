@@ -649,6 +649,7 @@ function TaskEmailSetup({
     to: string;
     cc: string;
     greeting: boolean;
+    reminder: boolean;
   }) => void;
   onClear: () => void;
 }) {
@@ -659,6 +660,7 @@ function TaskEmailSetup({
   const [to, setTo] = useState((task.email?.to ?? []).join(", "));
   const [cc, setCc] = useState((task.email?.cc ?? ["hrotasks@skyshare.com"]).join(", "));
   const [greeting, setGreeting] = useState(task.email?.greeting ?? true);
+  const [reminder, setReminder] = useState(task.email?.reminder ?? false);
 
   useEffect(() => {
     let live = true;
@@ -787,6 +789,20 @@ function TaskEmailSetup({
         </span>
       </label>
 
+      <label className="mt-2 flex items-start gap-2 text-xs text-brand-black dark:text-slate-200">
+        <input type="checkbox" checked={reminder} onChange={(e) => setReminder(e.target.checked)} className="mt-0.5 h-3.5 w-3.5" />
+        <span>
+          This is a reminder to somebody else &mdash; sending it does <b>not</b> tick this step, and the checklist grid
+          shows an envelope on everyone still to do. For a step that is somebody else&apos;s job, like accounting ordering
+          a company card.
+        </span>
+      </label>
+      <p className="mt-2 text-[11px] leading-4 text-brand-grey dark:text-slate-400">
+        The template can name the person: write {"{{name}}"}, {"{{first_name}}"}, {"{{position}}"}, {"{{start_date}}"} or{" "}
+        {"{{orientation_date}}"} in it (in Front) and each send fills it in. A detail they have no value for stays as
+        typed, so you can fill it in before sending.
+      </p>
+
       {chosen?.subject ? (
         <p className="mt-2 text-xs text-brand-grey dark:text-slate-400">
           Subject: <span className="text-brand-black dark:text-slate-200">{chosen.subject}</span>
@@ -796,7 +812,7 @@ function TaskEmailSetup({
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           onClick={() =>
-            onSave({ templateId, templateName: chosen?.name ?? task.email?.templateName ?? "", audience, to, cc, greeting })
+            onSave({ templateId, templateName: chosen?.name ?? task.email?.templateName ?? "", audience, to, cc, greeting, reminder })
           }
           disabled={busy || !templateId || (audience === "custom" && !to.trim())}
           className="rounded bg-brand-lea px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-eden disabled:opacity-50 dark:bg-brand-sweet dark:text-brand-lea"

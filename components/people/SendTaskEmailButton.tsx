@@ -12,6 +12,7 @@ import {
   sendTaskEmail,
   previewCandidateTaskEmail,
   sendCandidateTaskEmail,
+  skipTaskEmail,
   type TaskEmailPreviewResult,
   type TaskEmailSendResult,
 } from "@/app/people/actions";
@@ -72,9 +73,18 @@ type Props = {
    *  check-in per person, and a full "Send email" button does not fit in it
    *  without making every row taller for the one column that has an email. */
   compact?: boolean;
+  /**
+   * Offer "Skip - don't send" (a hire's step only). Given the skip once it is
+   * recorded, and whether it finished their post-onboarding list. Asked for on
+   * the post-onboarding grid, Sep 29: "sometimes we might want to skip sending
+   * this out. give me the option to do that and show it was skipped."
+   */
+  onSkipped?: (skip: { skippedAt: string; skippedBy?: string | null }, archived: boolean) => void;
+  /** After a real send of a REMINDER - which ticks nothing, so onSent is not called. */
+  onReminderSent?: () => void;
 };
 
-export function SendTaskEmailButton({ hireId, candidateId, taskKey, taskLabel, taskStatus, canEdit, onSent, compact = false, sentAt = null }: Props) {
+export function SendTaskEmailButton({ hireId, candidateId, taskKey, taskLabel, taskStatus, canEdit, onSent, onSkipped, onReminderSent, compact = false, sentAt = null }: Props) {
   // One pair of calls whichever record the step is on, so nothing below branches.
   const buildPreview = (override?: string | null) =>
     hireId ? previewTaskEmail(hireId, taskKey, override) : previewCandidateTaskEmail(candidateId ?? "", taskKey, override);
@@ -103,6 +113,8 @@ export function SendTaskEmailButton({ hireId, candidateId, taskKey, taskLabel, t
   // What the step is CONFIGURED with, captured from the first preview before any
   // override. Kept so the note can name the template the next send will use.
   const [configured, setConfigured] = useState<{ id: string; name: string } | null>(null);
+  const [skipping, setSkipping] = useState(false);
+  const [skipError, setSkipError] = useState<string | null>(null);
 
   if (!canEdit) return null;
 
@@ -173,7 +185,25 @@ export function SendTaskEmailButton({ hireId, candidateId, taskKey, taskLabel, t
     // NOT on a test. onSent() is what flips the grid cell to done without a
     // reload, and a test has ticked nothing on the server — calling it would show
     // a done check-in that the next refresh silently takes back.
-    if (res.ok && !res.test) onSent();
+    // A reminder ticked nothing on the server, so nothing may tick here either.
+    if (res.ok && !res.test) {
+      if (preview?.preview?.reminder) onReminderSent?.();
+      else onSent();
+    }
+  }
+
+  async function skip() {
+    if (!hireId || !onSkipped) return;
+    setSkipping(true);
+    setSkipError(null);
+    const res = await skipTaskEmail(hireId, taskKey);
+    setSkipping(false);
+    if (!res.ok || !res.skippedAt) {
+      setSkipError(res.error ?? "Couldn't skip it.");
+      return;
+    }
+    close();
+    onSkipped({ skippedAt: res.skippedAt, skippedBy: res.skippedBy ?? null }, Boolean(res.archived));
   }
 
   function close() {
@@ -244,8 +274,17 @@ export function SendTaskEmailButton({ hireId, candidateId, taskKey, taskLabel, t
               </div>
             ) : result.ok ? (
               <div className="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-800 dark:border-green-500/40 dark:bg-green-500/10 dark:text-green-300">
-                Sent to {result.to}. The checklist item is now marked done
-                {result.conversationId ? " and linked to the Front conversation" : ""}.
+                {p?.reminder ? (
+                  <>
+                    Reminder sent to {result.to}. The checklist step is unchanged
+                    {result.conversationId ? "; the email is linked to the Front conversation" : ""}.
+                  </>
+                ) : (
+                  <>
+                    Sent to {result.to}. The checklist item is now marked done
+                    {result.conversationId ? " and linked to the Front conversation" : ""}.
+                  </>
+                )}
               </div>
             ) : (
               <div className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
@@ -382,6 +421,17 @@ export function SendTaskEmailButton({ hireId, candidateId, taskKey, taskLabel, t
                 A test goes to hrotasks@skyshare.com, still addressed to {p.firstName}. It does not tick the checklist
                 item and is not recorded as sent.
               </p>
+              {skipError ? <p className="w-full text-right text-[12px] text-red-700 dark:text-red-300">{skipError}</p> : null}
+              {onSkipped && hireId && taskStatus !== "DONE" ? (
+                <Button
+                  variant="ghost"
+                  onClick={() => void skip()}
+                  disabled={sending || skipping}
+                  title="Don't send it to this person - the grid shows it as skipped, with who and when, and you can undo it there"
+                >
+                  {skipping ? "Skipping…" : "Skip - don't send"}
+                </Button>
+              ) : null}
               <Button variant="secondary" onClick={close} disabled={sending}>
                 Cancel
               </Button>
@@ -395,7 +445,7 @@ export function SendTaskEmailButton({ hireId, candidateId, taskKey, taskLabel, t
               <Button onClick={() => confirmSend(false)} disabled={sending || switching}>
                 {sending && !testing
                   ? "Sending…"
-                  : `Send ${body === null ? "" : "edited copy "}to ${
+                  : `Send ${p.reminder ? "reminder " : ""}${body === null ? "" : "edited copy "}to ${
                       p.to.length === 1 ? p.to[0] : `${p.to.length} recipients`
                     }`}
               </Button>

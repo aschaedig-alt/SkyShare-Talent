@@ -140,6 +140,7 @@ export async function POST(request: Request) {
     to?: unknown;
     cc?: unknown;
     greeting?: unknown;
+    reminder?: unknown;
   };
 
   if (typeof body.key !== "string" || !body.key) {
@@ -160,7 +161,8 @@ export async function POST(request: Request) {
       // than this route quietly coercing a typo into "no recipients".
       to: parseAddressList(typeof body.to === "string" ? body.to : Array.isArray(body.to) ? (body.to as string[]) : []),
       cc: parseAddressList(typeof body.cc === "string" ? body.cc : Array.isArray(body.cc) ? (body.cc as string[]) : []),
-      greeting: body.greeting !== false
+      greeting: body.greeting !== false,
+      reminder: body.reminder === true
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

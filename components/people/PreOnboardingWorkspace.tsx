@@ -1,5 +1,6 @@
 "use client";
 
+import type { TaskSkipRecord } from "@/lib/front/task-email";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -36,10 +37,12 @@ type Props = {
   /** hireId -> taskKey -> when this app actually sent that check-in email. Drives
    *  the Resend wording; absent means it has never been sent from here. */
   taskSends?: Record<string, Record<string, string>>;
+  /** hireId -> taskKey -> who skipped that step's email, and when. */
+  taskSkips?: Record<string, Record<string, TaskSkipRecord>>;
   archived?: NewHireRow[];
 };
 
-export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboard, grid, checklist, checkins, emailTaskKeys, post, archived, taskSends }: Props) {
+export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboard, grid, checklist, checkins, emailTaskKeys, post, archived, taskSends, taskSkips }: Props) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -148,8 +151,8 @@ export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboa
       </div>
 
       {tab === "dashboard" && dashboard ? <OnboardingDashboardTab dashboard={dashboard} /> : null}
-      {tab === "grid" && grid ? <OnboardingGridTab hires={grid} checklist={checklist ?? []} checkins={checkins ?? []} /> : null}
-      {tab === "post" && post ? <PostOnboardTab hires={post} emailTaskKeys={emailTaskKeys ?? []} taskSends={taskSends ?? {}} /> : null}
+      {tab === "grid" && grid ? <OnboardingGridTab hires={grid} checklist={checklist ?? []} checkins={checkins ?? []} taskSends={taskSends ?? {}} /> : null}
+      {tab === "post" && post ? <PostOnboardTab hires={post} emailTaskKeys={emailTaskKeys ?? []} taskSends={taskSends ?? {}} taskSkips={taskSkips ?? {}} /> : null}
       {tab === "archived" && archived ? <OnboardingArchivedTab rows={archived} /> : null}
 
       <Modal open={adding} onClose={() => setAdding(false)} busy={saving}>

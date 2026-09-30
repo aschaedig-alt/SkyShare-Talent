@@ -4,6 +4,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { maybeArchiveOnCheckinsComplete } from "@/lib/data/onboarding";
+import { MAINTENANCE_GROUP } from "@/lib/onboarding/tasks";
+import { getTaskEmailConfig } from "@/lib/onboarding/task-email-config";
 import { isAuthRequired } from "@/lib/auth/auth-config";
 import { hasPermission, isRoleName } from "@/lib/auth/roles";
 import { getOrientationChannelId, ORIENTATION_CHANNEL_ADDRESS } from "@/lib/front/config";
@@ -25,8 +27,10 @@ import {
 } from "@/lib/front/contacts-email";
 import {
   buildTaskEmail,
+  clearTaskSkip,
   getTaskSendRecord,
   recordTaskSend,
+  recordTaskSkip,
   type HireForTaskEmail,
   type TaskEmailPreview,
   type TaskSendRecord,
@@ -81,10 +85,43 @@ async function actorLabel(): Promise<string | null> {
   return session?.user?.email ?? session?.user?.name ?? null;
 }
 
+export type TaskSkipResult = { ok: boolean; error?: string; skippedAt?: string; skippedBy?: string | null; archived?: boolean };
+
+/**
+ * Skip a step's email: nobody is emailed, and the step reads "Skipped" (who, when)
+ * instead of sitting DUE forever. Asked for Sep 29 on the post-onboarding grid:
+ * "sometimes we might want to skip sending this out. give me the option to do
+ * that and show it was skipped." The step goes N/A, which the grid, DUE and the
+ * auto-archive all count as handled. A step that is already DONE is never skipped.
+ */
+export async function skipTaskEmail(hireId: string, taskKey: string): Promise<TaskSkipResult> {
+  if (!(await canEditPeople())) return { ok: false, error: "You don't have permission to change this checklist." };
+  const where = { newHireId_key: { newHireId: hireId, key: taskKey } };
+  const task = await prisma.onboardingTask.findUnique({ where, select: { status: true, group: true } });
+  if (!task) return { ok: false, error: "This person has no such checklist step." };
+  if (task.status === "DONE") return { ok: false, error: "That step is already done, so there is nothing to skip." };
+  const skippedAt = new Date().toISOString();
+  const skippedBy = await actorLabel();
+  await prisma.onboardingTask.update({ where, data: { status: "NA", completedAt: null } });
+  await recordTaskSkip(hireId, taskKey, { skippedAt, skippedBy });
+  // Skipping the last outstanding check-in finishes post-onboarding, the same as ticking it.
+  const archived = task.group === MAINTENANCE_GROUP ? await maybeArchiveOnCheckinsComplete(hireId) : false;
+  return { ok: true, skippedAt, skippedBy, archived };
+}
+
+/** Undo a skip: the step goes back to not done, and the record of the skip is dropped. */
+export async function undoTaskEmailSkip(hireId: string, taskKey: string): Promise<{ ok: boolean; error?: string }> {
+  if (!(await canEditPeople())) return { ok: false, error: "You don't have permission to change this checklist." };
+  await prisma.onboardingTask.updateMany({ where: { newHireId: hireId, key: taskKey, status: "NA" }, data: { status: "TODO", completedAt: null } });
+  await clearTaskSkip(hireId, taskKey);
+  return { ok: true };
+}
+
 async function loadHire(hireId: string) {
   return prisma.newHire.findUnique({
     where: { id: hireId },
-    select: { id: true, name: true, personalEmail: true, ssEmail: true },
+    // position and the two dates fill a template's {{...}} fields (lib/front/task-email.ts).
+    select: { id: true, name: true, personalEmail: true, ssEmail: true, position: true, startDate: true, orientationDate: true },
   });
 }
 
@@ -414,6 +451,9 @@ export async function sendTaskEmail(
       taskLabel: task?.label ?? taskKey,
       tick: async () => {
         const warnings: string[] = [];
+        // A REMINDER is about somebody else's job ("accounting, this pilot needs a
+        // card"), so sending it is not the step being done. Recorded, never ticked.
+        if ((await getTaskEmailConfig(taskKey))?.reminder) return warnings;
         // Forward-only, same as the other two sends: a send is evidence the step
         // happened, and we never un-tick from here.
         const ticked = await prisma.onboardingTask.updateMany({
@@ -656,6 +696,8 @@ export async function sendCandidateTaskEmail(
       person,
       taskLabel: label,
       tick: async () => {
+        // A reminder never ticks - see sendTaskEmail.
+        if ((await getTaskEmailConfig(taskKey))?.reminder) return [];
         await setPreHireTick(candidateId, taskKey, "DONE", await actorLabel(), { forwardOnly: true });
         return [];
       },

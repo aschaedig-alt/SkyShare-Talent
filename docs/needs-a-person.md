@@ -484,6 +484,83 @@ with Experience only, does not find them unless their resume or flight data ment
 
 ---
 
+### 24. Nobody has taken anyone off an orientation's Google invite yet
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-09-29
+
+Removing or moving an attendee now asks who should come off the session's Google Calendar
+invite (the hire, and each of their supervisors - kept by default if they supervise somebody
+still on the session), and the calendar panel lists anybody still on the invite who is no
+longer on the session (their own supervisors excepted). It all runs on the SIGNED-IN person's own Google access, which local
+dev does not have, so no invite was changed while it was built.
+
+**How to check it, about three minutes, signed in with Google on the live site:** open the Sep 29
+session. Its calendar panel should list Sam Jaffari under "On the invite, but not on this
+session" - press "Take off the invite", then look at the event in Google Calendar.
+
+**What would count as a pass:** Sam is gone from the event's guest list, nobody else changed,
+and no email went to Sam - removal is silent by his choice (Sep 29).
+
+---
+
+### 25. No 30-day check-in has been skipped yet
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-09-29
+
+The post-onboarding grid's check-in email now has "Skip - don't send" in its dialog; the cell
+then reads "Skipped" (who and when on hover) instead of DUE, and one click undoes it. Skipping
+writes the step as N/A plus a small record of who skipped it, so it was not pressed on real
+people while it was built.
+
+**How to check it, about a minute:** skip one person's 30-day check-in, hover the cell, then
+undo it.
+
+**What would count as a pass:** the cell reads Skipped with your name and today's date, the
+person drops out of "Outstanding check-ins only", and after undo the cell is back as it was.
+
+---
+
+### 26. No reminder email has been set up or sent yet
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-09-29
+
+A step's email can now be marked "reminder to somebody else": sending it never ticks the step,
+and the checklist grid shows an envelope on each person still to do. Templates can carry
+{{name}}, {{first_name}}, {{position}}, {{start_date}} and {{orientation_date}}. Needs a Front
+template and the accounting / compliance addresses, which only Aimee has.
+
+**How to check it, about five minutes:** write the reminder template in Front using {{name}};
+on the grid, Manage tasks -> Email on "Received company credit card": pick it, Send to
+"Addresses I type in below" with the accounting address, tick the reminder box, save. Then use
+a pilot's envelope on that row and send.
+
+**What would count as a pass:** accounting gets the email with the pilot's name filled in, and
+the grid still shows that pilot's card as to do, with the envelope now offering "Resend".
+
+---
+
+### 27. The orientation grid's card and iPad circles now write the hire's checklist
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-09-29
+
+On an orientation session the CREDIT CARD and IPAD columns now show the hire's own checklist
+steps (N/A shows as a dash) and a click saves to that checklist too. The TRAVEL select gained
+Remote, and only orientation trips count toward the session's travel and spend. Displaying was
+checked against the Sep 29 session; clicking was not, because every click writes a live
+checklist.
+
+**How to check it, about two minutes:** on an upcoming session, tick someone's credit card,
+then open their checklist from their name. Set somebody's travel to Remote.
+
+**What would count as a pass:** the checklist shows "Received company credit card" done, and
+the Remote person no longer counts in "Out-of-town", "Travel booked" or "Travel spend".
+
+---
+
 ## Closed
 
 ### 15. No trip uses Indoc & orientation yet

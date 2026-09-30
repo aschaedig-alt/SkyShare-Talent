@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { splitCandidateName } from "@/lib/candidates/normalize";
 import { getTaskEmailConfig, type TaskEmailConfig } from "@/lib/onboarding/task-email-config";
+import { formatCalendarDay, formatMomentDate } from "@/lib/dates/display";
 import { fetchTemplate } from "./templates";
 import { cleanEditedBody } from "./sanitize-body";
 
@@ -61,6 +62,8 @@ export type TaskEmailPreview = {
   templateOverridden: boolean;
   /** True when the body below is a hand edit rather than the live template. */
   edited: boolean;
+  /** A reminder to somebody else: sending it does not tick the step. */
+  reminder: boolean;
 };
 
 export type HireForTaskEmail = {
@@ -68,7 +71,36 @@ export type HireForTaskEmail = {
   name: string;
   personalEmail: string | null;
   ssEmail: string | null;
+  /** Optional, for the {{...}} fields a template can carry - see fillHireFields. */
+  position?: string | null;
+  startDate?: Date | string | null;
+  orientationDate?: Date | string | null;
 };
+
+/**
+ * Fill the hire's details into a template: {{name}}, {{first_name}},
+ * {{position}}, {{start_date}}, {{orientation_date}} (any case, spaces allowed).
+ *
+ * A template used to go out word for word, which is fine when it is addressed to
+ * the hire and useless when it is not: a reminder to accounting that a card is
+ * needed has to say for WHOM. A field with no value is left as typed, so the
+ * preview shows it and it can be filled in by hand before sending - never
+ * silently dropped out of a sentence.
+ */
+function fillHireFields(text: string, hire: HireForTaskEmail, firstName: string, html: boolean): string {
+  const values: Record<string, string | null> = {
+    name: hire.name,
+    first_name: firstName,
+    position: hire.position?.trim() || null,
+    start_date: hire.startDate ? formatCalendarDay(hire.startDate) : null,
+    orientation_date: hire.orientationDate ? formatMomentDate(hire.orientationDate) : null
+  };
+  return text.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (whole, raw: string) => {
+    const value = values[raw.toLowerCase()];
+    if (!value) return whole;
+    return html ? value.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string) : value;
+  });
+}
 
 function resolveRecipient(hire: HireForTaskEmail, cfg: TaskEmailConfig) {
   // A CUSTOM LIST IS NOT ABOUT THE HIRE AT ALL, so it neither reads their fields
@@ -141,7 +173,8 @@ export async function buildTaskEmail(
   const first = firstName || hire.name.split(/\s+/)[0] || "there";
 
   const edited = Boolean(bodyOverride && bodyOverride.trim());
-  const bodyHtml = edited ? cleanEditedBody(bodyOverride as string) : tpl.body;
+  // A hand edit is final - it started from the already-filled body.
+  const bodyHtml = edited ? cleanEditedBody(bodyOverride as string) : fillHireFields(tpl.body, hire, first, true);
   const greeting = cfg.greeting ? greetingHtml(first) : "";
 
   return {
@@ -152,14 +185,15 @@ export async function buildTaskEmail(
     fellBack,
     cc: cfg.cc,
     firstName: first,
-    subject: tpl.subject,
+    subject: fillHireFields(tpl.subject, hire, first, false),
     greetingHtml: greeting,
     bodyHtml,
     html: greeting + bodyHtml,
     templateName: tpl.name,
     templateId: chosenId,
     templateOverridden: Boolean(templateOverride && templateOverride.trim() && templateOverride.trim() !== cfg.templateId),
-    edited
+    edited,
+    reminder: cfg.reminder
   };
 }
 
@@ -246,4 +280,70 @@ export async function recordTaskSend(hireId: string, taskKey: string, rec: TaskS
     create: { scope: SCOPE, key: KEY, valueJson: value },
     update: { valueJson: value }
   });
+}
+
+// ---------------------------------------------------------------------------
+// Skip record. "sometimes we might want to skip sending this out. give me the
+// option to do that and show it was skipped." (Aimee, 2026-09-29, of the 30-day
+// check-in email on the post-onboarding grid.) A skip sets the step to N/A - the
+// status the checklist already uses for "not happening" - and this remembers who
+// skipped it and when, which a bare N/A cannot say. Same one-blob store, and the
+// same no-migration trade, as the send records above.
+
+const SKIP_KEY = "task-email-skips";
+
+export type TaskSkipRecord = { skippedAt: string; skippedBy?: string | null };
+
+async function readSkips(): Promise<Record<string, TaskSkipRecord>> {
+  const row = await prisma.workspaceSetting.findUnique({
+    where: { scope_key: { scope: SCOPE, key: SKIP_KEY } },
+    select: { valueJson: true }
+  });
+  if (!row?.valueJson) return {};
+  try {
+    const parsed = JSON.parse(row.valueJson) as unknown;
+    return (parsed && typeof parsed === "object" ? parsed : {}) as Record<string, TaskSkipRecord>;
+  } catch {
+    return {};
+  }
+}
+
+async function writeSkips(all: Record<string, TaskSkipRecord>): Promise<void> {
+  const value = JSON.stringify(all);
+  await prisma.workspaceSetting.upsert({
+    where: { scope_key: { scope: SCOPE, key: SKIP_KEY } },
+    create: { scope: SCOPE, key: SKIP_KEY, valueJson: value },
+    update: { valueJson: value }
+  });
+}
+
+export async function recordTaskSkip(hireId: string, taskKey: string, rec: TaskSkipRecord): Promise<void> {
+  const all = await readSkips();
+  all[recordKey(hireId, taskKey)] = rec;
+  await writeSkips(all);
+}
+
+export async function clearTaskSkip(hireId: string, taskKey: string): Promise<void> {
+  const all = await readSkips();
+  if (!(recordKey(hireId, taskKey) in all)) return;
+  delete all[recordKey(hireId, taskKey)];
+  await writeSkips(all);
+}
+
+/** hireId -> taskKey -> the skip. One read for a whole grid. */
+export async function getTaskSkipsByHire(): Promise<Record<string, Record<string, TaskSkipRecord>>> {
+  const out: Record<string, Record<string, TaskSkipRecord>> = {};
+  let all: Record<string, TaskSkipRecord> = {};
+  try {
+    all = await readSkips();
+  } catch {
+    // An unreadable log must not take the page down; a skipped step then reads N/A.
+    return out;
+  }
+  for (const [composite, rec] of Object.entries(all)) {
+    const at = composite.indexOf(":");
+    if (at <= 0 || !rec?.skippedAt) continue;
+    (out[composite.slice(0, at)] ??= {})[composite.slice(at + 1)] = rec;
+  }
+  return out;
 }

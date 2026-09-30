@@ -53,6 +53,15 @@ export type TaskEmailConfig = {
   /** Prepend "Hi <first name>," in the template's own font. Off for templates
    *  that already open with their own greeting. */
   greeting: boolean;
+  /**
+   * A REMINDER to somebody else about this step - "accounting, this pilot needs
+   * a company card" - so sending it is not the step being done: it is recorded
+   * as sent and the step is never ticked. The checklist grid also offers it on
+   * each person still to do. Asked for Sep 29 (Aimee): "from this section, it
+   * would be nice to be able to send a reminder email to accounting about a
+   * credit card (mostly pilots) and compliance about the ipad (only pilots)".
+   */
+  reminder: boolean;
 };
 
 export type TaskEmailMap = Record<string, TaskEmailConfig>;
@@ -85,7 +94,8 @@ function parseConfig(v: unknown): TaskEmailConfig | null {
     audience: parseAudience(o.audience),
     to: parseAddressList(Array.isArray(o.to) ? o.to.filter((x): x is string => typeof x === "string") : []),
     cc: Array.isArray(o.cc) ? o.cc.filter((x): x is string => typeof x === "string") : [],
-    greeting: o.greeting !== false
+    greeting: o.greeting !== false,
+    reminder: o.reminder === true
   };
 }
 
@@ -146,7 +156,10 @@ export function parseAddressList(input: string | string[]): string[] {
   return out.slice(0, 10);
 }
 
-export async function setTaskEmail(taskKey: string, config: Omit<TaskEmailConfig, "templateName"> & { templateName?: string }): Promise<void> {
+export async function setTaskEmail(
+  taskKey: string,
+  config: Omit<TaskEmailConfig, "templateName" | "reminder"> & { templateName?: string; reminder?: boolean }
+): Promise<void> {
   if (EXCLUDED_TASK_KEYS.has(taskKey)) {
     throw new Error("That task already sends its own email and is wired up in code.");
   }
@@ -166,7 +179,8 @@ export async function setTaskEmail(taskKey: string, config: Omit<TaskEmailConfig
     audience,
     to,
     cc: parseAddressList(config.cc),
-    greeting: config.greeting !== false
+    greeting: config.greeting !== false,
+    reminder: config.reminder === true
   };
   await writeMap(map);
 }

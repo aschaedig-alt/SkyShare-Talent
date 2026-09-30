@@ -862,7 +862,10 @@ export async function maybeArchiveOnCheckinsComplete(hireId: string): Promise<bo
   });
   if (!hire || hire.stage !== "POST_ONBOARD") return false;
   const checkins = hire.tasks;
-  if (checkins.length === 0 || !checkins.every((t) => t.status === "DONE")) return false;
+  // DONE or N/A: a check-in somebody chose to skip is handled too (skipTaskEmail,
+  // app/people/actions.ts). Measured 2026-09-29: no check-in anywhere was N/A, so
+  // this changed nobody's standing - it only lets a skip finish the list.
+  if (checkins.length === 0 || !checkins.every((t) => t.status === "DONE" || t.status === "NA")) return false;
   await prisma.newHire.update({ where: { id: hireId }, data: { stage: "ARCHIVED" } });
   return true;
 }
@@ -1059,7 +1062,8 @@ export async function getPostOnboardHires(): Promise<PostOnboardHire[]> {
     const checkins: Checkin[] = MAINTENANCE_TASKS.map((m) => {
       const rec = byKey.get(m.key);
       const status = (rec?.status ?? "TODO") as GridTaskStatus;
-      const dueSoon = Boolean(m.dueDays !== null && startMs !== null && now >= startMs + m.dueDays * DAY && status !== "DONE");
+      // N/A - a skipped check-in - is handled, not due.
+      const dueSoon = Boolean(m.dueDays !== null && startMs !== null && now >= startMs + m.dueDays * DAY && status !== "DONE" && status !== "NA");
       return { id: rec?.id ?? "", key: m.key, short: m.short, status, dueSoon };
     });
     return {
