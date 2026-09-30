@@ -371,6 +371,25 @@ gutter. On a list, a table or a panel, a hidden bar hides that there is more to
 see, which is worse than the bar. If content scrolls, the reader is entitled to
 know.
 
+### A popup always scrolls — and only once
+
+Aimee's rule, asked for directly on 2026-09-29, after the supervisor-contact send
+dialog hid its Send button on her laptop (1536×695) with nothing that could scroll
+to it: *when a window pops up on the screen you should always be able to scroll
+it* — and still no extra scrollbars. She asked for it to be written down so it
+always works.
+
+- **Use the shared `Modal` (`components/ui/Modal.tsx`).** Its dim overlay is the one
+  scroll container: a short dialog is centred, a tall one starts at the top with its
+  heading showing and scrolls down to its buttons. Nothing inside needs to know.
+- **Never give the panel, or anything in it, its own height cap + scroll** — no
+  `max-h-[90vh] overflow-y-auto` on the panel, no `max-h-72 overflow-y-auto` on an
+  email body. That is a second scrollbar inside the first. Let content grow.
+- **A hand-rolled `fixed inset-0` dialog must behave the same** (overlay
+  `overflow-y-auto overflow-x-hidden`, panel inside a `min-h-full` flex wrapper) —
+  or, better, be moved onto `Modal`. Eleven still are hand-rolled; they fit today.
+- **Check a dialog at 1536×695**, her screen — not only on a desktop monitor.
+
 ## Anything that navigates must be a real link
 
 The user's rule: if a click changes the **whole screen** to another page, use a real

@@ -25,6 +25,21 @@ import { useDialogClose } from "@/lib/hooks/useDialogClose";
 // Composing content: keep the top-right ~2rem of the panel clear, that corner
 // belongs to the close button.
 //
+// A DIALOG TALLER THAN THE SCREEN SCROLLS - and it is the only thing that does.
+// Aimee, 2026-09-29, on a 1536x695 laptop: "i cant scroll to see the send button
+// ... i dont want extra scroll bars but when a window pops up on the screen you
+// should always be able to scroll it." The panel had no height limit, the page
+// behind is locked, and the overlay did not scroll - so the supervisor-contact
+// email (~850px) was cut off top AND bottom, centred, with Send out of reach and
+// nothing that could scroll to it. It hit every one of the 28 dialogs here.
+//
+// So the OVERLAY is the scroll container (overflow-y-auto, the x axis pinned -
+// see CLAUDE.md on why one axis alone is a trap), and the panel sits in a
+// min-h-full wrapper: a short dialog is centred exactly as before; a tall one
+// starts at the top with its heading visible and scrolls to its buttons. One
+// scrollbar, and only when it is needed. Do not give a panel its own max-height
+// or overflow on top of this - that is the scroll-inside-scroll it replaces.
+//
 // WHY THE PANEL SETS text-left. This does NOT render in a portal — the tree below
 // is returned in place, so the dialog stays a DOM child of whatever opened it.
 // `position: fixed` gives it a new containing block for LAYOUT, but `text-align`
@@ -62,6 +77,9 @@ export type ModalProps = {
 export function Modal({ open, onClose, children, maxWidth = "max-w-md", busy = false, className, title }: ModalProps) {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const returnFocusTo = useRef<HTMLElement | null>(null);
+  // A click on the dim area closes, but only one that STARTED there - a text
+  // selection dragged out of the panel ends on the backdrop too, and must not.
+  const pressedOutside = useRef(false);
 
   // Escape-to-close, from the same hook every other dialog in the app uses.
   useDialogClose(onClose, open);
@@ -129,31 +147,41 @@ export function Modal({ open, onClose, children, maxWidth = "max-w-md", busy = f
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onKeyDown={onKeyDown}>
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+    <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden bg-black/50" onKeyDown={onKeyDown}>
       <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title ?? "Dialog"}
-        aria-busy={busy || undefined}
-        tabIndex={-1}
-        className={clsx(
-          "relative w-full rounded bg-white p-5 text-left shadow-2xl outline-none dark:bg-brand-panel",
-          maxWidth,
-          className
-        )}
+        className="flex min-h-full items-center justify-center p-4"
+        onMouseDown={(event) => {
+          pressedOutside.current = event.target === event.currentTarget;
+        }}
+        onClick={(event) => {
+          if (pressedOutside.current && event.target === event.currentTarget) onClose();
+          pressedOutside.current = false;
+        }}
       >
-        <button
-          type="button"
-          data-dialog-close
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute right-2.5 top-2.5 rounded p-1 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100"
+        <div
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label={title ?? "Dialog"}
+          aria-busy={busy || undefined}
+          tabIndex={-1}
+          className={clsx(
+            "relative w-full rounded bg-white p-5 text-left shadow-2xl outline-none dark:bg-brand-panel",
+            maxWidth,
+            className
+          )}
         >
-          <X className="h-4 w-4" />
-        </button>
-        {children}
+          <button
+            type="button"
+            data-dialog-close
+            onClick={onClose}
+            aria-label="Close"
+            className="absolute right-2.5 top-2.5 rounded p-1 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          {children}
+        </div>
       </div>
     </div>
   );

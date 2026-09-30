@@ -132,7 +132,7 @@ export function StartNewOnboardingButton({
         {former ? "Rehire — start new onboarding" : "Start new onboarding"}
       </Button>
 
-      <Modal open={open} onClose={() => setOpen(false)} busy={busy} maxWidth="max-w-3xl" className="max-h-[90vh] overflow-y-auto">
+      <Modal open={open} onClose={() => setOpen(false)} busy={busy} maxWidth="max-w-3xl">
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Start a new onboarding for {hireName}</h2>
         <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
           Their current checklist ({doneCount} of {totalCount} complete) is filed away as a read-only record on this profile, and a

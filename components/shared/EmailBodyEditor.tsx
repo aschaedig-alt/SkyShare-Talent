@@ -106,8 +106,19 @@ const LINK_PREVIEW = "[&_a]:text-[#0b63ce] [&_a]:underline [&_a]:underline-offse
 
 export function EmailBodyEditor({ greeting, template, edited, onChange, disabled, note, source = "front" }: EmailBodyEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const htmlRef = useRef<HTMLTextAreaElement>(null);
   const [seed, setSeed] = useState(0);
   const [mode, setMode] = useState<"rich" | "html">("rich");
+
+  // The HTML view grows with what it holds, like the formatted view, instead of
+  // scrolling inside the dialog - the dialog itself scrolls (components/ui/Modal).
+  const htmlValue = edited ?? template;
+  useEffect(() => {
+    const area = htmlRef.current;
+    if (mode !== "html" || !area) return;
+    area.style.height = "auto";
+    area.style.height = `${area.scrollHeight}px`;
+  }, [htmlValue, mode]);
 
   // Seeded imperatively, and deliberately NOT re-seeded from `edited`. Writing
   // innerHTML back under a live caret throws the caret to position 0 — the same
@@ -210,7 +221,10 @@ export function EmailBodyEditor({ greeting, template, edited, onChange, disabled
           aria-label="The body of this email"
           onInput={(e) => onChange((e.currentTarget as HTMLDivElement).innerHTML)}
           className={clsx(
-            "prose-sm max-h-72 overflow-y-auto overflow-x-hidden bg-white px-3 text-left text-[12.5px] text-brand-black outline-none transition",
+            // No max-height and no scroll of its own: this box used to stop at 18rem and
+            // scroll, a second scrollbar inside every send dialog. It grows with the
+            // email; the dialog scrolls. overflow-hidden only clips a too-wide table.
+            "prose-sm overflow-hidden bg-white px-3 text-left text-[12.5px] text-brand-black outline-none transition",
             LINK_PREVIEW,
             greeting ? "pb-2 pt-0" : "py-2",
             "focus:ring-4 focus:ring-brand-sweet/35 dark:bg-brand-field dark:text-slate-200"
@@ -218,12 +232,13 @@ export function EmailBodyEditor({ greeting, template, edited, onChange, disabled
         />
       ) : (
         <textarea
-          value={edited ?? template}
+          ref={htmlRef}
+          value={htmlValue}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
           spellCheck={false}
           rows={14}
-          className="block w-full resize-y bg-white px-3 py-2 text-left font-mono text-[11.5px] leading-relaxed text-brand-black outline-none focus:ring-4 focus:ring-brand-sweet/35 dark:bg-brand-field dark:text-slate-200"
+          className="block w-full resize-none overflow-hidden bg-white px-3 py-2 text-left font-mono text-[11.5px] leading-relaxed text-brand-black outline-none focus:ring-4 focus:ring-brand-sweet/35 dark:bg-brand-field dark:text-slate-200"
         />
       )}
     </div>
