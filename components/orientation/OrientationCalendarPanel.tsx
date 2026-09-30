@@ -37,6 +37,8 @@ type Preview = {
         hangoutLink: string | null;
         createdAt: string;
         liveAttendees: string[];
+        /** New hires on the invite who are not on this session (supervisors of attendees excluded). */
+        noLongerAttending: Array<{ name: string; email: string }>;
         missingInGoogle: boolean;
         /** true = matches the session, false = stale, null = no baseline recorded. */
         inStep: boolean | null;
@@ -100,7 +102,7 @@ export function OrientationCalendarPanel({
   }, [load, refreshKey]);
 
   async function act(
-    action: "create" | "update" | "add-attendees" | "add-guests",
+    action: "create" | "update" | "add-attendees" | "add-guests" | "remove-guests",
     emails?: string[],
     notify?: boolean
   ) {
@@ -120,6 +122,8 @@ export function OrientationCalendarPanel({
         skipped?: string[];
         rejected?: string[];
         notified?: boolean;
+        removed?: string[];
+        notThere?: string[];
       };
       if (!res.ok) throw new Error(data.message ?? "That didn't work.");
 
@@ -131,6 +135,10 @@ export function OrientationCalendarPanel({
             ? "Invite updated and the guests have been emailed about the change."
             : "Invite updated — title, description, location and times now match the session. The guests were NOT emailed."
         );
+      } else if (action === "remove-guests") {
+        const bits = [`Took ${data.removed?.length ?? 0} off the invite, quietly - nobody was emailed.`];
+        if (data.notThere?.length) bits.push(`Not on it anyway: ${data.notThere.join(", ")}.`);
+        setResult(bits.join(" "));
       } else {
         const bits = [`Invited ${data.added?.length ?? 0}.`];
         if (data.alreadyThere?.length) bits.push(`${data.alreadyThere.length} were already on it.`);
@@ -215,6 +223,36 @@ export function OrientationCalendarPanel({
               )}
             </Row>
           </dl>
+
+          {/* Removing or moving somebody used to leave them on the invite (Sam
+              Jaffari, Sep 29). The page now asks at the time; this catches
+              anybody taken off before that, or by a path that could not ask. */}
+          {existing && existing.noLongerAttending.length > 0 && !preview.blocker ? (
+            <div className="mt-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-500/30 dark:bg-amber-500/15">
+              <p className="text-[12.5px] font-semibold text-amber-900 dark:text-amber-200">On the invite, but not on this session</p>
+              <ul className="mt-1 space-y-1">
+                {existing.noLongerAttending.map((guest) => (
+                  <li key={guest.email} className="flex flex-wrap items-center justify-between gap-2 text-[12.5px] text-amber-900 dark:text-amber-200">
+                    <span>
+                      {guest.name} <span className="text-amber-800/80 dark:text-amber-200/80">{guest.email}</span>
+                    </span>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        if (confirm(`Take ${guest.name} off this invite? It is quiet - Google does not email them.`)) {
+                          void act("remove-guests", [guest.email]);
+                        }
+                      }}
+                      className="rounded border border-amber-400/60 bg-white px-2 py-0.5 text-[11px] font-semibold text-amber-900 transition hover:bg-amber-100 disabled:opacity-50 dark:bg-transparent dark:text-amber-200 dark:hover:bg-amber-500/20"
+                    >
+                      Take off the invite
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           <button
             onClick={() => setShowBody((v) => !v)}

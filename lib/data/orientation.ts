@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { isPilotPosition } from "@/lib/orientation/defaults";
 import { getPrepDefaults } from "@/lib/orientation/prep-defaults";
 import { type CardFlagState, cardStateFor, getCardNotNeeded } from "@/lib/orientation/card-state";
+import { getChecklistFlags } from "@/lib/orientation/checklist-link";
+import { purposeCoversOrientation } from "@/lib/travel/constants";
 import { officeDayKey } from "@/lib/dates/display";
 import { getOrientationSends } from "@/lib/front/orientation-email";
 
@@ -19,7 +21,30 @@ function calendarDayKey(d: Date): string {
 
 export type SessionStatus = "UPCOMING" | "COMPLETE" | "CANCELED";
 export type ConfirmStatus = "PENDING" | "TENTATIVE" | "CONFIRMED" | "DECLINED";
-export type TravelStatus = "NA" | "NEEDED" | "ARRANGED";
+/** NA is local. REMOTE joins by video: an attendee, but nobody travels for it. */
+export type TravelStatus = "NA" | "NEEDED" | "ARRANGED" | "REMOTE";
+
+/** Coming from out of town for this orientation - by the manual flag. */
+export function isOutOfTown(travelStatus: string): boolean {
+  return travelStatus === "NEEDED" || travelStatus === "ARRANGED";
+}
+
+/**
+ * The trips that are travel FOR ORIENTATION: an orientation or orientation-and-
+ * indoc trip, and nothing at all for somebody joining remotely.
+ *
+ * Every trip a hire had used to count, whatever it was for. On Sep 29 Chris
+ * Sharpe joined by Google Meet because his indoc moved; his trip was re-purposed
+ * to INDOC, and the session still read "Needed · $1,571.95", "1 out-of-town" and
+ * "$1,571.95 travel spend". Her words: "while we want to have an idea of the
+ * indoc costs incurred, i dont want it to show here if he is remote as it is not
+ * an orientation expense." Indoc and other trips still show on the hire's own
+ * travel and on /travel; they just do not count as this session's.
+ */
+export function orientationTrips<T extends { purpose: string | null }>(travelStatus: string, trips: T[]): T[] {
+  if (travelStatus === "REMOTE") return [];
+  return trips.filter((trip) => purposeCoversOrientation(trip.purpose));
+}
 
 function iso(d: Date | null) {
   return d ? d.toISOString() : null;
@@ -36,6 +61,8 @@ function iso(d: Date | null) {
  * manual flag only answers for somebody who has no trip at all.
  *
  * CANCELED trips do not count — a trip that was called off is not a trip.
+ * Callers pass orientationTrips(), so a trip for something else never counts and
+ * a REMOTE attendee (no trips, flag not NEEDED) is never pending.
  */
 export function travelStillPending(travelStatus: string, tripStatuses: string[]): boolean {
   const live = tripStatuses.filter((s) => s !== "CANCELED");
@@ -73,7 +100,7 @@ export async function getOrientationSessions(): Promise<{ upcoming: SessionListI
           newHire: {
             select: {
               name: true,
-              travelTrips: { where: { status: { not: "CANCELED" } }, select: { status: true } }
+              travelTrips: { where: { status: { not: "CANCELED" } }, select: { status: true, purpose: true } }
             }
           }
         }
@@ -85,7 +112,9 @@ export async function getOrientationSessions(): Promise<{ upcoming: SessionListI
 
   const items: SessionListItem[] = sessions.map((s) => {
     // One predicate feeds both the count and the names, so they cannot drift.
-    const pending = s.attendees.filter((a) => travelStillPending(a.travelStatus, a.newHire.travelTrips.map((t) => t.status)));
+    const pending = s.attendees.filter((a) =>
+      travelStillPending(a.travelStatus, orientationTrips(a.travelStatus, a.newHire.travelTrips).map((t) => t.status))
+    );
     return {
       id: s.id,
       date: s.date.toISOString(),
@@ -121,8 +150,14 @@ export type AttendeeView = {
   ipadReady: boolean;
   /** Company credit card: To do / Done / Not needed. Three states rather than the
       old on/off circle, because somebody who is not getting one had no way to say
-      so and sat as an empty circle forever. */
+      so and sat as an empty circle forever. Follows the hire's checklist step when
+      they have one - see lib/orientation/checklist-link.ts. */
   cardState: CardFlagState;
+  cardFromChecklist: boolean;
+  /** iPad, the same three states: from the checklist step when there is one, else
+      a pilot needs one and nobody else does. */
+  ipadState: CardFlagState;
+  ipadFromChecklist: boolean;
   swagReady: boolean;
   sentTemplateKeys: string[];
   /** templateKey -> what the APP actually sent. A key in sentTemplateKeys with no
@@ -192,7 +227,7 @@ export type SessionDetail = {
   };
   attendees: AttendeeView[];
   prepTasks: PrepTaskView[];
-  headcount: { total: number; outOfTown: number; pilots: number; confirmed: number };
+  headcount: { total: number; outOfTown: number; remote: number; pilots: number; confirmed: number };
   travelRollup: { traveling: number; booked: number; needsBooking: number; totalCost: number };
   candidates: SessionCandidate[];
   otherSessions: SessionRef[];
@@ -223,7 +258,7 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
               orientationRescheduleCount: true,
               travelTrips: {
                 where: { status: { not: "CANCELED" } },
-                select: { status: true, items: { select: { amount: true } } }
+                select: { status: true, purpose: true, items: { select: { amount: true } } }
               }
             }
           }
@@ -244,9 +279,12 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
   // "Credit card not needed" lives beside the boolean rather than in it — see
   // lib/orientation/card-state.ts for why. Read once for the whole session.
   const cardNotNeeded = await getCardNotNeeded(s.attendees.map((a) => a.id));
+  // The hire's own checklist steps for the card and the iPad, where it has them -
+  // they are the truth those two columns show. See lib/orientation/checklist-link.ts.
+  const checklist = await getChecklistFlags(s.attendees.map((a) => a.newHireId));
 
   const attendees: AttendeeView[] = s.attendees.map((a) => {
-    const trips = a.newHire.travelTrips;
+    const trips = orientationTrips(a.travelStatus, a.newHire.travelTrips);
     const total = trips.reduce((sum, t) => sum + t.items.reduce((x, i) => x + (i.amount ?? 0), 0), 0);
     const booked = trips.some((t) => t.status === "BOOKED" || t.status === "COMPLETED");
     const needed = trips.some((t) => t.status === "NEEDED");
@@ -255,18 +293,24 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
       status: (booked ? "BOOKED" : needed ? "NEEDED" : "NONE") as "NONE" | "NEEDED" | "BOOKED",
       total
     };
+    const isPilot = isPilotPosition(a.newHire.position);
+    const steps = checklist.get(a.newHireId) ?? {};
     return {
       id: a.id,
       newHireId: a.newHireId,
       name: a.newHire.name,
       position: a.newHire.position,
       department: a.newHire.department,
-      isPilot: isPilotPosition(a.newHire.position),
+      isPilot,
       confirmed: a.confirmed as ConfirmStatus,
       travelStatus: a.travelStatus as TravelStatus,
       travel,
       ipadReady: a.ipadReady,
-      cardState: cardStateFor(a.cardReady, cardNotNeeded.has(a.id)),
+      cardState: steps.card ?? cardStateFor(a.cardReady, cardNotNeeded.has(a.id)),
+      cardFromChecklist: Boolean(steps.card),
+      // Without a checklist step, the old rule: a pilot gets an iPad, nobody else.
+      ipadState: steps.ipad ?? (isPilot ? (a.ipadReady ? "DONE" : "TODO") : "NA"),
+      ipadFromChecklist: Boolean(steps.ipad),
       swagReady: a.swagReady,
       sentTemplateKeys: parseKeys(a.sentTemplateKeys),
       sends: sendMap[a.id] ?? {},
@@ -366,16 +410,17 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
     prepTasks: s.prepTasks.map((t) => ({ id: t.id, label: t.label, owner: t.owner, dueDaysBefore: t.dueDaysBefore, done: t.done })),
     headcount: {
       total: attendees.length,
-      outOfTown: attendees.filter((a) => a.travelStatus !== "NA").length,
+      outOfTown: attendees.filter((a) => isOutOfTown(a.travelStatus)).length,
+      remote: attendees.filter((a) => a.travelStatus === "REMOTE").length,
       pilots: attendees.filter((a) => a.isPilot).length,
       confirmed: attendees.filter((a) => a.confirmed === "CONFIRMED").length
     },
     travelRollup: {
-      traveling: attendees.filter((a) => a.travel.tripCount > 0 || a.travelStatus !== "NA").length,
+      traveling: attendees.filter((a) => a.travel.tripCount > 0 || isOutOfTown(a.travelStatus)).length,
       booked: attendees.filter((a) => a.travel.status === "BOOKED").length,
       // Same rule the /orientation list now uses — see travelStillPending.
       needsBooking: s.attendees.filter((a) =>
-        travelStillPending(a.travelStatus, a.newHire.travelTrips.map((t) => t.status))
+        travelStillPending(a.travelStatus, orientationTrips(a.travelStatus, a.newHire.travelTrips).map((t) => t.status))
       ).length,
       totalCost: attendees.reduce((sum, a) => sum + a.travel.total, 0)
     },
@@ -399,6 +444,22 @@ export async function syncHireOrientationDates(newHireIds: string[], sessionId: 
   const session = await prisma.orientationSession.findUnique({ where: { id: sessionId }, select: { date: true } });
   if (!session) return;
   await prisma.newHire.updateMany({ where: { id: { in: newHireIds } }, data: { orientationDate: session.date } });
+}
+
+/**
+ * Point a hire's orientation date at the session they are still on, or clear it.
+ * Removing an attendee used to leave the date of the session they came off, so a
+ * hire removed from Sep 29 still read as booked for Sep 29 everywhere that shows
+ * the date. Soonest upcoming session first; else the latest they were on; else none.
+ */
+export async function refreshHireOrientationDate(newHireId: string) {
+  const onSessions = await prisma.orientationAttendee.findMany({
+    where: { newHireId },
+    select: { session: { select: { date: true, status: true } } }
+  });
+  const upcoming = onSessions.filter((a) => a.session.status === "UPCOMING").map((a) => a.session.date).sort((a, b) => +a - +b);
+  const any = onSessions.map((a) => a.session.date).sort((a, b) => +b - +a);
+  await prisma.newHire.update({ where: { id: newHireId }, data: { orientationDate: upcoming[0] ?? any[0] ?? null } });
 }
 
 /** Moves an attendee to another session: detaches from the old one (clearing its email

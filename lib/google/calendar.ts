@@ -522,6 +522,48 @@ export async function addInviteAttendees(
   return { added, alreadyThere, total: res.data.attendees?.length ?? current.length + added.length };
 }
 
+/**
+ * Take guests OFF an existing event, leaving everybody else exactly as they are.
+ *
+ * The mirror of addInviteAttendees, and it reads first for the same reason:
+ * events.patch REPLACES the attendees array, so the list written back is the LIVE
+ * one minus the named addresses - never one rebuilt from what the app believes
+ * is on the invite. Only exact addresses (any case) come off, and the organizer
+ * never does, even if named. Asked for Sep 29, when a hire moved off the day's
+ * orientation stayed on its Google invite.
+ */
+export async function removeInviteAttendees(
+  client: calendar_v3.Calendar,
+  calendarId: string,
+  eventId: string,
+  emails: string[],
+  sendUpdates: "all" | "externalOnly" | "none"
+): Promise<{ removed: string[]; notThere: string[]; total: number }> {
+  const existing = await withGoogleRetry("reading the event", () => client.events.get({ calendarId, eventId }));
+  const current = existing.data.attendees ?? [];
+  const wanted = new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean));
+
+  const removed: string[] = [];
+  const keep = current.filter((a) => {
+    const email = (a.email ?? "").toLowerCase();
+    if (!email || !wanted.has(email) || a.organizer) return true;
+    removed.push(a.email as string);
+    return false;
+  });
+  const gone = new Set(removed.map((e) => e.toLowerCase()));
+  const notThere = [...wanted].filter((e) => !gone.has(e));
+
+  if (removed.length === 0) {
+    return { removed, notThere, total: current.length };
+  }
+
+  const res = await withGoogleRetry(`removing ${removed.length} guests`, () =>
+    client.events.patch({ calendarId, eventId, sendUpdates, requestBody: { attendees: keep } })
+  );
+
+  return { removed, notThere, total: res.data.attendees?.length ?? keep.length };
+}
+
 /** Read an event back, so the UI can show what is really on it rather than what
     the app believes it wrote. Returns null if it was deleted in Google. */
 export async function getInviteEvent(

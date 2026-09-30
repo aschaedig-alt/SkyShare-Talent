@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clsx } from "clsx";
-import { Button } from "@/components/ui";
+import { Button, Modal } from "@/components/ui";
 import type { AttendeeView, CardFlagState, ConfirmStatus, PrepTaskView, SessionCandidate, SessionDetail, TravelStatus } from "@/lib/data/orientation";
+import type { InviteRemovalPlan } from "@/lib/orientation/calendar-sync";
 
 import { formatUsd } from "@/lib/travel/constants";
 import { describeOffNormal, mapsSearchUrl, resolveSessionPlace, type UsedPlace } from "@/lib/orientation/places";
@@ -179,15 +180,21 @@ export function OrientationSessionDetail({
   const missingEnd = !session.endsAt && session.status !== "COMPLETE";
 
   const headDone = prep.filter((p) => p.done).length;
+  // Out of town = the manual flag says they travel. Local and Remote (joining by
+  // video) do not - the same rule as lib/data/orientation.ts isOutOfTown, which
+  // this client component cannot import (that module reads the database).
+  const outOfTown = (a: AttendeeView) => a.travelStatus === "NEEDED" || a.travelStatus === "ARRANGED";
   const headcount = {
     total: attendees.length,
-    outOfTown: attendees.filter((a) => a.travelStatus !== "NA").length,
+    outOfTown: attendees.filter(outOfTown).length,
+    remote: attendees.filter((a) => a.travelStatus === "REMOTE").length,
     pilots: attendees.filter((a) => a.isPilot).length,
     confirmed: attendees.filter((a) => a.confirmed === "CONFIRMED").length
   };
-  // Live travel roll-up from each attendee's real trips.
+  // Live travel roll-up from each attendee's real ORIENTATION trips (the server
+  // already dropped trips for anything else, and everything for a remote attendee).
   const travelRollup = {
-    traveling: attendees.filter((a) => a.travel.tripCount > 0 || a.travelStatus !== "NA").length,
+    traveling: attendees.filter((a) => a.travel.tripCount > 0 || outOfTown(a)).length,
     booked: attendees.filter((a) => a.travel.status === "BOOKED").length,
     totalCost: attendees.reduce((sum, a) => sum + a.travel.total, 0)
   };
@@ -270,6 +277,13 @@ export function OrientationSessionDetail({
     updateAttendee(a.id, { cardState: next });
     await patchJson(`/api/orientation/attendees/${a.id}`, { cardState: next });
   }
+  /** The iPad, when the hire's checklist has the step: the same three states,
+      written to the checklist so the two screens agree. */
+  async function cycleIpad(a: AttendeeView) {
+    const next = NEXT_CARD_STATE[a.ipadState];
+    updateAttendee(a.id, { ipadState: next, ipadReady: next === "DONE" });
+    await patchJson(`/api/orientation/attendees/${a.id}`, { ipadState: next });
+  }
   async function removeAttendee(id: string) {
     setAttendees((cur) => cur.filter((a) => a.id !== id));
     await patchJson(`/api/orientation/attendees/${id}`, null, "DELETE");
@@ -284,12 +298,83 @@ export function OrientationSessionDetail({
   // One-click: move to the next scheduled orientation, or — if none yet — drop
   // them to the waiting list so they resurface to be added once one is created.
   async function moveToNext(a: AttendeeView) {
-    if (session.nextSessionId) {
-      await moveAttendee(a.id, session.nextSessionId);
-    } else {
-      await removeAttendee(a.id);
-      setNotice(`No upcoming orientation yet — ${a.name} is on the waiting list (People → Orientation) and will show under Suggested when you create the next session.`);
-      setTimeout(() => setNotice(null), 8000);
+    await startLeaving(
+      a,
+      session.nextSessionId,
+      session.nextSessionId
+        ? null
+        : `No upcoming orientation yet — ${a.name} is on the waiting list (People → Orientation) and will show under Suggested when you create the next session.`
+    );
+  }
+
+  // ---- taking somebody off the session, and off its Google invite ----
+  //
+  // Removing or moving an attendee used to leave them on the invite. Aimee, Sep 29:
+  // "i moved Sam off of todays orientation. i need that to remove him from the
+  // google calendar invite. also it should ask us if we want to remove any
+  // supervisors associated with the employee and let us decide who to remove or
+  // keep incase that supervisor has another team member in orientation".
+  //
+  // So before they leave, ask the server what of theirs is on the invite. If
+  // nothing is (or there is no invite), they just leave, as before. If something
+  // is, a dialog lists it: the hire ticked, and each supervisor on the invite
+  // ticked unless they supervise somebody still on this session. Only what is
+  // ticked comes off. The removal from the session never waits on Google.
+  const [leaving, setLeaving] = useState<{
+    a: AttendeeView;
+    toSessionId: string | null;
+    afterNote: string | null;
+    plan: InviteRemovalPlan;
+    chosen: string[];
+  } | null>(null);
+
+  async function startLeaving(a: AttendeeView, toSessionId: string | null, afterNote: string | null = null) {
+    let plan: InviteRemovalPlan | null = null;
+    try {
+      const res = await fetch(`/api/orientation/attendees/${a.id}/invite-plan`);
+      if (res.ok) plan = (await res.json()) as InviteRemovalPlan;
+    } catch {
+      plan = null;
+    }
+    const onInvite = plan && !plan.blocker && (plan.hire.onInvite.length > 0 || plan.supervisors.some((x) => x.onInvite));
+    if (!plan || !onInvite) {
+      const unread = plan?.hasInvite && plan.blocker
+        ? `The Google invite couldn't be checked (${plan.blocker}) - if ${a.name} was on it, take them off in Google Calendar.`
+        : null;
+      await finishLeaving(a, toSessionId, [], [afterNote, unread].filter(Boolean).join(" ") || null);
+      return;
+    }
+    const chosen = [
+      ...plan.hire.onInvite,
+      ...plan.supervisors.filter((x) => x.onInvite && x.alsoFor.length === 0).map((x) => x.email)
+    ];
+    setLeaving({ a, toSessionId, afterNote, plan, chosen });
+  }
+
+  async function finishLeaving(a: AttendeeView, toSessionId: string | null, emails: string[], afterNote: string | null) {
+    if (toSessionId) await moveAttendee(a.id, toSessionId);
+    else await removeAttendee(a.id);
+    let inviteNote: string | null = null;
+    if (emails.length > 0) {
+      try {
+        const res = await fetch(`/api/orientation/sessions/${session.id}/calendar`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "remove-guests", emails })
+        });
+        const data = (await res.json().catch(() => ({}))) as { message?: string; removed?: string[] };
+        inviteNote = res.ok
+          ? `Took ${data.removed?.length ?? 0} off the Google invite, quietly - nobody was emailed.`
+          : `${a.name} is off this session, but the invite was not changed: ${data.message ?? "Google refused."}`;
+      } catch {
+        inviteNote = `${a.name} is off this session, but the invite could not be reached - check it in Google Calendar.`;
+      }
+      setCalendarKey((n) => n + 1);
+    }
+    const message = [afterNote, inviteNote].filter(Boolean).join(" ");
+    if (message) {
+      setNotice(message);
+      setTimeout(() => setNotice(null), 10000);
     }
   }
   const [notice, setNotice] = useState<string | null>(null);
@@ -395,6 +480,7 @@ export function OrientationSessionDetail({
             ["Attendees", headcount.total],
             ["Confirmed", `${headcount.confirmed}/${headcount.total}`],
             ["Out-of-town · travel", headcount.outOfTown],
+            ...(headcount.remote > 0 ? [["Remote · video", headcount.remote]] : []),
             ["Travel booked", `${travelRollup.booked}/${travelRollup.traveling}`],
             ["Travel spend", formatUsd(travelRollup.totalCost)],
             ["Pilots · iPads", headcount.pilots],
@@ -613,19 +699,37 @@ export function OrientationSessionDetail({
                         </Link>
                       ) : (
                         <div className="flex items-center gap-1">
-                          <select value={a.travelStatus} onChange={(e) => setTravel(a, e.target.value as TravelStatus)} className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.travelStatus === "ARRANGED" ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : a.travelStatus === "NEEDED" ? "border-brand-gold/40 bg-brand-gold/15 text-brand-lea dark:text-slate-100" : "border-brand-lea/15 bg-white text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400")}>
+                          <select
+                            value={a.travelStatus}
+                            onChange={(e) => setTravel(a, e.target.value as TravelStatus)}
+                            title={a.travelStatus === "REMOTE" ? "Joining by video - no travel counts for this orientation" : undefined}
+                            className={clsx("rounded border px-1 py-0.5 text-[11px] font-semibold", a.travelStatus === "ARRANGED" ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : a.travelStatus === "NEEDED" ? "border-brand-gold/40 bg-brand-gold/15 text-brand-lea dark:text-slate-100" : a.travelStatus === "REMOTE" ? "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/15 dark:text-sky-300" : "border-brand-lea/15 bg-white text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400")}
+                          >
                             <option value="NA">Local</option>
                             <option value="NEEDED">Needed</option>
                             <option value="ARRANGED">Arranged</option>
+                            <option value="REMOTE">Remote</option>
                           </select>
-                          <Link href={`/people/${a.newHireId}`} className="text-[10px] font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400" title="Add travel for this hire">
-                            +add
-                          </Link>
+                          {a.travelStatus === "REMOTE" ? null : (
+                            <Link href={`/people/${a.newHireId}`} className="text-[10px] font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400" title="Add travel for this hire">
+                              +add
+                            </Link>
+                          )}
                         </div>
                       )}
                     </td>
-                    <td className="px-1 py-2 text-center">{a.isPilot ? <Flag on={a.ipadReady} onClick={() => toggleFlag(a, "ipadReady")} /> : <span className="text-brand-grey/40">—</span>}</td>
-                    <td className="px-1 py-2 text-center"><CardFlag state={a.cardState} name={a.name} onClick={() => cycleCard(a)} /></td>
+                    <td className="px-1 py-2 text-center">
+                      {a.ipadFromChecklist ? (
+                        <CardFlag what="iPad" state={a.ipadState} name={a.name} fromChecklist onClick={() => cycleIpad(a)} />
+                      ) : a.isPilot ? (
+                        <Flag on={a.ipadReady} onClick={() => toggleFlag(a, "ipadReady")} />
+                      ) : (
+                        <span className="text-brand-grey/40">—</span>
+                      )}
+                    </td>
+                    <td className="px-1 py-2 text-center">
+                      <CardFlag what="Company credit card" state={a.cardState} name={a.name} fromChecklist={a.cardFromChecklist} onClick={() => cycleCard(a)} />
+                    </td>
                     <td className="px-1 py-2 text-center"><Flag on={a.swagReady} onClick={() => toggleFlag(a, "swagReady")} /></td>
                     <td className="px-1 py-2">
                       <div className="flex items-center justify-end gap-1.5">
@@ -639,7 +743,9 @@ export function OrientationSessionDetail({
                         {session.otherSessions.length > 0 ? (
                           <select
                             value=""
-                            onChange={(e) => moveAttendee(a.id, e.target.value)}
+                            onChange={(e) => {
+                              if (e.target.value) void startLeaving(a, e.target.value);
+                            }}
                             title="Move to a specific orientation"
                             className="rounded border border-brand-lea/15 bg-white px-1 py-0.5 text-[11px] text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400"
                           >
@@ -649,7 +755,7 @@ export function OrientationSessionDetail({
                             ))}
                           </select>
                         ) : null}
-                        <button onClick={() => removeAttendee(a.id)} className="text-[11px] text-red-600 dark:text-red-400 hover:underline">remove</button>
+                        <button onClick={() => void startLeaving(a, null)} className="text-[11px] text-red-600 dark:text-red-400 hover:underline">remove</button>
                       </div>
                     </td>
                   </tr>
@@ -695,6 +801,25 @@ export function OrientationSessionDetail({
           so the event has to exist first or the email is ahead of reality. */}
       <OrientationCalendarPanel sessionId={session.id} refreshKey={calendarKey} />
 
+      <Modal open={Boolean(leaving)} onClose={() => setLeaving(null)} maxWidth="max-w-lg" title="Take them off the invite too?">
+        {leaving ? (
+          <LeaveInviteDialog
+            leaving={leaving}
+            onToggle={(email) =>
+              setLeaving((cur) =>
+                cur ? { ...cur, chosen: cur.chosen.includes(email) ? cur.chosen.filter((x) => x !== email) : [...cur.chosen, email] } : cur
+              )
+            }
+            onCancel={() => setLeaving(null)}
+            onConfirm={(emails) => {
+              const { a, toSessionId, afterNote } = leaving;
+              setLeaving(null);
+              void finishLeaving(a, toSessionId, emails, afterNote);
+            }}
+          />
+        ) : null}
+      </Modal>
+
       {/* Sending + who's had what. Replaces the old tick-only tracker: the app can
           now send the team's real Front templates, so the five slots the app had
           invented (invitation / confirm_request / … ) are gone. */}
@@ -739,6 +864,79 @@ export function OrientationSessionDetail({
   );
 }
 
+/**
+ * The question asked when somebody leaves a session whose invite they are on:
+ * who comes off it. The hire is ticked. A supervisor is ticked unless they
+ * supervise somebody still on this session - that is the case she named: "incase
+ * that supervisor has another team member in orientation".
+ */
+function LeaveInviteDialog({
+  leaving,
+  onToggle,
+  onCancel,
+  onConfirm
+}: {
+  leaving: { a: AttendeeView; toSessionId: string | null; plan: InviteRemovalPlan; chosen: string[] };
+  onToggle: (email: string) => void;
+  onCancel: () => void;
+  onConfirm: (emails: string[]) => void;
+}) {
+  const { a, toSessionId, plan, chosen } = leaving;
+  const verb = toSessionId ? "Move" : "Remove";
+  const onInvite = plan.supervisors.filter((x) => x.onInvite);
+  const box = "flex cursor-pointer items-start gap-2.5 rounded border border-brand-lea/15 px-3 py-2 text-sm transition hover:bg-brand-cloudDancer/40 dark:border-white/10 dark:hover:bg-white/5";
+  return (
+    <div>
+      <h2 className="pr-8 text-base font-semibold text-brand-lea dark:text-slate-100">
+        {verb} {a.name} — and take them off the Google invite?
+      </h2>
+      <p className="mt-1 text-[13px] text-brand-grey dark:text-slate-400">
+        They are on this session&apos;s calendar invite. Tick who should come off it. It is quiet - Google emails nobody, the
+        event just leaves their calendar - and nobody unticked is touched.
+      </p>
+      <div className="mt-3 space-y-1.5">
+        {plan.hire.onInvite.map((email) => (
+          <label key={email} className={box}>
+            <input type="checkbox" checked={chosen.includes(email)} onChange={() => onToggle(email)} className="mt-0.5 h-4 w-4 accent-brand-lea" />
+            <span className="min-w-0">
+              <span className="block font-semibold text-brand-lea dark:text-slate-100">{a.name}</span>
+              <span className="block truncate text-[12px] text-brand-grey dark:text-slate-400">{email}</span>
+            </span>
+          </label>
+        ))}
+        {onInvite.length > 0 ? (
+          <p className="pt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-brand-gold">Their supervisors on the invite</p>
+        ) : null}
+        {onInvite.map((sup) => (
+          <label key={sup.email} className={box}>
+            <input type="checkbox" checked={chosen.includes(sup.email)} onChange={() => onToggle(sup.email)} className="mt-0.5 h-4 w-4 accent-brand-lea" />
+            <span className="min-w-0">
+              <span className="block font-semibold text-brand-lea dark:text-slate-100">{sup.name}</span>
+              <span className="block truncate text-[12px] text-brand-grey dark:text-slate-400">{sup.email}</span>
+              <span className={clsx("mt-0.5 block text-[12px]", sup.alsoFor.length ? "text-emerald-700 dark:text-emerald-300" : "text-brand-grey dark:text-slate-400")}>
+                {sup.alsoFor.length
+                  ? `Also supervises ${sup.alsoFor.join(", ")}, still on this session - kept unless you tick them.`
+                  : `Nobody else of theirs is on this session.`}
+              </span>
+            </span>
+          </label>
+        ))}
+      </div>
+      <div className="mt-5 flex flex-wrap justify-end gap-2">
+        <Button variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button variant="secondary" onClick={() => onConfirm([])}>
+          {verb} - leave the invite as it is
+        </Button>
+        <Button onClick={() => onConfirm(chosen)} disabled={chosen.length === 0}>
+          {verb} and update the invite
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /** To do → Done → Not needed → To do. Same order and same three glyphs as the
     onboarding grid (components/people/OnboardingGridTab.tsx), so the two tables
     behave identically. */
@@ -754,12 +952,27 @@ const CARD_STATE_LABEL: Record<CardFlagState, string> = { TODO: "To do", DONE: "
  * The title names the NEXT state as well as the current one — a click-to-cycle
  * control is undiscoverable without it.
  */
-function CardFlag({ state, name, onClick }: { state: CardFlagState; name: string; onClick: () => void }) {
+function CardFlag({
+  what,
+  state,
+  name,
+  fromChecklist = false,
+  onClick
+}: {
+  /** "Company credit card" or "iPad" - the same three-state cell serves both. */
+  what: string;
+  state: CardFlagState;
+  name: string;
+  /** Shown from, and saved to, the hire's onboarding checklist step. */
+  fromChecklist?: boolean;
+  onClick: () => void;
+}) {
+  const source = fromChecklist ? " Same as their onboarding checklist." : "";
   return (
     <button
       onClick={onClick}
-      aria-label={`Company credit card for ${name}: ${CARD_STATE_LABEL[state]}. Click for ${CARD_STATE_LABEL[NEXT_CARD_STATE[state]]}.`}
-      title={`Company credit card — ${CARD_STATE_LABEL[state]}. Click for “${CARD_STATE_LABEL[NEXT_CARD_STATE[state]]}”.`}
+      aria-label={`${what} for ${name}: ${CARD_STATE_LABEL[state]}. Click for ${CARD_STATE_LABEL[NEXT_CARD_STATE[state]]}.${source}`}
+      title={`${what} — ${CARD_STATE_LABEL[state]}. Click for “${CARD_STATE_LABEL[NEXT_CARD_STATE[state]]}”.${source}`}
       className="inline-flex items-center justify-center rounded p-0.5 transition hover:bg-brand-gold/10"
     >
       {state === "DONE" ? (

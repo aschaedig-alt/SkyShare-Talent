@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { addInviteAttendees, createInviteEvent, getInviteEvent, updateInviteEvent } from "@/lib/google/calendar";
+import { addInviteAttendees, createInviteEvent, getInviteEvent, removeInviteAttendees, updateInviteEvent } from "@/lib/google/calendar";
 import { getUserCalendar } from "@/lib/google/user-calendar";
 import { resolveSupervisors } from "@/lib/front/orientation-email";
 import { buildOrientationEvent, type OrientationEventDraft, type SessionForCalendar } from "./calendar-event";
@@ -247,6 +247,9 @@ export type OrientationCalendarPreview = {
   existing:
     | (OrientationCalendarRecord & {
         liveAttendees: string[];
+        /** New hires on the invite who are not on this session (and not a
+            supervisor of anyone who is) - left behind by a removal. */
+        noLongerAttending: Array<{ name: string; email: string }>;
         missingInGoogle: boolean;
         /** true = matches the session, false = stale, NULL = no baseline recorded
             so we genuinely cannot tell. The UI must not render null as either. */
@@ -322,6 +325,7 @@ export async function previewOrientationCalendar(
     existing = {
       ...record,
       liveAttendees: live?.attendees ?? [],
+      noLongerAttending: live ? await hiresOnInviteNotAttending(sessionId, live.attendees) : [],
       // Only assert "deleted in Google" when we actually got an answer back.
       missingInGoogle: reachable && live === null,
       inStep,
@@ -523,4 +527,151 @@ export async function addGuestsToOrientationEvent(
 
   const res = await addInviteAttendees(access.client, record.calendarId, record.eventId, cleaned, "all");
   return { ...res, rejected };
+}
+
+// --- taking people off the invite -------------------------------------------
+//
+// Asked for Sep 29: "i moved Sam off of todays orientation. i need that to remove
+// him from the google calendar invite. also it should ask us if we want to remove
+// any supervisors associated with the employee and let us decide who to remove or
+// keep incase that supervisor has another team member in orientation".
+//
+// Removing or moving an attendee never touched the invite. Now the page asks
+// first (invitePlanForAttendee says who is on the invite and which supervisors
+// still have somebody else at the session), and takes off only what the person
+// ticks (removeGuestsFromOrientationEvent). A removal made before this existed
+// shows on the calendar panel through hiresOnInviteNotAttending.
+
+const supervisorSelect = {
+  supervisorName: true,
+  supervisorEmail: true,
+  supervisorHire: { select: { name: true, ssEmail: true, personalEmail: true } },
+  supervisor2Name: true,
+  supervisor2Email: true,
+  supervisor2Hire: { select: { name: true, ssEmail: true, personalEmail: true } }
+} as const;
+
+/** Lower-cased and trimmed, empties dropped. */
+function lowerEmails(list: Array<string | null | undefined>): string[] {
+  return list.map((e) => (e ?? "").trim().toLowerCase()).filter(Boolean);
+}
+
+/**
+ * New hires whose address is on the invite but who are not on the session - the
+ * people a removal left behind. A supervisor of somebody still attending is left
+ * out even when they are a new hire themselves (a new base manager invited for
+ * their own team member): they are on the invite on purpose.
+ */
+async function hiresOnInviteNotAttending(sessionId: string, liveAttendees: string[]): Promise<Array<{ name: string; email: string }>> {
+  const live = lowerEmails(liveAttendees);
+  if (live.length === 0) return [];
+  const [hires, attending] = await Promise.all([
+    prisma.$queryRawUnsafe<Array<{ id: string; name: string; ssEmail: string | null; personalEmail: string | null }>>(
+      `SELECT id, name, "ssEmail", "personalEmail" FROM "NewHire"
+       WHERE lower(trim("ssEmail")) = ANY($1::text[]) OR lower(trim("personalEmail")) = ANY($1::text[])`,
+      live
+    ),
+    prisma.orientationAttendee.findMany({
+      where: { sessionId },
+      select: { newHireId: true, newHire: { select: supervisorSelect } }
+    })
+  ]);
+  const onSession = new Set(attending.map((a) => a.newHireId));
+  const supervising = new Set(
+    lowerEmails(attending.flatMap((a) => resolveSupervisors(a.newHire).map((x) => x.email)))
+  );
+  const liveSet = new Set(live);
+  const out: Array<{ name: string; email: string }> = [];
+  for (const h of hires) {
+    if (onSession.has(h.id)) continue;
+    for (const email of [h.ssEmail, h.personalEmail]) {
+      const e = email?.trim();
+      if (e && liveSet.has(e.toLowerCase()) && !supervising.has(e.toLowerCase()) && !out.some((o) => o.email.toLowerCase() === e.toLowerCase())) {
+        out.push({ name: h.name, email: e });
+      }
+    }
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export type InviteRemovalPlan = {
+  /** False when the session has no invite - nothing to ask. */
+  hasInvite: boolean;
+  /** Set when there is an invite but Google cannot be reached to read it. */
+  blocker: string | null;
+  hire: { name: string; onInvite: string[] };
+  supervisors: Array<{
+    name: string;
+    email: string;
+    onInvite: boolean;
+    /** Other people on this session they also supervise. Non-empty = suggest keeping them. */
+    alsoFor: string[];
+  }>;
+};
+
+/** What taking this attendee off the session would leave behind on the invite. */
+export async function invitePlanForAttendee(attendeeId: string, actingUserEmail: string | null): Promise<InviteRemovalPlan> {
+  const attendee = await prisma.orientationAttendee.findUnique({
+    where: { id: attendeeId },
+    select: { sessionId: true, newHire: { select: { name: true, ssEmail: true, personalEmail: true, ...supervisorSelect } } }
+  });
+  if (!attendee) throw new Error("That attendee is no longer on this session.");
+  const nothing: InviteRemovalPlan = { hasInvite: false, blocker: null, hire: { name: attendee.newHire.name, onInvite: [] }, supervisors: [] };
+
+  const record = await getOrientationCalendarRecord(attendee.sessionId);
+  if (!record) return nothing;
+  const access = await getUserCalendar(actingUserEmail);
+  if (!access.client) return { ...nothing, hasInvite: true, blocker: access.blocker ?? "Google Calendar is unavailable." };
+  let live: Awaited<ReturnType<typeof getInviteEvent>>;
+  try {
+    live = await getInviteEvent(access.client, record.calendarId, record.eventId);
+  } catch (error) {
+    return { ...nothing, hasInvite: true, blocker: error instanceof Error ? error.message : "Couldn't read the invite." };
+  }
+  if (!live) return nothing;
+  const onInvite = new Set(lowerEmails(live.attendees));
+
+  const others = await prisma.orientationAttendee.findMany({
+    where: { sessionId: attendee.sessionId, id: { not: attendeeId } },
+    select: { newHire: { select: { name: true, ...supervisorSelect } } }
+  });
+  const hireEmails = [attendee.newHire.ssEmail, attendee.newHire.personalEmail]
+    .map((e) => e?.trim())
+    .filter((e): e is string => Boolean(e));
+  const supervisors: InviteRemovalPlan["supervisors"] = [];
+  for (const sup of resolveSupervisors(attendee.newHire)) {
+    const email = sup.email?.trim();
+    if (!email || supervisors.some((x) => x.email.toLowerCase() === email.toLowerCase())) continue;
+    const key = email.toLowerCase();
+    const alsoFor = others
+      .filter((o) => resolveSupervisors(o.newHire).some((x) => x.email?.trim().toLowerCase() === key))
+      .map((o) => o.newHire.name);
+    supervisors.push({ name: sup.name ?? email, email, onInvite: onInvite.has(key), alsoFor });
+  }
+  return {
+    hasInvite: true,
+    blocker: null,
+    hire: { name: attendee.newHire.name, onInvite: hireEmails.filter((e) => onInvite.has(e.toLowerCase())) },
+    supervisors
+  };
+}
+
+/**
+ * Take the named addresses off the session's invite, SILENTLY: sendUpdates
+ * "none", so Google emails nobody - the event just leaves their calendar. His
+ * answer on Sep 29 when asked whether a removed guest should get Google's notice:
+ * "remove them silently". Adding guests still emails them; that is the invite.
+ */
+export async function removeGuestsFromOrientationEvent(
+  sessionId: string,
+  actingUserEmail: string | null,
+  emails: string[]
+): Promise<{ removed: string[]; notThere: string[]; total: number }> {
+  const access = await getUserCalendar(actingUserEmail);
+  if (!access.client) throw new Error(access.blocker ?? "Google Calendar is unavailable.");
+  const record = await getOrientationCalendarRecord(sessionId);
+  if (!record) throw new Error("This session has no calendar invite.");
+  const cleaned = emails.map((e) => String(e ?? "").trim()).filter(looksLikeEmail);
+  if (cleaned.length === 0) throw new Error("No addresses given.");
+  return removeInviteAttendees(access.client, record.calendarId, record.eventId, cleaned, "none");
 }

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { isCardFlagState, setCardState } from "@/lib/orientation/card-state";
+import { isChecklistFlagState, setChecklistFlag } from "@/lib/orientation/checklist-link";
+import { refreshHireOrientationDate } from "@/lib/data/orientation";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -14,7 +16,9 @@ export async function PATCH(request: Request, ctx: Ctx) {
     const data: Record<string, unknown> = {};
 
     if (body.confirmed === "PENDING" || body.confirmed === "TENTATIVE" || body.confirmed === "CONFIRMED" || body.confirmed === "DECLINED") data.confirmed = body.confirmed;
-    if (body.travelStatus === "NA" || body.travelStatus === "NEEDED" || body.travelStatus === "ARRANGED") data.travelStatus = body.travelStatus;
+    if (body.travelStatus === "NA" || body.travelStatus === "NEEDED" || body.travelStatus === "ARRANGED" || body.travelStatus === "REMOTE") {
+      data.travelStatus = body.travelStatus;
+    }
     for (const f of ["ipadReady", "swagReady"]) {
       if (typeof body[f] === "boolean") data[f] = body[f];
     }
@@ -27,8 +31,23 @@ export async function PATCH(request: Request, ctx: Ctx) {
     // A raw cardReady boolean is deliberately NOT accepted any more: it would set
     // the column without touching the not-needed flag, leaving the two disagreeing
     // and the cell still showing "not needed" after somebody ticked it ready.
+    //
+    // Both the card and the iPad also write the hire's own checklist step when the
+    // checklist has one, so the two screens can never disagree again - see
+    // lib/orientation/checklist-link.ts.
+    const needsHire = isCardFlagState(body.cardState) || isChecklistFlagState(body.ipadState);
+    const hireId = needsHire
+      ? (await prisma.orientationAttendee.findUnique({ where: { id }, select: { newHireId: true } }))?.newHireId
+      : undefined;
     if (isCardFlagState(body.cardState)) {
       data.cardReady = await setCardState(id, body.cardState);
+      if (hireId) await setChecklistFlag(hireId, "card", body.cardState);
+    }
+    // The iPad is three-way too now: "not needed" is the checklist's N/A. The
+    // attendee's own column stays a plain "is it in hand".
+    if (isChecklistFlagState(body.ipadState)) {
+      data.ipadReady = body.ipadState === "DONE";
+      if (hireId) await setChecklistFlag(hireId, "ipad", body.ipadState);
     }
 
     // Toggle an email template as sent / not sent.
@@ -59,7 +78,10 @@ export async function DELETE(_request: Request, ctx: Ctx) {
   if (!auth.ok) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   const { id } = await ctx.params;
   try {
-    await prisma.orientationAttendee.delete({ where: { id } });
+    const removed = await prisma.orientationAttendee.delete({ where: { id }, select: { newHireId: true } });
+    // The hire's own orientation date named the session they just came off, so
+    // they read as scheduled for a day they are not on (Sam Jaffari, Sep 29).
+    await refreshHireOrientationDate(removed.newHireId);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ message: "Unable to remove attendee." }, { status: 500 });

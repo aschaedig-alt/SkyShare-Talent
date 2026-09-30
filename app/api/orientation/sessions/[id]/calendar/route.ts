@@ -5,6 +5,7 @@ import {
   addOrientationAttendeesToEvent,
   createOrientationCalendarEvent,
   previewOrientationCalendar,
+  removeGuestsFromOrientationEvent,
   updateOrientationCalendarEvent
 } from "@/lib/orientation/calendar-sync";
 
@@ -80,8 +81,18 @@ export async function POST(request: Request, ctx: Ctx) {
       return NextResponse.json({ ok: true, ...result });
     }
 
+    // Take people off the invite - a hire removed from the session, and whichever
+    // of their supervisors the person chose. Only the addresses sent come off.
+    if (action === "remove-guests") {
+      if (!Array.isArray(emails)) {
+        return NextResponse.json({ message: "Expected an emails array." }, { status: 400 });
+      }
+      const result = await removeGuestsFromOrientationEvent(id, auth.user.email, emails.map(String));
+      return NextResponse.json({ ok: true, ...result });
+    }
+
     return NextResponse.json(
-      { message: 'Unknown action. Expected "create", "update", "add-attendees" or "add-guests".' },
+      { message: 'Unknown action. Expected "create", "update", "add-attendees", "add-guests" or "remove-guests".' },
       { status: 400 }
     );
   } catch (error) {
