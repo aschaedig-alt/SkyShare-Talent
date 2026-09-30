@@ -563,7 +563,7 @@ the Remote person no longer counts in "Out-of-town", "Travel booked" or "Travel 
 
 ### 28. Nobody without admin rights has opened Reports > Sources
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN — deployed 2026-09-29
 **Added:** 2026-09-29
 
 Reports > Sources (/reports/sources) lets an admin or recruiter give a source spelling its tidy
