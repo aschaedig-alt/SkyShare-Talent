@@ -36,6 +36,7 @@ export async function POST(request: Request) {
       await tx.roleAssignment.updateMany({ where: { newHireId: secondaryId }, data: { newHireId: primaryId } });
       await tx.employmentStint.updateMany({ where: { newHireId: secondaryId }, data: { newHireId: primaryId } });
       await tx.contractPeriod.updateMany({ where: { newHireId: secondaryId }, data: { newHireId: primaryId } });
+      await tx.employmentTypePeriod.updateMany({ where: { newHireId: secondaryId }, data: { newHireId: primaryId } });
       await tx.travelTrip.updateMany({ where: { newHireId: secondaryId }, data: { newHireId: primaryId } });
       await tx.redemption.updateMany({ where: { newHireId: secondaryId }, data: { newHireId: primaryId } });
       await tx.businessCardVariant.updateMany({ where: { newHireId: secondaryId }, data: { newHireId: primaryId } });

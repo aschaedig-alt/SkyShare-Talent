@@ -413,6 +413,7 @@ model NewHire {
   roleAssignments RoleAssignment[]
   employmentStints EmploymentStint[]
   contractPeriods ContractPeriod[]
+  employmentTypePeriods EmploymentTypePeriod[]
 
   recognitionsGiven    Recognition[] @relation("giver")
   recognitionsReceived Recognition[] @relation("recipient")
@@ -570,6 +571,44 @@ model ContractPeriod {
   updatedAt  DateTime  @updatedAt
 
   @@index([newHireId])
+}
+
+// Which KIND of employee somebody was, and when: FULL_TIME | PART_TIME | DAY_RATE |
+// TEMP | INTERN | LEAVE. ContractPeriod answers the other question - employee or
+// not - and wins where both cover a date. Asked for 2026-09-29: "also want to know
+// full time vs part time vs contract vs anything else in this category." Loaded
+// from the roster workbook (2017 and 2018 full/part-time ticks, then the TYPE
+// column to Aug 2024) by prisma/import-employment-types.ts; nothing in the app
+// records it after that, so a later hire has none until somebody adds it.
+model EmploymentTypePeriod {
+  id         String    @id @default(cuid())
+  newHireId  String
+  newHire    NewHire   @relation(fields: [newHireId], references: [id], onDelete: Cascade)
+  type       String
+  startDate  DateTime
+  endDate    DateTime? // null = still that type, as last recorded
+  source     String?
+  note       String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([newHireId])
+}
+
+// The tidy name for every way a source has been spelled - "bizjetjobs",
+// "BizJetJobs.com" and "bizjet" are one place. Keyed by the spelling after
+// lib/sources normalizes case, spacing and "www." / ".com"; applications and
+// candidates keep the spelling they arrived with. Reviewed on Reports > Sources.
+// A spelling with no row here shows as unmapped rather than being guessed.
+model SourceAlias {
+  id         String   @id @default(cuid())
+  key        String   @unique
+  canonical  String
+  updatedBy  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([canonical])
 }
 
 model OrientationSession {
@@ -1328,6 +1367,20 @@ model CandidateApplication {
   statusNote           String?
   decidedAt            DateTime?
   historicalSourceId   String?
+
+  // ---- How they found us --------------------------------------------------
+  // From Paycom's applicant Source Report, matched on sourceApplicationId (his
+  // export of 2026-09-29, 9,030 applications). EXACTLY as Paycom had them - never
+  // tidied here: the tidy name comes from SourceAlias (lib/sources), so a wrong
+  // spelling is corrected once, in one reviewable list, and the original stays
+  // visible. `source` above is NOT this - it says how the record got into the app
+  // ("Paycom hiring metrics import"), not how the person found SkyShare.
+  // trafficSource: where Paycom saw them arrive from ("Indeed - Organic", "Bizjetjobs").
+  // referralSource: what the applicant picked for "how did you hear about us".
+  // referralName: who referred them, when somebody did.
+  trafficSource        String?
+  referralSource       String?
+  referralName         String?
 
   // ---- Offer -------------------------------------------------------------
   // An offer is made for a specific job, so it lives on the application rather
