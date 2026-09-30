@@ -321,6 +321,12 @@ batch is large, that is a reason to split it across pushes, not to trust it.
   `eden #466481`, `sweet #a6c9e7`, `cloudDancer #f0eee9`.
 - **Selected state** = navy + gold. **Hover** = gold glow.
 - **Dark mode ships** (opt-in toggle) — style both light and dark.
+- **Reports and data pages are built from `components/reports/report-ui.ts`** —
+  Fleet Progression's exact classes: one panel per report, navy headline strip,
+  tiles four across, boxed charts drawn at 720×240, the type scale in its header.
+  His rule, 2026-09-29: "match the formatting exactly... dont use random different
+  sizes." A size, weight or letter-spacing not in that file does not go on a report;
+  a genuinely new one is added there once.
 
 Match the surrounding components rather than inventing new styling.
 

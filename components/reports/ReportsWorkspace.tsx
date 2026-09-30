@@ -14,6 +14,7 @@ import { SKYSHARE_LADDER, ladderRank, nextRungs } from "@/lib/fleet/pilot-ladder
 import { TravelSpendReport } from "@/components/travel/TravelSpendReport";
 import { ReportShareButton } from "@/components/reports/ReportShareButton";
 import { HeadcountTenureReport } from "@/components/reports/HeadcountTenureReport";
+import { R } from "@/components/reports/report-ui";
 import type { HeadcountHistory } from "@/lib/data/headcount-history";
 import { formatCalendarDay, formatMomentDate } from "@/lib/dates/display";
 
@@ -422,8 +423,10 @@ const SCOPE_LABEL: Record<Scope, string> = { active: "Active", former: "Former",
 // Selected = navy + gold; hover = gold glow. Both segmented controls used bare
 // navy with no gold at all, which is the one combination the locked design system
 // names for a selected state.
-const SEGMENT_ON = "bg-brand-lea text-white ring-1 ring-brand-gold";
-const SEGMENT_OFF = "text-brand-grey hover:text-brand-lea hover:shadow-glow dark:text-slate-400 dark:hover:text-slate-100";
+// From the one Reports design spec (components/reports/report-ui.ts), which is
+// lifted from this report - so every tab's segments are the same pixels.
+const SEGMENT_ON = R.segmentOn;
+const SEGMENT_OFF = R.segmentOff;
 
 /**
  * Filled vs target by aircraft type and seat, plus the upgrade bench behind the
@@ -1241,11 +1244,12 @@ export function PilotProgressions({
 
 function DocumentCurrency({ dc }: { dc: ReportsData["documentCurrency"] }) {
   return (
-    <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Document currency</p>
-      <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Expiring &amp; expired candidate documents</h2>
+    <section className={R.panel}>
+      <p className={R.eyebrow}>Document currency</p>
+      {/* text-xl, not text-base: every report title is the same size (report-ui.ts). */}
+      <h2 className={R.title}>Expiring &amp; expired candidate documents</h2>
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-4">
+      <div className={R.tiles}>
         {[
           { label: "Expired", value: dc.counts.expired, tone: "text-red-600 dark:text-red-300" },
           { label: "Due ≤ 30 days", value: dc.counts.due30, tone: "text-amber-600 dark:text-amber-300" },
@@ -1315,12 +1319,12 @@ type ReportTab = (typeof REPORT_TABS)[number]["id"];
 export function ReportsWorkspace({ data, headcount = null, logoDataUrl, canShare = false }: ReportsWorkspaceProps) {
   const [tab, setTab] = useState<ReportTab>("progression");
   return (
-    <div className="space-y-4 px-5 py-5 lg:px-8">
-      <section className="flex items-start justify-between gap-4 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+    <div className={R.page}>
+      <section className={R.pageHeader}>
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Talent analytics</p>
-          <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Reports</h1>
-          <p className="mt-1 max-w-3xl text-sm text-brand-grey dark:text-slate-400">
+          <p className={R.eyebrow}>Talent analytics</p>
+          <h1 className={R.pageTitle}>Reports</h1>
+          <p className={R.pageLede}>
             Pick a report below. Everything is clickable, down to the person.
           </p>
         </div>
@@ -1329,7 +1333,7 @@ export function ReportsWorkspace({ data, headcount = null, logoDataUrl, canShare
           <button
             type="button"
             onClick={() => window.print()}
-            className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 print:hidden dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/5"
+            className={R.pageButton}
           >
             <Download className="h-4 w-4" /> Export PDF
           </button>
@@ -1342,21 +1346,23 @@ export function ReportsWorkspace({ data, headcount = null, logoDataUrl, canShare
 
       {/* Sub-tabs — one report at a time. The active tab is the only one rendered,
           so "Export PDF" prints exactly what's on screen. */}
-      <div className="flex flex-wrap gap-1 rounded bg-white p-1 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10 print:hidden">
+      <div className={R.tabBar}>
         {REPORT_TABS.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
             aria-pressed={tab === t.id}
-            className={clsx(
-              "rounded px-4 py-2 text-sm font-semibold transition",
-              tab === t.id ? SEGMENT_ON : SEGMENT_OFF
-            )}
+            className={clsx(R.tab, tab === t.id ? SEGMENT_ON : SEGMENT_OFF)}
           >
             {t.label}
           </button>
         ))}
+        {/* Its own page, not a tab: it has an audit list to work through and a URL
+            worth sending somebody. A real link, so it opens in a new tab too. */}
+        <Link href="/reports/sources" className={clsx(R.tab, "ml-auto", SEGMENT_OFF)}>
+          How people found us →
+        </Link>
       </div>
 
       {/* staffing is passed HERE and deliberately not on the public share link —

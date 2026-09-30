@@ -2,9 +2,17 @@ import { prisma } from "@/lib/prisma";
 import { computeTenure, type TenureStint } from "@/lib/data/tenure";
 import { seatOf } from "@/lib/data/employee-journey";
 import { isTestTagged } from "@/lib/testdata/markers";
-import { rosterOf, rosterPacker, type HeadcountPerson, type RosterEntry } from "@/lib/reports/headcount-roster";
+import {
+  EMPLOYMENT_TYPES,
+  isEmploymentType,
+  rosterOf,
+  rosterPacker,
+  type EmploymentType,
+  type HeadcountPerson,
+  type RosterEntry
+} from "@/lib/reports/headcount-roster";
 
-export type { HeadcountPerson, RosterEntry } from "@/lib/reports/headcount-roster";
+export type { EmploymentType, HeadcountPerson, RosterEntry } from "@/lib/reports/headcount-roster";
 
 // ---------------------------------------------------------------------------
 // Headcount and tenure, year by year — the Reports "Headcount & Tenure" tab.
@@ -48,6 +56,18 @@ export type { HeadcountPerson, RosterEntry } from "@/lib/reports/headcount-roste
 //   Still here — on staff today, as an employee or a contractor.
 //   Tenure — the rehire-aware rule (lib/data/tenure): a gap of three months or less
 //     is bridged, a longer one restarts the clock.
+//   Across a year (asked for 2026-09-29: "if we have 2 people only with the company
+//     for 4 months they count as 2 separate people but if their time never overlaps
+//     they dont count as double the number of active employees in the year") - two
+//     numbers, because both are true and they answer different questions:
+//       people at some point: each person who was an employee on ANY day of it, once;
+//       average on staff: every employee-day in it, divided by its days - the
+//         overlap-aware number. Two people with four months each, never at the same
+//         time, are 2 people and an average of 0.7. The current year runs to today.
+//   Full-time / part-time — an EmploymentTypePeriod covering the day (loaded from
+//     the roster workbook by prisma/import-employment-types.ts: 2017-2018 ticks,
+//     then TYPE to Aug 2024). Nothing records it later, so a hire since then, and
+//     anyone before 2017, is "not recorded" - counted, never guessed.
 // ---------------------------------------------------------------------------
 
 const YEAR_DAYS = 365.25;
@@ -81,8 +101,22 @@ export type HeadcountYear = {
   /** Of those, how many are dated Dec 31 - a yearly roster's "gone by next year", not a real last day. */
   leftOnDec31: number;
   medianTenureYears: number | null;
+  /** That day's employees by type; notRecorded where no type covers the day. */
+  byType: TypeCounts;
+  /** The whole year (to today, for the current one): see "Across a year" above. */
+  span: {
+    /** Days in it - 365 or 366, fewer for the current year. */
+    days: number;
+    employees: SpanCount;
+    contractors: SpanCount;
+    byType: Record<EmploymentType | "notRecorded", SpanCount>;
+  };
   roster: RosterEntry[];
 };
+
+/** Each person who was it on any day once, and every such person-day divided by the days (one decimal). */
+export type SpanCount = { people: number; average: number };
+export type TypeCounts = Record<EmploymentType | "notRecorded", number>;
 
 export type TenureBucket = { label: string; count: number; pilots: number };
 
@@ -157,6 +191,47 @@ function contractorOn(p: Placed, d: Date, isToday: boolean): boolean {
   return p.contract.length === 0 && p.status === "CONTRACT" && p.periods.some((x) => !x.end && covers(x, d));
 }
 
+// ---- Day spans, for "across a year" ---------------------------------------
+// [first day, last day] as day() values, both counted; an open end is Infinity.
+type Span = [number, number];
+const DAY_MS = 86_400_000;
+const spanOf = (p: Period): Span => [day(p.start), p.end ? day(p.end) : Infinity];
+function clip(a: Span, b: Span): Span | null {
+  const s = Math.max(a[0], b[0]);
+  const e = Math.min(a[1], b[1]);
+  return s <= e ? [s, e] : null;
+}
+/** `a` with every day in `cuts` taken out. */
+function without(a: Span, cuts: Span[]): Span[] {
+  let pieces: Span[] = [a];
+  for (const c of cuts) {
+    pieces = pieces.flatMap((p) => {
+      const x = clip(p, c);
+      if (!x) return [p];
+      const out: Span[] = [];
+      if (p[0] < x[0]) out.push([p[0], x[0] - DAY_MS]);
+      if (x[1] < p[1]) out.push([x[1] + DAY_MS, p[1]]);
+      return out;
+    });
+  }
+  return pieces;
+}
+const daysIn = (s: Span) => Math.round((s[1] - s[0]) / DAY_MS) + 1;
+
+/** The days somebody was a contractor, by the same rule as contractorOn (open-ended where it is). */
+function contractSpans(p: Placed): Span[] {
+  if (p.contract.length) return p.contract.map(spanOf);
+  return p.status === "CONTRACT" ? p.periods.filter((x) => !x.end).map(spanOf) : [];
+}
+
+function typeOn(types: Array<{ type: EmploymentType; start: Date; end: Date | null }>, d: Date): EmploymentType | null {
+  let best: { type: EmploymentType; start: Date } | null = null;
+  for (const t of types) if (covers(t, d) && (!best || t.start.getTime() > best.start.getTime())) best = t;
+  return best?.type ?? null;
+}
+
+const zeroTypes = (): TypeCounts => ({ ...(Object.fromEntries(EMPLOYMENT_TYPES.map((t) => [t, 0])) as Record<EmploymentType, number>), notRecorded: 0 });
+
 /** The role covering a date: the latest-starting one, so a same-day change reads as the new role. */
 function roleOn(roles: Role[], d: Date): Role | null {
   let best: Role | null = null;
@@ -206,7 +281,8 @@ export async function getHeadcountHistory(now: Date = new Date()): Promise<Headc
       employmentStatus: true,
       employmentStints: { select: { startDate: true, endDate: true } },
       roleAssignments: { select: { title: true, seat: true, fleetPositionSlug: true, startDate: true, endDate: true } },
-      contractPeriods: { select: { startDate: true, endDate: true } }
+      contractPeriods: { select: { startDate: true, endDate: true } },
+      employmentTypePeriods: { select: { type: true, startDate: true, endDate: true } }
     }
   });
   const people = rows
@@ -217,7 +293,8 @@ export async function getHeadcountHistory(now: Date = new Date()): Promise<Headc
       status: r.employmentStatus,
       periods: periodsOf(r),
       roles: r.roleAssignments,
-      contract: r.contractPeriods.map((c) => ({ start: c.startDate, end: c.endDate }))
+      contract: r.contractPeriods.map((c) => ({ start: c.startDate, end: c.endDate })),
+      types: r.employmentTypePeriods.flatMap((t) => (isEmploymentType(t.type) ? [{ type: t.type, start: t.startDate, end: t.endDate }] : []))
     }));
   const placed = people.filter((p) => p.periods.length > 0);
   const hereNow = new Set(placed.filter((p) => p.periods.some((x) => covers(x, now))).map((p) => p.id));
@@ -239,7 +316,32 @@ export async function getHeadcountHistory(now: Date = new Date()): Promise<Headc
     let joined = 0;
     let left = 0;
     let leftOnDec31 = 0;
+    // The whole year, day by day: every employee-day and contractor-day in it.
+    const window: Span = [Date.UTC(year, 0, 1), day(asOf)];
+    const windowDays = daysIn(window);
+    const spanDays = { employees: 0, contractors: 0, byType: zeroTypes() };
+    const spanPeople = { employees: 0, contractors: 0, byType: zeroTypes() };
     for (const p of placed) {
+      const inYear = p.periods.map(spanOf).map((s) => clip(s, window)).filter((s): s is Span => s !== null);
+      if (inYear.length) {
+        const cuts = contractSpans(p);
+        const asEmployee = inYear.flatMap((s) => without(s, cuts));
+        const employeeDays = asEmployee.reduce((sum, s) => sum + daysIn(s), 0);
+        const contractorDays = inYear.reduce((sum, s) => sum + daysIn(s), 0) - employeeDays;
+        spanDays.employees += employeeDays;
+        spanDays.contractors += contractorDays;
+        if (employeeDays > 0) spanPeople.employees += 1;
+        if (contractorDays > 0) spanPeople.contractors += 1;
+        let typed = 0;
+        for (const t of EMPLOYMENT_TYPES) {
+          const d = p.types.filter((x) => x.type === t).reduce((sum, x) => sum + asEmployee.reduce((s2, e) => { const c = clip(e, spanOf(x)); return s2 + (c ? daysIn(c) : 0); }, 0), 0);
+          spanDays.byType[t] += d;
+          if (d > 0) spanPeople.byType[t] += 1;
+          typed += d;
+        }
+        spanDays.byType.notRecorded += employeeDays - typed;
+        if (employeeDays - typed > 0) spanPeople.byType.notRecorded += 1;
+      }
       // Joining or leaving as a contractor is not an employee joining or leaving.
       joined += p.periods.filter((x) => x.start.getUTCFullYear() === year && !contractorOn(p, x.start, false)).length;
       const ended = p.periods.filter((x) => x.end && x.end.getUTCFullYear() === year && day(x.end) <= day(now) && !contractorOn(p, x.end, false));
@@ -256,11 +358,15 @@ export async function getHeadcountHistory(now: Date = new Date()): Promise<Headc
         pilot: role ? isPilotRole(role) : null,
         stillHere: hereNow.has(p.id),
         tenureYears: years(tenureDaysOn(p.periods, asOf)),
-        contractor
+        contractor,
+        type: contractor ? null : typeOn(p.types, asOf)
       });
     }
     roster.sort((a, b) => Number(a.contractor) - Number(b.contractor) || b.tenureYears - a.tenureYears || a.name.localeCompare(b.name));
     const staff = roster.filter((r) => !r.contractor);
+    const byType = zeroTypes();
+    for (const r of staff) byType[r.type ?? "notRecorded"] += 1;
+    const avg = (d: number) => Math.round((d / windowDays) * 10) / 10;
     out.push({
       year,
       asOf: asOf.toISOString(),
@@ -276,6 +382,15 @@ export async function getHeadcountHistory(now: Date = new Date()): Promise<Headc
       left,
       leftOnDec31,
       medianTenureYears: median(staff.map((r) => r.tenureYears)),
+      byType,
+      span: {
+        days: windowDays,
+        employees: { people: spanPeople.employees, average: avg(spanDays.employees) },
+        contractors: { people: spanPeople.contractors, average: avg(spanDays.contractors) },
+        byType: Object.fromEntries(
+          (Object.keys(spanDays.byType) as Array<EmploymentType | "notRecorded">).map((k) => [k, { people: spanPeople.byType[k], average: avg(spanDays.byType[k]) }])
+        ) as Record<EmploymentType | "notRecorded", SpanCount>
+      },
       roster: roster.map(pack)
     });
   }

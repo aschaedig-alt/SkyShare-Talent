@@ -160,7 +160,7 @@ function breakdownOf(rows: TravelSpendRow[], keyOf: (r: TravelSpendRow) => strin
 
 function FilterField({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
+    <label className="flex flex-col gap-1 text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">
       {label}
       {children}
     </label>
@@ -541,7 +541,7 @@ export function TravelSpendReport({ trips }: { trips: TravelSpendRow[] }) {
               into a new tab like every other way off this page. */}
           <Link
             href="/travel"
-            className="ml-auto self-center text-[12px] font-semibold text-brand-eden transition hover:text-brand-lea dark:text-brand-edenOnDark dark:hover:text-slate-100"
+            className="ml-auto self-center text-xs font-semibold text-brand-eden transition hover:text-brand-lea dark:text-brand-edenOnDark dark:hover:text-slate-100"
           >
             Open the Travel hub &rarr;
           </Link>
@@ -718,7 +718,7 @@ export function TravelSpendReport({ trips }: { trips: TravelSpendRow[] }) {
             {sorted.length > 0 ? (
               <tfoot>
                 <tr className="border-t-2 border-brand-lea/15 bg-brand-cloudDancer/40 dark:border-white/10 dark:bg-white/5">
-                  <td colSpan={5} className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">
+                  <td colSpan={5} className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
                     {plural(sorted.length, "trip", "trips")} shown · total
                   </td>
                   <td className="px-3 py-2 text-right font-semibold tabular-nums text-brand-lea dark:text-slate-100">
