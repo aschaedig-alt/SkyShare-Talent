@@ -412,6 +412,7 @@ model NewHire {
   travelTrips     TravelTrip[]
   roleAssignments RoleAssignment[]
   employmentStints EmploymentStint[]
+  contractPeriods ContractPeriod[]
 
   recognitionsGiven    Recognition[] @relation("giver")
   recognitionsReceived Recognition[] @relation("recipient")
@@ -542,6 +543,28 @@ model EmploymentStint {
   newHire    NewHire   @relation(fields: [newHireId], references: [id], onDelete: Cascade)
   startDate  DateTime
   endDate    DateTime? // null = current
+  note       String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([newHireId])
+}
+
+// A stretch somebody worked for SkyShare as a CONTRACTOR (1099), not an employee.
+// employmentStatus CONTRACT says what somebody is TODAY and nothing about before,
+// so a contractor who later left - or later became an employee - read as an
+// employee in every past year-end headcount (Reports > Headcount & Tenure counted
+// the workbook's "2018: 35, 6 contractors" as 41 staff). This records when. First
+// loaded from the Employee Roster MASTER workbook's TYPE column (2018 to Aug 2024)
+// by prisma/import-contract-history.ts; source says where each row came from and
+// note carries the evidence. Lies inside an employment period (EmploymentStint).
+model ContractPeriod {
+  id         String    @id @default(cuid())
+  newHireId  String
+  newHire    NewHire   @relation(fields: [newHireId], references: [id], onDelete: Cascade)
+  startDate  DateTime
+  endDate    DateTime? // null = still contracting
+  source     String?
   note       String?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
