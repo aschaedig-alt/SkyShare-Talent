@@ -1,0 +1,264 @@
+{
+ "loadedAt": "2026-10-16T17:34:49.679Z",
+ "source": "Paycom export 20261016105442_Advanced_Report_Writer_5cd83c95.xlsx",
+ "people": [
+  {
+   "id": "cmqa1pz2b00c5g4rmiccykvev",
+   "name": "Jackson Page",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "POST_ONBOARD",
+    "terminationDate": null
+   },
+   "oldStints": [],
+   "createdStintIds": [
+    "cmvb8zn0i0001s8rmlxmq5ufw"
+   ],
+   "roleEnds": [
+    {
+     "id": "cmr24b3xk000cqormcuppyn9o",
+     "endDate": null
+    }
+   ]
+  },
+  {
+   "id": "cmr5dwt0f000t0orm61z2snlo",
+   "name": "Nikki Engel",
+   "before": {
+    "employmentStatus": "TERMINATED",
+    "stage": "ARCHIVED",
+    "terminationDate": "2022-12-31T00:00:00.000Z"
+   },
+   "oldStints": [
+    {
+     "id": "cmr5jfhvd0033tcrmac2tys9v",
+     "startDate": "2022-02-21T00:00:00.000Z",
+     "endDate": "2022-12-31T00:00:00.000Z",
+     "note": null
+    }
+   ],
+   "createdStintIds": [
+    "cmvb8zn5c0002s8rmv8rnvpgi"
+   ],
+   "roleEnds": []
+  },
+  {
+   "id": "cmr18a8e4003c04jqssuz83lv",
+   "name": "John Mcgarry",
+   "before": {
+    "employmentStatus": "TERMINATED",
+    "stage": "ARCHIVED",
+    "terminationDate": "2026-02-02T00:00:00.000Z"
+   },
+   "oldStints": [],
+   "createdStintIds": [
+    "cmvb8zn9o0003s8rmw7tcoysi"
+   ],
+   "roleEnds": [
+    {
+     "id": "cmr5kczoy000ancrm9tuk12hy",
+     "endDate": "2026-02-02T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "id": "cmr18a2c3000904jqcqcdv5dn",
+   "name": "Rowan Moser",
+   "before": {
+    "employmentStatus": "TERMINATED",
+    "stage": "ARCHIVED",
+    "terminationDate": "2024-06-18T00:00:00.000Z"
+   },
+   "oldStints": [
+    {
+     "id": "cmr5dx1wz004x0ormkxcype2w",
+     "startDate": "2019-11-18T00:00:00.000Z",
+     "endDate": "2024-06-18T00:00:00.000Z",
+     "note": null
+    }
+   ],
+   "createdStintIds": [
+    "cmvb8zndu0004s8rmh6ga0b5o"
+   ],
+   "roleEnds": [
+    {
+     "id": "cmr5dywxh00336grmcejjvc55",
+     "endDate": "2024-06-18T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "id": "cmr5dwsmp000l0ormm9k67w30",
+   "name": "Phil Torsello",
+   "before": {
+    "employmentStatus": "TERMINATED",
+    "stage": "ARCHIVED",
+    "terminationDate": "2024-10-08T00:00:00.000Z"
+   },
+   "oldStints": [
+    {
+     "id": "cmr8q9m89000ik8rm21t1yx8a",
+     "startDate": "2019-08-01T00:00:00.000Z",
+     "endDate": "2024-10-08T00:00:00.000Z",
+     "note": null
+    }
+   ],
+   "createdStintIds": [
+    "cmvb8znib0005s8rmvlnoxs3b"
+   ],
+   "roleEnds": [
+    {
+     "id": "cmr8q9m6w000hk8rmkx1v8ycv",
+     "endDate": "2024-10-08T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "id": "cmqac9wm500hfpkrmatvfwxt0",
+   "name": "Laurie Gomes",
+   "before": {
+    "employmentStatus": "TERMINATED",
+    "stage": "ARCHIVED",
+    "terminationDate": "2026-04-03T00:00:00.000Z"
+   },
+   "oldStints": [],
+   "createdStintIds": [
+    "cmvb8znmf0006s8rmcvsrom85"
+   ],
+   "roleEnds": []
+  },
+  {
+   "id": "cmr18a93l003p04jqvg44f5az",
+   "name": "Scott Adams",
+   "before": {
+    "employmentStatus": "TERMINATED",
+    "stage": "ARCHIVED",
+    "terminationDate": "2026-04-17T00:00:00.000Z"
+   },
+   "oldStints": [],
+   "createdStintIds": [
+    "cmvb8znqf0007s8rmw62v600i"
+   ],
+   "roleEnds": [
+    {
+     "id": "cmr5jkg2g001ki0rmrdc0mtdu",
+     "endDate": "2026-04-17T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "id": "cmr8qsrrc000zvwrmyc3xz6iq",
+   "name": "Poom Padmanuja",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "ARCHIVED",
+    "terminationDate": null
+   },
+   "oldStints": [
+    {
+     "id": "cmr8qsrsp0011vwrmh6nfrjv2",
+     "startDate": "2024-10-14T00:00:00.000Z",
+     "endDate": null,
+     "note": null
+    }
+   ],
+   "createdStintIds": [
+    "cmvb8znum0008s8rmahkmkzpc"
+   ],
+   "roleEnds": [
+    {
+     "id": "cmr8qsrs10010vwrmdlkxi8yr",
+     "endDate": null
+    }
+   ]
+  },
+  {
+   "id": "cmr18a1y8000204jqy23askft",
+   "name": "Jon Soleau",
+   "before": {
+    "employmentStatus": "TERMINATED",
+    "stage": "ARCHIVED",
+    "terminationDate": "2023-10-23T00:00:00.000Z"
+   },
+   "oldStints": [
+    {
+     "id": "cmr5dwwr4002k0ormaqca5b6z",
+     "startDate": "2018-09-01T00:00:00.000Z",
+     "endDate": "2023-10-23T00:00:00.000Z",
+     "note": null
+    }
+   ],
+   "createdStintIds": [
+    "cmvb8znyz0009s8rmg6x9v6xe"
+   ],
+   "roleEnds": [
+    {
+     "id": "cmr5dwwtc002l0ormv8s7n809",
+     "endDate": "2023-10-23T00:00:00.000Z"
+    }
+   ]
+  },
+  {
+   "id": "cmubtpvka001l04i7zjrwxm89",
+   "name": "Sam Jaffari",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "ACTIVE",
+    "terminationDate": null
+   },
+   "oldStints": [],
+   "createdStintIds": [
+    "cmvb8zo34000as8rmlgz4kg5s"
+   ],
+   "roleEnds": []
+  },
+  {
+   "id": "cmtk7sgy6000004l14il5si15",
+   "name": "Flynn McFarland",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "POST_ONBOARD",
+    "terminationDate": null
+   },
+   "oldStints": [],
+   "createdStintIds": [
+    "cmvb8zo65000bs8rmnancv4yh"
+   ],
+   "roleEnds": []
+  },
+  {
+   "id": "cmqa1pq4d0012g4rm8alam7yj",
+   "name": "Hannah Leslie",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "ARCHIVED",
+    "terminationDate": null
+   },
+   "oldStints": [],
+   "createdStintIds": [
+    "cmvb8zo8u000cs8rmab933hxy"
+   ],
+   "roleEnds": [
+    {
+     "id": "cmr24b3wu000bqormdg15ne03",
+     "endDate": null
+    }
+   ]
+  },
+  {
+   "id": "cmqa1pu5c005ag4rmyjqhr10k",
+   "name": "Brode Haynie",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "ARCHIVED",
+    "terminationDate": null
+   },
+   "oldStints": [],
+   "createdStintIds": [
+    "cmvb8zod1000ds8rmgjee235c"
+   ],
+   "roleEnds": []
+  }
+ ],
+ "note": "Larry Uzelac was restored on its own (2026-10-16) and removed from this record: the Sep 29 merge kept him to Dec 31 2022 on purpose."
+}

@@ -35,7 +35,7 @@ import path from "node:path";
 import { prisma } from "../../lib/prisma";
 
 const DIR = path.join(process.cwd(), "scripts", "merge-duplicates-2026-09-29");
-const MERGE_URL = "http://localhost:3000/api/new-hires/merge";
+const MERGE_URL = `${process.env.MERGE_ORIGIN ?? "http://localhost:3000"}/api/new-hires/merge`; // a dev server on another port: MERGE_ORIGIN=http://localhost:3001
 const day = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const d = (x: Date | null | undefined) => (x ? x.toISOString().slice(0, 10) : "open");
 
@@ -79,6 +79,12 @@ const PLANS: Plan[] = [
   {
     keep: "Mauricio Almeida", drop: "Mauricio Almeida Negron", end: "2022-10-24", legalName: "Mauricio Almeida Negron",
     note: "One person, two records: Mauricio Almeida on the staff list, Mauricio Almeida Negron on Paycom's terminated list, both starting 2022-08-27. Last day 2022-10-24 is Paycom's."
+  },
+  // Added 2026-10-16, found loading Paycom's employee export; he: "yes, merge Laurie
+  // Gomes's two records". Run on its own: --apply --only 7 (the six above are gone).
+  {
+    keep: "Laurie Gomes", drop: "Laurie Gomes Ms", start: "2026-02-27", end: "2026-04-03", legalName: null,
+    note: "One person, two records: Laurie Gomes (her candidate link and onboarding checklist) and \"Laurie Gomes Ms\" (her Cabin Attendant role), both ending 2026-04-03. Paycom: hired 2026-02-27, last day 2026-04-03."
   }
 ];
 

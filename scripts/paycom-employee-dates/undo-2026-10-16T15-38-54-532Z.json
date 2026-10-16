@@ -1,0 +1,283 @@
+{
+ "loadedAt": "2026-10-16T15:38:54.532Z",
+ "source": "Paycom Employee Dates export 2026-10-15",
+ "people": [
+  {
+   "id": "cmqac9okt006cpkrmklu77cr5",
+   "name": "Corby Alexander",
+   "code": "A0DM",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "ARCHIVED",
+    "terminationDate": null
+   },
+   "deletedStints": [],
+   "createdStintIds": [
+    "cmvb4uk220000fcrmif91kgf6"
+   ],
+   "closedRoles": [],
+   "closedStintIds": []
+  },
+  {
+   "id": "cmqac9tyr00dqpkrmfjnsb2ur",
+   "name": "Maka Bailey",
+   "code": "A0DZ",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "ARCHIVED",
+    "terminationDate": null
+   },
+   "deletedStints": [],
+   "createdStintIds": [
+    "cmvb4uk510001fcrmn8hx7srt"
+   ],
+   "closedRoles": [],
+   "closedStintIds": []
+  },
+  {
+   "id": "cmqac9uca00e9pkrmdhxtl1v8",
+   "name": "Luke Diederich",
+   "code": "A0F0",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "ARCHIVED",
+    "terminationDate": null
+   },
+   "deletedStints": [],
+   "createdStintIds": [
+    "cmvb4uk810002fcrmmkarbf50"
+   ],
+   "closedRoles": [],
+   "closedStintIds": []
+  },
+  {
+   "id": "cmqac9v3j00fbpkrmyi3mlfrd",
+   "name": "Kyle Ferrin",
+   "code": "A0F2",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "ARCHIVED",
+    "terminationDate": null
+   },
+   "deletedStints": [],
+   "createdStintIds": [
+    "cmvb4ukbc0003fcrmz2pc06vo"
+   ],
+   "closedRoles": [],
+   "closedStintIds": []
+  },
+  {
+   "id": "cmr5dx1ok004t0ormi8sr7kz9",
+   "name": "Shad Guffey",
+   "code": "A080",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "ARCHIVED",
+    "terminationDate": null
+   },
+   "deletedStints": [
+    {
+     "id": "cmr5jfd7j0022tcrmju2gj7j1",
+     "startDate": "2021-11-29T00:00:00.000Z",
+     "endDate": null,
+     "note": null
+    }
+   ],
+   "createdStintIds": [
+    "cmvb4ukef0004fcrmtuxz3r96",
+    "cmvb4ukf50005fcrmutyp5zvg"
+   ],
+   "closedRoles": [],
+   "closedStintIds": []
+  },
+  {
+   "id": "cmr5dytph001p6grmu70hu59o",
+   "name": "Jerry Harrington",
+   "code": "A0CC",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "ARCHIVED",
+    "terminationDate": null
+   },
+   "deletedStints": [],
+   "createdStintIds": [],
+   "closedRoles": [
+    {
+     "id": "cmr5jkglq001ti0rmst00rlgn",
+     "endDate": null
+    }
+   ],
+   "closedStintIds": []
+  },
+  {
+   "id": "cmr31uaag0004eormap9wu0b9",
+   "name": "Mark Harris",
+   "code": "A083",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "ARCHIVED",
+    "terminationDate": null
+   },
+   "deletedStints": [
+    {
+     "id": "cmr5dx3po005r0orm8mvfg26d",
+     "startDate": "2022-01-01T00:00:00.000Z",
+     "endDate": null,
+     "note": "Returned (rehire)"
+    }
+   ],
+   "createdStintIds": [
+    "cmvb4ukog0006fcrmgqlhnm3w"
+   ],
+   "closedRoles": [],
+   "closedStintIds": []
+  },
+  {
+   "id": "cmr5dyu1j001v6grmdd5w0mby",
+   "name": "Tommy Harvey",
+   "code": "A0CE",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "ARCHIVED",
+    "terminationDate": null
+   },
+   "deletedStints": [],
+   "createdStintIds": [],
+   "closedRoles": [
+    {
+     "id": "cmr5jkgpk001ui0rmu3cbv24l",
+     "endDate": null
+    }
+   ],
+   "closedStintIds": []
+  },
+  {
+   "id": "cmqac9vhj00fupkrmjsy7yc3s",
+   "name": "Jack Matiasevich",
+   "code": "A0F5",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "ARCHIVED",
+    "terminationDate": null
+   },
+   "deletedStints": [],
+   "createdStintIds": [],
+   "closedRoles": [
+    {
+     "id": "cmr5jkkwu003gi0rmkbu9n3xk",
+     "endDate": null
+    }
+   ],
+   "closedStintIds": []
+  },
+  {
+   "id": "cmr5dyypn003p6grmgmqbukyh",
+   "name": "Dayne Shafer",
+   "code": "A0AZ",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "ARCHIVED",
+    "terminationDate": null
+   },
+   "deletedStints": [],
+   "createdStintIds": [],
+   "closedRoles": [
+    {
+     "id": "cmr5jki0q002di0rms464te9n",
+     "endDate": null
+    }
+   ],
+   "closedStintIds": []
+  },
+  {
+   "id": "cmqa1pxxh00akg4rmfabydweu",
+   "name": "Jonathan Siswick",
+   "code": "A0G4",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "POST_ONBOARD",
+    "terminationDate": null
+   },
+   "deletedStints": [],
+   "createdStintIds": [
+    "cmvb4ul7w0007fcrmh49rzym6"
+   ],
+   "closedRoles": [],
+   "closedStintIds": []
+  },
+  {
+   "id": "cmqzr2onz000004l8ym1agd1i",
+   "name": "Scott Strahan",
+   "code": "A0GA",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "POST_ONBOARD",
+    "terminationDate": null
+   },
+   "deletedStints": [],
+   "createdStintIds": [
+    "cmvb4ulb40008fcrmer99eigm"
+   ],
+   "closedRoles": [],
+   "closedStintIds": []
+  },
+  {
+   "id": "cmr5kd21i0012ncrmhp7g43cs",
+   "name": "Brock Tyler",
+   "code": "A0DQ",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "ARCHIVED",
+    "terminationDate": null
+   },
+   "deletedStints": [],
+   "createdStintIds": [],
+   "closedRoles": [
+    {
+     "id": "cmr8q9las000bk8rm2clt7x8e",
+     "endDate": null
+    }
+   ],
+   "closedStintIds": [
+    "cmr8qsrc1000nvwrmu99i3uhv"
+   ]
+  },
+  {
+   "id": "cmqac9r9j00a1pkrmsh4ixtqy",
+   "name": "Adrienne Vaughn",
+   "code": "A0DT",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "ARCHIVED",
+    "terminationDate": null
+   },
+   "deletedStints": [],
+   "createdStintIds": [
+    "cmvb4uljj0009fcrmrtdwn60o"
+   ],
+   "closedRoles": [],
+   "closedStintIds": []
+  },
+  {
+   "id": "cmr5jc2tp00122crmffmjsgt3",
+   "name": "Olivia Vincent",
+   "code": "A0BS",
+   "before": {
+    "employmentStatus": "ACTIVE",
+    "stage": "ARCHIVED",
+    "terminationDate": null
+   },
+   "deletedStints": [],
+   "createdStintIds": [],
+   "closedRoles": [
+    {
+     "id": "cmr5jf678000itcrml8il6r5h",
+     "endDate": null
+    }
+   ],
+   "closedStintIds": [
+    "cmr5jf5yp000htcrm8zw9tprz"
+   ]
+  }
+ ]
+}
