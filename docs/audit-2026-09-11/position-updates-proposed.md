@@ -12,7 +12,71 @@ Written 2026-09-12 ~01:45 MT as part of the audit the user asked to be filed und
 
 ---
 
+## STOP - RE-VERIFIED 2026-10-25. THE HEADLINE ROW IS WITHDRAWN.
+
+Re-checked read-only against the live database on 2026-10-25, six weeks after this file
+was written. **Do not apply the Brock Tyler row.** The rest of the named rows were
+re-checked individually and still stand.
+
+### Brock Tyler is TERMINATED, effective 2026-09-04
+
+That is one week **before** this audit ran. Raw output from the re-check:
+
+```
+name=Brock Tyler  legal=Joshua Brock Tyler  position=G450 & GV Captain  status=TERMINATED
+ALL role assignments:
+  G450 Captain | 2025-12-15 -> 2026-09-04 | HIRE
+Employment stints:
+  2025-12-15 -> 2026-09-04
+```
+
+So the workbook was **right** and the app was **stale**. The G450/G5 roster tab's vacant
+`CAPTAIN (PIC)` ordinal 4 at r9 [L359] is a real open seat, not a bookkeeping miss.
+
+This file's recommendation was to add him to that tab. Doing that would have **closed a
+genuinely open G450 captain seat and suppressed recruiting for it** - the opposite of the
+"live recruiting error" the Headline claims, and more expensive, because a seat nobody is
+recruiting for stays empty.
+
+### Why it got this wrong, which is the part worth keeping
+
+On 2026-09-11 the app still carried him as ACTIVE with an open `G450 Captain` role, and
+this file trusted the app over the workbook on every row, by design and stated up front.
+His termination reached the database later, in the Paycom employee export load of
+2026-10-16 (commit 464c424), backdated to 2026-09-04.
+
+**Where the workbook and the app disagree, neither one is automatically the fresher.** The
+app is not a primary source for employment status; Paycom is, and it arrives in batches.
+Any future comparison of this kind should check termination state against the most recent
+Paycom load before concluding that the sheet is behind.
+
+### Re-checked on 2026-10-25 and still standing
+
+- **Matt Dahle** - still `PC-12 Captain`, role open since 2025-01-13, still no 560XL role.
+- **Matt Smith** - still ACTIVE with `startDate` NULL and zero role assignments.
+- **Devon Carter** - still ACTIVE, `CJ2 Captain` since 2026-02-21 (plus Assistant Chief
+  Pilot since 2025-05-08). The CJ2 roster-tab gap at item 8 is unchanged.
+- **Alex Andrade** - still carries two current roles, `PC-12 Captain` and Assistant
+  Director of Training, which is the stale second role this file describes.
+- **`NewHire.managedAircraft`** - populated on **3 of 459** rows, was 3 of 461 when this
+  was written. Still only Matt Garner N409KG, Morri Harames N366FB, Shad Guffey N418T.
+
+Positive control from the same query: exactly **3 of 176** ACTIVE people have no current
+role assignment - Josiah Clay, Matt Smith, Espen Rodsjo. Matt Smith being one of them is
+what makes his row above real rather than a query artefact.
+
+### Everything else in this file is six weeks old
+
+Only the people named above were re-verified. Re-check any other row against the live
+record before applying it.
+
+---
+
 ## Headline
+
+> **WITHDRAWN 2026-10-25.** Brock Tyler was TERMINATED effective 2026-09-04, a week before
+> this was written. The seat is genuinely open and the workbook was right. See the STOP
+> block at the top of this file. The Devon Carter half of this Headline still stands.
 
 **An active G450 captain is missing from the workbook, and the seat he fills still reads as
 OPEN.** Brock Tyler (legal name Joshua Brock Tyler) has been an ACTIVE SkyShare employee
@@ -56,7 +120,7 @@ table with their reason rather than dropped.
 
 | Person | Current value in app | Proposed value | Field | Sheet tab | Sheet row | Confidence | Why |
 |---|---|---|---|---|---|---|---|
-| **Brock Tyler** | `G450 Captain`, ACTIVE since 2025-12-15, open role | no app change - **add his row to the SHEET** | *(sheet fix: G450/G5 roster tab)* | G450/G5 (absent); Training Info; Referral Bonus Info | G450/G5 r9 [L359] is the OPEN seat; Training Info r103 [L310]; Referral r19 [L648] | **high** | He is an active G450 captain in the app and in two other tabs of this same workbook, but not on the roster tab that produces the open-seat number. The tab shows a vacant PIC ordinal 4. Leaving it is a live recruiting error, not a tidiness issue. |
+| **Brock Tyler** <br> **ROW WITHDRAWN 2026-10-25 - TERMINATED 2026-09-04, do not apply** | `G450 Captain`, ACTIVE since 2025-12-15, open role | no app change - **add his row to the SHEET** | *(sheet fix: G450/G5 roster tab)* | G450/G5 (absent); Training Info; Referral Bonus Info | G450/G5 r9 [L359] is the OPEN seat; Training Info r103 [L310]; Referral r19 [L648] | **high** | He is an active G450 captain in the app and in two other tabs of this same workbook, but not on the roster tab that produces the open-seat number. The tab shows a vacant PIC ordinal 4. Leaving it is a live recruiting error, not a tidiness issue. |
 | **Matt Dahle** | `NewHire.position` = "PC-12 Captain"; only open role = `PC-12 Captain` (PIC, Pilatus PC-12, since 2025-01-13) | close `PC-12 Captain`; open `560XL First Officer` (seat SIC, aircraft Citation 560XL), effective his indoc/training date; sync `NewHire.position` | new `RoleAssignment` + `NewHire.position` | 560XL; Training Info; Training Events As Staffed | 560XL r6 [L469] (GREEN, Fractional); Training Info r140 [L347] ("XL SIC", indoc 08/13/2026 end 08/25/2026); Training Events SIC r7 [L716] (560XL) | **high** | Three tabs agree he is now a 560XL First Officer. The app still has him as a PC-12 Captain with no second role. He is also still carried as a PC-12 dual-qual (PC-12 r30), which is consistent with a transition, not with him being a PC-12 captain today. Note this is a captain→first-officer move, so it is a real downgrade in seat and must not be auto-derived as a promotion. |
 | **Matt Smith** | `NewHire.position` = "PC-12 Captain", `employmentStatus` ACTIVE, `stage` ACTIVE, **`startDate` null, 0 RoleAssignment rows**; Candidate row "Matt Smith" stage **Offer**, status MERGED, PAYCOM, created 2026-06-18 | decide: either he has started (set a start date, which seeds his first role) or he has not (he should not be an ACTIVE employee yet) | `NewHire.startDate` / `employmentStatus` | Master | r139 [L140] col K: "Matt Smith PIC (Sending offer)" | **high** | The workbook says an offer is going out. The app already counts him as an ACTIVE employee with no start date and no role at all. An ACTIVE row with a null start date is invisible to the role journey and to tenure, and it inflates active headcount. This is the only ACTIVE pilot-titled row in the whole table with zero roles **and** a null start date. |
 | **Sven Lepschy** | `managedAircraft` empty; open role `G450 Captain` (slug `g450-captain`) | `managedAircraft` = **N787JS**; and consider `G450 Lead Captain` | `NewHire.managedAircraft` (high) + `RoleAssignment.title` (medium) | G450/G5; Training Events As Staffed | G450/G5 r3 [L353] "Sven Lepschy (Lead)" on N787JS; Training Events r33 [L742] "Lepschy (Lead), Sven … N787JS" | **high** (tail) / **medium** (Lead) | Two tabs put him on N787JS and two write "(Lead)" into his name cell. Master r7 [L8] carries a distinct `Lead PIC` seat of 1 on N787JS, so "Lead" is a real seat here, not a nickname. `G450 Lead Captain` exists in the fleet registry (`lib/fleet/positions.ts`, status Archived). Training Info r80 [L287] says only "G450 Captain", which is why Lead is medium and not high. |
@@ -254,7 +318,7 @@ NOT-IN-SHEET-AT-ALL                 | "Ward Holbrook"    | pos="PC12 PIC"       
 
 Reading that list honestly:
 
-- **Brock Tyler** is the one that costs money - see the Headline. "sheet-elsewhere" means the
+- **Brock Tyler** ~~is the one that costs money~~ - **WITHDRAWN 2026-10-25, terminated 2026-09-04.** See the Headline. "sheet-elsewhere" means the
   workbook knows him (Training Info r103, Referral r19); only the roster tab that drives the
   open-seat count does not.
 - **Gavin Wunderlich** reads as "NOT-IN-SHEET-AT-ALL" only because the sheet spells him
@@ -423,7 +487,7 @@ pass.
    the headers: six active 560XL captains, and G200 captains are nine in the app against six
    named GREEN on the tab.
 
-7. **NEW - the G450/G5 roster tab is missing an active captain.** Brock Tyler, ACTIVE since
+7. **WITHDRAWN 2026-10-25 - he was terminated 2026-09-04; the seat is really open.** ~~NEW - the G450/G5 roster tab is missing an active captain.~~ Brock Tyler, ACTIVE since
    2025-12-15, open `G450 Captain` role. In Training Info r103 [L310] and Referral Bonus
    r19 [L648], absent from the roster tab, which shows a vacant `CAPTAIN (PIC)` ordinal 4 at
    r9 [L359]. See the Headline. **This is the single most expensive row in this file.**
@@ -720,7 +784,7 @@ in this file and it is what makes the six that differ worth reading. Each of the
 - `G200|PIC +3` - Jerry Harrington is on the tab but in its dual-qual area below the Notes
   line (so my primary filter excluded him, correctly for counting and not for existence);
   Morri Harames and Rick Benik are CONTRACT.
-- `G450|PIC +1` - **Brock Tyler, genuinely missing from the tab.** The Headline.
+- `G450|PIC +1` - ~~**Brock Tyler, genuinely missing from the tab.**~~ **WITHDRAWN 2026-10-25:** he was terminated 2026-09-04, so the app was stale and the tab was right.
 - `PC-12|PIC +0 by coincidence` - and this one is worth calling out because the zero is a
   lie. Two errors cancel: Alex Andrade is "sheet only" purely because his stale second open
   role makes the app resolve him to a non-pilot title, and Matt Dahle is "app only" because
