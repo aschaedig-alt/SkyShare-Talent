@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ImportsData } from "@/lib/data/imports";
 import { formatMomentDateTime } from "@/lib/dates/display";
 import { CandidateCsvImportCard } from "@/components/imports/CandidateCsvImportCard";
@@ -55,6 +56,35 @@ export function ImportsWorkspace({ data }: ImportsWorkspaceProps) {
           </div>
         ))}
       </section>
+
+      <Link
+        href="/imports/paycom-applicants"
+        className="flex flex-col gap-2 rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 transition hover:shadow-glow sm:flex-row sm:items-center sm:justify-between dark:bg-brand-panel dark:ring-white/10"
+      >
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Paycom</p>
+          <h2 className="mt-1 text-base font-semibold text-brand-lea dark:text-slate-100">Paycom applicants</h2>
+          <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
+            Drop Paycom&apos;s application and resume zips: each applicant is matched or created, linked to the job, and both PDFs filed. Preview first, undo any time.
+          </p>
+        </div>
+        <span className="shrink-0 rounded bg-brand-lea px-3 py-2 text-sm font-semibold text-white">Open</span>
+      </Link>
+
+      <Link
+        href="/imports/paycom-employees"
+        className="flex flex-col gap-2 rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 transition hover:shadow-glow sm:flex-row sm:items-center sm:justify-between dark:bg-brand-panel dark:ring-white/10"
+      >
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-gold">Paycom</p>
+          <h2 className="mt-1 text-base font-semibold text-brand-lea dark:text-slate-100">Paycom employees</h2>
+          <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
+            Drop Paycom&apos;s employee export (Advanced Report Writer .xlsx) to bring the Employees directory up to date: terminations, re-hires,
+            dates, full / part time and position changes. Preview first, undo any time.
+          </p>
+        </div>
+        <span className="shrink-0 rounded bg-brand-lea px-3 py-2 text-sm font-semibold text-white">Open</span>
+      </Link>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <CandidateCsvImportCard />

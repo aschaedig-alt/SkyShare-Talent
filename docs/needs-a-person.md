@@ -622,6 +622,55 @@ three readers all use truthy filters so a stored false would be invisible to the
 to the checkbox - but it changes the shape of a row the unattended send depends on, so it
 wants a yes from the user rather than an agent's judgement.
 
+### 30. No Paycom applicant upload has been imported or undone yet
+
+**Status:** OPEN
+**Added:** 2026-10-25
+
+Imports > Paycom applicants takes Paycom's two document zips and files every application:
+it splits the bundle, matches or creates the candidate, links or creates the job, attaches
+the application PDF and the resume. **Only the read-only half has been run.** The preview
+was run against the live database with the October 2026 export (103 applications) and
+the PDF split was checked offline (460 pages in, 460 out, each piece holding only its own
+Application ID and name). **Import and Undo have never written anything for real**, because
+testing them would put real applicants into the shared live database.
+
+**Also unseen:** the upload itself. The browser sends the zips straight to S3, which needs
+the bucket's CORS rule to allow a PUT from the site; the older Unassigned files card uses
+the same route, so it should, but nobody has watched this page do it.
+
+**How to check it:** open the page, drop both zips, press Upload and preview. Use Select
+none, tick ONE application, Import. Open that person's profile: the application has the
+right job and date, and both PDFs open. Then Undo the upload from Recent uploads and check
+the application and PDFs are gone (and, if the person was new, the person too). Then
+upload again and import the rest.
+
+**What would count as a pass:** the one application lands correctly, Undo removes exactly
+what it added, and the full import afterwards matches what the preview said.
+
+### 31. No Paycom employee upload has been applied or undone yet
+
+**Status:** OPEN
+**Added:** 2026-10-25
+
+Imports > Paycom employees takes Paycom's Advanced Report Writer employee export and keeps
+the Employees directory current: terminations, re-hires, date corrections, full / part
+time and position changes. **Only the read-only half has been run**: the preview against
+the live database with the Oct 16 export, which the CLI scripts had already applied, and it
+came back with 0 changes, as it should. **Apply and Undo have never written anything for
+real.** The re-hire path and the position comparison were only checked in memory - the Oct
+16 file has nobody to re-hire, and positions have no baseline until one upload is applied.
+The page's file upload has not been clicked through in a browser either.
+
+**How to check it:** open the page, drop the Oct 16 export, Upload and preview. It should
+show 0 changes, 11 for a person, 2 not matched. Press "Record this export (no changes)" -
+that makes it the position baseline. When the next export arrives, upload it: any re-hire,
+termination or position change it shows, apply ONE, open that person's profile and check
+the employment dates, status and role, then Undo from Recent uploads and check they are back.
+
+**What would count as a pass:** the one person changes exactly as the preview said, and
+Undo puts them back exactly as they were.
+
 ---
 
 ## Closed
