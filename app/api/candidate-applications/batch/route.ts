@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { candidateScopeWhere } from "@/lib/auth/candidate-scope";
-import { normalizeEmail, normalizeName, normalizePhone } from "@/lib/candidates/normalize";
+import { normalizeEmail, normalizeName, normalizePhone, splitCandidateName } from "@/lib/candidates/normalize";
 import { linkCandidateToJob, type LinkToJobResult } from "@/lib/candidates/link-to-job";
 
 /**
@@ -48,9 +48,39 @@ type PreviewRow = {
   } | null;
   /** Populated instead of `candidate` when the line matched more than one person. */
   ambiguous?: { id: string; displayName: string; primaryEmail: string | null }[];
+  /**
+   * What the line looked like once parsed, on UNMATCHED rows only — the prefill
+   * for creating this person at the review step. Not sent for a matched row:
+   * there is nothing to create, and offering the fields would invite editing
+   * somebody's real record through a paste box.
+   */
+  parsed?: {
+    firstName: string | null;
+    lastName: string | null;
+    displayName: string;
+    email: string | null;
+    phone: string | null;
+  };
 };
 
 const EMAIL_RE = /[^\s,;|<>()]+@[^\s,;|<>()]+\.[^\s,;|<>()]+/;
+
+/** One or more name tokens: letters plus the punctuation real names carry. */
+const NAME_RUN = "[\\p{L}][\\p{L}'`\\-.\\s]*";
+/** Two name tokens side by side, e.g. "John Smith" — a column that IS a name. */
+const TWO_PART_NAME = new RegExp(`^${NAME_RUN}\\s+[\\p{L}][\\p{L}'\`\\-.\\s]*$`, "u");
+/**
+ * "Nielsen, Jeffrey" — ONE comma with a name either side and nothing else.
+ *
+ * This case shipped broken on 2026-09-04 and was live for seven weeks: the
+ * parser split every line on the comma as if it were a CSV column, so each half
+ * failed the two-token test above and the line produced NO NAME AT ALL. It is
+ * the format Paycom's own Legal Name column uses — the importer calls flipName()
+ * on it — so the most likely paste of all matched nobody. Caught 2026-10-25 on
+ * "Nielsen, Jeffrey" and "Tamayo, Juan", two people who were already sitting on
+ * the requisition being pasted.
+ */
+const LAST_COMMA_FIRST = new RegExp(`^${NAME_RUN},\\s*${NAME_RUN}$`, "u");
 
 /**
  * Pull the usable keys out of one pasted line. Paycom's applicant list pastes as
@@ -59,16 +89,19 @@ const EMAIL_RE = /[^\s,;|<>()]+@[^\s,;|<>()]+\.[^\s,;|<>()]+/;
  * a column order that will not hold.
  */
 function parseLine(line: string) {
-  const email = normalizeEmail(line.match(EMAIL_RE)?.[0] ?? null);
+  const rawEmail = line.match(EMAIL_RE)?.[0]?.trim() ?? null;
+  const email = normalizeEmail(rawEmail);
 
   // Strip the email before looking for a phone, so the digits inside an address
   // (jsmith2024@…) are not read as a number.
   const withoutEmail = line.replace(EMAIL_RE, " ");
   let phone: string | null = null;
+  let rawPhone: string | null = null;
   for (const chunk of withoutEmail.split(/[\t,;|]/)) {
     const found = normalizePhone(chunk);
     if (found) {
       phone = found;
+      rawPhone = chunk.trim();
       break;
     }
   }
@@ -76,13 +109,54 @@ function parseLine(line: string) {
   // The name is whatever is left once the email and phone columns are gone. A
   // column of pure digits, dates or status words is not a name, so anything
   // without two alphabetic parts is discarded rather than guessed at.
-  const nameCandidates = withoutEmail
+  //
+  // The phone goes too, not just the email: without that, "Nielsen, Jeffrey,
+  // 555-0100" still reads as three columns and the Last-comma-First shape below
+  // never gets a chance to match.
+  const leftover = (rawPhone ? withoutEmail.replace(rawPhone, " ") : withoutEmail)
+    // Collapse the empty segments the removals leave behind, so ", , " does not
+    // count as separators around nothing.
+    .split(/[\t;|]/)
+    .map((part) =>
+      part
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .join(", ")
+    )
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join("\t");
+
+  // Comma segments that could be part of a name: letters and name punctuation
+  // only, so a requisition number, a date or "555-0100" drops out and
+  // "Nielsen, Jeffrey, 555-0100" still reads as a name plus junk.
+  const commaSegs = leftover
     .split(/[\t,;|]/)
     .map((part) => part.trim())
-    .filter((part) => /^[\p{L}][\p{L}'`\-.\s]*\s+[\p{L}][\p{L}'`\-.\s]*$/u.test(part));
-  const name = normalizeName(nameCandidates[0] ?? null);
+    .filter(Boolean);
+  const nameSegs = commaSegs.filter((part) => new RegExp(`^${NAME_RUN}$`, "u").test(part));
 
-  return { email, phone, name };
+  // TWO name segments means Last, First — the Paycom shape.
+  //
+  // rawName keeps the written order for the create form; matchName is the same
+  // tokens FLIPPED, and that distinction is the second half of the bug. The
+  // match key was built from the line as typed, so "Padron Manrique, Roberto"
+  // was looked up as "padron manrique, roberto" and could never equal the
+  // stored "roberto padron manrique" however many people were sitting there.
+  // All tokens are kept rather than splitCandidateName's first-and-last, because
+  // a dropped middle name is a missed match.
+  const isLastFirst = nameSegs.length === 2 && LAST_COMMA_FIRST.test(`${nameSegs[0]}, ${nameSegs[1]}`);
+  const rawName = isLastFirst
+    ? `${nameSegs[0]}, ${nameSegs[1]}`
+    : (commaSegs.find((part) => TWO_PART_NAME.test(part)) ?? null);
+  const matchName = isLastFirst ? `${nameSegs[1]} ${nameSegs[0]}` : rawName;
+  const name = normalizeName(matchName);
+
+  // The raw values ride along for one reason: an unmatched line can be turned
+  // into a new candidate at the review step, and that form has to be prefilled
+  // with the name as WRITTEN, not the lowercased key used for matching.
+  return { email, phone, name, rawEmail, rawPhone, rawName };
 }
 
 export async function POST(request: Request) {
@@ -261,7 +335,23 @@ export async function POST(request: Request) {
         };
       }
 
-      return { line: p.line, matchedBy: null, candidate: null };
+      // Nobody matched, so this is the one row that can become a new candidate.
+      // splitCandidateName rather than a split on the first space: it handles
+      // "Smith, John", peels Jr/III off the surname and still keeps it on the
+      // display name, which is the same treatment every other intake path gives.
+      const split = splitCandidateName(p.rawName);
+      return {
+        line: p.line,
+        matchedBy: null,
+        candidate: null,
+        parsed: {
+          firstName: split.firstName,
+          lastName: split.lastName,
+          displayName: split.displayName,
+          email: p.rawEmail,
+          phone: p.rawPhone
+        }
+      };
     });
 
     return NextResponse.json({

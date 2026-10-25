@@ -19,6 +19,22 @@ type PreviewRow = {
     hasDocumentText: boolean;
   } | null;
   ambiguous?: { id: string; displayName: string; primaryEmail: string | null }[];
+  parsed?: {
+    firstName: string | null;
+    lastName: string | null;
+    displayName: string;
+    email: string | null;
+    phone: string | null;
+  };
+};
+
+/** An unmatched line the operator has chosen to turn into a new candidate. */
+type CreateDraft = {
+  enabled: boolean;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
 };
 
 type ApplyResult = {
@@ -26,6 +42,11 @@ type ApplyResult = {
   reused: number;
   reactivated: number;
   missing: number;
+  /** Candidates created from unmatched lines, counted separately on purpose. */
+  created?: number;
+  /** A created line that matched an existing person on email or phone after all. */
+  createMatchedExisting?: number;
+  createFailed?: string[];
 };
 
 const FIELD =
@@ -46,6 +67,9 @@ export function BatchAddCandidatesToJob({ jobId, jobTitle }: { jobId: string; jo
   const [text, setText] = useState("");
   const [rows, setRows] = useState<PreviewRow[]>([]);
   const [chosen, setChosen] = useState<Set<string>>(new Set());
+  // Keyed by the row's index in `rows`, because an unmatched line has no id yet
+  // and two identical lines in one paste must stay two separate drafts.
+  const [creates, setCreates] = useState<Map<number, CreateDraft>>(new Map());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ApplyResult | null>(null);
@@ -98,6 +122,21 @@ export function BatchAddCandidatesToJob({ jobId, jobTitle }: { jobId: string; jo
       // re-adding them is a no-op, and pre-ticking them hides the ones that are
       // genuinely new behind a wall of green.
       setChosen(new Set(body.rows.filter((r) => r.candidate && !r.candidate.alreadyLinked).map((r) => r.candidate!.id)));
+      // Drafts are prepared for every unmatched line but every one starts OFF.
+      // Creating a person is not the same act as linking one, and a paste of
+      // thirty lines where four were typos should not quietly add four people.
+      const drafts = new Map<number, CreateDraft>();
+      body.rows.forEach((r, i) => {
+        if (r.candidate || !r.parsed) return;
+        drafts.set(i, {
+          enabled: false,
+          firstName: r.parsed.firstName ?? "",
+          lastName: r.parsed.lastName ?? "",
+          email: r.parsed.email ?? "",
+          phone: r.parsed.phone ?? ""
+        });
+      });
+      setCreates(drafts);
       setStep("review");
     } catch {
       setError("Network error — nothing was matched.");
@@ -106,26 +145,79 @@ export function BatchAddCandidatesToJob({ jobId, jobTitle }: { jobId: string; jo
     }
   }
 
+  const enabledCreates = useMemo(
+    () => [...creates.entries()].filter(([, d]) => d.enabled),
+    [creates]
+  );
+
   async function runApply() {
     const ids = [...chosen];
-    if (ids.length === 0) {
-      setError("Tick at least one person.");
+    if (ids.length === 0 && enabledCreates.length === 0) {
+      setError("Tick at least one person, or fill in one to create.");
+      return;
+    }
+    const incomplete = enabledCreates.find(([, d]) => !d.firstName.trim() && !d.lastName.trim());
+    if (incomplete) {
+      setError("A candidate you are creating needs at least a first or last name.");
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/candidate-applications/batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "apply", jobId, candidateIds: ids })
-      });
-      const body = (await res.json().catch(() => null)) as (ApplyResult & { message?: string }) | null;
-      if (!res.ok || !body) {
-        setError(body?.message ?? `Could not add them (${res.status}).`);
-        return;
+      let linkResult: ApplyResult = { linked: 0, reused: 0, reactivated: 0, missing: 0 };
+
+      if (ids.length > 0) {
+        const res = await fetch("/api/candidate-applications/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: "apply", jobId, candidateIds: ids })
+        });
+        const body = (await res.json().catch(() => null)) as (ApplyResult & { message?: string }) | null;
+        if (!res.ok || !body) {
+          setError(body?.message ?? `Could not add them (${res.status}).`);
+          return;
+        }
+        linkResult = body;
       }
-      setResult(body);
+
+      // Creation goes through POST /api/candidates, which already matches an
+      // existing person on email or phone, applies the merged-away guard and
+      // links to the job in one step. Calling it per person rather than teaching
+      // the batch route to create keeps ONE create-or-reuse path — the same
+      // reason the link rules live in lib/candidates/link-to-job.ts.
+      let created = 0;
+      let createMatchedExisting = 0;
+      const createFailed: string[] = [];
+      for (const [, draft] of enabledCreates) {
+        const who = [draft.firstName.trim(), draft.lastName.trim()].filter(Boolean).join(" ") || "Unnamed";
+        try {
+          const res = await fetch("/api/candidates", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              firstName: draft.firstName.trim(),
+              lastName: draft.lastName.trim(),
+              email: draft.email.trim(),
+              phone: draft.phone.trim(),
+              jobId
+            })
+          });
+          const body = (await res.json().catch(() => null)) as { reused?: boolean; message?: string } | null;
+          if (!res.ok) {
+            createFailed.push(`${who} — ${body?.message ?? res.status}`);
+            continue;
+          }
+          // The route reuses a person it recognises by email or phone. That is
+          // the right outcome, but it is NOT a create, and reporting it as one
+          // would hide that the paste had already-known people in it.
+          if (body?.reused) createMatchedExisting += 1;
+          else created += 1;
+        } catch {
+          createFailed.push(`${who} — network error`);
+        }
+      }
+
+      setResult({ ...linkResult, created, createMatchedExisting, createFailed });
       setAddedIds(ids);
       setStep("done");
       router.refresh();
@@ -171,6 +263,7 @@ export function BatchAddCandidatesToJob({ jobId, jobTitle }: { jobId: string; jo
     setText("");
     setRows([]);
     setChosen(new Set());
+    setCreates(new Map());
     setResult(null);
     setAddedIds([]);
     setError(null);
@@ -187,6 +280,16 @@ export function BatchAddCandidatesToJob({ jobId, jobTitle }: { jobId: string; jo
       ? "A scan is running. Close and stop it? Everyone already added stays added."
       : "You have a list in progress. Close and lose it?"
   });
+
+  function setDraft(index: number, patch: Partial<CreateDraft>) {
+    setCreates((current) => {
+      const next = new Map(current);
+      const existing = next.get(index);
+      if (!existing) return current;
+      next.set(index, { ...existing, ...patch });
+      return next;
+    });
+  }
 
   function toggle(id: string) {
     setChosen((current) => {
@@ -266,7 +369,8 @@ export function BatchAddCandidatesToJob({ jobId, jobTitle }: { jobId: string; jo
                   </span>
                   {unmatched.length > 0 && (
                     <span className="font-semibold text-amber-700 dark:text-amber-400">
-                      {unmatched.length} not matched — add those by hand
+                      {unmatched.length} not matched
+                      {enabledCreates.length > 0 ? ` · ${enabledCreates.length} to create` : " — tick one to create them"}
                     </span>
                   )}
                 </div>
@@ -327,6 +431,41 @@ export function BatchAddCandidatesToJob({ jobId, jobTitle }: { jobId: string; jo
                                   {row.ambiguous.map((a) => a.displayName + (a.primaryEmail ? ` (${a.primaryEmail})` : "")).join(", ")}
                                 </p>
                               ) : null}
+
+                              {/* Create-from-this-line. Offered only where nobody
+                                  matched — an ambiguous line already has real
+                                  people behind it, and creating would add a third. */}
+                              {creates.has(i) && (
+                                <div className="mt-2">
+                                  <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-brand-lea dark:text-slate-100">
+                                    <input
+                                      type="checkbox"
+                                      checked={creates.get(i)!.enabled}
+                                      onChange={() => setDraft(i, { enabled: !creates.get(i)!.enabled })}
+                                      className="h-4 w-4 accent-brand-gold"
+                                    />
+                                    Create this person and add them
+                                  </label>
+                                  {creates.get(i)!.enabled && (
+                                    <>
+                                      <div className="mt-2 grid grid-cols-2 gap-2">
+                                        <input className={FIELD} placeholder="First name" value={creates.get(i)!.firstName}
+                                          onChange={(e) => setDraft(i, { firstName: e.target.value })} />
+                                        <input className={FIELD} placeholder="Last name" value={creates.get(i)!.lastName}
+                                          onChange={(e) => setDraft(i, { lastName: e.target.value })} />
+                                        <input className={FIELD} placeholder="Email" value={creates.get(i)!.email}
+                                          onChange={(e) => setDraft(i, { email: e.target.value })} />
+                                        <input className={FIELD} placeholder="Phone" value={creates.get(i)!.phone}
+                                          onChange={(e) => setDraft(i, { phone: e.target.value })} />
+                                      </div>
+                                      <p className="mt-1.5 text-xs text-brand-grey dark:text-slate-400">
+                                        A candidate created from a name and an email has no resume, so the matchboard cannot
+                                        rank them until documents are on file. Add them here, then upload their documents.
+                                      </p>
+                                    </>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         )}
@@ -344,10 +483,14 @@ export function BatchAddCandidatesToJob({ jobId, jobTitle }: { jobId: string; jo
                   </button>
                   <button
                     onClick={runApply}
-                    disabled={busy || chosen.size === 0}
+                    disabled={busy || (chosen.size === 0 && enabledCreates.length === 0)}
                     className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60 dark:bg-brand-sweet dark:text-brand-lea"
                   >
-                    {busy ? "Adding…" : `Add ${chosen.size} to this job`}
+                    {busy
+                      ? "Adding…"
+                      : enabledCreates.length > 0
+                        ? `Add ${chosen.size} and create ${enabledCreates.length}`
+                        : `Add ${chosen.size} to this job`}
                   </button>
                 </div>
               </div>
@@ -358,13 +501,31 @@ export function BatchAddCandidatesToJob({ jobId, jobTitle }: { jobId: string; jo
               <div className="space-y-3">
                 <div className="rounded border border-brand-gold/40 bg-brand-sweet/12 p-3 text-sm text-brand-lea dark:bg-brand-gold/10 dark:text-slate-100">
                   <p className="font-semibold">
-                    {result.linked} added to {jobTitle}.
+                    {result.linked} added to {jobTitle}
+                    {result.created ? `, ${result.created} created` : ""}.
                   </p>
                   <ul className="mt-1 space-y-0.5 text-xs">
                     {result.reused > 0 && <li>{result.reused} were already on this job — left as they were.</li>}
                     {result.reactivated > 0 && <li>{result.reactivated} were archived and are now back in the active pipeline.</li>}
                     {result.missing > 0 && <li>{result.missing} could not be added.</li>}
-                    {noDocuments > 0 && <li>{noDocuments} have no readable documents, so nothing can be scanned for them yet.</li>}
+                    {(result.createMatchedExisting ?? 0) > 0 && (
+                      <li>
+                        {result.createMatchedExisting} of the ones you asked to create turned out to be already here —
+                        matched on email or phone and linked instead of duplicated.
+                      </li>
+                    )}
+                    {(result.created ?? 0) > 0 && (
+                      <li>
+                        The {result.created} created have no documents yet, so they will not rank on the matchboard until
+                        their resumes are uploaded.
+                      </li>
+                    )}
+                    {result.createFailed && result.createFailed.length > 0 && (
+                      <li className="font-semibold text-red-700 dark:text-red-400">
+                        Could not create: {result.createFailed.join("; ")}
+                      </li>
+                    )}
+                    {noDocuments > 0 && <li>{noDocuments} of the linked have no readable documents, so nothing can be scanned for them yet.</li>}
                   </ul>
                 </div>
 
