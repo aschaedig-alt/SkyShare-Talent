@@ -580,6 +580,50 @@ text, and there are no Rename or Save buttons.
 
 ---
 
+### 29. The unarmed-orientation warning has never appeared on a screen
+
+**Status:** OPEN
+**Added:** 2026-10-25
+
+The reminder health check can now report an UPCOMING session that nobody has turned
+"Send it automatically" on for. That was the one failure shape it could not see, and it is
+the shape that hid the 29 Sep session in September: the check starts from the armed list,
+so a session nobody armed produced no output at all.
+
+**Nobody has seen it fire.** It cannot be made to fire against the live table today, and
+that is by design rather than luck: there is no future orientation session, and the stale
+29 Sep row is excluded on three separate gates (its day has passed, it is armed, and every
+attendee already has the reminder recorded). Measured today: zero warnings. So the logic is
+replayed and arithmetic-checked, and the red box itself has never been drawn.
+
+**Two things are reasoned rather than observed:**
+
+- The wording and the placement. The warning goes in the global `problems` list, so it
+  appears on *every* orientation session page with attendees, including sessions it is not
+  about. That is deliberate - the session nobody armed is the session nobody opens - but it
+  is also the shape of a bug this file previously fixed, and nobody has looked at how it
+  reads when it names a session other than the one in front of you.
+- That it clears. It should disappear the moment the session is armed, and again once the
+  session day passes. Both are gates in the code; neither has been watched.
+
+**How to check it:** the next time an orientation session is created, add an attendee and
+leave "Send it automatically" off. Four days before the session a red box should appear on
+the orientation pages. Turn it on and it should vanish.
+
+**What would count as a pass:** the box appears about four days out, names the right session
+with its date and time, reads sensibly when you are looking at a different session, and
+clears as soon as the session is armed.
+
+**Also still open, deliberately, and it is a decision rather than a check:** un-arming a
+session currently DELETES its entry, so "we decided to send this one by hand" is stored
+identically to "nobody ever looked". That means choosing the supported manual path still
+raises the warning. Storing false instead of deleting would fix it in two lines, and the
+three readers all use truthy filters so a stored false would be invisible to the cron and
+to the checkbox - but it changes the shape of a row the unattended send depends on, so it
+wants a yes from the user rather than an agent's judgement.
+
+---
+
 ## Closed
 
 ### 15. No trip uses Indoc & orientation yet

@@ -25,6 +25,16 @@ export const dynamic = "force-dynamic";
 //                             Without this the route had no idea which session
 //                             was being viewed, so a warning about one session
 //                             was rendered on every session's page.
+//
+// One field is always global, whatever sessionId says: `unarmedDueSoon`, the
+// UPCOMING sessions whose reminder day is within a few days and that nobody has
+// turned "Send it automatically" on for. The exact window is
+// UNARMED_WARN_WITHIN_DAYS in lib/orientation/reminder.ts, which carries the
+// argument for the number — read it there rather than restating it here, so the
+// two cannot drift. Its warning is in `problems` for the same reason — the session nobody
+// armed is the session nobody has opened, so a copy scoped to its own page would
+// be read by precisely the person who did not need it. This is the failure that
+// got past the diagnostic in September; see the comments in lib/orientation/reminder.ts.
 
 export async function GET(request: Request) {
   const auth = await requireApiPermission("candidates:write");
