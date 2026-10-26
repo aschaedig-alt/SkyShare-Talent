@@ -10,8 +10,9 @@
  *
  * POSITIONS ARE COMPARED PAYCOM-TO-PAYCOM. Paycom's Position is a payroll code
  * ("Pilot CJ2 PIC", "AR Specialist - Salary"); the app's titles are the fleet names
- * ("CJ2 Captain"). On the Oct 16 export 105 of the 154 current people differ in
- * wording alone. So a position change is Paycom's value moving between two APPLIED
+ * ("CJ2 Captain"). On the Oct 16 export 109 of the 154 current people's Paycom
+ * position differs from their NewHire.position (117 from their open role title).
+ * So a position change is Paycom's value moving between two APPLIED
  * uploads - the latest COMPLETED batch is the baseline - never Paycom against the
  * app's title. The first upload has nothing to compare with and only records the
  * starting point. The app title to write is suggested from what the people already
