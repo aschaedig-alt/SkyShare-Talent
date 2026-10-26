@@ -1,47 +1,54 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
+import { EditorContent, Mark, mergeAttributes, useEditor, useEditorState, type Editor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import { TextStyle, Color, BackgroundColor, FontSize } from "@tiptap/extension-text-style";
 import {
-  Bold, Italic, Underline, Strikethrough, List, ListOrdered,
+  Bold, Italic, Underline, Strikethrough, List, ListOrdered, IndentIncrease, IndentDecrease,
   Heading, Quote, Link2, Palette, Type, AtSign, Eraser
 } from "lucide-react";
 import { normalizeRichHtml, plainTextToHtml } from "@/lib/richtext/normalize";
 import { TEXT_COLORS, HIGHLIGHT_COLORS } from "@/lib/richtext/tokens";
 
 /**
- * A small rich-text editor for interview write-ups and candidate notes.
+ * The rich-text editor for interview write-ups and candidate notes.
  *
- * Built on contenteditable + execCommand. execCommand is formally deprecated
- * but is still the only thing every browser implements consistently, and the
- * alternative is a large editor dependency for what is a toolbar over a text
- * box. Everything it produces is passed through sanitizeRichText on the server
- * before storage, so the editor is a convenience and never the security
- * boundary.
+ * BUILT ON TIPTAP (ProseMirror), Oct 26. WHY, because this is the question the
+ * recruiter asked ("see what weve used before, what were using now and what we
+ * should be using"):
  *
- * COLOUR AND SIZE ARE APPLIED BY HAND rather than through execCommand. The
- * browser's own colour command emits rgb() and its font-size command emits
- * legacy <font size="1..7">, neither of which matches the exact style strings
- * the sanitizer allows. Wrapping the selection ourselves means what is typed is
- * exactly what survives.
+ *   Before Jul 29  a plain <textarea>. No formatting at all.
+ *   Jul 29–Oct 26  contentEditable + document.execCommand, plus a hand-written
+ *                  normaliser to clean up what the browser produced. The DOM
+ *                  WAS the document, so every quirk of Chrome's editing became
+ *                  a stored-data bug that had to be found and patched one at a
+ *                  time: the cursor jumping to the start (Aug 16, Aug 20,
+ *                  Sep 2), bold that could not be switched off, a <label>
+ *                  forwarding every click to Bold, and finally (Oct 26)
+ *                  indented bullets deleted on blur and blank lines deleted on
+ *                  save. execCommand is formally deprecated and no browser will
+ *                  ever fix those quirks.
+ *   Now            TipTap. The editor keeps a SCHEMA — a document model that
+ *                  only allows valid structure: a nested bullet always lives
+ *                  inside the item above it, an empty paragraph is a real blank
+ *                  line, bold is a mark with a definite start and end. The
+ *                  HTML is GENERATED from that model, so what is saved is
+ *                  exactly what was on screen, and loading it back produces the
+ *                  same document. That is the property the old editor could
+ *                  never have, and it is why this is a replacement, not a patch.
  *
- * STRUCTURE IS NORMALISED, not merely filtered — see lib/richtext/normalize.ts
- * for what that fixes and why it runs on load and on blur as well as on paste.
+ * Unchanged: everything still goes through sanitizeRichText on the server
+ * before storage (the editor is never the security boundary), the colour and
+ * size choices are the same design tokens, and pasted HTML still runs through
+ * normalizeRichHtml so Word/Gmail/Google Docs/Paycom markup is reduced to our
+ * vocabulary before the editor sees it.
  *
- * THE DOM IS THE SOURCE OF TRUTH WHILE THE CARET IS IN IT. The `value` prop
- * seeds this editor once, on mount, and is never written back into the DOM for
- * html this component itself emitted. Writing innerHTML under a live caret
- * collapses it to offset 0 — which is the "cursor jumps to the beginning"
- * report of Aug 16, Aug 20 and Sep 2. See the effect below before changing how
- * `value` is consumed.
- *
- * DO NOT WRAP THIS COMPONENT IN A <label>. A <label> with no `for` attribute
- * claims the first *labelable* descendant as its control, and the first one
- * here is the Bold button — so a click anywhere inside the label, including one
- * that only meant to place the caret, is forwarded to Bold and turns bold on.
- * That shipped on 2026-07-29 when a <textarea> already sitting inside a label
- * was swapped for this editor, and it took three rounds of feedback to find.
- * Use a plain <div> and pass `ariaLabel` for the accessible name.
+ * DO NOT WRAP THIS COMPONENT IN A <label>. A <label> with no `for` claims the
+ * first labelable descendant — the Bold button — so every click inside it
+ * turns bold on (shipped 2026-07-29, three rounds of feedback to find). Use a
+ * plain <div> and pass `ariaLabel`. A guard below catches it anyway.
  */
 
 export type RichTextEditorProps = {
@@ -58,36 +65,79 @@ export type RichTextEditorProps = {
   ariaLabel?: string;
 };
 
-/** Which character formats are live at the caret right now. */
-type Marks = { bold: boolean; italic: boolean; underline: boolean; strike: boolean };
-const NO_MARKS: Marks = { bold: false, italic: false, underline: false, strike: false };
-
 const COLOR_LABELS = ["Navy", "Red", "Green", "Gold", "Blue"] as const;
 const HIGHLIGHT_LABELS = ["Highlight gold", "Highlight red", "Highlight green"] as const;
 
-const COLORS: Array<{ label: string; style: string; swatch: string }> = [
-  ...TEXT_COLORS.map((hex, i) => ({ label: COLOR_LABELS[i], style: `color: ${hex}`, swatch: hex })),
-  ...HIGHLIGHT_COLORS.map((hex, i) => ({ label: HIGHLIGHT_LABELS[i], style: `background-color: ${hex}`, swatch: hex }))
+const COLORS: Array<{ label: string; kind: "color" | "highlight"; hex: string }> = [
+  ...TEXT_COLORS.map((hex, i) => ({ label: COLOR_LABELS[i], kind: "color" as const, hex })),
+  ...HIGHLIGHT_COLORS.map((hex, i) => ({ label: HIGHLIGHT_LABELS[i], kind: "highlight" as const, hex }))
 ];
 
-const SIZES: Array<{ label: string; style: string }> = [
-  { label: "Small", style: "font-size: 12px" },
-  { label: "Normal", style: "font-size: 14px" },
-  { label: "Large", style: "font-size: 18px" },
-  { label: "Huge", style: "font-size: 22px" }
+/** null = Normal, which clears the size rather than writing font-size: 14px everywhere. */
+const SIZES: Array<{ label: string; size: string | null }> = [
+  { label: "Small", size: "12px" },
+  { label: "Normal", size: null },
+  { label: "Large", size: "18px" },
+  { label: "Huge", size: "22px" }
 ];
+
+/** The colour a mention is drawn in — matches lib/richtext/normalize.ts. */
+const MENTION_COLOR = "#466481";
+
+/**
+ * An @-mention: <span data-mention="email">. lib/notifications/mentions.ts finds
+ * mentions by that attribute, so the stored shape must not change. Not
+ * inclusive, so typing straight after a mention is ordinary text.
+ */
+const MentionMark = Mark.create({
+  name: "mention",
+  inclusive: false,
+  priority: 1100,
+  addAttributes() {
+    return {
+      email: {
+        default: null,
+        parseHTML: (el) => el.getAttribute("data-mention"),
+        renderHTML: (attrs) => (attrs.email ? { "data-mention": attrs.email } : {})
+      }
+    };
+  },
+  parseHTML() {
+    return [{ tag: "span[data-mention]", consuming: false }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["span", mergeAttributes(HTMLAttributes, { style: `color: ${MENTION_COLOR}` }), 0];
+  }
+});
 
 const btn =
-  "inline-flex h-7 w-7 items-center justify-center rounded border border-transparent text-brand-grey transition hover:border-brand-lea/20 hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100";
+  "inline-flex h-7 w-7 items-center justify-center rounded border border-transparent text-brand-grey transition hover:border-brand-lea/20 hover:bg-brand-cloudDancer/60 hover:text-brand-lea disabled:opacity-40 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100";
 
 /**
  * On = the house selected treatment, navy filled with a gold edge (the same
- * pairing ApplicationStatusPicker uses). It exists so the toolbar can say out
- * loud that bold is armed: with no pressed state at all, text coming out bold
- * looks like the editor misbehaving rather than a button being on.
+ * pairing ApplicationStatusPicker uses), so the toolbar says out loud what is
+ * armed at the caret.
  */
 const btnOn =
   "inline-flex h-7 w-7 items-center justify-center rounded border border-brand-gold bg-brand-lea text-white transition hover:bg-brand-lea/90 dark:border-brand-gold dark:bg-brand-lea dark:text-white";
+
+/** Shared by the editing surface and the read-only view, so they cannot drift. */
+const CONTENT_CLASSES = clsx(
+  "[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5",
+  // Nested bullets change marker so an indented answer reads as one.
+  "[&_ul_ul]:list-[circle] [&_ul_ul_ul]:list-[square]",
+  "[&_p]:my-1 [&_li>p]:my-0",
+  // An empty paragraph is a deliberate blank line: give it a line's height.
+  "[&_p:empty]:min-h-[1.25rem]",
+  "[&_h3]:text-base [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1",
+  "[&_blockquote]:border-l-2 [&_blockquote]:border-brand-gold [&_blockquote]:pl-3 [&_blockquote]:italic",
+  "[&_a]:text-brand-eden [&_a]:underline"
+);
+
+/** What a stored value looks like once loaded — tolerant of legacy markup. */
+function toEditorHtml(value: string): string {
+  return value ? normalizeRichHtml(value) : "";
+}
 
 export function RichTextEditor({
   value,
@@ -97,98 +147,106 @@ export function RichTextEditor({
   people = [],
   ariaLabel
 }: RichTextEditorProps) {
-  const ref = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const [showColors, setShowColors] = useState(false);
   const [showSizes, setShowSizes] = useState(false);
   const [showPeople, setShowPeople] = useState(false);
-  const [marks, setMarks] = useState<Marks>(NO_MARKS);
 
-  // Held in a ref so the effect below can call it without listing it as a
-  // dependency — depending on onChange would re-run the seed on every render of
-  // a parent that passes an inline arrow function.
+  // Held in a ref so the editor (created once) always calls the latest one.
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
-  /** False until the mount pass has run. A ref, so StrictMode's double-invoke
-   *  of effects in dev does not re-seed. */
-  const mountedRef = useRef(false);
+  /** The last html this component handed up. A `value` equal to it is ours. */
+  const ownValueRef = useRef<string>(value);
 
-  /**
-   * The last html this component is responsible for: what it seeded the DOM
-   * from on mount, or what it last handed to onChange. Anything else arriving
-   * as `value` is a genuine change from outside (the parent clearing the box
-   * after a save) and is the only thing worth writing into the DOM.
-   */
-  const ownValueRef = useRef<string | null>(null);
+  /** For editorProps callbacks, which are bound once when the editor is created. */
+  const editorRef = useRef<Editor | null>(null);
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    // SEED ONCE, ON MOUNT — and only on mount.
-    //
-    // This used to fire the first time `value` became non-empty, which for an
-    // editor that STARTS empty (the Add a note composer, and a new interview
-    // write-up) is the user's FIRST KEYSTROKE. It then rewrote innerHTML under
-    // a live caret, which collapses the caret to offset 0. Typing "Hello"
-    // produced "elloH"; on a full sentence the caret went from character 43 to
-    // character 0. That is "i cant click on the end of the text because it
-    // moves the cursor back to the beginning" (feedback cmtk7edgg, Sep 2, and
-    // the same complaint on Aug 16 and Aug 20).
-    //
-    // The focus guard added on Aug 20 sat BELOW this branch, which returns
-    // before reaching it, so it never applied on this path. Hence "its still
-    // doing the weird cursor thing".
-    //
-    // Mount-only is also the honest scope: an editor that opens empty has no
-    // stored markup to repair, and handleBlur normalises on the way out.
-    if (!mountedRef.current) {
-      mountedRef.current = true;
-      ownValueRef.current = value;
-      if (value) {
-        el.innerHTML = normalizeRichHtml(value);
-        // Read back what the browser actually holds rather than what we wrote —
-        // it re-serialises (<br /> becomes <br>). Telling the parent keeps what
-        // gets saved equal to what is on screen.
-        if (el.innerHTML !== value) onChangeRef.current(el.innerHTML);
+  const editor = useEditor({
+    // Next renders this on the server first; ProseMirror needs a DOM.
+    immediatelyRender: false,
+    extensions: [
+      StarterKit.configure({
+        heading: { levels: [3] },
+        code: false,
+        codeBlock: false,
+        horizontalRule: false,
+        link: {
+          openOnClick: false,
+          autolink: true,
+          protocols: ["http", "https", "mailto"],
+          isAllowedUri: (url) => /^(https?:\/\/|mailto:)/i.test(url)
+        }
+      }),
+      TextStyle,
+      Color,
+      BackgroundColor,
+      FontSize,
+      MentionMark
+    ],
+    content: toEditorHtml(value),
+    editorProps: {
+      attributes: {
+        role: "textbox",
+        "aria-multiline": "true",
+        ...(ariaLabel ? { "aria-label": ariaLabel } : {}),
+        class: clsx("w-full px-3 py-2.5 text-sm text-brand-lea outline-none dark:text-slate-100", CONTENT_CLASSES),
+        style: `min-height: ${minHeight}px`
+      },
+      // Pasted Word/Gmail/Docs/Paycom markup is reduced to our vocabulary first
+      // (brand colours, our sizes, tables flattened) — see normalize.ts.
+      transformPastedHTML: (html) => normalizeRichHtml(html),
+      // A plain-text paste (no html on the clipboard) keeps its blank lines,
+      // which ProseMirror's default text parser would collapse.
+      handlePaste: (_view, event) => {
+        const data = event.clipboardData;
+        if (!data || data.getData("text/html")) return false;
+        const text = data.getData("text/plain");
+        if (!text || !text.includes("\n") || !editorRef.current) return false;
+        editorRef.current.commands.insertContent(plainTextToHtml(text));
+        return true;
       }
-      return;
+    },
+    onUpdate: ({ editor: e }) => {
+      const html = e.isEmpty ? "" : e.getHTML();
+      ownValueRef.current = html;
+      onChangeRef.current(html);
     }
+  });
+  editorRef.current = editor;
 
-    // Our own html coming back around, or a parent that re-rendered without
-    // changing anything. Not a change; never touch the DOM for it. This is the
-    // line that makes typing safe, because emit() records every keystroke here
-    // before onChange sends it up.
+  // A change from OUTSIDE (the parent clearing the box after a save) is written
+  // in; our own html coming back around is not, so the caret is never moved
+  // out from under the writer.
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
     if (value === ownValueRef.current) return;
-
     ownValueRef.current = value;
+    editor.commands.setContent(toEditorHtml(value), { emitUpdate: false });
+  }, [editor, value]);
 
-    // NEVER rewrite the DOM while the caret is inside it. Landing at offset 0
-    // is also why text came out bold: stored write-ups routinely open with a
-    // bold run, so the caret arrives INSIDE it. Nothing is lost by skipping —
-    // handleBlur normalises and re-emits on the way out, so an external change
-    // reconciles the moment focus leaves.
-    if (document.activeElement === el) return;
+  const state = useEditorState({
+    editor,
+    selector: ({ editor: e }) =>
+      e
+        ? {
+            empty: e.isEmpty,
+            bold: e.isActive("bold"),
+            italic: e.isActive("italic"),
+            underline: e.isActive("underline"),
+            strike: e.isActive("strike"),
+            bullet: e.isActive("bulletList"),
+            ordered: e.isActive("orderedList"),
+            heading: e.isActive("heading", { level: 3 }),
+            quote: e.isActive("blockquote"),
+            link: e.isActive("link"),
+            canIndent: e.can().sinkListItem("listItem"),
+            canOutdent: e.can().liftListItem("listItem")
+          }
+        : null
+  });
 
-    if (el.innerHTML !== value) el.innerHTML = value || "";
-  }, [value]);
-
-  /**
-   * DEFENCE IN DEPTH against a <label> ancestor stealing our clicks.
-   *
-   * A <label> with no `for` claims the first labelable descendant as its
-   * control; ours is the Bold button, so every click inside the label — even
-   * one that only meant to place the caret — is forwarded to Bold. Label
-   * activation is the click event's DEFAULT ACTION, so preventDefault cancels
-   * it; stopPropagation would not, and would break anything listening upward.
-   *
-   * Detected once on mount and otherwise completely inert, so this changes
-   * nothing at the call sites that are already correct. It is a guard, NOT the
-   * fix: a call site that wraps this editor in a <label> should use a <div>
-   * and pass `ariaLabel`, because the label also hijacks clicks on its own
-   * caption, which happen outside this component and cannot be caught here.
-   */
+  /** Guard against a <label> ancestor stealing clicks — see the file header. */
   const labelHijackRef = useRef(false);
   useEffect(() => {
     const root = rootRef.current;
@@ -197,200 +255,105 @@ export function RichTextEditor({
     labelHijackRef.current =
       !!label && !label.hasAttribute("for") && !!label.control && root.contains(label.control);
   }, []);
-
   const blockLabelActivation = (e: React.MouseEvent) => {
     if (labelHijackRef.current) e.preventDefault();
   };
 
-  /**
-   * Read the formats live at the caret so the toolbar can show what is armed.
-   * Cheap, and bailing out when nothing changed keeps a selectionchange
-   * listener from re-rendering on every caret move.
-   */
-  const syncMarks = useCallback(() => {
-    const el = ref.current;
-    if (!el || document.activeElement !== el) {
-      setMarks((prev) => (prev === NO_MARKS ? prev : NO_MARKS));
-      return;
-    }
-    let next: Marks;
-    try {
-      next = {
-        bold: document.queryCommandState("bold"),
-        italic: document.queryCommandState("italic"),
-        underline: document.queryCommandState("underline"),
-        strike: document.queryCommandState("strikeThrough")
-      };
-    } catch {
-      return;
-    }
-    setMarks((prev) =>
-      prev.bold === next.bold &&
-      prev.italic === next.italic &&
-      prev.underline === next.underline &&
-      prev.strike === next.strike
-        ? prev
-        : next
-    );
-  }, []);
+  // Keep focus (and the selection) in the editor when a toolbar button is pressed.
+  const keepFocus = (e: React.MouseEvent) => e.preventDefault();
 
-  useEffect(() => {
-    document.addEventListener("selectionchange", syncMarks);
-    return () => document.removeEventListener("selectionchange", syncMarks);
-  }, [syncMarks]);
-
-  function emit() {
-    const el = ref.current;
-    if (!el) return;
-    // Recorded BEFORE onChange so the effect above recognises the value coming
-    // back as ours and leaves the DOM alone.
-    ownValueRef.current = el.innerHTML;
-    onChange(el.innerHTML);
-  }
-
-  /**
-   * Normalise on the way out of the editor.
-   *
-   * Blur is the right moment: the caret is leaving anyway, so rewriting the DOM
-   * costs nothing, and it happens before the Save click that follows. This is
-   * what makes an un-bold stick — whatever tangle of tags and spans execCommand
-   * produced is folded back into the small vocabulary the store round-trips
-   * cleanly.
-   */
-  function handleBlur() {
-    const el = ref.current;
-    if (!el) return;
-    const clean = normalizeRichHtml(el.innerHTML);
-    if (clean !== el.innerHTML) el.innerHTML = clean;
-    emit();
-    setMarks(NO_MARKS);
-  }
-
-  function run(command: string, argument?: string) {
-    ref.current?.focus();
-    // Pin tag-based markup before every command. styleWithCSS is a
-    // DOCUMENT-level sticky flag that any code on the page can have flipped, and
-    // with it ON the browser expresses bold as <span style="font-weight: bold">
-    // — a style the sanitizer's allowlist does not carry, so the formatting is
-    // dropped on save. Tags survive; styles do not.
-    try {
-      document.execCommand("styleWithCSS", false, "false");
-    } catch {
-      // Not supported everywhere, and not worth failing the command over.
-    }
-    document.execCommand(command, false, argument);
-    emit();
-    syncMarks();
-  }
-
-  /** Wrap the current selection in a span carrying an exact allowed style. */
-  function applyStyle(style: string) {
-    const el = ref.current;
-    if (!el) return;
-    el.focus();
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-      setShowColors(false);
-      setShowSizes(false);
-      return;
-    }
-    const text = selection.toString();
-    document.execCommand(
-      "insertHTML",
-      false,
-      `<span style="${style}">${text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>`
-    );
+  const closeMenus = () => {
     setShowColors(false);
     setShowSizes(false);
-    emit();
+    setShowPeople(false);
+  };
+
+  function chain(e: Editor) {
+    return e.chain().focus();
   }
 
-  /**
-   * Tab / Shift+Tab indent or outdent a bullet.
-   *
-   * A plain contentEditable does nothing useful with Tab by default — it
-   * either inserts a literal tab character or, worse, moves focus OUT of the
-   * editor onto the next control on the page, which is what was happening
-   * here. This only takes over Tab while the caret sits inside a list item
-   * (indent/outdent has no sensible meaning otherwise); everywhere else Tab
-   * behaves normally, so leaving the editor by keyboard still works.
-   */
-  function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
-    if (e.key !== "Tab") return;
-    const selection = window.getSelection();
-    const node = selection?.anchorNode;
-    const inListItem = !!node && !!(node instanceof Element ? node : node.parentElement)?.closest("li");
-    if (!inListItem) return;
-    e.preventDefault();
-    run(e.shiftKey ? "outdent" : "indent");
+  function applyColor(c: (typeof COLORS)[number]) {
+    if (!editor) return;
+    if (c.kind === "color") chain(editor).setColor(c.hex).run();
+    else chain(editor).setBackgroundColor(c.hex).run();
+    closeMenus();
   }
 
-  /**
-   * Intercept paste so what lands in the editor is already OUR markup, not
-   * whatever Word, Gmail, Google Docs or Paycom sent.
-   */
-  function handlePaste(e: React.ClipboardEvent<HTMLDivElement>) {
-    e.preventDefault();
-    ref.current?.focus();
-    const html = e.clipboardData.getData("text/html");
-    const cleaned = html
-      ? normalizeRichHtml(html)
-      : plainTextToHtml(e.clipboardData.getData("text/plain"));
-    if (!cleaned) return;
-    document.execCommand("insertHTML", false, cleaned);
-    emit();
+  function applySize(size: string | null) {
+    if (!editor) return;
+    if (size) chain(editor).setFontSize(size).run();
+    else chain(editor).unsetFontSize().run();
+    closeMenus();
   }
 
   function insertMention(person: { name: string; email: string }) {
-    ref.current?.focus();
-    document.execCommand(
-      "insertHTML",
-      false,
-      `<span data-mention="${person.email}" style="color: #466481">@${person.name}</span>&nbsp;`
-    );
-    setShowPeople(false);
-    emit();
+    if (!editor) return;
+    chain(editor)
+      .insertContent([
+        { type: "text", text: `@${person.name}`, marks: [{ type: "mention", attrs: { email: person.email } }] },
+        { type: "text", text: " " }
+      ])
+      .run();
+    closeMenus();
   }
 
   function addLink() {
+    if (!editor) return;
+    if (editor.isActive("link")) {
+      chain(editor).extendMarkRange("link").unsetLink().run();
+      return;
+    }
     const url = window.prompt("Link address (https://…)");
     if (!url) return;
     if (!/^(https?:\/\/|mailto:)/i.test(url)) {
       window.alert("Links have to start with https:// or mailto:");
       return;
     }
-    run("createLink", url);
+    if (editor.state.selection.empty) {
+      chain(editor).insertContent({ type: "text", text: url, marks: [{ type: "link", attrs: { href: url } }] }).run();
+    } else {
+      chain(editor).extendMarkRange("link").setLink({ href: url }).run();
+    }
   }
 
-  const isEmpty = !value || value === "<br>" || value === "<p></p>";
-
-  // Keeping focus inside the editable is what makes the toolbar reliable: a
-  // plain button steals focus on mousedown, which collapses the selection the
-  // command was meant to act on and fires the blur normaliser mid-edit.
-  const keepFocus = (e: React.MouseEvent) => e.preventDefault();
+  const s = state;
+  const tool = (
+    on: boolean | undefined,
+    label: string,
+    title: string,
+    action: (e: Editor) => void,
+    icon: React.ReactNode,
+    disabled = false
+  ) => (
+    <button
+      type="button"
+      onMouseDown={keepFocus}
+      onClick={() => editor && action(editor)}
+      className={on ? btnOn : btn}
+      title={title}
+      aria-label={label}
+      aria-pressed={on === undefined ? undefined : on}
+      disabled={disabled}
+    >
+      {icon}
+    </button>
+  );
 
   return (
     <div ref={rootRef} onClick={blockLabelActivation} className="rounded border border-brand-lea/20 bg-white focus-within:border-brand-gold focus-within:ring-2 focus-within:ring-brand-gold/20 dark:border-white/10 dark:bg-[#0f2033]">
       <div className="flex flex-wrap items-center gap-0.5 border-b border-brand-lea/10 px-1.5 py-1 dark:border-white/10">
-        <button type="button" onMouseDown={keepFocus} onClick={() => run("bold")} className={marks.bold ? btnOn : btn} title="Bold" aria-label="Bold" aria-pressed={marks.bold}><Bold className="h-3.5 w-3.5" /></button>
-        <button type="button" onMouseDown={keepFocus} onClick={() => run("italic")} className={marks.italic ? btnOn : btn} title="Italic" aria-label="Italic" aria-pressed={marks.italic}><Italic className="h-3.5 w-3.5" /></button>
-        <button type="button" onMouseDown={keepFocus} onClick={() => run("underline")} className={marks.underline ? btnOn : btn} title="Underline" aria-label="Underline" aria-pressed={marks.underline}><Underline className="h-3.5 w-3.5" /></button>
-        <button type="button" onMouseDown={keepFocus} onClick={() => run("strikeThrough")} className={marks.strike ? btnOn : btn} title="Strikethrough" aria-label="Strikethrough" aria-pressed={marks.strike}><Strikethrough className="h-3.5 w-3.5" /></button>
-        <button
-          type="button"
-          onMouseDown={keepFocus}
-          onClick={() => run("removeFormat")}
-          className={btn}
-          title="Clear formatting from the selected text"
-          aria-label="Clear formatting"
-        >
-          <Eraser className="h-3.5 w-3.5" />
-        </button>
+        {tool(s?.bold, "Bold", "Bold (Ctrl+B)", (e) => chain(e).toggleBold().run(), <Bold className="h-3.5 w-3.5" />)}
+        {tool(s?.italic, "Italic", "Italic (Ctrl+I)", (e) => chain(e).toggleItalic().run(), <Italic className="h-3.5 w-3.5" />)}
+        {tool(s?.underline, "Underline", "Underline (Ctrl+U)", (e) => chain(e).toggleUnderline().run(), <Underline className="h-3.5 w-3.5" />)}
+        {tool(s?.strike, "Strikethrough", "Strikethrough", (e) => chain(e).toggleStrike().run(), <Strikethrough className="h-3.5 w-3.5" />)}
+        {tool(undefined, "Clear formatting", "Clear formatting from the selected text", (e) => chain(e).unsetAllMarks().run(), <Eraser className="h-3.5 w-3.5" />)}
         <span className="mx-1 h-4 w-px bg-brand-lea/15 dark:bg-white/10" />
-        <button type="button" onMouseDown={keepFocus} onClick={() => run("insertUnorderedList")} className={btn} title="Bullets" aria-label="Bulleted list"><List className="h-3.5 w-3.5" /></button>
-        <button type="button" onMouseDown={keepFocus} onClick={() => run("insertOrderedList")} className={btn} title="Numbered" aria-label="Numbered list"><ListOrdered className="h-3.5 w-3.5" /></button>
-        <button type="button" onMouseDown={keepFocus} onClick={() => run("formatBlock", "<h3>")} className={btn} title="Heading" aria-label="Heading"><Heading className="h-3.5 w-3.5" /></button>
-        <button type="button" onMouseDown={keepFocus} onClick={() => run("formatBlock", "<blockquote>")} className={btn} title="Quote" aria-label="Quote"><Quote className="h-3.5 w-3.5" /></button>
+        {tool(s?.bullet, "Bulleted list", "Bullets — only the selected lines", (e) => chain(e).toggleBulletList().run(), <List className="h-3.5 w-3.5" />)}
+        {tool(s?.ordered, "Numbered list", "Numbered — only the selected lines", (e) => chain(e).toggleOrderedList().run(), <ListOrdered className="h-3.5 w-3.5" />)}
+        {tool(undefined, "Indent", "Indent bullet (Tab)", (e) => chain(e).sinkListItem("listItem").run(), <IndentIncrease className="h-3.5 w-3.5" />, !s?.canIndent)}
+        {tool(undefined, "Outdent", "Outdent bullet (Shift+Tab)", (e) => chain(e).liftListItem("listItem").run(), <IndentDecrease className="h-3.5 w-3.5" />, !s?.canOutdent)}
+        {tool(s?.heading, "Heading", "Heading", (e) => chain(e).toggleHeading({ level: 3 }).run(), <Heading className="h-3.5 w-3.5" />)}
+        {tool(s?.quote, "Quote", "Quote", (e) => chain(e).toggleBlockquote().run(), <Quote className="h-3.5 w-3.5" />)}
         <span className="mx-1 h-4 w-px bg-brand-lea/15 dark:bg-white/10" />
 
         <div className="relative">
@@ -398,13 +361,17 @@ export function RichTextEditor({
           {showColors && (
             <div className="absolute left-0 top-8 z-20 w-44 rounded border border-brand-lea/20 bg-white p-1.5 shadow-panel dark:border-white/10 dark:bg-brand-panel">
               {COLORS.map((c) => (
-                <button key={c.style} type="button" onMouseDown={keepFocus} onClick={() => applyStyle(c.style)}
+                <button key={`${c.kind}-${c.hex}`} type="button" onMouseDown={keepFocus} onClick={() => applyColor(c)}
                   className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:text-slate-100 dark:hover:bg-white/10">
-                  <span className="h-3 w-3 rounded border border-brand-lea/25" style={{ backgroundColor: c.swatch }} />
+                  <span className="h-3 w-3 rounded border border-brand-lea/25" style={{ backgroundColor: c.hex }} />
                   {c.label}
                 </button>
               ))}
-              <p className="px-2 pt-1 text-[10px] text-brand-grey dark:text-slate-400">Select text first</p>
+              <button type="button" onMouseDown={keepFocus}
+                onClick={() => { if (editor) chain(editor).unsetColor().unsetBackgroundColor().run(); closeMenus(); }}
+                className="mt-1 block w-full rounded border-t border-brand-lea/10 px-2 py-1 text-left text-xs text-brand-grey transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-400 dark:hover:bg-white/10">
+                No colour
+              </button>
             </div>
           )}
         </div>
@@ -413,23 +380,23 @@ export function RichTextEditor({
           <button type="button" onMouseDown={keepFocus} onClick={() => { setShowSizes((v) => !v); setShowColors(false); setShowPeople(false); }} className={btn} title="Text size" aria-label="Text size"><Type className="h-3.5 w-3.5" /></button>
           {showSizes && (
             <div className="absolute left-0 top-8 z-20 w-32 rounded border border-brand-lea/20 bg-white p-1.5 shadow-panel dark:border-white/10 dark:bg-brand-panel">
-              {SIZES.map((s) => (
-                <button key={s.style} type="button" onMouseDown={keepFocus} onClick={() => applyStyle(s.style)}
+              {SIZES.map((sz) => (
+                <button key={sz.label} type="button" onMouseDown={keepFocus} onClick={() => applySize(sz.size)}
                   className="block w-full rounded px-2 py-1 text-left text-xs text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:text-slate-100 dark:hover:bg-white/10">
-                  {s.label}
+                  {sz.label}
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        <button type="button" onMouseDown={keepFocus} onClick={addLink} className={btn} title="Link" aria-label="Link"><Link2 className="h-3.5 w-3.5" /></button>
+        {tool(s?.link, "Link", s?.link ? "Remove link" : "Link", () => addLink(), <Link2 className="h-3.5 w-3.5" />)}
 
         {people.length > 0 && (
           <div className="relative">
             <button type="button" onMouseDown={keepFocus} onClick={() => { setShowPeople((v) => !v); setShowColors(false); setShowSizes(false); }} className={btn} title="Mention someone" aria-label="Mention someone"><AtSign className="h-3.5 w-3.5" /></button>
             {showPeople && (
-              <div className="absolute left-0 top-8 z-20 max-h-56 w-56 overflow-y-auto rounded border border-brand-lea/20 bg-white p-1.5 shadow-panel dark:border-white/10 dark:bg-brand-panel">
+              <div className="absolute left-0 top-8 z-20 max-h-56 w-56 overflow-y-auto overflow-x-hidden rounded border border-brand-lea/20 bg-white p-1.5 shadow-panel dark:border-white/10 dark:bg-brand-panel">
                 {people.map((p) => (
                   <button key={p.email} type="button" onMouseDown={keepFocus} onClick={() => insertMention(p)}
                     className="block w-full rounded px-2 py-1 text-left text-xs text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:text-slate-100 dark:hover:bg-white/10">
@@ -444,30 +411,15 @@ export function RichTextEditor({
       </div>
 
       <div className="relative">
-        {isEmpty && (
+        {(s ? s.empty : !value) && (
           <span className="pointer-events-none absolute left-3 top-2.5 text-sm text-brand-grey/70 dark:text-slate-500">{placeholder}</span>
         )}
-        <div
-          ref={ref}
-          contentEditable
-          suppressContentEditableWarning
-          role="textbox"
-          aria-multiline="true"
-          aria-label={ariaLabel}
-          onInput={emit}
-          onFocus={syncMarks}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          style={{ minHeight }}
-          className={clsx(
-            "prose-notes w-full px-3 py-2.5 text-sm text-brand-lea outline-none dark:text-slate-100",
-            "[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5",
-            "[&_h3]:text-base [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1",
-            "[&_blockquote]:border-l-2 [&_blockquote]:border-brand-gold [&_blockquote]:pl-3 [&_blockquote]:italic",
-            "[&_a]:text-brand-eden [&_a]:underline"
-          )}
-        />
+        {editor ? (
+          <EditorContent editor={editor} />
+        ) : (
+          // Server render and the first client frame, before ProseMirror mounts.
+          <div className="w-full px-3 py-2.5" style={{ minHeight }} />
+        )}
       </div>
     </div>
   );
@@ -478,14 +430,7 @@ export function RichTextView({ html, className }: { html: string; className?: st
   if (!html) return null;
   return (
     <div
-      className={clsx(
-        "text-sm text-brand-lea dark:text-slate-100",
-        "[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5",
-        "[&_h3]:text-base [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1",
-        "[&_blockquote]:border-l-2 [&_blockquote]:border-brand-gold [&_blockquote]:pl-3 [&_blockquote]:italic",
-        "[&_a]:text-brand-eden [&_a]:underline [&_p]:my-1",
-        className
-      )}
+      className={clsx("text-sm text-brand-lea dark:text-slate-100", CONTENT_CLASSES, className)}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

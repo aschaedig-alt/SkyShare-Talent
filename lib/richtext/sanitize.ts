@@ -53,8 +53,15 @@ const CLOSES_OPEN_P = new Set(["p", "div", "ul", "ol", "h3", "h4", "blockquote"]
  */
 const EMPTY_INLINE = /<(strong|b|em|i|u|s|strike|span)(?:\s[^>]*)?>((?:\s|<br \/>)*)<\/\1>/gi;
 
-/** Blocks holding nothing but breaks. Paragraph spacing comes from CSS. */
-const EMPTY_BLOCK = /<p>(?:\s|<br \/>)*<\/p>/gi;
+/**
+ * Blocks holding nothing but breaks are a BLANK LINE, folded to the one
+ * spelling <p></p> — never deleted. Deleting them is what made "spaces between
+ * lines" vanish on save (feedback cmvpiodds, Oct 26). Only the ones at the
+ * very start or end of the document go.
+ */
+const EMPTY_BLOCK = /<p>(?:\s|<br \/>)+<\/p>/gi;
+const LEADING_BLANKS = /^(?:<p><\/p>)+/;
+const TRAILING_BLANKS = /(?:<p><\/p>)+$/;
 
 /** Exact style values the editor emits — the single source is the token file. */
 export { ALLOWED_STYLES } from "@/lib/richtext/tokens";
@@ -154,11 +161,15 @@ function escapeText(text: string): string {
 function dropEmptyElements(html: string): string {
   let current = html;
   for (let pass = 0; pass < 8; pass += 1) {
-    const next = current.replace(EMPTY_INLINE, "$2").replace(EMPTY_BLOCK, "");
+    const next = current.replace(EMPTY_INLINE, "$2").replace(EMPTY_BLOCK, "<p></p>");
     if (next === current) return next;
     current = next;
   }
   return current;
+}
+
+function trimBlankLines(html: string): string {
+  return html.replace(LEADING_BLANKS, "").replace(TRAILING_BLANKS, "");
 }
 
 /** Pull out the attributes we allow, ignoring everything else entirely. */
@@ -240,7 +251,7 @@ export function sanitizeRichText(input: string | null | undefined): string {
   // Anything left open is closed here, so the result is always balanced.
   while (openStack.length) out.push(`</${openStack.pop()}>`);
 
-  return dropEmptyElements(out.join("")).trim();
+  return trimBlankLines(dropEmptyElements(out.join("")).trim());
 }
 
 /** Plain-text version, for search and for the existing `notes`/`body` columns. */

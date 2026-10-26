@@ -241,17 +241,39 @@ function walkInline(node: Node, state: InlineState): string {
   return childrenInline(el, inner);
 }
 
-/**
- * A paragraph, unless it would be an empty one.
- *
- * A block whose whole content is line breaks and whitespace contributes
- * nothing — paragraph spacing already comes from the [&_p]:my-1 rule — and
- * dropping it is what removes the 7 empty <p></p> and the stray <p><br></p>
- * from documents like the one described at the top of this file.
- */
+/** The one spelling of a deliberate blank line. */
+const BLANK_LINE = "<p></p>";
+
+/** A paragraph, unless it would be an empty one. */
 function emitParagraph(inner: string): string {
   const meaningful = inner.replace(/<br \/>/g, "").trim();
   return meaningful ? `<p>${inner}</p>` : "";
+}
+
+/**
+ * An empty paragraph or line-break-only block is a BLANK LINE the writer put
+ * there, and is kept as <p></p>.
+ *
+ * THE BUG THIS FIXES (feedback cmvpiodds, Oct 26: "i need to be able to have
+ * spaces between lines"). Every empty block used to be dropped on the theory
+ * that CSS paragraph margins supply the spacing — so pressing Enter twice
+ * looked right while typing and was gone after save. Measured in Chrome:
+ * <div>line one</div><div><br></div><div>line two</div> came back as two
+ * paragraphs with no gap. Only a bare wrapper with nothing at all inside (no
+ * break, not a <p>) is still treated as layout noise.
+ */
+function emitBlankOrParagraph(el: HTMLElement, inner: string): string {
+  const paragraph = emitParagraph(inner);
+  if (paragraph) return paragraph;
+  return el.tagName === "P" || el.querySelector("br") ? BLANK_LINE : "";
+}
+
+/** Blank lines at the very start or end of a document are never intended. */
+function trimBlankLines(html: string): string {
+  let out = html;
+  while (out.startsWith(BLANK_LINE)) out = out.slice(BLANK_LINE.length);
+  while (out.endsWith(BLANK_LINE)) out = out.slice(0, -BLANK_LINE.length);
+  return out;
 }
 
 function walkListItem(li: HTMLElement, state: InlineState): string {
@@ -264,10 +286,31 @@ function walkListItem(li: HTMLElement, state: InlineState): string {
   return parts.join("");
 }
 
+/**
+ * A list's items — INCLUDING a list sitting directly inside a list.
+ *
+ * THE BUG THIS FIXES (feedback cmvpiodds, Oct 26: "indented bullets
+ * disappeared ... there were answers to all of the questions and i had
+ * indented them and they are all gone now"). Chrome's indent command does not
+ * nest a list inside the item above it; it writes the nested list as a SIBLING
+ * of the items, which is invalid but is what the browser produces:
+ *     <ul><li>Q one</li><ul><li>A one</li></ul><li>Q two</li></ul>
+ * This used to read only <li> children, so every indented line was deleted
+ * the moment the editor lost focus — measured in Chrome, the above came back
+ * as <ul><li>Q one</li><li>Q two</li></ul>. A stray nested list now joins the
+ * item before it, which is the structure it was drawn as.
+ */
 function walkList(el: HTMLElement, state: InlineState): string {
   const wrapper = el.tagName === "UL" ? "ul" : "ol";
   const items: string[] = [];
   for (const child of Array.from(el.children)) {
+    if (child.tagName === "UL" || child.tagName === "OL") {
+      const nested = walkList(child as HTMLElement, nextState(child as HTMLElement, state));
+      if (!nested) continue;
+      if (items.length) items[items.length - 1] = items[items.length - 1].replace(/<\/li>$/, `${nested}</li>`);
+      else items.push(`<li>${nested}</li>`);
+      continue;
+    }
     if (child.tagName !== "LI") continue;
     const li = child as HTMLElement;
     const content = walkListItem(li, nextState(li, state));
@@ -355,11 +398,38 @@ function walkBlock(node: Node, state: InlineState): string {
     const inner = nextState(el, state);
     const hasBlockChild = Array.from(el.children).some((child) => isBlockish(child.tagName));
     if (hasBlockChild) return childrenBlock(el, inner);
-    return emitParagraph(childrenInline(el, inner));
+    return emitBlankOrParagraph(el, childrenInline(el, inner));
   }
 
   // An inline tag sitting at block position — a bare <span> or <a> wrapping the
-  // whole clipboard. Its content becomes one paragraph.
+  // whole clipboard. Its content becomes one paragraph, UNLESS it wraps blocks:
+  // one stored note (cms6jou2b, Oct 26 sweep) is an entire document of
+  // headings and 24 bullets inside a single <span>, and flattening it to one
+  // paragraph deleted every bullet the moment it was opened. Its inline runs
+  // become paragraphs and its blocks stay blocks, with its styling inherited.
+  if (Array.from(el.querySelectorAll("*")).some((child) => isBlockish(child.tagName))) {
+    const inner = nextState(el, state);
+    const parts: string[] = [];
+    let run: Node[] = [];
+    const flush = () => {
+      if (run.length) parts.push(emitParagraph(run.map((n) => walkInline(n, inner)).join("")));
+      run = [];
+    };
+    for (const child of Array.from(el.childNodes)) {
+      const blockish =
+        child.nodeType === Node.ELEMENT_NODE &&
+        (isBlockish((child as Element).tagName) ||
+          Array.from((child as Element).querySelectorAll("*")).some((d) => isBlockish(d.tagName)));
+      if (blockish) {
+        flush();
+        parts.push(walkBlock(child, inner));
+      } else {
+        run.push(child);
+      }
+    }
+    flush();
+    return parts.join("");
+  }
   return emitParagraph(walkInline(el, state));
 }
 
@@ -377,7 +447,7 @@ export function normalizeRichHtml(rawHtml: string): string {
   if (typeof DOMParser === "undefined") return rawHtml;
 
   const doc = new DOMParser().parseFromString(rawHtml, "text/html");
-  return childrenBlock(doc.body, BASE_STATE).trim();
+  return trimBlankLines(childrenBlock(doc.body, BASE_STATE).trim());
 }
 
 /**
@@ -385,8 +455,10 @@ export function normalizeRichHtml(rawHtml: string): string {
  * when a source offers no HTML at all.
  */
 export function plainTextToHtml(text: string): string {
-  return text
-    .split(/\r?\n/)
-    .map((line) => emitParagraph(escapeHtml(stripZeroWidth(line))))
-    .join("");
+  return trimBlankLines(
+    text
+      .split(/\r?\n/)
+      .map((line) => emitParagraph(escapeHtml(stripZeroWidth(line))) || BLANK_LINE)
+      .join("")
+  );
 }
