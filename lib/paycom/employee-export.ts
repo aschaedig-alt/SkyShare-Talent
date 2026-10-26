@@ -13,7 +13,11 @@
 //     two test logins included. He: "this is all i can get you. all payroll can be
 //     under cb aviation" - so absence from it says nothing about whether somebody left.
 
-import XLSX from "xlsx";
+// A namespace import, not a default one: xlsx.mjs (what Next bundles) has no default
+// export, so "import XLSX from" is undefined on the site while tsx scripts, which load
+// the CommonJS build, work - which is how this shipped broken on 2026-10-25.
+import fs from "node:fs";
+import * as XLSX from "xlsx";
 
 export type ExportRow = {
   label: string;          // for the review: "BROCK TYLER"
@@ -47,7 +51,8 @@ function dateCell(v: unknown, what: string): string | null {
 const TEST_LOGINS = /^(johnny|manager) test$/i; // Paycom's own test people, not employees
 
 export function readExport(file: string): ExportRow[] {
-  return readWorkbook(XLSX.readFile(file));
+  // Not XLSX.readFile: the ESM build has no file system wired in. Bytes work in both.
+  return readExportBytes(new Uint8Array(fs.readFileSync(file)));
 }
 
 /** The same, from an uploaded file's bytes. */
