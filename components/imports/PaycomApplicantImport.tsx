@@ -80,21 +80,35 @@ export function PaycomApplicantImport({ batches }: { batches: PaycomBatchSummary
     if (!files.length) return setError("Choose Paycom's two zip files first.");
     try {
       setPhase("uploading");
-      const presign = await readJson<{ batchId: string; uploads: Array<{ name: string; uploadUrl: string; contentType: string }> }>(
-        await fetch("/api/imports/paycom-applicants/presign", {
+      const started = await readJson<{ batchId: string; partBytes: number; files: Array<{ index: number; name: string; parts: number }> }>(
+        await fetch("/api/imports/paycom-applicants", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ files: files.map((f) => ({ name: f.name, size: f.size, type: f.type || "application/octet-stream" })) })
+          body: JSON.stringify({ files: files.map((f) => ({ name: f.name, size: f.size })) })
         })
       );
-      if (!presign.batchId) throw new Error(presign.message ?? "Could not start the upload.");
-      for (const [i, upload] of presign.uploads.entries()) {
-        const put = await fetch(upload.uploadUrl, { method: "PUT", headers: { "Content-Type": upload.contentType }, body: files[i] });
-        if (!put.ok) throw new Error(`${upload.name} did not upload (${put.status}).`);
+      if (!started.batchId) throw new Error(started.message ?? "Could not start the upload.");
+      // In parts, through the app — the bucket does not accept uploads straight from a
+      // browser (see lib/paycom/applicant-batch.ts).
+      const totalParts = started.files.reduce((n, f) => n + f.parts, 0);
+      let sent = 0;
+      setProgress({ done: 0, total: totalParts });
+      for (const f of started.files) {
+        for (let part = 0; part < f.parts; part += 1) {
+          const slice = files[f.index].slice(part * started.partBytes, (part + 1) * started.partBytes);
+          const response = await fetch(`/api/imports/paycom-applicants/${started.batchId}/upload?file=${f.index}&part=${part}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/octet-stream" },
+            body: slice
+          });
+          if (!response.ok) throw new Error((await readJson<object>(response)).message ?? `${f.name} did not upload.`);
+          sent += 1;
+          setProgress({ done: sent, total: totalParts });
+        }
       }
-      setBatchId(presign.batchId);
+      setBatchId(started.batchId);
       setPhase("reading");
-      const result = await readJson<{ preview: Preview }>(await fetch(`/api/imports/paycom-applicants/${presign.batchId}/preview`, { method: "POST" }));
+      const result = await readJson<{ preview: Preview }>(await fetch(`/api/imports/paycom-applicants/${started.batchId}/preview`, { method: "POST" }));
       if (!result.preview) throw new Error(result.message ?? "Could not read the upload.");
       const p = result.preview;
       setPreview(p);
@@ -229,7 +243,11 @@ export function PaycomApplicantImport({ batches }: { batches: PaycomBatchSummary
             className="w-full max-w-xl rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:file:text-slate-300"
           />
           <Button type="submit" disabled={phase === "uploading" || phase === "reading" || phase === "applying" || phase === "hours"}>
-            {phase === "uploading" ? "Uploading…" : phase === "reading" ? "Reading…" : "Upload and preview"}
+            {phase === "uploading"
+              ? `Uploading… ${progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%`
+              : phase === "reading"
+                ? "Reading…"
+                : "Upload and preview"}
           </Button>
         </form>
         {phase === "reading" ? (

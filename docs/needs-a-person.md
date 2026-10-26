@@ -635,9 +635,11 @@ the PDF split was checked offline (460 pages in, 460 out, each piece holding onl
 Application ID and name). **Import and Undo have never written anything for real**, because
 testing them would put real applicants into the shared live database.
 
-**Also unseen:** the upload itself. The browser sends the zips straight to S3, which needs
-the bucket's CORS rule to allow a PUT from the site; the older Unassigned files card uses
-the same route, so it should, but nobody has watched this page do it.
+**The upload itself failed on the live site the first time (2026-10-25, "Failed to
+fetch")** — the first version sent the zips straight from the browser to S3, and the
+bucket has no CORS rule, so S3 refused it. It now sends them through the app in 3 MB
+parts. That path was run end to end against the local server with the October zips
+(5 parts, then a preview of all 103), but **not yet on the live site**.
 
 **How to check it:** open the page, drop both zips, press Upload and preview. Use Select
 none, tick ONE application, Import. Open that person's profile: the application has the
