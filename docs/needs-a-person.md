@@ -622,24 +622,35 @@ three readers all use truthy filters so a stored false would be invisible to the
 to the checkbox - but it changes the shape of a row the unattended send depends on, so it
 wants a yes from the user rather than an agent's judgement.
 
-### 30. No Paycom applicant upload has been imported or undone yet
+### 30. No Paycom applicant upload has been undone yet
 
-**Status:** OPEN
+**Status:** OPEN — upload and import passed on the live site 2026-10-25 (him); Undo never run
 **Added:** 2026-10-25
+
+**Narrowed 2026-10-25, by him:** he ran the whole October upload on the live site and
+reported "i ran it, it worked." Read back from the live database afterwards: batch
+cmvokyco3000008kxveowrsly COMPLETED (19:30 to 19:37 MT), 103 of 103 applications
+IMPORTED, 53 people created, 6 retired jobs reopened and 2 jobs created (both as the
+preview said), 200 PDFs filed — 206 less the 6 resumes identical to one already on that
+person's profile, which are deliberately not filed twice (6 rows carry that note). He ran
+the full import directly rather than the one-application test below, so **Undo has still
+never run**. Do NOT test Undo on this batch: it would take the real October import back
+out. It waits on the next upload that can safely be undone (a small one, or a mistaken
+one). The rest of this item, below, is the original text.
 
 Imports > Paycom applicants takes Paycom's two document zips and files every application:
 it splits the bundle, matches or creates the candidate, links or creates the job, attaches
 the application PDF and the resume. **Only the read-only half has been run.** The preview
 was run against the live database with the October 2026 export (103 applications) and
 the PDF split was checked offline (460 pages in, 460 out, each piece holding only its own
-Application ID and name). **Import and Undo have never written anything for real**, because
+Application ID and name). **Import and Undo have never written anything for real** (true until his run on 2026-10-25; Undo still is), because
 testing them would put real applicants into the shared live database.
 
 **The upload itself failed on the live site the first time (2026-10-25, "Failed to
 fetch")** — the first version sent the zips straight from the browser to S3, and the
 bucket has no CORS rule, so S3 refused it. It now sends them through the app in 3 MB
 parts. That path was run end to end against the local server with the October zips
-(5 parts, then a preview of all 103), but **not yet on the live site**.
+(5 parts, then a preview of all 103), but **not yet on the live site** (it has been since: his run, 2026-10-25, above).
 
 **How to check it:** open the page, drop both zips, press Upload and preview. Use Select
 none, tick ONE application, Import. Open that person's profile: the application has the
