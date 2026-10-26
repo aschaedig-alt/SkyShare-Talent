@@ -673,7 +673,10 @@ the live database with the Oct 16 export, which the CLI scripts had already appl
 came back with 0 changes, as it should. **Apply and Undo have never written anything for
 real.** The re-hire path and the position comparison were only checked in memory - the Oct
 16 file has nobody to re-hire, and positions have no baseline until one upload is applied.
-The page's file upload has not been clicked through in a browser either.
+The page's file upload has not been clicked through in a browser either (until
+2026-10-25: his first upload on the live site failed with "Cannot read properties of
+undefined (reading 'read')" - the site loads a build of the spreadsheet library the
+terminal scripts never did. Fixed in d9ab68a; an upload since the fix has not been seen).
 
 **How to check it:** open the page, drop the Oct 16 export, Upload and preview. It should
 show 0 changes, 11 for a person, 2 not matched. Press "Record this export (no changes)" -
