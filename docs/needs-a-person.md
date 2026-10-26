@@ -661,14 +661,23 @@ upload again and import the rest.
 **What would count as a pass:** the one application lands correctly, Undo removes exactly
 what it added, and the full import afterwards matches what the preview said.
 
-### 31. No Paycom employee upload has been applied or undone yet
+### 31. No Paycom employee upload has applied a change or been undone yet
 
-**Status:** OPEN
+**Status:** OPEN — upload, preview and recording the starting point passed on the live site 2026-10-26 (him); applying a change and Undo never run
 **Added:** 2026-10-25
+
+**Narrowed 2026-10-26, by him:** he uploaded the Oct 16 export on the live site after the
+fix and reported "i ran the employee upload on the live site and the preview worked."
+Read back from the live database: batch cmvpbxjfa000007gqjtmjgtgr COMPLETED (08:05 to
+08:07 MT), preview 322 rows / 320 matched / 309 agree / 0 changes / 11 for a person / 2 not
+matched - exactly the dry run - and recorded as the position starting point with 0 people
+changed. That covers the first two steps of the check below. What is left waits on the
+NEXT Paycom export: apply ONE change it shows, check that person, Undo, check them again.
+The rest of this item, below, is the original text.
 
 Imports > Paycom employees takes Paycom's Advanced Report Writer employee export and keeps
 the Employees directory current: terminations, re-hires, date corrections, full / part
-time and position changes. **Only the read-only half has been run**: the preview against
+time and position changes. **Only the read-only half has been run** (as of 2026-10-25; see above for 2026-10-26): the preview against
 the live database with the Oct 16 export, which the CLI scripts had already applied, and it
 came back with 0 changes, as it should. **Apply and Undo have never written anything for
 real.** The re-hire path and the position comparison were only checked in memory - the Oct
@@ -676,7 +685,7 @@ real.** The re-hire path and the position comparison were only checked in memory
 The page's file upload has not been clicked through in a browser either (until
 2026-10-25: his first upload on the live site failed with "Cannot read properties of
 undefined (reading 'read')" - the site loads a build of the spreadsheet library the
-terminal scripts never did. Fixed in d9ab68a; an upload since the fix has not been seen).
+terminal scripts never did. Fixed in d9ab68a; his upload after the fix worked, 2026-10-26, above).
 
 **How to check it:** open the page, drop the Oct 16 export, Upload and preview. It should
 show 0 changes, 11 for a person, 2 not matched. Press "Record this export (no changes)" -
