@@ -714,6 +714,24 @@ bullet (Tab) and a blank line between two paragraphs, save, close, and reopen it
 **What would count as a pass:** the indented bullet and the blank line are still there
 after reopening, and nothing else in the write-up moved.
 
+### 33. The candidate page's layout has not been saved since the boxes started fitting their content
+
+**Status:** OPEN — deployed 2026-10-26 (cffc1ab)
+**Added:** 2026-10-26
+
+The candidate Documents board now retires the Contact and Record boxes, and its left-column
+boxes take their content's height outside Edit layout (feedback cmvpu6z6r). In Edit layout
+they go back to their saved sizes. The code was read at commit time: measured heights only
+shape the display and never reach the save. But **nobody has opened Edit layout and saved
+since**, because a layout save rewrites the one shared layout everybody sees.
+
+**How to check it:** as an admin, open any candidate, Edit layout, move one box slightly,
+Save. Then reload two different candidates (one with many certificates, one with few).
+
+**What would count as a pass:** the save succeeds, Contact and Record do not come back, the
+left-column boxes still fit their content on both candidates with no box scrolling inside,
+and nothing overlaps.
+
 ---
 
 ## Closed
