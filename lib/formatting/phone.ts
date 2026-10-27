@@ -11,10 +11,9 @@
  * shared and live, and a format is not worth a mass write); the edit forms
  * format a number as it is typed in, so new entries are stored this way too.
  *
- * Measured on Oct 26 across 3,381 candidates with a phone: 1,861 carried a
- * leading +1, 1,275 used other punctuation, 65 already matched, 173 had another
- * country code, 7 were malformed. All 195 new-hire/employee numbers already
- * matched.
+ * Measured through formatPhone on Oct 26 across 3,382 candidates with a phone:
+ * 3,201 show as 111.111.1111 and 181 are flagged (177 not a US number, 4 not a
+ * full 10-digit number). All 197 new-hire/employee numbers show as 111.111.1111.
  *
  * Not lib/candidates/normalize.ts's normalizePhone: that one feeds duplicate
  * matching and deliberately accepts a bare 10 digits after any "+". Here a
