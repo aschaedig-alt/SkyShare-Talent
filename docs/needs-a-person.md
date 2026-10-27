@@ -696,6 +696,24 @@ the employment dates, status and role, then Undo from Recent uploads and check t
 **What would count as a pass:** the one person changes exactly as the preview said, and
 Undo puts them back exactly as they were.
 
+### 34. Which Paycom reports hold separation reasons and the employee census is unconfirmed
+
+**Status:** OPEN
+**Added:** 2026-10-27
+
+The Quality of Hire baseline (scripts/qoh/qoh-baseline.cjs) leaves voluntary or
+involuntary, termination reason and rehire eligibility blank for all 276 hires who have
+left, because Journey does not store them. The plan is to join a Paycom separation report
+and the employee census onto the hires file by Employee Code, else legal name plus hire
+date. **Nobody here can see Paycom**, so the report names and their columns are a guess.
+
+**How to check it:** in Paycom, find the report that lists terminations with their reason,
+voluntary or involuntary, and rehire eligibility, and the one that lists every employee
+with their Employee Code, legal name and hire date. Export one of each.
+
+**What would count as a pass:** both exports exist and carry those columns, so the join
+can be built on a real file.
+
 ---
 
 ## Closed
