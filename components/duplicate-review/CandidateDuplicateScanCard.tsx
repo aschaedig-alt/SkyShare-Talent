@@ -9,6 +9,7 @@ import { Badge, Button } from "@/components/ui";
 import type { BadgeTone } from "@/components/ui";
 import type { DetectedPair } from "@/lib/duplicates/candidate-scan";
 import { formatMomentDate } from "@/lib/dates/display";
+import { phoneText } from "@/lib/formatting/phone";
 
 type ScanResult = {
   message?: string;
@@ -131,7 +132,7 @@ function SideName({ side }: { side: DetectedPair["left"] }) {
  */
 function SideDetail({ side }: { side: DetectedPair["left"] }) {
   if (!side) return null;
-  const bits = [side.email, side.phone].filter((value): value is string => Boolean(value));
+  const bits = [side.email, phoneText(side.phone)].filter((value): value is string => Boolean(value));
   const origin = originLabel(side.origin);
   return (
     <p className="text-xs text-brand-grey dark:text-slate-400">

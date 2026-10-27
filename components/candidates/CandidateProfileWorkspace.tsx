@@ -43,6 +43,8 @@ import { LinkApplicationJob, UnlinkApplicationJob } from "@/components/candidate
 import type { JobSuggestion } from "@/lib/jobs/paycom-title-match";
 import type { PreHireChecklistView } from "@/lib/data/prehire";
 import { formatMomentDate, formatMomentDateTime, formatMixedDay, zoneForValue } from "@/lib/dates/display";
+import { PhoneNumber, PhoneInputError } from "@/components/shared/PhoneNumber";
+import { formatPhoneInput } from "@/lib/formatting/phone";
 
 type CandidateProfileWorkspaceProps = {
   candidate: CandidateProfileData;
@@ -82,10 +84,40 @@ const PROFILE_DEFAULT_LAYOUT: GridItem[] = [
   { i: "flight", x: 0, y: 0, w: 3, h: 8 },
   { i: "checklist", x: 0, y: 8, w: 3, h: 7 },
   { i: "currency", x: 0, y: 15, w: 3, h: 6 },
-  { i: "proscons", x: 0, y: 21, w: 3, h: 7 },
-  { i: "contact", x: 0, y: 28, w: 3, h: 4 },
-  { i: "record", x: 0, y: 32, w: 3, h: 5 }
+  { i: "proscons", x: 0, y: 21, w: 3, h: 7 }
 ];
+
+/**
+ * Panels that used to be on the Documents board and have moved off it.
+ *
+ * "contact" and "record" moved into the header info strip on Oct 26 so they
+ * show on every tab (feedback cmvpu6z6r, option C). The saved board (WorkspaceSetting page-layout /
+ * candidate-profile) still has a slot for it — at the TOP of the left column,
+ * with Flight profile directly under it — and the grid does not compact
+ * (compactType null), so dropping the panel alone would leave a hole where it
+ * was. Her ask was "move the flight profile up to fill in the missing space".
+ *
+ * Done here, in code, rather than by rewriting the stored layout: the database
+ * is live and shared, and this way her saved board is untouched. The next time
+ * anyone saves the layout, the lifted positions are what gets stored, and this
+ * becomes a no-op.
+ */
+const RETIRED_PROFILE_PANELS = new Set(["contact", "record"]);
+
+/** Remove retired slots, lifting whatever sat below each one in its columns. */
+function withoutRetiredPanels(layout: GridItem[] | null | undefined): GridItem[] | null | undefined {
+  if (!layout) return layout;
+  const retired = layout.filter((l) => RETIRED_PROFILE_PANELS.has(l.i));
+  if (retired.length === 0) return layout;
+  let kept = layout.filter((l) => !RETIRED_PROFILE_PANELS.has(l.i));
+  for (const gone of retired) {
+    kept = kept.map((l) => {
+      const sharesColumns = l.x < gone.x + gone.w && gone.x < l.x + l.w;
+      return sharesColumns && l.y >= gone.y + gone.h ? { ...l, y: l.y - gone.h } : l;
+    });
+  }
+  return kept;
+}
 
 type ProfileTab = "documents" | "applications" | "offers" | "notes" | "interviews" | "timeline" | "summary" | "communications" | "activity" | "travel" | "checklists";
 
@@ -325,6 +357,7 @@ export function CandidateProfileWorkspace({
       },
       {
         id: "flight",
+        fit: true,
         title: "Flight profile",
         node: (
           <div className="h-full overflow-auto [&>*]:min-h-full">
@@ -334,6 +367,7 @@ export function CandidateProfileWorkspace({
       },
       {
         id: "checklist",
+        fit: true,
         title: "Document checklist",
         node: (
           <div className="h-full overflow-auto [&>*]:min-h-full">
@@ -343,6 +377,7 @@ export function CandidateProfileWorkspace({
       },
       {
         id: "currency",
+        fit: true,
         title: "Currency",
         node: (
           <div className="h-full overflow-auto [&>*]:min-h-full">
@@ -352,50 +387,21 @@ export function CandidateProfileWorkspace({
       },
       {
         id: "proscons",
+        fit: true,
         title: "Pros & cons",
         node: (
           <div className="h-full overflow-auto [&>*]:min-h-full">
             <ProConPanel candidateId={candidate.id} initialPros={candidate.pros} initialCons={candidate.cons} />
           </div>
         )
-      },
-      {
-        id: "contact",
-        title: "Contact",
-        node: (
-          <div className="h-full overflow-auto rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Contact</p>
-            <div className="mt-3 space-y-2 text-sm">
-              <div>
-                <div className={labelClass}>Email</div>
-                <div className="mt-0.5 break-words text-brand-lea dark:text-slate-100">{candidate.primaryEmail ?? "No email"}</div>
-              </div>
-              <div>
-                <div className={labelClass}>Phone</div>
-                <div className="mt-0.5 text-brand-lea dark:text-slate-100">{candidate.primaryPhone ?? "No phone"}</div>
-              </div>
-            </div>
-          </div>
-        )
-      },
-      {
-        id: "record",
-        title: "Record",
-        node: (
-          <div className="h-full overflow-auto rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">Record</p>
-            <div className="mt-3 space-y-1.5 text-sm text-brand-grey dark:text-slate-400">
-              <div>Owner: {candidate.owner ?? "Unassigned"}</div>
-              <div>Source: {candidate.source ?? "Not recorded"}</div>
-              <div>Created: {formatDate(candidate.createdAt)}</div>
-              <div>Updated: {formatDate(candidate.updatedAt)}</div>
-            </div>
-          </div>
-        )
       }
     ],
     [candidate]
   );
+
+  // Memoized for the same reason as the panels: EditableGrid re-runs its layout
+  // init when this array's identity changes.
+  const boardLayout = useMemo(() => withoutRetiredPanels(savedLayout), [savedLayout]);
 
   return (
     <div className="space-y-4 px-5 py-5 lg:px-8">
@@ -409,8 +415,11 @@ export function CandidateProfileWorkspace({
             read as the link being broken — the last open piece of the "Back to
             candidates feels broken" report. Now it is a padded, bordered box
             that highlights on hover, so where to click is visible before you
-            click and anywhere inside it works. The negative margin cancels the
-            new padding so the text still lines up with the content below. */}
+            click and anywhere inside it works. NO negative margin: it used to
+            pull the box 8.75px left so its text lined up with the content
+            below, which left it 9px from the card edge while Search sat 18px
+            from the other edge. His ask, Oct 26: the same distance on both
+            sides. */}
         {/* Back link and search share one row. The search is here, on the row you
             already look at to leave the page, because leaving to search was the
             whole problem: looking up a second person meant back, retype, open.
@@ -423,7 +432,7 @@ export function CandidateProfileWorkspace({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link
             href="/candidates"
-            className="-ml-2.5 inline-flex items-center gap-1.5 rounded border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-eden transition hover:border-brand-gold hover:bg-brand-gold/10 hover:text-brand-lea hover:shadow-glow dark:border-white/10 dark:text-slate-300 dark:hover:bg-brand-gold/15 dark:hover:text-slate-100"
+            className="inline-flex items-center gap-1.5 rounded border border-brand-lea/15 px-2.5 py-1.5 text-xs font-semibold text-brand-eden transition hover:border-brand-gold hover:bg-brand-gold/10 hover:text-brand-lea hover:shadow-glow dark:border-white/10 dark:text-slate-300 dark:hover:bg-brand-gold/15 dark:hover:text-slate-100"
           >
             ← Back to candidates
             {/* The click already worked before this existed — what was missing
@@ -442,7 +451,7 @@ export function CandidateProfileWorkspace({
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">{candidate.displayName}</h1>
-            <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
+            <p className="mt-1 text-xs font-semibold text-brand-grey dark:text-slate-400">
               {[candidate.currentTitle, candidate.stage].filter(Boolean).join(" · ") || "No title recorded"}
             </p>
             <CandidateTagEditor
@@ -481,6 +490,25 @@ export function CandidateProfileWorkspace({
             )}
           </div>
         </div>
+        {/* Option C, chosen Oct 26 (feedback cmvpu6z6r): contact and the old
+            Record box as one strip in the header, so they show on EVERY tab.
+            Both used to be boxes on the Documents board and vanished on Notes,
+            Interviews and the rest. */}
+        <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-brand-lea/10 pt-3 sm:grid-cols-3 xl:grid-cols-6 dark:border-white/10">
+          {[
+            { label: "Email", value: <span className="break-words">{candidate.primaryEmail ?? "No email"}</span> },
+            { label: "Phone", value: <PhoneNumber value={candidate.primaryPhone} empty="No phone" /> },
+            { label: "Owner", value: candidate.owner ?? "Unassigned" },
+            { label: "Source", value: candidate.source ?? "Not recorded" },
+            { label: "Created", value: formatDate(candidate.createdAt) },
+            { label: "Updated", value: formatDate(candidate.updatedAt) }
+          ].map((f) => (
+            <div key={f.label} className="min-w-0">
+              <dt className={labelClass}>{f.label}</dt>
+              <dd className="mt-0.5 text-xs font-semibold text-brand-lea dark:text-slate-100">{f.value}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
 
       {/* Historical Candidate Archive — match banner (Jazz history present) */}
@@ -531,7 +559,15 @@ export function CandidateProfileWorkspace({
             </div>
             <div>
               <label className={labelClass}>Phone</label>
-              <input type="tel" value={formData.primaryPhone ?? ""} onChange={(e) => setFormData({ ...formData, primaryPhone: e.target.value || null })} className={inputClass} />
+              <input
+                type="tel"
+                value={formData.primaryPhone ?? ""}
+                placeholder="111.111.1111"
+                onChange={(e) => setFormData({ ...formData, primaryPhone: e.target.value || null })}
+                onBlur={(e) => setFormData({ ...formData, primaryPhone: formatPhoneInput(e.target.value) || null })}
+                className={inputClass}
+              />
+              <PhoneInputError value={formData.primaryPhone} />
             </div>
             <div>
               <label className={labelClass}>Status</label>
@@ -631,7 +667,7 @@ export function CandidateProfileWorkspace({
             <EditableGrid
               pageKey="candidate-profile"
               canEdit={canEdit}
-              savedLayout={savedLayout}
+              savedLayout={boardLayout}
               savedWidgets={savedWidgets}
               defaultLayout={PROFILE_DEFAULT_LAYOUT}
               panels={documentPanels}

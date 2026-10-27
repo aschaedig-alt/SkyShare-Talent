@@ -6,6 +6,7 @@ import { CalendarClock, Mail, Phone, Video, MapPin, Briefcase } from "lucide-rea
 import type { CalendarData } from "@/lib/data/calendar";
 import { formatRelativeDay, formatTime } from "@/lib/calendar/format";
 import { timezoneAbbr } from "@/lib/calendar/timezones";
+import { phoneText } from "@/lib/formatting/phone";
 
 type Interview = CalendarData["interviews"][number];
 
@@ -93,7 +94,8 @@ export function UpcomingInterviews({ interviews, onInterviewClick }: UpcomingInt
                   )}
                   {interview.candidate.phone && (
                     <a
-                      href={`tel:${interview.candidate.phone}`}
+                      href={`tel:${phoneText(interview.candidate.phone) ?? interview.candidate.phone}`}
+                      title={phoneText(interview.candidate.phone) ?? undefined}
                       onClick={(e) => e.stopPropagation()}
                       className="inline-flex items-center gap-1 rounded bg-brand-cloudDancer/60 px-2 py-0.5 text-[10px] font-medium text-brand-lea hover:bg-brand-sweet/30 dark:bg-white/5 dark:text-slate-100"
                     >

@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Search, UserPlus } from "lucide-react";
 import type { ContactCandidate } from "@/lib/data/new-hire-contacts";
+import { phoneText } from "@/lib/formatting/phone";
 
 // Search-as-you-type picker over the whole current-staff roster. Replaces a
 // plain <select>, which was unusable once the pool went from 28 people to ~190.
@@ -80,7 +81,7 @@ export function ContactPicker({
                     {[c.position, c.department].filter(Boolean).join(" · ") || "No title on file"}
                   </span>
                   <span className="block truncate text-xs text-brand-grey/80 dark:text-slate-500">
-                    {[c.phone, c.ssEmail].filter(Boolean).join(" · ") || "No phone or email on file"}
+                    {[phoneText(c.phone), c.ssEmail].filter(Boolean).join(" · ") || "No phone or email on file"}
                   </span>
                 </span>
                 {!c.isCurrent ? (

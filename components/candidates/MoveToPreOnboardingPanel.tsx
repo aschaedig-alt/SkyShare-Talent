@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { UserPlus, CheckCircle2, Link2 } from "lucide-react";
 import { isOfferClosed } from "@/lib/offers/constants";
 import type { CandidateProfileData } from "@/lib/data/candidates";
+import { formatPhoneInput } from "@/lib/formatting/phone";
 
 type Props = {
   candidate: CandidateProfileData;
@@ -68,7 +69,8 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
           name: candidate.displayName,
           position: position.trim() || null,
           department: department.trim() || null,
-          phone: candidate.primaryPhone,
+          // In the 111.111.1111 house format when it is a US number.
+          phone: candidate.primaryPhone ? formatPhoneInput(candidate.primaryPhone) : null,
           personalEmail: candidate.primaryEmail,
           // The company address follows a fixed convention and feeds the business
           // cards, so it is filled in by default rather than typed.
@@ -173,7 +175,7 @@ export function MoveToPreOnboardingPanel({ candidate, canEdit }: Props) {
       <section className="rounded border border-emerald-500/30 bg-emerald-50/60 p-3 dark:bg-emerald-500/10">
         <div className="flex flex-wrap items-center gap-3">
           <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" />
-          <p className="text-sm text-brand-lea dark:text-slate-100">
+          <p className="text-xs font-semibold text-brand-lea dark:text-slate-100">
             In {pre.hireStage === "ACTIVE" ? "onboarding" : "onboarding records"} as a new hire.
           </p>
           <Link

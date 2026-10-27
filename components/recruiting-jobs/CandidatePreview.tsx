@@ -9,6 +9,7 @@ import { SCAN_EXCLUSION_LABELS, isScanExclusionReason } from "@/lib/candidates/s
 import { CertificateChecklist } from "@/components/candidates/CertificateChecklist";
 import type { CandidatePreview as CandidatePreviewData } from "@/app/pilot-requirements/scoring-actions";
 import type { PilotRequirementCandidateMatch } from "@/lib/matching/pilot-requirement-matches";
+import { PhoneNumber } from "@/components/shared/PhoneNumber";
 
 export function CandidatePreview({
   preview,
@@ -83,7 +84,7 @@ export function CandidatePreview({
               {preview.primaryPhone ? (
                 <div className="flex items-center gap-2 text-xs text-brand-black/80 dark:text-slate-300">
                   <Phone className="h-3.5 w-3.5 shrink-0 text-brand-grey dark:text-slate-400" />
-                  <span className="min-w-0 truncate">{preview.primaryPhone}</span>
+                  <PhoneNumber value={preview.primaryPhone} className="min-w-0 truncate" />
                 </div>
               ) : null}
             </div>

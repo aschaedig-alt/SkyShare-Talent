@@ -6,6 +6,7 @@ import { TickedNotSentNote } from "@/components/shared/TickedNotSentNote";
 import { EmailBodyEditor } from "@/components/shared/EmailBodyEditor";
 import { formatMomentDate } from "@/lib/dates/display";
 import type { FrontTemplateSummary } from "@/lib/front/templates";
+import { PhoneNumber } from "@/components/shared/PhoneNumber";
 import {
   chooseSupervisorContactTemplate,
   previewSupervisorContactEmail,
@@ -278,7 +279,7 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
                       </dd>
                       <dt className="font-semibold text-brand-grey dark:text-slate-400">Mobile</dt>
                       <dd className="text-brand-black dark:text-slate-100">
-                        {card.phone ?? <span className="text-brand-grey dark:text-slate-400">none on file</span>}
+                        <PhoneNumber value={card.phone} empty={<span className="text-brand-grey dark:text-slate-400">none on file</span>} />
                       </dd>
                       <dt className="font-semibold text-brand-grey dark:text-slate-400">Email</dt>
                       <dd className="break-all text-brand-black dark:text-slate-100">

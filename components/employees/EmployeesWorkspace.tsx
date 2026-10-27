@@ -11,6 +11,7 @@ import { EmployeeTags, displayTags } from "@/components/employees/EmployeeTags";
 import { Badge, Button, EmptyState, Modal } from "@/components/ui";
 import type { BadgeTone } from "@/components/ui/Badge";
 import { useDialogClose } from "@/lib/hooks/useDialogClose";
+import { PhoneNumber } from "@/components/shared/PhoneNumber";
 
 type Filter = "all" | "current" | "past";
 const FILTER_KEY = "skyshare-employees-filter";
@@ -72,7 +73,7 @@ const COLUMNS: Record<EmployeeColumnKey, { label: string; sortKey?: SortKey; cel
   tenure: { label: "Tenure", sortKey: "tenure", cell: (e) => tenure(e.tenureDays) },
   roles: { label: "Roles", sortKey: "roles", cell: (e) => `${e.roleCount || "—"}${e.stintCount > 1 ? ` · ${e.stintCount} stints` : ""}` },
   status: { label: "Status", sortKey: "status", cell: (e) => { const b = statusBadge(e); return <Badge tone={b.tone}>{b.label}</Badge>; } },
-  phone: { label: "Phone", cell: (e) => e.phone ?? "—" },
+  phone: { label: "Phone", cell: (e) => <PhoneNumber value={e.phone} empty="—" /> },
   workEmail: { label: "Work email", cell: (e) => e.workEmail ?? "—" },
   personalEmail: { label: "Personal email", cell: (e) => e.personalEmail ?? "—" },
   birthday: { label: "Birthday", cell: (e) => fmtDay(e.birthday) },

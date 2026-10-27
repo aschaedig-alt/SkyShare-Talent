@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Check, Mail, Phone, Plus, UserPlus } from "lucide-react";
 import { clsx } from "clsx";
 import type { ResolvedGroup } from "@/lib/data/new-hire-contacts";
+import { phoneText } from "@/lib/formatting/phone";
 
 type ViewContact = {
   key: string;
@@ -151,9 +152,9 @@ export function NewHireContactsView({
                         ) : null}
                         <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-brand-grey dark:text-slate-400">
                           {contact.phone ? (
-                            <a href={`tel:${contact.phone}`} className="inline-flex items-center gap-1 hover:text-brand-lea">
+                            <a href={`tel:${phoneText(contact.phone) ?? contact.phone}`} className="inline-flex items-center gap-1 hover:text-brand-lea">
                               <Phone className="h-3 w-3" />
-                              {contact.phone}
+                              {phoneText(contact.phone)}
                             </a>
                           ) : null}
                           {contact.email ? (

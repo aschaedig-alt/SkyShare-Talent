@@ -7,6 +7,7 @@ import { clsx } from "clsx";
 import { GitMerge, X, Loader, ArrowRight } from "lucide-react";
 import type { DuplicateReviewData, DuplicateCandidateBrief } from "@/lib/data/duplicate-review";
 import { formatMomentDateTime } from "@/lib/dates/display";
+import { PhoneNumber } from "@/components/shared/PhoneNumber";
 
 type Item = DuplicateReviewData["items"][number];
 
@@ -34,7 +35,7 @@ function CandidateCard({ candidate, keep, onKeep }: { candidate: NonNullable<Dup
         )}
       </div>
       <div className="mt-1 text-xs text-brand-grey dark:text-slate-400">{candidate.email ?? "No email"}</div>
-      <div className="text-xs text-brand-grey dark:text-slate-400">{candidate.phone ?? "No phone"}</div>
+      <div className="text-xs text-brand-grey dark:text-slate-400"><PhoneNumber value={candidate.phone} empty="No phone" /></div>
       <div className="mt-2 text-[11px] text-brand-grey dark:text-slate-400">
         {counts.files} files · {counts.applications} apps · {counts.interviews} interviews · {counts.notes} notes
       </div>

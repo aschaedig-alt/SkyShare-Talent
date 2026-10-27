@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FileUp, X, Check, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useDialogClose } from "@/lib/hooks/useDialogClose";
+import { phoneText } from "@/lib/formatting/phone";
 
 type IntakeResult = {
   filename: string;
@@ -148,7 +149,7 @@ export function ResumeIntake({
                         ) : (
                           <>
                             <div className="font-semibold text-brand-lea dark:text-slate-100">{r.displayName} {r.reused && <span className="font-normal text-brand-grey dark:text-slate-400">(existing)</span>}</div>
-                            <div className="text-brand-grey dark:text-slate-400">{[r.email, r.phone].filter(Boolean).join(" · ") || "no contact found — edit on profile"}{r.linkedToJob ? " · added to job" : ""}</div>
+                            <div className="text-brand-grey dark:text-slate-400">{[r.email, phoneText(r.phone)].filter(Boolean).join(" · ") || "no contact found — edit on profile"}{r.linkedToJob ? " · added to job" : ""}</div>
                           </>
                         )}
                       </div>

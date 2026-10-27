@@ -23,6 +23,7 @@ import { CANDIDATE_DEPARTMENTS } from "@/lib/candidates/departments";
 import { CandidateTagCell } from "@/components/candidates/CandidateTagCell";
 import { Button } from "@/components/ui";
 import { formatMomentDate } from "@/lib/dates/display";
+import { PhoneNumber } from "@/components/shared/PhoneNumber";
 
 type ProfileSummary = {
   displayName: string;
@@ -386,7 +387,7 @@ export function SavedViewWorkspace({
               </div>
               <div className="flex items-center gap-1.5">
                 <Phone className="h-3 w-3 shrink-0 text-brand-lea/50" />
-                <span>{openMember.primaryPhone ?? "No phone"}</span>
+                <PhoneNumber value={openMember.primaryPhone} empty="No phone" />
               </div>
               <div>Stage: {openMember.stage ?? "—"}</div>
               <div>Updated {formatDate(openMember.updatedAt)}</div>

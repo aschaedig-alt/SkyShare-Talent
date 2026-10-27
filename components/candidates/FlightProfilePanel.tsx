@@ -189,7 +189,10 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
 
   return (
     <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-      <div className="flex items-center justify-between gap-2">
+      {/* Both rows WRAP rather than overflow: this panel sits in a 2-of-12
+          column that is only 143px wide on a 1280px window, and the unwrapped
+          rows (167px) gave it a sideways scrollbar. */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-brand-gold">
           <Plane className="h-3.5 w-3.5" /> Flight Profile
         </p>
@@ -207,9 +210,10 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
       {message && <div className="mt-2 rounded bg-brand-cloudDancer/50 px-2 py-1 text-[11px] text-brand-grey dark:bg-white/5 dark:text-slate-400">{message}</div>}
 
       {/* Currency — hours flown in the last 12 months; drives the Recency score */}
-      <div className="mt-3 flex items-center gap-2 rounded bg-brand-cloudDancer/45 px-2.5 py-2 dark:bg-white/5">
+      <div className="mt-3 flex flex-wrap items-center gap-2 rounded bg-brand-cloudDancer/45 px-2.5 py-2 dark:bg-white/5">
         <Clock className="h-3.5 w-3.5 shrink-0 text-brand-eden" />
         <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey dark:text-slate-400">Hours (last 12 mo)</span>
+        <span className="ml-auto flex items-center gap-2">
         <input
           type="text"
           inputMode="numeric"
@@ -219,11 +223,12 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
             if (e.key === "Enter") saveRecency();
           }}
           placeholder="—"
-          className="ml-auto w-16 rounded border border-brand-lea/20 px-1.5 py-0.5 text-right text-sm text-brand-lea focus:border-brand-gold dark:border-white/10 dark:text-slate-100"
+          className="w-16 rounded border border-brand-lea/20 px-1.5 py-0.5 text-right text-sm text-brand-lea focus:border-brand-gold dark:border-white/10 dark:text-slate-100"
         />
         <button onClick={saveRecency} disabled={savingRecency} className="rounded p-0.5 text-emerald-700 dark:text-emerald-400 disabled:opacity-50" aria-label="Save recent hours">
           {savingRecency ? <Loader className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
         </button>
+        </span>
       </div>
 
       {/* Confirmed values */}

@@ -126,7 +126,7 @@ export function CandidateTagEditor({
         {canEdit && !adding ? (
           <button
             onClick={() => setAdding(true)}
-            className="inline-flex items-center gap-1 rounded border border-dashed border-brand-lea/30 px-2 py-0.5 text-[11px] font-semibold text-brand-eden transition hover:border-brand-gold hover:bg-brand-gold/10 dark:border-white/20 dark:text-slate-300"
+            className="inline-flex items-center gap-1 rounded border border-dashed border-brand-lea/30 px-2 py-0.5 text-xs font-semibold text-brand-eden transition hover:border-brand-gold hover:bg-brand-gold/10 dark:border-white/20 dark:text-slate-300"
           >
             <Plus className="h-3 w-3" /> Add tag
           </button>

@@ -12,7 +12,36 @@ import type { PageLayoutItem, WidgetInstance } from "@/lib/data/page-layout";
 const GridLayout = WidthProvider(RGL);
 
 export type GridItem = PageLayoutItem;
-export type EditablePanel = { id: string; title: string; node: ReactNode };
+/**
+ * `fit`: outside Edit layout, the box takes its content's own height instead of
+ * the saved one, and boxes below it move up or down to stay stacked under it.
+ *
+ * WHY. A saved height is one number for every record, but the content is not:
+ * a candidate with three certificates and one with thirteen share the same
+ * Flight profile box. On a narrow window the same text also wraps to more lines.
+ * Fixed heights therefore gave boxes their own scrollbars (measured at 1280px:
+ * Flight profile 167px of content in a 143px box, Currency 206px in 188px) and
+ * left others half empty — scroll-inside-scroll, which the house rule forbids.
+ * In Edit layout every box goes back to its saved size so it can be arranged.
+ */
+export type EditablePanel = { id: string; title: string; node: ReactNode; fit?: boolean };
+
+/**
+ * Stack boxes upward in reading order so none overlaps and no gap is left
+ * above any of them — the same order the saved layout gives, just packed.
+ */
+function packUp(items: GridItem[]): GridItem[] {
+  const placed: GridItem[] = [];
+  for (const item of [...items].sort((a, b) => a.y - b.y || a.x - b.x)) {
+    let y = 0;
+    for (const p of placed) {
+      const sharesColumns = item.x < p.x + p.w && p.x < item.x + item.w;
+      if (sharesColumns) y = Math.max(y, p.y + p.h);
+    }
+    placed.push({ ...item, y });
+  }
+  return placed;
+}
 
 type Props = {
   pageKey: string;
@@ -87,6 +116,29 @@ export function EditableGrid({
   const [narrow, setNarrow] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [configFor, setConfigFor] = useState<string | null>(null);
+
+  // Measured content height (px) of every `fit` panel, kept current by a
+  // ResizeObserver so a box follows its content as it loads, expands or wraps.
+  const [fitPx, setFitPx] = useState<Record<string, number>>({});
+  const fitIdsKey = panels.filter((p) => p.fit).map((p) => p.id).join("|");
+  const fitObserver = useMemo(() => {
+    if (typeof ResizeObserver === "undefined" || !fitIdsKey) return null;
+    return new ResizeObserver((entries) => {
+      setFitPx((cur) => {
+        let next = cur;
+        for (const entry of entries) {
+          const id = (entry.target as HTMLElement).dataset.fitId;
+          const px = Math.ceil((entry.target as HTMLElement).offsetHeight);
+          if (id && cur[id] !== px) next = { ...next, [id]: px };
+        }
+        return next;
+      });
+    });
+  }, [fitIdsKey]);
+  useEffect(() => () => fitObserver?.disconnect(), [fitObserver]);
+  const observeFit = (el: HTMLDivElement | null) => {
+    if (el && fitObserver) fitObserver.observe(el);
+  };
 
   useEffect(() => {
     setWidgets(savedWidgets ?? []);
@@ -166,8 +218,8 @@ export function EditableGrid({
     setConfigFor(null);
   }
 
-  const renderItems: Array<{ id: string; title: string; node: ReactNode; isWidget: boolean }> = [
-    ...panels.map((p) => ({ id: p.id, title: p.title, node: p.node, isWidget: false })),
+  const renderItems: Array<{ id: string; title: string; node: ReactNode; isWidget: boolean; fit?: boolean }> = [
+    ...panels.map((p) => ({ id: p.id, title: p.title, node: p.node, isWidget: false, fit: p.fit })),
     ...widgets.map((w) => {
       const def = WIDGETS_BY_TYPE[w.type];
       return { id: w.i, title: def?.name ?? w.type, node: def ? def.render(w.config, widgetData) : null, isWidget: true };
@@ -183,10 +235,22 @@ export function EditableGrid({
     return <div className="space-y-4">{ordered.map((it) => <div key={it.id}>{it.node}</div>)}</div>;
   }
 
-  const displayLayout = renderItems.map((it) => {
+  // Outside Edit layout, `fit` boxes take their measured height (in whole grid
+  // rows, margin included) and everything is packed up under them.
+  const fitting = !editing && renderItems.some((it) => it.fit);
+  const MARGIN = 12;
+  const sized = renderItems.map((it) => {
     const l = layout.find((x) => x.i === it.id) ?? { i: it.id, x: 0, y: 999, w: 3, h: 4 };
-    return { ...l, static: !editing, isDraggable: editing, isResizable: editing };
+    const px = fitPx[it.id];
+    if (!fitting || !it.fit || !px) return l;
+    return { ...l, h: Math.max(1, Math.ceil((px + MARGIN) / (rowHeight + MARGIN))) };
   });
+  const displayLayout = (fitting ? packUp(sized) : sized).map((l) => ({
+    ...l,
+    static: !editing,
+    isDraggable: editing,
+    isResizable: editing
+  }));
 
   const configWidget = configFor ? widgets.find((w) => w.i === configFor) : null;
   const configDef = configWidget ? WIDGETS_BY_TYPE[configWidget.type] : null;
@@ -281,10 +345,19 @@ export function EditableGrid({
                 className={
                   editing
                     ? "min-h-0 flex-1 overflow-hidden rounded-b ring-2 ring-brand-gold/40 [&>*]:pointer-events-none [&>*]:h-full"
-                    : "min-h-0 flex-1 [&>*]:h-full"
+                    : fitting && it.fit
+                      ? "min-h-0 flex-1"
+                      : "min-h-0 flex-1 [&>*]:h-full"
                 }
               >
-                {it.node}
+                {fitting && it.fit ? (
+                  // Measured at its natural height; the grid box is then sized to it.
+                  <div ref={observeFit} data-fit-id={it.id}>
+                    {it.node}
+                  </div>
+                ) : (
+                  it.node
+                )}
               </div>
             </div>
           ))}

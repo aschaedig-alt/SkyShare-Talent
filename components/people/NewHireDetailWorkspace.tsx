@@ -37,6 +37,8 @@ import type { CardOrderView } from "@/lib/data/business-cards";
 import { Button, Input, Modal } from "@/components/ui";
 import { EMPLOYEE_TAGS } from "@/lib/employees/columns";
 import { tagStyle, TagPill, displayTags } from "@/components/employees/EmployeeTags";
+import { PhoneInputError } from "@/components/shared/PhoneNumber";
+import { formatPhoneInput } from "@/lib/formatting/phone";
 
 function fmtDay(iso: string | null) {
   // Dates are stored as date-only (UTC midnight); format in UTC so the calendar
@@ -199,7 +201,12 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
 
   /** Save one typed field if it differs from what the server last accepted. */
   function commit(key: keyof typeof details) {
-    const value = details[key];
+    let value = details[key];
+    // Phone numbers are stored and shown as 111.111.1111 (lib/formatting/phone.ts).
+    if (key === "phone" && value !== formatPhoneInput(value)) {
+      value = formatPhoneInput(value);
+      setDetails((d) => ({ ...d, phone: value }));
+    }
     if (value === saved.current[key]) return;
     if (key === "name" && !value.trim()) {
       // The name is the one field that cannot be blank. Put it back rather than
@@ -703,7 +710,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
       total: 7,
       rows: [
         [field("Name", "name"), field("Position", "position"), field("Department", "department"), field("Job location", "location")],
-        [field("Phone", "phone"), field("SkyShare email", "ssEmail"), field("Personal email", "personalEmail")],
+        [field("Phone", "phone", "text", <PhoneInputError value={details.phone} />), field("SkyShare email", "ssEmail"), field("Personal email", "personalEmail")],
         [legalNameControl],
         // Built from the SAVED record, so it is labelled with hire.name rather than
         // the form's unsaved draft — naming a card that has not shipped yet would be

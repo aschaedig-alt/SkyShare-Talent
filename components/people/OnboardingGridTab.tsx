@@ -13,6 +13,7 @@ import { copyRich } from "@/lib/business-cards/copy";
 import { buildHireInfoHtml, buildHireInfoText } from "@/lib/onboarding/hire-email-copy";
 import { SendTaskEmailButton } from "@/components/people/SendTaskEmailButton";
 import { EmptyState } from "@/components/ui";
+import { phoneText } from "@/lib/formatting/phone";
 
 const GRID_BULK_ACTIONS: BulkAction[] = [
   { kind: "run", key: "copy", label: "Copy for email", icon: ClipboardCopy },
@@ -296,7 +297,7 @@ export function OnboardingGridTab({
               ["Offer signed", (h: GridHire) => fmtDate(h.offerSignedDate)],
               ["Start date", (h: GridHire) => fmtDate(h.startDate)],
               ["Orientation", (h: GridHire) => fmtDate(h.orientationDate)],
-              ["Phone", (h: GridHire) => h.phone ?? "—"],
+              ["Phone", (h: GridHire) => phoneText(h.phone) ?? "—"],
               ["SkyShare email", (h: GridHire) => h.ssEmail ?? "—"],
               ["Personal email", (h: GridHire) => h.personalEmail ?? "—"],
               ["Position", (h: GridHire) => h.position ?? "—"],
