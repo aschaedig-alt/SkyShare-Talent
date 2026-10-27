@@ -696,6 +696,24 @@ the employment dates, status and role, then Undo from Recent uploads and check t
 **What would count as a pass:** the one person changes exactly as the preview said, and
 Undo puts them back exactly as they were.
 
+### 32. Nobody has saved an interview write-up or note in the new editor yet
+
+**Status:** OPEN — deployed 2026-10-26 (a7e461b); he said he will check it
+**Added:** 2026-10-26
+
+The interview and note editor was rebuilt on TipTap to stop indented bullets vanishing on
+blur and blank lines vanishing on save (feedback cmvpiodds). The working session checked it
+in a local browser without saving (the database is live): a typed document survived
+sanitize and reopen unchanged, and all 77 stored write-ups and notes loaded with the same
+text, bullets and headings. The server half was re-checked at commit time. **No save
+through the live site has happened.**
+
+**How to check it:** open a candidate's Interviews tab, edit a write-up, make an indented
+bullet (Tab) and a blank line between two paragraphs, save, close, and reopen it.
+
+**What would count as a pass:** the indented bullet and the blank line are still there
+after reopening, and nothing else in the write-up moved.
+
 ---
 
 ## Closed
