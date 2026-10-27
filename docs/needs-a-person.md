@@ -696,27 +696,14 @@ the employment dates, status and role, then Undo from Recent uploads and check t
 **What would count as a pass:** the one person changes exactly as the preview said, and
 Undo puts them back exactly as they were.
 
-### 32. Nobody has saved an interview write-up or note in the new editor yet
+---
 
-**Status:** OPEN — deployed 2026-10-26 (a7e461b); he said he will check it
-**Added:** 2026-10-26
-
-The interview and note editor was rebuilt on TipTap to stop indented bullets vanishing on
-blur and blank lines vanishing on save (feedback cmvpiodds). The working session checked it
-in a local browser without saving (the database is live): a typed document survived
-sanitize and reopen unchanged, and all 77 stored write-ups and notes loaded with the same
-text, bullets and headings. The server half was re-checked at commit time. **No save
-through the live site has happened.**
-
-**How to check it:** open a candidate's Interviews tab, edit a write-up, make an indented
-bullet (Tab) and a blank line between two paragraphs, save, close, and reopen it.
-
-**What would count as a pass:** the indented bullet and the blank line are still there
-after reopening, and nothing else in the write-up moved.
+## Closed
 
 ### 33. The candidate page's layout has not been saved since the boxes started fitting their content
 
-**Status:** OPEN — deployed 2026-10-26 (cffc1ab)
+**Status:** CLOSED
+**Closed:** 2026-10-26, by him: he saved the board in Edit layout on the live site. His words: "works as intended."
 **Added:** 2026-10-26
 
 The candidate Documents board now retires the Contact and Record boxes, and its left-column
@@ -732,9 +719,24 @@ Save. Then reload two different candidates (one with many certificates, one with
 left-column boxes still fit their content on both candidates with no box scrolling inside,
 and nothing overlaps.
 
----
+### 32. Nobody has saved an interview write-up or note in the new editor yet
 
-## Closed
+**Status:** CLOSED
+**Closed:** 2026-10-26, by him, NOT as a pass: he checked it on the live site and line spacing is still lost once a note is sent. His words: "still has issues. i made a new feedback message on it. so we can let that go for now. a working agent will work on it." The open work now lives in feedback cmvpxe5xt (and the roadmap entry, back to in progress).
+**Added:** 2026-10-26
+
+The interview and note editor was rebuilt on TipTap to stop indented bullets vanishing on
+blur and blank lines vanishing on save (feedback cmvpiodds). The working session checked it
+in a local browser without saving (the database is live): a typed document survived
+sanitize and reopen unchanged, and all 77 stored write-ups and notes loaded with the same
+text, bullets and headings. The server half was re-checked at commit time. **No save
+through the live site has happened.**
+
+**How to check it:** open a candidate's Interviews tab, edit a write-up, make an indented
+bullet (Tab) and a blank line between two paragraphs, save, close, and reopen it.
+
+**What would count as a pass:** the indented bullet and the blank line are still there
+after reopening, and nothing else in the write-up moved.
 
 ### 15. No trip uses Indoc & orientation yet
 
