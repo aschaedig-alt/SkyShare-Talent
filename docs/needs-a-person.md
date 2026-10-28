@@ -726,6 +726,28 @@ question is whether Paycom holds rehire eligibility anywhere, or whether it is d
 
 ---
 
+### 35. The Quality of Hire tab has not been clicked, and its uploads have never been saved or undone
+
+**Status:** OPEN
+**Added:** 2026-10-27
+
+The Quality of Hire tab on Data > Reports (commit 08d13dc) was checked by rendering it
+on the server and by previewing each upload over HTTP. Nobody has opened it in a browser
+and clicked through it, and **Save and Undo have never been pressed**, because both write
+the live database. Until the three files are saved, the tab shows no exit reasons and
+almost no interviews.
+
+**How to check it:** as an admin, open Data > Reports > Quality of Hire. In Update the
+data, upload Paycom's terminations report (.xlsx), HR's term-type sheet (.csv) and the
+calendar interview file (.csv): preview each, then Save. Confirm the tab now shows exit
+reasons and interviews (about 190 of 274 hires with one or more). Then press Undo on one
+upload and confirm the tab goes back, and Save it again.
+
+**What would count as a pass:** the tab renders for an admin and not for anyone else; all
+three files save; Undo puts the report back as it was; Save again restores it.
+
+---
+
 ## Closed
 
 ### 33. The candidate page's layout has not been saved since the boxes started fitting their content
