@@ -14,14 +14,18 @@ import { SKYSHARE_LADDER, ladderRank, nextRungs } from "@/lib/fleet/pilot-ladder
 import { TravelSpendReport } from "@/components/travel/TravelSpendReport";
 import { ReportShareButton } from "@/components/reports/ReportShareButton";
 import { HeadcountTenureReport } from "@/components/reports/HeadcountTenureReport";
+import { QualityOfHireReport } from "@/components/reports/QualityOfHireReport";
 import { R } from "@/components/reports/report-ui";
 import type { HeadcountHistory } from "@/lib/data/headcount-history";
+import type { QualityOfHire } from "@/lib/quality-of-hire/report";
 import { formatCalendarDay, formatMomentDate } from "@/lib/dates/display";
 
 type ReportsWorkspaceProps = {
   data: ReportsData;
   /** Headcount and tenure by year - loaded by app/reports only, never the share link. */
   headcount?: HeadcountHistory | null;
+  /** Quality of Hire - admins only (it names why each person left), never the share link. */
+  qoh?: QualityOfHire | null;
   logoDataUrl?: string | null;
   canShare?: boolean;
 };
@@ -1312,11 +1316,13 @@ const REPORT_TABS = [
   { id: "documents", label: "Document Currency" },
   // Aimee, Sep 29: "in 2020 we had xx employees, xx of them were pilots, xx of
   // those employees are still here."
-  { id: "headcount", label: "Headcount & Tenure" }
+  { id: "headcount", label: "Headcount & Tenure" },
+  // The Q4 2026 rock. Shown only to admins, who are the only ones given its data.
+  { id: "qoh", label: "Quality of Hire" }
 ] as const;
 type ReportTab = (typeof REPORT_TABS)[number]["id"];
 
-export function ReportsWorkspace({ data, headcount = null, logoDataUrl, canShare = false }: ReportsWorkspaceProps) {
+export function ReportsWorkspace({ data, headcount = null, qoh = null, logoDataUrl, canShare = false }: ReportsWorkspaceProps) {
   const [tab, setTab] = useState<ReportTab>("progression");
   return (
     <div className={R.page}>
@@ -1347,7 +1353,7 @@ export function ReportsWorkspace({ data, headcount = null, logoDataUrl, canShare
       {/* Sub-tabs — one report at a time. The active tab is the only one rendered,
           so "Export PDF" prints exactly what's on screen. */}
       <div className={R.tabBar}>
-        {REPORT_TABS.map((t) => (
+        {REPORT_TABS.filter((t) => t.id !== "qoh" || qoh).map((t) => (
           <button
             key={t.id}
             type="button"
@@ -1374,6 +1380,7 @@ export function ReportsWorkspace({ data, headcount = null, logoDataUrl, canShare
       {tab === "travel" ? <TravelSpendReport trips={data.travelSpend.trips} /> : null}
       {tab === "documents" ? <DocumentCurrency dc={data.documentCurrency} /> : null}
       {tab === "headcount" && headcount ? <HeadcountTenureReport history={headcount} /> : null}
+      {tab === "qoh" && qoh ? <QualityOfHireReport qoh={qoh} canUpload /> : null}
     </div>
   );
 }
