@@ -6,6 +6,7 @@ import { canWriteModule } from "@/lib/auth/module-write-access";
 import { isCardStatus } from "@/lib/business-cards/card";
 import { normalizeTags } from "@/lib/employees/columns";
 import { ensureInitialRole } from "@/lib/data/ensure-initial-role";
+import { alignClosedStintEnd } from "@/lib/employees/align-stint-end";
 import { carryPreHireTicksToHire } from "@/lib/onboarding/prehire";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -156,6 +157,9 @@ export async function PATCH(request: Request, context: RouteContext) {
           // Close the open role + stint at the last day.
           await tx.roleAssignment.updateMany({ where: { newHireId: id, endDate: null, startDate: { lte: termDate } }, data: { endDate: termDate } });
           await tx.employmentStint.updateMany({ where: { newHireId: id, endDate: null, startDate: { lte: termDate } }, data: { endDate: termDate } });
+          // Already closed (a corrected date on someone who left): move its end too -
+          // only for a date actually given, never the "today" fallback above.
+          if (parseDate(body.terminationDate) instanceof Date) await alignClosedStintEnd(tx, id, termDate);
         } else if (empChange === "ACTIVE") {
           // Reopen the latest stint + role so they have a current role again.
           const latestStint = await tx.employmentStint.findFirst({ where: { newHireId: id }, orderBy: { startDate: "desc" }, select: { id: true, endDate: true } });

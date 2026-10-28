@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { resolveFleetPosition } from "@/lib/fleet/positions";
+import { alignClosedStintEnd } from "@/lib/employees/align-stint-end";
 
 type RouteContext = { params: Promise<{ roleId: string }> };
 
@@ -31,7 +32,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   try {
     const role = await prisma.roleAssignment.findUnique({
       where: { id: roleId },
-      select: { id: true, newHireId: true, title: true, seat: true, aircraft: true, fleetPositionSlug: true }
+      select: { id: true, newHireId: true, title: true, seat: true, aircraft: true, fleetPositionSlug: true, endDate: true }
     });
     if (!role) return NextResponse.json({ message: "Role not found." }, { status: 404 });
 
@@ -73,9 +74,17 @@ export async function PATCH(request: Request, context: RouteContext) {
       const latest = await tx.roleAssignment.findFirst({
         where: { newHireId: role.newHireId },
         orderBy: { startDate: "desc" },
-        select: { title: true }
+        select: { id: true, title: true }
       });
       if (latest) await tx.newHire.update({ where: { id: role.newHireId }, data: { position: latest.title } });
+      // A corrected end on the LAST role is a corrected last day: carry it to the
+      // closed employment period the reports count from (lib/employees/align-stint-end.ts),
+      // but only when the role and the period ended on the same day before this edit.
+      // Many older people's role history stops years before they left, and re-saving
+      // one of those roles must not pull their period back to it.
+      if (latest?.id === roleId && endDate && role.endDate && role.endDate.getTime() !== endDate.getTime()) {
+        await alignClosedStintEnd(tx, role.newHireId, endDate, role.endDate);
+      }
     });
 
     return NextResponse.json({ ok: true });
