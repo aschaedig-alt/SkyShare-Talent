@@ -714,6 +714,16 @@ with their Employee Code, legal name and hire date. Export one of each.
 **What would count as a pass:** both exports exist and carry those columns, so the join
 can be built on a real file.
 
+**Update 2026-10-27 (commit agent, checked against the file):** the separation report has
+arrived — Paycom's Employee Turnover Report, tab "Terminated Employee Details" (EE Code,
+Name, Company Location, Department, Term Date, Term Type, Term Reason, Hire Date, Rehire
+Date), 168 rows. It carries Employee Code, name and hire date itself, and every row
+matched a Journey hire, so a separate census export turned out not to be needed. What it
+does **not** carry is rehire eligibility: there is no such column, and Rehire Date reads
+00/00/0000 on all 168 rows. Term Type is blank on every exit before 2025, which HR is
+filling in by hand (a sheet of 102 people). Left OPEN for you to close: the remaining
+question is whether Paycom holds rehire eligibility anywhere, or whether it is dropped.
+
 ---
 
 ## Closed
