@@ -19,7 +19,17 @@ export const HANDLE_PERSON: Record<string, string> = {
   michael: "cmr5dwrw500080orm0czohygz", // Michael Patwin, former VP
   patrick: "cmr18a39i000q04jqsuhn0j1e", // Patrick Mcpartland, former DO
   esantana: "cmr18a9p2004004jqo6nskz2i", // Emilio Santana (identified 2026-10-29)
-  hlowe: "cmr18a67m002804jqwkpgxfpj" // Helen Lowe (identified 2026-10-29)
+  hlowe: "cmr18a67m002804jqwkpgxfpj", // Helen Lowe (identified 2026-10-29)
+  // From the full calendar sweep (identified 2026-10-29)
+  ncharles: "cmr18a6r8002i04jqtvvcu13j", // Nicholas Charles
+  andrew: "cmr5dxa4k008k0ormz0pbcxwc", // Andrew Steward
+  clay: "cmr5dwyy3003i0orm2fq2953f", // Clay Lingo
+  kpoulsen: "cmr18a6nb002g04jq2cplddav", // Kimbol Poulsen
+  dstewart: "cmr18a6pa002h04jq9861b1yr", // Devan Stewart
+  garth: "cmr5jc1hg000c2crmqo740knn", // Garth Archibald
+  ncraig: "cmr5jc4z300242crm34ilbajl", // Nelson Craig
+  dgonzalez: "cmr5dyt8p001i6grm0rdsw12u", // Daniel Gonzalez
+  corissa: "cmr18a9dc003u04jqpq88wg4p" // Corissa Thomas
 };
 
 /** An older or shared address -> the address it stands for; null means it is not a
