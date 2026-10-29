@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { seatOf } from "@/lib/data/employee-journey";
 import { periodsOf } from "@/lib/data/headcount-history";
 import { isTestTagged } from "@/lib/testdata/markers";
+import { HANDLE_PERSON, canonicalHandles } from "@/lib/quality-of-hire/interviewers";
 import { latestBatch, type StoredBatch, type CalendarInterview, type ExitRow, type InterviewKind, type QohSource, type Voluntary } from "@/lib/quality-of-hire/imports";
 
 // ---------------------------------------------------------------------------
@@ -282,7 +283,7 @@ export async function getQualityOfHire(now: Date = new Date(), override: QohOver
         ? myIvs.filter((i) => day(i.startDateTime) >= lo && day(i.startDateTime) <= day(start) && !isCancelled(i.outcome))
         : [];
       const cal = calBy.get(`${h.id}|${iso(start)}`);
-      const calIvs = (cal ?? []).filter((r) => r.kind !== "none");
+      const calIvs = (cal ?? []).filter((r) => r.kind !== "none").map((r) => ({ ...r, interviewers: canonicalHandles(r.interviewers) }));
       const kinds = zeroKinds();
       let interviewsFrom: QohHire["interviewsFrom"] = null;
       let count: number | null = null;
@@ -392,9 +393,14 @@ export async function getQualityOfHire(now: Date = new Date(), override: QohOver
     b ? { id: b.id, file: b.file, savedAt: b.savedAt, uploadedBy: b.uploadedBy, rows: b.rows.length, matched: b.rows.filter((r) => r.newHireId).length } : null;
 
   // interviewer handles: a person's SkyShare address, else a login's; exact only
-  const handles = new Set((calendar?.rows ?? []).flatMap((r) => r.interviewers));
+  const handles = new Set((calendar?.rows ?? []).flatMap((r) => canonicalHandles(r.interviewers)));
   const interviewers: QualityOfHire["interviewers"] = {};
-  const handleOf = (email: string | null) => (email && /@skyshare.com$/i.test(email.trim()) ? email.trim().toLowerCase().split("@")[0] : null);
+  const handleOf = (email: string | null) => (email && /@skyshare\.com$/i.test(email.trim()) ? email.trim().toLowerCase().split("@")[0] : null);
+  const byId = new Map(people.map((p) => [p.id, p]));
+  for (const [h, id] of Object.entries(HANDLE_PERSON)) {
+    const p = byId.get(id);
+    if (p && handles.has(h)) interviewers[h] = { name: p.name, id: p.id };
+  }
   for (const p of people) {
     const h = handleOf(p.ssEmail);
     if (h && handles.has(h) && !isTestTagged(p.tags)) interviewers[h] = { name: p.name, id: p.id };
