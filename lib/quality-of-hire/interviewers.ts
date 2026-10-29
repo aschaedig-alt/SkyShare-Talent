@@ -17,7 +17,9 @@ export const HANDLE_PERSON: Record<string, string> = {
   nengel: "cmr5dwt0f000t0orm61z2snlo", // Nikki (Nichole) Engel
   sadams: "cmr18a93l003p04jqvg44f5az", // Scott Adams, pilot
   michael: "cmr5dwrw500080orm0czohygz", // Michael Patwin, former VP
-  patrick: "cmr18a39i000q04jqsuhn0j1e" // Patrick Mcpartland, former DO
+  patrick: "cmr18a39i000q04jqsuhn0j1e", // Patrick Mcpartland, former DO
+  esantana: "cmr18a9p2004004jqo6nskz2i", // Emilio Santana (identified 2026-10-29)
+  hlowe: "cmr18a67m002804jqwkpgxfpj" // Helen Lowe (identified 2026-10-29)
 };
 
 /** An older or shared address -> the address it stands for; null means it is not a
