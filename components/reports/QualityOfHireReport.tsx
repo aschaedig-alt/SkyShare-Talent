@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { clsx } from "clsx";
 import type { QohHire, QualityOfHire } from "@/lib/quality-of-hire/report";
 import { QualityOfHireUploads } from "@/components/reports/QualityOfHireUploads";
+import { QualityOfHireInterviews } from "@/components/reports/QualityOfHireInterviews";
 import { R } from "@/components/reports/report-ui";
 import { formatCalendarDay } from "@/lib/dates/display";
 
@@ -270,6 +271,8 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
           <p className={R.footnote}>From Paycom&apos;s terminations report, and HR&apos;s sheet for older leavers Paycom never typed. &quot;Unknown&quot; is an accepted answer.</p>
         </div>
       </div>
+
+      <QualityOfHireInterviews hires={hires} interviewers={qoh.interviewers} />
 
       <div className="mt-5">
         <div className={R.sectionLabel}>By department at hire (3 or more hires)</div>

@@ -70,6 +70,8 @@ export type QohHire = {
   interviewsFrom: "calendar" | "app" | null;
   kinds: Record<InterviewKind, number>;
   metCeo: boolean;
+  /** Each interview counted, oldest first. App-logged ones carry no interviewer handles. */
+  interviewList: Array<{ date: string; kind: InterviewKind; interviewers: string[] }>;
   voluntary: Voluntary | null;
   reason: string | null;
   typedFrom: ExitRow["typedFrom"];
@@ -92,6 +94,9 @@ export type QualityOfHire = {
   imports: Record<QohSource, QohImportInfo>;
   /** The span of hires the calendar file searched, for saying what it covers. */
   calendarSpan: { from: string; to: string } | null;
+  /** The calendar file's interviewer handles ("dcarter") to a person, where one has exactly that
+      SkyShare address. A handle nobody has stays a handle - never a guessed name. */
+  interviewers: Record<string, { name: string; id: string | null }>;
 };
 
 const day = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
@@ -178,6 +183,7 @@ export async function getQualityOfHire(now: Date = new Date(), override: QohOver
         startDate: true,
         terminationDate: true,
         candidateId: true,
+        ssEmail: true,
         offerSentDate: true,
         offerSignedDate: true,
         employmentStints: { select: { startDate: true, endDate: true } },
@@ -280,14 +286,17 @@ export async function getQualityOfHire(now: Date = new Date(), override: QohOver
       const kinds = zeroKinds();
       let interviewsFrom: QohHire["interviewsFrom"] = null;
       let count: number | null = null;
+      let interviewList: QohHire["interviewList"] = [];
       if (cal && calIvs.length >= appIvs.length) {
         for (const r of calIvs) kinds[r.kind as InterviewKind] += 1;
         count = calIvs.length;
         interviewsFrom = "calendar";
+        interviewList = calIvs.map((r) => ({ date: r.date ?? "", kind: r.kind as InterviewKind, interviewers: r.interviewers }));
       } else if (appIvs.length || cal) {
         for (const i of appIvs) kinds[APP_KIND[i.interviewType] ?? "other"] += 1;
         count = appIvs.length;
         interviewsFrom = "app";
+        interviewList = appIvs.map((i) => ({ date: iso(i.startDateTime), kind: APP_KIND[i.interviewType] ?? "other", interviewers: [] }));
       }
 
       // exit: the Paycom or HR row nearest this period's last day
@@ -322,6 +331,7 @@ export async function getQualityOfHire(now: Date = new Date(), override: QohOver
         interviewsFrom,
         kinds,
         metCeo: calIvs.some((r) => r.interviewers.includes(CEO_INTERVIEWER)),
+        interviewList: interviewList.sort((a, b) => (a.date < b.date ? -1 : 1)),
         ...exit
       });
     });
@@ -381,6 +391,20 @@ export async function getQualityOfHire(now: Date = new Date(), override: QohOver
   const info = (b: Saved): QohImportInfo =>
     b ? { id: b.id, file: b.file, savedAt: b.savedAt, uploadedBy: b.uploadedBy, rows: b.rows.length, matched: b.rows.filter((r) => r.newHireId).length } : null;
 
+  // interviewer handles: a person's SkyShare address, else a login's; exact only
+  const handles = new Set((calendar?.rows ?? []).flatMap((r) => r.interviewers));
+  const interviewers: QualityOfHire["interviewers"] = {};
+  const handleOf = (email: string | null) => (email && /@skyshare.com$/i.test(email.trim()) ? email.trim().toLowerCase().split("@")[0] : null);
+  for (const p of people) {
+    const h = handleOf(p.ssEmail);
+    if (h && handles.has(h) && !isTestTagged(p.tags)) interviewers[h] = { name: p.name, id: p.id };
+  }
+  const users = await prisma.user.findMany({ where: { email: { endsWith: "@skyshare.com", mode: "insensitive" } }, select: { email: true, name: true } });
+  for (const u of users) {
+    const h = handleOf(u.email);
+    if (h && handles.has(h) && !interviewers[h] && u.name) interviewers[h] = { name: u.name, id: null };
+  }
+
   return {
     asOf: now.toISOString(),
     hires,
@@ -389,6 +413,7 @@ export async function getQualityOfHire(now: Date = new Date(), override: QohOver
     neverStarted,
     mismatches,
     imports: { terminations: info(terminations), termTypes: info(termTypes), interviews: info(calendar) },
-    calendarSpan
+    calendarSpan,
+    interviewers
   };
 }
