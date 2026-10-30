@@ -748,6 +748,32 @@ three files save; Undo puts the report back as it was; Save again restores it.
 
 ---
 
+### 36. No offer step has filled its Offer sent / Offer signed date on its own yet
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-10-30
+
+Ticking "Offer letter sent to candidate" or "Candidate signed offer letter" now fills the
+hire's Offer sent / Offer signed date when that field is blank, and Paycom's "Offer
+Accepted" notice fills Offer signed with the day it arrived. Paycom's subjects also stopped
+reading since they gained an "[EXTERNAL] " prefix, which is fixed. The parser was checked
+against the real Oct 28-30 notices with nothing written. **No tick has been made through
+the new code**, because it writes the live database.
+
+Separately, as of 12:59pm on Oct 30, **no Paycom email had reached Front since 6:21pm on
+Oct 29**, while two did reach Aimee's Gmail (11:03am and 11:28am Oct 30) and Front itself
+was receiving other mail. Until that flow resumes the sweep has nothing to read.
+
+**How to check it:** on the next new hire, tick "Offer letter sent to candidate" on the
+onboarding checklist with Offer sent blank, then reload and look at Identity & dates. When
+their "Offer Accepted" email arrives, wait for the next Paycom check and look at Offer
+signed. Also confirm a Paycom email from Oct 30 or later shows in Front's HR Onboarding inbox.
+
+**What would count as a pass:** both dates appear on their own with the right day, a date
+you typed yourself is never changed, and Paycom mail is showing up in HR Onboarding again.
+
+---
+
 ## Closed
 
 ### 33. The candidate page's layout has not been saved since the boxes started fitting their content

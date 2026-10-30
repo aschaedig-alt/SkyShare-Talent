@@ -1,5 +1,37 @@
 import { prisma } from "@/lib/prisma";
 import { OFFER_STEP_KEYS, type OfferStepKey } from "@/lib/offers/steps";
+import { toCalendarDay } from "@/lib/dates/display";
+
+/**
+ * The two offer steps that have a DATE field on the hire's Identity & dates
+ * panel. Recruiters were ticking the step and then typing the same day into the
+ * field by hand, every time.
+ */
+const HIRE_DATE_FOR_STEP: Partial<Record<OfferStepKey, "offerSentDate" | "offerSignedDate">> = {
+  offer_letter_sent: "offerSentDate",
+  candidate_signed: "offerSignedDate"
+};
+
+/**
+ * Fill the hire's Offer sent / Offer signed date from the moment its step was
+ * done — ONLY when the field is still blank.
+ *
+ * Blank-only is the safety rule: a date somebody typed is never overwritten, and
+ * unticking a step never erases one. `at` is the moment the thing happened (the
+ * Paycom notice's arrival, or the tick), turned into the office-time calendar day
+ * so an evening tick does not land on tomorrow.
+ */
+export async function fillHireOfferDate(newHireId: string, key: string, at: Date): Promise<boolean> {
+  const field = HIRE_DATE_FOR_STEP[key as OfferStepKey];
+  if (!field) return false;
+  const day = toCalendarDay(at);
+  if (!day) return false;
+  const { count } = await prisma.newHire.updateMany({
+    where: { id: newHireId, [field]: null },
+    data: { [field]: day }
+  });
+  return count > 0;
+}
 
 // Keeps the offer's two faces in step: the 6 offer steps on the candidate's
 // application (offerStepsJson) and the SAME 6 keys as the "OFFER" group of the
@@ -53,6 +85,7 @@ export async function syncOfferStepToOnboarding(
     where: { newHireId: hire.id, key },
     data: { status: done ? "DONE" : "TODO", completedAt: done ? at : null }
   });
+  if (done) await fillHireOfferDate(hire.id, key, at);
 }
 
 /**

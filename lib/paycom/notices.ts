@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity/logger";
 import { isOfferStepKey } from "@/lib/offers/steps";
-import { syncOnboardingTaskToOffer } from "@/lib/offers/onboarding-sync";
+import { fillHireOfferDate, syncOnboardingTaskToOffer } from "@/lib/offers/onboarding-sync";
 import type { FrontMessage } from "@/lib/front";
 
 /**
@@ -334,13 +334,21 @@ const PAYCOM_PROVENANCE =
  * notice, not the notice — and leaving Re: in place is what stops somebody's
  * reply on a forwarded thread, which quotes the whole notice underneath it, from
  * being read as a fresh event.
+ *
+ * "[EXTERNAL]" is stripped too. SkyShare's mail system began stamping it on
+ * every outside message between Sep 10 and Oct 28 2026, so Paycom's notice now
+ * arrives as "[EXTERNAL] Offer Accepted". The anchored subject pattern refused
+ * that, and the Oct 28 and Oct 29 acceptances (Cameron Smith, Jonathan
+ * Gleisberg) both reported as unrecognised while a recruiter ticked them by
+ * hand. Only that exact tag goes — "[PaycomOnline]" is a real part of Paycom's
+ * own task-mail subjects and IGNORED matches on it.
  */
 export function bareSubject(subject: string): string {
   let s = subject.trim();
   let previous: string;
   do {
     previous = s;
-    s = s.replace(/^\s*(?:fwd?|fw)\s*:\s*/i, "");
+    s = s.replace(/^\s*(?:fwd?|fw)\s*:\s*/i, "").replace(/^\s*\[external\]\s*/i, "");
   } while (s !== previous);
   return s.trim();
 }
@@ -623,15 +631,25 @@ export async function processPaycomMessage(
   if (!task) {
     return { ...found, outcome: "no-such-task", detail: def.taskKey };
   }
+  // When the notice ARRIVED, not when the sweep got round to it — the nightly
+  // cron can run a day later, and this becomes the hire's Offer signed date.
+  const arrivedAt = typeof message.created_at === "number" ? new Date(message.created_at * 1000) : new Date();
+
   if (task.status === "DONE") {
-    return { ...found, outcome: "already-done" };
+    // Ticked by hand already, but the date field may still be blank — fill it
+    // from the notice. Blank-only, so a typed date is never touched.
+    const filled = opts?.dryRun ? false : await fillHireOfferDate(hire.id, def.taskKey, arrivedAt);
+    return { ...found, outcome: "already-done", detail: filled ? "filled the blank date from the notice" : undefined };
   }
 
   if (opts?.dryRun) {
     return { ...found, outcome: "would-tick", detail: def.taskKey };
   }
 
-  const completedAt = new Date();
+  const completedAt = arrivedAt;
+  // Before the offer sync, so the notice's day is the one that lands — the sync
+  // would otherwise fill the same blank field with the moment of the sweep.
+  await fillHireOfferDate(hire.id, def.taskKey, arrivedAt);
   await prisma.onboardingTask.update({
     where: { id: task.id },
     data: { status: "DONE", completedAt }

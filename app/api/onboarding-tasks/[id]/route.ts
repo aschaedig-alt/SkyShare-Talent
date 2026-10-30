@@ -4,7 +4,7 @@ import { requireApiPermission } from "@/lib/auth/route-auth";
 import { MAINTENANCE_GROUP } from "@/lib/onboarding/tasks";
 import { maybeArchiveOnCheckinsComplete } from "@/lib/data/onboarding";
 import { isOfferStepKey } from "@/lib/offers/steps";
-import { syncOnboardingTaskToOffer } from "@/lib/offers/onboarding-sync";
+import { fillHireOfferDate, syncOnboardingTaskToOffer } from "@/lib/offers/onboarding-sync";
 import { syncCardStatusFromChecklist } from "@/lib/business-cards/checklist-sync";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -37,6 +37,12 @@ export async function PATCH(request: Request, context: RouteContext) {
     // offer concept, so only DONE/TODO write back.
     if (isOfferStepKey(updated.key) && status !== "NA") {
       await syncOnboardingTaskToOffer(updated.newHireId, updated.key, status === "DONE", { id: auth.user.id, email: auth.user.email });
+    }
+    // The sync above fills Offer sent / Offer signed via the application, but a
+    // hire with no linked candidate has no application to go through — so fill
+    // it here too. Blank-only, so the second call is a no-op.
+    if (status === "DONE" && updated.completedAt) {
+      await fillHireOfferDate(updated.newHireId, updated.key, updated.completedAt);
     }
 
     // N/A on "Order business card" means this person isn't getting cards — move
