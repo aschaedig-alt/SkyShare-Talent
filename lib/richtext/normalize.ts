@@ -29,6 +29,7 @@
 // BROWSER ONLY (it needs DOMParser). The server still runs sanitizeRichText —
 // this is a correctness pass, never the security boundary.
 
+import { trailingBreaksToBlankLines } from "@/lib/richtext/blank-lines";
 import {
   snapTextColor,
   snapHighlightColor,
@@ -360,10 +361,52 @@ function walkTable(el: HTMLElement, state: InlineState): string {
     .join("");
 }
 
+/** Does this element hold a block (list, paragraph, table…) anywhere inside it? */
+function hasBlockInside(el: Element): boolean {
+  return Array.from(el.querySelectorAll("*")).some((d) => isBlockish(d.tagName));
+}
+
+/** Text, a <br>, or an inline element with no block inside — part of a line. */
+function isInlineNode(node: Node): boolean {
+  if (node.nodeType === Node.TEXT_NODE) return true;
+  if (node.nodeType !== Node.ELEMENT_NODE) return false;
+  const tag = (node as Element).tagName;
+  if (isBlockish(tag) || tag === "LI" || tag === "TR" || tag === "TD" || tag === "TH") return false;
+  return !hasBlockInside(node as Element);
+}
+
+/**
+ * A container's children, with neighbouring INLINE content kept together as one
+ * paragraph — the way a browser lays it out.
+ *
+ * THE BUG THIS FIXES (Oct 30 check behind feedback cmvpxe5xt). Every loose
+ * inline child used to become its own paragraph, so <b>Name<br></b>@Aimee text
+ * — one bold line then one line of text in the saved view — opened in the
+ * editor as three lines with a blank between, and saved that way. Measured: the
+ * editor drew it 32px taller than the saved view. A run that is nothing but
+ * line breaks, sitting between blocks, is that many blank lines — which is how
+ * a browser draws …</p><br><div>…
+ */
 function childrenBlock(el: Node, state: InlineState): string {
-  return Array.from(el.childNodes)
-    .map((child) => walkBlock(child, state))
-    .join("");
+  const parts: string[] = [];
+  let run: Node[] = [];
+  const flush = () => {
+    if (!run.length) return;
+    const inner = run.map((n) => walkInline(n, state)).join("");
+    const paragraph = emitParagraph(inner);
+    if (paragraph) parts.push(paragraph);
+    else parts.push(BLANK_LINE.repeat((inner.match(/<br \/>/g) ?? []).length));
+    run = [];
+  };
+  for (const child of Array.from(el.childNodes)) {
+    if (isInlineNode(child)) run.push(child);
+    else {
+      flush();
+      parts.push(walkBlock(child, state));
+    }
+  }
+  flush();
+  return parts.join("");
 }
 
 /** Walk block-level structure — paragraphs, lists, headings, quotes, tables. */
@@ -377,8 +420,11 @@ function walkBlock(node: Node, state: InlineState): string {
   const tag = el.tagName;
 
   if (DROP_ENTIRELY.has(tag)) return "";
-  // A break BETWEEN blocks is spacing, not content; blocks already space themselves.
-  if (tag === "BR") return "";
+  // A break BETWEEN blocks (…</p><br><div>…) is drawn by a browser as a blank
+  // line, so it IS one. It used to be dropped as "spacing", which made the
+  // editor open a note with fewer blank lines than the saved view showed —
+  // 5 of 81 stored notes on Oct 30 (feedback cmvpxe5xt).
+  if (tag === "BR") return BLANK_LINE;
 
   if (tag === "TABLE") return walkTable(el, nextState(el, state));
   if (tag === "UL" || tag === "OL") return walkList(el, nextState(el, state));
@@ -407,29 +453,7 @@ function walkBlock(node: Node, state: InlineState): string {
   // headings and 24 bullets inside a single <span>, and flattening it to one
   // paragraph deleted every bullet the moment it was opened. Its inline runs
   // become paragraphs and its blocks stay blocks, with its styling inherited.
-  if (Array.from(el.querySelectorAll("*")).some((child) => isBlockish(child.tagName))) {
-    const inner = nextState(el, state);
-    const parts: string[] = [];
-    let run: Node[] = [];
-    const flush = () => {
-      if (run.length) parts.push(emitParagraph(run.map((n) => walkInline(n, inner)).join("")));
-      run = [];
-    };
-    for (const child of Array.from(el.childNodes)) {
-      const blockish =
-        child.nodeType === Node.ELEMENT_NODE &&
-        (isBlockish((child as Element).tagName) ||
-          Array.from((child as Element).querySelectorAll("*")).some((d) => isBlockish(d.tagName)));
-      if (blockish) {
-        flush();
-        parts.push(walkBlock(child, inner));
-      } else {
-        run.push(child);
-      }
-    }
-    flush();
-    return parts.join("");
-  }
+  if (hasBlockInside(el)) return childrenBlock(el, nextState(el, state));
   return emitParagraph(walkInline(el, state));
 }
 
@@ -447,7 +471,7 @@ export function normalizeRichHtml(rawHtml: string): string {
   if (typeof DOMParser === "undefined") return rawHtml;
 
   const doc = new DOMParser().parseFromString(rawHtml, "text/html");
-  return trimBlankLines(childrenBlock(doc.body, BASE_STATE).trim());
+  return trimBlankLines(trailingBreaksToBlankLines(childrenBlock(doc.body, BASE_STATE).trim()));
 }
 
 /**

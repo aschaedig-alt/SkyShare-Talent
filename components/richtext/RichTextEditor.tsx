@@ -10,6 +10,7 @@ import {
   Heading, Quote, Link2, Palette, Type, AtSign, Eraser
 } from "lucide-react";
 import { normalizeRichHtml, plainTextToHtml } from "@/lib/richtext/normalize";
+import { trailingBreaksToBlankLines } from "@/lib/richtext/blank-lines";
 import { TEXT_COLORS, HIGHLIGHT_COLORS } from "@/lib/richtext/tokens";
 
 /**
@@ -425,13 +426,20 @@ export function RichTextEditor({
   );
 }
 
-/** Read-only render of stored rich text. The HTML is sanitized server-side. */
+/**
+ * Read-only render of stored rich text. The HTML is sanitized server-side.
+ *
+ * Trailing breaks are converted HERE as well as on save, so a note saved before
+ * the fix shows the blank lines its author saw in the editor — see
+ * lib/richtext/blank-lines.ts. (Only ever removes a <br> and adds an empty <p>,
+ * so it cannot introduce anything the sanitizer would not have allowed.)
+ */
 export function RichTextView({ html, className }: { html: string; className?: string }) {
   if (!html) return null;
   return (
     <div
       className={clsx("text-sm text-brand-lea dark:text-slate-100", CONTENT_CLASSES, className)}
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: trailingBreaksToBlankLines(html) }}
     />
   );
 }

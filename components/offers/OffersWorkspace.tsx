@@ -6,6 +6,7 @@ import { clsx } from "clsx";
 import { FileSignature, ArrowRight } from "lucide-react";
 import { offerStatusLabel } from "@/lib/offers/constants";
 import type { OffersBoard, OfferRow } from "@/lib/data/offers";
+import { compareOffers, OFFER_SORTS, type OfferSort } from "@/lib/offers/sort";
 import { formatMomentDate, formatCalendarDay } from "@/lib/dates/display";
 
 // sent/signed/declined are real moments (office timezone); the start date is a
@@ -123,10 +124,15 @@ function OfferCard({ row }: { row: OfferRow }) {
 
 export function OffersWorkspace({ board }: { board: OffersBoard }) {
   const [filter, setFilter] = useState<Filter>("ALL");
+  // Newest first by default on every tab (feedback cmvpxiipu); the others are a choice.
+  const [sort, setSort] = useState<OfferSort>("newest");
 
   const rows = useMemo(
-    () => (filter === "ALL" ? board.rows : board.rows.filter((r) => r.status === filter)),
-    [board.rows, filter]
+    () =>
+      (filter === "ALL" ? board.rows : board.rows.filter((r) => r.status === filter))
+        .slice()
+        .sort(compareOffers[sort]),
+    [board.rows, filter, sort]
   );
 
   const tabs: Array<{ key: Filter; label: string; count: number }> = [
@@ -175,6 +181,20 @@ export function OffersWorkspace({ board }: { board: OffersBoard }) {
             {t.label} ({t.count})
           </button>
         ))}
+        <label className="ml-auto flex items-center gap-2 text-xs font-semibold text-brand-grey dark:text-slate-400">
+          Sort
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as OfferSort)}
+            className="rounded border border-brand-lea/15 bg-white px-2 py-1.5 text-xs font-semibold text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+          >
+            {OFFER_SORTS.map((o) => (
+              <option key={o.key} value={o.key}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {rows.length === 0 ? (

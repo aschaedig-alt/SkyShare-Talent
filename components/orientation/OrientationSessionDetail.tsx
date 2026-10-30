@@ -38,6 +38,14 @@ function candidateLabel(c: SessionCandidate): string {
   return `${c.name}${role}${start}${booked}`;
 }
 
+/** The "Complete" group's line — name, position, start date, attended date (her ask, Oct 30). */
+function completeLabel(c: SessionCandidate): string {
+  const role = c.position ? ` · ${c.position}` : "";
+  const start = c.startDate ? ` · started ${formatCalendarDayShort(c.startDate)}` : " · no start date";
+  const attended = c.attendedOn ? ` · attended ${formatCalendarDayShort(c.attendedOn)}` : " · attended (date not recorded)";
+  return `${c.name}${role}${start}${attended}`;
+}
+
 async function patchJson(url: string, body: unknown, method = "PATCH") {
   const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
   return res.ok;
@@ -383,13 +391,17 @@ export function OrientationSessionDetail({
   // booked on another upcoming session, so they are handled and only need to
   // appear if you are deliberately moving them. "Later" = starts after this
   // session, so they normally belong to the next orientation but stay one click
-  // away. Everyone else (no start date, already attended, past onboarding) is
-  // still listed. Scheduled is checked FIRST so a person cannot fall into two
-  // groups.
-  const suggestedCands = session.candidates.filter((c) => c.suggested);
-  const scheduledCands = session.candidates.filter((c) => !c.suggested && c.scheduledOn);
-  const laterCands = session.candidates.filter((c) => !c.suggested && !c.scheduledOn && c.startsAfter);
-  const otherCands = session.candidates.filter((c) => !c.suggested && !c.scheduledOn && !c.startsAfter);
+  // away. Complete = already attended. Everyone else = not attended and none of
+  // the above. Someone with no start date is Suggested (Oct 30). Scheduled is
+  // checked FIRST so a person cannot fall into two groups.
+  // The grouping itself is decided server-side (CandidateGroup in
+  // lib/data/orientation.ts) so a person can only ever land in one group.
+  const inGroup = (g: SessionCandidate["group"]) => session.candidates.filter((c) => c.group === g);
+  const suggestedCands = inGroup("SUGGESTED");
+  const scheduledCands = inGroup("SCHEDULED");
+  const laterCands = inGroup("LATER");
+  const otherCands = inGroup("OTHER");
+  const completeCands = inGroup("COMPLETE");
   async function addAttendee() {
     if (!addId) return;
     setBusy(true);
@@ -766,7 +778,7 @@ export function OrientationSessionDetail({
           <div className="mt-3 flex items-center gap-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
             <select value={addId} onChange={(e) => setAddId(e.target.value)} className="flex-1 rounded border border-brand-lea/15 px-2 py-1.5 text-sm text-brand-lea dark:border-white/10 dark:text-slate-100">
               <option value="">Add attendee…</option>
-              {/* Four groups, but nobody is hidden — who attends is a judgment
+              {/* Five groups, and nobody is hidden — who attends is a judgment
                   call, so a late starter, someone with no start date, or someone
                   already booked elsewhere can still be added on purpose. The
                   start date is shown because that is what the decision turns on. */}
@@ -788,6 +800,11 @@ export function OrientationSessionDetail({
               {otherCands.length > 0 ? (
                 <optgroup label="Everyone else">
                   {otherCands.map((c) => <option key={c.id} value={c.id}>{candidateLabel(c)}</option>)}
+                </optgroup>
+              ) : null}
+              {completeCands.length > 0 ? (
+                <optgroup label="Complete">
+                  {completeCands.map((c) => <option key={c.id} value={c.id}>{completeLabel(c)}</option>)}
                 </optgroup>
               ) : null}
             </select>

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { candidateFieldScopeWhere, type CandidateAccessScope } from "@/lib/auth/candidate-scope";
+import { compareOffers } from "@/lib/offers/sort";
 
 export type OfferRow = {
   applicationId: string;
@@ -17,6 +18,12 @@ export type OfferRow = {
   notSentAt: string | null;
   notSentReason: string | null;
   startDate: string | null;
+  /**
+   * What "newest" sorts on: the offer's most recent dated event (sent, signed,
+   * declined or stopped). A planned or started offer has none yet, so it falls
+   * back to when its application last changed — it is in progress, so recent.
+   */
+  latestAt: string;
   source: string | null;
   /** Set once they have been moved into onboarding. */
   hireId: string | null;
@@ -31,11 +38,26 @@ export type OffersBoard = {
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
-// Outstanding work first: an offer that is out is the one you are waiting on,
-// and a signed offer that has not been onboarded is the one you are late on.
-// Started/planned are still in your court, so they sit below the sent/signed ones.
-// Offers that ended sort last — they are the record, not the work.
-const ORDER: Record<string, number> = { SENT: 0, SIGNED: 1, STARTED: 2, PLANNED: 3, DECLINED: 4, NOT_SENT: 5 };
+function latestOfferEvent(a: {
+  offerSentAt: Date | null;
+  offerSignedAt: Date | null;
+  offerDeclinedAt: Date | null;
+  offerNotSentAt: Date | null;
+  updatedAt: Date;
+}): string {
+  const events = [a.offerSentAt, a.offerSignedAt, a.offerDeclinedAt, a.offerNotSentAt].filter(
+    (d): d is Date => d !== null
+  );
+  const latest = events.length ? new Date(Math.max(...events.map((d) => d.getTime()))) : a.updatedAt;
+  return latest.toISOString();
+}
+
+// NEWEST FIRST, on every tab — her ask, feedback cmvpxiipu (Oct 26): "default
+// the newest offer at the top ... reverse the default order for all of these
+// tabs". It used to group by status (out, signed, started, planned, ended) and
+// then go OLDEST first within each group, so July's signed offers sat at the
+// top of All. Other orders are a choice on the page (OffersWorkspace). A signed
+// offer nobody has onboarded is still called out by the banner and its card.
 
 // viewer is REQUIRED. Offers ride on the CANDIDATES module (see app/offers/page.tsx),
 // which is precisely the module a hand-picked hiring manager has switched ON - so this
@@ -61,6 +83,7 @@ export async function getOffersBoard(viewer: CandidateAccessScope | null): Promi
       offerNotSentReason: true,
       offerStartDate: true,
       offerSource: true,
+      updatedAt: true,
       candidateId: true,
       candidate: { select: { id: true, displayName: true, primaryEmail: true } },
       job: { select: { id: true, title: true } }
@@ -93,17 +116,11 @@ export async function getOffersBoard(viewer: CandidateAccessScope | null): Promi
       notSentAt: iso(a.offerNotSentAt),
       notSentReason: a.offerNotSentReason,
       startDate: iso(a.offerStartDate),
+      latestAt: latestOfferEvent(a),
       source: a.offerSource,
       hireId: hireByCandidate.get(a.candidateId) ?? null
     }))
-    .sort((x, y) => {
-      const byStatus = (ORDER[x.status] ?? 9) - (ORDER[y.status] ?? 9);
-      if (byStatus !== 0) return byStatus;
-      // Then soonest start first, then most recent activity.
-      const xs = x.startDate ?? x.signedAt ?? x.sentAt ?? "";
-      const ys = y.startDate ?? y.signedAt ?? y.sentAt ?? "";
-      return xs.localeCompare(ys);
-    });
+    .sort(compareOffers.newest);
 
   const counts = {
     planned: rows.filter((r) => r.status === "PLANNED").length,

@@ -18,6 +18,7 @@
  * parser.
  */
 
+import { trailingBreaksToBlankLines } from "@/lib/richtext/blank-lines";
 import { snapTextColor, snapHighlightColor, snapFontSize, styleAttr, stripZeroWidth } from "@/lib/richtext/tokens";
 
 const ALLOWED_TAGS = new Set([
@@ -251,7 +252,9 @@ export function sanitizeRichText(input: string | null | undefined): string {
   // Anything left open is closed here, so the result is always balanced.
   while (openStack.length) out.push(`</${openStack.pop()}>`);
 
-  return trimBlankLines(dropEmptyElements(out.join("")).trim());
+  // A break stranded at the end of a paragraph becomes a real blank line — see
+  // lib/richtext/blank-lines.ts (feedback cmvpxe5xt).
+  return trimBlankLines(trailingBreaksToBlankLines(dropEmptyElements(out.join("")).trim()));
 }
 
 /** Plain-text version, for search and for the existing `notes`/`body` columns. */

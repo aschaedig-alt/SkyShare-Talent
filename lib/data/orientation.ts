@@ -186,6 +186,22 @@ export type PrepTaskView = {
   done: boolean;
 };
 
+/**
+ * The "Add attendee" picker's groups, in the order they are shown.
+ *
+ * Rules from feedback cmvve3mp0 (Oct 30), in her words where it matters:
+ *   SUGGESTED  in onboarding, has not attended, not booked elsewhere, and either
+ *              starts by this session OR has no start date yet — "if someone
+ *              doesnt have a start date they should be in the suggested because
+ *              they are not yet scheduled." (Both Logros were missing from it.)
+ *   SCHEDULED  already booked on another upcoming session.
+ *   LATER      starts after this session — normally the next orientation.
+ *   OTHER      has not attended and fits none of the above ("Everyone else").
+ *   COMPLETE   already attended — "former new employees who have already
+ *              attended orientation", shown with their start and attended dates.
+ */
+export type CandidateGroup = "SUGGESTED" | "SCHEDULED" | "LATER" | "OTHER" | "COMPLETE";
+
 /** Someone who can be added to a session. `startDate` is surfaced so the picker
     can show WHEN they start — the thing you actually decide on — and `startsAfter`
     marks people whose start date falls after this session, so they read as "next
@@ -194,7 +210,11 @@ export type SessionCandidate = {
   id: string;
   name: string;
   position: string | null;
+  /** Which picker group they belong in — decided once, here. See candidateGroup. */
+  group: CandidateGroup;
   suggested: boolean;
+  /** When they attended orientation, for the "Complete" group's line. */
+  attendedOn: string | null;
   startDate: string | null;
   startsAfter: boolean;
   /** ISO date of another session they are ALREADY booked on, if any. They are
@@ -330,23 +350,27 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
   // Candidates to add: anyone not already on this session and not archived —
   // deliberately broad, because who attends is a judgment call (someone can be
   // held back, squeezed in, or moved) and the tool should never block that.
+  // `canceled: false` — a hire whose offer was accepted but who never started is
+  // not an employee and never will be, so they are not anyone's attendee. Auggie
+  // Quintero (canceled, still at stage ACTIVE) was sitting under Suggested; see
+  // lib/data/current-employee.ts for what `canceled` means.
   const hires = await prisma.newHire.findMany({
-    where: { id: { notIn: [...attendeeHireIds] }, stage: { not: "ARCHIVED" } },
+    where: { id: { notIn: [...attendeeHireIds] }, stage: { not: "ARCHIVED" }, canceled: false },
     select: {
       id: true,
       name: true,
       position: true,
       stage: true,
       startDate: true,
-      tasks: { where: { key: "attended_orientation" }, select: { status: true } }
+      orientationDate: true,
+      tasks: { where: { key: "attended_orientation" }, select: { status: true, completedAt: true } }
     },
     orderBy: { name: "asc" }
   });
-  // "Suggested" = the obvious ones: an active hire who hasn't attended AND has
-  // actually started (or starts) by the day of this session. Someone starting
-  // later belongs to the NEXT orientation, and someone with no start date can't
-  // be judged at all (no signed offer yet, typically) — neither is suggested,
-  // but both stay in the list so they can still be added on purpose.
+  // Groups are decided in candidateGroup's rules (see CandidateGroup). Someone
+  // starting later belongs to the NEXT orientation; someone with NO start date
+  // IS suggested since Oct 30 — they are not scheduled anywhere yet, which is
+  // exactly what Suggested is for (it used to leave them under Everyone else).
   // Who is ALREADY booked on some other session. Without this the picker
   // suggests people who are plainly handled — two of the nine suggestions for
   // the Sep 1 session were already on Aug 4 — which is what buried the people
@@ -358,8 +382,14 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
   // Only a session that has not happened yet counts as "already scheduled": a
   // past or completed one means they still need a seat, not that they have one.
   const scheduledOnByHire = new Map<string, Date>();
+  // The latest COMPLETED session each person was on — their attended date.
+  const attendedOnByHire = new Map<string, Date>();
   for (const b of otherBookings) {
-    if (b.session.status === "COMPLETE") continue;
+    if (b.session.status === "COMPLETE") {
+      const seen = attendedOnByHire.get(b.newHireId);
+      if (!seen || b.session.date > seen) attendedOnByHire.set(b.newHireId, b.session.date);
+      continue;
+    }
     const current = scheduledOnByHire.get(b.newHireId);
     if (!current || b.session.date < current) scheduledOnByHire.set(b.newHireId, b.session.date);
   }
@@ -367,17 +397,33 @@ export async function getSessionDetail(id: string): Promise<SessionDetail | null
   const sessionDay = officeDayKey(s.date);
   const candidates: SessionCandidate[] = hires.map((h) => {
     const startsAfter = h.startDate ? calendarDayKey(h.startDate) > sessionDay : false;
-    const notAttended = (h.tasks[0]?.status ?? "TODO") !== "DONE";
+    const attendedTask = h.tasks[0];
+    const attended = attendedTask?.status === "DONE";
     const scheduled = scheduledOnByHire.get(h.id) ?? null;
+    // Attended date: the completed session they were on, else the orientation
+    // date on their record, else when the checklist step was ticked.
+    const attendedOn = attended
+      ? attendedOnByHire.get(h.id) ?? h.orientationDate ?? attendedTask?.completedAt ?? null
+      : null;
+    const group: CandidateGroup = scheduled
+      ? "SCHEDULED"
+      : attended
+        ? "COMPLETE"
+        : startsAfter
+          ? "LATER"
+          : h.stage === "ACTIVE"
+            ? "SUGGESTED"
+            : "OTHER";
     return {
       id: h.id,
       name: h.name,
       position: h.position,
+      group,
       startDate: h.startDate ? h.startDate.toISOString() : null,
       startsAfter,
       scheduledOn: scheduled ? scheduled.toISOString() : null,
-      suggested:
-        h.stage === "ACTIVE" && notAttended && h.startDate !== null && !startsAfter && scheduled === null
+      attendedOn: attendedOn ? attendedOn.toISOString() : null,
+      suggested: group === "SUGGESTED"
     };
   });
   // suggested first
