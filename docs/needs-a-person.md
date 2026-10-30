@@ -750,7 +750,7 @@ three files save; Undo puts the report back as it was; Save again restores it.
 
 ### 36. No offer step has filled its Offer sent / Offer signed date on its own yet
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN (deployed 2026-10-30, bee8ebc)
 **Added:** 2026-10-30
 
 Ticking "Offer letter sent to candidate" or "Candidate signed offer letter" now fills the
