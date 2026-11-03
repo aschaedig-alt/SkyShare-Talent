@@ -709,7 +709,7 @@ const hireSelect = {
  * separate `canceled: false` clauses would be five chances to miss one, which is
  * how the checklist became the only place they still showed.
  */
-function hiresInStage(stage: HireStage) {
+export function hiresInStage(stage: HireStage) {
   if (stage === "ARCHIVED") return { OR: [{ stage: "ARCHIVED" }, { canceled: true }] };
   return { stage, canceled: false };
 }

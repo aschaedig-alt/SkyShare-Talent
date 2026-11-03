@@ -772,6 +772,29 @@ signed. Also confirm a Paycom email from Oct 30 or later shows in Front's HR Onb
 **What would count as a pass:** both dates appear on their own with the right day, a date
 you typed yourself is never changed, and Paycom mail is showing up in HR Onboarding again.
 
+### 37. Nobody has saved a note since blank lines started surviving the save
+
+**Status:** OPEN (deployed 2026-10-30, aa436e5)
+**Added:** 2026-11-03 — owed since Oct 30; the handoff said NOT VERIFIED and this entry was missed
+
+Feedback cmvpxe5xt: a blank line showed while editing a note and vanished once it was saved.
+The cause was a line break left stranded at the end of a paragraph, which the editor draws
+as a blank line and a normal page does not. It is now turned into a real blank line on
+save, when the editor opens a note, and when a saved note is shown, so older notes show
+their blank lines without being re-saved. Checked on Oct 30 with nothing written: all 81
+stored notes keep their text and bullets, and on Teya Clarke's Jan 10 interview pressing
+Enter before a question produced a real blank line that the saved view draws at full
+height. **No note has been saved through the new code**, because a save writes the live
+database. This replaces item 32, which was closed on Oct 26 as superseded by this bug.
+
+**How to check it:** open any interview write-up or candidate note, press Enter twice
+between two lines to leave a blank line, add a bullet and an indented bullet under it,
+then save. Reopen it with Edit, then Cancel.
+
+**What would count as a pass:** the saved note shows the blank line, the bullet and the
+indented bullet exactly as they looked while editing, and reopening it shows the same
+again.
+
 ---
 
 ## Closed

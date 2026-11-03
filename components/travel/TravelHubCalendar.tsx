@@ -132,6 +132,14 @@ export function TravelHubCalendar({ data }: { data: TravelCalendarData }) {
     setCursor({ year: next.getUTCFullYear(), month: next.getUTCMonth() });
   };
 
+  // Back to the month we are in — feedback cmw0yr025 (Nov 3): "if im looking at
+  // another month, i can select today and it brings me to this month". Uses the
+  // office-timezone `today` the grid already outlines, not the trip-based
+  // opening month, which can be a different month when this one is empty.
+  const thisMonth = { year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) - 1 };
+  const onThisMonth = cursor.year === thisMonth.year && cursor.month === thisMonth.month;
+  const goToday = () => setCursor(thisMonth);
+
   const monthName = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(
     new Date(Date.UTC(cursor.year, cursor.month, 1))
   );
@@ -159,6 +167,14 @@ export function TravelHubCalendar({ data }: { data: TravelCalendarData }) {
           <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Who is traveling</h2>
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={goToday}
+            aria-pressed={onThisMonth}
+            title="Show this month"
+            className="mr-1 rounded border border-brand-lea/15 px-2.5 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-gold/10 hover:shadow-glow dark:border-white/10 dark:text-slate-200"
+          >
+            Today
+          </button>
           <button
             onClick={() => shift(-1)}
             aria-label="Previous month"

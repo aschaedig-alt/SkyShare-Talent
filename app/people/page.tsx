@@ -12,10 +12,11 @@ import { getTaskSendsByHire } from "@/lib/front/send-status";
 import { getTaskSkipsByHire } from "@/lib/front/task-email";
 import { PreOnboardingWorkspace, type PeopleTab } from "@/components/people/PreOnboardingWorkspace";
 import { isAdminOrRecruiter } from "@/lib/auth/roles";
+import { getOnboardingCalendarData } from "@/lib/data/onboarding-calendar";
 
 export const dynamic = "force-dynamic";
 
-const TABS: PeopleTab[] = ["dashboard", "grid", "post", "archived"];
+const TABS: PeopleTab[] = ["dashboard", "grid", "calendar", "post", "archived"];
 
 function tabFromParam(value: string | undefined): PeopleTab {
   // Grid + Milestones merged into one tab; keep old ?tab=milestones links working.
@@ -37,6 +38,11 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
 
   if (tab === "dashboard") {
     return <PreOnboardingWorkspace tab={tab} counts={counts} canManage={canManage} dashboard={await getActiveDashboard()} />;
+  }
+  // The onboarding month calendar — its own tab, NOT on the dashboard (his
+  // choice, Nov 3, from previews of both). Feedback cmw0yn8lh / cmw0ytvlc.
+  if (tab === "calendar") {
+    return <PreOnboardingWorkspace tab={tab} counts={counts} canManage={canManage} calendar={await getOnboardingCalendarData()} />;
   }
   if (tab === "grid") {
     const [grid, checklist, checkins, taskSends] = await Promise.all([getActiveGridHires(), getGridChecklist(), getCheckinEmailTargets(), getTaskSendsByHire()]);

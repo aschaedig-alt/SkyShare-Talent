@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 
@@ -42,8 +42,22 @@ export function NewHireBottomTabs({ tabs }: { tabs: BottomTab[] }) {
   });
   const current = tabs.find((t) => t.key === active) ?? tabs[0];
 
+  // The browser's own #sections jump happens before this page has streamed in
+  // past its loading skeleton, so it finds nothing and stays at the top —
+  // measured Nov 3: scrollY 0 with the checklist 882px down. Do the jump
+  // ourselves once the tabs exist, and only when the link asked for it.
+  useEffect(() => {
+    if (window.location.hash === "#sections") {
+      document.getElementById("sections")?.scrollIntoView({ block: "start" });
+    }
+  }, []);
+
   return (
-    <div className="space-y-3">
+    // id="sections" is a link target: /people/<id>?tab=checklist#sections opens
+    // the record on its Checklist AND scrolls down to it (the onboarding
+    // calendar's Open checklist button, Nov 3). Without the jump, ?tab= alone
+    // selects the tab but leaves you at the top of a long page.
+    <div id="sections" className="scroll-mt-4 space-y-3">
       <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="New hire sections">
         {tabs.map((t) => {
           const on = t.key === current?.key;

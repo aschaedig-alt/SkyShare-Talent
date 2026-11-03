@@ -13,6 +13,8 @@ import type {
 } from "@/lib/data/onboarding";
 import type { GridChecklistGroup, CheckinEmailTarget } from "@/lib/data/onboarding-grid-config";
 import { OnboardingDashboardTab } from "@/components/people/OnboardingDashboardTab";
+import { OnboardingCalendar } from "@/components/people/OnboardingCalendar";
+import type { OnboardingCalendarData } from "@/lib/onboarding/calendar";
 import { OnboardingGridTab } from "@/components/people/OnboardingGridTab";
 import { PostOnboardTab } from "@/components/people/PostOnboardTab";
 import { OnboardingArchivedTab } from "@/components/people/OnboardingArchivedTab";
@@ -20,13 +22,15 @@ import { ImportHiresButton } from "@/components/people/ImportHiresButton";
 import { PaycomScanButton } from "@/components/people/PaycomScanButton";
 import { Button, Modal, Input } from "@/components/ui";
 
-export type PeopleTab = "dashboard" | "grid" | "post" | "archived";
+export type PeopleTab = "dashboard" | "calendar" | "grid" | "post" | "archived";
 
 type Props = {
   tab: PeopleTab;
   counts: { active: number; postOnboard: number; archived: number };
   canManage?: boolean;
   dashboard?: OnboardingDashboard;
+  /** The onboarding month calendar, for the Calendar tab — see components/people/OnboardingCalendar. */
+  calendar?: OnboardingCalendarData;
   grid?: GridHire[];
   checklist?: GridChecklistGroup[];
   /** Post-onboarding check-ins, so Manage tasks can point one at a template. */
@@ -42,7 +46,7 @@ type Props = {
   archived?: NewHireRow[];
 };
 
-export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboard, grid, checklist, checkins, emailTaskKeys, post, archived, taskSends, taskSkips }: Props) {
+export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboard, calendar, grid, checklist, checkins, emailTaskKeys, post, archived, taskSends, taskSkips }: Props) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -59,6 +63,8 @@ export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboa
   const tabs: Array<{ key: PeopleTab; label: string; badge?: number }> = [
     { key: "dashboard", label: "Dashboard" },
     { key: "grid", label: "Checklist", badge: counts.active },
+    // Third, after Checklist (his ask, Nov 3).
+    { key: "calendar", label: "Calendar" },
     { key: "post", label: "Post-onboard", badge: counts.postOnboard },
     { key: "archived", label: "Archived", badge: counts.archived }
   ];
@@ -151,6 +157,7 @@ export function PreOnboardingWorkspace({ tab, counts, canManage = false, dashboa
       </div>
 
       {tab === "dashboard" && dashboard ? <OnboardingDashboardTab dashboard={dashboard} /> : null}
+      {tab === "calendar" && calendar ? <OnboardingCalendar data={calendar} /> : null}
       {tab === "grid" && grid ? <OnboardingGridTab hires={grid} checklist={checklist ?? []} checkins={checkins ?? []} taskSends={taskSends ?? {}} /> : null}
       {tab === "post" && post ? <PostOnboardTab hires={post} emailTaskKeys={emailTaskKeys ?? []} taskSends={taskSends ?? {}} taskSkips={taskSkips ?? {}} /> : null}
       {tab === "archived" && archived ? <OnboardingArchivedTab rows={archived} /> : null}

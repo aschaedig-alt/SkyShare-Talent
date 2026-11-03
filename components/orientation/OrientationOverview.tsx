@@ -382,7 +382,7 @@ export function OrientationOverview({
 
       <div className="border-b border-brand-lea/10 dark:border-white/10">
         <nav className="flex gap-6">
-          {([["sessions", "Sessions"], ["cohorts", "Cohorts & calendar"]] as const).map(([key, label]) => (
+          {([["sessions", "Sessions"], ["cohorts", "Attendees & calendar"]] as const).map(([key, label]) => (
             <button key={key} onClick={() => setView(key)} className={clsx("border-b-2 px-1 py-3 text-sm font-semibold transition hover:shadow-glow", view === key ? "border-brand-lea text-brand-lea dark:border-slate-100 dark:text-slate-100" : "border-transparent text-brand-grey hover:text-brand-lea dark:text-slate-400 dark:hover:text-slate-100")}>
               {label}
               {key === "cohorts" && cohorts.length > 0 ? <span className="ml-1.5 text-brand-grey dark:text-slate-400">· {cohorts.length}</span> : null}
@@ -396,7 +396,7 @@ export function OrientationOverview({
           <section>
             <h2 className="mb-2 text-sm font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Upcoming</h2>
             {upcoming.length === 0 ? (
-              <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">No upcoming sessions. Create one, or use the Cohorts tab to spin one up from onboarding orientation dates.</p>
+              <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">No upcoming sessions. Create one, or use the Attendees tab to spin one up from onboarding orientation dates.</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{upcoming.map((s) => <SessionCard key={s.id} s={s} />)}</div>
             )}
@@ -421,7 +421,7 @@ export function OrientationOverview({
             </div>
           </section>
           <section>
-            <h2 className="mb-2 text-sm font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Cohorts by orientation date</h2>
+            <h2 className="mb-2 text-sm font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Attendees by orientation date</h2>
             {cohorts.length === 0 ? (
               <p className="rounded bg-white p-6 text-center text-sm text-brand-grey shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-400 dark:ring-white/10">No active hires have an orientation date set yet. Set one on a hire under New hires and they&apos;ll group here.</p>
             ) : (
