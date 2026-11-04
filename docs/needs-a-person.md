@@ -797,7 +797,7 @@ again.
 
 ### 38. Nobody has dragged an aircraft card with a mouse or saved the crew chart since it became draggable
 
-**Status:** OPEN (waiting on the deploy of the crew chart drag-and-drop change)
+**Status:** OPEN (deployed 2026-11-03, 2addb48)
 **Added:** 2026-11-03
 
 Feedback cmw13sa9s: in Edit all on Fleet → Crew, aircraft cards can now be dragged to
@@ -820,7 +820,7 @@ and the Chief Pilot box reads Cameron Morgan.
 
 ### 39. The daily sheet check has never run on the live site, and no suggestion has been used for real
 
-**Status:** OPEN (waiting on the deploy of the sheet check)
+**Status:** OPEN (deployed 2026-11-03, 2addb48)
 **Added:** 2026-11-03
 
 Feedback cmw13vxfx: every morning (12:30 UTC) the app reads the per-aircraft tabs of
