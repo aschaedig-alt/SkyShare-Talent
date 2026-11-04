@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
-import type { CrewGroup, Departure, Seat } from "@/lib/fleet/staffing/types";
+import type { CrewGroup, CrewLeadership, CrewPool, Departure, Seat } from "@/lib/fleet/staffing/types";
 import { normSeat, cntSeat } from "@/lib/fleet/staffing/compute";
 import { CREW_GROUPS, CREW_LEADERSHIP, CREW_TRAINING, CREW_PILOT_TURNOVER, turnoverFor } from "@/lib/fleet/staffing/crew-data";
 import { aircraftLabel, positionLabel, isoToday, splitDepartures, isDepartureArchived, DEPARTURE_ARCHIVE_DAYS } from "@/lib/fleet/staffing/labels";
@@ -17,6 +17,8 @@ import { BackupPlan } from "./BackupPlan";
 import { TrainingTab } from "./TrainingTab";
 import { useUnsavedGuard } from "./useUnsavedGuard";
 import styles from "./OrgChart.module.css";
+import { SheetSuggestions } from "./SheetSuggestions";
+import type { ScanState } from "@/lib/fleet/sheet-scan/store.server";
 
 type SortKey = "Fleet size" | "Open seats";
 type ParkedKey = "hide" | "show";
@@ -617,11 +619,19 @@ export default function CrewOrgChart({
   initialGroups,
   initialLinks,
   initialTraining,
+  initialLeadership,
+  initialSheetScan,
+  sheetScanUnsaved = false,
   canEdit = false
 }: {
   initialGroups?: CrewGroup[];
   initialLinks?: Record<string, string>;
   initialTraining?: TrainingRecord[];
+  /** The Chief Pilot + assistant boxes, saved with the roster since Nov 3. */
+  initialLeadership?: CrewLeadership;
+  /** The daily sheet check (feedback cmw13vxfx) — admins only, absent otherwise. */
+  initialSheetScan?: ScanState;
+  sheetScanUnsaved?: boolean;
   canEdit?: boolean;
 } = {}) {
   const [sort, setSort] = useState<SortKey>("Fleet size");
@@ -647,6 +657,14 @@ export default function CrewOrgChart({
   // Training records, edited and saved alongside the roster in the same blob.
   const [training, setTraining] = useState<TrainingRecord[]>(() => initialTraining ?? []);
   const [savedTraining, setSavedTraining] = useState<TrainingRecord[]>(() => initialTraining ?? []);
+  // The Chief Pilot and assistant boxes, edited in Edit roster and saved in the
+  // same blob (feedback cmw13sa9s, Nov 3). They used to be a code constant.
+  const [leadership, setLeadership] = useState<CrewLeadership>(() => initialLeadership ?? CREW_LEADERSHIP);
+  const [savedLeadership, setSavedLeadership] = useState<CrewLeadership>(() => initialLeadership ?? CREW_LEADERSHIP);
+  // Drag and drop of aircraft cards in Edit roster: which card is being dragged
+  // (its index in groupsData) and where it would land.
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dropAt, setDropAt] = useState<{ before: number | null; pool: CrewPool } | null>(null);
   // "Find a person" panel, and who to highlight once their card opens.
   const [findOpen, setFindOpen] = useState(false);
   const [highlight, setHighlight] = useState<string | null>(null);
@@ -709,8 +727,9 @@ export default function CrewOrgChart({
     () =>
       JSON.stringify(groupsData) !== JSON.stringify(savedGroups) ||
       JSON.stringify(links) !== JSON.stringify(savedLinks) ||
-      JSON.stringify(training) !== JSON.stringify(savedTraining),
-    [groupsData, savedGroups, links, savedLinks, training, savedTraining]
+      JSON.stringify(training) !== JSON.stringify(savedTraining) ||
+      JSON.stringify(leadership) !== JSON.stringify(savedLeadership),
+    [groupsData, savedGroups, links, savedLinks, training, savedTraining, leadership, savedLeadership]
   );
   /** Has anything changed since THIS card editor opened? Drives its Save button
       and the discard prompt — separate from `dirty`, which is chart-wide. */
@@ -1165,10 +1184,24 @@ export default function CrewOrgChart({
       const res = await fetch("/api/workspace-settings/fleet-crew-roster", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        // Every save carries the CURRENT leadership, not only the Save button:
+        // several actions save straight away (a move, a departure), and one that
+        // left it out would come back with the stored copy and drop an unsaved
+        // edit to the Chief Pilot box. A reset sends nothing but the reset.
+        body: JSON.stringify(
+          body && typeof body === "object" && !("reset" in body) ? { ...(body as object), leadership } : body
+        )
       });
       if (!res.ok) throw new Error(String(res.status));
-      const data = (await res.json()) as { groups: CrewGroup[]; links?: Record<string, string>; training?: TrainingRecord[] };
+      const data = (await res.json()) as {
+        groups: CrewGroup[];
+        links?: Record<string, string>;
+        training?: TrainingRecord[];
+        leadership?: CrewLeadership;
+      };
+      const nextLeadership = data.leadership ?? CREW_LEADERSHIP;
+      setLeadership(nextLeadership);
+      setSavedLeadership(nextLeadership);
       setGroupsData(data.groups);
       setSavedGroups(data.groups);
       const nextLinks = data.links ?? {};
@@ -1198,6 +1231,7 @@ export default function CrewOrgChart({
     setGroupsData(savedGroups);
     setLinks(savedLinks);
     setTraining(savedTraining);
+    setLeadership(savedLeadership);
     setMovePick(null);
     setLeavePick(null);
     setSaveErr(null);
@@ -1448,10 +1482,17 @@ export default function CrewOrgChart({
     return a;
   };
 
-  const Card = ({ g }: { g: G }) => {
+  // Card and Section are plain functions CALLED from the JSX, not components.
+  // Declared inside this component, each would be a NEW component type on every
+  // render, so React rebuilt every card from scratch on each redraw. Harmless
+  // until drag and drop (Nov 3): a drag changes state on every move, and the
+  // card being dragged was thrown away mid-drag, so Chrome lost its dragend and
+  // the gold drop marker never drew (measured: both missing in Chrome).
+  const renderCard = (g: G) => {
+    const dz = cardDrag(g.idx, g.d.pool);
     if (g.d.poolFlown) {
       return (
-        <div className="gcol">
+        <div {...dz}>
           <div
             className="card"
             tabIndex={0}
@@ -1518,7 +1559,7 @@ export default function CrewOrgChart({
     const barCls = g.o > 0 ? "r" : g.tr > 0 ? "y" : "g";
     const barWord = g.o > 0 ? "Hiring" : g.tr > 0 ? "Training" : "Staffed";
     return (
-      <div className="gcol">
+      <div {...dz}>
         <div
           className="card"
           tabIndex={0}
@@ -1608,7 +1649,118 @@ export default function CrewOrgChart({
     );
   };
 
-  const Section = ({ title, list, bg, fg }: { title: string; list: G[]; bg: string; fg: string }) => {
+  // ---- drag and drop of aircraft cards (feedback cmw13sa9s, Nov 3) ----------
+  // Only in Edit roster, and only while no card is open: an open card editor
+  // tracks its aircraft BY POSITION, which a move would point at the wrong one.
+  // Pilot links and training are keyed by NAME, so reordering cannot detach them.
+  const canDrag = editMode && openIdx === null && cardEdit === null;
+  /** A shared-pool managed tail is managed by definition — it cannot become fractional. */
+  const dropAllowed = (pool: CrewPool) => !(dragIdx !== null && groupsData[dragIdx]?.poolFlown && pool === "SkyShare");
+
+  /** Move the dragged card in front of "before" (or to the end of its new section) and into "pool". */
+  const finishDrop = (target: { before: number | null; pool: CrewPool }) => {
+    const from = dragIdx;
+    setDragIdx(null);
+    setDropAt(null);
+    if (from === null || !dropAllowed(target.pool) || target.before === from) return;
+    applyEdit((d) => {
+      const [moved] = d.splice(from, 1);
+      if (!moved) return;
+      moved.pool = target.pool;
+      let at: number;
+      if (target.before === null) {
+        let last = -1;
+        d.forEach((x, i) => {
+          if (x.pool === target.pool) last = i;
+        });
+        at = last >= 0 ? last + 1 : target.pool === "SkyShare" ? 0 : d.length;
+      } else {
+        // "before" was an index in the array WITH the card still in it.
+        at = target.before > from ? target.before - 1 : target.before;
+      }
+      d.splice(at, 0, moved);
+    });
+    // The stored order IS the "Fleet size" order; "Open seats" re-sorts and
+    // would hide where the card was just put.
+    setSort("Fleet size");
+  };
+
+  /** Props for one card's grid item: draggable, and a drop target in front of itself. */
+  const cardDrag = (idx: number, pool: CrewPool) => {
+    if (!canDrag) return { className: "gcol" };
+    return {
+      className: `gcol dnd${dragIdx === idx ? " dragging" : ""}${dropAt?.before === idx ? " dropbefore" : ""}`,
+      draggable: true,
+      title: "Drag to reorder, or into the other section",
+      onDragStart: (e: React.DragEvent) => {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", String(idx));
+        setDragIdx(idx);
+      },
+      onDragEnd: () => {
+        setDragIdx(null);
+        setDropAt(null);
+      },
+      onDragOver: (e: React.DragEvent) => {
+        if (dragIdx === null || dragIdx === idx || !dropAllowed(pool)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (dropAt?.before !== idx || dropAt.pool !== pool) setDropAt({ before: idx, pool });
+      },
+      onDrop: (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        finishDrop({ before: idx, pool });
+      }
+    };
+  };
+
+  /** Props for a section's grid: dropping on its empty space puts the card at the section's end. */
+  const sectionDrop = (pool: CrewPool) =>
+    canDrag
+      ? {
+          onDragOver: (e: React.DragEvent) => {
+            if (dragIdx === null || !dropAllowed(pool)) return;
+            e.preventDefault();
+            if (dropAt?.before !== null || dropAt?.pool !== pool) setDropAt({ before: null, pool });
+          },
+          onDrop: (e: React.DragEvent) => {
+            e.preventDefault();
+            finishDrop({ before: null, pool });
+          }
+        }
+      : {};
+
+  const setLeader = (patch: Partial<CrewLeadership>) => setLeadership((cur) => ({ ...cur, ...patch }));
+  const setAssistant = (i: number, patch: Partial<CrewLeadership["assistants"][number]>) =>
+    setLeadership((cur) => ({ ...cur, assistants: cur.assistants.map((a, j) => (j === i ? { ...a, ...patch } : a)) }));
+
+  /**
+   * One assistant box beside the Chief Pilot — text boxes while editing.
+   * A plain function CALLED from the JSX, not a component: a component declared
+   * inside this one is a new type on every render, so React would remount the
+   * input on each keystroke and typing would lose focus after one letter.
+   */
+  const assistantBox = (i: number) => {
+    const a = leadership.assistants[i];
+    if (!a) return null;
+    if (!editMode) {
+      return (
+        <div className="mbox">
+          <div className="t">{a.name}</div>
+          <div className="mr">{a.role}</div>
+        </div>
+      );
+    }
+    return (
+      <div className="mbox">
+        <input className="ldin tin" aria-label={`Assistant ${i + 1} name`} value={a.name} onChange={(e) => setAssistant(i, { name: e.target.value })} />
+        <input className="ldin mrin" aria-label={`Assistant ${i + 1} title`} value={a.role} onChange={(e) => setAssistant(i, { role: e.target.value })} />
+      </div>
+    );
+  };
+
+  const renderSection = ({ title, list, bg, fg, pool }: { title: string; list: G[]; bg: string; fg: string; pool: CrewPool }) => {
     const cl = list.filter((g) => !g.d.noCount);
     const f = cl.reduce((n, g) => n + g.cp.f + g.cp.tr + (g.cs ? g.cs.f + g.cs.tr : 0), 0);
     const t = cl.reduce((n, g) => n + g.cp.at + (g.cs ? g.cs.at : 0), 0);
@@ -1621,9 +1773,9 @@ export default function CrewOrgChart({
             {f}/{t} filled · <b>{op}</b> open
           </div>
         </div>
-        <div className="grid">
+        <div className={`grid${dragIdx !== null ? " dropzone" : ""}${dropAt && dropAt.before === null && dropAt.pool === pool ? " droptarget" : ""}`} {...sectionDrop(pool)}>
           {sortG(list).map((g) => (
-            <Card key={g.idx} g={g} />
+            <Fragment key={g.idx}>{renderCard(g)}</Fragment>
           ))}
         </div>
       </>
@@ -1913,7 +2065,7 @@ export default function CrewOrgChart({
       {editMode ? (
         <div className="editbar">
           <div className="eb-msg">
-            <b>Editing roster.</b> Click any aircraft to add or remove pilots, move them between aircraft, and open or close seats — or to <b>duplicate</b> it into another tail. Use <b>{dirty ? "Cancel" : "Done"}</b> to leave without changing anyone.
+            <b>Editing roster.</b> Click any aircraft to add or remove pilots, move them between aircraft, and open or close seats — or to <b>duplicate</b> it into another tail. <b>Drag</b> a card to reorder it, or drop it in the other section to move it between Fractional and Managed. The Chief Pilot and assistant boxes are editable too. Use <b>{dirty ? "Cancel" : "Done"}</b> to leave without changing anyone.
             {dirty ? (
               <span className="eb-dirty"> · unsaved changes</span>
             ) : (
@@ -1948,19 +2100,42 @@ export default function CrewOrgChart({
       ) : null}
 
       <div style={{ display: isTraining ? "none" : undefined }}>
+      {canEdit && initialSheetScan ? (
+        <SheetSuggestions
+          initial={initialSheetScan}
+          unsaved={sheetScanUnsaved}
+          groups={groupsData}
+          links={links}
+          onApply={(next) => postRoster({ groups: next.groups, links: next.links, training })}
+          blockedReason={
+            editMode || cardEdit !== null || dirty
+              ? "Save or cancel your edits on the chart first — using a suggestion saves the whole chart."
+              : null
+          }
+        />
+      ) : null}
       <div className="toptree">
         <div className="mgmt">
-          <div className="mbox">
-            <div className="t">{CREW_LEADERSHIP.assistants[0].name}</div>
-            <div className="mr">{CREW_LEADERSHIP.assistants[0].role}</div>
-          </div>
+          {assistantBox(0)}
           <div className="chief">
             <div className="role">
-              <div className="kk kkw">{CREW_LEADERSHIP.reportsTo}</div>
-              <div className="r1">{CREW_LEADERSHIP.chiefRole}</div>
-              <div className="kk kkw" style={{ marginTop: 7, letterSpacing: "0.06em" }}>
-                {CREW_LEADERSHIP.chiefName}
-              </div>
+              {editMode ? (
+                // Edit roster: the three leadership fields are plain text boxes,
+                // saved with the rest of the chart by Save changes.
+                <>
+                  <input className="ldin kkin" aria-label="Reports to" value={leadership.reportsTo} onChange={(e) => setLeader({ reportsTo: e.target.value })} />
+                  <input className="ldin r1in" aria-label="Chief Pilot title" value={leadership.chiefRole} onChange={(e) => setLeader({ chiefRole: e.target.value })} />
+                  <input className="ldin kkin" aria-label="Chief Pilot name" value={leadership.chiefName} onChange={(e) => setLeader({ chiefName: e.target.value })} style={{ marginTop: 7 }} />
+                </>
+              ) : (
+                <>
+                  <div className="kk kkw">{leadership.reportsTo}</div>
+                  <div className="r1">{leadership.chiefRole}</div>
+                  <div className="kk kkw" style={{ marginTop: 7, letterSpacing: "0.06em" }}>
+                    {leadership.chiefName}
+                  </div>
+                </>
+              )}
             </div>
             <div className="stats">
               <div>
@@ -1989,17 +2164,14 @@ export default function CrewOrgChart({
               </div>
             </div>
           </div>
-          <div className="mbox">
-            <div className="t">{CREW_LEADERSHIP.assistants[1].name}</div>
-            <div className="mr">{CREW_LEADERSHIP.assistants[1].role}</div>
-          </div>
+          {assistantBox(1)}
         </div>
         <div className="vline" />
       </div>
 
-      <Section title="Fractional / Charter Aircraft" list={ssG} bg="var(--band-fractional-bg)" fg="var(--band-fractional-fg)" />
+      {renderSection({ title: "Fractional / Charter Aircraft", pool: "SkyShare", list: ssG, bg: "var(--band-fractional-bg)", fg: "var(--band-fractional-fg)" })}
       <div className="secgap" />
-      <Section title="Managed / Dedicated Aircraft" list={mgG} bg="var(--band-managed-bg)" fg="var(--band-managed-fg)" />
+      {renderSection({ title: "Managed / Dedicated Aircraft", pool: "Managed", list: mgG, bg: "var(--band-managed-bg)", fg: "var(--band-managed-fg)" })}
 
       <div className="legend">
         <span className="kk" style={{ color: "var(--n600)" }}>

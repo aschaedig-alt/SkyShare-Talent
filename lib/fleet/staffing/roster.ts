@@ -8,12 +8,13 @@
 // a malformed stored blob can never crash the page: anything unparseable falls
 // back to the seed.
 //
-// Leadership / training / turnover are NOT part of this override (v1 scope is
-// "edit by openings and move pilots around" = the aircraft groups only); they
-// stay sourced from crew-data.ts.
+// LEADERSHIP is part of the override since Nov 3 (feedback cmw13sa9s: "our chief
+// pilot has changed and I need to be able to adjust that from this section").
+// It used to be read straight from crew-data.ts, so nobody could change it
+// without a code edit. Turnover still comes from crew-data.ts.
 
-import type { CrewGroup, CrewPool, Departure, FillBucket, Seat, SeatKey } from "./types";
-import { CREW_GROUPS } from "./crew-data";
+import type { CrewGroup, CrewLeadership, CrewPool, Departure, FillBucket, Seat, SeatKey } from "./types";
+import { CREW_GROUPS, CREW_LEADERSHIP } from "./crew-data";
 import type { TrainingRecord } from "./training";
 
 /**
@@ -27,7 +28,34 @@ export type CrewLinks = Record<string, string>;
 /** Roster + candidate links + training records, all in the ONE stored blob.
     Training rides along here rather than in new database columns — see the note
     at the top of training.ts for why that matters on a shared live database. */
-export type CrewRoster = { groups: CrewGroup[]; links: CrewLinks; training: TrainingRecord[] };
+export type CrewRoster = { groups: CrewGroup[]; links: CrewLinks; training: TrainingRecord[]; leadership: CrewLeadership };
+
+/** The seed leadership, deep-cloned so callers can edit their copy. */
+export function defaultCrewLeadership(): CrewLeadership {
+  return structuredClone(CREW_LEADERSHIP);
+}
+
+/**
+ * Coerce stored/posted leadership into a safe shape. Never throws. A blank
+ * field keeps the seed's value rather than drawing an empty box, and there are
+ * always exactly two assistant slots, because the header has two places for them.
+ */
+export function normalizeCrewLeadership(input: unknown): CrewLeadership {
+  const seed = defaultCrewLeadership();
+  if (!input || typeof input !== "object" || Array.isArray(input)) return seed;
+  const raw = input as Record<string, unknown>;
+  const text = (v: unknown, fallback: string) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 120) : fallback);
+  const rawAssistants = Array.isArray(raw.assistants) ? raw.assistants : [];
+  return {
+    chiefName: text(raw.chiefName, seed.chiefName),
+    chiefRole: text(raw.chiefRole, seed.chiefRole),
+    reportsTo: text(raw.reportsTo, seed.reportsTo),
+    assistants: seed.assistants.map((fallback, i) => {
+      const a = rawAssistants[i] as Record<string, unknown> | undefined;
+      return a && typeof a === "object" ? { role: text(a.role, fallback.role), name: text(a.name, fallback.name) } : fallback;
+    })
+  };
+}
 
 /** Coerce a stored/posted links blob into a safe { name: candidateId } map. */
 export function normalizeCrewLinks(input: unknown): CrewLinks {

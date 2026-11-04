@@ -795,6 +795,54 @@ then save. Reopen it with Edit, then Cancel.
 indented bullet exactly as they looked while editing, and reopening it shows the same
 again.
 
+### 38. Nobody has dragged an aircraft card with a mouse or saved the crew chart since it became draggable
+
+**Status:** OPEN (waiting on the deploy of the crew chart drag-and-drop change)
+**Added:** 2026-11-03
+
+Feedback cmw13sa9s: in Edit all on Fleet → Crew, aircraft cards can now be dragged to
+reorder them or dropped into the other section to move them between Fractional and
+Managed, and the Chief Pilot and assistant boxes became text boxes saved with the chart.
+Checked on Nov 3 in Chrome against the real roster with every save blocked: the Challenger
+350 (N522AD) moved from Fractional into Managed between the Legacy 650 and the 560 XLS+,
+a reorder and a drop at a section's end worked, a shared-pool tail was refused from
+Fractional, and typing in a leadership box kept focus. **The drags were simulated drag
+events, not a hand on a mouse, and nothing was saved**, because Save rewrites the one
+shared roster everybody sees.
+
+**How to check it:** on Fleet → Crew press Edit all, drag the Challenger 350 card down
+into Managed / Dedicated Aircraft and drop it where it belongs by size, add its owner
+on the card if it has one, then Save changes and reload the page.
+
+**What would count as a pass:** after the reload the Challenger 350 is under Managed in
+the place you dropped it, Fractional shows 5 aircraft, nothing else on the chart moved,
+and the Chief Pilot box reads Cameron Morgan.
+
+### 39. The daily sheet check has never run on the live site, and no suggestion has been used for real
+
+**Status:** OPEN (waiting on the deploy of the sheet check)
+**Added:** 2026-11-03
+
+Feedback cmw13vxfx: every morning (12:30 UTC) the app reads the per-aircraft tabs of
+"Recruiting Status Tracking" as the skyshare-calendar-sync service account and lists the
+differences on Fleet → Crew as suggestions: each one shows what the chart has now, what
+the sheet says and the exact tab and row, with Keep as is / Use suggestion / Change with
+modifications. Checked on Nov 3 on this computer against the real sheet and chart: 68
+people agree, 13 suggestions, every one applies cleanly; the panel's buttons, the edit
+form and both error paths worked in Chrome with every save blocked, and a save echoed back
+moved Elijah Hall on screen. **Nothing was saved**, and the scheduled run can only happen
+on the live site. The live site uses the account's ORIGINAL key (Vercel); the Sheets API
+and the sheet sharing were set up Nov 3, so it should read, but that has not been seen.
+
+**How to check it:** the morning after the deploy, open Fleet → Crew. The Sheet check
+panel should say "Last scanned" with that morning's time. Then use one suggestion you
+agree with (for example a seat count) and reload, and press Keep as is on one you do
+not, then reload again.
+
+**What would count as a pass:** the panel shows a scan from that morning rather than an
+error, the suggestion you used is reflected on the chart after the reload, and the one
+you kept is gone from the list (it appears under "already decided").
+
 ---
 
 ## Closed

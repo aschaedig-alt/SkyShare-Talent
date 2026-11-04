@@ -7,8 +7,12 @@ import type { CrewGroup, CrewLeadership, TurnStat } from "./types";
 // OPEN (On Hold) = `parked`, TRANSITION OUT = `out`, "Dual Qualified (don't use
 // for numbers)" = counted on primary aircraft, tagged "+TYPE" on that primary.
 
+// The DEFAULT for the leadership boxes — what shows until somebody edits them in
+// Edit roster, after which the saved copy (fleet/crew-roster) wins. Chief Pilot
+// changed to Cameron Morgan on Nov 3 (his confirmation; David Ricks moves to a
+// G200 PIC seat, which Aimee added on the chart herself).
 export const CREW_LEADERSHIP: CrewLeadership = {
-  chiefName: "David Ricks",
+  chiefName: "Cameron Morgan",
   chiefRole: "Chief Pilot",
   reportsTo: "Reports to VP of Flight Ops",
   assistants: [
