@@ -45,6 +45,18 @@ const EXIT_MATCH_DAYS = 45;
 
 const NON_FLIGHT_DEPT = /fbo|accounting|finance|maintenance|\bmx\b|sales|marketing|human resources|safety|skyops|detailing|svr/i;
 
+// Journey spells some departments more than one way. These are the ones Aimee
+// combined on 2026-11-05 (her "Correct Department" column over the tab's own
+// department table); every other spelling is shown as recorded.
+const DEPARTMENT_GROUP: Record<string, string> = {
+  "FlightOps | Managed Client": "FlightOps",
+  Pilot: "FlightOps",
+  MX: "Maintenance",
+  "Maintenance | SLC": "Maintenance",
+  SVR: "SVR FBO"
+};
+const departmentGroup = (d: string) => DEPARTMENT_GROUP[d.trim()] ?? d.trim();
+
 export type QohHire = {
   id: string;
   name: string;
@@ -259,8 +271,9 @@ export async function getQualityOfHire(now: Date = new Date(), override: QohOver
       };
 
       const role = roleOn(roles, start) ?? roles.find((r) => Math.abs(day(r.startDate) - day(start)) <= 60 * DAY && (!end || day(r.startDate) <= day(end))) ?? null;
-      const department = role?.department || h.department || "";
-      const pilot = role ? (isPilotRole(role) ? "Pilot" : "Non-pilot") : NON_FLIGHT_DEPT.test(department) ? "Non-pilot" : "Role not recorded";
+      const recordedDepartment = role?.department || h.department || "";
+      const department = departmentGroup(recordedDepartment);
+      const pilot = role ? (isPilotRole(role) ? "Pilot" : "Non-pilot") : NON_FLIGHT_DEPT.test(recordedDepartment) ? "Non-pilot" : "Role not recorded";
 
       // the application behind this hire
       const appliedIn = (a: App, lo: number, hi: number) => !!a.appliedAt && day(a.appliedAt) >= day(start) - lo * DAY && day(a.appliedAt) <= day(start) + hi * DAY;
