@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import type { QohHire, QualityOfHire } from "@/lib/quality-of-hire/report";
 import { QualityOfHireUploads } from "@/components/reports/QualityOfHireUploads";
@@ -71,6 +72,49 @@ function interviewTitle(h: QohHire): string {
   return parts.length ? `${parts.join(", ")} - ${from}${h.metCeo ? ", met Cory" : ""}` : `none found - ${from}`;
 }
 
+// Aimee, 2026-11-05: a declined offer marked "Other" usually means the person took
+// another offer - better pay, closer to home so they need not relocate, or a schedule
+// they prefer. People seldom say which.
+const OTHER_DECLINE = "Usually another offer: better pay, no relocation, or a preferred schedule";
+
+/** Admin only: mark one exit as situational (caused by the business), or clear it. */
+function SituationalButton({ h }: { h: QohHire }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  async function send(situational: boolean, note?: string) {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/reports/quality-of-hire/situational", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ newHireId: h.id, start: h.start, situational, note })
+      });
+      if (res.ok) router.refresh();
+      else window.alert(((await res.json().catch(() => ({}))) as { message?: string }).message ?? "That did not save.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return h.situational ? (
+    <button type="button" className={clsx(R.smallButton, "ml-2")} disabled={busy} onClick={() => void send(false)}>
+      Not situational
+    </button>
+  ) : (
+    <button
+      type="button"
+      className={clsx(R.smallButton, "ml-2")}
+      disabled={busy}
+      title="The business caused this exit, so it is never read as a bad hire"
+      onClick={() => {
+        const note = window.prompt("What happened? For example: Ogden FBO sale", "Ogden FBO sale");
+        if (note && note.trim()) void send(true, note.trim());
+      }}
+    >
+      Mark situational
+    </button>
+  );
+}
+
 export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; canUpload: boolean }) {
   const years = useMemo(() => [...new Set(qoh.hires.map((h) => h.year))].sort((a, b) => a - b), [qoh.hires]);
   const [group, setGroup] = useState<Group>("all");
@@ -90,9 +134,13 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
   const accepted = offers.reduce((s, o) => s + o.accepted, 0);
   const declined = offers.reduce((s, o) => s + o.declined, 0);
   const leavers = hires.filter((h) => !h.stillHere);
+  // A situational exit (the business caused it - the Ogden FBO sale) is counted on
+  // its own, never as a quit or a let-go: Aimee, 2026-11-05.
   const earlyLeavers = hires.filter((h) => h.left365 === 1);
-  const vol = earlyLeavers.filter((h) => h.voluntary === "V").length;
-  const invol = earlyLeavers.filter((h) => h.voluntary === "I").length;
+  const situational = earlyLeavers.filter((h) => h.situational).length;
+  const vol = earlyLeavers.filter((h) => !h.situational && h.voluntary === "V").length;
+  const invol = earlyLeavers.filter((h) => !h.situational && h.voluntary === "I").length;
+  const untyped = earlyLeavers.length - situational - vol - invol;
   const groupWord = group === "all" ? "people" : group === "pilots" ? "pilots" : "support-role people";
   const yearWord = year === "all" ? `since ${years[0] ?? ""}` : `in ${year}`;
 
@@ -112,7 +160,7 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
 
   const reasons = new Map<string, { v: string; n: number }>();
   for (const h of leavers) {
-    const k = h.voluntary ? `${h.voluntary}|${h.reason ?? "No reason given"}` : "?|Not recorded yet";
+    const k = h.situational ? `S|Situational: ${h.situational}` : h.voluntary ? `${h.voluntary}|${h.reason ?? "No reason given"}` : "?|Not recorded yet";
     const r = reasons.get(k) ?? { v: k.split("|")[0], n: 0 };
     r.n += 1;
     reasons.set(k, r);
@@ -204,9 +252,9 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
           <div className={R.tileSub}>chose to leave inside a year</div>
         </div>
         <div className={R.tile}>
-          <div className={R.tileLabel}>Left in year one, not typed</div>
-          <div className={R.tileValue}>{earlyLeavers.length - vol - invol}</div>
-          <div className={R.tileSub}>no voluntary or involuntary on file yet</div>
+          <div className={R.tileLabel}>Left in year one, situational</div>
+          <div className={R.tileValue}>{situational}</div>
+          <div className={R.tileSub}>caused by the business, not the hire{untyped ? ` · ${untyped} more with no reason on file` : ""}</div>
         </div>
         <div className={R.tile}>
           <div className={R.tileLabel}>Still here today</div>
@@ -259,7 +307,7 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
                 {reasonRows.map(([k, r]) => (
                   <tr key={k} className={R.tr}>
                     <td className={R.td}>
-                      {r.v !== "?" ? <span className={clsx(R.chip, "mr-2")}>{r.v === "V" ? "Voluntary" : "Involuntary"}</span> : null}
+                      {r.v !== "?" && r.v !== "S" ? <span className={clsx(R.chip, "mr-2")}>{r.v === "V" ? "Voluntary" : "Involuntary"}</span> : null}
                       <span className={r.v === "?" ? R.muted : undefined}>{k.split("|")[1]}</span>
                     </td>
                     <td className={R.num}>{r.n}</td>
@@ -296,7 +344,7 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
                     <td className={R.td}>{d}</td>
                     <td className={R.num}>{hs.length}</td>
                     <Rate hs={hs} />
-                    <td className={R.num}>{hs.filter((h) => h.left365 === 1 && h.voluntary === "I").length}</td>
+                    <td className={R.num}>{hs.filter((h) => h.left365 === 1 && !h.situational && h.voluntary === "I").length}</td>
                     <td className={R.num}>{s.length ? pct(s.filter((h) => (h.interviews ?? 0) > 0).length, s.length) : "—"}</td>
                     <td className={R.num}>{pct(hs.filter((h) => h.stillHere).length, hs.length)}</td>
                   </tr>
@@ -345,7 +393,10 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
           <ul className="mt-2 divide-y divide-brand-lea/10 dark:divide-white/10">
             {qoh.declineReasons.map((r) => (
               <li key={r.reason} className="flex items-baseline justify-between gap-3 py-2 text-sm">
-                <span className={r.reason === "No reason recorded" ? R.muted : undefined}>{r.reason}</span>
+                <span className={r.reason === "No reason recorded" ? R.muted : undefined}>
+                  {r.reason}
+                  {/^other$/i.test(r.reason) ? <span className={clsx("block text-[11px]", R.muted)}>{OTHER_DECLINE}</span> : null}
+                </span>
                 <span className="tabular-nums">{r.count}</span>
               </li>
             ))}
@@ -429,8 +480,10 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
                     )}
                   </td>
                   <td className={R.td}>
-                    {h.voluntary ? <span className={clsx(R.chip, "mr-2")}>{h.voluntary === "V" ? "Voluntary" : "Involuntary"}</span> : null}
+                    {h.situational ? <span className={clsx(R.chip, "mr-2")}>Situational</span> : h.voluntary ? <span className={clsx(R.chip, "mr-2")}>{h.voluntary === "V" ? "Voluntary" : "Involuntary"}</span> : null}
                     <span className={h.reason ? undefined : R.muted}>{h.stillHere ? "" : h.reason ?? "not recorded"}</span>
+                    {h.situational ? <span className={clsx("block text-[11px]", R.muted)}>{h.situational}</span> : null}
+                    {canUpload && !h.stillHere ? <SituationalButton h={h} /> : null}
                   </td>
                 </tr>
               ))}

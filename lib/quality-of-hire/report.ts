@@ -3,6 +3,7 @@ import { seatOf } from "@/lib/data/employee-journey";
 import { periodsOf } from "@/lib/data/headcount-history";
 import { isTestTagged } from "@/lib/testdata/markers";
 import { HANDLE_PERSON, canonicalHandles } from "@/lib/quality-of-hire/interviewers";
+import { getSituationalMarks, periodKey } from "@/lib/quality-of-hire/situational";
 import { latestBatch, type StoredBatch, type CalendarInterview, type ExitRow, type InterviewKind, type QohSource, type Voluntary } from "@/lib/quality-of-hire/imports";
 
 // ---------------------------------------------------------------------------
@@ -88,6 +89,9 @@ export type QohHire = {
   voluntary: Voluntary | null;
   reason: string | null;
   typedFrom: ExitRow["typedFrom"];
+  /** HR marked this exit as caused by the business (the Ogden FBO sale), with its note:
+      never read as a bad or good hire. */
+  situational: string | null;
 };
 
 export type QohMismatch = { id: string | null; name: string; paycomLeft: string | null; journey: string };
@@ -184,7 +188,7 @@ type Saved<T> = (StoredBatch<T> & { id: string }) | null;
 export type QohOverride = { terminations?: Saved<ExitRow>; termTypes?: Saved<ExitRow>; interviews?: Saved<CalendarInterview> };
 
 export async function getQualityOfHire(now: Date = new Date(), override: QohOverride = {}): Promise<QualityOfHire> {
-  const [people, apps, interviews, terminations, termTypes, calendar] = await Promise.all([
+  const [people, apps, interviews, terminations, termTypes, calendar, situational] = await Promise.all([
     prisma.newHire.findMany({
       where: { canceled: false },
       select: {
@@ -216,7 +220,8 @@ export async function getQualityOfHire(now: Date = new Date(), override: QohOver
     }),
     "terminations" in override ? override.terminations ?? null : latestBatch<ExitRow>("terminations"),
     "termTypes" in override ? override.termTypes ?? null : latestBatch<ExitRow>("termTypes"),
-    "interviews" in override ? override.interviews ?? null : latestBatch<CalendarInterview>("interviews")
+    "interviews" in override ? override.interviews ?? null : latestBatch<CalendarInterview>("interviews"),
+    getSituationalMarks()
   ]);
   const neverStarted = (await prisma.newHire.findMany({ where: { canceled: true }, select: { tags: true } })).filter((h) => !isTestTagged(h.tags)).length;
 
@@ -346,7 +351,8 @@ export async function getQualityOfHire(now: Date = new Date(), override: QohOver
         kinds,
         metCeo: calIvs.some((r) => r.interviewers.includes(CEO_INTERVIEWER)),
         interviewList: interviewList.sort((a, b) => (a.date < b.date ? -1 : 1)),
-        ...exit
+        ...exit,
+        situational: left ? situational[periodKey(h.id, iso(start))]?.note ?? null : null
       });
     });
   }
