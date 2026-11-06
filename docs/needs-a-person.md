@@ -843,6 +843,31 @@ not, then reload again.
 error, the suggestion you used is reflected on the chart after the reload, and the one
 you kept is gone from the list (it appears under "already decided").
 
+### 40. The Paycom notes scan has never hit a Paycom sign-out, and its alert may not reach a phone
+
+**Status:** OPEN
+**Added:** 2026-11-06
+
+The "Paycom notes scan" scheduled task (Claude desktop app, weekdays every 2 hours plus Run
+now) copies the notes on every Paycom application that mentions Aimee into the app. Its first
+live run worked through Chrome while Paycom was signed in, and the filing, the typo pass and
+the Front "Notes Auto Added" tag were each checked against the live data that day.
+
+**Two things have not been seen:**
+
+- **The signed-out path.** Paycom never timed out during a run, so the stop-and-alert step
+  ("Paycom signed out — N mention(s) waiting…") has never fired for real.
+- **Whether the alert reaches anyone away from the desk.** On the first run a notification was
+  sent and reported as not reaching the phone, because Remote Control was not connected. A
+  desktop notification still shows on the computer, but nothing arrives on the phone unless
+  Remote Control is on.
+
+**How to check it:** the next time Paycom has signed out on its own, click Run now on the task.
+
+**What would count as a pass:** the run stops without touching the login form, a notification
+appears (on the phone too, if that matters), and after signing in a second Run now files the
+waiting mentions.
+
 ---
 
 ## Closed

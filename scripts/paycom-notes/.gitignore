@@ -1,0 +1,3 @@
+# Undo records the Paycom notes scan writes on every run (ids only). Local to this
+# machine, like the scan itself; never committed.
+undo/

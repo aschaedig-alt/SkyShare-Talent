@@ -287,6 +287,42 @@ export function resolveJob(paycomTitle: string, jobs: MatchableJob[]): JobResolu
   };
 }
 
+/**
+ * Create the job a Paycom posting title names, ONCE per `marker` (an upload batch, or
+ * the notes scan): a second application with the same title finds the job the first
+ * one made rather than making another. Shared by the applicant upload and the Paycom
+ * notes scan (lib/paycom/note-filing.ts) so the two create jobs identically.
+ */
+export async function createJobForPaycomTitle(
+  resolution: JobResolution,
+  appliedOn: string | null,
+  marker: string
+): Promise<{ job: { id: string; title: string; status: string }; created: boolean }> {
+  const made = await prisma.job.findFirst({ where: { sourceFilename: marker, title: resolution.newJobTitle }, select: { id: true, title: true, status: true } });
+  if (made) return { job: made, created: false };
+  const pilot = isPilotTitle(resolution.newJobTitle);
+  const aircraft = extractAircraftTypes(resolution.newJobTitle);
+  const job = await prisma.job.create({
+    data: {
+      title: resolution.newJobTitle,
+      normalizedTitle: resolution.newJobTitle.toLowerCase().replace(/\s+/g, " ").trim(),
+      status: resolution.closedPosting ? "RETIRED" : "OPEN",
+      source: CREATED_JOB_SOURCE,
+      sourceFilename: marker,
+      importedAt: new Date(),
+      openedDate: appliedOn ? mountainMidnight(appliedOn) : new Date(),
+      isPilotRole: pilot,
+      isPilotLeadershipRole: /\b(chief pilot|assistant chief pilot)\b/i.test(resolution.newJobTitle),
+      pilotSeat: pilot ? detectSeat(resolution.newJobTitle) : null,
+      aircraftTypesJson: aircraft.length ? JSON.stringify(aircraft) : null,
+      roleCategory: pilot ? "Pilot" : null,
+      originalFieldsJson: JSON.stringify({ paycomTitle: resolution.paycomTitle })
+    },
+    select: { id: true, title: true, status: true }
+  });
+  return { job, created: true };
+}
+
 // ---------------------------------------------------------------- preview
 
 export type PreviewRow = {
@@ -448,30 +484,9 @@ async function chooseJob(ctx: ApplyContext, app: ParsedApplication, notes: strin
   if (!target) {
     // "new": created ONCE per upload — a later row (or a later chunk) with the same
     // title finds the job this upload already made rather than making a second.
-    const made = await prisma.job.findFirst({ where: { sourceFilename: marker, title: resolution.newJobTitle }, select: { id: true, title: true, status: true } });
-    if (made) return { job: made, created: false, reopenedFrom: null };
-    const pilot = isPilotTitle(resolution.newJobTitle);
-    const aircraft = extractAircraftTypes(resolution.newJobTitle);
-    const job = await prisma.job.create({
-      data: {
-        title: resolution.newJobTitle,
-        normalizedTitle: resolution.newJobTitle.toLowerCase().replace(/\s+/g, " ").trim(),
-        status: resolution.closedPosting ? "RETIRED" : "OPEN",
-        source: CREATED_JOB_SOURCE,
-        sourceFilename: marker,
-        importedAt: new Date(),
-        openedDate: app.appliedOn ? mountainMidnight(app.appliedOn) : new Date(),
-        isPilotRole: pilot,
-        isPilotLeadershipRole: /\b(chief pilot|assistant chief pilot)\b/i.test(resolution.newJobTitle),
-        pilotSeat: pilot ? detectSeat(resolution.newJobTitle) : null,
-        aircraftTypesJson: aircraft.length ? JSON.stringify(aircraft) : null,
-        roleCategory: pilot ? "Pilot" : null,
-        originalFieldsJson: JSON.stringify({ paycomTitle: app.jobTitle })
-      },
-      select: { id: true, title: true, status: true }
-    });
-    notes.push(`Created job "${job.title}"${resolution.closedPosting ? " (retired — Paycom marks the posting closed)" : ""}.`);
-    return { job, created: true, reopenedFrom: null };
+    const { job, created } = await createJobForPaycomTitle(resolution, app.appliedOn, marker);
+    if (created) notes.push(`Created job "${job.title}"${resolution.closedPosting ? " (retired — Paycom marks the posting closed)" : ""}.`);
+    return { job, created, reopenedFrom: null };
   }
 
   let reopenedFrom: string | null = null;

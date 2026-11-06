@@ -64,7 +64,12 @@ export const JOURNEY_TAGS = {
   needsReview: "needs review",
 
   /** A travel booking was read out of this thread. */
-  travel: "travel"
+  travel: "travel",
+
+  /** A Paycom "You've Been Mentioned" notice whose application's notes the Paycom
+   *  notes scan has copied into the app (lib/paycom/note-filing.ts). Created by him
+   *  2026-11-06 and verified in the account that day, nested under SkyShare Journey. */
+  notesAutoAdded: "Notes Auto Added"
 } as const;
 
 /**

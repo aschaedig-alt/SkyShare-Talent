@@ -175,6 +175,12 @@ export function CandidateSegmentTiles({
           Recent interviews <ArrowRight className="h-3 w-3" />
         </Link>
         <Link
+          href="/candidates/recent-notes"
+          className="inline-flex items-center gap-1.5 rounded border border-brand-lea/15 bg-white px-2.5 py-1 text-xs font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/15 dark:bg-brand-panel dark:text-slate-100"
+        >
+          Recent notes <ArrowRight className="h-3 w-3" />
+        </Link>
+        <Link
           href="/candidates/manage"
           title="Rename, merge and tidy the tags and disposition reasons"
           className="inline-flex items-center gap-1.5 rounded border border-dashed border-brand-lea/25 px-2.5 py-1 text-xs font-semibold text-brand-eden transition hover:shadow-glow dark:border-white/25 dark:text-brand-edenOnDark"
