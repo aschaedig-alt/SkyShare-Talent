@@ -64,6 +64,12 @@ export default async function RecentNotesPage({
             Recent interviews
           </Link>
           <Link
+            href="/candidates/paycom-log"
+            className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100"
+          >
+            Paycom email log
+          </Link>
+          <Link
             href="/candidates"
             className="rounded border border-brand-lea/20 px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 dark:border-white/10 dark:text-slate-100"
           >

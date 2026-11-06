@@ -7,8 +7,8 @@ import { mountainMidnight, parsePaycomName } from "@/lib/paycom/applicant-bundle
 import { createJobForPaycomTitle, loadMatchableJobs, matchCandidate, resolveJob } from "@/lib/paycom/applicant-import";
 import type { PaycomApplicationPage } from "@/lib/paycom/notes-page";
 import { correctHtml, correctLines, protectedSet, type Correction, type CorrectionOutcome } from "@/lib/paycom/note-spelling";
-import { addTags, getMessages, iterateConversations, resolveTagIds } from "@/lib/front";
 import { JOURNEY_TAGS } from "@/lib/front/tags";
+import { FRONT_SINCE, findMentionCopies, tagAndArchive } from "@/lib/paycom/front-copies";
 
 /**
  * Filing Paycom notes into the app as interviews — the half of the Paycom notes scan
@@ -139,6 +139,15 @@ async function whoWrote(author: string): Promise<Person | null> {
     })
   );
   return nick.length ? unique(nick) : null;
+}
+
+/** The one directory person whose name starts with this first name, or null if none or several. */
+async function onePersonByFirstName(first: string): Promise<Person | null> {
+  await whoWrote("");
+  const f = clean(first);
+  const hits = (directory ?? []).filter((d) => d.keys.some((k) => k.split(" ")[0] === f && k.includes(" ")));
+  const emails = new Set(hits.map((h) => h.person.email).filter(Boolean));
+  return emails.size === 1 ? hits.find((h) => h.person.email)!.person : null;
 }
 
 /** The note as written, one paragraph per line — nothing cut, pay talk included. */
@@ -277,22 +286,56 @@ export async function fileNotes(
 
   const [interviews, candidateNotes] = where.candidateId
     ? await Promise.all([
-        prisma.interview.findMany({ where: { candidateId: where.candidateId }, select: { startDateTime: true, notes: true } }),
+        prisma.interview.findMany({ where: { candidateId: where.candidateId }, select: { startDateTime: true, notes: true, interviewer: true, source: true } }),
         prisma.candidateNote.findMany({ where: { candidateId: where.candidateId }, select: { body: true, sourceRef: true } })
       ])
     : [[], []];
   const existingText = [...interviews.map((i) => i.notes ?? ""), ...candidateNotes.map((n) => n.body)].map(textKey);
   const minute = (d: Date) => Math.floor(d.getTime() / 60000);
-  const takenMinutes = new Set(interviews.map((i) => minute(i.startDateTime)));
-  const takenRefs = new Set(candidateNotes.map((n) => n.sourceRef).filter(Boolean));
+  // SAME MINUTE IS NOT ENOUGH. Paycom often saves two people's notes in one minute (Devon's and
+  // Dave's write-ups after a panel; two emails Hannah files at once) — the 2026-11-06 backfill
+  // found 8 such pairs, and keying on the minute alone dropped the second note of each. So a
+  // match needs the same minute AND the same author. An interview with no interviewer recorded
+  // still counts (it cannot be told apart); one recorded from a Paycom INVITE does not, because
+  // an invite is the time slot, not anybody's write-up.
+  const who = (s: string | null | undefined) => (s ?? "").toLowerCase().replace(/[^a-z]/g, "");
+  const takenMinutes = new Map<number, Set<string>>();
+  for (const i of interviews) {
+    if (i.source === "paycom-invite") continue;
+    const set = takenMinutes.get(minute(i.startDateTime)) ?? new Set<string>();
+    set.add(who(i.interviewer));
+    takenMinutes.set(minute(i.startDateTime), set);
+  }
+  const minuteTaken = (at: Date, author: string) => {
+    const set = takenMinutes.get(minute(at));
+    return Boolean(set && (set.has(who(author)) || set.has("")));
+  };
+  // The ref carries the author for the same reason. Notes filed before that change carry the
+  // older ref (no author), so one of those counts only when its heading names this author.
   const refFor = (stamp: string) => `paycom:${page.applicationId}:${stamp}`;
+  // And the title: one person can save two notes in a minute (Hannah filing two emails at once).
+  const refWithAuthor = (stamp: string, author: string, title: string) => `${refFor(stamp)}:${who(author)}:${who(title)}`;
+  const refTaken = (stamp: string, author: string, title: string) =>
+    candidateNotes.some(
+      (n) =>
+        n.sourceRef === refWithAuthor(stamp, author, title) ||
+        (n.sourceRef === refFor(stamp) && n.body.includes(`Paycom note by ${author},`) && n.body.startsWith(title ? `${title} (` : "("))
+    );
 
   const protect = protectedSet([...(await directoryNames()), result.candidate?.name, page.name]);
 
   // Oldest first, so the rows are also created in the order the notes were written.
   const ordered = [...page.notes].sort((a, b) => a.at.getTime() - b.at.getTime());
   for (const note of ordered) {
-    const person = await whoWrote(note.author);
+    let person = await whoWrote(note.author);
+    // A note the recruiting team typed FOR a hiring manager — titled "Harry's interview notes" —
+    // is that manager's interview, filed under them. His rule, 2026-11-06. Only when the first
+    // name is exactly one person in the directory, and never a recruiting-team member.
+    const forWhom = note.title.match(/^\s*([A-Z][a-z]+)['’]s\b/)?.[1];
+    if (forWhom && person?.email && RECRUITING_TEAM.has(person.email)) {
+      const hm = await onePersonByFirstName(forWhom);
+      if (hm && hm.email && !RECRUITING_TEAM.has(hm.email)) person = hm;
+    }
     const email = person?.email ?? null;
     const team = Boolean(email && RECRUITING_TEAM.has(email));
     const type = team ? "RECRUITER_SCREEN" : "HIRING_MANAGER";
@@ -307,10 +350,10 @@ export async function fileNotes(
       corrections: [],
       filedAs: note.private ? "hr-only note" : team && !INTERVIEW_TITLE.test(note.title) ? "note" : "interview"
     };
-    if (takenRefs.has(refFor(note.stamp))) {
+    if (refTaken(note.stamp, plan.interviewer.name, note.title)) {
       plan.action = "already-there";
       plan.why = "this Paycom note is already on the profile as a candidate note";
-    } else if (takenMinutes.has(minute(note.at))) {
+    } else if (minuteTaken(note.at, plan.interviewer.name)) {
       plan.action = "already-there";
       plan.why = "an interview at that exact time is already on the profile";
     } else if (opening.length >= 20 && existingText.some((t) => t.includes(opening))) {
@@ -344,7 +387,7 @@ export async function fileNotes(
           body: [heading, ...body].join("\n").slice(0, 20000),
           bodyHtml: noteHtml([heading, ...body]).slice(0, 120000),
           source: NOTE_SOURCE,
-          sourceRef: refFor(note.stamp),
+          sourceRef: refWithAuthor(note.stamp, plan.interviewer.name, note.title),
           hrOnly: note.private,
           createdAt: note.at
         },
@@ -352,7 +395,7 @@ export async function fileNotes(
       });
       plan.noteId = created.id;
       result.undo.noteIds.push(created.id);
-      takenRefs.add(refFor(note.stamp));
+      candidateNotes.push({ body: [heading, ...body].join("\n"), sourceRef: refWithAuthor(note.stamp, plan.interviewer.name, note.title) });
       await logActivity({
         userEmail: opts.runBy ?? undefined,
         activityType: "CANDIDATE_EDITED",
@@ -381,7 +424,7 @@ export async function fileNotes(
       });
       plan.interviewId = interview.id;
       result.undo.interviewIds.push(interview.id);
-      takenMinutes.add(minute(note.at));
+      takenMinutes.set(minute(note.at), (takenMinutes.get(minute(note.at)) ?? new Set<string>()).add(who(plan.interviewer.name)));
       await logActivity({
         userEmail: opts.runBy ?? undefined,
         activityType: "CANDIDATE_EDITED",
@@ -478,33 +521,24 @@ export async function markMentionHandled(messageId: string, entry: HandledMentio
  * below is what makes it skip, and this tag is the visible mark where a copy exists.
  *
  * FINDING THEM. Front's search did NOT find "395768" inside a notice that contains it
- * (checked 2026-11-06), so the number is never searched for: the recent notices are
- * listed by the bare Paycom address term (the same rule lib/paycom/scan.ts uses) inside
- * a window, and each body is read for "(<id>)".
+ * (checked 2026-11-06), so the number is never searched for: the Paycom notices are
+ * listed by the bare Paycom address term (the same rule lib/paycom/scan.ts uses) and each
+ * mention body is read for "(<id>)" — see lib/paycom/front-copies.ts.
+ *
+ * HOW FAR BACK: to 2025-01-01, the start of the Paycom email log (his request, 2026-11-06;
+ * this was 120 days). The listing is cached per process, so a backfill pays for it once.
+ *
+ * ARCHIVE. With archive: true the copies are archived too, once tagged. The caller passes it
+ * only after the notes were saved (filed, or already there) — never before, because an
+ * archived thread is out of sight and a failed filing must stay where a person sees it.
  */
-export async function tagFrontCopies(paycomId: string, kind: FilingResult["kind"], days = 120): Promise<{ tagged: string[]; alreadyTagged: string[]; missingTags: string[] }> {
-  const { ids, missing } = await resolveTagIds([JOURNEY_TAGS.notesAutoAdded, JOURNEY_TAGS.automated]);
-  const out = { tagged: [] as string[], alreadyTagged: [] as string[], missingTags: missing };
-  if (!ids.length) return out;
-  const after = Math.floor((Date.now() - days * 86_400_000) / 1000);
-  const label = kind === "candidate" ? "Candidate" : "Application";
-  // String.raw keeps the backslashes: in a plain template literal "\(" is just "(", and the
-  // first version of this line silently matched nothing because of exactly that.
-  const needle = new RegExp(String.raw`${label}:\s*[^(<]*\(${paycomId}\)`);
-  for await (const conversation of iterateConversations(`systemmessage@paycomonline.com mentioned after:${after}`)) {
-    if (!/mentioned/i.test(conversation.subject ?? "")) continue;
-    const messages = await getMessages(conversation.id);
-    const text = messages.map((m) => `${m.text ?? ""} ${(m.body ?? "").replace(/<[^>]+>/g, " ")}`).join(" ");
-    if (!needle.test(text.replace(/\s+/g, " "))) continue;
-    const names = ((conversation.tags ?? []) as Array<{ name?: string }>).map((t) => (t.name ?? "").toLowerCase());
-    if (names.includes(JOURNEY_TAGS.notesAutoAdded.toLowerCase())) {
-      out.alreadyTagged.push(conversation.id);
-      continue;
-    }
-    await addTags(conversation.id, ids);
-    out.tagged.push(conversation.id);
-  }
-  return out;
+export async function tagFrontCopies(
+  paycomId: string,
+  kind: FilingResult["kind"],
+  opts: { since?: string; archive?: boolean } = {}
+): Promise<{ tagged: string[]; alreadyTagged: string[]; archived: string[]; missingTags: string[] }> {
+  const copies = await findMentionCopies(paycomId, kind, opts.since ?? FRONT_SINCE);
+  return tagAndArchive(copies, [JOURNEY_TAGS.notesAutoAdded, JOURNEY_TAGS.automated], { archive: opts.archive === true });
 }
 
 // ---------------------------------------------------------------- fixing a note already filed
