@@ -870,6 +870,31 @@ waiting mentions.
 
 ---
 
+### 41. The Paycom email log has not been opened in a browser, and the scan has not added a row to it yet
+
+**Status:** OPEN (deployed 2026-11-06, ad10840)
+**Added:** 2026-11-06
+
+Candidates > Paycom email log (/candidates/paycom-log) lists every Paycom email in Aimee's
+Gmail since Jan 1 2025: 2,649 rows, re-counted against the live data. The page returned
+200 locally with no error, but nobody has looked at it or clicked its filters. The
+scheduled Paycom notes scan now has a new first step that adds each new email to the log;
+that step has not run yet.
+
+**How to check it:**
+
+- Open the page on the live site. Click a month, a kind of email and an outcome tile, then
+  search a candidate's name.
+- After the next scheduled scan, check that today's Paycom emails appear at the top.
+- Optionally, open it with a login that is not HR. The personal and HR-only rows should be
+  hidden, with a count saying so.
+
+**What would count as a pass:** the filters change the rows, names link to the right
+profiles, new emails appear after a scan, and a non-HR login sees no personal or HR-only
+rows.
+
+---
+
 ## Closed
 
 ### 33. The candidate page's layout has not been saved since the boxes started fitting their content
