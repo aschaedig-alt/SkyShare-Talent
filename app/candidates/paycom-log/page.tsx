@@ -79,8 +79,8 @@ export default async function PaycomLogPage({
             </span>
           </div>
           <p className={R.heroSub}>
-            {view.total.toLocaleString()} logged in {view.months.length ? `${monthLabel(view.months[0])} – ${monthLabel(view.months.at(-1)!)}` : "no month yet"}
-            {view.hiddenForPrivacy ? ` · ${view.hiddenForPrivacy} HR-only or personal rows hidden for your access` : ""}
+            {view.logTotal.toLocaleString()} in the whole log{view.months.length ? `, ${monthLabel(view.months[0])} – ${monthLabel(view.months.at(-1)!)}` : ", no month yet"}
+            {view.hiddenForPrivacy ? ` · ${view.hiddenForPrivacy.toLocaleString()} more hidden for your access (HR-only, personal, or outside your candidates)` : ""}
           </p>
         </div>
 

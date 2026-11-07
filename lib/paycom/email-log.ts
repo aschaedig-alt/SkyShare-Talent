@@ -421,7 +421,11 @@ export type LogView = {
   months: string[];
   familyCounts: Record<string, number>;
   outcomeCounts: Record<string, number>;
+  /** Rows in the month shown (every month when none is chosen), as this viewer may see them. */
   total: number;
+  /** Rows in the whole log, every month, as this viewer may see them. */
+  logTotal: number;
+  /** Whole-log rows this viewer may not see (HR-only, personal, or outside the candidate allowlist). */
   hiddenForPrivacy: number;
 };
 
@@ -433,16 +437,19 @@ export async function getPaycomLog(options: {
   viewer: ViewerScope | null;
 }): Promise<LogView> {
   const months = await listMonths();
+  // Every month is read so the headline can give the whole log's total, not just the month shown.
   const settings = await prisma.workspaceSetting.findMany({
-    where: { scope: LOG_SCOPE, ...(options.month ? { key: options.month } : {}) },
-    select: { valueJson: true }
+    where: { scope: LOG_SCOPE },
+    select: { key: true, valueJson: true }
   });
-  const isHr = options.viewer === null || Boolean(options.viewer?.isHr);
-  let all = settings.flatMap((s) => Object.values(JSON.parse(s.valueJson) as Record<string, PaycomLogRow>));
-  const before = all.length;
+  // The profile's own rule (lib/data/candidates.ts, lib/data/recent-notes.ts): no viewer is not HR.
+  const isHr = Boolean(options.viewer?.isHr);
+  const everyRow = settings.flatMap((s) => Object.values(JSON.parse(s.valueJson) as Record<string, PaycomLogRow>).map((r) => ({ r, month: s.key })));
   // HR-only and personal rows need the HR permission; the candidate allowlist applies to the rest.
-  all = all.filter((r) => (isHr || (!r.hrOnly && r.family !== "personal")) && (!r.candidateId || isCandidateVisible(options.viewer, r.candidateId)));
-  const hiddenForPrivacy = before - all.length;
+  const visible = everyRow.filter(({ r }) => (isHr || (!r.hrOnly && r.family !== "personal")) && (!r.candidateId || isCandidateVisible(options.viewer, r.candidateId)));
+  const hiddenForPrivacy = everyRow.length - visible.length;
+  const logTotal = visible.length;
+  const all = visible.filter(({ month }) => !options.month || month === options.month).map(({ r }) => r);
 
   const familyCounts: Record<string, number> = {};
   for (const r of all) familyCounts[r.family] = (familyCounts[r.family] ?? 0) + 1;
@@ -464,6 +471,7 @@ export async function getPaycomLog(options: {
     familyCounts,
     outcomeCounts,
     total: all.length,
+    logTotal,
     hiddenForPrivacy
   };
 }
