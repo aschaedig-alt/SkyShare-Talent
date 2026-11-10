@@ -9,6 +9,7 @@ import { parseOfferSteps } from "@/lib/offers/steps";
 import { carryPreHireTicksToHire } from "@/lib/onboarding/prehire";
 import { suggestCompanyEmail } from "@/lib/people/company-email";
 import { toCalendarDay } from "@/lib/dates/display";
+import { applyPilotSupervisorDefault } from "@/lib/people/leadership-roles";
 
 function parseDate(value: unknown): Date | null {
   if (value === null || value === undefined || value === "") return null;
@@ -161,6 +162,9 @@ export async function POST(request: Request) {
     if (candidateId) await carryPreHireTicksToHire(candidateId, hire.id);
     // Seed the first role-journey entry from position + start date (if both set).
     await ensureInitialRole(hire.id);
+    // A pilot reports to the Chief Pilot, dotted-line to the Assistant Chief
+    // Pilot, whoever holds those (his answer 2026-11-10: automatic).
+    await applyPilotSupervisorDefault(hire.id);
 
     return NextResponse.json({ ok: true, id: hire.id });
   } catch (error) {

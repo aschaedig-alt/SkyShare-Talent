@@ -6,6 +6,7 @@ import { ensureCustomMilestoneTasks } from "@/lib/data/onboarding-milestones";
 import { getChecklistPlacement } from "@/lib/data/onboarding-grid-config";
 import { syncCardStatusFromChecklist } from "@/lib/business-cards/checklist-sync";
 import type { ParsedHireRow } from "@/lib/onboarding/import-hires";
+import { applyPilotSupervisorDefault } from "@/lib/people/leadership-roles";
 
 function parseDate(value: unknown): Date | null {
   if (value === null || value === undefined || value === "") return null;
@@ -211,6 +212,7 @@ export async function POST(request: Request) {
       if (!terminated) {
         await ensureCustomMilestoneTasks(hire.id, placement);
         taskChanges += await applyTasks(hire.id, incomingTasks);
+        await applyPilotSupervisorDefault(hire.id);
       }
 
       // Register so duplicate rows within the same file match this new record.

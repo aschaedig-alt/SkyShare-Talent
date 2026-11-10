@@ -55,6 +55,8 @@ export type NewHireRow = {
   supervisor2Email: string | null;
   supervisor2HireId: string | null;
   supervisor2Hire: { name: string; ssEmail: string | null; personalEmail: string | null } | null;
+  supervisorRoleKey: string | null;
+  supervisor2RoleKey: string | null;
   offerSentDate: string | null;
   offerSignedDate: string | null;
   startDate: string | null;
@@ -182,6 +184,8 @@ type HireWithTasks = {
   supervisor2Email: string | null;
   supervisor2HireId: string | null;
   supervisor2Hire: { name: string; ssEmail: string | null; personalEmail: string | null } | null;
+  supervisorRoleKey: string | null;
+  supervisor2RoleKey: string | null;
   supervisorName: string | null;
   supervisorEmail: string | null;
   offerSentDate: Date | null;
@@ -264,6 +268,8 @@ function toRow(hire: HireWithTasks, now: number): NewHireRow {
     supervisor2Email: hire.supervisor2Email,
     supervisor2HireId: hire.supervisor2HireId,
     supervisor2Hire: hire.supervisor2Hire ?? null,
+    supervisorRoleKey: hire.supervisorRoleKey ?? null,
+    supervisor2RoleKey: hire.supervisor2RoleKey ?? null,
     offerSentDate: iso(hire.offerSentDate),
     offerSignedDate: iso(hire.offerSignedDate),
     startDate: iso(hire.startDate),
@@ -661,6 +667,8 @@ const hireSelect = {
   supervisor2Email: true,
   supervisor2HireId: true,
   supervisor2Hire: { select: { name: true, ssEmail: true, personalEmail: true } },
+  supervisorRoleKey: true,
+  supervisor2RoleKey: true,
   offerSentDate: true,
   offerSignedDate: true,
   startDate: true,

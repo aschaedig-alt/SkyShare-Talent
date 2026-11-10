@@ -254,6 +254,20 @@ model ReportShareLink {
   revokedAt DateTime?
 }
 
+// A management role people report to by ROLE rather than by name — see
+// NewHire.supervisorRoleKey. One row per role; the holder is whoever has the job
+// today. Change it only through setLeadershipRoleHolder, which re-points the
+// followers in the same transaction; a direct update leaves their copies stale.
+model LeadershipRole {
+  key          String   @id // "chief-pilot", "assistant-chief-pilot"
+  title        String
+  holderHireId String?
+  holder       NewHire? @relation("LeadershipRoleHolder", fields: [holderHireId], references: [id], onDelete: SetNull)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
 model NewHire {
   id              String   @id @default(cuid())
   name            String
@@ -294,6 +308,17 @@ model NewHire {
   supervisees2      NewHire[] @relation("HireSupervisor2")
   supervisor2Name  String?
   supervisor2Email String?
+  // A supervisor slot can FOLLOW a leadership role (Chief Pilot, Assistant Chief
+  // Pilot) instead of naming a person. Asked for 2026-11-10, when both roles
+  // changed hands and 80+ pilots were still linked to the people who used to
+  // hold them. When set, the matching supervisorHireId is kept equal to the
+  // role's current holder: changing the holder (lib/people/leadership-roles.ts)
+  // re-points every follower at once, so every existing reader of supervisorHire
+  // — orientation emails, digests, calendar, reminders — stays right without
+  // knowing roles exist. Linking a person by hand clears it.
+  supervisorRoleKey   String?
+  supervisor2RoleKey  String?
+  leadershipRolesHeld LeadershipRole[] @relation("LeadershipRoleHolder")
   // Cross-cutting person labels shown as pills (Executive, Management, ...),
   // independent of department — a person can carry more than one. Hand-applied.
   // "Contract" is NOT stored here; it's derived from employmentStatus at display.

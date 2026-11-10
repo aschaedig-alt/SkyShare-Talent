@@ -895,6 +895,34 @@ rows.
 
 ---
 
+### 42. Nobody has clicked "Report to a role" or changed a leadership role holder yet
+
+**Status:** OPEN
+**Added:** 2026-11-10
+
+Supervisor slots can now follow a role: Chief Pilot (Cameron Morgan) and Assistant Chief
+Pilot (Alex Andrade). 77 current pilots were moved onto those roles in the live database
+and read back. The pages returned 200 locally, and saves were tested by direct request:
+an unchanged save keeps the role, and a holder cannot report to their own role. But
+nobody has clicked through the picker or the People > Leadership roles page in a
+browser, and no holder has been changed for real.
+
+**How to check it:**
+
+- Open a pilot's profile. Under Supervisor it should say "Chief Pilot · follows the role"
+  above Cameron Morgan. Click Unlink, then Link a supervisor, then pick Chief Pilot under
+  "Report to a role". It should come back the same.
+- Open /people/leadership-roles. Both roles should show their holder and a count of
+  people who report to them. Do not change a holder just to test it, since that
+  re-points about 77 people at once. Wait for a real change, such as filling the
+  Assistant Director of Training role or the next handover.
+
+**What would count as a pass:** the profile shows the role and its holder, re-picking the
+role sticks after a reload, and a real holder change updates every follower's supervisor
+(the page says how many).
+
+---
+
 ## Closed
 
 ### 33. The candidate page's layout has not been saved since the boxes started fitting their content

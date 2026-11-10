@@ -21,6 +21,7 @@ import type { ChecklistRow, ChecklistSection } from "@/lib/data/onboarding-grid-
 import type { HireSendStatus } from "@/lib/front/send-status";
 import { CARD_STATUS_LABEL, isCardStatus } from "@/lib/business-cards/card";
 import { SupervisorPicker } from "@/components/people/SupervisorPicker";
+import { leadershipRoleTitle } from "@/lib/people/leadership-role-keys";
 import { MakeContactButton } from "@/components/people/MakeContactButton";
 import {
   NOT_NEEDED_LABEL,
@@ -113,6 +114,9 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     supervisor2HireId: hire.supervisor2HireId ?? "",
     supervisor2HireName: hire.supervisor2Hire?.name ?? "",
     supervisor2HireEmail: (hire.supervisor2Hire?.ssEmail || hire.supervisor2Hire?.personalEmail) ?? "",
+    // The leadership role a slot follows (lib/people/leadership-roles.ts), if any.
+    supervisorRoleKey: hire.supervisorRoleKey ?? "",
+    supervisor2RoleKey: hire.supervisor2RoleKey ?? "",
     offerSentDate: toDateInput(hire.offerSentDate),
     offerSignedDate: toDateInput(hire.offerSignedDate),
     startDate: toDateInput(hire.startDate),
@@ -224,7 +228,9 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
   useEffect(() => {
     // The linked supervisor's name and address are shown, never sent — they are
     // read from that person's record — so they can never be "unsaved".
-    const displayOnly = new Set(["supervisorHireName", "supervisorHireEmail", "supervisor2HireName", "supervisor2HireEmail"]);
+    // The role keys are set by clicks that save at once, and cleared server-side by
+    // an unlink, so they are never typed-and-unsaved either.
+    const displayOnly = new Set(["supervisorHireName", "supervisorHireEmail", "supervisor2HireName", "supervisor2HireEmail", "supervisorRoleKey", "supervisor2RoleKey"]);
     function guard(e: BeforeUnloadEvent) {
       const dirty = (Object.keys(details) as Array<keyof typeof details>).some(
         (k) => !displayOnly.has(k) && details[k] !== saved.current[k]
@@ -642,6 +648,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     const linkedEmailKey = which === 1 ? "supervisorHireEmail" : "supervisor2HireEmail";
     const nameKey = which === 1 ? ("supervisorName" as const) : ("supervisor2Name" as const);
     const emailKey = which === 1 ? ("supervisorEmail" as const) : ("supervisor2Email" as const);
+    const roleKeyKey = which === 1 ? ("supervisorRoleKey" as const) : ("supervisor2RoleKey" as const);
     return (
       <div className="space-y-2">
         <span className="block text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
@@ -652,19 +659,35 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
           linkedId={details[linkedIdKey] || null}
           linkedName={details[linkedNameKey] || null}
           linkedEmail={details[linkedEmailKey] || null}
+          roleKey={details[roleKeyKey] || null}
+          roleTitle={leadershipRoleTitle(details[roleKeyKey])}
+          // Following a role saves at once like a link. The server sets the link to
+          // the current holder and clears the typed fallback.
+          onFollowRole={(r) => {
+            setDetails((f) => ({
+              ...f,
+              [roleKeyKey]: r.key,
+              [linkedIdKey]: r.holder?.id ?? "",
+              [linkedNameKey]: r.holder?.name ?? "",
+              [linkedEmailKey]: r.holder?.email ?? "",
+              [nameKey]: "",
+              [emailKey]: ""
+            }));
+            void saveFields({ [roleKeyKey]: r.key });
+          }}
           // Linking or unlinking a supervisor is a click, not typing, so it saves
           // at once. Only the id is stored; the name and address shown beside it
           // are read from that person's own record.
           onLink={(p) => {
-            setDetails((f) => ({ ...f, [linkedIdKey]: p.id, [linkedNameKey]: p.name, [linkedEmailKey]: p.email ?? "" }));
+            setDetails((f) => ({ ...f, [roleKeyKey]: "", [linkedIdKey]: p.id, [linkedNameKey]: p.name, [linkedEmailKey]: p.email ?? "" }));
             void saveFields({ [linkedIdKey]: p.id });
           }}
           onUnlink={() => {
-            setDetails((f) => ({ ...f, [linkedIdKey]: "", [linkedNameKey]: "", [linkedEmailKey]: "" }));
+            setDetails((f) => ({ ...f, [roleKeyKey]: "", [linkedIdKey]: "", [linkedNameKey]: "", [linkedEmailKey]: "" }));
             void saveFields({ [linkedIdKey]: "" });
           }}
         />
-        {!details[linkedIdKey] ? (
+        {!details[linkedIdKey] && !details[roleKeyKey] ? (
           <>
             <p className="text-[11px] text-brand-grey dark:text-slate-500">
               Not in the app yet? Type their details instead — used only when nobody is linked.

@@ -8,6 +8,7 @@ import { normalizeTags } from "@/lib/employees/columns";
 import { ensureInitialRole } from "@/lib/data/ensure-initial-role";
 import { alignClosedStintEnd } from "@/lib/employees/align-stint-end";
 import { carryPreHireTicksToHire } from "@/lib/onboarding/prehire";
+import { applyPilotSupervisorDefault, followRoleData, isLeadershipRoleKey } from "@/lib/people/leadership-roles";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -50,6 +51,36 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
     if (body.name !== undefined && (!data.name || String(data.name).trim().length === 0)) {
       return NextResponse.json({ message: "Name cannot be empty." }, { status: 400 });
+    }
+
+    // Supervisors by ROLE (lib/people/leadership-roles.ts). A slot either follows
+    // a role — its link is set to the role's holder and kept there — or names a
+    // person. Linking or unlinking a DIFFERENT person by hand stops the follow,
+    // otherwise the next holder change would silently overwrite a choice made on
+    // purpose. "Different" matters: the classic layout's Save sends every field,
+    // including the unchanged link, and that must not quietly end the follow.
+    let currentLinks: { supervisorHireId: string | null; supervisor2HireId: string | null } | null = null;
+    for (const slot of [1, 2] as const) {
+      const roleField = slot === 1 ? "supervisorRoleKey" : "supervisor2RoleKey";
+      const linkField = slot === 1 ? "supervisorHireId" : "supervisor2HireId";
+      if (roleField in body) {
+        const key = body[roleField];
+        if (key === null || key === "") {
+          // Stop following; the link is whatever else this request says.
+          data[roleField] = null;
+        } else if (isLeadershipRoleKey(key)) {
+          const follow = await followRoleData(slot, key);
+          if (follow.holderId === id) {
+            return NextResponse.json({ message: "They hold that role themselves, so they cannot report to it." }, { status: 400 });
+          }
+          Object.assign(data, follow.data);
+        } else {
+          return NextResponse.json({ message: "Unknown role." }, { status: 400 });
+        }
+      } else if (linkField in body) {
+        currentLinks ??= await prisma.newHire.findUnique({ where: { id }, select: { supervisorHireId: true, supervisor2HireId: true } });
+        if ((data[linkField] ?? null) !== (currentLinks?.[linkField] ?? null)) data[roleField] = null;
+      }
     }
 
     if (isCardStatus(body.businessCardStatus)) {
@@ -175,6 +206,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     // If this update just supplied a position + start date, seed the first
     // role-journey entry (no-op if they already have one).
     await ensureInitialRole(updated.id);
+    // A position that just became a pilot title, on somebody with no supervisor
+    // at all, gets the Chief Pilot / Assistant Chief Pilot default. Never
+    // overwrites a supervisor already set.
+    if (typeof data.position === "string") await applyPilotSupervisorDefault(updated.id);
     // LINKING a candidate to a hire typed in by hand is the other way somebody
     // "moves to onboarding", so the pre-offer steps worked on the candidate (the
     // PRD section) come across here too. Only To do rows are filled — a hire that
