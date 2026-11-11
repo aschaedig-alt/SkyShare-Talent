@@ -925,7 +925,12 @@ role sticks after a reload, and a real holder change updates every follower's su
 
 ### 43. Nobody has saved a scorecard with the core values, or an offer's recruiter and hiring manager, yet
 
-**Status:** OPEN
+**Status:** OPEN - half passed. He tested it on the live site 2026-11-11: the offer's
+recruiter and hiring manager stuck after a reload, and Declined kept Save grey until a
+reason was picked (PASSED). The scorecard part is NOT tested: he could not find a way to
+add one, because the scorecard page was linked only from the calendar's edit popup. Every
+interview on a candidate's Interviews tab now has a Scorecard link (Nov 11 fix, handed off);
+re-test the first bullet once that is live.
 **Added:** 2026-11-10
 
 Two Quality of Hire tracking pieces for Dec 10 are built. Every interview scorecard now
@@ -951,7 +956,11 @@ localhost writes the live database.
 
 ### 44. Nobody has saved a 90-day check-in rating yet, and the People page would not come alive locally to click it
 
-**Status:** OPEN
+**Status:** OPEN - not passed yet. His live test 2026-11-11: he looked for the rating on the
+tracking check's 90-day due list, where a name only opens the profile, and did not find the
+Rate button in the Values column on People > Post-onboard. The due list now has its own Rate
+button on each person (Nov 11 fix, handed off); re-test from there once it is live. (The
+local-dev "never comes alive" problem was the automated browser, not the page: closed Nov 10.)
 **Added:** 2026-11-10
 
 People > Post-onboard has a new Values column. Ticking a 90-day check-in done now opens a
@@ -980,7 +989,9 @@ is not this change. Nothing was saved, because localhost writes the live databas
 
 ### 45. The tracking check on the Quality of Hire tab has not been looked at in a browser
 
-**Status:** OPEN
+**Status:** CLOSED 2026-11-11 - he checked it on the live site and all four checks passed:
+recent offers listed with gaps marked missing, the offer he filled showed both ticks, names
+open the candidate, and the 90-day list shows day counts.
 **Added:** 2026-11-10
 
 Reports > Quality of Hire now has a "Tracking check" section: every offer made since
@@ -1047,6 +1058,40 @@ Then drag one question above another and reload.
 
 **What would count as a pass:** the blank line, bold, both value tags and both guidance
 blocks are still there after the reload, and the new order holds.
+
+---
+
+### 48. Nobody has typed into the ten boxes that became the notes editor
+
+**Status:** OPEN
+**Added:** 2026-11-11
+
+Feedback cmwcjtm5k, "sitewide": ten more boxes now use the notes editor (bold, italics,
+lists, blank lines). Recognition message, interview scorecard comments, the onboarding-round
+note, the public /welcome message, new hire notes (current and classic page), 90-day check-in
+notes, orientation lunch notes, event Ramp & FBO notes, trip internal notes, and the travel
+visit-pack answers. Nothing in the database was rewritten: old plain notes are read as they
+are and only become HTML when somebody edits them. Checked: lint and typecheck clean, the
+save/clean/display helper run on sample text (blank lines kept, scripts and click handlers
+stripped, an untouched plain note stays plain), and the compliments, travel, people and
+orientation pages render over HTTP with no error. NOT checked: typing into any of them and
+saving, because the database is live and the in-app browser cannot drive these pages.
+Four of them save when you click away rather than on a button — new hire notes, Ramp & FBO
+notes, trip internal notes and the visit answers — and clicking one of the editor's own
+toolbar buttons must NOT count as clicking away.
+
+Also NOT checked by typing: the calendar's Edit interview Notes box, which now edits the
+interview's write-up itself (before, an edit there never showed on the candidate profile).
+
+**How to check it, four minutes:** on a test new hire, type two paragraphs with a blank line
+between and one bold word into Notes, click Bold mid-way, then click somewhere else on the
+page and reload. Do the same in one trip's Internal notes, and give one recognition. Then open
+a test interview that has a write-up from the calendar, add a line to Notes, save, and open the
+candidate's profile.
+
+**What would count as a pass:** the blank line and the bold survive the reload, nothing saved
+while you were only clicking toolbar buttons, the recognition shows its blank line on the
+feed, and the calendar edit shows in the write-up on the profile.
 
 ---
 

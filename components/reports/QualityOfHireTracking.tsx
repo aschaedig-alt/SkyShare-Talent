@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { clsx } from "clsx";
-import type { QohTracking, TrackedOffer } from "@/lib/quality-of-hire/tracking";
+import type { QohTracking, RatingDue, TrackedOffer } from "@/lib/quality-of-hire/tracking";
+import { CheckinRatingModal } from "@/components/people/CheckinRatingModal";
 import { R } from "@/components/reports/report-ui";
 import { formatCalendarDay } from "@/lib/dates/display";
 
@@ -40,6 +42,15 @@ function Row({ o }: { o: TrackedOffer }) {
           {o.interviews}
           <span className={clsx("ml-1 text-[11px]", R.muted)}>{o.valuesScored ? "· values rated" : "· no values"}</span>
         </Mark>
+        {o.interviewList.length ? (
+          <ul className={clsx("mt-1 space-y-0.5 text-[11px]", R.muted)}>
+            {o.interviewList.map((i) => (
+              <li key={`${i.on}-${i.type}`} className="whitespace-nowrap">
+                {formatCalendarDay(i.on)} · {i.type}
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </td>
       <td className={R.td}>
         <Mark ok={o.has.recruiter}>{o.recruiter}</Mark>
@@ -55,6 +66,10 @@ function Row({ o }: { o: TrackedOffer }) {
 
 export function QualityOfHireTracking({ tracking }: { tracking: QohTracking }) {
   const complete = tracking.offers.filter((o) => o.complete).length;
+  // Rated from here as well as from People > Post-onboard: this list is where he
+  // looked for it (test run, Nov 11). A saved rating drops the person off the list.
+  const [due, setDue] = useState<RatingDue[]>(tracking.ratingsDue);
+  const [rating, setRating] = useState<RatingDue | null>(null);
   return (
     <div className={R.box}>
       <div className={R.sectionLabel}>
@@ -99,23 +114,45 @@ export function QualityOfHireTracking({ tracking }: { tracking: QohTracking }) {
         <p className={R.footnote}>No offers made in this window yet.</p>
       )}
 
-      <div className={clsx(R.sectionLabel, "mt-5")}>90-day ratings due - {tracking.ratingsDue.length}</div>
+      <div className={clsx(R.sectionLabel, "mt-5")}>90-day ratings due - {due.length}</div>
       <p className={R.footnote}>
-        People past day 90 with no rating yet. Rate them on People &gt; Post-onboard, from the hiring manager&apos;s answers.
+        People past day 90 with no rating yet. Click Rate and enter the hiring manager&apos;s answers. The same rating is on People &gt; Post-onboard, in the Values column.
       </p>
-      {tracking.ratingsDue.length ? (
+      {due.length ? (
         <ul className="mt-2 divide-y divide-brand-lea/10 dark:divide-white/10">
-          {tracking.ratingsDue.map((p) => (
-            <li key={p.id} className="flex items-baseline justify-between gap-3 py-2 text-sm">
+          {due.map((p) => (
+            <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 py-2 text-sm">
               <Link href={`/people/${p.id}`} className={R.link}>
                 {p.name}
               </Link>
-              <span className={R.muted}>
-                started {formatCalendarDay(p.startDate)} · day {p.day}
+              <span className="flex items-center gap-3">
+                <span className={R.muted}>
+                  started {formatCalendarDay(p.startDate)} · day {p.day}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setRating(p)}
+                  className="rounded border border-brand-lea/20 px-2.5 py-0.5 text-[11px] font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"
+                >
+                  Rate
+                </button>
               </span>
             </li>
           ))}
         </ul>
+      ) : null}
+      {rating ? (
+        <CheckinRatingModal
+          open
+          name={rating.name}
+          newHireId={rating.id}
+          initial={null}
+          onClose={() => setRating(null)}
+          onSaved={() => {
+            setDue((cur) => cur.filter((p) => p.id !== rating.id));
+            setRating(null);
+          }}
+        />
       ) : null}
     </div>
   );

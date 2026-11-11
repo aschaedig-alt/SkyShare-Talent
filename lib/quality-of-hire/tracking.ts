@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { parseOfferSteps } from "@/lib/offers/steps";
 import { isTestTagged } from "@/lib/testdata/markers";
 import { CHECKIN_RATING_DAY } from "@/lib/onboarding/checkin-rating";
+import { INTERVIEW_TYPE_META } from "@/lib/calendar/interview-types";
 
 // ---------------------------------------------------------------------------
 // The Quality of Hire tracking check - milestone 4. His wording (Nov 5, 2026):
@@ -12,8 +13,8 @@ import { CHECKIN_RATING_DAY } from "@/lib/onboarding/checkin-rating";
 // An offer counts once it is MADE - sent, signed or declined (not one only planned
 // or started, nor one that was never sent) - dated by its earliest recorded moment
 // (a ticked step, or sent / signed / declined), on or after TRACKING_FROM. For each one, four things:
-//   interviews   at least one interview logged on the candidate (not cancelled,
-//                not the offer call, not an imported Jazz evaluation or demo row),
+//   interviews   at least one interview logged on the candidate, however old (not
+//                cancelled, not the offer call, not a demo row; JazzHR ones count),
 //                and whether any of its scorecards rates the core values
 //   recruiter    CandidateApplication.recruiterName
 //   manager      CandidateApplication.hiringManager
@@ -38,6 +39,8 @@ export type TrackedOffer = {
   status: string;
   offerOn: string;
   interviews: number;
+  /** Each interview, oldest first: its day and type. */
+  interviewList: TrackedInterview[];
   valuesScored: boolean;
   recruiter: string | null;
   hiringManager: string | null;
@@ -46,6 +49,8 @@ export type TrackedOffer = {
   has: { interviews: boolean; recruiter: boolean; hiringManager: boolean; reason: boolean };
   complete: boolean;
 };
+
+export type TrackedInterview = { on: string; type: string };
 
 export type RatingDue = { id: string; name: string; startDate: string; day: number };
 
@@ -101,9 +106,13 @@ export async function getQohTracking(now: Date = new Date()): Promise<QohTrackin
         where: {
           candidateId: { in: candidateIds },
           status: { notIn: ["CANCELLED", "CANCELED"] },
-          NOT: [{ source: "seed-demo" }, { source: "JAZZ" }, { interviewType: "OFFER" }]
+          // Every interview, however old - old JazzHR ones included (his test note,
+          // Nov 11: "all interviews for candidates, no matter how long ago"). Only
+          // demo rows and the offer call itself are left out.
+          NOT: [{ source: "seed-demo" }, { interviewType: "OFFER" }]
         },
-        select: { candidateId: true, scorecards: { select: { itemsJson: true } } }
+        select: { candidateId: true, startDateTime: true, interviewType: true, scorecards: { select: { itemsJson: true } } },
+        orderBy: { startDateTime: "asc" }
       })
     : [];
   const byCandidate = new Map<string, typeof interviews>();
@@ -121,9 +130,20 @@ export async function getQohTracking(now: Date = new Date()): Promise<QohTrackin
     .filter((x) => !isTestTagged(parseTags(x.a.candidate?.tagsJson)))
     .map(({ a, at }) => {
       const ivs = byCandidate.get(a.candidateId) ?? [];
+      // One sitting can be logged twice (a Paycom invite and its Paycom note): list,
+      // and count, each day-and-type once.
+      const seen = new Set<string>();
+      const list: TrackedInterview[] = [];
+      for (const i of ivs) {
+        const day = iso(i.startDateTime);
+        const key = `${day}|${i.interviewType}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        list.push({ on: day, type: INTERVIEW_TYPE_META[i.interviewType as keyof typeof INTERVIEW_TYPE_META]?.label ?? i.interviewType });
+      }
       const declined = a.offerStatus === "DECLINED";
       const has = {
-        interviews: ivs.length > 0,
+        interviews: list.length > 0,
         recruiter: Boolean(a.recruiterName?.trim()),
         hiringManager: Boolean(a.hiringManager?.trim()),
         reason: !declined || Boolean(a.offerDeclineReason?.trim())
@@ -135,7 +155,8 @@ export async function getQohTracking(now: Date = new Date()): Promise<QohTrackin
         job: a.job?.title ?? a.historicalJobTitle ?? null,
         status: a.offerStatus,
         offerOn: iso(new Date(at)),
-        interviews: ivs.length,
+        interviews: list.length,
+        interviewList: list,
         valuesScored: ivs.some((i) => i.scorecards.some((s) => ratesValues(s.itemsJson))),
         recruiter: a.recruiterName,
         hiringManager: a.hiringManager,

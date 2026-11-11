@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clsx } from "clsx";
-import { Star, Pencil, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Star, Pencil, Trash2, ClipboardCheck } from "lucide-react";
 import { RichTextEditor, RichTextView } from "@/components/richtext/RichTextEditor";
 import { INTERVIEW_OUTCOMES, INTERVIEW_TYPES, interviewOutcomeTone, interviewOutcomeLabel } from "@/lib/interviews/constants";
 import { formatCalendarDayShort } from "@/lib/dates/display";
@@ -526,8 +527,16 @@ function LoggedInterview({
             ))}
           </span>
         ) : null}
+        {/* The scorecard (core values + questions) lives on the interview's own page;
+            always visible, because this was the only way in that nobody could find. */}
+        <Link
+          href={`/interviews/${interview.id}`}
+          className="ml-auto inline-flex items-center gap-1 rounded border border-brand-lea/20 px-2 py-0.5 text-[11px] font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"
+        >
+          <ClipboardCheck className="h-3.5 w-3.5" /> Scorecard
+        </Link>
         {canEdit && (
-          <span className="ml-auto flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+          <span className="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
             <button onClick={() => setEditing(true)} aria-label="Edit this interview" className="rounded p-1 text-brand-grey transition hover:bg-white hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100">
               <Pencil className="h-3.5 w-3.5" />
             </button>
