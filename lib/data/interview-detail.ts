@@ -8,6 +8,7 @@ import {
   type ScorecardItem
 } from "@/lib/interviews/scorecard";
 import { parseStringArray } from "@/lib/json";
+import { questionPlain } from "@/lib/interview-questions/rich";
 import type { ViewerScope } from "@/lib/auth/viewer-scope";
 import { isCandidateVisible } from "@/lib/auth/candidate-scope";
 
@@ -120,7 +121,7 @@ export async function getInterviewDetail(id: string, viewer: ViewerScope | null)
   // Active bank questions suited to this interview's department (empty tags = all).
   const allActive = await prisma.interviewQuestion.findMany({
     where: { isActive: true },
-    orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
     select: { text: true, departmentsJson: true }
   });
   const bankQuestions = allActive
@@ -129,7 +130,10 @@ export async function getInterviewDetail(id: string, viewer: ViewerScope | null)
       const depts = parseStringArray(q.departmentsJson);
       return depts.length === 0 || depts.includes(departmentKey);
     })
-    .map((q) => q.text);
+    // Scorecard items are plain text (an editable input), and bank questions are
+    // rich text since Nov 2026 — so they are flattened here, not shown as HTML.
+    .map((q) => questionPlain(q.text))
+    .filter(Boolean);
 
   const hosts = await prisma.bookingHost.findMany({
     where: { isActive: true },

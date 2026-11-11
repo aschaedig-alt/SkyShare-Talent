@@ -229,6 +229,112 @@ export function pilotsInTraining(groups: CrewGroup[]): { name: string; aircraft:
   return out;
 }
 
+/** Nicknames the sheet and the chart use interchangeably. */
+const NICKNAME: Record<string, string> = {
+  ben: "benjamin", nick: "nicholas", josh: "joshua", matt: "matthew", chris: "christopher", alex: "alexander",
+  mike: "michael", jake: "jacob", rob: "robert", bob: "robert", tom: "thomas", dan: "daniel", will: "william",
+  jon: "jonathan", russ: "russell", kat: "kathleen"
+};
+
+function editDistance(a: string, b: string): number {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array<number>(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+
+/**
+ * Same pilot, allowing for a misspelt surname — feedback cmw2gd82m (Nov 4
+ * 2026): the chart had "Ben Fleckenstien" and the sheet "Ben Fleckenstein", so
+ * the tab showed a "from chart" row for a pilot who already had a record, and
+ * that row could not be removed.
+ *
+ * Still conservative, on purpose. The FIRST name must be the same person's
+ * (nicknames allowed: Ben = Benjamin, Matt = Matthew) and the surname may be at
+ * most two letters off, and only when both surnames are 5+ letters, so a short
+ * surname has to match exactly. "Matt Smith" never matches "Mark Smith" (the
+ * first names differ). The honest cost: two different pilots with the same first
+ * name and near-identical long surnames would be treated as one — rare on a
+ * roster this size, and the tab still lists both records.
+ */
+export function sameTrainee(a: string, b: string): boolean {
+  const ka = matchKey(a);
+  const kb = matchKey(b);
+  if (ka === kb) return true;
+  // Words only — "John Murdoch ???" is John Murdoch, not a surname of "???".
+  const words = (n: string) =>
+    n.replace(/\([^)]*\)/g, " ").replace(/"[^"]*"/g, " ").toLowerCase().replace(/[^a-z\s'-]/g, " ").split(/\s+/).filter((w) => /[a-z]/.test(w));
+  const wa = words(a);
+  const wb = words(b);
+  const [fa = "", la = ""] = [wa[0], wa.length > 1 ? wa[wa.length - 1] : ""];
+  const [fb = "", lb = ""] = [wb[0], wb.length > 1 ? wb[wb.length - 1] : ""];
+  if (!la || !lb) return false;
+  if ((NICKNAME[fa] ?? fa) !== (NICKNAME[fb] ?? fb)) return false;
+  if (la === lb) return true;
+  return Math.min(la.length, lb.length) >= 5 && editDistance(la, lb) <= 2;
+}
+
+/** The aircraft part of a position ("Challenger 350 PIC" -> "challenger"), for telling two courses apart. */
+function aircraftWord(position: string | undefined): string {
+  return slug(position ?? "").split("-")[0] ?? "";
+}
+
+/**
+ * Which existing record an imported one is the same training as — feedback
+ * cmw2gd82m: "when i do a new import of training info it seems to duplicate
+ * lines already being tracked".
+ *
+ * Record ids are name + start + position, so the same training got a NEW id
+ * whenever any of those changed between pastes: a row first entered by hand (or
+ * from a chart placeholder) with no dates has "nodate" in its id, and the sheet
+ * later supplying the start date made a second row instead of filling the first.
+ * Live data on Nov 11 2026 had exactly that — Matt Smith's record id still says
+ * nodate while it holds a Dec 18 start, and Jonathan Gleisberg has an undated
+ * Tentative row beside his dated Confirmed one.
+ *
+ * Matching, in order: the same id; else the same pilot (sameTrainee) with the
+ * same start date; else the same pilot where the existing record has NO start
+ * date yet and the aircraft agrees (or either side has none). Two dated courses
+ * on different dates stay two records — that is a pilot's real history
+ * (Fabio Alves, CJ2 FO then G200 SIC). Each existing record is claimed once.
+ */
+export function mergeImportedTraining(existing: TrainingRecord[], incoming: TrainingRecord[]): { records: TrainingRecord[]; added: number; updated: number } {
+  const out = existing.map((r) => ({ ...r }));
+  const claimed = new Set<number>();
+  let added = 0;
+  let updated = 0;
+  for (const rec of incoming) {
+    let at = out.findIndex((r, i) => !claimed.has(i) && r.id === rec.id);
+    if (at === -1 && rec.start) {
+      at = out.findIndex((r, i) => !claimed.has(i) && r.start === rec.start && sameTrainee(r.name, rec.name));
+    }
+    if (at === -1) {
+      at = out.findIndex((r, i) => {
+        if (claimed.has(i) || r.start || !sameTrainee(r.name, rec.name)) return false;
+        const a = aircraftWord(r.position);
+        const b = aircraftWord(rec.position);
+        return !a || !b || a === b;
+      });
+    }
+    if (at === -1) {
+      out.push(rec);
+      claimed.add(out.length - 1);
+      added++;
+      continue;
+    }
+    const prev = out[at];
+    // Keep the existing id so the row updates in place, and keep completedAt —
+    // that is ours, not the sheet's; a re-import must not undo somebody having
+    // already moved that pilot onto the line.
+    out[at] = { ...rec, id: prev.id, ...(prev.completedAt ? { completedAt: prev.completedAt } : {}) };
+    claimed.add(at);
+    updated++;
+  }
+  return { records: out, added, updated };
+}
+
 export type TrainingRow = TrainingRecord & { onChart: boolean; missing: boolean; progress: TrainingProgress };
 
 /**
@@ -240,22 +346,21 @@ export type TrainingRow = TrainingRecord & { onChart: boolean; missing: boolean;
  */
 export function trainingRows(groups: CrewGroup[], records: TrainingRecord[], today: string | null): TrainingRow[] {
   const onChart = pilotsInTraining(groups);
-  const chartKeys = new Set(onChart.map((p) => matchKey(p.name)));
-
   const rows: TrainingRow[] = records.map((r) => ({
     ...r,
-    onChart: chartKeys.has(matchKey(r.name)),
+    onChart: onChart.some((p) => sameTrainee(p.name, r.name)),
     missing: false,
     progress: trainingProgress(r, today)
   }));
 
   // Only LIVE records count as covering somebody — an archived course from 2024
   // does not explain why they are in a training seat today.
-  const covered = new Set(records.filter((r) => !r.archived).map((r) => matchKey(r.name)));
+  // sameTrainee, not an exact key, so a misspelt name on the chart does not
+  // conjure a second, undeletable row for a pilot who already has a record.
+  const covered = records.filter((r) => !r.archived).map((r) => r.name);
   for (const p of onChart) {
-    const key = matchKey(p.name);
-    if (covered.has(key)) continue;
-    covered.add(key);
+    if (covered.some((n) => sameTrainee(n, p.name))) continue;
+    covered.push(p.name);
     rows.push({
       id: trainingRecordId(p.name, undefined, `${p.aircraft} ${p.seat}`),
       name: p.name,
@@ -298,7 +403,7 @@ export function completedTraining(
 
   const out: { name: string; end: string; recordId: string; aircraft: string; seat: string; gIdx: number; seatKey: "pic" | "sic" | "cabin" }[] = [];
   for (const p of pilotsInTraining(groups)) {
-    const rec = byKey.get(matchKey(p.name));
+    const rec = byKey.get(matchKey(p.name)) ?? [...byKey.values()].find((r) => sameTrainee(r.name, p.name));
     if (!rec?.end) continue;
     out.push({ ...p, end: rec.end, recordId: rec.id });
   }

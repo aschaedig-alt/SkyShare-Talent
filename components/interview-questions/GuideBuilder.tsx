@@ -7,6 +7,9 @@ import { COMPANY_VALUES } from "@/lib/compliments/constants";
 import { DEPARTMENTS, DEPARTMENT_LABELS } from "@/lib/calendar/departments";
 import { InterviewTabs } from "@/components/interview-questions/InterviewTabs";
 import { Button } from "@/components/ui";
+import { RichTextView } from "@/components/richtext/RichTextEditor";
+import { questionHtml, questionPlain } from "@/lib/interview-questions/rich";
+import { GuidanceBlocks } from "@/components/interview-questions/GuidanceBlocks";
 
 const CATEGORY_LABELS: Record<string, string> = {
   BEHAVIORAL: "Behavioral",
@@ -59,15 +62,15 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
       const perValue = Math.max(1, Math.floor(length / valueList.length));
       // Round-robin: take perValue from each selected value first (balanced coverage).
       for (const v of valueList) {
-        const matches = shuffle(available.filter((q) => q.coreValue === v && !used.has(q.id)));
+        const matches = shuffle(available.filter((q) => q.coreValues.includes(v) && !used.has(q.id)));
         for (const q of matches.slice(0, perValue)) {
           picked.push(q);
           used.add(q.id);
         }
       }
       // Fill remaining slots: prefer other questions tagged with a selected value, then anything.
-      const prefer = shuffle(available.filter((q) => !used.has(q.id) && q.coreValue && values.has(q.coreValue)));
-      const rest = shuffle(available.filter((q) => !used.has(q.id) && (!q.coreValue || !values.has(q.coreValue))));
+      const prefer = shuffle(available.filter((q) => !used.has(q.id) && q.coreValues.some((v) => values.has(v))));
+      const rest = shuffle(available.filter((q) => !used.has(q.id) && !q.coreValues.some((v) => values.has(v))));
       for (const q of [...prefer, ...rest]) {
         if (picked.length >= length) break;
         picked.push(q);
@@ -81,11 +84,15 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
     setCopied(false);
   }
 
-  // Group the generated guide by core value (untagged under "General").
+  // Group the generated guide by core value (untagged under "General"). A
+  // question tagged with several values sits under the first one this guide
+  // asked for, so it is listed once.
   function grouped(list: InterviewQuestionItem[]) {
     const groups = new Map<string, InterviewQuestionItem[]>();
     for (const q of list) {
-      const key = q.coreValue && VALUE_NAME[q.coreValue] ? VALUE_NAME[q.coreValue] : "General";
+      const known = q.coreValues.filter((v) => VALUE_NAME[v]);
+      const value = known.find((v) => values.has(v)) ?? known[0];
+      const key = value ? VALUE_NAME[value] : "General";
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(q);
     }
@@ -100,8 +107,9 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
     for (const [group, items] of grouped(guide)) {
       text += `${group}\n`;
       for (const q of items) {
-        text += `  ${n}. ${q.text}\n`;
-        if (q.guidance) text += `     (Look for: ${q.guidance})\n`;
+        text += `  ${n}. ${questionPlain(q.text)}\n`;
+        if (q.strongAnswer) text += `     Strong answer: ${questionPlain(q.strongAnswer)}\n`;
+        if (q.listenFor) text += `     Listen for: ${questionPlain(q.listenFor)}\n`;
         n += 1;
       }
       text += "\n";
@@ -223,13 +231,11 @@ export function GuideBuilder({ questions }: { questions: InterviewQuestionItem[]
                         <li key={q.id} className="flex gap-2">
                           <span className="shrink-0 text-sm font-semibold text-brand-grey dark:text-slate-400">{n}.</span>
                           <div>
-                            <p className="text-sm text-brand-black dark:text-slate-100">
-                              {q.text}
-                              <span className="ml-2 rounded bg-brand-cloudDancer/70 px-2 py-0.5 text-[10px] font-semibold text-brand-grey dark:bg-white/5 dark:text-slate-400">
-                                {CATEGORY_LABELS[q.category] ?? q.category}
-                              </span>
-                            </p>
-                            {q.guidance ? <p className="mt-0.5 text-xs italic text-brand-grey dark:text-slate-400">Look for: {q.guidance}</p> : null}
+                            <RichTextView html={questionHtml(q.text)} className="!text-brand-black dark:!text-slate-100 [&_p:first-child]:mt-0" />
+                            <span className="rounded bg-brand-cloudDancer/70 px-2 py-0.5 text-[10px] font-semibold text-brand-grey dark:bg-white/5 dark:text-slate-400">
+                              {CATEGORY_LABELS[q.category] ?? q.category}
+                            </span>
+                            <GuidanceBlocks strongAnswer={q.strongAnswer} listenFor={q.listenFor} />
                           </div>
                         </li>
                       );

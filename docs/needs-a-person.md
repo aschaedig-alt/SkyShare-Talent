@@ -1001,6 +1001,55 @@ count.
 
 ---
 
+### 46. No training sheet has been imported since imports stopped doubling rows
+
+**Status:** OPEN
+**Added:** 2026-11-11
+
+Feedback cmw2gd82m: importing the training sheet added a second row for pilots already
+tracked, and a chart spelling ("Ben Fleckenstien") made an extra "from chart" row with no X.
+Import now matches the same pilot's existing record (same start date, or an undated record
+for the same aircraft) instead of adding one, and a misspelt chart name counts as covered.
+Checked against the live 127 records without saving: re-importing all of them added 0;
+a dated Matt Smith row filled his undated record instead of doubling it; the Ben
+Fleckenstien typo no longer makes a row. NOT checked: an import through the Training tab
+itself, which saves to the live chart.
+
+**How to check it, two minutes:** Fleet > Crew > Training, paste the current sheet into
+Import, then Save training.
+
+**What would count as a pass:** the message says mostly "updated" and few or no "new", and
+no pilot appears twice for the same training. (Two rows already there before the fix stay
+until someone X's one out, for example Jonathan Gleisberg's undated Tentative row.)
+
+---
+
+### 47. Nobody has saved a question-bank question in the new editor or dragged one into order
+
+**Status:** OPEN
+**Added:** 2026-11-11
+
+Feedback cmwcjtm5k: the question bank's Question box is now the notes editor (bold,
+italics, lists, blank lines), and the guidance under it is two separate editors, "Strong
+answer" and "Listen for" (existing questions are split at read time; the old prefixes
+become the labels). A question can carry several core values, and questions can be dragged
+(or moved with arrows) into order. Later check, same way: the two-block form opened with
+the old "Strong answer: ... Listen for: ..." text correctly split and sent them separately.
+Checked in Chrome with every save blocked: the editor loaded existing text, Enter-Enter and
+bold produced a blank line and bold text in what would be saved, two core values went in
+the save, and Move down swapped two questions and sent the new order. The server side was
+checked separately (the saved text keeps the blank line and drops anything unsafe). Nothing
+was actually saved, and the drag itself was not performed with a mouse.
+
+**How to check it, two minutes:** edit one question, add a blank line and some bold, tick a
+second core value, put something in both Strong answer and Listen for, save, and reload.
+Then drag one question above another and reload.
+
+**What would count as a pass:** the blank line, bold, both value tags and both guidance
+blocks are still there after the reload, and the new order holds.
+
+---
+
 ## Closed
 
 ### 33. The candidate page's layout has not been saved since the boxes started fitting their content

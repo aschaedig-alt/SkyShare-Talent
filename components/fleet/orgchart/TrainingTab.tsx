@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { CrewGroup } from "@/lib/fleet/staffing/types";
 import type { TrainingRecord, TrainingRow, TrainingConfirmation, TrainingHireType, TrainingPool } from "@/lib/fleet/staffing/training";
-import { PROGRESS_LABEL, trainingRows, parseTrainingPaste, trainingRecordId } from "@/lib/fleet/staffing/training";
+import { PROGRESS_LABEL, trainingRows, parseTrainingPaste, trainingRecordId, mergeImportedTraining } from "@/lib/fleet/staffing/training";
 import { DateCell, TonedSelect, hireTypeTone, poolTone, confirmationTone } from "./TrainingCells";
 
 // The Training tab on the Crew Org Chart.
@@ -214,22 +214,16 @@ export function TrainingTab({
       setImportMsg({ ok: false, lines: result.problems.length ? result.problems : ["Nothing to import from that paste."] });
       return;
     }
-    // MERGE by record id, never replace: a paste is often a subset, and
-    // replacing would delete everyone the sheet no longer lists. Ids are
-    // derived from name + training start + position, so re-pasting a corrected
-    // sheet updates rows in place instead of doubling them.
-    const byId = new Map(records.map((r) => [r.id, r]));
-    for (const rec of result.records) {
-      const prev = byId.get(rec.id);
-      // completedAt is ours, not the sheet's — a re-import must not undo
-      // somebody having already moved that pilot onto the line.
-      byId.set(rec.id, prev?.completedAt ? { ...rec, completedAt: prev.completedAt } : rec);
-    }
-    onChange([...byId.values()]);
+    // MERGE, never replace: a paste is often a subset, and replacing would
+    // delete everyone the sheet no longer lists. Matching is by id first, then
+    // by the same pilot + training (see mergeImportedTraining) — matching by id
+    // alone doubled rows whenever a start date or position was filled in later
+    // (feedback cmw2gd82m).
+    const merged = mergeImportedTraining(records, result.records);
+    onChange(merged.records);
 
-    const added = result.records.filter((r) => !records.some((e) => e.id === r.id)).length;
     const lines = [
-      `Read ${result.records.length} training records — ${added} new, ${result.records.length - added} updated. ${result.archived} are archived history.`,
+      `Read ${result.records.length} training records — ${merged.added} new, ${merged.updated} updated. ${result.archived} are archived history.`,
       `${result.skipped} rows had no name and were skipped (blank spacers and the ARCHIVED divider).`,
       "Nothing is stored until you press Save training below."
     ];
@@ -507,7 +501,12 @@ export function TrainingTab({
                       </span>
                       {canEdit ? (
                         row.missing ? (
-                          <span style={{ flex: "0 0 auto", fontSize: 10, opacity: 0.6 }}>from chart</span>
+                          <span
+                            style={{ flex: "0 0 auto", fontSize: 10, opacity: 0.6, cursor: "help" }}
+                            title="This row comes from the org chart, not a saved record: the chart shows this pilot in a training seat and no training record matches. It goes away once a record exists for them (fill in any field, or import the sheet), or once they leave the training seat on the chart."
+                          >
+                            from chart
+                          </span>
                         ) : (
                           <>
                             <button

@@ -1,13 +1,16 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type DragEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Search, ListChecks } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ListChecks, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
 import type { InterviewQuestionItem } from "@/lib/data/interview-questions";
 import { COMPANY_VALUES } from "@/lib/compliments/constants";
 import { DEPARTMENTS, DEPARTMENT_LABELS } from "@/lib/calendar/departments";
 import { InterviewTabs } from "@/components/interview-questions/InterviewTabs";
 import { Button } from "@/components/ui";
+import { RichTextEditor, RichTextView } from "@/components/richtext/RichTextEditor";
+import { questionHtml, questionPlain } from "@/lib/interview-questions/rich";
+import { GuidanceBlocks } from "@/components/interview-questions/GuidanceBlocks";
 
 const CATEGORY_LABELS: Record<string, string> = {
   BEHAVIORAL: "Behavioral",
@@ -20,23 +23,36 @@ const CATEGORIES = Object.keys(CATEGORY_LABELS);
 const VALUE_NAME: Record<string, string> = Object.fromEntries(COMPANY_VALUES.map((v) => [v.colorKey, v.name]));
 
 type FormState = {
+  /** Rich-text HTML. */
   text: string;
   category: string;
-  coreValue: string; // "" = none
+  coreValues: string[];
   departments: string[];
-  guidance: string;
+  /** Rich-text HTML. */
+  strongAnswer: string;
+  /** Rich-text HTML. */
+  listenFor: string;
   isActive: boolean;
 };
 
 const inputCls = "w-full rounded border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100";
+const fieldLabel = "text-xs font-semibold text-brand-lea dark:text-slate-100";
+
+/** Chip used for both multi-selects (core values, departments): selected = navy + gold. */
+function chipCls(active: boolean): string {
+  return `rounded border px-3 py-1 text-xs font-semibold transition hover:shadow-glow ${
+    active ? "border-brand-gold bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
+  }`;
+}
 
 function toForm(q?: InterviewQuestionItem): FormState {
   return {
-    text: q?.text ?? "",
+    text: questionHtml(q?.text),
     category: q?.category ?? "BEHAVIORAL",
-    coreValue: q?.coreValue ?? "",
+    coreValues: q?.coreValues ?? [],
     departments: q?.departments ?? [],
-    guidance: q?.guidance ?? "",
+    strongAnswer: q?.strongAnswer ?? "",
+    listenFor: q?.listenFor ?? "",
     isActive: q?.isActive ?? true
   };
 }
@@ -57,8 +73,8 @@ function QuestionForm({
   function set<K extends keyof FormState>(k: K, v: FormState[K]) {
     setForm((f) => ({ ...f, [k]: v }));
   }
-  function toggleDept(key: string) {
-    set("departments", form.departments.includes(key) ? form.departments.filter((d) => d !== key) : [...form.departments, key]);
+  function toggle(field: "departments" | "coreValues", key: string) {
+    setForm((f) => ({ ...f, [field]: f[field].includes(key) ? f[field].filter((d) => d !== key) : [...f[field], key] }));
   }
 
   async function save() {
@@ -67,9 +83,10 @@ function QuestionForm({
     const payload = {
       text: form.text,
       category: form.category,
-      coreValue: form.coreValue || null,
+      coreValues: form.coreValues,
       departments: form.departments,
-      guidance: form.guidance || null,
+      strongAnswer: questionPlain(form.strongAnswer) ? form.strongAnswer : "",
+      listenFor: questionPlain(form.listenFor) ? form.listenFor : "",
       isActive: form.isActive
     };
     try {
@@ -93,64 +110,77 @@ function QuestionForm({
   return (
     <div className="rounded border border-brand-gold/30 bg-brand-gold/5 p-4">
       <div className="grid gap-3">
-        <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
-          Question
-          <textarea value={form.text} onChange={(e) => set("text", e.target.value)} rows={2} placeholder="e.g. Tell me about a time you put the customer first." className={inputCls} />
-        </label>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
-            Category
-            <select value={form.category} onChange={(e) => set("category", e.target.value)} className={inputCls}>
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {CATEGORY_LABELS[c]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
-            Core value
-            <select value={form.coreValue} onChange={(e) => set("coreValue", e.target.value)} className={inputCls}>
-              <option value="">— None —</option>
-              {COMPANY_VALUES.map((v) => (
-                <option key={v.colorKey} value={v.colorKey}>
-                  {v.name}
-                </option>
-              ))}
-            </select>
-          </label>
+        {/* Not a <label>: the editor must not sit inside one (see RichTextEditor). */}
+        <div className="grid gap-1">
+          <span className={fieldLabel}>Question</span>
+          <RichTextEditor
+            value={form.text}
+            onChange={(html) => set("text", html)}
+            minHeight={70}
+            placeholder="e.g. Tell me about a time you put the customer first."
+            ariaLabel="Question"
+          />
         </div>
 
+        <label className={`grid gap-1 sm:max-w-xs ${fieldLabel}`}>
+          Category
+          <select value={form.category} onChange={(e) => set("category", e.target.value)} className={inputCls}>
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {CATEGORY_LABELS[c]}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <div>
-          <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">Departments</span>
-          <p className="mb-1.5 text-[11px] text-brand-grey dark:text-slate-400">Which departments this question suits — leave empty for all.</p>
+          <span className={fieldLabel}>Core values</span>
+          <p className="mb-1.5 text-[11px] text-brand-grey dark:text-slate-400">Pick every value this question speaks to — leave empty for none.</p>
           <div className="flex flex-wrap gap-1.5">
-            {DEPARTMENTS.map((d) => {
-              const active = form.departments.includes(d.key);
-              return (
-                <button
-                  key={d.key}
-                  type="button"
-                  onClick={() => toggleDept(d.key)}
-                  className={`rounded border px-3 py-1 text-xs font-semibold transition hover:shadow-glow ${
-                    active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
-                  }`}
-                >
-                  {d.label}
-                </button>
-              );
-            })}
+            {COMPANY_VALUES.map((v) => (
+              <button key={v.colorKey} type="button" aria-pressed={form.coreValues.includes(v.colorKey)} onClick={() => toggle("coreValues", v.colorKey)} className={chipCls(form.coreValues.includes(v.colorKey))}>
+                {v.name}
+              </button>
+            ))}
           </div>
         </div>
 
-        <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
-          What a strong answer looks like (optional)
-          <textarea value={form.guidance} onChange={(e) => set("guidance", e.target.value)} rows={2} placeholder="Interviewer guidance / scoring notes" className={inputCls} />
-        </label>
+        <div>
+          <span className={fieldLabel}>Departments</span>
+          <p className="mb-1.5 text-[11px] text-brand-grey dark:text-slate-400">Which departments this question suits — leave empty for all.</p>
+          <div className="flex flex-wrap gap-1.5">
+            {DEPARTMENTS.map((d) => (
+              <button key={d.key} type="button" aria-pressed={form.departments.includes(d.key)} onClick={() => toggle("departments", d.key)} className={chipCls(form.departments.includes(d.key))}>
+                {d.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid gap-1">
+          <span className={fieldLabel}>Strong answer (optional)</span>
+          <RichTextEditor
+            value={form.strongAnswer}
+            onChange={(html) => set("strongAnswer", html)}
+            minHeight={90}
+            placeholder="What a strong answer sounds like"
+            ariaLabel="Strong answer"
+          />
+        </div>
+
+        <div className="grid gap-1">
+          <span className={fieldLabel}>Listen for (optional)</span>
+          <RichTextEditor
+            value={form.listenFor}
+            onChange={(html) => set("listenFor", html)}
+            minHeight={70}
+            placeholder="What the interviewer should listen for"
+            ariaLabel="Listen for"
+          />
+        </div>
 
         <label className="flex items-center gap-2 text-sm text-brand-lea dark:text-slate-100">
-          <input type="checkbox" checked={form.isActive} onChange={(e) => set("isActive", e.target.checked)} /> Active (available when building guides)
+          <input type="checkbox" checked={form.isActive} onChange={(e) => set("isActive", e.target.checked)} /> Active (available when building guides and scorecards)
         </label>
       </div>
 
@@ -159,7 +189,7 @@ function QuestionForm({
         <button type="button" onClick={onCancel} className="rounded px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400">
           Cancel
         </button>
-        <Button onClick={save} disabled={busy || form.text.trim().length < 5}>
+        <Button onClick={save} disabled={busy || questionPlain(form.text).length < 5}>
           {busy ? "Saving…" : initial ? "Save changes" : "Add question"}
         </Button>
       </div>
@@ -177,6 +207,11 @@ function Badge({ children, tone = "sweet" }: { children: ReactNode; tone?: "swee
   return <span className={`rounded px-2 py-0.5 text-[11px] font-semibold ${cls}`}>{children}</span>;
 }
 
+/** Active questions first (the server sorts that way too), saved order within each. */
+function orderedIds(list: InterviewQuestionItem[]): string[] {
+  return [...list.filter((q) => q.isActive), ...list.filter((q) => !q.isActive)].map((q) => q.id);
+}
+
 export function InterviewQuestionsWorkspace({ questions }: { questions: InterviewQuestionItem[] }) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
@@ -187,16 +222,33 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
   const [fVal, setFVal] = useState("all");
   const [fDept, setFDept] = useState("all");
 
+  // The order on screen. Held locally so a move shows at once; re-taken from
+  // the server whenever the set of questions (or their active state) changes.
+  const serverKey = questions.map((q) => `${q.id}:${q.isActive ? 1 : 0}`).join("|");
+  const [order, setOrder] = useState<string[]>(() => orderedIds(questions));
+  const [seenKey, setSeenKey] = useState(serverKey);
+  if (seenKey !== serverKey) {
+    setSeenKey(serverKey);
+    setOrder(orderedIds(questions));
+  }
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+
+  const byId = useMemo(() => new Map(questions.map((q) => [q.id, q])), [questions]);
+  const ordered = useMemo(() => order.map((id) => byId.get(id)).filter((q): q is InterviewQuestionItem => Boolean(q)), [order, byId]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return questions.filter((item) => {
-      if (q && !item.text.toLowerCase().includes(q) && !(item.guidance ?? "").toLowerCase().includes(q)) return false;
+    return ordered.filter((item) => {
+      if (q && !questionPlain(item.text).toLowerCase().includes(q) && !questionPlain(item.strongAnswer).toLowerCase().includes(q) && !questionPlain(item.listenFor).toLowerCase().includes(q)) return false;
       if (fCat !== "all" && item.category !== fCat) return false;
-      if (fVal !== "all" && item.coreValue !== fVal) return false;
+      if (fVal !== "all" && !item.coreValues.includes(fVal)) return false;
       if (fDept !== "all" && !item.departments.includes(fDept)) return false;
       return true;
     });
-  }, [questions, search, fCat, fVal, fDept]);
+  }, [ordered, search, fCat, fVal, fDept]);
 
   const activeCount = questions.filter((q) => q.isActive).length;
 
@@ -207,7 +259,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
   }
 
   async function remove(item: InterviewQuestionItem) {
-    if (!window.confirm("Delete this question? This cannot be undone.")) return;
+    if (!window.confirm("Delete this question? This cannot be undone. (To keep it but stop using it, switch it to Inactive instead.)")) return;
     setBusyId(item.id);
     try {
       const res = await fetch(`/api/interview-questions/${item.id}`, { method: "DELETE" });
@@ -231,6 +283,76 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
     }
   }
 
+  async function saveOrder(next: string[]) {
+    const previous = order;
+    setOrder(next);
+    setOrderError(null);
+    setSavingOrder(true);
+    try {
+      const res = await fetch("/api/interview-questions/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: next })
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { message?: string };
+        throw new Error(body.message ?? "Could not save the new order.");
+      }
+      router.refresh();
+    } catch (caught) {
+      // Put it back rather than show an order that is not what is saved.
+      setOrder(previous);
+      setOrderError(caught instanceof Error ? caught.message : "Could not save the new order.");
+    } finally {
+      setSavingOrder(false);
+    }
+  }
+
+  /**
+   * Move `id` to where `targetId` is. Works on the FULL order, so moving within
+   * a filtered view only swaps the questions you can see past each other.
+   * Active and inactive questions are kept apart (active always list first).
+   */
+  function moveTo(id: string, targetId: string) {
+    if (id === targetId) return;
+    const a = byId.get(id);
+    const b = byId.get(targetId);
+    if (!a || !b || a.isActive !== b.isActive) return;
+    const from = order.indexOf(id);
+    const to = order.indexOf(targetId);
+    if (from === -1 || to === -1) return;
+    const next = order.filter((x) => x !== id);
+    const at = next.indexOf(targetId);
+    // Dragging down lands after the target, dragging up lands before it.
+    next.splice(from < to ? at + 1 : at, 0, id);
+    void saveOrder(next);
+  }
+
+  function neighbour(item: InterviewQuestionItem, step: -1 | 1): InterviewQuestionItem | null {
+    const i = filtered.findIndex((q) => q.id === item.id);
+    const other = filtered[i + step];
+    return other && other.isActive === item.isActive ? other : null;
+  }
+
+  function onDragStart(e: DragEvent<HTMLElement>, id: string) {
+    setDragId(id);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", id);
+    const card = (e.currentTarget as HTMLElement).closest("[data-qid]");
+    if (card instanceof HTMLElement) e.dataTransfer.setDragImage(card, 16, 16);
+  }
+
+  function onDrop(e: DragEvent<HTMLElement>, targetId: string) {
+    e.preventDefault();
+    const id = dragId ?? e.dataTransfer.getData("text/plain");
+    setDragId(null);
+    setOverId(null);
+    if (id) moveTo(id, targetId);
+  }
+
+  const reorderBtn =
+    "rounded p-0.5 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea disabled:opacity-25 disabled:hover:bg-transparent dark:text-slate-400 dark:hover:bg-white/10";
+
   return (
     <div className="space-y-5 px-5 py-5 lg:px-8">
       {/* Header */}
@@ -242,8 +364,10 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
               <ListChecks className="h-7 w-7" /> Question bank
             </h1>
             <p className="mt-1 max-w-2xl text-sm text-white/75">
-              A reusable library of interview questions, tagged by category, core value, and department — the source the
-              interview-guide builder will draw from.
+              A reusable library of interview questions, tagged by category, core values, and department — the source the
+              interview-guide builder and scorecards draw from. Drag a question by its handle (or use the arrows) to set the
+              order. Switch a question to <b className="text-white">Inactive</b> to keep it in the bank but leave it out of new
+              guides and scorecards.
             </p>
           </div>
           <button
@@ -295,6 +419,10 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
         </span>
       </section>
 
+      {orderError ? (
+        <p className="rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-300">{orderError}</p>
+      ) : null}
+
       {creating ? <QuestionForm onCancel={() => setCreating(false)} onSaved={afterSave} /> : null}
 
       {/* List */}
@@ -310,36 +438,93 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
             </p>
           </div>
         ) : (
-          filtered.map((item) =>
-            editingId === item.id ? (
-              <QuestionForm key={item.id} initial={item} onCancel={() => setEditingId(null)} onSaved={afterSave} />
-            ) : (
-              <div key={item.id} className={`rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10 ${item.isActive ? "" : "opacity-60"}`}>
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm font-medium text-brand-black dark:text-slate-100">{item.text}</p>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <button onClick={() => toggleActive(item)} disabled={busyId === item.id} title={item.isActive ? "Mark inactive" : "Mark active"} className="rounded px-2 py-1 text-[11px] font-semibold text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5">
-                      {item.isActive ? "Active" : "Inactive"}
-                    </button>
-                    <button onClick={() => { setCreating(false); setEditingId(item.id); }} title="Edit" className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5">
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button onClick={() => remove(item)} disabled={busyId === item.id} title="Delete" className="rounded p-1.5 text-brand-grey transition hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-500/15 dark:hover:text-red-300">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+          filtered.map((item) => {
+            if (editingId === item.id) {
+              return <QuestionForm key={item.id} initial={item} onCancel={() => setEditingId(null)} onSaved={afterSave} />;
+            }
+            const up = neighbour(item, -1);
+            const down = neighbour(item, 1);
+            const dropTarget = dragId !== null && overId === item.id && dragId !== item.id && byId.get(dragId)?.isActive === item.isActive;
+            return (
+              <div
+                key={item.id}
+                data-qid={item.id}
+                onDragOver={(e) => {
+                  if (!dragId) return;
+                  e.preventDefault();
+                  if (overId !== item.id) setOverId(item.id);
+                }}
+                onDragLeave={() => setOverId((cur) => (cur === item.id ? null : cur))}
+                onDrop={(e) => onDrop(e, item.id)}
+                className={`flex gap-2 rounded bg-white p-4 shadow-panel ring-1 dark:bg-brand-panel ${
+                  dropTarget ? "ring-2 ring-brand-gold" : "ring-brand-lea/10 dark:ring-white/10"
+                } ${item.isActive ? "" : "opacity-60"} ${dragId === item.id ? "opacity-40" : ""}`}
+              >
+                {/* Reorder handle + arrows */}
+                <div className="flex shrink-0 flex-col items-center gap-0.5 pt-0.5">
+                  <button type="button" onClick={() => up && moveTo(item.id, up.id)} disabled={!up || savingOrder} title="Move up" aria-label="Move up" className={reorderBtn}>
+                    <ChevronUp className="h-4 w-4" />
+                  </button>
+                  <span
+                    draggable={!savingOrder}
+                    onDragStart={(e) => onDragStart(e, item.id)}
+                    onDragEnd={() => {
+                      setDragId(null);
+                      setOverId(null);
+                    }}
+                    title="Drag to reorder"
+                    aria-hidden
+                    className="cursor-grab text-brand-grey/70 hover:text-brand-lea active:cursor-grabbing dark:text-slate-500 dark:hover:text-slate-200"
+                  >
+                    <GripVertical className="h-4 w-4" />
+                  </span>
+                  <button type="button" onClick={() => down && moveTo(item.id, down.id)} disabled={!down || savingOrder} title="Move down" aria-label="Move down" className={reorderBtn}>
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <RichTextView html={questionHtml(item.text)} className="min-w-0 font-medium !text-brand-black dark:!text-slate-100 [&_p:first-child]:mt-0" />
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        onClick={() => toggleActive(item)}
+                        disabled={busyId === item.id}
+                        aria-pressed={item.isActive}
+                        title={item.isActive ? "Active — click to make inactive (kept in the bank, left out of new guides and scorecards)" : "Inactive — click to make active again"}
+                        className={`inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-[11px] font-semibold transition hover:shadow-glow ${
+                          item.isActive
+                            ? "border-emerald-600/30 text-emerald-700 dark:border-emerald-400/30 dark:text-emerald-300"
+                            : "border-brand-lea/20 text-brand-grey dark:border-white/10 dark:text-slate-400"
+                        }`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${item.isActive ? "bg-emerald-600 dark:bg-emerald-400" : "bg-brand-grey/60"}`} />
+                        {item.isActive ? "Active" : "Inactive"}
+                      </button>
+                      <button onClick={() => { setCreating(false); setEditingId(item.id); }} title="Edit" className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/10">
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => remove(item)} disabled={busyId === item.id} title="Delete" className="rounded p-1.5 text-brand-grey transition hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-500/15 dark:hover:text-red-300">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <Badge tone="grey">{CATEGORY_LABELS[item.category] ?? item.category}</Badge>
+                    {item.coreValues.map((v) => (
+                      <Badge key={v} tone="gold">
+                        {VALUE_NAME[v] ?? v}
+                      </Badge>
+                    ))}
+                    {item.departments.map((d) => (
+                      <Badge key={d}>{DEPARTMENT_LABELS[d as keyof typeof DEPARTMENT_LABELS] ?? d}</Badge>
+                    ))}
+                  </div>
+                  <GuidanceBlocks strongAnswer={item.strongAnswer} listenFor={item.listenFor} />
                 </div>
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <Badge tone="grey">{CATEGORY_LABELS[item.category] ?? item.category}</Badge>
-                  {item.coreValue ? <Badge tone="gold">{VALUE_NAME[item.coreValue] ?? item.coreValue}</Badge> : null}
-                  {item.departments.map((d) => (
-                    <Badge key={d}>{DEPARTMENT_LABELS[d as keyof typeof DEPARTMENT_LABELS] ?? d}</Badge>
-                  ))}
-                </div>
-                {item.guidance ? <p className="mt-2 border-l-2 border-brand-sweet/40 pl-2 text-xs italic text-brand-grey dark:text-slate-400">{item.guidance}</p> : null}
               </div>
-            )
-          )
+            );
+          })
         )}
       </section>
     </div>
