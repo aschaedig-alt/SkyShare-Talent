@@ -4,6 +4,7 @@ import { periodsOf } from "@/lib/data/headcount-history";
 import { isTestTagged } from "@/lib/testdata/markers";
 import { HANDLE_PERSON, canonicalHandles } from "@/lib/quality-of-hire/interviewers";
 import { getSituationalMarks, periodKey } from "@/lib/quality-of-hire/situational";
+import { getQohTracking, type QohTracking } from "@/lib/quality-of-hire/tracking";
 import { latestBatch, type StoredBatch, type CalendarInterview, type ExitRow, type InterviewKind, type QohSource, type Voluntary } from "@/lib/quality-of-hire/imports";
 
 // ---------------------------------------------------------------------------
@@ -114,6 +115,8 @@ export type QualityOfHire = {
   /** The calendar file's interviewer handles ("dcarter") to a person, where one has exactly that
       SkyShare address. A handle nobody has stays a handle - never a guessed name. */
   interviewers: Record<string, { name: string; id: string | null }>;
+  /** Milestone 4's tracking check: offers since Dec 10 and 90-day ratings due (lib/quality-of-hire/tracking.ts). */
+  tracking: QohTracking;
 };
 
 const day = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
@@ -188,7 +191,7 @@ type Saved<T> = (StoredBatch<T> & { id: string }) | null;
 export type QohOverride = { terminations?: Saved<ExitRow>; termTypes?: Saved<ExitRow>; interviews?: Saved<CalendarInterview> };
 
 export async function getQualityOfHire(now: Date = new Date(), override: QohOverride = {}): Promise<QualityOfHire> {
-  const [people, apps, interviews, terminations, termTypes, calendar, situational] = await Promise.all([
+  const [people, apps, interviews, terminations, termTypes, calendar, situational, tracking] = await Promise.all([
     prisma.newHire.findMany({
       where: { canceled: false },
       select: {
@@ -221,7 +224,8 @@ export async function getQualityOfHire(now: Date = new Date(), override: QohOver
     "terminations" in override ? override.terminations ?? null : latestBatch<ExitRow>("terminations"),
     "termTypes" in override ? override.termTypes ?? null : latestBatch<ExitRow>("termTypes"),
     "interviews" in override ? override.interviews ?? null : latestBatch<CalendarInterview>("interviews"),
-    getSituationalMarks()
+    getSituationalMarks(),
+    getQohTracking(now)
   ]);
   const neverStarted = (await prisma.newHire.findMany({ where: { canceled: true }, select: { tags: true } })).filter((h) => !isTestTagged(h.tags)).length;
 
@@ -439,6 +443,7 @@ export async function getQualityOfHire(now: Date = new Date(), override: QohOver
     mismatches,
     imports: { terminations: info(terminations), termTypes: info(termTypes), interviews: info(calendar) },
     calendarSpan,
-    interviewers
+    interviewers,
+    tracking
   };
 }

@@ -978,6 +978,29 @@ is not this change. Nothing was saved, because localhost writes the live databas
 
 ---
 
+### 45. The tracking check on the Quality of Hire tab has not been looked at in a browser
+
+**Status:** OPEN
+**Added:** 2026-11-10
+
+Reports > Quality of Hire now has a "Tracking check" section: every offer made since
+Dec 10 (until then, a practice run over the last 30 days) with four marks - interviews
+logged, recruiter, hiring manager, and a decline reason if declined - plus 90-day ratings
+due. Checked: it runs on live data (practice run, 9 offers since Oct 12, 0 with all four,
+6 with no interview logged, 13 ratings due), the section renders on the server with all 9
+rows, and the live Reports page carries its data. NOT checked: looking at it in a
+browser. On localhost the Reports page, like the People page (item 44), loads but never
+comes alive, in the in-app pane and in Chrome.
+
+**How to check it, one minute, on the live site after deploy:** open Reports > Quality of
+Hire and scroll to "Tracking check".
+
+**What would count as a pass:** the practice run lists the recent offers, the gaps say
+"missing", each name opens the candidate, and the 90-day list shows people with their day
+count.
+
+---
+
 ## Closed
 
 ### 33. The candidate page's layout has not been saved since the boxes started fitting their content
