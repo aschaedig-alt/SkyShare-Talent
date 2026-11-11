@@ -1,0 +1,4 @@
+# Dry-run reviews, plans and undo records for the Paycom status-step cleanup. They name
+# candidates, so they stay on this machine, like scripts/paycom-notes/undo; never committed.
+*
+!.gitignore
