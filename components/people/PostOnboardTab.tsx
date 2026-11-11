@@ -14,11 +14,11 @@ import type { TaskSkipRecord } from "@/lib/front/task-email";
 import { EmptyState, Input } from "@/components/ui";
 import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
 import { CheckinRatingModal } from "@/components/people/CheckinRatingModal";
-import { ratingAverage, type CheckinRatingView } from "@/lib/onboarding/checkin-rating";
+import { CHECKIN_RATING_TASK_KEY, ratingAverage, type CheckinRatingView } from "@/lib/onboarding/checkin-rating";
 
 // Quality of Hire, Dec 10 2026: ticking the 90-day check-in done asks for the
 // hiring manager's rating first (HR enters it from the manager - his call, Nov 10).
-const RATED_CHECKIN = "checkin_90";
+const RATED_CHECKIN = CHECKIN_RATING_TASK_KEY;
 
 // startDate is a chosen calendar day (UTC); onboardedAt is the moment they were
 // marked onboarded, so it reads in Mountain. See lib/dates/display.ts.
@@ -348,11 +348,24 @@ export function PostOnboardTab({
           newHireId={rating.hire.id}
           initial={ratings[rating.hire.id] ?? null}
           onClose={() => setRating(null)}
-          onSaved={(saved) => {
+          onSaved={(saved, result) => {
+            // The server ticked the 90-day check-in itself; mirror it here (this grid
+            // keeps its own copy of the rows), and drop the person if that archived them.
             setRatings((cur) => ({ ...cur, [saved.newHireId]: saved }));
-            const tick = rating.tick;
+            const hireId = rating.hire.id;
             setRating(null);
-            if (tick) void markCheckin(rating.hire.id, tick);
+            if (result.archived) {
+              setHires((cur) => cur.filter((h) => h.id !== hireId));
+              router.refresh();
+            } else if (result.checkinDone) {
+              setHires((cur) =>
+                cur.map((h) =>
+                  h.id === hireId
+                    ? { ...h, checkins: h.checkins.map((c) => (c.key === RATED_CHECKIN ? { ...c, status: "DONE" as GridTaskStatus, dueSoon: false } : c)) }
+                    : h
+                )
+              );
+            }
           }}
           onSkip={
             rating.tick

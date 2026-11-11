@@ -6,7 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { RichNoteField } from "@/components/richtext/RichNoteField";
 import { RATINGS, CORE_VALUE_NAMES, type RatingKey } from "@/lib/interviews/scorecard";
 import { VALUE_DESCRIPTIONS } from "@/lib/compliments/constants";
-import type { CheckinRatingView, CheckinRatings } from "@/lib/onboarding/checkin-rating";
+import type { CheckinRatingView, CheckinRatings, CheckinTickResult } from "@/lib/onboarding/checkin-rating";
 
 // The 90-day check-in rating, entered by HR from the hiring manager's answers
 // (Quality of Hire, Dec 10 2026). The four core values on the interview
@@ -26,7 +26,8 @@ export function CheckinRatingModal({
   newHireId: string;
   initial: CheckinRatingView | null;
   onClose: () => void;
-  onSaved: (rating: CheckinRatingView) => void;
+  /** Saving also ticks the 90-day check-in done on the server; `tick` says what it did. */
+  onSaved: (rating: CheckinRatingView, tick: CheckinTickResult) => void;
   /** Offered when the form opened from ticking "90-day" done: tick it without a rating. */
   onSkip?: () => void;
 }) {
@@ -49,9 +50,9 @@ export function CheckinRatingModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newHireId, ratings, wouldHireAgain: again, managerName: manager, notes })
       });
-      const data = (await res.json().catch(() => ({}))) as { message?: string; rating?: CheckinRatingView };
+      const data = (await res.json().catch(() => ({}))) as { message?: string; rating?: CheckinRatingView } & Partial<CheckinTickResult>;
       if (!res.ok || !data.rating) throw new Error(data.message || "Could not save the rating.");
-      onSaved(data.rating);
+      onSaved(data.rating, { checkinDone: Boolean(data.checkinDone), archived: Boolean(data.archived) });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save the rating.");
     } finally {
@@ -71,6 +72,7 @@ export function CheckinRatingModal({
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">90-day check-in: {name}</h2>
         <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
           Enter the hiring manager&apos;s answers. The same four values are rated at the interview, so this shows how well the interview predicted.
+          Saving also marks the 90-day check-in done.
         </p>
 
         <label className="mt-3 grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
@@ -136,7 +138,7 @@ export function CheckinRatingModal({
             disabled={busy || nothing}
             className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-50"
           >
-            {busy ? "Saving…" : onSkip ? "Save and mark done" : "Save"}
+            {busy ? "Saving…" : "Save and mark done"}
           </button>
         </div>
       </div>

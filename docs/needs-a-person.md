@@ -925,12 +925,11 @@ role sticks after a reload, and a real holder change updates every follower's su
 
 ### 43. Nobody has saved a scorecard with the core values, or an offer's recruiter and hiring manager, yet
 
-**Status:** OPEN - half passed. He tested it on the live site 2026-11-11: the offer's
+**Status:** CLOSED 2026-11-11 - he tested both halves on the live site. The offer's
 recruiter and hiring manager stuck after a reload, and Declined kept Save grey until a
-reason was picked (PASSED). The scorecard part is NOT tested: he could not find a way to
-add one, because the scorecard page was linked only from the calendar's edit popup. Every
-interview on a candidate's Interviews tab now has a Scorecard link (Nov 11 fix, handed off);
-re-test the first bullet once that is live.
+reason was picked. After the Scorecard link went onto each interview on the candidate's
+Interviews tab (5490627), he added a scorecard: the four core values came first, the
+ratings saved, and they were still there when reopened with the pencil.
 **Added:** 2026-11-10
 
 Two Quality of Hire tracking pieces for Dec 10 are built. Every interview scorecard now
@@ -956,11 +955,15 @@ localhost writes the live database.
 
 ### 44. Nobody has saved a 90-day check-in rating yet, and the People page would not come alive locally to click it
 
-**Status:** OPEN - not passed yet. His live test 2026-11-11: he looked for the rating on the
-tracking check's 90-day due list, where a name only opens the profile, and did not find the
-Rate button in the Values column on People > Post-onboard. The due list now has its own Rate
-button on each person (Nov 11 fix, handed off); re-test from there once it is live. (The
-local-dev "never comes alive" problem was the automated browser, not the page: closed Nov 10.)
+**Status:** OPEN - three of four passed. His second live test 2026-11-11, after the due
+list got its own Rate button (5490627): he rated Jonathan Siswick from it and the rating
+showed in the Values column after a reload (commit agent read it back: would hire again yes, no
+core values rated, so the column has no average to show yet), and Jonathan left the due list (the database holds that
+one rating). NOT passed: ticking a 90-day check-in done and using "Mark done without a
+rating" - he did not see that option. It appears only when the form is opened from the
+90-day column on People > Post-onboard (the circle or the red DUE), not from Rate; not yet
+known whether he opened it that way. Also found: a rating saved from Rate does not tick the
+90-day check-in (Jonathan's is still TODO).
 **Added:** 2026-11-10
 
 People > Post-onboard has a new Values column. Ticking a 90-day check-in done now opens a

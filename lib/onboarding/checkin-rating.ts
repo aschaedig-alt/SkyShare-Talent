@@ -6,6 +6,11 @@
 import { CORE_VALUE_NAMES, RATING_VALUE, isRatingKey, type RatingKey } from "@/lib/interviews/scorecard";
 
 export const CHECKIN_RATING_DAY = 90;
+/** The check-in a saved rating ticks done (his call, Nov 11: "Yes, tick it"). */
+export const CHECKIN_RATING_TASK_KEY = "checkin_90";
+
+/** What saving a rating did to the 90-day check-in, so the screen can follow. */
+export type CheckinTickResult = { checkinDone: boolean; archived: boolean };
 
 export type CheckinRatings = Partial<Record<string, RatingKey>>;
 

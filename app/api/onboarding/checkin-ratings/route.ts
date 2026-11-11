@@ -2,14 +2,17 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cleanRichInput, richNoteTooLong } from "@/lib/richtext/stored";
 import { requireApiPermission } from "@/lib/auth/route-auth";
-import { CHECKIN_RATING_DAY, cleanRatings, type CheckinRatingView } from "@/lib/onboarding/checkin-rating";
+import { CHECKIN_RATING_DAY, CHECKIN_RATING_TASK_KEY, cleanRatings, type CheckinRatingView, type CheckinTickResult } from "@/lib/onboarding/checkin-rating";
+import { MAINTENANCE_GROUP } from "@/lib/onboarding/tasks";
+import { maybeArchiveOnCheckinsComplete } from "@/lib/data/onboarding";
 
 // The 90-day check-in rating HR enters from the hiring manager (Quality of Hire,
 // Dec 10 2026). Same permission as ticking a check-in done (onboarding-tasks/[id]).
 // See lib/onboarding/checkin-rating.ts.
 //
 //   GET  ?ids=a,b,c                       the saved ratings for those hires
-//   POST { newHireId, ratings, wouldHireAgain, managerName, notes }   save (one per hire)
+//   POST { newHireId, ratings, wouldHireAgain, managerName, notes }   save (one per hire);
+//        also ticks the 90-day check-in done, and says so: { rating, checkinDone, archived }
 
 const MAX_IDS = 500;
 const tidy = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) || null : null);
@@ -63,5 +66,21 @@ export async function POST(request: Request) {
     create: { newHireId, dayMark: CHECKIN_RATING_DAY, ...data },
     update: data
   });
-  return NextResponse.json({ ok: true, rating: view(saved) });
+
+  // A rating means the 90-day check-in happened, so it ticks that check-in done -
+  // from any screen (his call, Nov 11: "Yes, tick it"). Same as ticking it by hand
+  // in onboarding-tasks/[id]: completedAt set, and the last check-in done archives.
+  const tick: CheckinTickResult = { checkinDone: false, archived: false };
+  const task = await prisma.onboardingTask.findUnique({
+    where: { newHireId_key: { newHireId, key: CHECKIN_RATING_TASK_KEY } },
+    select: { id: true, status: true, group: true }
+  });
+  if (task) {
+    if (task.status !== "DONE") {
+      await prisma.onboardingTask.update({ where: { id: task.id }, data: { status: "DONE", completedAt: new Date() } });
+      if (task.group === MAINTENANCE_GROUP) tick.archived = await maybeArchiveOnCheckinsComplete(newHireId);
+    }
+    tick.checkinDone = true;
+  }
+  return NextResponse.json({ ok: true, rating: view(saved), ...tick });
 }
