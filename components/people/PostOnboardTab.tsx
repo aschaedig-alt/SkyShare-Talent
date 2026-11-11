@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { clsx } from "clsx";
 import { Archive, CalendarClock, Building2, Trash2, ListChecks } from "lucide-react";
 import type { Checkin, EmploymentStatus, GridTaskStatus, PostOnboardHire } from "@/lib/data/onboarding";
@@ -13,6 +13,12 @@ import { undoTaskEmailSkip } from "@/app/people/actions";
 import type { TaskSkipRecord } from "@/lib/front/task-email";
 import { EmptyState, Input } from "@/components/ui";
 import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
+import { CheckinRatingModal } from "@/components/people/CheckinRatingModal";
+import { ratingAverage, type CheckinRatingView } from "@/lib/onboarding/checkin-rating";
+
+// Quality of Hire, Dec 10 2026: ticking the 90-day check-in done asks for the
+// hiring manager's rating first (HR enters it from the manager - his call, Nov 10).
+const RATED_CHECKIN = "checkin_90";
 
 // startDate is a chosen calendar day (UTC); onboardedAt is the moment they were
 // marked onboarded, so it reads in Mountain. See lib/dates/display.ts.
@@ -56,6 +62,24 @@ export function PostOnboardTab({
   const emailKeys = useMemo(() => new Set(emailTaskKeys), [emailTaskKeys]);
   // Kept here so a skip, or undoing one, shows at once without a reload.
   const [skips, setSkips] = useState(taskSkips);
+
+  // 90-day ratings, loaded once for the people on this list.
+  const [ratings, setRatings] = useState<Record<string, CheckinRatingView>>({});
+  const [rating, setRating] = useState<{ hire: PostOnboardHire; tick: Checkin | null } | null>(null);
+  useEffect(() => {
+    const ids = initial.map((h) => h.id);
+    if (!ids.length) return;
+    let live = true;
+    void fetch(`/api/onboarding/checkin-ratings?ids=${encodeURIComponent(ids.join(","))}`)
+      .then((r) => (r.ok ? r.json() : { ratings: [] }))
+      .then((d: { ratings?: CheckinRatingView[] }) => {
+        if (live) setRatings(Object.fromEntries((d.ratings ?? []).map((x) => [x.newHireId, x])));
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [initial]);
 
   // Filters. Applied in the browser rather than the server: this list is the
   // post-onboard cohort, which is tens of rows, and it is already fully loaded —
@@ -229,6 +253,19 @@ export function PostOnboardTab({
 
   async function toggle(hireId: string, c: Checkin) {
     if (!c.id) return;
+    // Ticking the 90-day check-in done asks for the manager's rating first.
+    if (c.key === RATED_CHECKIN && c.status !== "DONE") {
+      const hire = hires.find((h) => h.id === hireId);
+      if (hire) {
+        setRating({ hire, tick: c });
+        return;
+      }
+    }
+    await markCheckin(hireId, c);
+  }
+
+  async function markCheckin(hireId: string, c: Checkin) {
+    if (!c.id) return;
     const next: GridTaskStatus = c.status === "DONE" ? "TODO" : "DONE";
     const prev = hires;
     setHires((cur) =>
@@ -303,6 +340,31 @@ export function PostOnboardTab({
           </button>
         ) : null}
       </div>
+      {rating ? (
+        <CheckinRatingModal
+          key={rating.hire.id}
+          open
+          name={rating.hire.name}
+          newHireId={rating.hire.id}
+          initial={ratings[rating.hire.id] ?? null}
+          onClose={() => setRating(null)}
+          onSaved={(saved) => {
+            setRatings((cur) => ({ ...cur, [saved.newHireId]: saved }));
+            const tick = rating.tick;
+            setRating(null);
+            if (tick) void markCheckin(rating.hire.id, tick);
+          }}
+          onSkip={
+            rating.tick
+              ? () => {
+                  const tick = rating.tick as Checkin;
+                  setRating(null);
+                  void markCheckin(rating.hire.id, tick);
+                }
+              : undefined
+          }
+        />
+      ) : null}
       <BulkActionBar count={selected.size} actions={POST_ONBOARD_BULK_ACTIONS} onApply={applyBulk} onChoice={bulkCheckin} onDelete={deleteSelected} onClear={() => setSelected(new Set())} busy={busy} />
       <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="overflow-x-auto">
@@ -318,6 +380,7 @@ export function PostOnboardTab({
               {heads.map((h) => (
                 <th key={h} className="px-3 py-3 text-center">{h}</th>
               ))}
+              <th className="px-3 py-3 text-center" title="The hiring manager's 90-day rating of the four core values">Values</th>
             </tr>
           </thead>
           <tbody>
@@ -426,12 +489,37 @@ export function PostOnboardTab({
                   </td>
                   );
                 })}
+                <td className="px-3 py-3 text-center">
+                  {ratings[h.id] ? (
+                    <button
+                      type="button"
+                      onClick={() => setRating({ hire: h, tick: null })}
+                      title={`Rated${ratings[h.id].managerName ? ` by ${ratings[h.id].managerName}` : ""} - click to edit`}
+                      className="whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-gold/10 dark:text-slate-100"
+                    >
+                      {ratingAverage(ratings[h.id].ratings)?.toFixed(1) ?? "—"} / 4
+                      {ratings[h.id].wouldHireAgain === null ? null : (
+                        <span className={clsx("ml-1 font-normal", ratings[h.id].wouldHireAgain ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300")}>
+                          {ratings[h.id].wouldHireAgain ? "· again" : "· not again"}
+                        </span>
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setRating({ hire: h, tick: null })}
+                      className="rounded border border-brand-lea/20 px-2 py-0.5 text-[11px] font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"
+                    >
+                      Rate
+                    </button>
+                  )}
+                </td>
               </tr>
               );
             })}
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={6 + heads.length} className="px-4 py-8 text-center text-sm text-brand-grey dark:text-slate-400">
+                <td colSpan={7 + heads.length} className="px-4 py-8 text-center text-sm text-brand-grey dark:text-slate-400">
                   No post-onboard employees match these filters.
                 </td>
               </tr>

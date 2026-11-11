@@ -949,6 +949,35 @@ localhost writes the live database.
 
 ---
 
+### 44. Nobody has saved a 90-day check-in rating yet, and the People page would not come alive locally to click it
+
+**Status:** OPEN
+**Added:** 2026-11-10
+
+People > Post-onboard has a new Values column. Ticking a 90-day check-in done now opens a
+short form first: the hiring manager's 1-4 rating of the four core values, "Would you
+hire this person again?", the manager's name and a note, entered by HR (his call, Nov 10).
+Save and mark done, or Mark done without a rating. Rate opens the same form any time.
+Checked: the new table exists in the live database (the change was only CREATE TABLE and
+two indexes, and the schema diff is empty after it); the ratings API answers, and refuses
+an empty rating; the form, rendered on the server, shows all four values with their
+buttons, the hire-again question and both actions; the Values column and 33 Rate buttons
+appear on the page. NOT checked: clicking Rate, or saving, in a browser. On localhost the
+People page loads but its buttons never come alive, in the in-app pane and in Chrome
+alike, and swapping this file back to the committed version did not change that, so it
+is not this change. Nothing was saved, because localhost writes the live database.
+
+**How to check it, about two minutes, on the live site after deploy:**
+
+- People > Post-onboard: click Rate on anyone. The form should open with the four values.
+  Rate them, answer hire-again, save: the cell should show the average out of 4.
+- Tick someone's 90-day check-in: the form should open first; Mark done without a rating
+  should tick it with no rating.
+
+**What would count as a pass:** both stick after a reload.
+
+---
+
 ## Closed
 
 ### 33. The candidate page's layout has not been saved since the boxes started fitting their content

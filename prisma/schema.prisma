@@ -708,6 +708,29 @@ model OrientationPrepTask {
   @@index([sessionId])
 }
 
+// A check-in rating HR enters from the hiring manager - Quality of Hire, Dec 10 2026.
+// At the 90-day check-in the manager rates SkyShare's four core values on the same
+// 1-4 scale the interview scorecard uses (Exceeds/Meets/Can Develop/Does Not Meet),
+// so interview and 90-day ratings can be compared, plus "would you hire again?".
+// ratingsJson: { "<core value name>": "EXCEEDS" | "MEETS" | "CAN_DEVELOP" | "DOES_NOT_MEET" }.
+// No relation on NewHire on purpose (keeps that shared model untouched); one row per
+// hire per check-in day.
+model HireCheckinRating {
+  id             String   @id @default(cuid())
+  newHireId      String
+  dayMark        Int      @default(90)
+  ratingsJson    String   @default("{}")
+  wouldHireAgain Boolean?
+  managerName    String?
+  notes          String?
+  enteredBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([newHireId, dayMark])
+  @@index([newHireId])
+}
+
 model OnboardingTask {
   id          String    @id @default(cuid())
   newHireId   String
