@@ -23,6 +23,7 @@
 import type { TravelItemView, TravelTripView } from "@/lib/data/travel";
 import { tripRange, itemHasNoDate } from "@/lib/travel/schedule";
 import { travelItemTypeLabel } from "@/lib/travel/constants";
+import { storedToPlain } from "@/lib/richtext/stored";
 
 export type TravelGapSeverity = "action" | "info";
 
@@ -37,7 +38,8 @@ export type TravelGap = {
 
 /** Free text on the trip where a human may have noted a booking in prose. */
 function freeText(trip: TravelTripView): string {
-  return [trip.specialRequests, trip.additionalTransport, trip.notes, trip.preferences]
+  // Internal notes may be rich text (feedback cmwcjtm5k) — read the words, not the tags.
+  return [trip.specialRequests, trip.additionalTransport, storedToPlain(trip.notes), trip.preferences]
     .filter(Boolean)
     .join(" \n ")
     .toLowerCase();

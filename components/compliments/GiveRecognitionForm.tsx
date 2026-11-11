@@ -14,6 +14,8 @@ import { createRecognition } from "@/app/compliments/actions";
 import { RecognitionStrength, STRENGTH_STOPS, VALUE_DESCRIPTIONS } from "@/lib/compliments/constants";
 import { valueColorClasses } from "@/lib/compliments/value-colors";
 import type { RosterPerson } from "@/lib/compliments/types";
+import { RichNoteField } from "@/components/richtext/RichNoteField";
+import { RICH_NOTE_MAX_CHARS, storedPlainLength } from "@/lib/richtext/stored";
 
 type ValueOption = { id: string; name: string; colorKey: string };
 type StrengthPoints = { GOOD: number; GREAT: number; AMAZING: number };
@@ -31,7 +33,10 @@ const schema = z
   .object({
     giverId: z.string().min(1, "Choose who is giving the recognition."),
     recipientId: z.string().min(1, "Choose who is being recognized."),
-    message: z.string().trim().min(5, "Add a short message about the impact.").max(1000),
+    message: z
+      .string()
+      .refine((v) => storedPlainLength(v) >= 5, "Add a short message about the impact.")
+      .refine((v) => storedPlainLength(v) <= RICH_NOTE_MAX_CHARS, `Keep it under ${RICH_NOTE_MAX_CHARS} characters.`),
     valueIds: z.array(z.string()).min(1, "Select at least one value."),
     strength: z.enum(strengthValues)
   })
@@ -50,7 +55,6 @@ export function GiveRecognitionForm({ roster, values, strengthPoints, defaultRec
   const {
     control,
     handleSubmit,
-    register,
     watch,
     formState: { errors }
   } = useForm<FormValues>({
@@ -107,14 +111,20 @@ export function GiveRecognitionForm({ roster, values, strengthPoints, defaultRec
         />
 
         <div>
-          <label htmlFor="message" className="mb-2 block text-sm font-medium text-brand-lea dark:text-slate-100">
-            What&apos;s this recognition about?
-          </label>
-          <textarea
-            id="message"
-            {...register("message")}
-            placeholder="Share what made this special. Be specific about the impact..."
-            className="min-h-[100px] w-full resize-none rounded-element border-[0.5px] border-brand-lea/20 px-3 py-2.5 text-sm text-brand-black outline-none focus:border-value-innovation focus:ring-2 focus:ring-value-innovation/30 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500"
+          {/* Rich text (feedback cmwcjtm5k). Not a <label>: it would hijack the editor's clicks. */}
+          <Controller
+            control={control}
+            name="message"
+            render={({ field }) => (
+              <RichNoteField
+                label="What's this recognition about?"
+                labelClassName="mb-2 block text-sm font-medium text-brand-lea dark:text-slate-100"
+                value={field.value}
+                onChange={field.onChange}
+                placeholder="Share what made this special. Be specific about the impact..."
+                minHeight={100}
+              />
+            )}
           />
           {errors.message ? <p className="mt-1 text-xs text-brand-red dark:text-red-400">{errors.message.message}</p> : null}
         </div>

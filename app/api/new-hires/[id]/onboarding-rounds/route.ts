@@ -3,6 +3,7 @@ import { requireApiUser } from "@/lib/auth/route-auth";
 import { canWriteModule } from "@/lib/auth/module-write-access";
 import { getOnboardingArchives, startOnboardingRound } from "@/lib/data/onboarding-rounds";
 import { isRoundReason } from "@/lib/onboarding/rounds";
+import { richNoteTooLong } from "@/lib/richtext/stored";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -40,6 +41,8 @@ export async function POST(request: Request, context: RouteContext) {
     if (!effectiveDate) {
       return NextResponse.json({ message: "A valid effective date is required." }, { status: 400 });
     }
+    const noteTooLong = richNoteTooLong(typeof body.note === "string" ? body.note : null);
+    if (noteTooLong) return NextResponse.json({ message: noteTooLong }, { status: 400 });
     const carryOver = Array.isArray(body.carryOver) ? body.carryOver.filter((k): k is string => typeof k === "string") : undefined;
 
     const result = await startOnboardingRound(id, {

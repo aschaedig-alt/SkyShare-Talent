@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { richTextField } from "@/lib/validation/rich-text";
+import { RICH_NOTE_MAX_CHARS } from "@/lib/richtext/stored";
 
 const ratingEnum = z.enum(["EXCEEDS", "MEETS", "CAN_DEVELOP", "DOES_NOT_MEET"]);
 const recommendationEnum = z.enum(["STRONG_YES", "YES", "NO", "STRONG_NO"]);
@@ -15,12 +17,12 @@ export const scorecardCreateSchema = z.object({
   interviewer: z.string().trim().min(1, "Interviewer is required."),
   recommendation: recommendationEnum.optional().nullable(),
   items: z.array(itemSchema).max(50).default([]),
-  comments: z.string().trim().max(4000).optional().nullable()
+  comments: richTextField(RICH_NOTE_MAX_CHARS)
 });
 
 export const scorecardUpdateSchema = z.object({
   interviewer: z.string().trim().min(1).optional(),
   recommendation: recommendationEnum.optional().nullable(),
   items: z.array(itemSchema).max(50).optional(),
-  comments: z.string().trim().max(4000).optional().nullable()
+  comments: richTextField(RICH_NOTE_MAX_CHARS)
 });

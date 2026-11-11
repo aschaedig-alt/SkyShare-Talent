@@ -49,6 +49,8 @@ export type CalendarData = {
     meetingUrl: string | null;
     status: string;
     notes: string | null;
+    /** The rich write-up, when there is one; notes is its plain copy (feedback cmwcjtm5k). */
+    notesHtml: string | null;
     googleEventId: string | null;
     syncStatus: string | null;
     /**
@@ -241,6 +243,7 @@ export async function getCalendarData(): Promise<CalendarData> {
       meetingUrl: interview.meetingUrl,
       status: interview.status,
       notes: interview.notes,
+      notesHtml: interview.notesHtml,
       googleEventId: interview.googleEventId,
       syncStatus: interview.syncStatus,
       candidate: {

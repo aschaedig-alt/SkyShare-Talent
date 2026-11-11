@@ -20,6 +20,7 @@ import {
 import { loadChecklist, setChecklistStatus, setVisitField, setReimbursementStage } from "@/app/travel/actions";
 import { SendReimbursementEmailButton } from "@/components/travel/SendReimbursementEmailButton";
 import type { TravelTripView } from "@/lib/data/travel";
+import { RichNoteField } from "@/components/richtext/RichNoteField";
 import { formatMomentDateShort } from "@/lib/dates/display";
 
 /**
@@ -336,19 +337,18 @@ function VisitField({
     setDraft(value);
   }, [value]);
 
+  // Rich text (feedback cmwcjtm5k). RichNoteField only commits after an edit.
   return (
-    <label className="block">
-      <span className="text-[10.5px] font-semibold text-brand-eden dark:text-slate-400">{label}</span>
-      <textarea
-        value={draft}
-        rows={2}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={() => {
-          if (draft.trim() !== value.trim()) onSave(draft);
-        }}
-        className="mt-0.5 w-full resize-y rounded border border-brand-lea/15 bg-white px-2 py-1 text-[12px] text-brand-lea placeholder:text-brand-grey/60 focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
-        placeholder="—"
-      />
-    </label>
+    <RichNoteField
+      label={label}
+      labelClassName="text-[10.5px] font-semibold text-brand-eden dark:text-slate-400"
+      value={draft}
+      onChange={setDraft}
+      onCommit={() => {
+        if (draft.trim() !== value.trim()) onSave(draft);
+      }}
+      minHeight={44}
+      placeholder="—"
+    />
   );
 }

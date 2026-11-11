@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { RotateCcw } from "lucide-react";
-import { Button, Input, Modal, Textarea } from "@/components/ui";
+import { Button, Input, Modal } from "@/components/ui";
+import { RichNoteField } from "@/components/richtext/RichNoteField";
 import { ONBOARDING_TASKS, groupLabel } from "@/lib/onboarding/tasks";
 import type { ChecklistRow } from "@/lib/data/onboarding-grid-config";
 import { CARRY_OVER_DEFAULTS, ROUND_REASONS, type RoundReason } from "@/lib/onboarding/rounds";
@@ -201,10 +202,7 @@ export function StartNewOnboardingButton({
             </span>
           </label>
 
-          <label className="block">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Note (optional)</span>
-            <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="mt-1" placeholder="Why this move needs a full onboarding" />
-          </label>
+          <RichNoteField label="Note (optional)" value={note} onChange={setNote} minHeight={60} placeholder="Why this move needs a full onboarding" />
 
           <div>
             <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">

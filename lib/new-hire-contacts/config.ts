@@ -1,3 +1,5 @@
+import { cleanRichInput, isStoredRich } from "@/lib/richtext/stored";
+
 // "New Hire Contacts" — the admin-curated set of SkyShare contacts a new hire
 // can load onto their phone. This is deliberately NOT the whole employee
 // directory: an admin picks people per department and can add contacts that
@@ -181,7 +183,14 @@ export function normalizeNewHireContactsConfig(input: unknown): NewHireContactsC
     : [];
 
   return {
-    intro: (str(raw.intro) ?? DEFAULT_INTRO).trim() || DEFAULT_INTRO,
+    // Rich text since feedback cmwcjtm5k; a saved plain intro is still read as is.
+    intro: introText(str(raw.intro)) || DEFAULT_INTRO,
     groups: groups.length ? groups : defaultNewHireContactsConfig().groups
   };
+}
+
+/** The welcome blurb as stored: sanitized HTML from the editor, or legacy plain text. */
+function introText(raw: string | null | undefined): string | null {
+  if (!raw || !raw.trim()) return null;
+  return isStoredRich(raw) ? cleanRichInput(raw) : raw.trim();
 }

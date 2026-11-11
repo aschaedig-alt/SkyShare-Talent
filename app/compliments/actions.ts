@@ -8,6 +8,7 @@ import { authOptions } from "@/auth";
 import { CURRENT_EMPLOYEE_WHERE } from "@/lib/data/current-employee";
 import { RecognitionStrength } from "@/lib/compliments/constants";
 import { getComplimentsSettings } from "@/lib/compliments/settings";
+import { cleanRichInput, RICH_NOTE_MAX_CHARS, storedPlainLength } from "@/lib/richtext/stored";
 
 const strengthValues = Object.values(RecognitionStrength) as [string, ...string[]];
 
@@ -15,7 +16,11 @@ const createRecognitionSchema = z
   .object({
     giverId: z.string().min(1, "Choose who is giving the recognition."),
     recipientId: z.string().min(1, "Choose who is being recognized."),
-    message: z.string().trim().min(5, "Add a short message about the impact.").max(1000),
+    // Rich text since feedback cmwcjtm5k: the limits count the words typed, not the HTML.
+    message: z
+      .string()
+      .refine((v) => storedPlainLength(v) >= 5, "Add a short message about the impact.")
+      .refine((v) => storedPlainLength(v) <= RICH_NOTE_MAX_CHARS, `Keep it under ${RICH_NOTE_MAX_CHARS} characters.`),
     valueIds: z.array(z.string().min(1)).min(1, "Select at least one value."),
     strength: z.enum(strengthValues)
   })
@@ -53,7 +58,7 @@ export async function createRecognition(input: unknown): Promise<ActionResult> {
       data: {
         giverId,
         recipientId,
-        message,
+        message: cleanRichInput(message) ?? "",
         strength,
         pointsAwarded: points,
         values: { connect: valueIds.map((id) => ({ id })) }

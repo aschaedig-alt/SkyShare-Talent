@@ -8,6 +8,7 @@ import { Button, Input, Modal } from "@/components/ui";
 import { groupLabel } from "@/lib/onboarding/tasks";
 import { roundReasonLabel, type ArchivedTask } from "@/lib/onboarding/rounds";
 import type { ArchivedRoundView } from "@/lib/data/onboarding-rounds";
+import { StoredRichText } from "@/components/richtext/RichNoteField";
 
 // Previous trips through onboarding. A person who changed departments or came
 // back after leaving has more than one, and the earlier ones are the record of
@@ -244,7 +245,7 @@ export function OnboardingHistoryPanel({
 
               {open ? (
                 <div className="border-t border-brand-lea/10 px-3 py-3 dark:border-white/10">
-                  {a.note ? <p className="mb-2 text-xs italic text-brand-grey dark:text-slate-400">{a.note}</p> : null}
+                  {a.note ? <StoredRichText value={a.note} className="mb-2 !text-xs !text-brand-grey dark:!text-slate-400" /> : null}
 
                   {isEditing ? (
                     <>

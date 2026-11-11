@@ -92,6 +92,9 @@ export const interviewUpdateSchema = z
     interviewer: z.string().trim().optional().nullable(),
     location: z.string().trim().optional().nullable(),
     meetingUrl: z.string().trim().optional().nullable(),
+    // The calendar edits the rich write-up directly (feedback cmwcjtm5k); the
+    // route sanitizes it and writes the plain copy into notes.
+    notesHtml: z.string().max(120000).optional().nullable(),
     notes: z.string().trim().optional().nullable(),
     status: z.enum(["SCHEDULED", "COMPLETED", "CANCELLED"]).optional()
   })

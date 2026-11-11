@@ -3,7 +3,8 @@
 import { useMemo, useRef, useState } from "react";
 import { Building2, Check, ChevronDown, ChevronUp, Copy, ExternalLink, Eye, EyeOff, Plus, RefreshCw, Trash2, UserPlus } from "lucide-react";
 import { clsx } from "clsx";
-import { Badge, Button, Input, Textarea } from "@/components/ui";
+import { Badge, Button, Input } from "@/components/ui";
+import { RichNoteField } from "@/components/richtext/RichNoteField";
 import { ContactPicker } from "@/components/new-hire-contacts/ContactPicker";
 import { slugify } from "@/lib/new-hire-contacts/config";
 import type { ContactGroup, ContactMember, ManualContact, NewHireContactsConfig } from "@/lib/new-hire-contacts/config";
@@ -323,12 +324,12 @@ export function NewHireContactsAdmin({
       </section>
 
       <div className="mt-6">
-        <label className="text-sm font-semibold text-brand-lea dark:text-slate-100">Welcome message</label>
-        <Textarea
-          className="mt-2"
-          rows={2}
+        <RichNoteField
+          label="Welcome message"
+          labelClassName="text-sm font-semibold text-brand-lea dark:text-slate-100"
           value={config.intro}
-          onChange={(e) => setConfig((prev) => ({ ...prev, intro: e.target.value }))}
+          onChange={(html) => setConfig((prev) => ({ ...prev, intro: html }))}
+          minHeight={60}
         />
       </div>
 

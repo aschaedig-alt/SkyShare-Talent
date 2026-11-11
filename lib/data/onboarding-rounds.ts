@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { buildChecklistRows } from "@/lib/data/onboarding-grid-config";
 import { resolveFleetPosition } from "@/lib/fleet/positions";
+import { cleanRichInput, storedToPlain } from "@/lib/richtext/stored";
 import {
   CARRY_OVER_DEFAULTS,
   parseArchivedTasks,
@@ -214,7 +215,8 @@ export async function startOnboardingRound(hireId: string, input: StartRoundInpu
           startDate: effective,
           endDate: null,
           transitionType,
-          notes: clean(input.note)
+          // Role journey notes are plain text; the round note may be rich (cmwcjtm5k).
+          notes: clean(storedToPlain(input.note))
         }
       });
       createdRoleId = created.id;
@@ -242,7 +244,7 @@ export async function startOnboardingRound(hireId: string, input: StartRoundInpu
         }
       }
       const newStint = await tx.employmentStint.create({
-        data: { newHireId: hireId, startDate: effective, endDate: null, note: clean(input.note) }
+        data: { newHireId: hireId, startDate: effective, endDate: null, note: clean(storedToPlain(input.note)) }
       });
       createdStintId = newStint.id;
       changes.push("Opened a new employment period from the rehire date.");
@@ -253,7 +255,8 @@ export async function startOnboardingRound(hireId: string, input: StartRoundInpu
         newHireId: hireId,
         sequence,
         reason: input.reason,
-        note: clean(input.note),
+        // Rich text, shown back on the onboarding history panel (feedback cmwcjtm5k).
+        note: cleanRichInput(input.note),
         roundReason: hire.onboardingReason,
         roundStartedAt: hire.onboardingRoundStartedAt,
         position: hire.position,

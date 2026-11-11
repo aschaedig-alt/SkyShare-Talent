@@ -45,6 +45,7 @@ import type { EmployeeJourney as Journey } from "@/lib/data/employee-journey";
 import { Button, Input, Modal } from "@/components/ui";
 import { EMPLOYEE_TAGS } from "@/lib/employees/columns";
 import { tagStyle, TagPill, displayTags } from "@/components/employees/EmployeeTags";
+import { RichNoteField } from "@/components/richtext/RichNoteField";
 
 function fmtDay(iso: string | null) {
   // Dates are stored as date-only (UTC midnight); format in UTC so the calendar
@@ -569,15 +570,12 @@ export function NewHireDetailWorkspaceClassic({ hire, travelTrips, travelLoyalty
                 Already attended a new-hire orientation — keeps them off the orientation page&apos;s outstanding list.
               </span>
             </label>
-            <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Notes</span>
-              <textarea
-                value={details.notes}
-                onChange={(e) => setDetails({ ...details, notes: e.target.value })}
-                rows={3}
-                className="mt-1 w-full rounded border border-brand-lea/15 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100"
-              />
-            </label>
+            <RichNoteField
+              label="Notes"
+              value={details.notes}
+              onChange={(html) => setDetails((d) => ({ ...d, notes: html }))}
+              minHeight={80}
+            />
           </div>
         </section>
 

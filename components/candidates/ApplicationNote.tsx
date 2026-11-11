@@ -68,7 +68,7 @@ export function ApplicationNote({
   if (!canEdit) {
     if (!note) return null;
     return (
-      <p className="mt-1.5 border-t border-brand-lea/10 pt-1.5 text-[11px] leading-snug text-brand-grey dark:border-white/10 dark:text-slate-400">
+      <p className="mt-1.5 whitespace-pre-line border-t border-brand-lea/10 pt-1.5 text-[11px] leading-snug text-brand-grey dark:border-white/10 dark:text-slate-400">
         <span className="font-semibold">Note: </span>
         {note}
       </p>
@@ -119,7 +119,7 @@ export function ApplicationNote({
   return (
     <div className={clsx("mt-1.5", note && "border-t border-brand-lea/10 pt-1.5 dark:border-white/10")}>
       {note ? (
-        <p className="text-[11px] leading-snug text-brand-grey dark:text-slate-400">
+        <p className="whitespace-pre-line text-[11px] leading-snug text-brand-grey dark:text-slate-400">
           <span className="font-semibold">Note: </span>
           {note}{" "}
           <button

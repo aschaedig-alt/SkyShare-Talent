@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { joinStored } from "@/lib/richtext/stored";
 import { requireApiUser } from "@/lib/auth/route-auth";
 import { canWriteModule } from "@/lib/auth/module-write-access";
 
@@ -69,7 +70,8 @@ export async function POST(request: Request) {
 
       // --- Fill the primary's blank fields from the secondary ------------------
       const keepBlank = <T,>(a: T | null, b: T | null): T | null => (a !== null && a !== undefined && a !== "" ? a : b ?? null);
-      const notes = [primary.notes, secondary.notes].filter(Boolean).join("\n\n").trim() || null;
+      // Either may be rich text since feedback cmwcjtm5k; joinStored keeps both readable.
+      const notes = joinStored([primary.notes, secondary.notes]);
 
       await tx.newHire.update({
         where: { id: primaryId },

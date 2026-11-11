@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { prisma } from "@/lib/prisma";
+import { cleanRichInput, richNoteTooLong } from "@/lib/richtext/stored";
 import { isAircraftPlan, isEventStatus, isEventType } from "@/lib/events/constants";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -47,6 +48,10 @@ export async function PATCH(request: Request, ctx: Ctx) {
     ]) {
       if (typeof body[field] === "string") data[field] = (body[field] as string).trim() || null;
     }
+    // Ramp & FBO notes are rich text since feedback cmwcjtm5k.
+    if (typeof body.aircraftNotes === "string") data.aircraftNotes = cleanRichInput(body.aircraftNotes);
+    const rampTooLong = richNoteTooLong(data.aircraftNotes as string | null | undefined);
+    if (rampTooLong) return NextResponse.json({ message: `Ramp & FBO notes: ${rampTooLong}` }, { status: 400 });
     if (isAircraftPlan(body.aircraftPlan)) data.aircraftPlan = body.aircraftPlan;
     if (typeof body.ownerId === "string") data.ownerId = body.ownerId || null;
     if (body.budget === null) data.budget = null;

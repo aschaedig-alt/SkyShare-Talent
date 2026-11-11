@@ -1,6 +1,7 @@
 import { normalizeFieldsNotNeeded } from "@/lib/onboarding/optional-fields";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { cleanRichInput, richNoteTooLong } from "@/lib/richtext/stored";
 import { requireApiUser } from "@/lib/auth/route-auth";
 import { canWriteModule } from "@/lib/auth/module-write-access";
 import { isCardStatus } from "@/lib/business-cards/card";
@@ -49,6 +50,10 @@ export async function PATCH(request: Request, context: RouteContext) {
       const v = strOrNull(body[field]);
       if (v !== undefined) data[field] = v;
     }
+    // Notes are rich text since feedback cmwcjtm5k: sanitize editor HTML before it is stored.
+    if (data.notes !== undefined) data.notes = cleanRichInput(data.notes);
+    const notesTooLong = richNoteTooLong(data.notes as string | null | undefined);
+    if (notesTooLong) return NextResponse.json({ message: `Notes: ${notesTooLong}` }, { status: 400 });
     if (body.name !== undefined && (!data.name || String(data.name).trim().length === 0)) {
       return NextResponse.json({ message: "Name cannot be empty." }, { status: 400 });
     }

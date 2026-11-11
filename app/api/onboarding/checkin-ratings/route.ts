@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { cleanRichInput, richNoteTooLong } from "@/lib/richtext/stored";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { CHECKIN_RATING_DAY, cleanRatings, type CheckinRatingView } from "@/lib/onboarding/checkin-rating";
 
@@ -43,6 +44,9 @@ export async function POST(request: Request) {
   if (!Object.keys(ratings).length && wouldHireAgain === null) {
     return NextResponse.json({ message: "Rate at least one value, or answer \"would you hire again?\"" }, { status: 400 });
   }
+  const notes = cleanRichInput(body.notes);
+  const notesTooLong = richNoteTooLong(notes);
+  if (notesTooLong) return NextResponse.json({ message: notesTooLong }, { status: 400 });
   const hire = await prisma.newHire.findUnique({ where: { id: newHireId }, select: { id: true } });
   if (!hire) return NextResponse.json({ message: "Person not found." }, { status: 404 });
 
@@ -50,7 +54,8 @@ export async function POST(request: Request) {
     ratingsJson: JSON.stringify(ratings),
     wouldHireAgain,
     managerName: tidy(body.managerName, 80),
-    notes: tidy(body.notes, 2000),
+    // Rich text since feedback cmwcjtm5k; the shared 4000 limit is on the words typed (checked above).
+    notes,
     enteredBy: auth.user.email ?? auth.user.name ?? null
   };
   const saved = await prisma.hireCheckinRating.upsert({

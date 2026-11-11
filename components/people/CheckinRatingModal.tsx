@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { clsx } from "clsx";
 import { Modal } from "@/components/ui/Modal";
+import { RichNoteField } from "@/components/richtext/RichNoteField";
 import { RATINGS, CORE_VALUE_NAMES, type RatingKey } from "@/lib/interviews/scorecard";
 import { VALUE_DESCRIPTIONS } from "@/lib/compliments/constants";
 import type { CheckinRatingView, CheckinRatings } from "@/lib/onboarding/checkin-rating";
@@ -110,15 +111,14 @@ export function CheckinRatingModal({
           </div>
         </div>
 
-        <label className="mt-3 grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
-          Notes (optional)
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-            className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-normal outline-none focus:border-brand-gold dark:border-white/10 dark:bg-brand-field dark:text-slate-100"
-          />
-        </label>
+        <RichNoteField
+          className="mt-3"
+          label="Notes (optional)"
+          labelClassName="text-xs font-semibold text-brand-lea dark:text-slate-100"
+          value={notes}
+          onChange={setNotes}
+          minHeight={60}
+        />
 
         {error ? <p className="mt-2 text-xs font-medium text-red-700 dark:text-red-300">{error}</p> : null}
         <div className="mt-4 flex flex-wrap items-center justify-end gap-2">

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiPermission } from "@/lib/auth/route-auth";
+import { richNoteTooLong } from "@/lib/richtext/stored";
 import { getNewHireContactsConfig, saveNewHireContactsConfig, syncContactOverridesToRecords } from "@/lib/new-hire-contacts/config.server";
 
 // Admin config for the New Hire Contacts curation. Lives under /api/workspace-settings
@@ -21,6 +22,9 @@ export async function POST(request: Request) {
 
   try {
     const payload = await request.json();
+    // The welcome message is rich text under the shared limit (feedback cmwcjtm5k).
+    const introTooLong = richNoteTooLong(typeof payload?.intro === "string" ? payload.intro : null);
+    if (introTooLong) return NextResponse.json({ message: `Welcome message: ${introTooLong}` }, { status: 400 });
     // Push any phone/email edits back onto the employee records first, which also
     // clears those now-redundant overrides; then persist the cleaned config.
     const { config, updated } = await syncContactOverridesToRecords(payload);

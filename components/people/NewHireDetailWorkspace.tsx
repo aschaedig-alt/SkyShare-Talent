@@ -40,6 +40,7 @@ import { EMPLOYEE_TAGS } from "@/lib/employees/columns";
 import { tagStyle, TagPill, displayTags } from "@/components/employees/EmployeeTags";
 import { PhoneInputError } from "@/components/shared/PhoneNumber";
 import { formatPhoneInput } from "@/lib/formatting/phone";
+import { RichNoteField } from "@/components/richtext/RichNoteField";
 
 function fmtDay(iso: string | null) {
   // Dates are stored as date-only (UTC midnight); format in UTC so the calendar
@@ -625,17 +626,15 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
   );
 
   const notesControl = (
-    <label className="block">
-      <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Notes</span>
-      <textarea
-        value={details.notes}
-        disabled={!canEdit}
-        onChange={(e) => setDetails({ ...details, notes: e.target.value })}
-        onBlur={() => commit("notes")}
-        rows={3}
-        className="mt-1 w-full rounded border border-brand-lea/15 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold focus:shadow-glow dark:border-white/10 dark:bg-brand-field dark:text-slate-100"
-      />
-    </label>
+    // Rich text (feedback cmwcjtm5k). Saves when focus leaves the field, as before.
+    <RichNoteField
+      label="Notes"
+      value={details.notes}
+      disabled={!canEdit}
+      onChange={(html) => setDetails((d) => ({ ...d, notes: html }))}
+      onCommit={() => commit("notes")}
+      minHeight={80}
+    />
   );
 
   // Who they report to. The orientation emails cc the supervisor and one is

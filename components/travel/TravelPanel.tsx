@@ -60,6 +60,7 @@ import {
 import { parseRoute, runsFor, HOME_AIRPORT } from "@/lib/travel/hub-calendar";
 import { zonedWallClockToUtc } from "@/lib/booking/timezone";
 import { mountainWallClockToIso } from "@/lib/calendar/format";
+import { RichNoteField } from "@/components/richtext/RichNoteField";
 
 type Props = {
   subjectType: "newHire" | "candidate";
@@ -560,7 +561,7 @@ function TripCard({
           <ReceiptsBlock tripId={trip.id} receipts={trip.receipts} onChange={setReceipts} />
           <GuestsBlock trip={trip} onChange={onChange} />
           <TextAreaField label="Special requests / notes" defaultValue={trip.specialRequests} onSave={(v) => saveField("specialRequests", v)} />
-          <TextAreaField label="Internal notes" defaultValue={trip.notes} onSave={(v) => saveField("notes", v)} />
+          <RichTextAreaField label="Internal notes" defaultValue={trip.notes} onSave={(v) => saveField("notes", v)} />
         </div>
       )}
     </div>
@@ -1449,6 +1450,20 @@ function TextAreaField({ label, defaultValue, onSave }: { label: string; default
         rows={2}
         className={clsx(inputClass, "mt-1 resize-none")}
       />
+    </div>
+  );
+}
+
+/**
+ * Internal notes as rich text (feedback cmwcjtm5k). Saves on leaving the field,
+ * like TextAreaField, but only after an edit — RichNoteField handles both.
+ */
+function RichTextAreaField({ label, defaultValue, onSave }: { label: string; defaultValue: string | null; onSave: (v: string) => void }) {
+  const [draft, setDraft] = useState(defaultValue ?? "");
+  return (
+    <div>
+      <FieldHead label={label} />
+      <RichNoteField className="mt-1" value={draft} onChange={setDraft} onCommit={() => onSave(draft)} minHeight={60} />
     </div>
   );
 }

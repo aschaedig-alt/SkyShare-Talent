@@ -11,6 +11,7 @@ import { toMountainDateTimeParts } from "@/lib/calendar/format";
 import { InterviewerPicker } from "@/components/calendar/InterviewerPicker";
 import { INTERVIEW_STATUSES } from "@/components/calendar/ScheduleInterviewForm";
 import { useDialogClose } from "@/lib/hooks/useDialogClose";
+import { RichNoteField } from "@/components/richtext/RichNoteField";
 
 type Interview = CalendarData["interviews"][number];
 
@@ -36,6 +37,9 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState<{ type: string; text: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // The write-up when there is one (notes is only its plain copy), else the plain notes.
+  const [notesValue, setNotesValue] = useState<string>(interview.notesHtml ?? interview.notes ?? "");
+  const [notesTouched, setNotesTouched] = useState(false);
   const [interviewType, setInterviewType] = useState<string>(interview.interviewType || DEFAULT_INTERVIEW_TYPE);
   const [selectedJobId, setSelectedJobId] = useState<string>(interview.job?.id ?? "");
 
@@ -74,8 +78,9 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
       interviewer: String(formData.get("interviewer") ?? ""),
       location: String(formData.get("location") ?? ""),
       meetingUrl: String(formData.get("meetingUrl") ?? ""),
-      notes: String(formData.get("notes") ?? ""),
-      status: String(formData.get("status") ?? "SCHEDULED")
+      status: String(formData.get("status") ?? "SCHEDULED"),
+      // Only sent when edited, so saving a time change never rewrites the write-up.
+      ...(notesTouched ? { notesHtml: notesValue } : {})
     };
 
     try {
@@ -278,15 +283,20 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
             />
           </label>
 
-          <label className="grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
-            Notes
-            <textarea
-              name="notes"
-              rows={3}
-              defaultValue={interview.notes ?? ""}
-              className="rounded border border-brand-lea/20 px-3 py-2 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:[color-scheme:dark]"
-            />
-          </label>
+          {/* The interview's write-up itself, in the same editor as the candidate
+              profile (feedback cmwcjtm5k) — so an edit here shows there. */}
+          <RichNoteField
+            label="Notes"
+            labelClassName="text-xs font-semibold text-brand-lea dark:text-slate-100"
+            value={notesValue}
+            onChange={(html) => {
+              setNotesValue(html);
+              setNotesTouched(true);
+            }}
+            minHeight={80}
+            // The write-up itself: its own 20,000 limit, not the 4000 one (write-ups run to 8,558).
+            maxChars={20000}
+          />
 
           {/* Inline feedback — kept next to the buttons so it's always visible */}
           {message && (

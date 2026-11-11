@@ -451,7 +451,7 @@ export const WIDGETS: WidgetDef[] = [
     ],
     render: (c) => (
       <Shell icon={StickyNote} title={str(c.title, "Note")}>
-        <p className="border-l-2 border-brand-gold/50 pl-2 text-xs leading-5 text-brand-black/80 dark:text-slate-300">{str(c.body)}</p>
+        <p className="whitespace-pre-line border-l-2 border-brand-gold/50 pl-2 text-xs leading-5 text-brand-black/80 dark:text-slate-300">{str(c.body)}</p>
       </Shell>
     )
   }

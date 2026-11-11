@@ -35,6 +35,7 @@ import {
   type TripChecklistState
 } from "@/lib/travel/checklist";
 import { clearTripChecklist, getTripChecklist, saveTripChecklist } from "@/lib/travel/checklist-store";
+import { cleanRichInput, richNoteTooLong } from "@/lib/richtext/stored";
 import {
   getTravelTripView,
   getNewHireLoyalty,
@@ -211,6 +212,10 @@ export async function updateTrip(tripId: string, patch: Record<string, unknown>)
   for (const key of TRIP_STRING_FIELDS) {
     if (key in patch) data[key] = cleanString(patch[key]);
   }
+  // Internal notes are rich text since feedback cmwcjtm5k: sanitize editor HTML.
+  if ("notes" in patch) data.notes = cleanRichInput(patch.notes);
+  const notesTooLong = richNoteTooLong(data.notes as string | null | undefined);
+  if (notesTooLong) return { ok: false, error: `Internal notes: ${notesTooLong}` };
   for (const key of TRIP_DATE_FIELDS) {
     if (key in patch) data[key] = parseDate(patch[key]);
   }
@@ -299,7 +304,9 @@ export async function setChecklistStatus(tripId: string, key: string, status: st
 export async function setVisitField(tripId: string, field: string, value: string): Promise<ChecklistResult> {
   if (!(await canEditTravel())) return { ok: false, error: "You do not have permission to edit travel." };
   if (!isVisitField(field)) return { ok: false, error: "Unknown field." };
-  const state = await saveTripChecklist(tripId, { visit: { [field]: value.trim() } });
+  const answerTooLong = richNoteTooLong(value);
+  if (answerTooLong) return { ok: false, error: answerTooLong };
+  const state = await saveTripChecklist(tripId, { visit: { [field]: cleanRichInput(value) ?? "" } /* rich text, cmwcjtm5k */ });
   return { ok: true, state };
 }
 

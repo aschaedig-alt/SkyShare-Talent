@@ -18,6 +18,7 @@ import {
 import { VALUE_DESCRIPTIONS } from "@/lib/compliments/constants";
 import { InterviewerPicker } from "@/components/calendar/InterviewerPicker";
 import { Button } from "@/components/ui";
+import { RichNoteField, StoredRichText } from "@/components/richtext/RichNoteField";
 import { formatDateTimeWithZone } from "@/lib/calendar/format";
 
 const inputCls = "w-full rounded border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100";
@@ -221,10 +222,14 @@ function ScorecardEditor({
         </div>
       </div>
 
-      <label className="mt-3 grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
-        Comments
-        <textarea value={comments} onChange={(e) => setComments(e.target.value)} rows={2} className={inputCls} />
-      </label>
+      <RichNoteField
+        className="mt-3"
+        label="Comments"
+        labelClassName="text-xs font-semibold text-brand-lea dark:text-slate-100"
+        value={comments}
+        onChange={setComments}
+        minHeight={60}
+      />
 
       <div className="mt-3 flex items-center justify-end gap-3">
         {error ? <span className="mr-auto text-xs font-medium text-red-700 dark:text-red-300">{error}</span> : null}
@@ -377,7 +382,11 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
                     ))}
                   </ul>
                 ) : null}
-                {card.comments ? <p className="mt-2 border-l-2 border-brand-sweet/40 pl-2 text-xs italic text-brand-grey dark:text-slate-400">{card.comments}</p> : null}
+                {card.comments ? (
+                  <div className="mt-2 border-l-2 border-brand-sweet/40 pl-2">
+                    <StoredRichText value={card.comments} className="!text-xs !text-brand-grey dark:!text-slate-400" />
+                  </div>
+                ) : null}
               </div>
             )
           )

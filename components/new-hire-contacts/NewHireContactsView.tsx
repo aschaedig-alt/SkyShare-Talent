@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Check, Mail, Phone, Plus, UserPlus } from "lucide-react";
 import { clsx } from "clsx";
 import type { ResolvedGroup } from "@/lib/data/new-hire-contacts";
+import { StoredRichText } from "@/components/richtext/RichNoteField";
 import { phoneText } from "@/lib/formatting/phone";
 
 type ViewContact = {
@@ -73,7 +74,7 @@ export function NewHireContactsView({
       <header className="text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-gold">Welcome to SkyShare</p>
         <h1 className="mt-2 text-2xl font-semibold text-brand-lea dark:text-slate-100">Your key contacts</h1>
-        <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-brand-grey dark:text-slate-400">{intro}</p>
+        <StoredRichText value={intro} className="mx-auto mt-3 max-w-md leading-relaxed !text-brand-grey dark:!text-slate-400" />
       </header>
 
       <button

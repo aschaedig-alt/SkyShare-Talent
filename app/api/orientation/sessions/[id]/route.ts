@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { cleanRichInput, richNoteTooLong } from "@/lib/richtext/stored";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { completeOrientationSession } from "@/lib/data/orientation";
 import { normalizePlaceText, resolveSessionPlace } from "@/lib/orientation/places";
@@ -33,6 +34,10 @@ export async function PATCH(request: Request, ctx: Ctx) {
       const v = str(body[f]);
       if (v !== undefined) data[f] = v;
     }
+    // Lunch notes are rich text since feedback cmwcjtm5k.
+    if (data.lunchNotes !== undefined) data.lunchNotes = cleanRichInput(data.lunchNotes);
+    const lunchTooLong = richNoteTooLong(data.lunchNotes as string | null | undefined);
+    if (lunchTooLong) return NextResponse.json({ message: `Lunch notes: ${lunchTooLong}` }, { status: 400 });
     // Lunch arrival: a string sets it, an explicit null clears it. Deliberately
     // NOT validated against the session start — lunch can legitimately land
     // before doors open (an early drop-off) and rejecting that would be wrong.

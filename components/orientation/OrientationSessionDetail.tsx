@@ -17,6 +17,7 @@ import { OffNormalChip } from "./OffNormalNotice";
 import { SessionTimePlaceEditor } from "./SessionTimePlaceEditor";
 import { formatDateLong, formatTime, formatTimeRange, zoneLabel, toMountainDateTimeParts, mountainWallClockToIso } from "@/lib/calendar/format";
 import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
+import { RichNoteField } from "@/components/richtext/RichNoteField";
 
 function fmtShort(iso: string) {
   // Always Mountain Time, regardless of the viewer's / server's zone.
@@ -574,16 +575,14 @@ export function OrientationSessionDetail({
                 />
               </label>
             </div>
-            <label className="mt-3 block">
-              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">Notes</span>
-              <textarea
-                value={lunch.notes}
-                onChange={(e) => setLunch({ ...lunch, notes: e.target.value })}
-                rows={2}
-                placeholder="Dietary requirements, where it gets dropped off, anything worth knowing on the day"
-                className="mt-1 block w-full rounded border border-brand-lea/15 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100 dark:placeholder:text-slate-500"
-              />
-            </label>
+            <RichNoteField
+              className="mt-3"
+              label="Notes"
+              value={lunch.notes}
+              onChange={(html) => setLunch((l) => ({ ...l, notes: html }))}
+              minHeight={60}
+              placeholder="Dietary requirements, where it gets dropped off, anything worth knowing on the day"
+            />
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <button

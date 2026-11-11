@@ -15,6 +15,7 @@ import {
 } from "@/lib/events/constants";
 import type { AttendeeView, EventDetail, SupplyLineView, TaskView } from "@/lib/data/events";
 import { officeDayKey, zoneForValue } from "@/lib/dates/display";
+import { RichNoteField } from "@/components/richtext/RichNoteField";
 
 const FIELD =
   "w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100";
@@ -486,19 +487,15 @@ export function EventDetailWorkspace({ event }: { event: EventDetail }) {
             </label>
           ) : null}
 
-          <label className="mt-3 block">
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
-              Ramp &amp; FBO notes
-            </span>
-            <textarea
-              className={`mt-1 ${FIELD}`}
-              rows={3}
-              value={aircraftNotes}
-              onChange={(e) => setAircraftNotes(e.target.value)}
-              onBlur={() => saveAircraft({ notes: aircraftNotes })}
-              placeholder="Air-stairs, GPU, hangar space, who to call at the FBO…"
-            />
-          </label>
+          <RichNoteField
+            className="mt-3"
+            label="Ramp & FBO notes"
+            value={aircraftNotes}
+            onChange={setAircraftNotes}
+            onCommit={() => saveAircraft({ notes: aircraftNotes })}
+            minHeight={70}
+            placeholder="Air-stairs, GPU, hangar space, who to call at the FBO…"
+          />
 
           {aircraftPlan === "UNDECIDED" ? (
             <p className="mt-2 rounded border border-brand-gold/40 bg-brand-gold/10 px-3 py-2 text-xs text-brand-lea dark:border-brand-gold/30 dark:text-brand-gold">

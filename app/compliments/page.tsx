@@ -8,6 +8,7 @@ import { Avatar } from "@/components/compliments/Avatar";
 import { ValueTag } from "@/components/compliments/ValueTag";
 import { Leaderboard } from "@/components/compliments/Leaderboard";
 import { valueColorClasses } from "@/lib/compliments/value-colors";
+import { StoredRichText } from "@/components/richtext/RichNoteField";
 
 export const dynamic = "force-dynamic";
 
@@ -152,7 +153,7 @@ export default async function ComplimentsDashboardPage() {
                 <p className="font-medium text-brand-lea dark:text-slate-100">
                   {data.mostLoved.giverName} recognized {data.mostLoved.recipientName}
                 </p>
-                <p className="mt-1 text-[13px] text-brand-grey dark:text-slate-400">{data.mostLoved.message}</p>
+                <StoredRichText value={data.mostLoved.message} className="mt-1 !text-[13px] !text-brand-grey dark:!text-slate-400" />
                 <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                   {data.mostLoved.values.map((v) => (
                     <ValueTag key={v.name} name={v.name} colorKey={v.colorKey} />

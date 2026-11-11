@@ -5,6 +5,7 @@ import { ValueTag, PointsTag } from "@/components/compliments/ValueTag";
 import { valueColorClasses } from "@/lib/compliments/value-colors";
 import { relativeTime } from "@/lib/compliments/format";
 import type { RecognitionView } from "@/lib/compliments/types";
+import { StoredRichText } from "@/components/richtext/RichNoteField";
 
 type RecognitionCardProps = {
   recognition: RecognitionView;
@@ -36,7 +37,7 @@ export function RecognitionCard({ recognition, engagementSlot }: RecognitionCard
               <p className="font-medium text-brand-lea dark:text-slate-100">
                 {recognition.giverName} recognized {recognition.recipientName} for {valueLabel}
               </p>
-              <p className="mt-1 text-[13px] text-brand-grey dark:text-slate-400">{recognition.message}</p>
+              <StoredRichText value={recognition.message} className="mt-1 !text-[13px] !text-brand-grey dark:!text-slate-400" />
             </div>
             <span className="shrink-0 whitespace-nowrap text-xs text-brand-grey dark:text-slate-400">
               {relativeTime(recognition.createdAt)}
