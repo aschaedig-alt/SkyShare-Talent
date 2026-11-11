@@ -37,6 +37,12 @@ export async function POST(request: Request, context: RouteContext) {
     if (!isOfferStatus(body.status)) {
       return NextResponse.json({ message: "Unknown offer status." }, { status: 400 });
     }
+    // Quality of Hire (Dec 10 tracking): every declined offer carries a reason. Only
+    // a decline recorded by hand is held to it - a Paycom or Front notice that
+    // arrives without one still records the decline.
+    if (body.status === "DECLINED" && !body.reason?.trim()) {
+      return NextResponse.json({ message: "Say why they declined. If they did not say, pick \"Other\"." }, { status: 400 });
+    }
 
     const result = await recordOfferStatus(applicationId, {
       status: body.status,

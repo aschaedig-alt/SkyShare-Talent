@@ -5,7 +5,9 @@ const recommendationEnum = z.enum(["STRONG_YES", "YES", "NO", "STRONG_NO"]);
 
 const itemSchema = z.object({
   q: z.string().trim().min(1, "Question text is required."),
-  rating: ratingEnum.nullable().default(null)
+  rating: ratingEnum.nullable().default(null),
+  // the core value this row rates, by name (lib/interviews/scorecard.ts)
+  value: z.string().trim().max(60).nullable().optional()
 });
 
 export const scorecardCreateSchema = z.object({

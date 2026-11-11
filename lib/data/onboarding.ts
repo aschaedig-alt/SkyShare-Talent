@@ -778,7 +778,9 @@ async function loadHireOffer(candidateId: string | null | undefined): Promise<Of
       offerNotSentAt: true,
       offerNotSentReason: true,
       offerStartDate: true,
-      offerSource: true
+      offerSource: true,
+      recruiterName: true,
+      hiringManager: true
     }
   });
   if (!app) return null;
@@ -793,7 +795,9 @@ async function loadHireOffer(candidateId: string | null | undefined): Promise<Of
     offerNotSentAt: app.offerNotSentAt?.toISOString() ?? null,
     offerNotSentReason: app.offerNotSentReason,
     offerStartDate: app.offerStartDate?.toISOString() ?? null,
-    offerSource: app.offerSource
+    offerSource: app.offerSource,
+    recruiterName: app.recruiterName,
+    hiringManager: app.hiringManager
   };
 }
 

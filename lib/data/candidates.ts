@@ -516,6 +516,9 @@ export type CandidateProfileData = {
     offerSignedAt: string | null;
     offerDeclinedAt: string | null;
     offerDeclineReason: string | null;
+    /** Who recruited for and who manages this hire - Quality of Hire tracking, Dec 10 2026. */
+    recruiterName: string | null;
+    hiringManager: string | null;
     // Stopped on our side and never sent — kept apart from the decline pair
     // above, which is the candidate's answer. See lib/offers/constants.ts.
     offerNotSentAt: string | null;
@@ -2071,6 +2074,8 @@ export async function getCandidateProfileData(
       offerSignedAt: application.offerSignedAt?.toISOString() ?? null,
       offerDeclinedAt: application.offerDeclinedAt?.toISOString() ?? null,
       offerDeclineReason: application.offerDeclineReason,
+      recruiterName: application.recruiterName,
+      hiringManager: application.hiringManager,
       offerNotSentAt: application.offerNotSentAt?.toISOString() ?? null,
       offerNotSentReason: application.offerNotSentReason,
       offerStartDate: application.offerStartDate?.toISOString() ?? null,

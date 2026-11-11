@@ -113,6 +113,9 @@ export type OfferApplicationView = {
   offerNotSentReason: string | null;
   offerStartDate: string | null;
   offerSource: string | null;
+  /** Who recruited for and who manages this hire (Quality of Hire tracking, Dec 10 2026). */
+  recruiterName: string | null;
+  hiringManager: string | null;
 };
 
 /**

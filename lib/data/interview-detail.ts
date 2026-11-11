@@ -46,7 +46,7 @@ function parseItems(json: string): ScorecardItem[] {
     if (!Array.isArray(parsed)) return [];
     return parsed
       .filter((i) => i && typeof i.q === "string")
-      .map((i) => ({ q: i.q as string, rating: isRatingKey(i.rating) ? i.rating : null }));
+      .map((i) => ({ q: i.q as string, rating: isRatingKey(i.rating) ? i.rating : null, value: typeof i.value === "string" ? i.value : null }));
   } catch {
     return [];
   }

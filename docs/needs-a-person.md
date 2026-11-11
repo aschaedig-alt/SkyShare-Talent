@@ -923,6 +923,32 @@ role sticks after a reload, and a real holder change updates every follower's su
 
 ---
 
+### 43. Nobody has saved a scorecard with the core values, or an offer's recruiter and hiring manager, yet
+
+**Status:** OPEN
+**Added:** 2026-11-10
+
+Two Quality of Hire tracking pieces for Dec 10 are built. Every interview scorecard now
+opens with the four core values (Fueled by Passion, Team Alignment, Deliver the Wow,
+Solutions Focused), each rated Exceeds to Does Not Meet; and an offer has Recruiter and
+Hiring manager boxes, with a reason now required when an offer is marked declined by hand.
+Checked locally in Chrome: the scorecard editor shows the four values with their rating
+buttons, and the offer shows both boxes. Checked by direct request: a declined offer with
+no reason is refused, and the offer read back unchanged. Nothing was saved, because
+localhost writes the live database.
+
+**How to check it, about two minutes:**
+
+- Open an interview, Add scorecard, rate the four core values and one question, save.
+  Reopen it with the pencil: the ratings should still be there, values first.
+- On a candidate's Offers tab with an offer started, type a recruiter and a hiring
+  manager, click away, reload: both should stay.
+- Set an offer to Declined: Save stays grey until a reason is picked or typed.
+
+**What would count as a pass:** all three stick after a reload.
+
+---
+
 ## Closed
 
 ### 33. The candidate page's layout has not been saved since the boxes started fitting their content

@@ -40,9 +40,12 @@ const CHIP: Record<string, string> = {
 // The two endings that want a "why", and the wording each one asks for. The
 // question is genuinely different: one asks about them, one asks about us.
 const REASON_PROMPT: Record<string, { placeholder: string; suggestions: string[] }> = {
+  // Required since Dec 10 2026 (Quality of Hire). "Other" is a real answer: per
+  // Aimee it usually means another offer - better pay, no relocation, a schedule
+  // they prefer - that they did not name.
   DECLINED: {
-    placeholder: "Why did they decline? (optional)",
-    suggestions: ["Took another offer", "Pay", "Schedule or base", "Stayed with current employer"]
+    placeholder: "Why did they decline? (required)",
+    suggestions: ["Took another offer", "Pay", "Schedule or base", "Did not want to relocate", "Stayed with current employer", "Other"]
   },
   NOT_SENT: {
     placeholder: "Why was it never sent? (optional)",
@@ -74,6 +77,27 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
   // router.refresh() reconciles.
   const [steps, setSteps] = useState<Record<string, string>>(application.offerSteps ?? {});
   const [showSteps, setShowSteps] = useState(false);
+  // Recruiter and hiring manager on this offer (Quality of Hire tracking, Dec 10 2026).
+  const [recruiter, setRecruiter] = useState(application.recruiterName ?? "");
+  const [manager, setManager] = useState(application.hiringManager ?? "");
+  const [savedPeople, setSavedPeople] = useState({ recruiter: application.recruiterName ?? "", manager: application.hiringManager ?? "" });
+
+  async function savePeople() {
+    if (recruiter.trim() === savedPeople.recruiter && manager.trim() === savedPeople.manager) return;
+    setError(null);
+    try {
+      const res = await fetch(`/api/offers/${application.id}/people`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recruiterName: recruiter.trim(), hiringManager: manager.trim() })
+      });
+      const data = (await res.json().catch(() => ({}))) as { message?: string };
+      if (!res.ok) throw new Error(data.message || "Could not save who recruited and manages this hire.");
+      setSavedPeople({ recruiter: recruiter.trim(), manager: manager.trim() });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save who recruited and manages this hire.");
+    }
+  }
 
   const status = application.offerStatus ?? "NONE";
   const doneCount = OFFER_STEPS.filter((s) => steps[s.key]).length;
@@ -215,6 +239,30 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
         )}
       </div>
 
+      {status !== "NONE" && (canEdit || recruiter || manager) && (
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          {([
+            ["Recruiter", recruiter, setRecruiter],
+            ["Hiring manager", manager, setManager]
+          ] as const).map(([label, value, setValue]) => (
+            <label key={label} className="grid gap-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">
+              {label}
+              {canEdit ? (
+                <input
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  onBlur={() => void savePeople()}
+                  placeholder={label === "Recruiter" ? "Who recruited for this hire" : "Who this person will report to"}
+                  className="rounded border border-brand-lea/20 px-2 py-1 text-xs font-normal normal-case tracking-normal text-brand-lea outline-none focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+                />
+              ) : (
+                <span className="text-xs font-normal normal-case tracking-normal text-brand-lea dark:text-slate-100">{value || "—"}</span>
+              )}
+            </label>
+          ))}
+        </div>
+      )}
+
       {stepsOpen && (
         <ol className="mt-2 space-y-1">
           {OFFER_STEPS.map((step) => {
@@ -337,7 +385,7 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
             />
             <button
               onClick={() => void set(askReason, { reason })}
-              disabled={busy}
+              disabled={busy || (askReason === "DECLINED" && !reason.trim())}
               className="rounded bg-brand-lea px-3 py-1 text-xs font-semibold text-white transition hover:bg-brand-eden disabled:opacity-50"
             >
               Save
@@ -350,6 +398,9 @@ export function OfferControl({ application, canEdit }: { application: Applicatio
               Cancel
             </button>
           </div>
+          {askReason === "DECLINED" ? (
+            <p className="text-[10px] text-brand-grey dark:text-slate-400">Required. If they did not say, pick &quot;Other&quot;: it usually means they took another offer.</p>
+          ) : null}
           {/* A reason is only useful if it is written the same way twice — one
               click beats four people typing four spellings of the same thing. */}
           <div className="flex flex-wrap gap-1">

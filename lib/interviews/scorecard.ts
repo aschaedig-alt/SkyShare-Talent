@@ -6,6 +6,8 @@
  * interviews) can be averaged and compared.
  */
 
+import { COMPANY_VALUES } from "@/lib/compliments/constants";
+
 export type RatingKey = "EXCEEDS" | "MEETS" | "CAN_DEVELOP" | "DOES_NOT_MEET";
 export type RecommendationKey = "STRONG_YES" | "YES" | "NO" | "STRONG_NO";
 
@@ -44,7 +46,23 @@ export const RECOMMENDATION_LABEL: Record<RecommendationKey, string> = {
   STRONG_NO: "Strong no"
 };
 
-export type ScorecardItem = { q: string; rating: RatingKey | null };
+/** `value` marks one of the four core-value rows (its name); plain questions have none. */
+export type ScorecardItem = { q: string; rating: RatingKey | null; value?: string | null };
+
+/**
+ * SkyShare's four core values, rated on every scorecard on the same 1-4 scale as
+ * the questions - Quality of Hire, Nov 10 2026: rated at the interview and again at
+ * the 90-day check-in, so the two can be compared ("how accurate are we?").
+ */
+export const CORE_VALUE_NAMES = COMPANY_VALUES.map((v) => v.name);
+
+/** The scorecard's items with the four core-value rows first, each once, then the rest. */
+export function withCoreValues(items: ScorecardItem[]): ScorecardItem[] {
+  const values = CORE_VALUE_NAMES.map(
+    (name) => items.find((i) => i.value === name) ?? { q: name, rating: null, value: name }
+  );
+  return [...values, ...items.filter((i) => !i.value || !CORE_VALUE_NAMES.includes(i.value))];
+}
 
 export function isRatingKey(value: unknown): value is RatingKey {
   return value === "EXCEEDS" || value === "MEETS" || value === "CAN_DEVELOP" || value === "DOES_NOT_MEET";

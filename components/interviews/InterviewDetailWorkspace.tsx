@@ -12,8 +12,10 @@ import {
   RECOMMENDATION_LABEL,
   type RatingKey,
   type RecommendationKey,
-  type ScorecardItem
+  type ScorecardItem,
+  withCoreValues
 } from "@/lib/interviews/scorecard";
+import { VALUE_DESCRIPTIONS } from "@/lib/compliments/constants";
 import { InterviewerPicker } from "@/components/calendar/InterviewerPicker";
 import { Button } from "@/components/ui";
 import { formatDateTimeWithZone } from "@/lib/calendar/format";
@@ -49,8 +51,10 @@ function ScorecardEditor({
   onSaved: () => void;
 }) {
   const [interviewer, setInterviewer] = useState(initial?.interviewer ?? "");
+  // The four core values always lead, on new scorecards and on older ones when
+  // they are edited, so every scorecard rates them (Quality of Hire, Nov 10 2026).
   const [items, setItems] = useState<ScorecardItem[]>(() =>
-    initial ? initial.items.map((i) => ({ ...i })) : detail.bankQuestions.map((q) => ({ q, rating: null as RatingKey | null }))
+    withCoreValues(initial ? initial.items.map((i) => ({ ...i })) : detail.bankQuestions.map((q) => ({ q, rating: null as RatingKey | null })))
   );
   const [recommendation, setRecommendation] = useState<string>(initial?.recommendation ?? "");
   const [comments, setComments] = useState(initial?.comments ?? "");
@@ -77,7 +81,9 @@ function ScorecardEditor({
   async function save() {
     setBusy(true);
     setError(null);
-    const cleanItems = items.filter((it) => it.q.trim()).map((it) => ({ q: it.q.trim(), rating: it.rating }));
+    const cleanItems = items
+      .filter((it) => it.value || it.q.trim())
+      .map((it) => ({ q: it.q.trim(), rating: it.rating, ...(it.value ? { value: it.value } : {}) }));
     const payload = initial
       ? { interviewer, recommendation: recommendation || null, items: cleanItems, comments: comments || null }
       : { interviewId: detail.id, interviewer, recommendation: recommendation || null, items: cleanItems, comments: comments || null };
@@ -111,9 +117,43 @@ function ScorecardEditor({
       </label>
 
       <div className="mt-3">
+        <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">Core values</span>
+        <p className="text-[11px] text-brand-grey dark:text-slate-400">Rated on every scorecard, and again at the 90-day check-in, so we can see how well interviews predict.</p>
+        <div className="mt-1.5 space-y-2">
+          {items.map((item, idx) =>
+            item.value ? (
+              <div key={idx} className="rounded border border-brand-gold/30 bg-white p-2.5 dark:border-brand-gold/20 dark:bg-brand-panel">
+                <div className="text-sm font-semibold text-brand-lea dark:text-slate-100">{item.value}</div>
+                {VALUE_DESCRIPTIONS[item.value] ? (
+                  <p className="text-[11px] text-brand-grey dark:text-slate-400">{VALUE_DESCRIPTIONS[item.value]}</p>
+                ) : null}
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {RATINGS.map((r) => {
+                    const active = item.rating === r.key;
+                    return (
+                      <button
+                        key={r.key}
+                        type="button"
+                        onClick={() => setRating(idx, r.key)}
+                        className={`rounded border px-2.5 py-0.5 text-[11px] font-semibold transition hover:shadow-glow ${
+                          active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
+                        }`}
+                      >
+                        {r.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3">
         <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">Questions &amp; ratings</span>
         <div className="mt-1.5 space-y-2">
-          {items.map((item, idx) => (
+          {items.map((item, idx) => item.value ? null : (
             <div key={idx} className="rounded border border-brand-lea/10 bg-white p-2.5 dark:border-white/10 dark:bg-brand-panel">
               <div className="flex items-start gap-2">
                 <input value={item.q} onChange={(e) => setText(idx, e.target.value)} className={`${inputCls} flex-1`} />
@@ -326,7 +366,10 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
                   <ul className="mt-2 space-y-1">
                     {card.items.map((it, i) => (
                       <li key={i} className="flex items-start justify-between gap-3 text-sm">
-                        <span className="text-brand-black dark:text-slate-100">{it.q}</span>
+                        <span className="text-brand-black dark:text-slate-100">
+                          {it.value ? <span className="mr-1.5 rounded border border-brand-gold/40 px-1.5 py-0.5 text-[10px] font-semibold text-brand-lea dark:text-slate-200">Core value</span> : null}
+                          {it.value ?? it.q}
+                        </span>
                         <span className={`shrink-0 text-xs font-semibold ${it.rating ? "text-brand-lea dark:text-slate-100" : "text-brand-grey/60 dark:text-slate-500"}`}>
                           {it.rating ? RATING_LABEL[it.rating] : "—"}
                         </span>
