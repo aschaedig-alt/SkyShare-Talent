@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-export const QUESTION_CATEGORIES = ["BEHAVIORAL", "SITUATIONAL", "TECHNICAL", "EXPERIENCE", "OTHER"] as const;
+// CULTURE and GENERAL added Nov 11 2026: his question doc defines six categories -
+// Culture (motivation, attitudes, values, core-value alignment) and General
+// (disclosures, candidate questions, logistics - not meant to measure fit).
+export const QUESTION_CATEGORIES = ["BEHAVIORAL", "SITUATIONAL", "TECHNICAL", "EXPERIENCE", "CULTURE", "GENERAL", "OTHER"] as const;
 export const CORE_VALUE_KEYS = ["teamwork", "innovation", "leadership", "customerFocus", "growthMindset", "integrity"] as const;
 export const QUESTION_DEPARTMENTS = ["crew", "maintenance", "fbo", "support"] as const;
 

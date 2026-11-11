@@ -16,6 +16,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   SITUATIONAL: "Situational",
   TECHNICAL: "Technical",
   EXPERIENCE: "Experience",
+  CULTURE: "Culture",
+  GENERAL: "General",
   OTHER: "Other"
 };
 const VALUE_NAME: Record<string, string> = Object.fromEntries(COMPANY_VALUES.map((v) => [v.colorKey, v.name]));

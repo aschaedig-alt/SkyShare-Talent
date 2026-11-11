@@ -2017,7 +2017,7 @@ model Booking {
 model InterviewQuestion {
   id              String   @id @default(cuid())
   text            String
-  category        String   @default("BEHAVIORAL") // BEHAVIORAL | SITUATIONAL | TECHNICAL | EXPERIENCE | OTHER
+  category        String   @default("BEHAVIORAL") // BEHAVIORAL | SITUATIONAL | TECHNICAL | EXPERIENCE | CULTURE | GENERAL | OTHER
   coreValue       String?  // colorKey from COMPANY_VALUES (e.g. "teamwork"); null = none
   departmentsJson String?  // JSON array of canonical department keys; empty/null = applies to all
   guidance        String?  // what a strong answer looks like (interviewer note)

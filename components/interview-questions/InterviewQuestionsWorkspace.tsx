@@ -17,6 +17,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   SITUATIONAL: "Situational",
   TECHNICAL: "Technical",
   EXPERIENCE: "Experience",
+  CULTURE: "Culture",
+  GENERAL: "General",
   OTHER: "Other"
 };
 const CATEGORIES = Object.keys(CATEGORY_LABELS);
