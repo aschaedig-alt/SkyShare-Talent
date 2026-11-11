@@ -41,6 +41,7 @@ import { tagStyle, TagPill, displayTags } from "@/components/employees/EmployeeT
 import { PhoneInputError } from "@/components/shared/PhoneNumber";
 import { formatPhoneInput } from "@/lib/formatting/phone";
 import { RichNoteField } from "@/components/richtext/RichNoteField";
+import { CheckinRepliesPanel } from "@/components/people/CheckinReplyWorklist";
 
 function fmtDay(iso: string | null) {
   // Dates are stored as date-only (UTC midnight); format in UTC so the calendar
@@ -636,6 +637,14 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
       minHeight={80}
     />
   );
+  // Replies to the check-in emails sit under the notes, read-only here. HR only;
+  // renders nothing for anyone else, or when there are none.
+  const notesBlock = (
+    <div>
+      {notesControl}
+      <CheckinRepliesPanel newHireId={hire.id} />
+    </div>
+  );
 
   // Who they report to. The orientation emails cc the supervisor and one is
   // addressed to them, so this is what lets the app fill that in instead of
@@ -805,7 +814,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
         [field("Birth country", "birthCountry"), field("Citizenship", "citizenshipCountry")],
         [supervisorControl(1), supervisorControl(2)],
         [tagsControl],
-        [notesControl]
+        [notesBlock]
       ]
     }
   ];

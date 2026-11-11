@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { clsx } from "clsx";
-import { Archive, CalendarClock, Building2, Trash2, ListChecks } from "lucide-react";
+import { Archive, CalendarClock, Building2, Trash2, ListChecks, MessageSquareText, MessageSquareWarning, RefreshCw } from "lucide-react";
 import type { Checkin, EmploymentStatus, GridTaskStatus, PostOnboardHire } from "@/lib/data/onboarding";
 import { MAINTENANCE_TASKS } from "@/lib/onboarding/tasks";
 import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
@@ -15,6 +15,16 @@ import { EmptyState, Input } from "@/components/ui";
 import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
 import { CheckinRatingModal } from "@/components/people/CheckinRatingModal";
 import { CHECKIN_RATING_TASK_KEY, ratingAverage, type CheckinRatingView } from "@/lib/onboarding/checkin-rating";
+import { CheckinReplyModal, LEVEL_STYLE } from "@/components/people/CheckinReplyModal";
+import { NO_REPLY_AFTER_DAYS, REPLY_LEVEL_LABEL, needsFollowUp, type CheckinReplyView } from "@/lib/onboarding/checkin-reply";
+
+/** The reply to show in a cell: an unhandled one that needs follow-up first, else the latest. */
+function pickReply(list: CheckinReplyView[] | undefined): CheckinReplyView | null {
+  if (!list?.length) return null;
+  return list.find((r) => needsFollowUp(r.level) && !r.handledAt) ?? list[0];
+}
+
+type ReplyFilter = "" | "replied" | "action" | "waiting";
 
 // Quality of Hire, Dec 10 2026: ticking the 90-day check-in done asks for the
 // hiring manager's rating first (HR enters it from the manager - his call, Nov 10).
@@ -81,6 +91,64 @@ export function PostOnboardTab({
     };
   }, [initial]);
 
+  // Check-in email replies (lib/onboarding/checkin-reply.ts), HR only - a non-HR
+  // session gets a 403 here and the grid simply shows no reply icons.
+  // hireId -> taskKey -> replies, newest first.
+  const [replies, setReplies] = useState<Record<string, Record<string, CheckinReplyView[]>>>({});
+  const [replyReload, setReplyReload] = useState(0);
+  const [openReply, setOpenReply] = useState<CheckinReplyView | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanNote, setScanNote] = useState<string | null>(null);
+  useEffect(() => {
+    const ids = initial.map((h) => h.id);
+    if (!ids.length) return;
+    let live = true;
+    void fetch(`/api/onboarding/checkin-replies?ids=${encodeURIComponent(ids.join(","))}`)
+      .then((r) => (r.ok ? r.json() : { replies: [] }))
+      .then((d: { replies?: CheckinReplyView[] }) => {
+        if (!live) return;
+        const map: Record<string, Record<string, CheckinReplyView[]>> = {};
+        for (const r of d.replies ?? []) ((map[r.hireId] ??= {})[r.taskKey] ??= []).push(r);
+        setReplies(map);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [initial, replyReload]);
+
+  function replaceReply(saved: CheckinReplyView) {
+    setReplies((cur) => {
+      const list = (cur[saved.hireId]?.[saved.taskKey] ?? []).map((r) => (r.messageId === saved.messageId ? saved : r));
+      return { ...cur, [saved.hireId]: { ...(cur[saved.hireId] ?? {}), [saved.taskKey]: list } };
+    });
+    setOpenReply(saved);
+  }
+
+  async function checkForReplies() {
+    setScanning(true);
+    setScanNote(null);
+    try {
+      const res = await fetch("/api/onboarding/checkin-replies/scan", { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { found?: unknown[]; errors?: string[]; message?: string };
+      if (!res.ok) throw new Error(data.message || "Could not check Front.");
+      const n = data.found?.length ?? 0;
+      setScanNote(`${n === 0 ? "No new replies" : n === 1 ? "1 new reply" : `${n} new replies`}${data.errors?.length ? ` · ${data.errors.length} problem(s), see the server log` : ""}`);
+      setReplyReload((x) => x + 1);
+    } catch (e) {
+      setScanNote(e instanceof Error ? e.message : "Could not check Front.");
+    } finally {
+      setScanning(false);
+    }
+  }
+
+  /** Sent long enough ago to expect an answer, and nothing has come back. */
+  function waitingOnReply(hireId: string, key: string): boolean {
+    const sent = taskSends[hireId]?.[key];
+    if (!sent || replies[hireId]?.[key]?.length) return false;
+    return Date.now() - new Date(sent).getTime() >= NO_REPLY_AFTER_DAYS * 86_400_000;
+  }
+
   // Filters. Applied in the browser rather than the server: this list is the
   // post-onboard cohort, which is tens of rows, and it is already fully loaded —
   // a round trip per keystroke would be slower and lose the check-in state that
@@ -89,6 +157,7 @@ export function PostOnboardTab({
   const [dept, setDept] = useState("");
   const [status, setStatus] = useState("");
   const [outstandingOnly, setOutstandingOnly] = useState(false);
+  const [replyFilter, setReplyFilter] = useState<ReplyFilter>("");
 
   const departments = useMemo(
     () => [...new Set(hires.map((h) => h.department).filter((d): d is string => Boolean(d && d.trim())))].sort((a, b) => a.localeCompare(b)),
@@ -102,17 +171,43 @@ export function PostOnboardTab({
       if (status && h.employmentStatus !== status) return false;
       // Outstanding = still to do. A skipped (N/A) check-in is handled.
       if (outstandingOnly && !h.checkins.some((c) => c.status === "TODO")) return false;
+      if (replyFilter) {
+        const mine = Object.values(replies[h.id] ?? {}).flat();
+        if (replyFilter === "replied" && !mine.length) return false;
+        if (replyFilter === "action" && !mine.some((r) => needsFollowUp(r.level) && !r.handledAt)) return false;
+        if (replyFilter === "waiting" && !h.checkins.some((c) => waitingOnReply(h.id, c.key))) return false;
+      }
       if (!needle) return true;
       return [h.name, h.position, h.department].some((v) => (v ?? "").toLowerCase().includes(needle));
     });
-  }, [hires, q, dept, status, outstandingOnly]);
+    // waitingOnReply reads replies and taskSends, both listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hires, q, dept, status, outstandingOnly, replyFilter, replies, taskSends]);
 
   const filtered = visible.length !== hires.length;
+
+  // For the people on this list: emails sent, how many have answered, how many still need someone.
+  const replyCounts = useMemo(() => {
+    let sent = 0;
+    let replied = 0;
+    let action = 0;
+    for (const h of hires) {
+      for (const key of Object.keys(taskSends[h.id] ?? {})) {
+        if (!key.startsWith("checkin_")) continue;
+        sent++;
+        const list = replies[h.id]?.[key] ?? [];
+        if (list.length) replied++;
+        if (list.some((r) => needsFollowUp(r.level) && !r.handledAt)) action++;
+      }
+    }
+    return { sent, replied, action };
+  }, [hires, taskSends, replies]);
   function clearFilters() {
     setQ("");
     setDept("");
     setStatus("");
     setOutstandingOnly(false);
+    setReplyFilter("");
   }
 
   // Selection tracks what is ON SCREEN. Select-all must never reach a row a
@@ -327,6 +422,29 @@ export function PostOnboardTab({
           <input type="checkbox" checked={outstandingOnly} onChange={(e) => setOutstandingOnly(e.target.checked)} className="h-4 w-4" />
           Outstanding check-ins only
         </label>
+        <select value={replyFilter} onChange={(e) => setReplyFilter(e.target.value as ReplyFilter)} aria-label="Filter by check-in reply" className={"rounded border border-brand-lea/20 bg-white px-2 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-brand-field dark:text-slate-100"}>
+          <option value="">Any reply</option>
+          <option value="replied">Replied</option>
+          <option value="action">Needs action</option>
+          <option value="waiting">No reply after {NO_REPLY_AFTER_DAYS} days</option>
+        </select>
+        {replyCounts.sent > 0 ? (
+          <span className="text-xs text-brand-grey dark:text-slate-400" title="Check-in emails sent from this app, for the people on this list">
+            {replyCounts.sent} sent · {replyCounts.replied} replied ·{" "}
+            <span className={clsx(replyCounts.action > 0 && "font-semibold text-brand-lea dark:text-amber-200")}>{replyCounts.action} need action</span>
+          </span>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => void checkForReplies()}
+          disabled={scanning}
+          title="Look in Front for replies to the check-in emails now (it also runs every morning)"
+          className="inline-flex items-center gap-1 rounded border border-brand-lea/20 px-2 py-1 text-xs font-semibold text-brand-lea transition hover:shadow-glow disabled:opacity-60 dark:border-white/10 dark:text-slate-100"
+        >
+          <RefreshCw className={clsx("h-3 w-3", scanning && "animate-spin")} />
+          {scanning ? "Checking…" : "Check for replies"}
+        </button>
+        {scanNote ? <span className="text-xs text-brand-grey dark:text-slate-400">{scanNote}</span> : null}
         <span className="ml-auto text-xs text-brand-grey dark:text-slate-400">
           {filtered ? `${visible.length} of ${hires.length}` : `${hires.length}`} shown
         </span>
@@ -378,6 +496,7 @@ export function PostOnboardTab({
           }
         />
       ) : null}
+      {openReply ? <CheckinReplyModal key={openReply.messageId} reply={openReply} onClose={() => setOpenReply(null)} onSaved={replaceReply} /> : null}
       <BulkActionBar count={selected.size} actions={POST_ONBOARD_BULK_ACTIONS} onApply={applyBulk} onChoice={bulkCheckin} onDelete={deleteSelected} onClear={() => setSelected(new Set())} busy={busy} />
       <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="overflow-x-auto">
@@ -498,6 +617,38 @@ export function PostOnboardTab({
                         }
                       />
                     ) : null}
+                    {(() => {
+                      const r = pickReply(replies[h.id]?.[c.key]);
+                      if (r) {
+                        const handled = Boolean(r.handledAt);
+                        const urgent = needsFollowUp(r.level) && !handled;
+                        const Icon = urgent ? MessageSquareWarning : MessageSquareText;
+                        const more = (replies[h.id]?.[c.key]?.length ?? 1) - 1;
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => setOpenReply(r)}
+                            title={`Replied ${formatMomentDateShort(r.receivedAt)} · ${handled ? "Handled" : REPLY_LEVEL_LABEL[r.level]}: ${r.triage.summary}${more > 0 ? ` (+${more} more)` : ""}`}
+                            aria-label={`${h.name} replied to the ${c.short} check-in: ${handled ? "handled" : REPLY_LEVEL_LABEL[r.level]}`}
+                            className="relative inline-flex items-center justify-center rounded p-1 transition hover:bg-brand-gold/15 dark:hover:bg-white/10"
+                          >
+                            <Icon className={clsx("h-4 w-4", handled ? "text-brand-lea dark:text-slate-300" : LEVEL_STYLE[r.level].icon)} />
+                            {urgent ? <span className="absolute right-0 top-0 h-1.5 w-1.5 rounded-full bg-red-600" /> : null}
+                          </button>
+                        );
+                      }
+                      if (waitingOnReply(h.id, c.key)) {
+                        return (
+                          <span
+                            className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wide text-brand-grey/80 dark:text-slate-500"
+                            title={`Sent ${formatMomentDateShort(taskSends[h.id]?.[c.key])}, no reply yet`}
+                          >
+                            no reply
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
                     </span>
                   </td>
                   );

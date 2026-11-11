@@ -21,6 +21,10 @@
     {
       "path": "/api/cron/crew-sheet-scan",
       "schedule": "30 12 * * *"
+    },
+    {
+      "path": "/api/cron/checkin-reply-scan",
+      "schedule": "45 13 * * *"
     }
   ]
 }

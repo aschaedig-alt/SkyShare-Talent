@@ -6,6 +6,7 @@ import { clsx } from "clsx";
 import { Check, RotateCcw } from "lucide-react";
 import type { ChartDatum, DrillPerson, OnboardingDashboard, WorklistPerson } from "@/lib/data/onboarding";
 import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
+import { CheckinReplyWorklist } from "@/components/people/CheckinReplyWorklist";
 
 const STATUS_COLOR: Record<string, string> = {
   "In progress": "#b8860b",
@@ -311,6 +312,9 @@ export function OnboardingDashboardTab({ dashboard }: { dashboard: OnboardingDas
           </div>
         </section>
       )}
+
+      {/* Check-in email replies that need someone. Renders nothing when none are open. */}
+      <CheckinReplyWorklist />
 
       {/* Ready for their start — quick scan of who's starting soon and how ready */}
       <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">

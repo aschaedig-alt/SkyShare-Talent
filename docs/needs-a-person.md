@@ -1098,6 +1098,32 @@ feed, and the calendar edit shows in the write-up on the profile.
 
 ---
 
+### 49. Check-in replies: nobody has marked one handled, and the HR-only wall and the morning run are unproven
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-11-11
+
+Replies to the check-in emails ("Re: Just checking in") are now read out of Front, sorted
+by Claude, and shown on the Post-onboard grid, the dashboard and the person page. Checked
+locally against the live data: the four real replies were filed (Grace Ward as Needs
+action, three as All good), a second run filed nothing twice, the grid showed the icons,
+counts and "no reply" marks, Grace's dialog opened and fitted at 1536x695, and the dashboard
+and her profile listed it. NOT checked: (1) pressing Mark handled or changing the level in
+the dialog, because that writes Grace's live record (the same save was exercised through
+the API as a no-op); (2) that a non-HR login sees nothing - local dev has no login, so it
+always counts as HR; (3) that the 7:45am Mountain Vercel cron actually fires; (4) the Check
+for replies button on the live site.
+
+**How to check it, three minutes:** on the live site open People, Post-onboard, press Check
+for replies, then open Grace's gold icon, type what was done and press Mark handled. Ask a
+non-HR user to open the same tab. The next morning, look for "Check-in reply cron" in the
+Vercel logs.
+
+**What would count as a pass:** Grace's icon turns navy and drops off the dashboard's
+follow-up list, the non-HR user sees no reply icons at all, and the log line is there.
+
+---
+
 ## Closed
 
 ### 33. The candidate page's layout has not been saved since the boxes started fitting their content
