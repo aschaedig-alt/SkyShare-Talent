@@ -65,7 +65,11 @@ const LEGACY_TO_HOUSE: Record<string, string> = {
   // Did not pass interview
   "notselecteddidnotpassinterview": "Failed Interview",
   "didntpassinterview": "Failed Interview",
-  "notselectedpastinterview": "Failed Interview",
+  // NOT "Failed Interview" — Aimee, 2026-11-11 (feedback cmwcqsevi): "Not Selected -
+  // Past Interview" means they got past the interview and were not chosen, and "is
+  // relevant and gives more info than Failed Interview". The Sep 7 sheet never folded
+  // it in (it mapped only the two "did not pass" wordings); a later code line did.
+  "notselectedpastinterview": "Not Selected - Past Interview",
   "notselectednoshow": "No Show",
 
   // Not eligible
@@ -171,6 +175,7 @@ export const WORDING_TO_STAGE: Record<string, string> = {
   Rejected: "Rejected",
   "Not Best Qualified": "Rejected",
   "Failed Interview": "Rejected",
+  "Not Selected - Past Interview": "Rejected",
   "No Show": "Rejected",
   "Does Not Meet Mins": "Rejected",
   "Closed / On Hold": "Rejected",

@@ -1,6 +1,6 @@
 ---
 name: paycom-status-steps
-description: Decide which Paycom status steps belong in a candidate's interview history and notes history, and which are steps Aimee only clicked past in Paycom. Use whenever you record, import, clean up or audit interviews that came from Paycom invite emails (source "paycom-invite"), touch lib/paycom/interview-invites.ts or lib/paycom/status-steps.ts, run the Paycom notes scan, or someone says a Paycom step or interview "didn't happen", "shouldn't show", or is "just a status".
+description: Decide which Paycom statuses belong in a candidate's interview, notes and timeline history, and how they are worded. Use whenever you record, import, clean up or audit interviews from Paycom invite emails (source "paycom-invite") or application dispositions from Paycom exports, touch lib/paycom/interview-invites.ts, lib/paycom/status-steps.ts or lib/candidates/disposition-vocabulary.ts, run the Paycom notes scan, or someone says a Paycom step or interview "didn't happen", "shouldn't show", is "just a status", or a disposition like "Failed Interview" is "listed wrong".
 ---
 
 # Paycom status steps: what to include and what to leave out
@@ -110,3 +110,52 @@ Review with every group: `scripts/paycom-status-steps/review-calendar.md`.
 - Only `source "paycom-invite"` rows are ever removed. Notes and write-ups are never touched.
 - Removal logs an ActivityLog entry per candidate. Quality of Hire counts COMPLETED app
   interviews, so removed steps stop counting there — intended.
+
+---
+
+# Application dispositions: say what Paycom said, on the day it was decided
+
+## Aimee's rule (feedback cmwcqsevi, 2026-11-11, her words, on Stephen Cox)
+
+> "I think the status 'Not Selected - Past Interview' is relevant and gives more info than
+> 'Failed Interview.' Failed Interview on each of those looks like they failed an interview
+> that day and that is incorrect."
+
+Two separate faults made it read that way, and both are fixed:
+
+1. **The wording.** `lib/candidates/disposition-vocabulary.ts` folded Paycom's "Not Selected -
+   Past Interview" into the house name "Failed Interview". His Sep 7 vocabulary sheet (Sheet13)
+   never asked for that — it mapped only "Not Selected - Did Not Pass Interview" and "Didn't
+   Pass Interview". "Past Interview" means they got PAST the interview and were not chosen. It
+   now keeps its own house name, **"Not Selected - Past Interview"** (stage Rejected; still in
+   the "interview" reason group, whose filter tile is labelled "Failed interview").
+2. **The date.** The candidate timeline (`lib/data/candidates.ts`) showed each application as
+   ONE entry headed by its outcome but dated by the APPLICATION date — and a day early, because
+   date-only values are stored at UTC midnight. Now "Applied" sits on `appliedAt` and the outcome
+   on `decidedAt` (Paycom's "Dispositioned"), both rendered at noon UTC so the calendar day is
+   right in every US zone.
+
+## The test for a disposition wording
+
+- Keep Paycom's meaning. Shorten a wording only when the house name means the same thing; never
+  fold two Paycom wordings into one when they say different things about what happened.
+- "Failed Interview" = Paycom "Not Selected - Did Not Pass Interview" / "Didn't Pass Interview"
+  ONLY. "Not Selected - Past Interview" stays as it is.
+- An outcome is dated by its disposition date, never the application date.
+- Before changing a mapping, check the sheet he signed off (Downloads, "Hiring Metrics -
+  Sheet13.csv") — a mapping that is not on it is a session's guess, not his decision.
+
+## Recovering a merged wording
+
+A merged wording has no per-row record of what it was. Paycom's own exports do: Downloads,
+"Hiring Metrics - Sheet10.csv" and "Sheet14.csv", keyed by Application ID =
+`CandidateApplication.sourceApplicationId`. JazzHR rows (no Paycom id) cannot be recovered.
+
+`npx tsx scripts/paycom-past-interview.ts --plan | --apply [--limit N] | --undo <file>`
+
+## The 2026-11-11 fix
+
+108 Paycom applications said "Failed Interview": 67 really were "Did Not Pass Interview" (left
+alone), 41 were "Not Selected - Past Interview" and were reworded (batch of 3, undo tested,
+then all 41). Undo: `scripts/paycom-status-steps/undo/past-interview-2026-11-12T01-00-27-294Z-41.json`.
+111 JazzHR applications still say "Failed Interview" in `status`; unrecoverable, left alone.

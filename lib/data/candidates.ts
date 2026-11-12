@@ -1808,17 +1808,51 @@ export async function getCandidateProfileData(
   // Unified timeline built from the real relations so everything links together
   // chronologically — every application (with its job), interview, and note —
   // even when the candidate applied to more than one job.
+  //
+  // An application is TWO moments: when they applied, and when it was decided. It used
+  // to be one entry headed by the outcome but dated by the application, so "Failed
+  // Interview, May 25" read as an interview failed that day when it was the day he
+  // applied (Aimee, feedback cmwcqsevi, 2026-11-11). Now "Applied" sits on the
+  // application date and the outcome on its disposition date (decidedAt); with no
+  // decision date the outcome stays on the application entry, as before.
+  //
+  // Imported dates are DATE-ONLY values stored at UTC midnight, which every US time zone
+  // shows as the day before. Noon UTC is the same calendar day everywhere from Hawaii to
+  // Maine. But an application made IN the app carries a real moment (new Date()), and an
+  // evening one in Mountain time is already the next day in UTC: forcing noon on its UTC
+  // date would show it a day late (230 live rows on Nov 11). So only an exact UTC midnight
+  // is treated as date-only; a real timestamp is kept as it is.
+  const dateOnly = (d: Date) =>
+    d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0 && d.getUTCMilliseconds() === 0
+      ? `${d.toISOString().slice(0, 10)}T12:00:00.000Z`
+      : d.toISOString();
   const timeline = [
-    ...candidate.applications
-      .filter((a) => a.appliedAt)
-      .map((a) => ({
-        id: `app-${a.id}`,
-        type: a.disposition ?? "APPLIED",
-        title: a.job?.title ?? a.historicalJobTitle ?? "Application",
-        detail: a.status ?? null,
-        occurredAt: a.appliedAt!.toISOString(),
-        origin: a.origin
-      })),
+    ...candidate.applications.flatMap((a) => {
+      const title = a.job?.title ?? a.historicalJobTitle ?? "Application";
+      const decided = a.disposition && a.decidedAt;
+      const entries = [];
+      if (a.appliedAt) {
+        entries.push({
+          id: `app-${a.id}`,
+          type: decided ? "APPLIED" : (a.disposition ?? "APPLIED"),
+          title,
+          detail: decided ? null : (a.status ?? null),
+          occurredAt: dateOnly(a.appliedAt),
+          origin: a.origin
+        });
+      }
+      if (decided) {
+        entries.push({
+          id: `app-${a.id}-decided`,
+          type: a.disposition!,
+          title,
+          detail: a.status ?? null,
+          occurredAt: dateOnly(a.decidedAt!),
+          origin: a.origin
+        });
+      }
+      return entries;
+    }),
     ...candidate.interviews.map((i) => ({
       id: `iv-${i.id}`,
       type: "INTERVIEWED",
