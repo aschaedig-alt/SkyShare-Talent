@@ -1,31 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { cleanRichInput, richNoteTooLong } from "@/lib/richtext/stored";
 import { requireApiPermission } from "@/lib/auth/route-auth";
-import { CHECKIN_RATING_DAY, CHECKIN_RATING_TASK_KEY, cleanRatings, type CheckinRatingView, type CheckinTickResult } from "@/lib/onboarding/checkin-rating";
-import { MAINTENANCE_GROUP } from "@/lib/onboarding/tasks";
-import { maybeArchiveOnCheckinsComplete } from "@/lib/data/onboarding";
+import { CHECKIN_RATING_DAY } from "@/lib/onboarding/checkin-rating";
+import { checkinRatingView, saveCheckinRating } from "@/lib/onboarding/save-checkin-rating";
 
 // The 90-day check-in rating HR enters from the hiring manager (Quality of Hire,
 // Dec 10 2026). Same permission as ticking a check-in done (onboarding-tasks/[id]).
-// See lib/onboarding/checkin-rating.ts.
+// See lib/onboarding/checkin-rating.ts. The save and the tick live in
+// lib/onboarding/save-checkin-rating.ts, shared with the manager's no-login link.
 //
 //   GET  ?ids=a,b,c                       the saved ratings for those hires
 //   POST { newHireId, ratings, wouldHireAgain, managerName, notes }   save (one per hire);
 //        also ticks the 90-day check-in done, and says so: { rating, checkinDone, archived }
 
 const MAX_IDS = 500;
-const tidy = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) || null : null);
-
-function view(r: { newHireId: string; dayMark: number; ratingsJson: string; wouldHireAgain: boolean | null; managerName: string | null; notes: string | null; enteredBy: string | null; updatedAt: Date }): CheckinRatingView {
-  let ratings = {};
-  try {
-    ratings = cleanRatings(JSON.parse(r.ratingsJson));
-  } catch {
-    ratings = {};
-  }
-  return { newHireId: r.newHireId, dayMark: r.dayMark, ratings, wouldHireAgain: r.wouldHireAgain, managerName: r.managerName, notes: r.notes, enteredBy: r.enteredBy, updatedAt: r.updatedAt.toISOString() };
-}
 
 export async function GET(request: Request) {
   const auth = await requireApiPermission("candidates:write");
@@ -33,54 +21,24 @@ export async function GET(request: Request) {
   const ids = (new URL(request.url).searchParams.get("ids") ?? "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, MAX_IDS);
   if (!ids.length) return NextResponse.json({ ratings: [] });
   const rows = await prisma.hireCheckinRating.findMany({ where: { newHireId: { in: ids }, dayMark: CHECKIN_RATING_DAY } });
-  return NextResponse.json({ ratings: rows.map(view) });
+  return NextResponse.json({ ratings: rows.map(checkinRatingView) });
 }
 
 export async function POST(request: Request) {
   const auth = await requireApiPermission("candidates:write");
   if (!auth.ok) return (auth as { ok: false; response: Response }).response;
   const body = (await request.json().catch(() => ({}))) as { newHireId?: unknown; ratings?: unknown; wouldHireAgain?: unknown; managerName?: unknown; notes?: unknown };
-  const newHireId = typeof body.newHireId === "string" ? body.newHireId.trim() : "";
-  if (!newHireId) return NextResponse.json({ message: "Which person?" }, { status: 400 });
-  const ratings = cleanRatings(body.ratings);
-  const wouldHireAgain = typeof body.wouldHireAgain === "boolean" ? body.wouldHireAgain : null;
-  if (!Object.keys(ratings).length && wouldHireAgain === null) {
-    return NextResponse.json({ message: "Rate at least one value, or answer \"would you hire again?\"" }, { status: 400 });
-  }
-  const notes = cleanRichInput(body.notes);
-  const notesTooLong = richNoteTooLong(notes);
-  if (notesTooLong) return NextResponse.json({ message: notesTooLong }, { status: 400 });
-  const hire = await prisma.newHire.findUnique({ where: { id: newHireId }, select: { id: true } });
-  if (!hire) return NextResponse.json({ message: "Person not found." }, { status: 404 });
-
-  const data = {
-    ratingsJson: JSON.stringify(ratings),
-    wouldHireAgain,
-    managerName: tidy(body.managerName, 80),
-    // Rich text since feedback cmwcjtm5k; the shared 4000 limit is on the words typed (checked above).
-    notes,
+  const result = await saveCheckinRating({
+    newHireId: typeof body.newHireId === "string" ? body.newHireId.trim() : "",
+    ratings: body.ratings,
+    wouldHireAgain: body.wouldHireAgain,
+    managerName: body.managerName,
+    notes: body.notes,
     enteredBy: auth.user.email ?? auth.user.name ?? null
-  };
-  const saved = await prisma.hireCheckinRating.upsert({
-    where: { newHireId_dayMark: { newHireId, dayMark: CHECKIN_RATING_DAY } },
-    create: { newHireId, dayMark: CHECKIN_RATING_DAY, ...data },
-    update: data
   });
-
-  // A rating means the 90-day check-in happened, so it ticks that check-in done -
-  // from any screen (his call, Nov 11: "Yes, tick it"). Same as ticking it by hand
-  // in onboarding-tasks/[id]: completedAt set, and the last check-in done archives.
-  const tick: CheckinTickResult = { checkinDone: false, archived: false };
-  const task = await prisma.onboardingTask.findUnique({
-    where: { newHireId_key: { newHireId, key: CHECKIN_RATING_TASK_KEY } },
-    select: { id: true, status: true, group: true }
-  });
-  if (task) {
-    if (task.status !== "DONE") {
-      await prisma.onboardingTask.update({ where: { id: task.id }, data: { status: "DONE", completedAt: new Date() } });
-      if (task.group === MAINTENANCE_GROUP) tick.archived = await maybeArchiveOnCheckinsComplete(newHireId);
-    }
-    tick.checkinDone = true;
+  if (!result.ok) {
+    const failed = result as { status: number; message: string };
+    return NextResponse.json({ message: failed.message }, { status: failed.status });
   }
-  return NextResponse.json({ ok: true, rating: view(saved), ...tick });
+  return NextResponse.json(result);
 }

@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { clsx } from "clsx";
-import { Archive, CalendarClock, Building2, Trash2, ListChecks, MessageSquareText, MessageSquareWarning, RefreshCw } from "lucide-react";
+import { Archive, CalendarClock, Building2, Trash2, ListChecks, MessageSquareText, MessageSquareWarning, RefreshCw, Send, X } from "lucide-react";
+import { CheckinRatingRequestDialog, StateChip } from "@/components/people/CheckinRatingRequestDialog";
+import { cancelReasonText, type RatingRequestView } from "@/lib/onboarding/checkin-rating-request-shared";
 import type { Checkin, EmploymentStatus, GridTaskStatus, PostOnboardHire } from "@/lib/data/onboarding";
 import { MAINTENANCE_TASKS } from "@/lib/onboarding/tasks";
 import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
@@ -91,6 +93,39 @@ export function PostOnboardTab({
       live = false;
     };
   }, [initial]);
+
+  // The no-login rating link sent to the hiring manager (feedback cmwcq16o7):
+  // hireId -> its current request, plus the requests cancelled because the
+  // employee left - those people have usually dropped off this list, so the tab
+  // says it in a notice above the grid instead of on their row.
+  const [requests, setRequests] = useState<Record<string, RatingRequestView>>({});
+  const [leftNotices, setLeftNotices] = useState<RatingRequestView[]>([]);
+  const [requestReload, setRequestReload] = useState(0);
+  const [openRequest, setOpenRequest] = useState<PostOnboardHire | null>(null);
+  useEffect(() => {
+    const ids = initial.map((h) => h.id);
+    let live = true;
+    void fetch(`/api/onboarding/checkin-rating-requests?ids=${encodeURIComponent(ids.join(","))}`)
+      .then((r) => (r.ok ? r.json() : { requests: [], leftNotices: [] }))
+      .then((d: { requests?: RatingRequestView[]; leftNotices?: RatingRequestView[] }) => {
+        if (!live) return;
+        setRequests(Object.fromEntries((d.requests ?? []).map((x) => [x.hireId, x])));
+        setLeftNotices(d.leftNotices ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [initial, requestReload]);
+
+  async function dismissLeftNotice(hireId: string) {
+    setLeftNotices((cur) => cur.filter((n) => n.hireId !== hireId));
+    await fetch("/api/onboarding/checkin-rating-requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "acknowledge", hireId })
+    }).catch(() => {});
+  }
 
   // Check-in email replies (lib/onboarding/checkin-reply.ts), HR only - a non-HR
   // session gets a 403 here and the grid simply shows no reply icons.
@@ -301,6 +336,8 @@ export function PostOnboardTab({
         body: JSON.stringify({ employmentStatus: status })
       });
       if (!res.ok) throw new Error();
+      // Leaving cancels an open rating link; re-read so the notice says so.
+      if (status === "TERMINATED") setRequestReload((x) => x + 1);
       if (status === "TERMINATED") router.refresh();
     } catch {
       setHires(prev);
@@ -497,6 +534,40 @@ export function PostOnboardTab({
           }
         />
       ) : null}
+      {leftNotices.length ? (
+        <div className="space-y-1 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+          <div className="font-semibold">90-day rating links cancelled because the employee left</div>
+          {leftNotices.map((n) => (
+            <div key={n.hireId} className="flex flex-wrap items-center gap-2">
+              <Link href={`/people/${n.hireId}`} className="font-semibold hover:underline">
+                {n.hireName}
+              </Link>
+              <span>
+                sent {formatMomentDateShort(n.lastSentAt)} to {n.toName ?? n.to}, not answered · {cancelReasonText(n)} ({formatMomentDateShort(n.cancelledAt)})
+              </span>
+              <button
+                type="button"
+                onClick={() => void dismissLeftNotice(n.hireId)}
+                title="Dismiss this notice (the request stays cancelled)"
+                aria-label={`Dismiss the notice for ${n.hireName}`}
+                className="ml-auto inline-flex items-center rounded p-0.5 transition hover:bg-amber-100 dark:hover:bg-amber-500/20"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {openRequest ? (
+        <CheckinRatingRequestDialog
+          key={openRequest.id}
+          hireId={openRequest.id}
+          hireName={openRequest.name}
+          request={requests[openRequest.id] ?? null}
+          onClose={() => setOpenRequest(null)}
+          onChanged={(view) => setRequests((cur) => ({ ...cur, [view.hireId]: view }))}
+        />
+      ) : null}
       {openReply ? <CheckinReplyModal key={openReply.messageId} reply={openReply} onClose={() => setOpenReply(null)} onSaved={replaceReply} /> : null}
       <BulkActionBar count={selected.size} actions={POST_ONBOARD_BULK_ACTIONS} onApply={applyBulk} onChoice={bulkCheckin} onDelete={deleteSelected} onClear={() => setSelected(new Set())} busy={busy} />
       <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
@@ -678,6 +749,37 @@ export function PostOnboardTab({
                       Rate
                     </button>
                   )}
+                  {(() => {
+                    // The manager's no-login link: its status once sent, else a Send
+                    // button while there is no rating yet (feedback cmwcq16o7).
+                    const req = requests[h.id];
+                    if (req) {
+                      const when = req.state === "COMPLETED" ? req.completedAt : req.state === "CANCELLED" ? req.cancelledAt : req.lastSentAt;
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => setOpenRequest(h)}
+                          title={`Rating link to ${req.toName ?? req.to} - click for status, resend or cancel`}
+                          className="mt-1 flex w-full items-center justify-center gap-1 whitespace-nowrap rounded px-1 py-0.5 text-[10px] text-brand-grey transition hover:bg-brand-gold/10 dark:text-slate-400"
+                        >
+                          <StateChip view={req} />
+                          {formatMomentDateShort(when)}
+                        </button>
+                      );
+                    }
+                    if (ratings[h.id] || terminated) return null;
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => setOpenRequest(h)}
+                        title="Email the hiring manager a link to rate this person - no login needed"
+                        className="mt-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold text-brand-lea transition hover:shadow-glow dark:text-slate-100"
+                      >
+                        <Send className="h-3 w-3" />
+                        Send to manager
+                      </button>
+                    );
+                  })()}
                 </td>
               </tr>
               );

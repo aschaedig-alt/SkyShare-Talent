@@ -1241,6 +1241,60 @@ points with "Meets on all N = N", and the interview's combined score sits beside
 
 ---
 
+### 55. The 90-day rating link has never been emailed to a manager, or opened by one
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-11-11
+
+Feedback cmwcq16o7: Post-onboard now has **Send to manager** under each person's Rate
+button. It emails the hiring manager a no-login link (/rate/...) to that one person's
+90-day form; the tab shows Sent / Completed / Expired / Cancelled, with resend (same link
+or a new one) and cancel; and if the person is terminated, cancelled or archived first,
+the link dies and a notice above the grid says why. Checked locally on a throwaway TEST
+hire (20 checks, all passed, all test rows deleted): the form opens for that one person,
+refuses an empty answer, takes one submission, saves the rating, ticks the 90-day check-in
+done, refuses a second submission, shows Completed on the tab; a terminated employee's
+link stops working and the notice lists them; and the send dialog opens on the real tab
+with the supervisors filled in. NOT checked: **no email has gone out through it at all**
+— the local test ran with sends BLOCKED, never redirected — so the Front send, how the
+email looks in an inbox, and a link opened from a phone outside the app are all untested.
+A local send would also refuse to build a localhost link for a real recipient, which is
+why this waits for the deploy.
+
+**How to check it, about three minutes:** on the live site, open People > Post-onboard,
+press **Send to manager** on someone, choose **Someone else** and type your own address,
+and send. Open the email on your phone, tap the link, rate, and send. Then reload
+Post-onboard.
+
+**What would count as a pass:** the email arrives with the link under the message; the
+link opens a SkyShare page with only that person's form and no sidebar, without signing
+in; after sending it says thank you; Post-onboard shows that person as Completed with a
+rating in the Values column, and their 90-day check-in ticked. Opening the link again
+says it has already been submitted. (It was your address, so it was a real test of a
+real person's rating — re-rate them properly afterwards, or tell a session to remove it.)
+
+---
+
+### 56. Interview drawer: not tried on a phone, and no scorecard saved, edited or deleted from inside it
+
+**Status:** OPEN
+**Added:** 2026-11-11
+
+Aimee feedback cmwco78eg, his pick of option A: an interview opens in a side drawer over the
+candidate's Interviews tab and over the Calendar, with the write-up and the scorecards both open
+and each collapsible. Checked in Chrome at 1536 by 695: opening, collapsing, the newer and older
+arrows, Escape, the unsaved-scorecard warning, ctrl-click still opening the full page, and the
+Calendar's Edit interview link. NOT checked: a phone-width screen (Chrome would not resize below
+desktop), and any scorecard save, edit or delete from inside the drawer (live database).
+
+**How to check it, three minutes:** on a phone, open a candidate's interview Scorecard. Then, on
+a test interview, add a scorecard in the drawer, edit it, and delete it.
+
+**What would count as a pass:** on the phone the drawer fills the screen with no sideways
+scroll; each scorecard change shows in the drawer straight away, with no reload.
+
+---
+
 ## Closed
 
 ### 33. The candidate page's layout has not been saved since the boxes started fitting their content
