@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { resolveDepartmentKey, interviewDepartmentRaw, type DeptKey } from "@/lib/calendar/departments";
 import {
-  scorecardAverage,
-  interviewAverage,
+  scorecardPoints,
+  interviewPoints,
+  type Points,
   isRatingKey,
   type RecommendationKey,
   type ScorecardItem
@@ -18,7 +19,8 @@ export type ScorecardView = {
   recommendation: RecommendationKey | null;
   items: ScorecardItem[];
   comments: string | null;
-  average: number | null;
+  /** Points (Exceeds 1.5, Meets 1, Can Develop 0.5, Does Not Meet 0), with par. */
+  score: Points | null;
   updatedAt: string;
 };
 
@@ -35,7 +37,7 @@ export type InterviewDetail = {
   job: { id: string; title: string; department: string | null } | null;
   departmentKey: DeptKey | null;
   scorecards: ScorecardView[];
-  aggregate: { average: number | null; count: number; recommendations: Partial<Record<RecommendationKey, number>> };
+  aggregate: { score: Points | null; count: number; recommendations: Partial<Record<RecommendationKey, number>> };
   bankQuestions: string[];
   interviewers: Array<{ name: string; role: string; departments: string[] }>;
 };
@@ -108,7 +110,7 @@ export async function getInterviewDetail(id: string, viewer: ViewerScope | null)
       recommendation: (card.recommendation as RecommendationKey | null) ?? null,
       items,
       comments: card.comments,
-      average: scorecardAverage(items),
+      score: scorecardPoints(items),
       updatedAt: card.updatedAt.toISOString()
     };
   });
@@ -161,7 +163,7 @@ export async function getInterviewDetail(id: string, viewer: ViewerScope | null)
     departmentKey,
     scorecards,
     aggregate: {
-      average: interviewAverage(scorecards.map((s) => s.average)),
+      score: interviewPoints(scorecards.map((s) => s.score)),
       count: scorecards.length,
       recommendations
     },

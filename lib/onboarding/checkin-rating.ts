@@ -1,9 +1,9 @@
 // The 90-day check-in rating - Quality of Hire, Dec 10 2026. HR enters it from the
 // hiring manager's answers (his decision, Nov 10). The manager rates SkyShare's four
-// core values on the interview scorecard's own 1-4 scale, so the two can be compared,
+// core values on the interview scorecard's own rubric and points, so the two can be compared,
 // and says whether they would hire the person again. Client-safe: no Prisma here.
 
-import { CORE_VALUE_NAMES, RATING_VALUE, isRatingKey, type RatingKey } from "@/lib/interviews/scorecard";
+import { CORE_VALUE_NAMES, isRatingKey, sumRatings, type Points, type RatingKey } from "@/lib/interviews/scorecard";
 
 export const CHECKIN_RATING_DAY = 90;
 /** The check-in a saved rating ticks done (his call, Nov 11: "Yes, tick it"). */
@@ -36,8 +36,11 @@ export function cleanRatings(raw: unknown): CheckinRatings {
   return out;
 }
 
-/** Average of the rated values (1-4), or null when none are rated. */
-export function ratingAverage(r: CheckinRatings): number | null {
-  const vals = Object.values(r).filter((v): v is RatingKey => isRatingKey(v)).map((v) => RATING_VALUE[v]);
-  return vals.length ? Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10 : null;
+/**
+ * The rating's points, the same way an interview scorecard is scored (Exceeds 1.5,
+ * Meets 1, Can Develop 0.5, Does Not Meet 0; feedback cmwcobn71): Meets on all four
+ * values is 4. Null when none are rated.
+ */
+export function ratingPoints(r: CheckinRatings): Points | null {
+  return sumRatings(Object.values(r));
 }

@@ -14,7 +14,8 @@ import type { TaskSkipRecord } from "@/lib/front/task-email";
 import { EmptyState, Input } from "@/components/ui";
 import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
 import { CheckinRatingModal } from "@/components/people/CheckinRatingModal";
-import { CHECKIN_RATING_TASK_KEY, ratingAverage, type CheckinRatingView } from "@/lib/onboarding/checkin-rating";
+import { CHECKIN_RATING_TASK_KEY, ratingPoints, type CheckinRatingView } from "@/lib/onboarding/checkin-rating";
+import { pointsText } from "@/lib/interviews/scorecard";
 import { CheckinReplyModal, LEVEL_STYLE } from "@/components/people/CheckinReplyModal";
 import { NO_REPLY_AFTER_DAYS, REPLY_LEVEL_LABEL, needsFollowUp, type CheckinReplyView } from "@/lib/onboarding/checkin-reply";
 
@@ -661,7 +662,7 @@ export function PostOnboardTab({
                       title={`Rated${ratings[h.id].managerName ? ` by ${ratings[h.id].managerName}` : ""} - click to edit`}
                       className="whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-gold/10 dark:text-slate-100"
                     >
-                      {ratingAverage(ratings[h.id].ratings)?.toFixed(1) ?? "—"} / 4
+                      {pointsText(ratingPoints(ratings[h.id].ratings))}
                       {ratings[h.id].wouldHireAgain === null ? null : (
                         <span className={clsx("ml-1 font-normal", ratings[h.id].wouldHireAgain ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300")}>
                           {ratings[h.id].wouldHireAgain ? "· again" : "· not again"}

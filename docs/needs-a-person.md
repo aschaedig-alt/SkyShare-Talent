@@ -1219,6 +1219,28 @@ Former employee, Inactive and Archived.
 
 ---
 
+### 54. Rating points: no 90-day rating exists yet to show the new points, and no scorecard has been saved under them
+
+**Status:** OPEN
+**Added:** 2026-11-11
+
+Feedback cmwcobn71: interview scorecards and the 90-day check-in rating are now scored in
+points that add up (Exceeds 1.5, Meets 1, Can Develop 0.5, Does Not Meet 0), shown against
+"Meets on all N = N", instead of an average out of 4. Ratings are stored as names, not
+numbers, so nothing was rewritten. Checked: the one rated scorecard on file (5 items) now
+shows 6.5 pts against a par of 5 on its interview page, which renders without error; all
+four values rated Meets give 4 points, all Exceeds 6. NOT checked: the Post-onboard tab's
+rating cell with a real rating (the table holds 0 ratings today), and a scorecard saved
+after the change.
+
+**How to check it, two minutes:** rate one hire's 90-day check-in on People > Post-onboard
+(Meets on all four), and save one interview scorecard with a mix of ratings.
+
+**What would count as a pass:** the Post-onboard cell reads 4 pts; the scorecard shows its
+points with "Meets on all N = N", and the interview's combined score sits beside it.
+
+---
+
 ## Closed
 
 ### 33. The candidate page's layout has not been saved since the boxes started fitting their content

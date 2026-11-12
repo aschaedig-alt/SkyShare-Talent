@@ -1,9 +1,17 @@
 /**
  * Interview scorecard rubric — shared, client-safe constants and helpers.
  *
- * Each scorecard rates a set of questions on a 4-point rubric and carries an
- * overall recommendation. Ratings map to 1–4 so scorecards (and whole
- * interviews) can be averaged and compared.
+ * Each scorecard rates a set of questions on a 4-step rubric and carries an
+ * overall recommendation.
+ *
+ * POINTS, NOT AN AVERAGE (Aimee, feedback cmwcobn71, values set by him Nov 11
+ * 2026): "meets is a standard number so it should give one full point... if the
+ * person meets in all 4 categories they would have 4 points." So each rating is
+ * worth points and a scorecard's score is the SUM — Exceeds 1.5, Meets 1, Can
+ * Develop 0.5, Does Not Meet 0 — read against "par", what Meets on everything
+ * rated would score (1 point per rated item). Ratings are stored as keys, never
+ * numbers, so changing these values rescored every saved scorecard at once and
+ * rewrote no data.
  */
 
 import { COMPANY_VALUES } from "@/lib/compliments/constants";
@@ -11,19 +19,48 @@ import { COMPANY_VALUES } from "@/lib/compliments/constants";
 export type RatingKey = "EXCEEDS" | "MEETS" | "CAN_DEVELOP" | "DOES_NOT_MEET";
 export type RecommendationKey = "STRONG_YES" | "YES" | "NO" | "STRONG_NO";
 
+export const RATING_VALUE: Record<RatingKey, number> = {
+  EXCEEDS: 1.5,
+  MEETS: 1,
+  CAN_DEVELOP: 0.5,
+  DOES_NOT_MEET: 0
+};
+
 export const RATINGS: Array<{ key: RatingKey; label: string; value: number }> = [
-  { key: "EXCEEDS", label: "Exceeds", value: 4 },
-  { key: "MEETS", label: "Meets", value: 3 },
-  { key: "CAN_DEVELOP", label: "Can Develop", value: 2 },
-  { key: "DOES_NOT_MEET", label: "Does Not Meet", value: 1 }
+  { key: "EXCEEDS", label: "Exceeds", value: RATING_VALUE.EXCEEDS },
+  { key: "MEETS", label: "Meets", value: RATING_VALUE.MEETS },
+  { key: "CAN_DEVELOP", label: "Can Develop", value: RATING_VALUE.CAN_DEVELOP },
+  { key: "DOES_NOT_MEET", label: "Does Not Meet", value: RATING_VALUE.DOES_NOT_MEET }
 ];
 
-export const RATING_VALUE: Record<RatingKey, number> = {
-  EXCEEDS: 4,
-  MEETS: 3,
-  CAN_DEVELOP: 2,
-  DOES_NOT_MEET: 1
-};
+/** A score in points, and par: what Meets on every rated item would score. */
+export type Points = { points: number; par: number };
+
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+/** "1.5 points" style label for a single rating, for buttons and tooltips. */
+export function ratingPointsLabel(key: RatingKey): string {
+  const v = RATING_VALUE[key];
+  return `${v} point${v === 1 ? "" : "s"}`;
+}
+
+/** Points from a set of ratings, or null when nothing is rated yet. */
+export function sumRatings(ratings: Array<RatingKey | null | undefined>): Points | null {
+  const rated = ratings.filter((r): r is RatingKey => isRatingKey(r));
+  if (rated.length === 0) return null;
+  return { points: round1(rated.reduce((acc, r) => acc + RATING_VALUE[r], 0)), par: rated.length * RATING_VALUE.MEETS };
+}
+
+/** "4.5 pts" / "—". */
+export function pointsText(p: Points | null): string {
+  return p === null ? "—" : `${Number.isInteger(p.points) ? p.points : p.points.toFixed(1)} pts`;
+}
+
+/** "Meets on all 4 = 4" — the benchmark beside a score. */
+export function parText(p: Points | null): string {
+  if (p === null) return "";
+  return `Meets on all ${p.par} = ${p.par}`;
+}
 
 export const RATING_LABEL: Record<RatingKey, string> = {
   EXCEEDS: "Exceeds",
@@ -72,18 +109,21 @@ export function isRecommendationKey(value: unknown): value is RecommendationKey 
   return value === "STRONG_YES" || value === "YES" || value === "NO" || value === "STRONG_NO";
 }
 
-/** Average of the rated items (1–4), or null when nothing is rated yet. */
-export function scorecardAverage(items: ScorecardItem[]): number | null {
-  const rated = items.filter((i) => i.rating && isRatingKey(i.rating));
-  if (rated.length === 0) return null;
-  const sum = rated.reduce((acc, i) => acc + RATING_VALUE[i.rating as RatingKey], 0);
-  return Math.round((sum / rated.length) * 10) / 10;
+/** A scorecard's points: the sum over its rated items. */
+export function scorecardPoints(items: ScorecardItem[]): Points | null {
+  return sumRatings(items.map((i) => i.rating));
 }
 
-/** Average of the per-scorecard averages (each interviewer weighted equally). */
-export function interviewAverage(scorecardAverages: Array<number | null>): number | null {
-  const vals = scorecardAverages.filter((v): v is number => v !== null);
+/**
+ * The interview's combined score: the AVERAGE scorecard, so each interviewer
+ * counts equally and a third interviewer does not inflate the number. Par is
+ * averaged the same way (interviewers may rate different numbers of questions).
+ */
+export function interviewPoints(cards: Array<Points | null>): Points | null {
+  const vals = cards.filter((c): c is Points => c !== null);
   if (vals.length === 0) return null;
-  const sum = vals.reduce((a, b) => a + b, 0);
-  return Math.round((sum / vals.length) * 10) / 10;
+  return {
+    points: round1(vals.reduce((a, c) => a + c.points, 0) / vals.length),
+    par: round1(vals.reduce((a, c) => a + c.par, 0) / vals.length)
+  };
 }

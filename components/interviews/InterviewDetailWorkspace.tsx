@@ -7,6 +7,9 @@ import { ArrowLeft, Plus, Pencil, Trash2, ClipboardCheck, Star } from "lucide-re
 import type { InterviewDetail, ScorecardView } from "@/lib/data/interview-detail";
 import {
   RATINGS,
+  parText,
+  pointsText,
+  ratingPointsLabel,
   RECOMMENDATIONS,
   RATING_LABEL,
   RECOMMENDATION_LABEL,
@@ -36,8 +39,9 @@ function recoTone(key: RecommendationKey): string {
   }
 }
 
-function avgText(avg: number | null) {
-  return avg === null ? "—" : avg.toFixed(1);
+/** The number alone, for the big combined-score tile. */
+function pointsNumber(p: { points: number } | null) {
+  return p === null ? "—" : Number.isInteger(p.points) ? String(p.points) : p.points.toFixed(1);
 }
 
 function ScorecardEditor({
@@ -136,6 +140,7 @@ function ScorecardEditor({
                         key={r.key}
                         type="button"
                         onClick={() => setRating(idx, r.key)}
+                        title={ratingPointsLabel(r.key)}
                         className={`rounded border px-2.5 py-0.5 text-[11px] font-semibold transition hover:shadow-glow ${
                           active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
                         }`}
@@ -170,6 +175,7 @@ function ScorecardEditor({
                       key={r.key}
                       type="button"
                       onClick={() => setRating(idx, r.key)}
+                        title={ratingPointsLabel(r.key)}
                       className={`rounded border px-2.5 py-0.5 text-[11px] font-semibold transition hover:shadow-glow ${
                         active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
                       }`}
@@ -292,15 +298,15 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
       <section className="grid gap-3 sm:grid-cols-[auto,1fr]">
         <div className="flex items-center gap-4 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
           <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded bg-brand-lea/5">
-            <span className="text-2xl font-semibold leading-none text-brand-lea dark:text-slate-100">{avgText(agg.average)}</span>
-            <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">of 4</span>
+            <span className="text-2xl font-semibold leading-none text-brand-lea dark:text-slate-100">{pointsNumber(agg.score)}</span>
+            <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-grey dark:text-slate-400">points</span>
           </div>
           <div>
             <div className="flex items-center gap-1.5 text-sm font-semibold text-brand-lea dark:text-slate-100">
               <Star className="h-4 w-4 text-brand-gold" /> Combined score
             </div>
             <p className="text-xs text-brand-grey dark:text-slate-400">
-              Across {agg.count} scorecard{agg.count === 1 ? "" : "s"}. Each interviewer counts equally.
+              {agg.score ? `${parText(agg.score)}. ` : ""}Across {agg.count} scorecard{agg.count === 1 ? "" : "s"}, each interviewer counting equally. Exceeds 1.5, Meets 1, Can Develop 0.5, Does Not Meet 0.
             </p>
           </div>
         </div>
@@ -356,7 +362,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
                         {RECOMMENDATION_LABEL[card.recommendation]}
                       </span>
                     ) : null}
-                    <span className="rounded bg-brand-lea/5 px-2.5 py-0.5 text-[11px] font-semibold text-brand-lea dark:text-slate-100">{avgText(card.average)} / 4</span>
+                    <span className="rounded bg-brand-lea/5 px-2.5 py-0.5 text-[11px] font-semibold text-brand-lea dark:text-slate-100">{pointsText(card.score)}{card.score ? ` · ${parText(card.score)}` : ""}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <button onClick={() => { setCreating(false); setEditingId(card.id); }} title="Edit" className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:bg-white/5">
