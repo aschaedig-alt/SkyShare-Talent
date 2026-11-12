@@ -964,6 +964,9 @@ rating" - he did not see that option. It appears only when the form is opened fr
 90-day column on People > Post-onboard (the circle or the red DUE), not from Rate; not yet
 known whether he opened it that way. Also found: a rating saved from Rate does not tick the
 90-day check-in (Jonathan's is still TODO).
+UPDATE 2026-11-12 (commit agent): the Jonathan Siswick rating was only his test and was deleted at
+his request; his 90-day check-in stays open on purpose. The one rating now on file is Axel Leimer's,
+saved 2026-11-12 through the emailed rating link (entered by "Rating link (Jonathan Schaedig)").
 **Added:** 2026-11-10
 
 People > Post-onboard has a new Values column. Ticking a 90-day check-in done now opens a
