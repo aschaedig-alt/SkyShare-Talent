@@ -7,6 +7,23 @@ import { interviewUpdateSchema } from "@/lib/validation/interview";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { logActivity } from "@/lib/activity/logger";
 import { pushInterviewToGoogle, removeInterviewFromGoogle } from "@/lib/google/interview-sync";
+import { getInterviewDetail } from "@/lib/data/interview-detail";
+
+// What the interview drawer loads: the same object /interviews/[id] renders, with
+// the same candidate scoping (getInterviewDetail returns null for an
+// off-allowlist candidate, so this 404s exactly like the page does).
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const authResult = await requireApiPermission("calendar:read");
+  if (!authResult.ok) {
+    return (authResult as { ok: false; response: Response }).response;
+  }
+  const { id } = await params;
+  const detail = await getInterviewDetail(id, authResult.user.viewer);
+  if (!detail) {
+    return NextResponse.json({ message: "Interview not found." }, { status: 404 });
+  }
+  return NextResponse.json(detail);
+}
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const authResult = await requireApiPermission("calendar:write");

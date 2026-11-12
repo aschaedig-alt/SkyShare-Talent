@@ -3,12 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { clsx } from "clsx";
-import Link from "next/link";
 import { Star, Pencil, Trash2, ClipboardCheck } from "lucide-react";
 import { RichTextEditor, RichTextView } from "@/components/richtext/RichTextEditor";
 import { INTERVIEW_OUTCOMES, INTERVIEW_TYPES, interviewOutcomeTone, interviewOutcomeLabel } from "@/lib/interviews/constants";
 import { formatCalendarDayShort } from "@/lib/dates/display";
 import { EmptyState } from "@/components/ui";
+import { InterviewDrawer, InterviewDrawerLink, useInterviewDrawerParam } from "@/components/interviews/InterviewDrawer";
 
 /**
  * Record an interview that already happened, with the notes pasted in.
@@ -181,6 +181,11 @@ export function InterviewWriteUp({
   const logged = [...interviews].sort(
     (a, b) => new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime()
   );
+  // The interview drawer (write-up + scorecards) opens over this list instead of
+  // sending you to a separate page (feedback cmwco78eg). Only ids from THIS
+  // candidate open, so a stale ?interview= from another page does nothing.
+  const drawer = useInterviewDrawerParam();
+  const drawerId = drawer.openId && logged.some((i) => i.id === drawer.openId) ? drawer.openId : null;
 
   return (
     <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
@@ -331,12 +336,22 @@ export function InterviewWriteUp({
               // is exactly what the API allows. Showing the pencil on somebody
               // else's row would offer an action guaranteed to come back 403.
               canEdit={canEdit || (canAnnotate && Boolean(me?.email) && i.interviewerEmail === me?.email)}
+              onOpen={drawer.open}
             />
           ))
         ) : (
           <EmptyState title="No interviews logged yet" description="Log one to paste your write-up and put this candidate on the Recent interviews list." bare />
         )}
       </div>
+      {drawerId ? (
+        <InterviewDrawer
+          interviewId={drawerId}
+          onClose={drawer.close}
+          siblings={logged.map((i) => i.id)}
+          onNavigate={drawer.open}
+          showCandidate={false}
+        />
+      ) : null}
     </section>
   );
 }
@@ -350,12 +365,14 @@ function LoggedInterview({
   candidateId,
   interview,
   people,
-  canEdit
+  canEdit,
+  onOpen
 }: {
   candidateId: string;
   interview: InterviewView;
   people: Array<{ name: string; email: string }>;
   canEdit: boolean;
+  onOpen: (id: string) => void;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -527,14 +544,17 @@ function LoggedInterview({
             ))}
           </span>
         ) : null}
-        {/* The scorecard (core values + questions) lives on the interview's own page;
-            always visible, because this was the only way in that nobody could find. */}
-        <Link
-          href={`/interviews/${interview.id}`}
+        {/* Opens the interview drawer: this write-up plus its scorecards (core
+            values + questions). Always visible, because this was the only way in
+            that nobody could find. A real link, so ctrl-click still opens the
+            full page in a new tab. */}
+        <InterviewDrawerLink
+          interviewId={interview.id}
+          onOpen={onOpen}
           className="ml-auto inline-flex items-center gap-1 rounded border border-brand-lea/20 px-2 py-0.5 text-[11px] font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"
         >
           <ClipboardCheck className="h-3.5 w-3.5" /> Scorecard
-        </Link>
+        </InterviewDrawerLink>
         {canEdit && (
           <span className="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
             <button onClick={() => setEditing(true)} aria-label="Edit this interview" className="rounded p-1 text-brand-grey transition hover:bg-white hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100">

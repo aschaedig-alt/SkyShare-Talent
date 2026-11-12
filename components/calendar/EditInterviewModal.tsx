@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
-import Link from "next/link";
+import { InterviewDrawerLink } from "@/components/interviews/InterviewDrawer";
 import { Loader, Trash2, ClipboardCheck } from "lucide-react";
 import { Button, buttonClasses } from "@/components/ui";
 import type { CalendarData } from "@/lib/data/calendar";
@@ -21,6 +21,8 @@ interface EditInterviewModalProps {
   interviewers?: CalendarData["interviewers"];
   onClose: () => void;
   onSaved: () => void;
+  /** Opens the interview drawer (write-up + scorecards) over the calendar. */
+  onOpenScorecards: (id: string) => void;
 }
 
 // Convert ISO to a datetime-local input value in MOUNTAIN wall clock — which is
@@ -32,7 +34,7 @@ function toDateTimeLocal(iso: string): string {
   return `${date}T${time}`;
 }
 
-export function EditInterviewModal({ interview, jobs, interviewers = [], onClose, onSaved }: EditInterviewModalProps) {
+export function EditInterviewModal({ interview, jobs, interviewers = [], onClose, onSaved, onOpenScorecards }: EditInterviewModalProps) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState<{ type: string; text: string } | null>(null);
@@ -147,9 +149,15 @@ export function EditInterviewModal({ interview, jobs, interviewers = [], onClose
               <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">{interview.candidate.displayName}</p>
             </div>
             <div className="flex items-center gap-3">
-              <Link href={`/interviews/${interview.id}`} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+              {/* Opens the drawer over the calendar rather than leaving it
+                  (feedback cmwco78eg); ctrl-click still opens the full page. */}
+              <InterviewDrawerLink
+                interviewId={interview.id}
+                onOpen={onOpenScorecards}
+                className={buttonClasses({ variant: "secondary", size: "sm" })}
+              >
                 <ClipboardCheck className="h-4 w-4" /> Scorecards
-              </Link>
+              </InterviewDrawerLink>
               <button onClick={onClose} data-dialog-close aria-label="Close" className="text-brand-grey hover:text-brand-lea dark:text-slate-400">
                 ✕
               </button>

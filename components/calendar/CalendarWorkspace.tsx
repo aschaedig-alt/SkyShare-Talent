@@ -12,6 +12,7 @@ import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import { TimeGridCalendar } from "@/components/calendar/TimeGridCalendar";
 import { ScheduleTimeline } from "@/components/calendar/ScheduleTimeline";
 import { EditInterviewModal } from "@/components/calendar/EditInterviewModal";
+import { InterviewDrawer, useInterviewDrawerParam } from "@/components/interviews/InterviewDrawer";
 import { UpcomingInterviews } from "@/components/calendar/UpcomingInterviews";
 import { GoogleSyncCard } from "@/components/calendar/GoogleSyncCard";
 import { formatDateTimeWithZone } from "@/lib/calendar/format";
@@ -148,6 +149,8 @@ export function CalendarWorkspace({
   const [colorMode, setColorMode] = useState<ColorMode>("department");
   const [colorEditorOpen, setColorEditorOpen] = useState(false);
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
+  // An interview's write-up + scorecards, in a drawer over the calendar (?interview=<id>).
+  const interviewDrawer = useInterviewDrawerParam();
   const [prefilledDate, setPrefilledDate] = useState<Date | null>(null);
   // Optimistic drag-to-reschedule: the new times we have asked the server for but
   // not yet had confirmed, keyed by interview id. Rendering these immediately is
@@ -540,8 +543,14 @@ export function CalendarWorkspace({
           interviewers={data.interviewers}
           onClose={() => setEditingInterview(null)}
           onSaved={() => router.refresh()}
+          onOpenScorecards={(id) => {
+            setEditingInterview(null);
+            interviewDrawer.open(id);
+          }}
         />
       )}
+
+      {interviewDrawer.openId ? <InterviewDrawer interviewId={interviewDrawer.openId} onClose={interviewDrawer.close} /> : null}
 
       {/* Department color editor (admins) */}
       {colorEditorOpen && <DepartmentColorEditor colors={departmentColors} onClose={() => setColorEditorOpen(false)} />}

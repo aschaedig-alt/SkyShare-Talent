@@ -33,6 +33,15 @@ export type InterviewDetail = {
   timezone: string | null;
   status: string;
   location: string | null;
+  // The write-up, so the drawer and the full page show it beside the scorecards
+  // instead of leaving it behind on the candidate's Interviews tab (feedback
+  // cmwco78eg: one interview was split across two screens).
+  interviewer: string | null;
+  coInterviewers: string[];
+  notesHtml: string | null;
+  notes: string | null;
+  outcome: string | null;
+  nextStep: string | null;
   candidate: { id: string; displayName: string; currentTitle: string | null };
   job: { id: string; title: string; department: string | null } | null;
   departmentKey: DeptKey | null;
@@ -42,6 +51,20 @@ export type InterviewDetail = {
   interviewers: Array<{ name: string; role: string; departments: string[] }>;
 };
 
+// Same shape lib/data/candidates.ts reads: [{ name, email }]. Names only here.
+function parseCoInterviewerNames(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((p) => p && typeof p === "object")
+      .map((p) => String(p.name ?? "").trim() || String(p.email ?? "").trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
 
 function parseItems(json: string): ScorecardItem[] {
   try {
@@ -154,6 +177,12 @@ export async function getInterviewDetail(id: string, viewer: ViewerScope | null)
     timezone: interview.timezone,
     status: interview.status,
     location: interview.location,
+    interviewer: interview.interviewer,
+    coInterviewers: parseCoInterviewerNames(interview.coInterviewersJson),
+    notesHtml: interview.notesHtml,
+    notes: interview.notes,
+    outcome: interview.outcome,
+    nextStep: interview.nextStep,
     candidate: {
       id: interview.candidate.id,
       displayName: interview.candidate.displayName,
