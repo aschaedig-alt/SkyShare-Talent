@@ -42,6 +42,9 @@ const TYPE_LABEL: Record<string, string> = {
   OFFER: "Offer",
   REJECTED: "Not selected",
   HIRED: "Hired",
+  // Written by lib/candidates/hire-lifecycle.ts when the linked employee leaves,
+  // or the hire is canceled before day one.
+  EMPLOYMENT_ENDED: "Employment ended",
   NOTE: "Note",
   INTERVIEW_NOTE: "Interview note",
   RESUME_UPLOADED: "Resume uploaded",

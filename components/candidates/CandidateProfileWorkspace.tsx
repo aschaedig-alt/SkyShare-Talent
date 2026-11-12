@@ -45,6 +45,7 @@ import type { PreHireChecklistView } from "@/lib/data/prehire";
 import { formatMomentDate, formatMomentDateTime, formatMixedDay, zoneForValue } from "@/lib/dates/display";
 import { PhoneNumber, PhoneInputError } from "@/components/shared/PhoneNumber";
 import { formatPhoneInput } from "@/lib/formatting/phone";
+import { CANDIDATE_STATUS_OPTIONS, candidateStatusLabel, candidateStatusPillClass } from "@/lib/candidates/candidate-status";
 
 type CandidateProfileWorkspaceProps = {
   candidate: CandidateProfileData;
@@ -337,7 +338,6 @@ export function CandidateProfileWorkspace({
     { id: "activity", label: "Activity", icon: History, count: candidate.activity.length }
   ];
 
-  const statusActive = candidate.status === "ACTIVE";
 
   // Hoisted out of the JSX and memoized so EditableGrid receives a stable array.
   // As an inline literal it was a brand-new array on every re-render, and this
@@ -466,12 +466,9 @@ export function CandidateProfileWorkspace({
           <div className="flex items-center gap-2">
             <PaycomLinkControl candidateId={candidate.id} paycomLink={candidate.paycomLink} canEdit={canEdit} />
             <span
-              className={clsx(
-                "rounded px-3 py-1 text-xs font-semibold",
-                statusActive ? "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : "bg-brand-cloudDancer text-brand-grey dark:bg-white/5 dark:text-slate-400"
-              )}
+              className={clsx("rounded px-3 py-1 text-xs font-semibold", candidateStatusPillClass(candidate.status))}
             >
-              {candidate.status}
+              {candidateStatusLabel(candidate.status)}
             </span>
             <button
               onClick={() => (isEditing ? handleCancel() : setIsEditing(true))}
@@ -572,9 +569,18 @@ export function CandidateProfileWorkspace({
             <div>
               <label className={labelClass}>Status</label>
               <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className={inputClass}>
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive</option>
-                <option value="ARCHIVED">Archived</option>
+                {/* Hired / Former employee are set automatically from the linked
+                    employee record (lib/candidates/hire-lifecycle.ts), and can
+                    still be picked by hand. A stored value not on the list is kept
+                    as its own option so opening this never rewrites it. */}
+                {CANDIDATE_STATUS_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+                {formData.status && !CANDIDATE_STATUS_OPTIONS.some((o) => o.value === formData.status) && (
+                  <option value={formData.status}>{candidateStatusLabel(formData.status)}</option>
+                )}
               </select>
             </div>
             <div>

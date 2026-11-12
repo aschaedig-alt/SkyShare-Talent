@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { syncCandidateFromHire } from "@/lib/candidates/hire-lifecycle";
 import { buildChecklistRows } from "@/lib/data/onboarding-grid-config";
 import { resolveFleetPosition } from "@/lib/fleet/positions";
 import { cleanRichInput, storedToPlain } from "@/lib/richtext/stored";
@@ -336,6 +337,8 @@ export async function startOnboardingRound(hireId: string, input: StartRoundInpu
     "Moved them back into New hires (in onboarding)."
   );
   if (!isRehire) changes.push("Hire date and tenure left untouched — this is the same period of employment.");
+  // A rehire makes a Former employee's candidate record read Hired again.
+  if (isRehire) await syncCandidateFromHire(hireId, "Rehired: a new onboarding round was started.");
 
   return {
     ok: true,
@@ -519,5 +522,7 @@ export async function restoreOnboardingRound(hireId: string, archiveId: string):
     }
   });
 
+  // Undoing a rehire can put them back to terminated; the candidate follows.
+  await syncCandidateFromHire(hireId, "An onboarding round was undone on their employee record.");
   return { ok: true, restoredTasks: tasks.length };
 }

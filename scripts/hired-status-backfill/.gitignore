@@ -1,0 +1,4 @@
+# Dry-run reviews and the undo record for the Current / Former employee backfill.
+# They name candidates, so they stay on this machine, like scripts/paycom-status-steps/undo; never committed.
+*
+!.gitignore

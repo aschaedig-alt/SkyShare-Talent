@@ -10,6 +10,7 @@ import { carryPreHireTicksToHire } from "@/lib/onboarding/prehire";
 import { suggestCompanyEmail } from "@/lib/people/company-email";
 import { toCalendarDay } from "@/lib/dates/display";
 import { applyPilotSupervisorDefault } from "@/lib/people/leadership-roles";
+import { syncCandidateFromHire } from "@/lib/candidates/hire-lifecycle";
 
 function parseDate(value: unknown): Date | null {
   if (value === null || value === undefined || value === "") return null;
@@ -165,6 +166,9 @@ export async function POST(request: Request) {
     // A pilot reports to the Chief Pilot, dotted-line to the Assistant Chief
     // Pilot, whoever holds those (his answer 2026-11-10: automatic).
     await applyPilotSupervisorDefault(hire.id);
+    // The candidate they came from now reads Current employee, at stage Hired, with the
+    // offer's application moved too (Aimee, 2026-11-11). Never throws.
+    if (candidateId) await syncCandidateFromHire(hire.id, "Moved to onboarding as a new hire.");
 
     return NextResponse.json({ ok: true, id: hire.id });
   } catch (error) {

@@ -9,6 +9,7 @@ import { normalizeTags } from "@/lib/employees/columns";
 import { ensureInitialRole } from "@/lib/data/ensure-initial-role";
 import { alignClosedStintEnd } from "@/lib/employees/align-stint-end";
 import { carryPreHireTicksToHire } from "@/lib/onboarding/prehire";
+import { syncCandidateFromHire } from "@/lib/candidates/hire-lifecycle";
 import { applyPilotSupervisorDefault, followRoleData, isLeadershipRoleKey } from "@/lib/people/leadership-roles";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -204,6 +205,16 @@ export async function PATCH(request: Request, context: RouteContext) {
           if (latestRole?.endDate) await tx.roleAssignment.update({ where: { id: latestRole.id }, data: { endDate: null } });
         }
       });
+      // Their candidate record follows (Aimee, 2026-11-11): terminated -> Former
+      // employee; back to active or on contract -> Hired. Never throws.
+      await syncCandidateFromHire(
+        id,
+        empChange === "TERMINATED"
+          ? "Marked terminated on their employee record."
+          : empChange === "CONTRACT"
+            ? "Marked as a contract worker on their employee record."
+            : "Returned to active employment on their employee record."
+      );
       return NextResponse.json({ ok: true, id });
     }
 
@@ -220,6 +231,20 @@ export async function PATCH(request: Request, context: RouteContext) {
     // PRD section) come across here too. Only To do rows are filled — a hire that
     // already exists may have been worked on its own checklist. Never throws.
     if (typeof data.candidateId === "string") await carryPreHireTicksToHire(data.candidateId, updated.id);
+    // A link, a cancel/un-cancel, or a move back into onboarding each change what
+    // the candidate record should say. Never throws; a no-op when nothing differs.
+    if (typeof data.candidateId === "string" || typeof data.canceled === "boolean" || data.employmentStatus !== undefined) {
+      await syncCandidateFromHire(
+        updated.id,
+        typeof data.candidateId === "string"
+          ? "Linked to their employee record."
+          : data.canceled === true
+            ? "Hire canceled on their employee record."
+            : data.canceled === false
+              ? "Hire un-canceled on their employee record."
+              : "Moved back into onboarding on their employee record."
+      );
+    }
     return NextResponse.json({ ok: true, id: updated.id });
   } catch (error) {
     console.error("New hire update error:", error);

@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { normalizeEmail, normalizeName, splitCandidateName } from "@/lib/candidates/normalize";
+import { CANDIDATE_STATUS } from "@/lib/candidates/candidate-status";
+import { syncCandidateFromHire } from "@/lib/candidates/hire-lifecycle";
 
 /**
  * Guarantee a hire/employee has a linked Candidate record, so anything that keys
@@ -29,6 +31,7 @@ export async function ensureCandidateForHire(hireId: string): Promise<{ candidat
     const dupe = await prisma.candidate.findFirst({ where: { normalizedEmail }, select: { id: true, displayName: true } });
     if (dupe) {
       await prisma.newHire.update({ where: { id: hireId }, data: { candidateId: dupe.id } });
+      await syncCandidateFromHire(hireId, "Linked to their employee record by email.");
       return { candidateId: dupe.id, displayName: dupe.displayName };
     }
   }
@@ -44,7 +47,9 @@ export async function ensureCandidateForHire(hireId: string): Promise<{ candidat
         primaryEmail: hire.personalEmail?.trim() || null,
         normalizedEmail,
         currentTitle: hire.position?.trim() || null,
-        status: "ACTIVE",
+        // Current employee, not Active: this person already works here (2026-11-11). The
+        // sync below corrects it to Former employee if they have since left.
+        status: CANDIDATE_STATUS.CURRENT_EMPLOYEE,
         stage: "Hired",
         source: "Employee backfill (org chart link)",
         origin: "MANUAL",
@@ -62,5 +67,6 @@ export async function ensureCandidateForHire(hireId: string): Promise<{ candidat
     await tx.newHire.update({ where: { id: hireId }, data: { candidateId: c.id } });
     return c;
   });
+  await syncCandidateFromHire(hireId, "Created from their employee record.");
   return { candidateId: created.id, displayName: created.displayName };
 }

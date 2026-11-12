@@ -7,6 +7,7 @@ import { getChecklistPlacement } from "@/lib/data/onboarding-grid-config";
 import { syncCardStatusFromChecklist } from "@/lib/business-cards/checklist-sync";
 import type { ParsedHireRow } from "@/lib/onboarding/import-hires";
 import { applyPilotSupervisorDefault } from "@/lib/people/leadership-roles";
+import { syncCandidateFromHire } from "@/lib/candidates/hire-lifecycle";
 
 function parseDate(value: unknown): Date | null {
   if (value === null || value === undefined || value === "") return null;
@@ -161,6 +162,9 @@ export async function POST(request: Request) {
         }
         if (changed.length > 0) {
           await prisma.newHire.update({ where: { id: match.id }, data });
+          // A termination from the import moves their candidate record to Former
+          // employee (Aimee, 2026-11-11). No-op for an unlinked hire; never throws.
+          if (changed.includes("employmentStatus")) await syncCandidateFromHire(match.id, "Marked terminated by the employee import.");
           // Reflect the update in our in-memory copy for later rows in the batch.
           Object.assign(match, data);
         }
