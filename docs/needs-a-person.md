@@ -1124,6 +1124,28 @@ follow-up list, the non-HR user sees no reply icons at all, and the log line is 
 
 ---
 
+### 50. Paycom steps that never happened: no profile page looked at since, and the scan's sweep has not run yet
+
+**Status:** OPEN
+**Added:** 2026-11-11
+
+Paycom steps she clicked past are now removed from the interview and notes history when there
+is no note AND no calendar event that day (his approval, Nov 11). 50 were removed in two passes
+and checked against the live database (457 to 407 rows; undo tested). Teya's example and the
+May 2025 to Jan 2026 calendar gap were settled the same day. NOT checked: (1) no candidate page
+was opened in a browser after the removals, so the profile's Interviews and Notes tabs are
+proven only by the database counts; (2) the scheduled Paycom notes scan has not yet run its new
+step 0b (scripts/paycom-status-steps.ts --sweep --apply), so the going-forward half is untested.
+
+**How to check it, three minutes:** open Annie Mader's candidate page (a step was removed for
+her Feb 2 2026 Additional Interview) and look at the Interviews and Notes tabs. After the next
+scan run, read its summary for the sweep line.
+
+**What would count as a pass:** no "Additional Interview (Paycom)" on Feb 2 2026 on her page,
+and the scan summary reports the sweep (usually "removed 0") without an error.
+
+---
+
 ## Closed
 
 ### 33. The candidate page's layout has not been saved since the boxes started fitting their content

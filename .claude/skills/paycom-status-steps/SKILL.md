@@ -44,7 +44,10 @@ A step recorded from a Paycom invite **stays** when any of these is true:
    matched by the Paycom application link in the event description
    (`.../ats/application/<id>/...`), or by the candidate's first and last name in the title.
 6. **The Recruiting calendar has no events at all that month** — it cannot vouch either way,
-   so the step stays. (It has none from May 2025 through Jan 2026; 62 steps sit in that gap.)
+   so the step stays. (It has none from May 2025 through Jan 2026: in those months hiring-team
+   interviews were booked on Aimee's OWN calendar, aschaedig@, which the service account cannot
+   read. The 62 steps in that gap were checked by hand through her Google account on Nov 11 —
+   see the cleanup below. Any future check of that period has to read her calendar the same way.)
 7. **The calendar could not be read** — nothing is removed.
 
 Otherwise — no note, not an HR screen, nothing on a calendar that was in use — it is a step
@@ -65,10 +68,11 @@ A write-up that arrives later is not lost: the note scan files it as its own int
 
 ## Teya Clarke (cmqvr4jxv0cy3xcrmme9zh0d9) — the example, and why it stayed
 
-Aimee named her "Pilot - Additional Interview" (Nov 4 2026) as a step she clicked past. The
-Recruiting calendar shows a real in-person event that day at Ogden (Devon accepted), and Alex
-Andrade's Nov 6 write-up ("when we asked her...") reads as that meeting. By the rule it is KEPT,
-and that conflict was reported for her to look at. Do not remove it without her saying so.
+Aimee's feedback was left on Teya's page, and her "Pilot - Additional Interview" (Nov 4 2026)
+looked like the step she meant. The Recruiting calendar shows a real in-person event that day
+at Ogden (Devon accepted), and Alex Andrade's Nov 6 write-up ("when we asked her...") reads as
+that meeting. The rule KEPT it, and he confirmed on Nov 11: it happened; the rule was right.
+The lesson: a step a person remembers as skipped can still be real — check the calendar.
 
 ## Where it lives
 
@@ -85,8 +89,18 @@ and that conflict was reported for her to look at. Do not remove it without her 
 
 ## The 2026-11-11 cleanup
 
-32 removed (457 -> 425 invite rows). Undo:
-`scripts/paycom-status-steps/undo/steps-2026-11-11T23-37-02-974Z-batch-32.json`.
+Two passes, both approved by him, 457 -> 407 invite rows (re-counted live Nov 11):
+1. **32** with no note and no Recruiting-calendar event (457 -> 425). Undo:
+   `scripts/paycom-status-steps/undo/steps-2026-11-11T23-37-02-974Z-batch-32.json`.
+2. **18** of the 62 calendar-gap steps, checked against Aimee's own calendar (425 -> 407):
+   6 were duplicate steps whose real interview is recorded on its own day, 12 never happened
+   (only an HR screen on her calendar). 42 had a real interview that day and stay; Keith
+   Chirico's Oct 1 step and Alex Fuentes Morales's Jan 16 screen also stay. Keith's turned out to
+   be the same HM interview, rescheduled: it was moved to its real time (Oct 3 2025, 2pm MT, with
+   the three interviewers named) on Nov 11, so the sweep now keeps it as written on in the app. Undo:
+   `steps-2026-11-12T00-26-51-642Z-batch-3.json` and `steps-2026-11-12T00-27-09-421Z-batch-15.json`.
+
+All undo files are in `scripts/paycom-status-steps/undo/` (gitignored, on this machine only).
 Review with every group: `scripts/paycom-status-steps/review-calendar.md`.
 
 ## Rules for running it
