@@ -1146,6 +1146,79 @@ and the scan summary reports the sweep (usually "removed 0") without an error.
 
 ---
 
+### 51. "Not Selected - Past Interview" and the two-date timeline have not been looked at on the live site
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-11-11
+
+41 applications that Paycom calls "Not Selected - Past Interview" said "Failed Interview" in the
+app; they were reworded in the live database (undo tested), and the candidate timeline now shows
+"Applied" on the application date and the outcome on Paycom's disposition date, on the right
+calendar day. Checked from the local dev server against the live data: Stephen Cox's page served
+Applied 04/30 and 05/26 and Not Selected - Past Interview 05/20 and 06/17, matching Paycom. NOT
+checked: (1) nobody has LOOKED at the rendered timeline — the in-app browser cannot render this
+app's pages, so only the data the page receives was read; (2) the live site, which keeps the old
+one-entry timeline until this deploys (the reworded label shows there already).
+
+**How to check it, two minutes:** after the deploy, open Stephen Cox's candidate page, Timeline
+tab, beside his Paycom candidate profile (115698).
+
+**What would count as a pass:** each application shows an "Applied" line and its outcome line,
+with the same dates and wording as Paycom's Application Date and Dispositioned columns.
+
+---
+
+### 52. Question bank: Duplicate, "Apply this formatting to all questions" and Import have never saved for real
+
+**Status:** OPEN
+**Added:** 2026-11-11
+
+Feedback cmwcmsbwn: each question has a Duplicate button; each box in the edit form has
+"Apply this formatting to all questions" (with an Undo bar); and "Import from a document"
+reads a .docx, PDF, text file or pasted text into separate questions for review before
+adding. Checked in a browser with every save blocked: Duplicate opened a new form with all
+three boxes, the category and both core values copied, and sent a new-question save; Apply
+showed the right confirm and sent the right box; a pasted two-question document was read
+for real in 6 seconds and split correctly (question, category, values, Strong answer,
+Listen for), and Add sent both. The formatting logic was dry-run on the live 22 questions:
+"Large" would change all 22 and the wording of none; "Normal" changes none. NOT checked:
+any of the three actually saving, both Undo buttons, a real .docx upload through the page
+(the .docx reader itself was tested on a generated file), and a PDF (never tried).
+
+**How to check it, five minutes:** Duplicate one question and save it, then delete the copy.
+Make one Question box Large, press Apply to all, look at the list, then press Undo and check
+every question is back. Import her question doc (download it as .docx), add one, then use
+Undo that import.
+
+**What would count as a pass:** the copy saves as a new question; Apply changes every
+question's box size and Undo puts them all back; the imported question matches the doc word
+for word, sits at the end of the bank, and Undo removes it.
+
+---
+
+### 53. Current employee / Former employee: no real hire, termination or cancel has moved a candidate yet
+
+**Status:** OPEN
+**Added:** 2026-11-11
+
+Aimee feedback cmwclwrfp and cmwclxn4v. A candidate linked to an employee record now reads
+Current employee or Former employee, and moves automatically when the employee record is
+hired, terminated, reactivated, put on contract, canceled, rehired or imported. 173 of 185
+linked candidates were backfilled on Nov 11 with an undo file (read back by the commit agent:
+125 Current employee and Hired, 45 Former employee and Hired, 128 hire and 45 employment-ended
+timeline entries). NOT checked: none of the automatic hooks has run for a real person yet, and
+the Status picker in the candidate Edit form has not been clicked.
+
+**How to check it, three minutes:** the next time someone is moved to onboarding, or an
+employee is marked terminated, open their candidate page. Separately, open any candidate's
+Edit form and look at the Status list.
+
+**What would count as a pass:** the header pill says Current employee (or Former employee),
+the timeline has an entry saying why, and the Status list shows Active, Current employee,
+Former employee, Inactive and Archived.
+
+---
+
 ## Closed
 
 ### 33. The candidate page's layout has not been saved since the boxes started fitting their content

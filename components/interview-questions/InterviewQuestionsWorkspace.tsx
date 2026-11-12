@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, type DragEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type DragEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Search, ListChecks, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ListChecks, GripVertical, ChevronUp, ChevronDown, Copy, FileUp, Paintbrush } from "lucide-react";
 import type { InterviewQuestionItem } from "@/lib/data/interview-questions";
 import { COMPANY_VALUES } from "@/lib/compliments/constants";
 import { DEPARTMENTS, DEPARTMENT_LABELS } from "@/lib/calendar/departments";
@@ -11,6 +11,8 @@ import { Button } from "@/components/ui";
 import { RichTextEditor, RichTextView } from "@/components/richtext/RichTextEditor";
 import { questionHtml, questionPlain } from "@/lib/interview-questions/rich";
 import { GuidanceBlocks } from "@/components/interview-questions/GuidanceBlocks";
+import { QuestionImport } from "@/components/interview-questions/QuestionImport";
+import { describeStyle, fieldStyle, QUESTION_FIELD_LABEL, type QuestionField } from "@/lib/interview-questions/format";
 
 const CATEGORY_LABELS: Record<string, string> = {
   BEHAVIORAL: "Behavioral",
@@ -61,16 +63,73 @@ function toForm(q?: InterviewQuestionItem): FormState {
 
 function QuestionForm({
   initial,
+  copyFrom,
   onCancel,
-  onSaved
+  onSaved,
+  onFormatApplied
 }: {
+  /** Editing this question. */
   initial?: InterviewQuestionItem;
+  /** A NEW question pre-filled from this one, formatting and all (feedback cmwcmsbwn). */
+  copyFrom?: InterviewQuestionItem;
   onCancel: () => void;
   onSaved: () => void;
+  onFormatApplied: (message: string) => void;
 }) {
-  const [form, setForm] = useState<FormState>(() => toForm(initial));
+  const [form, setForm] = useState<FormState>(() => toForm(initial ?? copyFrom));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [applying, setApplying] = useState<QuestionField | null>(null);
+
+  /**
+   * "If i change the size of the font or something in one question box, give
+   * me the option to apply to all questions" (feedback cmwcmsbwn). Copies what
+   * covers the WHOLE box (see lib/interview-questions/format.ts); undoable.
+   */
+  async function applyToAll(field: QuestionField) {
+    const style = fieldStyle(form[field]);
+    if (!style) {
+      setError(`Type something in the ${QUESTION_FIELD_LABEL[field]} box first — its formatting is what gets copied.`);
+      return;
+    }
+    const ok = window.confirm(
+      `Make the ${QUESTION_FIELD_LABEL[field]} box on EVERY question in the bank: ${describeStyle(style)}?\n\n` +
+        "Only formatting changes, never wording. Bold or italics on just a few words inside a question are kept. " +
+        "You can undo this from the top of the list."
+    );
+    if (!ok) return;
+    setApplying(field);
+    setError(null);
+    try {
+      const res = await fetch("/api/interview-questions/apply-format", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "apply", field, html: form[field] })
+      });
+      const body = (await res.json().catch(() => ({}))) as { message?: string; changed?: number; label?: string };
+      if (!res.ok) throw new Error(body.message ?? "Could not apply the formatting.");
+      onFormatApplied(`${body.label}: ${body.changed} question${body.changed === 1 ? "" : "s"} changed.`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not apply the formatting.");
+    } finally {
+      setApplying(null);
+    }
+  }
+
+  const fieldHead = (field: QuestionField, label: string) => (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <span className={fieldLabel}>{label}</span>
+      <button
+        type="button"
+        onClick={() => applyToAll(field)}
+        disabled={applying !== null}
+        title={`Give the ${QUESTION_FIELD_LABEL[field]} box on every question this box's formatting (size, colour, and bold/italic when the whole box has it)`}
+        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold text-brand-eden transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea disabled:opacity-50 dark:text-brand-sweet dark:hover:bg-white/10"
+      >
+        <Paintbrush className="h-3 w-3" /> {applying === field ? "Applying…" : "Apply this formatting to all questions"}
+      </button>
+    </div>
+  );
 
   function set<K extends keyof FormState>(k: K, v: FormState[K]) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -114,7 +173,7 @@ function QuestionForm({
       <div className="grid gap-3">
         {/* Not a <label>: the editor must not sit inside one (see RichTextEditor). */}
         <div className="grid gap-1">
-          <span className={fieldLabel}>Question</span>
+          {fieldHead("text", "Question")}
           <RichTextEditor
             value={form.text}
             onChange={(html) => set("text", html)}
@@ -160,7 +219,7 @@ function QuestionForm({
         </div>
 
         <div className="grid gap-1">
-          <span className={fieldLabel}>Strong answer (optional)</span>
+          {fieldHead("strongAnswer", "Strong answer (optional)")}
           <RichTextEditor
             value={form.strongAnswer}
             onChange={(html) => set("strongAnswer", html)}
@@ -171,7 +230,7 @@ function QuestionForm({
         </div>
 
         <div className="grid gap-1">
-          <span className={fieldLabel}>Listen for (optional)</span>
+          {fieldHead("listenFor", "Listen for (optional)")}
           <RichTextEditor
             value={form.listenFor}
             onChange={(html) => set("listenFor", html)}
@@ -217,6 +276,48 @@ function orderedIds(list: InterviewQuestionItem[]): string[] {
 export function InterviewQuestionsWorkspace({ questions }: { questions: InterviewQuestionItem[] }) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
+  /** Set when "Duplicate" opened the new-question form from an existing question. */
+  const [copyFrom, setCopyFrom] = useState<InterviewQuestionItem | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [formatUndo, setFormatUndo] = useState<{ label: string; count: number } | null>(null);
+
+  const loadFormatUndo = useCallback(async () => {
+    try {
+      const res = await fetch("/api/interview-questions/apply-format");
+      const body = (await res.json()) as { undo: { label: string; count: number } | null };
+      setFormatUndo(body.undo);
+    } catch {
+      /* the Undo bar is a convenience; the page works without it */
+    }
+  }, []);
+  useEffect(() => {
+    void loadFormatUndo();
+  }, [loadFormatUndo]);
+
+  function onFormatApplied(message: string) {
+    setNotice(message);
+    void loadFormatUndo();
+    router.refresh();
+  }
+
+  async function undoFormat() {
+    if (!formatUndo || !window.confirm(`Undo "${formatUndo.label}" on ${formatUndo.count} question${formatUndo.count === 1 ? "" : "s"}?`)) return;
+    const res = await fetch("/api/interview-questions/apply-format", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "undo" })
+    });
+    const body = (await res.json().catch(() => ({}))) as { message?: string; restored?: number; skipped?: number };
+    setNotice(
+      res.ok
+        ? `Formatting undone on ${body.restored} question${body.restored === 1 ? "" : "s"}.` +
+            (body.skipped ? ` ${body.skipped} edited since were left as they are.` : "")
+        : body.message ?? "Could not undo."
+    );
+    void loadFormatUndo();
+    router.refresh();
+  }
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -256,6 +357,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
 
   function afterSave() {
     setCreating(false);
+    setCopyFrom(null);
     setEditingId(null);
     router.refresh();
   }
@@ -372,15 +474,28 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
               guides and scorecards.
             </p>
           </div>
-          <button
-            onClick={() => {
-              setEditingId(null);
-              setCreating(true);
-            }}
-            className="inline-flex items-center gap-1.5 self-start rounded bg-white px-4 py-2 text-sm font-semibold text-brand-lea shadow-sm transition hover:bg-brand-cloudDancer dark:bg-brand-panel dark:text-slate-100"
-          >
-            <Plus className="h-4 w-4" /> New question
-          </button>
+          <div className="flex flex-wrap gap-2 self-start">
+            <button
+              onClick={() => {
+                setCreating(false);
+                setEditingId(null);
+                setImporting((v) => !v);
+              }}
+              className="inline-flex items-center gap-1.5 rounded border border-white/40 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10 hover:shadow-glow"
+            >
+              <FileUp className="h-4 w-4" /> Import from a document
+            </button>
+            <button
+              onClick={() => {
+                setEditingId(null);
+                setCopyFrom(null);
+                setCreating(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded bg-white px-4 py-2 text-sm font-semibold text-brand-lea shadow-sm transition hover:bg-brand-cloudDancer dark:bg-brand-panel dark:text-slate-100"
+            >
+              <Plus className="h-4 w-4" /> New question
+            </button>
+          </div>
         </div>
       </section>
 
@@ -425,7 +540,49 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
         <p className="rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-300">{orderError}</p>
       ) : null}
 
-      {creating ? <QuestionForm onCancel={() => setCreating(false)} onSaved={afterSave} /> : null}
+      {notice ? (
+        <p className="flex items-center justify-between gap-3 rounded bg-brand-sweet/20 px-3 py-2 text-xs font-medium text-brand-lea dark:bg-white/5 dark:text-slate-100">
+          <span>{notice}</span>
+          <button type="button" onClick={() => setNotice(null)} className="font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400">
+            Dismiss
+          </button>
+        </p>
+      ) : null}
+
+      {formatUndo ? (
+        <p className="flex flex-wrap items-center justify-between gap-3 rounded border border-brand-lea/10 bg-white px-3 py-2 text-xs text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400">
+          <span>
+            Last formatting change: <b className="text-brand-lea dark:text-slate-100">{formatUndo.label}</b> on {formatUndo.count} question{formatUndo.count === 1 ? "" : "s"}.
+          </span>
+          <button type="button" onClick={undoFormat} className="rounded border border-brand-lea/20 px-2 py-0.5 font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100">
+            Undo
+          </button>
+        </p>
+      ) : null}
+
+      {importing ? (
+        <QuestionImport
+          questions={questions}
+          onClose={() => setImporting(false)}
+          onDone={(message) => {
+            setNotice(message);
+            router.refresh();
+          }}
+        />
+      ) : null}
+
+      {creating ? (
+        <QuestionForm
+          key={copyFrom?.id ?? "new"}
+          copyFrom={copyFrom ?? undefined}
+          onCancel={() => {
+            setCreating(false);
+            setCopyFrom(null);
+          }}
+          onSaved={afterSave}
+          onFormatApplied={onFormatApplied}
+        />
+      ) : null}
 
       {/* List */}
       <section className="space-y-2">
@@ -442,7 +599,7 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
         ) : (
           filtered.map((item) => {
             if (editingId === item.id) {
-              return <QuestionForm key={item.id} initial={item} onCancel={() => setEditingId(null)} onSaved={afterSave} />;
+              return <QuestionForm key={item.id} initial={item} onCancel={() => setEditingId(null)} onSaved={afterSave} onFormatApplied={onFormatApplied} />;
             }
             const up = neighbour(item, -1);
             const down = neighbour(item, 1);
@@ -502,6 +659,19 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
                       >
                         <span className={`h-1.5 w-1.5 rounded-full ${item.isActive ? "bg-emerald-600 dark:bg-emerald-400" : "bg-brand-grey/60"}`} />
                         {item.isActive ? "Active" : "Inactive"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingId(null);
+                          setCopyFrom(item);
+                          setCreating(true);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                        title="Duplicate — a new question pre-filled with this one, formatting and all"
+                        aria-label="Duplicate"
+                        className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/10"
+                      >
+                        <Copy className="h-4 w-4" />
                       </button>
                       <button onClick={() => { setCreating(false); setEditingId(item.id); }} title="Edit" className="rounded p-1.5 text-brand-grey transition hover:bg-brand-cloudDancer/60 hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/10">
                         <Pencil className="h-4 w-4" />
