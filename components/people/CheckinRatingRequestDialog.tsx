@@ -16,8 +16,10 @@ import {
   type RatingRecipientOption,
   type RatingRequestView
 } from "@/lib/onboarding/checkin-rating-request-shared";
+import { RATED_CHECKINS, ratedCheckin } from "@/lib/onboarding/checkin-rating";
 
-// Send the hiring manager the no-login 90-day rating link, see where it stands,
+// Send the hiring manager the no-login check-in rating link (90-day, 6-month or
+// 12-month - the same questionnaire each time), see where it stands,
 // resend it, or cancel it - all from Post-onboard (feedback cmwcq16o7).
 //
 // The body is EDITABLE for this send (her standing rule for every template send);
@@ -32,22 +34,26 @@ const OTHER = "__other__";
 export function CheckinRatingRequestDialog({
   hireId,
   hireName,
+  dayMark,
   request,
   onClose,
   onChanged
 }: {
   hireId: string;
   hireName: string;
+  /** Which check-in: 90, 180 or 365. */
+  dayMark: number;
   request: RatingRequestView | null;
   onClose: () => void;
   onChanged: (view: RatingRequestView) => void;
 }) {
+  const checkin = ratedCheckin(dayMark) ?? RATED_CHECKINS[0];
   const [recipients, setRecipients] = useState<Recipients | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pick, setPick] = useState<string>("");
   const [otherName, setOtherName] = useState("");
   const [otherEmail, setOtherEmail] = useState("");
-  const [subject, setSubject] = useState(defaultRatingSubject(hireName));
+  const [subject, setSubject] = useState(defaultRatingSubject(hireName, checkin.dayMark));
   const [body, setBody] = useState<string | null>(null);
   const reusable = request?.state === "PENDING" || request?.state === "EXPIRED";
   const [linkMode, setLinkMode] = useState<"same" | "new">(reusable ? "same" : "new");
@@ -58,7 +64,7 @@ export function CheckinRatingRequestDialog({
 
   useEffect(() => {
     let live = true;
-    void fetch(`/api/onboarding/checkin-rating-requests?recipients=${encodeURIComponent(hireId)}`)
+    void fetch(`/api/onboarding/checkin-rating-requests?recipients=${encodeURIComponent(hireId)}&dayMark=${checkin.dayMark}`)
       .then(async (r) => {
         const d = (await r.json().catch(() => ({}))) as Recipients & { message?: string };
         if (!r.ok) throw new Error(d.message || "Could not load the supervisors.");
@@ -80,7 +86,7 @@ export function CheckinRatingRequestDialog({
     return () => {
       live = false;
     };
-  }, [hireId, request]);
+  }, [hireId, request, checkin.dayMark]);
 
   const chosen = recipients?.options.find((o) => o.email === pick) ?? null;
   const toEmail = pick === OTHER ? otherEmail.trim() : chosen?.email ?? "";
@@ -98,7 +104,7 @@ export function CheckinRatingRequestDialog({
       const res = await fetch("/api/onboarding/checkin-rating-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hireId, ...payload })
+        body: JSON.stringify({ hireId, dayMark: checkin.dayMark, ...payload })
       });
       const data = (await res.json().catch(() => ({}))) as { message?: string; request?: RatingRequestView; warnings?: string[] };
       if (!res.ok || !data.request) throw new Error(data.message || "That did not work.");
@@ -115,7 +121,7 @@ export function CheckinRatingRequestDialog({
 
   const send = () => post({ action: "send", to: toEmail, toName, subject, body, linkMode: reusableNow() ? linkMode : "new" });
   const cancel = () => {
-    if (!confirm(`Cancel the 90-day rating request for ${hireName}? The link stops working straight away.`)) return;
+    if (!confirm(`Cancel the ${checkin.short} rating request for ${hireName}? The link stops working straight away.`)) return;
     void post({ action: "cancel" });
   };
   function reusableNow() {
@@ -127,13 +133,13 @@ export function CheckinRatingRequestDialog({
     "rounded border border-brand-lea/20 px-3 py-2 text-sm font-normal outline-none focus:border-brand-gold dark:border-white/10 dark:bg-brand-field dark:text-slate-100";
 
   return (
-    <Modal open onClose={onClose} busy={busy} maxWidth="max-w-2xl" title={`90-day rating link for ${hireName}`}>
+    <Modal open onClose={onClose} busy={busy} maxWidth="max-w-2xl" title={`${checkin.short} rating link for ${hireName}`}>
       <div className="p-5 text-left">
-        <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Ask the manager to rate {hireName}</h2>
+        <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Ask the manager to rate {hireName}: {checkin.title}</h2>
         <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
-          Emails the hiring manager a link to {hireName}&apos;s 90-day form - the four core values and &ldquo;would you hire again?&rdquo;. No login
+          Emails the hiring manager a link to {hireName}&apos;s {checkin.title} form - the four core values on the 1&ndash;10 scale, how well they have learned the role, and &ldquo;would you hire again?&rdquo;. No login
           needed, it works once, for {RATING_LINK_DAYS} days, and it shows them no other ratings. When they send it, the rating appears here and the
-          90-day check-in is marked done.
+          {checkin.short} check-in is marked done.
         </p>
 
         {current ? (
@@ -173,7 +179,7 @@ export function CheckinRatingRequestDialog({
 
         {recipients?.leftReason ? (
           <p className="mt-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
-            {hireName} has left ({recipients.leftReason.toLowerCase()}), so there is no 90-day rating to ask for.
+            {hireName} has left ({recipients.leftReason.toLowerCase()}), so there is no {checkin.short} rating to ask for.
           </p>
         ) : null}
         {loadError ? <p className="mt-3 text-sm text-red-700 dark:text-red-300">{loadError}</p> : null}
@@ -230,7 +236,7 @@ export function CheckinRatingRequestDialog({
             <div className="mt-3">
               <EmailBodyEditor
                 greeting={ratingGreetingHtml(toName)}
-                template={defaultRatingBodyHtml(hireName)}
+                template={defaultRatingBodyHtml(hireName, checkin.dayMark)}
                 edited={body}
                 onChange={setBody}
                 disabled={busy}
@@ -238,7 +244,7 @@ export function CheckinRatingRequestDialog({
                 note="The rating link is added under this message when it sends, so editing the wording cannot lose it."
               />
               <p className="mt-1.5 text-xs text-brand-grey dark:text-slate-400">
-                Added under the message: <span className="font-semibold text-brand-lea underline dark:text-slate-100">Rate {hireName}&apos;s first 90 days</span>{" "}
+                Added under the message: <span className="font-semibold text-brand-lea underline dark:text-slate-100">Rate {hireName}: {checkin.title}</span>{" "}
                 and the date it stops working. hrotasks@ is copied, as on the other sends.
               </p>
             </div>

@@ -1,4 +1,6 @@
-// The no-login 90-day rating link - the client-safe half (no Prisma, no Node).
+// The no-login check-in rating link - the client-safe half (no Prisma, no Node).
+// Sent at the 90-day, 6-month and 12-month check-ins (his call, Nov 13 2026), with
+// the same wording each time apart from the period (RATED_CHECKINS).
 //
 // Aimee's feedback cmwcq16o7 (Nov 11 2026), on Post-onboard's 90-day rating: "i
 // need to be able to send this to a hiring manager so they can complete it
@@ -12,6 +14,13 @@
 // So HR sends the manager a tokenized link (/rate/<token>) that opens ONE form for
 // ONE employee, accepts ONE submission, expires, and can be revoked. The server
 // half (storage, token checks, the send) is lib/onboarding/checkin-rating-request.ts.
+
+import { RATED_CHECKINS, ratedCheckin } from "@/lib/onboarding/checkin-rating";
+
+/** The check-in a request is for, falling back to the 90-day for anything unknown. */
+function checkinFor(dayMark: number) {
+  return ratedCheckin(dayMark) ?? RATED_CHECKINS[0];
+}
 
 /** How long a link works after it was last sent. A resend restarts the clock. */
 export const RATING_LINK_DAYS = 30;
@@ -49,6 +58,8 @@ export type RatingRequestSend = {
 /** What the Post-onboard tab sees. Never carries the token. */
 export type RatingRequestView = {
   hireId: string;
+  /** 90, 180 or 365 - which check-in the request is for. */
+  dayMark: number;
   hireName: string;
   state: RatingRequestState;
   to: string;
@@ -103,16 +114,17 @@ export function ratingGreetingHtml(recipientName: string | null): string {
   return para(`Hi ${escHtml(first)},`) + GAP;
 }
 
-export function defaultRatingSubject(employeeName: string): string {
-  return `90-day check-in: ${employeeName}`;
+export function defaultRatingSubject(employeeName: string, dayMark: number): string {
+  return `${checkinFor(dayMark).title}: ${employeeName}`;
 }
 
 /** The editable part. The app writes it (there is no Front template for this email). */
-export function defaultRatingBodyHtml(employeeName: string): string {
+export function defaultRatingBodyHtml(employeeName: string, dayMark: number): string {
   const name = escHtml(employeeName);
+  const c = checkinFor(dayMark);
   return (
     para(
-      `${name} has reached their first 90 days with SkyShare. Could you take a couple of minutes to rate how they are doing on our four core values, and tell us whether you would hire them again?`
+      `${name} has reached ${c.dayMark === 365 ? "their first year" : c.at} with SkyShare. Could you take a couple of minutes to rate them on our four core values, tell us how well they have learned their role, and whether you would hire them again?`
     ) +
     GAP +
     para("You don't need a login - just open the link below. Your answers go to HR.") +
@@ -126,11 +138,12 @@ export function defaultRatingBodyHtml(employeeName: string): string {
  * rewritten body can never drop or stale the link, and a resend with a new token
  * always carries the new one.
  */
-export function ratingLinkBlockHtml(url: string, employeeName: string, expiresAt: string): string {
+export function ratingLinkBlockHtml(url: string, employeeName: string, expiresAt: string, dayMark: number): string {
+  const c = checkinFor(dayMark);
   const until = new Date(expiresAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "America/Denver" });
   return (
     GAP +
-    para(`<a href="${escHtml(url)}"><b>Rate ${escHtml(employeeName)}'s first 90 days</b></a>`) +
+    para(`<a href="${escHtml(url)}"><b>Rate ${escHtml(employeeName)}: ${escHtml(c.title)}</b></a>`) +
     para(`<span style="color: #6b7280;">This link is just for this one rating and works until ${escHtml(until)}.</span>`)
   );
 }

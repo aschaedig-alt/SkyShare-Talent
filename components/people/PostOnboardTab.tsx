@@ -16,7 +16,7 @@ import type { TaskSkipRecord } from "@/lib/front/task-email";
 import { EmptyState, Input } from "@/components/ui";
 import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
 import { CheckinRatingModal } from "@/components/people/CheckinRatingModal";
-import { CHECKIN_RATING_TASK_KEY, ratingPoints, type CheckinRatingView } from "@/lib/onboarding/checkin-rating";
+import { ratedCheckin, ratedCheckinForTask, ratingPoints, scaleSummary, type CheckinRatingView, type RatedCheckin } from "@/lib/onboarding/checkin-rating";
 import { pointsText } from "@/lib/interviews/scorecard";
 import { CheckinReplyModal, LEVEL_STYLE } from "@/components/people/CheckinReplyModal";
 import { NO_REPLY_AFTER_DAYS, REPLY_LEVEL_LABEL, needsFollowUp, type CheckinReplyView } from "@/lib/onboarding/checkin-reply";
@@ -29,9 +29,11 @@ function pickReply(list: CheckinReplyView[] | undefined): CheckinReplyView | nul
 
 type ReplyFilter = "" | "replied" | "action" | "waiting";
 
-// Quality of Hire, Dec 10 2026: ticking the 90-day check-in done asks for the
-// hiring manager's rating first (HR enters it from the manager - his call, Nov 10).
-const RATED_CHECKIN = CHECKIN_RATING_TASK_KEY;
+// The rated check-ins (90-day, 6-month, 12-month - lib/onboarding/checkin-rating.ts
+// RATED_CHECKINS): ticking one done asks for the manager's rating first, and each
+// carries its own rating and rating link under its tick.
+/** Map key for one person's rating or rating link at one check-in. */
+const rk = (hireId: string, dayMark: number) => `${hireId}:${dayMark}`;
 
 // startDate is a chosen calendar day (UTC); onboardedAt is the moment they were
 // marked onboarded, so it reads in Mountain. See lib/dates/display.ts.
@@ -76,9 +78,9 @@ export function PostOnboardTab({
   // Kept here so a skip, or undoing one, shows at once without a reload.
   const [skips, setSkips] = useState(taskSkips);
 
-  // 90-day ratings, loaded once for the people on this list.
+  // Check-in ratings (90-day, 6-month, 12-month), loaded once for the people on this list, keyed rk(hireId, dayMark).
   const [ratings, setRatings] = useState<Record<string, CheckinRatingView>>({});
-  const [rating, setRating] = useState<{ hire: PostOnboardHire; tick: Checkin | null } | null>(null);
+  const [rating, setRating] = useState<{ hire: PostOnboardHire; tick: Checkin | null; checkin: RatedCheckin } | null>(null);
   useEffect(() => {
     const ids = initial.map((h) => h.id);
     if (!ids.length) return;
@@ -86,7 +88,7 @@ export function PostOnboardTab({
     void fetch(`/api/onboarding/checkin-ratings?ids=${encodeURIComponent(ids.join(","))}`)
       .then((r) => (r.ok ? r.json() : { ratings: [] }))
       .then((d: { ratings?: CheckinRatingView[] }) => {
-        if (live) setRatings(Object.fromEntries((d.ratings ?? []).map((x) => [x.newHireId, x])));
+        if (live) setRatings(Object.fromEntries((d.ratings ?? []).map((x) => [rk(x.newHireId, x.dayMark), x])));
       })
       .catch(() => {});
     return () => {
@@ -101,7 +103,7 @@ export function PostOnboardTab({
   const [requests, setRequests] = useState<Record<string, RatingRequestView>>({});
   const [leftNotices, setLeftNotices] = useState<RatingRequestView[]>([]);
   const [requestReload, setRequestReload] = useState(0);
-  const [openRequest, setOpenRequest] = useState<PostOnboardHire | null>(null);
+  const [openRequest, setOpenRequest] = useState<{ hire: PostOnboardHire; checkin: RatedCheckin } | null>(null);
   useEffect(() => {
     const ids = initial.map((h) => h.id);
     let live = true;
@@ -109,7 +111,7 @@ export function PostOnboardTab({
       .then((r) => (r.ok ? r.json() : { requests: [], leftNotices: [] }))
       .then((d: { requests?: RatingRequestView[]; leftNotices?: RatingRequestView[] }) => {
         if (!live) return;
-        setRequests(Object.fromEntries((d.requests ?? []).map((x) => [x.hireId, x])));
+        setRequests(Object.fromEntries((d.requests ?? []).map((x) => [rk(x.hireId, x.dayMark), x])));
         setLeftNotices(d.leftNotices ?? []);
       })
       .catch(() => {});
@@ -118,12 +120,12 @@ export function PostOnboardTab({
     };
   }, [initial, requestReload]);
 
-  async function dismissLeftNotice(hireId: string) {
-    setLeftNotices((cur) => cur.filter((n) => n.hireId !== hireId));
+  async function dismissLeftNotice(hireId: string, dayMark: number) {
+    setLeftNotices((cur) => cur.filter((n) => !(n.hireId === hireId && n.dayMark === dayMark)));
     await fetch("/api/onboarding/checkin-rating-requests", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "acknowledge", hireId })
+      body: JSON.stringify({ action: "acknowledge", hireId, dayMark })
     }).catch(() => {});
   }
 
@@ -386,11 +388,12 @@ export function PostOnboardTab({
 
   async function toggle(hireId: string, c: Checkin) {
     if (!c.id) return;
-    // Ticking the 90-day check-in done asks for the manager's rating first.
-    if (c.key === RATED_CHECKIN && c.status !== "DONE") {
+    // Ticking a rated check-in done asks for the manager's rating first.
+    const rated = ratedCheckinForTask(c.key);
+    if (rated && c.status !== "DONE") {
       const hire = hires.find((h) => h.id === hireId);
       if (hire) {
-        setRating({ hire, tick: c });
+        setRating({ hire, tick: c, checkin: rated });
         return;
       }
     }
@@ -424,6 +427,67 @@ export function PostOnboardTab({
     } catch {
       setHires(prev);
     }
+  }
+
+  /**
+   * Under a rated check-in's tick: the manager's rating (points, or Rate) and the
+   * no-login rating link (its status, or Send). Nothing for other check-ins, or for
+   * a skipped one. The 90-day, 6-month and 12-month each have their own.
+   */
+  function ratingControls(h: PostOnboardHire, c: Checkin, terminated: boolean) {
+    const checkin = ratedCheckinForTask(c.key);
+    if (!checkin || c.status === "NA") return null;
+    const saved = ratings[rk(h.id, checkin.dayMark)];
+    const req = requests[rk(h.id, checkin.dayMark)];
+    return (
+      <div className="mt-1 flex flex-col items-center gap-0.5">
+        {saved ? (
+          <button
+            type="button"
+            onClick={() => setRating({ hire: h, tick: null, checkin })}
+            title={`${checkin.short} rating${saved.managerName ? ` by ${saved.managerName}` : ""}: ${scaleSummary(saved)} - click to edit`}
+            className="whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-gold/10 dark:text-slate-100"
+          >
+            {pointsText(ratingPoints(saved.ratings))}
+            {saved.wouldHireAgain === null ? null : (
+              <span className={clsx("ml-1 font-normal", saved.wouldHireAgain ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300")}>
+                {saved.wouldHireAgain ? "· again" : "· not again"}
+              </span>
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setRating({ hire: h, tick: null, checkin })}
+            title={`Enter the manager's ${checkin.short} rating`}
+            className="rounded border border-brand-lea/20 px-2 py-0.5 text-[11px] font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"
+          >
+            Rate
+          </button>
+        )}
+        {req ? (
+          <button
+            type="button"
+            onClick={() => setOpenRequest({ hire: h, checkin })}
+            title={`${checkin.short} rating link to ${req.toName ?? req.to} - click for status, resend or cancel`}
+            className="flex items-center justify-center gap-1 whitespace-nowrap rounded px-1 py-0.5 text-[10px] text-brand-grey transition hover:bg-brand-gold/10 dark:text-slate-400"
+          >
+            <StateChip view={req} />
+            {formatMomentDateShort(req.state === "COMPLETED" ? req.completedAt : req.state === "CANCELLED" ? req.cancelledAt : req.lastSentAt)}
+          </button>
+        ) : saved || terminated ? null : (
+          <button
+            type="button"
+            onClick={() => setOpenRequest({ hire: h, checkin })}
+            title={`Email the hiring manager the ${checkin.short} rating link - no login needed`}
+            className="inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold text-brand-lea transition hover:shadow-glow dark:text-slate-100"
+          >
+            <Send className="h-3 w-3" />
+            Send
+          </button>
+        )}
+      </div>
+    );
   }
 
   if (hires.length === 0) {
@@ -498,17 +562,19 @@ export function PostOnboardTab({
       </div>
       {rating ? (
         <CheckinRatingModal
-          key={rating.hire.id}
+          key={rk(rating.hire.id, rating.checkin.dayMark)}
           open
           name={rating.hire.name}
           newHireId={rating.hire.id}
-          initial={ratings[rating.hire.id] ?? null}
+          dayMark={rating.checkin.dayMark}
+          initial={ratings[rk(rating.hire.id, rating.checkin.dayMark)] ?? null}
           onClose={() => setRating(null)}
           onSaved={(saved, result) => {
-            // The server ticked the 90-day check-in itself; mirror it here (this grid
+            // The server ticked that check-in itself; mirror it here (this grid
             // keeps its own copy of the rows), and drop the person if that archived them.
-            setRatings((cur) => ({ ...cur, [saved.newHireId]: saved }));
+            setRatings((cur) => ({ ...cur, [rk(saved.newHireId, saved.dayMark)]: saved }));
             const hireId = rating.hire.id;
+            const taskKey = rating.checkin.taskKey;
             setRating(null);
             if (result.archived) {
               setHires((cur) => cur.filter((h) => h.id !== hireId));
@@ -517,7 +583,7 @@ export function PostOnboardTab({
               setHires((cur) =>
                 cur.map((h) =>
                   h.id === hireId
-                    ? { ...h, checkins: h.checkins.map((c) => (c.key === RATED_CHECKIN ? { ...c, status: "DONE" as GridTaskStatus, dueSoon: false } : c)) }
+                    ? { ...h, checkins: h.checkins.map((c) => (c.key === taskKey ? { ...c, status: "DONE" as GridTaskStatus, dueSoon: false } : c)) }
                     : h
                 )
               );
@@ -536,18 +602,18 @@ export function PostOnboardTab({
       ) : null}
       {leftNotices.length ? (
         <div className="space-y-1 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
-          <div className="font-semibold">90-day rating links cancelled because the employee left</div>
+          <div className="font-semibold">Rating links cancelled because the employee left</div>
           {leftNotices.map((n) => (
-            <div key={n.hireId} className="flex flex-wrap items-center gap-2">
+            <div key={rk(n.hireId, n.dayMark)} className="flex flex-wrap items-center gap-2">
               <Link href={`/people/${n.hireId}`} className="font-semibold hover:underline">
                 {n.hireName}
               </Link>
               <span>
-                sent {formatMomentDateShort(n.lastSentAt)} to {n.toName ?? n.to}, not answered · {cancelReasonText(n)} ({formatMomentDateShort(n.cancelledAt)})
+                {ratedCheckin(n.dayMark)?.short ?? "90-day"} link sent {formatMomentDateShort(n.lastSentAt)} to {n.toName ?? n.to}, not answered · {cancelReasonText(n)} ({formatMomentDateShort(n.cancelledAt)})
               </span>
               <button
                 type="button"
-                onClick={() => void dismissLeftNotice(n.hireId)}
+                onClick={() => void dismissLeftNotice(n.hireId, n.dayMark)}
                 title="Dismiss this notice (the request stays cancelled)"
                 aria-label={`Dismiss the notice for ${n.hireName}`}
                 className="ml-auto inline-flex items-center rounded p-0.5 transition hover:bg-amber-100 dark:hover:bg-amber-500/20"
@@ -560,12 +626,13 @@ export function PostOnboardTab({
       ) : null}
       {openRequest ? (
         <CheckinRatingRequestDialog
-          key={openRequest.id}
-          hireId={openRequest.id}
-          hireName={openRequest.name}
-          request={requests[openRequest.id] ?? null}
+          key={rk(openRequest.hire.id, openRequest.checkin.dayMark)}
+          hireId={openRequest.hire.id}
+          hireName={openRequest.hire.name}
+          dayMark={openRequest.checkin.dayMark}
+          request={requests[rk(openRequest.hire.id, openRequest.checkin.dayMark)] ?? null}
           onClose={() => setOpenRequest(null)}
-          onChanged={(view) => setRequests((cur) => ({ ...cur, [view.hireId]: view }))}
+          onChanged={(view) => setRequests((cur) => ({ ...cur, [rk(view.hireId, view.dayMark)]: view }))}
         />
       ) : null}
       {openReply ? <CheckinReplyModal key={openReply.messageId} reply={openReply} onClose={() => setOpenReply(null)} onSaved={replaceReply} /> : null}
@@ -584,7 +651,6 @@ export function PostOnboardTab({
               {heads.map((h) => (
                 <th key={h} className="px-3 py-3 text-center">{h}</th>
               ))}
-              <th className="px-3 py-3 text-center" title="The hiring manager's 90-day rating of the four core values">Values</th>
             </tr>
           </thead>
           <tbody>
@@ -722,71 +788,16 @@ export function PostOnboardTab({
                       return null;
                     })()}
                     </span>
+                    {ratingControls(h, c, terminated)}
                   </td>
                   );
                 })}
-                <td className="px-3 py-3 text-center">
-                  {ratings[h.id] ? (
-                    <button
-                      type="button"
-                      onClick={() => setRating({ hire: h, tick: null })}
-                      title={`Rated${ratings[h.id].managerName ? ` by ${ratings[h.id].managerName}` : ""} - click to edit`}
-                      className="whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-gold/10 dark:text-slate-100"
-                    >
-                      {pointsText(ratingPoints(ratings[h.id].ratings))}
-                      {ratings[h.id].wouldHireAgain === null ? null : (
-                        <span className={clsx("ml-1 font-normal", ratings[h.id].wouldHireAgain ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300")}>
-                          {ratings[h.id].wouldHireAgain ? "· again" : "· not again"}
-                        </span>
-                      )}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setRating({ hire: h, tick: null })}
-                      className="rounded border border-brand-lea/20 px-2 py-0.5 text-[11px] font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"
-                    >
-                      Rate
-                    </button>
-                  )}
-                  {(() => {
-                    // The manager's no-login link: its status once sent, else a Send
-                    // button while there is no rating yet (feedback cmwcq16o7).
-                    const req = requests[h.id];
-                    if (req) {
-                      const when = req.state === "COMPLETED" ? req.completedAt : req.state === "CANCELLED" ? req.cancelledAt : req.lastSentAt;
-                      return (
-                        <button
-                          type="button"
-                          onClick={() => setOpenRequest(h)}
-                          title={`Rating link to ${req.toName ?? req.to} - click for status, resend or cancel`}
-                          className="mt-1 flex w-full items-center justify-center gap-1 whitespace-nowrap rounded px-1 py-0.5 text-[10px] text-brand-grey transition hover:bg-brand-gold/10 dark:text-slate-400"
-                        >
-                          <StateChip view={req} />
-                          {formatMomentDateShort(when)}
-                        </button>
-                      );
-                    }
-                    if (ratings[h.id] || terminated) return null;
-                    return (
-                      <button
-                        type="button"
-                        onClick={() => setOpenRequest(h)}
-                        title="Email the hiring manager a link to rate this person - no login needed"
-                        className="mt-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold text-brand-lea transition hover:shadow-glow dark:text-slate-100"
-                      >
-                        <Send className="h-3 w-3" />
-                        Send to manager
-                      </button>
-                    );
-                  })()}
-                </td>
               </tr>
               );
             })}
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={7 + heads.length} className="px-4 py-8 text-center text-sm text-brand-grey dark:text-slate-400">
+                <td colSpan={6 + heads.length} className="px-4 py-8 text-center text-sm text-brand-grey dark:text-slate-400">
                   No post-onboard employees match these filters.
                 </td>
               </tr>

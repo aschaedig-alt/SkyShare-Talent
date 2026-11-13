@@ -13,7 +13,8 @@ import {
 //
 //   GET  ?ids=a,b,c        the request for each of those hires, plus every
 //                          un-dismissed "employee left" cancellation
-//   GET  ?recipients=<id>  who the send dialog can offer as the recipient
+//   GET  ?recipients=<id>&dayMark=<90|180|365>  who the send dialog can offer as the recipient
+//   (every POST also takes dayMark: 90 | 180 | 365, default 90)
 //   POST { action: "send", hireId, to, toName, subject, body, linkMode }
 //   POST { action: "cancel", hireId }
 //   POST { action: "acknowledge", hireId }   dismiss an "employee left" notice
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const recipientsFor = params.get("recipients")?.trim();
   if (recipientsFor) {
-    const r = await ratingRecipientOptions(recipientsFor);
+    const r = await ratingRecipientOptions(recipientsFor, Number(params.get("dayMark") ?? 90));
     if (!r) return NextResponse.json({ message: "Employee not found." }, { status: 404 });
     return NextResponse.json(r);
   }
@@ -43,10 +44,13 @@ export async function POST(request: Request) {
   const hireId = str(body.hireId).trim();
   if (!hireId) return NextResponse.json({ message: "Which employee?" }, { status: 400 });
   const actor = auth.user.email ?? auth.user.name ?? null;
+  // 90 when not given: the only check-in that had a link before the 6- and 12-month ones.
+  const dayMark = typeof body.dayMark === "number" ? body.dayMark : 90;
 
   if (body.action === "send") {
     const result = await sendRatingRequest({
       hireId,
+      dayMark,
       to: str(body.to),
       toName: str(body.toName) || null,
       subject: str(body.subject) || null,
@@ -58,12 +62,12 @@ export async function POST(request: Request) {
     return NextResponse.json(result);
   }
   if (body.action === "cancel") {
-    const request = await cancelRatingRequest(hireId, actor);
+    const request = await cancelRatingRequest(hireId, dayMark, actor);
     if (!request) return NextResponse.json({ message: "There is no open request to cancel." }, { status: 400 });
     return NextResponse.json({ ok: true, request });
   }
   if (body.action === "acknowledge") {
-    await acknowledgeRatingRequest(hireId);
+    await acknowledgeRatingRequest(hireId, dayMark);
     return NextResponse.json({ ok: true });
   }
   return NextResponse.json({ message: "Unknown action." }, { status: 400 });

@@ -136,7 +136,13 @@ export const MAINTENANCE_TASKS: Array<{ key: string; label: string; short: strin
   // Appended rather than slotted in date-order on purpose: the stored task rows
   // carry an order of 100 + index, so inserting in the middle would renumber
   // every existing row. No dueDays - there is no fixed day this is owed by.
-  { key: "social_announcement", label: "Social media announcement", short: "Social", dueDays: null }
+  { key: "social_announcement", label: "Social media announcement", short: "Social", dueDays: null },
+  // The 6-month and 12-month check-ins (his call, Nov 13 2026): the hiring manager
+  // gets the SAME rating questionnaire as the 90-day (lib/onboarding/checkin-rating.ts
+  // RATED_CHECKINS), stored as its own rating for reporting. Appended for the same
+  // reason as Social. A person now stays on Post-onboard until these are done too.
+  { key: "checkin_180", label: "6-month check-in", short: "6-month", dueDays: 180 },
+  { key: "checkin_365", label: "12-month check-in", short: "12-month", dueDays: 365 }
 ];
 
 // Maps the verbose row labels from the current Google Sheet to our task keys (used by the importer).

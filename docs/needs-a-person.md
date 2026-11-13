@@ -1298,6 +1298,45 @@ scroll; each scorecard change shows in the drawer straight away, with no reload.
 
 ---
 
+### 57. The 1–10 check-in ratings (90-day, 6-month, 12-month) have not been used by a real manager
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-11-13
+
+His picks, Nov 13. The check-in rating is one form shared by the manager's link and
+HR's dialog: four core values on a 1–10 scale (1 Does not meet, 2–3 Below the bar, 4–5
+Can develop, 6–7 Meets, 8–9 Exceeds, 10 Sets the standard; red 1–3, amber 4–5, green
+6–10), "Haven't seen it yet" per value, "How well has [name] learned their role so far?"
+(Behind / On track / Ahead), and hire-again asked last. NO answer needs a reason (his
+call: a required box makes supervisors switch to a higher score or Yes). The same form
+now also runs at 6 months and 12 months: the post-hire checklist gained 6-month and
+12-month check-ins, each with its own Rate and Send under its tick on Post-onboard, its
+own rating, and its own link. Each score is also stored as its interview word, so
+points and the interview comparison work as before.
+
+Checked locally on throwaway TEST hires (all rows removed):
+- a 1–3 and a No submit with no reason;
+- a 6-month link says 6-month and "at 6 months", saves its own rating and ticks only the
+  6-month check-in;
+- HR's 12-month save ticks the 12-month check-in;
+- a terminated person's 12-month link dies and the notice names the 12-month;
+- the tab shows the new columns, with Rate and Send under 90-day, 6-month and 12-month.
+
+The link page was looked at at phone width in the in-app browser, with a real tap.
+NOT checked: HR's rating dialog was not opened on screen, and no real manager has used
+the new form.
+
+**How to check it, about three minutes:** after the deploy, open Post-onboard, press
+**Send** under someone's 90-day (or 6-month) check-in, choose **Someone else** and
+type your own address. Fill it in on your phone, picking a 2 and "Haven't seen it yet"
+for one value, and send.
+
+**What would count as a pass:** nothing asks you to explain the 2 or a No; after
+sending, that check-in shows points, and the hover lists the 1–10 scores, "not seen" for
+the skipped one, and the role answer; that check-in is ticked and the others are not.
+
+---
+
 ## Closed
 
 ### 33. The candidate page's layout has not been saved since the boxes started fitting their content

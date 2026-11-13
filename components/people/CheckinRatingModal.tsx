@@ -1,21 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { clsx } from "clsx";
 import { Modal } from "@/components/ui/Modal";
 import { RichNoteField } from "@/components/richtext/RichNoteField";
-import { RATINGS, CORE_VALUE_NAMES, type RatingKey } from "@/lib/interviews/scorecard";
-import { VALUE_DESCRIPTIONS } from "@/lib/compliments/constants";
-import type { CheckinRatingView, CheckinRatings, CheckinTickResult } from "@/lib/onboarding/checkin-rating";
+import { CheckinScaleForm, type CheckinFormResult } from "@/components/people/CheckinScaleForm";
+import { RATED_CHECKINS, answersFromView, ratedCheckin, type CheckinRatingView, type CheckinTickResult } from "@/lib/onboarding/checkin-rating";
 
-// The 90-day check-in rating, entered by HR from the hiring manager's answers
-// (Quality of Hire, Dec 10 2026). The four core values on the interview
-// scorecard's own scale, so the two can be compared, plus "would you hire again?".
+// A check-in rating (90-day, 6-month or 12-month), entered by HR from the hiring
+// manager's answers (Quality of Hire). The SAME form the manager gets on the no-login
+// link (components/people/CheckinScaleForm.tsx): the four core values on the 1-10
+// scale, how well they have learned the role, and "would you hire again?". Each
+// score is also stored as its interview word, so the two can be compared.
 
 export function CheckinRatingModal({
   open,
   name,
   newHireId,
+  dayMark = 90,
   initial,
   onClose,
   onSaved,
@@ -24,31 +25,30 @@ export function CheckinRatingModal({
   open: boolean;
   name: string;
   newHireId: string;
+  /** Which check-in: 90 (the default), 180 or 365. */
+  dayMark?: number;
   initial: CheckinRatingView | null;
   onClose: () => void;
-  /** Saving also ticks the 90-day check-in done on the server; `tick` says what it did. */
+  /** Saving also ticks that check-in done on the server; `tick` says what it did. */
   onSaved: (rating: CheckinRatingView, tick: CheckinTickResult) => void;
-  /** Offered when the form opened from ticking "90-day" done: tick it without a rating. */
+  /** Offered when the form opened from ticking the check-in done: tick it without a rating. */
   onSkip?: () => void;
 }) {
-  const [ratings, setRatings] = useState<CheckinRatings>(initial?.ratings ?? {});
-  const [again, setAgain] = useState<boolean | null>(initial?.wouldHireAgain ?? null);
-  const [manager, setManager] = useState(initial?.managerName ?? "");
-  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const checkin = ratedCheckin(dayMark) ?? RATED_CHECKINS[0];
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A rating saved before the 1-10 form has only interview words; it opens with the
+  // scores blank so it is re-rated on the new scale rather than guessed into it.
+  const legacy = Boolean(initial && !initial.scale);
 
-  const pick = (value: string, key: RatingKey) => setRatings((cur) => ({ ...cur, [value]: cur[value] === key ? undefined : key }));
-  const nothing = !Object.values(ratings).some(Boolean) && again === null;
-
-  async function save() {
+  async function save(r: CheckinFormResult) {
     setBusy(true);
     setError(null);
     try {
       const res = await fetch("/api/onboarding/checkin-ratings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newHireId, ratings, wouldHireAgain: again, managerName: manager, notes })
+        body: JSON.stringify({ newHireId, dayMark: checkin.dayMark, answers: r.answers, managerName: r.managerName, notes: r.notes })
       });
       const data = (await res.json().catch(() => ({}))) as { message?: string; rating?: CheckinRatingView } & Partial<CheckinTickResult>;
       if (!res.ok || !data.rating) throw new Error(data.message || "Could not save the rating.");
@@ -60,87 +60,53 @@ export function CheckinRatingModal({
     }
   }
 
-  const choice = (active: boolean) =>
-    clsx(
-      "rounded border px-2.5 py-0.5 text-[11px] font-semibold transition hover:shadow-glow",
-      active ? "border-brand-lea bg-brand-lea text-white" : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
-    );
-
   return (
-    <Modal open={open} onClose={onClose} busy={busy} maxWidth="max-w-lg" title={`90-day check-in rating for ${name}`}>
+    <Modal open={open} onClose={onClose} busy={busy} maxWidth="max-w-xl" title={`${checkin.title} rating for ${name}`}>
       <div className="p-5 text-left">
-        <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">90-day check-in: {name}</h2>
-        <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
-          Enter the hiring manager&apos;s answers. The same four values are rated at the interview, so this shows how well the interview predicted.
-          Saving also marks the 90-day check-in done.
+        <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">{checkin.title}: {name}</h2>
+        <p className="mb-3 mt-1 text-xs text-brand-grey dark:text-slate-400">
+          Enter the hiring manager&apos;s answers. This is the same form the manager gets by email. Each score also counts as an interview word
+          (1–3 Does Not Meet, 4–5 Can Develop, 6–7 Meets, 8–10 Exceeds), so it can be compared with the interview. Saving also marks the {checkin.short} check-in done.
         </p>
-
-        <label className="mt-3 grid gap-1 text-xs font-semibold text-brand-lea dark:text-slate-100">
-          Hiring manager
-          <input
-            value={manager}
-            onChange={(e) => setManager(e.target.value)}
-            placeholder="Who gave these answers"
-            className="rounded border border-brand-lea/20 px-3 py-2 text-sm font-normal outline-none focus:border-brand-gold dark:border-white/10 dark:bg-brand-field dark:text-slate-100"
-          />
-        </label>
-
-        <div className="mt-3 space-y-2">
-          {CORE_VALUE_NAMES.map((value) => (
-            <div key={value} className="rounded border border-brand-gold/30 p-2.5 dark:border-brand-gold/20">
-              <div className="text-sm font-semibold text-brand-lea dark:text-slate-100">{value}</div>
-              {VALUE_DESCRIPTIONS[value] ? <p className="text-[11px] text-brand-grey dark:text-slate-400">{VALUE_DESCRIPTIONS[value]}</p> : null}
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {RATINGS.map((r) => (
-                  <button key={r.key} type="button" onClick={() => pick(value, r.key)} className={choice(ratings[value] === r.key)}>
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-3">
-          <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">Would you hire this person again?</span>
-          <div className="mt-1.5 flex gap-1.5">
-            <button type="button" onClick={() => setAgain(again === true ? null : true)} className={choice(again === true)}>
-              Yes
-            </button>
-            <button type="button" onClick={() => setAgain(again === false ? null : false)} className={choice(again === false)}>
-              No
-            </button>
-          </div>
-        </div>
-
-        <RichNoteField
-          className="mt-3"
-          label="Notes (optional)"
-          labelClassName="text-xs font-semibold text-brand-lea dark:text-slate-100"
-          value={notes}
-          onChange={setNotes}
-          minHeight={60}
+        {legacy ? (
+          <p className="mb-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+            This rating was saved before the 1–10 form, so the scores start blank. Saving replaces it.
+          </p>
+        ) : null}
+        <CheckinScaleForm
+          employeeName={name}
+          at={checkin.at}
+          initial={answersFromView(initial)}
+          initialManagerName={initial?.managerName ?? ""}
+          initialNotes={initial?.notes ?? ""}
+          nameLabel="Hiring manager"
+          namePlaceholder="Who gave these answers"
+          renderNotes={(value, onChange) => (
+            <RichNoteField
+              label="Notes (optional)"
+              labelClassName="text-xs font-semibold text-brand-lea dark:text-slate-100"
+              value={value}
+              onChange={onChange}
+              minHeight={60}
+            />
+          )}
+          busy={busy}
+          error={error}
+          submitLabel="Save and mark done"
+          footerStart={
+            <>
+              {onSkip ? (
+                <button type="button" onClick={onSkip} disabled={busy} className="mr-auto rounded px-3 py-2 text-xs font-semibold text-brand-grey transition hover:text-brand-lea disabled:opacity-50 dark:text-slate-400">
+                  Mark done without a rating
+                </button>
+              ) : null}
+              <button type="button" onClick={onClose} disabled={busy} className="rounded px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400">
+                Cancel
+              </button>
+            </>
+          }
+          onSubmit={(r) => void save(r)}
         />
-
-        {error ? <p className="mt-2 text-xs font-medium text-red-700 dark:text-red-300">{error}</p> : null}
-        <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
-          {onSkip ? (
-            <button type="button" onClick={onSkip} disabled={busy} className="mr-auto rounded px-3 py-2 text-xs font-semibold text-brand-grey transition hover:text-brand-lea disabled:opacity-50 dark:text-slate-400">
-              Mark done without a rating
-            </button>
-          ) : null}
-          <button type="button" onClick={onClose} disabled={busy} className="rounded px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400">
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => void save()}
-            disabled={busy || nothing}
-            className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-50"
-          >
-            {busy ? "Saving…" : "Save and mark done"}
-          </button>
-        </div>
       </div>
     </Modal>
   );
