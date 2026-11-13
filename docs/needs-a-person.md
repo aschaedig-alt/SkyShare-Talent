@@ -1349,7 +1349,8 @@ bucket with a 7 MB test video, then deleted. NOT checked: picking a video in the
 panel by hand (Chrome could not reach that dev server), and a real iPhone recording.
 
 **How to check it:** record your screen on the iPhone, open Feedback, choose **Add a
-screenshot, photo or screen recording**, pick the recording and send it.
+screenshot, photo or video** (label changed Nov 13), pick the recording from Videos in the photo
+library and send it. Also a pass check: the photo library offers Videos, not only Photos and Files.
 
 **What would count as a pass:** the button counts up to 100 percent, then the video plays
 on Settings, Feedback.

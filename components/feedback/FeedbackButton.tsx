@@ -67,13 +67,36 @@ const VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm"];
 const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
 const VIDEO_PART_BYTES = 3 * 1024 * 1024;
 
+// What the file picker is told to offer. "video/*", NOT the three exact types:
+// iPhone Safari decides whether its photo library shows Videos from this list,
+// and with only video/mp4 + video/quicktime listed it offered Photos and Files
+// but no videos at all (Nov 13 2026, his iPhone). The exact types are still
+// checked after picking, below and on the server.
+const PICKER_ACCEPT = [...IMAGE_TYPES, "video/*"].join(",");
+
+/**
+ * The video type of a picked file, or "" when it is not a video. Falls back to
+ * the extension because a file can arrive with an empty type (seen from the
+ * Files app); the server re-checks type and extension together.
+ */
+function videoMime(file: File): string {
+  const type = file.type.toLowerCase();
+  if (type.startsWith("video/")) return type;
+  if (type) return "";
+  const ext = file.name.toLowerCase().split(".").pop() ?? "";
+  if (ext === "mov") return "video/quicktime";
+  if (ext === "mp4" || ext === "m4v") return "video/mp4";
+  if (ext === "webm") return "video/webm";
+  return "";
+}
+
 function isVideo(file: File) {
-  return file.type.toLowerCase().startsWith("video/");
+  return videoMime(file) !== "";
 }
 
 function imageProblem(file: File): string | null {
   if (isVideo(file)) {
-    if (!VIDEO_TYPES.includes(file.type.toLowerCase())) return "Attach an MP4, MOV or WEBM video.";
+    if (!VIDEO_TYPES.includes(videoMime(file))) return "Attach an MP4, MOV or WEBM video.";
     if (file.size > MAX_VIDEO_BYTES) return "That video is larger than the 200 MB limit.";
     return null;
   }
@@ -85,7 +108,8 @@ function imageProblem(file: File): string | null {
 /** A filename the server will accept: the type decides the extension when the name has none. */
 function videoName(file: File) {
   if (/\.(mp4|mov|m4v|webm)$/i.test(file.name)) return file.name;
-  const ext = file.type === "video/quicktime" ? "mov" : file.type === "video/webm" ? "webm" : "mp4";
+  const mime = videoMime(file);
+  const ext = mime === "video/quicktime" ? "mov" : mime === "video/webm" ? "webm" : "mp4";
   return `${(file.name || "screen-recording").replace(/\.[^.]*$/, "")}.${ext}`;
 }
 
@@ -114,7 +138,7 @@ async function uploadVideo(feedbackId: string, file: File, onProgress: (sent: nu
   const done = await fetch(`/api/feedback/${feedbackId}/video`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ upload, size: file.size, filename: videoName(file), mimeType: file.type.toLowerCase() })
+    body: JSON.stringify({ upload, size: file.size, filename: videoName(file), mimeType: videoMime(file) })
   });
   if (!done.ok) {
     const data = await done.json().catch(() => null);
@@ -505,7 +529,7 @@ export function FeedbackButton({ variant = "rail" }: { variant?: FeedbackVariant
               <input
                 ref={fileInputRef}
                 type="file"
-                accept={[...IMAGE_TYPES, ...VIDEO_TYPES].join(",")}
+                accept={PICKER_ACCEPT}
                 className="hidden"
                 multiple
                 onChange={(e) => addImages([...(e.target.files ?? [])])}
@@ -553,7 +577,7 @@ export function FeedbackButton({ variant = "rail" }: { variant?: FeedbackVariant
                       reads as a missing feature. The picker works on both and on
                       a phone opens the camera / photo library, which is the thing
                       worth saying instead. */}
-                  {variant === "rail" ? "Add a screenshot or video — or just paste one" : "Add a screenshot, photo or screen recording"}
+                  {variant === "rail" ? "Add a screenshot or video — or just paste one" : "Add a screenshot, photo or video"}
                 </button>
               )}
 
