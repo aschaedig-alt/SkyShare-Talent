@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity/logger";
+import { cancelUnstartedHiresForClosedOffer } from "@/lib/offers/cancel-unstarted-hire";
 import { isOfferStatus, offerStatusLabel, offerStatusWord, type OfferSource, type OfferStatus } from "@/lib/offers/constants";
 
 /**
@@ -143,6 +144,15 @@ export async function recordOfferStatus(applicationId: string, t: OfferTransitio
     entityId: app.candidateId,
     metadata: { applicationId, from: app.offerStatus, to: t.status, source, at: when.toISOString() }
   });
+
+  // An offer that ended before day one also ends the onboarding record, so the
+  // person is never counted as an employee (Nov 13 2026 - see cancel-unstarted-hire.ts).
+  if (t.status === "DECLINED" || t.status === "NOT_SENT") {
+    const cancelled = await cancelUnstartedHiresForClosedOffer(app.candidateId, t.status, t.actor);
+    if (cancelled.length) {
+      return { ok: true, changed: true, message: `Their onboarding record was moved to Archived as did not start (${cancelled.join(", ")}).` };
+    }
+  }
 
   return { ok: true, changed: true };
 }
