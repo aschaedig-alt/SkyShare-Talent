@@ -23,6 +23,11 @@ const config = [
       "node_modules/**",
       "next-env.d.ts",
       "scripts/**/*.cjs",
+      // Session scratch (one-off checks, undo scripts). Never committed - no
+      // tracked file matches - but the pre-push hook lints the working tree, so
+      // a sibling's scratch script blocked two pushes on 2026-11-13.
+      "scripts/_*",
+      "scripts/_*/**",
       "public/vendor/**"
     ]
   },
