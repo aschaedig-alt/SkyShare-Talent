@@ -3,7 +3,7 @@ import { isPilotPosition } from "@/lib/orientation/defaults";
 import { getPrepDefaults } from "@/lib/orientation/prep-defaults";
 import { type CardFlagState, cardStateFor, getCardNotNeeded } from "@/lib/orientation/card-state";
 import { getChecklistFlags } from "@/lib/orientation/checklist-link";
-import { purposeCoversOrientation } from "@/lib/travel/constants";
+import { ONBOARDING_TRAVEL_PURPOSES, purposeCoversOrientation } from "@/lib/travel/constants";
 import { officeDayKey } from "@/lib/dates/display";
 import { getOrientationSends } from "@/lib/front/orientation-email";
 
@@ -688,5 +688,20 @@ export async function completeOrientationSession(id: string) {
       where: { newHireId: { in: hireIds }, key: "attended_orientation" },
       data: { status: "DONE", completedAt: new Date() }
     });
+    // Travel that read "Scheduled" — a booked onboarding trip — has happened
+    // once the session they travelled for is over (lib/onboarding/holds.ts).
+    // Only those: an attendee with no booked trip keeps whatever their travel
+    // step says, because nothing tells us it was arranged.
+    const booked = await prisma.travelTrip.findMany({
+      where: { newHireId: { in: hireIds }, status: "BOOKED", purpose: { in: [...ONBOARDING_TRAVEL_PURPOSES] } },
+      select: { newHireId: true }
+    });
+    const travelled = [...new Set(booked.map((t) => t.newHireId).filter((x): x is string => Boolean(x)))];
+    if (travelled.length) {
+      await prisma.onboardingTask.updateMany({
+        where: { newHireId: { in: travelled }, key: "travel_complete", status: "TODO" },
+        data: { status: "DONE", completedAt: new Date() }
+      });
+    }
   }
 }

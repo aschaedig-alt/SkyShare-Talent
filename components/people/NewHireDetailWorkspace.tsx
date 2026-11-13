@@ -42,6 +42,7 @@ import { PhoneInputError } from "@/components/shared/PhoneNumber";
 import { formatPhoneInput } from "@/lib/formatting/phone";
 import { RichNoteField } from "@/components/richtext/RichNoteField";
 import { CheckinRepliesPanel } from "@/components/people/CheckinReplyWorklist";
+import { isHandled } from "@/lib/onboarding/holds";
 
 function fmtDay(iso: string | null) {
   // Dates are stored as date-only (UTC midnight); format in UTC so the calendar
@@ -351,7 +352,8 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
   }
 
   const applicable = tasks.filter((t) => t.status !== "NA");
-  const doneCount = applicable.filter((t) => t.status === "DONE").length;
+  // Scheduled / Requested count as handled (lib/onboarding/holds.ts).
+  const doneCount = applicable.filter((t) => isHandled(t.status, t.hold ?? null)).length;
   const pct = applicable.length > 0 ? Math.round((doneCount / applicable.length) * 100) : 0;
 
   async function setTaskStatus(taskId: string, next: TaskView["status"]) {
@@ -819,7 +821,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     }
   ];
 
-  const outstanding = tasks.filter((t) => t.status === "TODO").length;
+  const outstanding = tasks.filter((t) => t.status === "TODO" && !t.hold).length;
 
   // Read live from tasks, not from a snapshot, so ticking travel N/A on the
   // Checklist tab changes this tab's chip without a reload.

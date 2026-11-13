@@ -13,6 +13,9 @@ import { getGridHiddenKeys } from "@/lib/data/onboarding-grid-config";
 import { computeTenure } from "@/lib/data/tenure";
 import { isOfferStepKey, offerStepCompletedAt, parseOfferSteps, type OfferSteps, type OfferApplicationView } from "@/lib/offers/steps";
 import { findOfferApplicationId } from "@/lib/offers/onboarding-sync";
+import { isFoldedTask, isHandled, taskHold, NO_HOLD_FACTS, type HoldFacts, type TaskHold } from "@/lib/onboarding/holds";
+import { defaultsToNotApplicable } from "@/lib/onboarding/role-defaults";
+import { ONBOARDING_TRAVEL_PURPOSES } from "@/lib/travel/constants";
 
 const DAY = 86_400_000;
 
@@ -32,6 +35,8 @@ export type TaskView = {
   group: string;
   order: number;
   status: "TODO" | "DONE" | "NA";
+  /** "Scheduled" / "Requested": still TODO, but nothing left to do. See lib/onboarding/holds.ts. */
+  hold?: TaskHold | null;
 };
 
 export type NewHireRow = {
@@ -233,12 +238,16 @@ function deriveStatus(hire: HireWithTasks, doneCount: number, applicableCount: n
   return "In progress";
 }
 
-function toRow(hire: HireWithTasks, now: number): NewHireRow {
-  const onboardingTasks = hire.tasks.filter((t) => t.group !== MAINTENANCE_GROUP && t.group !== CUSTOM_GROUP);
+function toRow(hire: HireWithTasks, now: number, facts: HoldFacts = NO_HOLD_FACTS): NewHireRow {
+  const onboardingTasks = hire.tasks.filter((t) => t.group !== MAINTENANCE_GROUP && t.group !== CUSTOM_GROUP && !isFoldedTask(t.key));
   const applicable = onboardingTasks.filter((t) => t.status !== "NA");
-  const doneCount = applicable.filter((t) => t.status === "DONE").length;
+  // A Scheduled or Requested step counts with the done ones: the hire is not
+  // waiting on anybody for it (lib/onboarding/holds.ts). This is what lets a hire
+  // whose only open step is an orientation they are booked on read as Ready.
+  const held = (t: HireWithTasks["tasks"][number]) => taskHold(t, hire, facts);
+  const doneCount = applicable.filter((t) => isHandled(t.status, held(t))).length;
   const applicableCount = applicable.length;
-  const nextTask = [...onboardingTasks].sort((a, b) => a.order - b.order).find((t) => t.status === "TODO");
+  const nextTask = [...onboardingTasks].sort((a, b) => a.order - b.order).find((t) => t.status === "TODO" && !held(t));
   // Rehire-aware tenure: bridge gaps <= 3 months, reset for longer (see lib/data/tenure).
   // Fall back to a single implicit stint (hire start -> termination) when no stints exist.
   const stints = hire.employmentStints.length
@@ -385,9 +394,10 @@ function buildDashboard(
   travelByHire: Map<string, HireTravelStatus>,
   recentlyOnboarded: HireWithTasks[] = [],
   hiddenIds: Set<string> = new Set(),
-  owed: ReimbursementOwed[] = []
+  owed: ReimbursementOwed[] = [],
+  holdFacts: Map<string, HoldFacts> = new Map()
 ): OnboardingDashboard {
-  const rows = active.map((h) => ({ hire: h, row: toRow(h, now) }));
+  const rows = active.map((h) => ({ hire: h, row: toRow(h, now, holdFacts.get(h.id)) }));
 
   const startingSoon = rows.filter(
     ({ row }) => row.startDate && new Date(row.startDate).getTime() - now <= 7 * DAY && new Date(row.startDate).getTime() - now >= -DAY
@@ -736,12 +746,15 @@ export async function getOnboardingWorkspaceData(stage: HireStage = "ACTIVE"): P
     orderBy: [{ startDate: "asc" }, { name: "asc" }]
   })) as HireWithTasks[];
 
-  const rows = hires.map((h) => toRow(h, now));
+  // Holds only ever apply to someone still onboarding, so the other two lists
+  // skip the two queries.
+  const holdFacts = stage === "ACTIVE" ? await loadHoldFacts(hires.map((h) => h.id)) : new Map<string, HoldFacts>();
+  const rows = hires.map((h) => toRow(h, now, holdFacts.get(h.id)));
 
   let dashboard: OnboardingDashboard | null = null;
   if (stage === "ACTIVE") {
     const travelByHire = await travelStatusByHire(hires.map((h) => h.id));
-    dashboard = buildDashboard(hires, now, travelByHire);
+    dashboard = buildDashboard(hires, now, travelByHire, [], new Set(), [], holdFacts);
   }
 
   return { counts: { active, postOnboard: post, archived }, rows, dashboard };
@@ -810,10 +823,22 @@ export async function getNewHireDetail(id: string): Promise<NewHireDetail | null
   const candidate = link?.candidateId
     ? await prisma.candidate.findUnique({ where: { id: link.candidateId }, select: { displayName: true } })
     : null;
-  const row = toRow(hire, Date.now());
+  const facts = hire.stage === "ACTIVE" ? (await loadHoldFacts([hire.id])).get(hire.id) ?? NO_HOLD_FACTS : NO_HOLD_FACTS;
+  const row = toRow(hire, Date.now(), facts);
   const tasks: TaskView[] = [...hire.tasks]
+    // The folded "Scheduled for orientation" step is said by the Attended
+    // orientation row now (lib/onboarding/holds.ts), so it is not listed twice.
+    .filter((t) => !isFoldedTask(t.key))
     .sort((a, b) => a.order - b.order)
-    .map((t) => ({ id: t.id, key: t.key, label: t.label, group: t.group, order: t.order, status: t.status as TaskView["status"] }));
+    .map((t) => ({
+      id: t.id,
+      key: t.key,
+      label: t.label,
+      group: t.group,
+      order: t.order,
+      status: t.status as TaskView["status"],
+      hold: taskHold(t, hire, facts)
+    }));
   return {
     ...row,
     tasks,
@@ -863,6 +888,51 @@ export function defaultTaskCreateData(
   });
 }
 
+/**
+ * The facts a "Scheduled" hold is read from, for many hires in two queries: who
+ * is on an UPCOMING orientation session, and who has an onboarding trip BOOKED.
+ * See lib/onboarding/holds.ts.
+ */
+export async function loadHoldFacts(hireIds: string[]): Promise<Map<string, HoldFacts>> {
+  const out = new Map<string, HoldFacts>();
+  if (hireIds.length === 0) return out;
+  const [attendees, trips] = await Promise.all([
+    prisma.orientationAttendee.findMany({
+      where: { newHireId: { in: hireIds }, session: { status: "UPCOMING" } },
+      select: { newHireId: true }
+    }),
+    prisma.travelTrip.findMany({
+      where: { newHireId: { in: hireIds }, status: "BOOKED", purpose: { in: [...ONBOARDING_TRAVEL_PURPOSES] } },
+      select: { newHireId: true }
+    })
+  ]);
+  const onSession = new Set(attendees.map((a) => a.newHireId));
+  const booked = new Set(trips.map((t) => t.newHireId).filter((id): id is string => Boolean(id)));
+  for (const id of hireIds) out.set(id, { onUpcomingSession: onSession.has(id), tripBooked: booked.has(id) });
+  return out;
+}
+
+/**
+ * Start the steps this hire's role rules out at N/A (lib/onboarding/role-defaults.ts).
+ * Called once, right after a hire's checklist is created — built-ins AND custom
+ * milestones, since the iPad is a custom one. Only touches steps still at To do,
+ * so it can never overwrite something that was ticked.
+ */
+export async function applyRoleDefaults(hireId: string): Promise<string[]> {
+  const hire = await prisma.newHire.findUnique({
+    where: { id: hireId },
+    select: { position: true, department: true, tasks: { where: { status: "TODO" }, select: { key: true, label: true } } }
+  });
+  if (!hire) return [];
+  const keys = hire.tasks.filter((t) => defaultsToNotApplicable(t.key, t.label, hire.position, hire.department)).map((t) => t.key);
+  if (keys.length === 0) return [];
+  await prisma.onboardingTask.updateMany({
+    where: { newHireId: hireId, key: { in: keys }, status: "TODO" },
+    data: { status: "NA", completedAt: null }
+  });
+  return keys;
+}
+
 // When every maintenance check-in (30/60/90 + benefits) is done, a post-onboard
 // employee is finished with onboarding, so move them to Archived — but keep their
 // employmentStatus (they are a CURRENT employee, not terminated). The Archived
@@ -907,14 +977,18 @@ export async function getActiveDashboard(): Promise<OnboardingDashboard> {
     }) as Promise<HireWithTasks[]>,
     getDashboardHiddenIds()
   ]);
-  const [travelByHire, owed] = await Promise.all([travelStatusByHire(hires.map((h) => h.id)), reimbursementsOwed()]);
-  return buildDashboard(hires, now, travelByHire, recentlyOnboarded, new Set(hiddenIds), owed);
+  const [travelByHire, owed, holdFacts] = await Promise.all([
+    travelStatusByHire(hires.map((h) => h.id)),
+    reimbursementsOwed(),
+    loadHoldFacts(hires.map((h) => h.id))
+  ]);
+  return buildDashboard(hires, now, travelByHire, recentlyOnboarded, new Set(hiddenIds), owed, holdFacts);
 }
 
 // ---- Grid + Milestones (active hires only) ----
 
 export type GridTaskStatus = "TODO" | "DONE" | "NA";
-export type GridTask = { id: string; key: string; status: GridTaskStatus };
+export type GridTask = { id: string; key: string; status: GridTaskStatus; hold?: TaskHold | null };
 export type GridHire = {
   id: string;
   name: string;
@@ -944,16 +1018,25 @@ export async function getActiveGridHires(): Promise<GridHire[]> {
     getGridHiddenKeys()
   ]);
 
+  const holdFacts = await loadHoldFacts(hires.map((h) => h.id));
+
   return hires.map((h) => {
-    const row = toRow(h, now);
+    const facts = holdFacts.get(h.id) ?? NO_HOLD_FACTS;
+    const row = toRow(h, now, facts);
     const tasks = h.tasks
       .filter((t) => t.group !== MAINTENANCE_GROUP)
       .sort((a, b) => a.order - b.order)
-      .map((t) => ({ id: t.id, key: t.key, status: t.status as GridTaskStatus }));
+      .map((t) => ({ id: t.id, key: t.key, status: t.status as GridTaskStatus, hold: taskHold(t, h, facts) }));
     // Progress counts the visible built-in checklist only — a hidden task no
     // longer drags the percentage, and custom tasks are extras that don't count.
+    // A Scheduled / Requested step counts as handled, as on the list.
     const counted = h.tasks.filter(
-      (t) => t.group !== MAINTENANCE_GROUP && t.group !== CUSTOM_GROUP && !hiddenKeys.has(t.key) && t.status !== "NA"
+      (t) =>
+        t.group !== MAINTENANCE_GROUP &&
+        t.group !== CUSTOM_GROUP &&
+        !hiddenKeys.has(t.key) &&
+        !isFoldedTask(t.key) &&
+        t.status !== "NA"
     );
     return {
       id: h.id,
@@ -968,7 +1051,7 @@ export async function getActiveGridHires(): Promise<GridHire[]> {
       ssEmail: h.ssEmail,
       personalEmail: h.personalEmail,
       status: row.status,
-      doneCount: counted.filter((t) => t.status === "DONE").length,
+      doneCount: counted.filter((t) => isHandled(t.status, taskHold(t, h, facts))).length,
       applicableCount: counted.length,
       tasks
     };

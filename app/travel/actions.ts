@@ -250,8 +250,14 @@ export async function updateTrip(tripId: string, patch: Record<string, unknown>)
   // than a hire. Crew travel is booked for people who ARE hires, so booking a
   // pilot's line trip would otherwise have marked their orientation travel
   // arranged. See ONBOARDING_TRAVEL_PURPOSES.
+  //
+  // BOOKED NO LONGER TICKS IT (2026-11-13). A booked trip now reads "Scheduled"
+  // on the row and counts as handled without being marked done
+  // (lib/onboarding/holds.ts); the step turns DONE when the trip is marked
+  // completed here, or when the orientation session is marked complete
+  // (completeOrientationSession).
   if (
-    (data.status === "BOOKED" || data.status === "COMPLETED") &&
+    data.status === "COMPLETED" &&
     trip.newHireId &&
     (ONBOARDING_TRAVEL_PURPOSES as readonly string[]).includes(trip.purpose)
   ) {

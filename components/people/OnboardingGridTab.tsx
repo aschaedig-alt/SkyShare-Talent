@@ -44,8 +44,10 @@ function fmtDate(iso: string | null) {
   return iso ? new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(iso)) : "—";
 }
 
-function Glyph({ status }: { status: GridTaskStatus }) {
-  if (status === "DONE")
+function Glyph({ status, hold }: { status: GridTaskStatus; hold?: string | null }) {
+  // Scheduled / Requested reads as done here, as it does on the hire's checklist
+  // (lib/onboarding/holds.ts); the cell's tooltip names which.
+  if (status === "DONE" || (status === "TODO" && hold))
     return (
       <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
         <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true">
@@ -345,10 +347,10 @@ export function OnboardingGridTab({
                                 type="button"
                                 onClick={() => cycle(h.id, task.id, task.status)}
                                 className="inline-flex h-8 min-w-0 flex-1 items-center justify-center transition-colors hover:bg-brand-gold/10 dark:hover:bg-white/5"
-                                aria-label={`${def.label} for ${h.name} — ${STATUS_WORD[task.status]}, click to change`}
-                                title="Click to change"
+                                aria-label={`${def.label} for ${h.name} — ${task.status === "TODO" && task.hold ? task.hold : STATUS_WORD[task.status]}, click to change`}
+                                title={task.status === "TODO" && task.hold ? `${task.hold} — click to change` : "Click to change"}
                               >
-                                <Glyph status={task.status} />
+                                <Glyph status={task.status} hold={task.hold} />
                               </button>
                               {remind ? (
                                 <span className="shrink-0 pr-1">

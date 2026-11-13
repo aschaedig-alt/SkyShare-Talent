@@ -67,7 +67,11 @@ export const ONBOARDING_TASKS: OnboardingTaskDef[] = [
   { key: "drug_screen", label: "Email docs to ITS for pre-employment drug screen", group: "SYSTEMS" },
 
   { key: "attended_orientation", label: "Attended orientation", group: "ORIENTATION" },
-  { key: "travel_complete", label: "Travel accommodations complete", group: "ORIENTATION" },
+  // "complete" dropped from the label 2026-11-13: a booked trip now reads
+  // "Scheduled" on this row and done means the travel happened (lib/onboarding/holds.ts).
+  // The KEY stays travel_complete — stored rows, the trip-booking tick and the
+  // sheet importer all hang off it.
+  { key: "travel_complete", label: "Travel accommodations", group: "ORIENTATION" },
   // DAY OF ORIENTATION, deliberately not earlier. The contacts link hands over
   // staff names, titles, phone numbers and email addresses, and a hire who has
   // been offered and welcomed may still never start — so it is not in the welcome
@@ -175,6 +179,7 @@ export const SHEET_LABEL_TO_KEY: Record<string, string> = {
   "attended orientation": "attended_orientation",
   "travel accomodations complete": "travel_complete",
   "travel accommodations complete": "travel_complete",
+  "travel accommodations": "travel_complete",
   "send new hire contacts link (day of orientation)": "contacts_link_sent",
   "send new hire contacts link": "contacts_link_sent",
   "contacts link": "contacts_link_sent"

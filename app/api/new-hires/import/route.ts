@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
-import { defaultTaskCreateData } from "@/lib/data/onboarding";
+import { applyRoleDefaults, defaultTaskCreateData } from "@/lib/data/onboarding";
 import { ensureCustomMilestoneTasks } from "@/lib/data/onboarding-milestones";
 import { getChecklistPlacement } from "@/lib/data/onboarding-grid-config";
 import { syncCardStatusFromChecklist } from "@/lib/business-cards/checklist-sync";
@@ -215,6 +215,8 @@ export async function POST(request: Request) {
       });
       if (!terminated) {
         await ensureCustomMilestoneTasks(hire.id, placement);
+        // Role defaults first, so a status the sheet actually states still wins.
+        await applyRoleDefaults(hire.id);
         taskChanges += await applyTasks(hire.id, incomingTasks);
         await applyPilotSupervisorDefault(hire.id);
       }

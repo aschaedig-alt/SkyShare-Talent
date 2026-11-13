@@ -10,6 +10,7 @@ import type { TaskView } from "@/lib/data/onboarding";
 import type { ChecklistSection } from "@/lib/data/onboarding-grid-config";
 import { OfferControl } from "@/components/candidates/OfferControl";
 import type { OfferApplicationView } from "@/lib/offers/steps";
+import { isHandled } from "@/lib/onboarding/holds";
 
 // The whole checklist on one tab, group by group, with the next outstanding item
 // called out above it.
@@ -26,6 +27,11 @@ const STATUS_BTN: Record<TaskView["status"], { label: string; on: string }> = {
   TODO: { label: "To do", on: "bg-brand-lea text-white" },
   NA: { label: "N/A", on: "bg-brand-grey text-white" }
 };
+
+/** A Scheduled / Requested row: stored To do, but nothing left to do on it — the
+ * business card's "On the next order", for orientation, travel, and a pilot's
+ * iPad and credit card. See lib/onboarding/holds.ts. */
+const handled = (t: TaskView) => isHandled(t.status, t.hold ?? null);
 
 /** The six checklist keys the offer stepper already owns. */
 const OFFER_KEYS = new Set(["verbal_offer", "draft_offer", "supervisor_signs", "president_signs", "offer_letter_sent", "candidate_signed"]);
@@ -90,7 +96,7 @@ export function OnboardingChecklist({
   }, [tasks, sections]);
 
   const applicable = tasks.filter((t) => t.status !== "NA");
-  const doneCount = applicable.filter((t) => t.status === "DONE").length;
+  const doneCount = applicable.filter(handled).length;
   const naCount = tasks.length - applicable.length;
   const pct = applicable.length > 0 ? Math.round((doneCount / applicable.length) * 100) : 0;
 
@@ -114,10 +120,10 @@ export function OnboardingChecklist({
       const present = rows.filter((t): t is TaskView => Boolean(t));
       const na = present.filter((t) => t.status === "NA").length;
       out.set(g.key, {
-        done: present.filter((t) => t.status === "DONE").length,
+        done: present.filter(handled).length,
         applicable: present.length - na,
         na,
-        complete: rows.length > 0 && rows.every((t) => t && t.status !== "TODO")
+        complete: rows.length > 0 && rows.every((t) => t && (t.status !== "TODO" || Boolean(t.hold)))
       });
     }
     return out;
@@ -137,7 +143,7 @@ export function OnboardingChecklist({
   const next = useMemo(() => {
     for (const g of groups) {
       if (g.key === "OFFER") continue;
-      const t = g.items.find((x) => x.status === "TODO");
+      const t = g.items.find((x) => x.status === "TODO" && !x.hold);
       if (t) return { task: t, group: g };
     }
     return null;
@@ -317,6 +323,14 @@ export function OnboardingChecklist({
                 <div className="space-y-1.5">
                   {items.map((t) => {
                     const isNext = next?.task.id === t.id;
+                    // A held row LOOKS done, exactly like the business card's
+                    // "On the next order": struck through, Done lit, and a tag
+                    // saying why. The stored status is still To do, which is what
+                    // lets the tag clear itself — the session being completed, the
+                    // trip being completed, or the iPad / card being ticked on the
+                    // orientation page all write Done, and the tag goes.
+                    const held = t.status === "TODO" && t.hold ? t.hold : null;
+                    const shown = held ? "DONE" : t.status;
                     return (
                       <div
                         key={t.id}
@@ -325,10 +339,26 @@ export function OnboardingChecklist({
                           isNext ? "bg-gradient-to-r from-brand-gold/15 to-brand-gold/[0.03] ring-1 ring-brand-gold/40" : "border border-brand-lea/10 dark:border-white/10"
                         )}
                       >
-                        <span className={clsx("min-w-0 flex-1 text-sm", t.status === "DONE" ? "text-brand-grey line-through dark:text-slate-400" : t.status === "NA" ? "text-brand-grey/70 dark:text-slate-500" : clsx("text-brand-black dark:text-slate-100", isNext && "font-semibold text-brand-lea"))}>
+                        <span className={clsx("min-w-0 flex-1 text-sm", shown === "DONE" ? "text-brand-grey line-through dark:text-slate-400" : t.status === "NA" ? "text-brand-grey/70 dark:text-slate-500" : clsx("text-brand-black dark:text-slate-100", isNext && "font-semibold text-brand-lea"))}>
                           {t.label}
                         </span>
                         <div className="flex shrink-0 items-center gap-2">
+                          {held ? (
+                            // The same tag, in the same classes, as the business
+                            // card's "On the next order" (NewHireDetailWorkspace).
+                            <span
+                              title={
+                                held === "Scheduled"
+                                  ? t.key === "attended_orientation"
+                                    ? "Booked on an upcoming orientation. Clears when the session is marked complete."
+                                    : "Trip booked. Clears when the trip or the orientation session is marked complete."
+                                  : "Pilots always get one. Clears when it is ticked on the orientation page."
+                              }
+                              className="rounded bg-brand-sweet/25 px-2 py-0.5 text-[10px] font-semibold text-brand-lea dark:bg-brand-sweet/15 dark:text-brand-sweet"
+                            >
+                              {held}
+                            </span>
+                          ) : null}
                           {renderTaskExtra?.(t)}
                           <div className="flex shrink-0 overflow-hidden rounded border border-brand-lea/15 dark:border-white/10">
                             {(["TODO", "DONE", "NA"] as const).map((s) => (
@@ -338,7 +368,7 @@ export function OnboardingChecklist({
                                 onClick={() => onSetStatus(t.id, s)}
                                 className={clsx(
                                   "px-2.5 py-1 text-xs font-semibold transition hover:shadow-glow",
-                                  t.status === s ? STATUS_BTN[s].on : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-brand-panel dark:text-slate-400"
+                                  shown === s ? STATUS_BTN[s].on : "bg-white text-brand-grey hover:bg-brand-cloudDancer/60 dark:bg-brand-panel dark:text-slate-400"
                                 )}
                               >
                                 {STATUS_BTN[s].label}

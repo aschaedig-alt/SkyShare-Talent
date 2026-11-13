@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiPermission } from "@/lib/auth/route-auth";
-import { defaultTaskCreateData } from "@/lib/data/onboarding";
+import { applyRoleDefaults, defaultTaskCreateData } from "@/lib/data/onboarding";
 import { ensureCustomMilestoneTasks } from "@/lib/data/onboarding-milestones";
 import { getChecklistPlacement } from "@/lib/data/onboarding-grid-config";
 import { ensureInitialRole } from "@/lib/data/ensure-initial-role";
@@ -161,6 +161,10 @@ export async function POST(request: Request) {
     // on this checklist as they were left — after the custom milestones above,
     // because those are the rows the PRD steps live on.
     if (candidateId) await carryPreHireTicksToHire(candidateId, hire.id);
+    // Steps this person's role rules out start at N/A — pilot documents, the
+    // drug screen, the iPad (lib/onboarding/role-defaults.ts). To do only, so
+    // nothing carried over above is touched.
+    await applyRoleDefaults(hire.id);
     // Seed the first role-journey entry from position + start date (if both set).
     await ensureInitialRole(hire.id);
     // A pilot reports to the Chief Pilot, dotted-line to the Assistant Chief
