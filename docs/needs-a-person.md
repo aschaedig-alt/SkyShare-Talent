@@ -1300,7 +1300,7 @@ scroll; each scorecard change shows in the drawer straight away, with no reload.
 
 ### 57. The 1–10 check-in ratings (90-day, 6-month, 12-month) have not been used by a real manager
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN - deployed Nov 13 (dc4c33b), not yet used by a real manager
 **Added:** 2026-11-13
 
 His picks, Nov 13. The check-in rating is one form shared by the manager's link and
@@ -1334,6 +1334,25 @@ for one value, and send.
 **What would count as a pass:** nothing asks you to explain the 2 or a No; after
 sending, that check-in shows points, and the hover lists the 1–10 scores, "not seen" for
 the skipped one, and the role answer; that check-in is ticked and the others are not.
+
+---
+
+### 58. A screen recording sent from an iPhone has not been played back on the Feedback page
+
+**Status:** OPEN
+**Added:** 2026-11-13
+
+Feedback now accepts screen recordings (MP4, MOV or WEBM up to 200 MB) from the same Add
+button (feedback cmwfkklis, from an iPhone). The video goes up in 3 MB parts through the app
+and is stitched together in S3. It was tested end to end on the dev server against the live
+bucket with a 7 MB test video, then deleted. NOT checked: picking a video in the feedback
+panel by hand (Chrome could not reach that dev server), and a real iPhone recording.
+
+**How to check it:** record your screen on the iPhone, open Feedback, choose **Add a
+screenshot, photo or screen recording**, pick the recording and send it.
+
+**What would count as a pass:** the button counts up to 100 percent, then the video plays
+on Settings, Feedback.
 
 ---
 

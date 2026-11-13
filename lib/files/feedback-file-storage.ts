@@ -41,6 +41,43 @@ export function isSupportedFeedbackImage(filename: string, mimeType: string | nu
   return extensionOk && mimeOk;
 }
 
+// ---------------------------------------------------------------------------
+// Screen recordings (feedback cmwfkklis, Nov 13 2026: "It won't let me add a
+// video with feedback", sent from an iPhone).
+//
+// A phone recording is tens of MB, far past Vercel's ~4.5 MB request limit, so a
+// video is NOT part of the feedback post. The report is saved first, then the
+// video arrives in FEEDBACK_VIDEO_PART_BYTES parts (app/api/feedback/[id]/video)
+// and is stitched into one object. Stored as a FeedbackImage row - the table
+// holds every attachment; mimeType tells a video from a picture.
+//
+// iPhone recordings come as .mov (video/quicktime) or .mp4; webm is what a
+// desktop browser's own recorder makes. Nothing else: these are played back
+// inside an admin page.
+// ---------------------------------------------------------------------------
+const VIDEO_MIME_TYPES = new Set(["video/mp4", "video/quicktime", "video/webm"]);
+const VIDEO_EXTENSIONS = new Set([".mp4", ".mov", ".m4v", ".webm"]);
+
+/** 200 MB: a few minutes of phone screen recording. Written to the live bucket. */
+export const MAX_FEEDBACK_VIDEO_BYTES = 200 * 1024 * 1024;
+/** Under Vercel's ~4.5 MB request body ceiling with room to spare (same as the Paycom upload). */
+export const FEEDBACK_VIDEO_PART_BYTES = 3 * 1024 * 1024;
+
+export function isSupportedFeedbackVideo(filename: string, mimeType: string | null): boolean {
+  const extensionOk = VIDEO_EXTENSIONS.has(path.extname(filename).toLowerCase());
+  const mimeOk = Boolean(mimeType && VIDEO_MIME_TYPES.has(mimeType.toLowerCase()));
+  return extensionOk && mimeOk;
+}
+
+export function isFeedbackVideoMime(mimeType: string | null): boolean {
+  return Boolean(mimeType && VIDEO_MIME_TYPES.has(mimeType.toLowerCase()));
+}
+
+/** Where one part of an in-progress video upload is kept until it is stitched together. */
+export function feedbackVideoPartKey(feedbackId: string, uploadId: string, part: number) {
+  return `feedback-files/${feedbackId}/upload-${uploadId}/part-${String(part).padStart(4, "0")}`;
+}
+
 /**
  * A safe Content-Type to serve a stored feedback image back with. Never trust the
  * value we recorded at upload time: pin it to the known list, and fall back to a
@@ -48,5 +85,5 @@ export function isSupportedFeedbackImage(filename: string, mimeType: string | nu
  */
 export function safeFeedbackImageContentType(mimeType: string | null): string {
   const normalized = mimeType?.toLowerCase() ?? "";
-  return IMAGE_MIME_TYPES.has(normalized) ? normalized : "application/octet-stream";
+  return IMAGE_MIME_TYPES.has(normalized) || VIDEO_MIME_TYPES.has(normalized) ? normalized : "application/octet-stream";
 }

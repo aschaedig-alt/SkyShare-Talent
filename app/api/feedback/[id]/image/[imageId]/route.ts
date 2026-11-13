@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getFileStorageAdapter } from "@/lib/files/storage-adapter";
+import { createStoredFileReadUrl, getFileStorageAdapter } from "@/lib/files/storage-adapter";
 import { requireApiPermission } from "@/lib/auth/route-auth";
-import { safeFeedbackImageContentType } from "@/lib/files/feedback-file-storage";
+import { isFeedbackVideoMime, safeFeedbackImageContentType } from "@/lib/files/feedback-file-storage";
 
 type RouteContext = { params: Promise<{ id: string; imageId: string }> };
 
@@ -27,6 +27,19 @@ export async function GET(_request: Request, context: RouteContext) {
     });
     if (!image) {
       return NextResponse.json({ message: "That image is not attached to this feedback." }, { status: 404 });
+    }
+
+    // A screen recording is far bigger than a Vercel response may be (~4.5 MB),
+    // so it is played from a ten-minute signed S3 link instead. The gate above
+    // still decides who gets the link; the link itself pins the content type.
+    // S3 also answers the Range requests Safari needs to play a video.
+    if (isFeedbackVideoMime(image.mimeType)) {
+      const url = await createStoredFileReadUrl({
+        storageKey: image.storageKey,
+        contentType: safeFeedbackImageContentType(image.mimeType),
+        filename: image.filename
+      });
+      if (url) return NextResponse.redirect(url, { status: 302, headers: { "Cache-Control": "private, no-store" } });
     }
 
     const { bytes } = await getFileStorageAdapter().read(image.storageKey);

@@ -9,7 +9,6 @@ import {
   type ScorecardItem
 } from "@/lib/interviews/scorecard";
 import { parseStringArray } from "@/lib/json";
-import { questionPlain } from "@/lib/interview-questions/rich";
 import type { ViewerScope } from "@/lib/auth/viewer-scope";
 import { isCandidateVisible } from "@/lib/auth/candidate-scope";
 
@@ -47,7 +46,6 @@ export type InterviewDetail = {
   departmentKey: DeptKey | null;
   scorecards: ScorecardView[];
   aggregate: { score: Points | null; count: number; recommendations: Partial<Record<RecommendationKey, number>> };
-  bankQuestions: string[];
   interviewers: Array<{ name: string; role: string; departments: string[] }>;
 };
 
@@ -143,22 +141,9 @@ export async function getInterviewDetail(id: string, viewer: ViewerScope | null)
     if (card.recommendation) recommendations[card.recommendation] = (recommendations[card.recommendation] ?? 0) + 1;
   }
 
-  // Active bank questions suited to this interview's department (empty tags = all).
-  const allActive = await prisma.interviewQuestion.findMany({
-    where: { isActive: true },
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
-    select: { text: true, departmentsJson: true }
-  });
-  const bankQuestions = allActive
-    .filter((q) => {
-      if (!departmentKey) return true;
-      const depts = parseStringArray(q.departmentsJson);
-      return depts.length === 0 || depts.includes(departmentKey);
-    })
-    // Scorecard items are plain text (an editable input), and bank questions are
-    // rich text since Nov 2026 — so they are flattened here, not shown as HTML.
-    .map((q) => questionPlain(q.text))
-    .filter(Boolean);
+  // The Question Bank is NOT loaded here any more. Scorecards used to pre-fill
+  // every bank question as a rating line; since Nov 13 2026 they rate the core
+  // values only (his call - the bank holds questions to ask, not to score).
 
   const hosts = await prisma.bookingHost.findMany({
     where: { isActive: true },
@@ -196,7 +181,6 @@ export async function getInterviewDetail(id: string, viewer: ViewerScope | null)
       count: scorecards.length,
       recommendations
     },
-    bankQuestions,
     interviewers
   };
 }

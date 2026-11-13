@@ -26,8 +26,6 @@ import { formatDateTimeWithZone } from "@/lib/calendar/format";
 import { RichTextView } from "@/components/richtext/RichTextEditor";
 import { interviewOutcomeLabel, interviewOutcomeTone } from "@/lib/interviews/constants";
 
-const inputCls = "w-full rounded border border-brand-lea/20 px-3 py-2 text-sm outline-none transition focus:border-brand-gold dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100";
-
 function recoTone(key: RecommendationKey): string {
   switch (key) {
     case "STRONG_YES":
@@ -60,30 +58,29 @@ function ScorecardEditor({
   const [interviewer, setInterviewer] = useState(initial?.interviewer ?? "");
   // The four core values always lead, on new scorecards and on older ones when
   // they are edited, so every scorecard rates them (Quality of Hire, Nov 10 2026).
+  //
+  // A scorecard rates the core values only. It used to pre-fill every active
+  // Question Bank question as a rating line too (19 for crew), which is not what
+  // the bank is for - it holds questions to ASK - and on a phone it buried the
+  // four values under a wall of questions. His call, Nov 13 2026: remove them
+  // entirely. Questions an older scorecard actually RATED are kept and shown
+  // (282 imported scorecards are rated on questions alone); unrated ones are
+  // dropped, since they carry no score.
   const [items, setItems] = useState<ScorecardItem[]>(() =>
-    withCoreValues(initial ? initial.items.map((i) => ({ ...i })) : detail.bankQuestions.map((q) => ({ q, rating: null as RatingKey | null })))
+    withCoreValues(initial ? initial.items.filter((i) => i.value || i.rating).map((i) => ({ ...i })) : [])
   );
   const [recommendation, setRecommendation] = useState<string>(initial?.recommendation ?? "");
   const [comments, setComments] = useState(initial?.comments ?? "");
-  const [newQ, setNewQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function setRating(idx: number, rating: RatingKey) {
     setItems((cur) => cur.map((it, i) => (i === idx ? { ...it, rating: it.rating === rating ? null : rating } : it)));
   }
-  function setText(idx: number, q: string) {
-    setItems((cur) => cur.map((it, i) => (i === idx ? { ...it, q } : it)));
-  }
   function removeItem(idx: number) {
     setItems((cur) => cur.filter((_, i) => i !== idx));
   }
-  function addItem() {
-    const q = newQ.trim();
-    if (!q) return;
-    setItems((cur) => [...cur, { q, rating: null }]);
-    setNewQ("");
-  }
+  const hasQuestions = items.some((it) => !it.value);
 
   async function save() {
     setBusy(true);
@@ -158,13 +155,14 @@ function ScorecardEditor({
         </div>
       </div>
 
+      {hasQuestions ? (
       <div className="mt-3">
-        <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">Questions &amp; ratings</span>
+        <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">Questions rated on this scorecard earlier</span>
         <div className="mt-1.5 space-y-2">
           {items.map((item, idx) => item.value ? null : (
             <div key={idx} className="rounded border border-brand-lea/10 bg-white p-2.5 dark:border-white/10 dark:bg-brand-panel">
               <div className="flex items-start gap-2">
-                <input value={item.q} onChange={(e) => setText(idx, e.target.value)} className={`${inputCls} flex-1`} />
+                <span className="flex-1 text-sm text-brand-lea dark:text-slate-100">{item.q}</span>
                 <button type="button" onClick={() => removeItem(idx)} aria-label="Remove" className="mt-1 rounded p-1 text-brand-grey transition hover:text-red-600 dark:text-slate-400 dark:hover:text-red-300">
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -190,24 +188,8 @@ function ScorecardEditor({
             </div>
           ))}
         </div>
-        <div className="mt-2 flex gap-2">
-          <input
-            value={newQ}
-            onChange={(e) => setNewQ(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addItem();
-              }
-            }}
-            placeholder="Add a question to rate"
-            className={`${inputCls} flex-1`}
-          />
-          <button type="button" onClick={addItem} disabled={!newQ.trim()} className="inline-flex items-center gap-1 rounded border border-brand-lea/20 px-2.5 py-1.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-cloudDancer/60 disabled:opacity-50 dark:border-white/10 dark:text-slate-100 dark:bg-white/5">
-            <Plus className="h-3.5 w-3.5" /> Add
-          </button>
-        </div>
       </div>
+      ) : null}
 
       <div className="mt-3">
         <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">Overall recommendation</span>
@@ -454,9 +436,11 @@ export function InterviewScorecards({
                   </button>
                 </div>
               </div>
-              {card.items.length > 0 ? (
+              {/* Unrated lines are left out: a scorecard saved before Nov 13 could
+                  carry all 19 bank questions with no rating, which read as clutter. */}
+              {card.items.some((it) => it.value || it.rating) ? (
                 <ul className="mt-2 space-y-1">
-                  {card.items.map((it, i) => (
+                  {card.items.filter((it) => it.value || it.rating).map((it, i) => (
                     <li key={i} className="flex items-start justify-between gap-3 text-sm">
                       <span className="text-brand-black dark:text-slate-100">
                         {it.value ? <span className="mr-1.5 rounded border border-brand-gold/40 px-1.5 py-0.5 text-[10px] font-semibold text-brand-lea dark:text-slate-200">Core value</span> : null}

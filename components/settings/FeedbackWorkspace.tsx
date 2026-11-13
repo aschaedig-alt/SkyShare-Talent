@@ -13,7 +13,7 @@ type FeedbackItem = {
   contextJson: string | null;
   imageKey: string | null;
   imageName: string | null;
-  images: Array<{ id: string; filename: string }>;
+  images: Array<{ id: string; filename: string; isVideo?: boolean }>;
   status: string;
   userEmail: string | null;
   userName: string | null;
@@ -251,14 +251,24 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
           // the single legacy column. Prefer the rows when present so a migrated
           // report never renders its first picture twice.
           const shots = item.images.length
-            ? item.images.map((i) => ({ href: `/api/feedback/${item.id}/image/${i.id}`, name: i.filename }))
+            ? item.images.map((i) => ({ href: `/api/feedback/${item.id}/image/${i.id}`, name: i.filename, isVideo: Boolean(i.isVideo) }))
             : item.imageKey
-              ? [{ href: `/api/feedback/${item.id}/image`, name: item.imageName ?? "Screenshot" }]
+              ? [{ href: `/api/feedback/${item.id}/image`, name: item.imageName ?? "Screenshot", isVideo: false }]
               : [];
           if (shots.length === 0) return null;
           return (
             <div className="mt-2 flex flex-wrap gap-2">
-              {shots.map((shot) => (
+              {shots.map((shot) =>
+                shot.isVideo ? (
+                  // A screen recording plays in place. preload="metadata" so a
+                  // list of reports does not download every video on open.
+                  <div key={shot.href} className="w-fit rounded border border-brand-lea/15 p-1 dark:border-white/10">
+                    <video src={shot.href} controls playsInline preload="metadata" className="max-h-72 max-w-full rounded" title={shot.name} />
+                    <a href={shot.href} target="_blank" rel="noreferrer" className="mt-1 block px-1 text-[11px] font-semibold text-brand-eden hover:underline dark:text-slate-300">
+                      {shot.name}
+                    </a>
+                  </div>
+                ) : (
                 <a
                   key={shot.href}
                   href={shot.href}
@@ -270,7 +280,8 @@ export function FeedbackWorkspace({ items: initialItems }: { items: FeedbackItem
                   {/* eslint-disable-next-line @next/next/no-img-element -- authenticated same-origin route, not an optimizable asset */}
                   <img src={shot.href} alt={shot.name} className="max-h-48 rounded object-contain" />
                 </a>
-              ))}
+                )
+              )}
             </div>
           );
         })()}

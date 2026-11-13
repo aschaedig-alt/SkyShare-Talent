@@ -11,7 +11,7 @@ export default async function FeedbackPage() {
     const feedback = await prisma.feedback.findMany({
       orderBy: { createdAt: "desc" },
       take: 500,
-      include: { images: { orderBy: { sortOrder: "asc" }, select: { id: true, filename: true } } }
+      include: { images: { orderBy: { sortOrder: "asc" }, select: { id: true, filename: true, mimeType: true } } }
     });
 
     const serialized = feedback.map((f) => ({
@@ -26,7 +26,7 @@ export default async function FeedbackPage() {
       imageName: f.imageName,
       // Newer reports carry several. Ids only — the bytes come from the
       // admin-gated per-image route, same as the legacy single one.
-      images: f.images.map((i) => ({ id: i.id, filename: i.filename })),
+      images: f.images.map((i) => ({ id: i.id, filename: i.filename, isVideo: Boolean(i.mimeType?.startsWith("video/")) })),
       status: f.status,
       userEmail: f.userEmail,
       userName: f.userName,

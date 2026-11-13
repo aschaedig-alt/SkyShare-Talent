@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { MessageSquare, X, Lightbulb, Bug, HelpCircle, Check, Loader, ImagePlus, Trash2 } from "lucide-react";
+import { MessageSquare, X, Lightbulb, Bug, HelpCircle, Check, Loader, ImagePlus, Trash2, Film } from "lucide-react";
 import { clsx } from "clsx";
 import { useDialogClose } from "@/lib/hooks/useDialogClose";
 
@@ -59,10 +59,67 @@ const IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
 const MAX_IMAGES = 4;
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
+// Screen recordings (feedback cmwfkklis, sent from an iPhone: "It won't let me
+// add a video with feedback"). Mirrors lib/files/feedback-file-storage.ts. A video
+// is too big for one request (Vercel stops at ~4.5 MB), so it is sent AFTER the
+// report is saved, in VIDEO_PART_BYTES parts, then stitched together server-side.
+const VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm"];
+const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
+const VIDEO_PART_BYTES = 3 * 1024 * 1024;
+
+function isVideo(file: File) {
+  return file.type.toLowerCase().startsWith("video/");
+}
+
 function imageProblem(file: File): string | null {
-  if (!IMAGE_TYPES.includes(file.type.toLowerCase())) return "Attach a PNG, JPG, GIF or WEBP image.";
+  if (isVideo(file)) {
+    if (!VIDEO_TYPES.includes(file.type.toLowerCase())) return "Attach an MP4, MOV or WEBM video.";
+    if (file.size > MAX_VIDEO_BYTES) return "That video is larger than the 200 MB limit.";
+    return null;
+  }
+  if (!IMAGE_TYPES.includes(file.type.toLowerCase())) return "Attach a PNG, JPG, GIF or WEBP image, or a video.";
   if (file.size > MAX_IMAGE_BYTES) return "That image is larger than the 10 MB limit.";
   return null;
+}
+
+/** A filename the server will accept: the type decides the extension when the name has none. */
+function videoName(file: File) {
+  if (/\.(mp4|mov|m4v|webm)$/i.test(file.name)) return file.name;
+  const ext = file.type === "video/quicktime" ? "mov" : file.type === "video/webm" ? "webm" : "mp4";
+  return `${(file.name || "screen-recording").replace(/\.[^.]*$/, "")}.${ext}`;
+}
+
+/** Send one video to a saved report, part by part. Throws with a readable message. */
+async function uploadVideo(feedbackId: string, file: File, onProgress: (sent: number) => void) {
+  const upload = crypto.randomUUID();
+  const parts = Math.ceil(file.size / VIDEO_PART_BYTES);
+  for (let part = 0; part < parts; part += 1) {
+    const body = file.slice(part * VIDEO_PART_BYTES, Math.min(file.size, (part + 1) * VIDEO_PART_BYTES));
+    let res: Response | null = null;
+    // A phone on a weak signal drops a request now and then; one retry per part
+    // saves the whole upload from starting over.
+    for (let attempt = 0; attempt < 2 && !res?.ok; attempt += 1) {
+      res = await fetch(`/api/feedback/${feedbackId}/video?upload=${upload}&part=${part}&size=${file.size}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/octet-stream" },
+        body
+      }).catch(() => null);
+    }
+    if (!res?.ok) {
+      const data = await res?.json().catch(() => null);
+      throw new Error(data?.message ?? "The video upload was interrupted.");
+    }
+    onProgress(Math.min(file.size, (part + 1) * VIDEO_PART_BYTES));
+  }
+  const done = await fetch(`/api/feedback/${feedbackId}/video`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ upload, size: file.size, filename: videoName(file), mimeType: file.type.toLowerCase() })
+  });
+  if (!done.ok) {
+    const data = await done.json().catch(() => null);
+    throw new Error(data?.message ?? "The video could not be attached.");
+  }
 }
 
 // A pasted screenshot arrives as an unnamed blob ("image.png" at best), so give it
@@ -101,6 +158,10 @@ export function FeedbackButton({ variant = "rail" }: { variant?: FeedbackVariant
   // Optional screenshot + its local preview URL.
   const [images, setImages] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  // "Uploading video… 40%" while a recording goes up, and what went wrong if the
+  // words were saved but the video was not.
+  const [progress, setProgress] = useState<string | null>(null);
+  const [doneWarning, setDoneWarning] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -154,6 +215,8 @@ export function FeedbackButton({ variant = "rail" }: { variant?: FeedbackVariant
     setMessage("");
     setDone(false);
     setError(null);
+    setDoneWarning(null);
+    setProgress(null);
     setImages([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
@@ -176,7 +239,7 @@ export function FeedbackButton({ variant = "rail" }: { variant?: FeedbackVariant
     }
     const room = MAX_IMAGES - images.length;
     if (room <= 0) {
-      setError(`You can attach up to ${MAX_IMAGES} images.`);
+      setError(`You can attach up to ${MAX_IMAGES} files.`);
       return;
     }
     setError(files.length > room ? `Only the first ${room} were added — the limit is ${MAX_IMAGES}.` : null);
@@ -215,15 +278,18 @@ export function FeedbackButton({ variant = "rail" }: { variant?: FeedbackVariant
     try {
       // Only reach for multipart when there is actually a file: the JSON path is
       // the common case and stays exactly as it was.
+      // Pictures ride along with the report as before; videos follow it.
+      const pictures = images.filter((f) => !isVideo(f));
+      const videos = images.filter(isVideo);
       let res: Response;
-      if (images.length > 0) {
+      if (pictures.length > 0) {
         const form = new FormData();
         form.set("type", type);
         form.set("message", message.trim());
         form.set("page", pathname);
         form.set("context", JSON.stringify(collectContext()));
         // append, not set — the server reads them back with getAll("image").
-        for (const file of images) form.append("image", file, file.name);
+        for (const file of pictures) form.append("image", file, file.name);
         // No Content-Type header — the browser must set the multipart boundary.
         res = await fetch("/api/feedback", { method: "POST", body: form });
       } else {
@@ -237,7 +303,32 @@ export function FeedbackButton({ variant = "rail" }: { variant?: FeedbackVariant
         const data = await res.json().catch(() => null);
         throw new Error(data?.message ?? "Unable to send feedback.");
       }
+      const saved = (await res.json().catch(() => null)) as { id?: string } | null;
+      let warning: string | null = null;
+      if (videos.length > 0 && saved?.id) {
+        const total = videos.reduce((n, f) => n + f.size, 0);
+        let before = 0;
+        for (const video of videos) {
+          try {
+            setProgress("Uploading video… 0%");
+            await uploadVideo(saved.id, video, (sent) =>
+              setProgress(`Uploading video… ${Math.round(((before + sent) / total) * 100)}%`)
+            );
+          } catch (videoError) {
+            const reason = videoError instanceof Error ? videoError.message : "the upload failed";
+            warning = `Your feedback was saved, but ${video.name} was not attached: ${reason}`;
+          }
+          before += video.size;
+        }
+        setProgress(null);
+      }
       setDone(true);
+      if (warning) {
+        // Stays open so the warning is read. The report itself is already saved,
+        // so nothing here is sent twice.
+        setDoneWarning(warning);
+        return;
+      }
       setTimeout(() => {
         setOpen(false);
         reset();
@@ -348,6 +439,20 @@ export function FeedbackButton({ variant = "rail" }: { variant?: FeedbackVariant
               </div>
               <p className="text-sm font-semibold text-brand-lea dark:text-slate-100">Thanks for the feedback!</p>
               <p className="text-xs text-brand-grey dark:text-slate-400">We&apos;ll take a look.</p>
+              {doneWarning ? (
+                <>
+                  <p className="mt-1 text-xs font-medium text-red-600 dark:text-red-400">{doneWarning}</p>
+                  <button
+                    onClick={() => {
+                      setOpen(false);
+                      reset();
+                    }}
+                    className="mt-1 rounded border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"
+                  >
+                    Close
+                  </button>
+                </>
+              ) : null}
             </div>
           ) : (
             <div className="p-4">
@@ -400,7 +505,7 @@ export function FeedbackButton({ variant = "rail" }: { variant?: FeedbackVariant
               <input
                 ref={fileInputRef}
                 type="file"
-                accept={IMAGE_TYPES.join(",")}
+                accept={[...IMAGE_TYPES, ...VIDEO_TYPES].join(",")}
                 className="hidden"
                 multiple
                 onChange={(e) => addImages([...(e.target.files ?? [])])}
@@ -410,8 +515,14 @@ export function FeedbackButton({ variant = "rail" }: { variant?: FeedbackVariant
                 <div className="mt-2 space-y-1.5">
                   {images.map((file, index) => (
                     <div key={`${file.name}-${index}`} className="flex items-center gap-2 rounded border border-brand-lea/15 bg-brand-cloudDancer/30 p-2 dark:border-white/10 dark:bg-white/5">
-                      {/* eslint-disable-next-line @next/next/no-img-element -- local object URL, not a remote asset */}
-                      <img src={previews[index]} alt="" className="h-12 w-12 rounded object-cover" />
+                      {isVideo(file) ? (
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded bg-brand-lea/10 text-brand-lea dark:bg-white/10 dark:text-slate-200">
+                          <Film className="h-5 w-5" />
+                        </span>
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element -- local object URL, not a remote asset
+                        <img src={previews[index]} alt="" className="h-12 w-12 rounded object-cover" />
+                      )}
                       <span className="min-w-0 flex-1 truncate text-[11px] text-brand-grey dark:text-slate-400">{file.name}</span>
                       <button
                         onClick={() => removeImage(index)}
@@ -442,7 +553,7 @@ export function FeedbackButton({ variant = "rail" }: { variant?: FeedbackVariant
                       reads as a missing feature. The picker works on both and on
                       a phone opens the camera / photo library, which is the thing
                       worth saying instead. */}
-                  {variant === "rail" ? "Add a screenshot — or just paste one" : "Add a screenshot or photo"}
+                  {variant === "rail" ? "Add a screenshot or video — or just paste one" : "Add a screenshot, photo or screen recording"}
                 </button>
               )}
 
@@ -458,7 +569,7 @@ export function FeedbackButton({ variant = "rail" }: { variant?: FeedbackVariant
                 className="mt-3 flex w-full items-center justify-center gap-2 rounded bg-brand-lea px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-60"
               >
                 {submitting && <Loader className="h-4 w-4 animate-spin" />}
-                {submitting ? "Sending…" : "Send feedback"}
+                {submitting ? progress ?? "Sending…" : "Send feedback"}
               </button>
             </div>
           )}
