@@ -460,16 +460,20 @@ export function PostOnboardTab({
         window.alert(pre.error ?? "Couldn't count those check-ins.");
         return;
       }
+      // Open AND done ones change (his call, Nov 14 2026); a done one with a saved
+      // manager rating, or one already skipped, is left as it is.
       const left = [
-        pre.done ? `${pre.done} already done` : "",
+        pre.doneRated ? `${pre.doneRated} done with a saved rating` : "",
         pre.alreadySkipped ? `${pre.alreadySkipped} already skipped` : "",
         pre.missing ? `${pre.missing} without this check-in` : ""
       ].filter(Boolean);
-      if (pre.open === 0) {
-        window.alert(`Nothing to skip: none of the ${ids.length} selected have the ${label} still open${left.length ? ` (${left.join(", ")})` : ""}.`);
+      const total = pre.open + pre.done;
+      if (total === 0) {
+        window.alert(`Nothing to skip for the ${label}${left.length ? ` (${left.join(", ")})` : ""}.`);
         return;
       }
-      const ask = `Mark the ${label} skipped for ${pre.open} ${pre.open === 1 ? "person" : "people"}? It reads "Skipped", not done, and nobody is emailed.${left.length ? ` ${left.join(", ")} - left as they are.` : ""} Each can be undone one at a time from the person's drawer.`;
+      const parts = [pre.open ? `${pre.open} still open` : "", pre.done ? `${pre.done} marked done, which will change to skipped` : ""].filter(Boolean).join(" and ");
+      const ask = `Mark the ${label} skipped for ${total} ${total === 1 ? "person" : "people"} (${parts})? It reads "Skipped", not done, and nobody is emailed.${left.length ? ` ${left.join(", ")} - left as they are.` : ""} Each can be undone one at a time from the person's drawer.`;
       if (!window.confirm(ask)) return;
       const res = await skipTasksBulk(ids, key);
       if (!res.ok || !res.skippedAt) {
