@@ -52,6 +52,12 @@ const POST_ONBOARD_BULK_ACTIONS: BulkAction[] = [
   { kind: "delete", key: "delete", label: "Delete", icon: Trash2 }
 ];
 
+/** A header cell that sticks to the top of the window, with its own background and bottom rule.
+ * top-12 below lg: AppShell draws a fixed h-12 top bar there (z-30), which would cover a
+ * header stuck at top-0. lg and up has no bar. */
+const HEAD_CELL =
+  "sticky top-12 lg:top-0 z-10 bg-white py-3 shadow-[inset_0_-1px_0_rgba(13,44,67,0.1)] dark:bg-brand-panel dark:shadow-[inset_0_-1px_0_rgba(255,255,255,0.1)]";
+
 export function PostOnboardTab({
   hires: initial,
   emailTaskKeys,
@@ -446,7 +452,7 @@ export function PostOnboardTab({
             type="button"
             onClick={() => setRating({ hire: h, tick: null, checkin })}
             title={`${checkin.short} rating${saved.managerName ? ` by ${saved.managerName}` : ""}: ${scaleSummary(saved)} - click to edit`}
-            className="whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-gold/10 dark:text-slate-100"
+            className="flex flex-wrap items-center justify-center rounded px-1.5 py-0.5 text-xs font-semibold text-brand-lea transition hover:bg-brand-gold/10 dark:text-slate-100"
           >
             {pointsText(ratingPoints(saved.ratings))}
             {saved.wouldHireAgain === null ? null : (
@@ -470,7 +476,7 @@ export function PostOnboardTab({
             type="button"
             onClick={() => setOpenRequest({ hire: h, checkin })}
             title={`${checkin.short} rating link to ${req.toName ?? req.to} - click for status, resend or cancel`}
-            className="flex items-center justify-center gap-1 whitespace-nowrap rounded px-1 py-0.5 text-[10px] text-brand-grey transition hover:bg-brand-gold/10 dark:text-slate-400"
+            className="flex flex-wrap items-center justify-center gap-1 rounded px-1 py-0.5 text-[10px] text-brand-grey transition hover:bg-brand-gold/10 dark:text-slate-400"
           >
             <StateChip view={req} />
             {formatMomentDateShort(req.state === "COMPLETED" ? req.completedAt : req.state === "CANCELLED" ? req.cancelledAt : req.lastSentAt)}
@@ -637,19 +643,31 @@ export function PostOnboardTab({
       ) : null}
       {openReply ? <CheckinReplyModal key={openReply.messageId} reply={openReply} onClose={() => setOpenReply(null)} onSaved={replaceReply} /> : null}
       <BulkActionBar count={selected.size} actions={POST_ONBOARD_BULK_ACTIONS} onApply={applyBulk} onChoice={bulkCheckin} onDelete={deleteSelected} onClear={() => setSelected(new Set())} busy={busy} />
-      <div className="overflow-hidden rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
+      {/* NO sideways scroll and a header that stays put (feedback cmwfsem9x, Nov 13
+          2026): the table is fixed-layout at the panel's width, so the check-in
+          columns share what is left instead of pushing the table wider, and
+          Department / Started / Onboarded sit under the name (rows may be
+          taller; "there's tons of space"). The header is sticky against the
+          WINDOW, which only works because nothing between here and <main> clips
+          overflow - do not put overflow-hidden or overflow-x-auto back on these
+          wrappers, or the header stops sticking. */}
+      <div className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+        <table className="w-full table-fixed text-sm">
+          <colgroup>
+            <col className="w-10" />
+            <col className="w-[24%]" />
+            <col className="w-[8.5rem]" />
+            {heads.map((h) => (
+              <col key={h} />
+            ))}
+          </colgroup>
           <thead>
-            <tr className="border-b border-brand-lea/10 text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:border-white/10 dark:text-slate-400">
-              <th className="w-10 px-3 py-3 text-center"><input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" className="h-4 w-4 align-middle" /></th>
-              <th className="px-4 py-3 text-left">Employee</th>
-              <th className="px-4 py-3 text-left">Department</th>
-              <th className="px-4 py-3 text-left">Started</th>
-              <th className="px-4 py-3 text-left">Onboarded</th>
-              <th className="px-4 py-3 text-left">Status</th>
-              {heads.map((h) => (
-                <th key={h} className="px-3 py-3 text-center">{h}</th>
+            <tr className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey dark:text-slate-400">
+              <th className={clsx(HEAD_CELL, "rounded-tl px-2 text-center")}><input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" className="h-4 w-4 align-middle" /></th>
+              <th className={clsx(HEAD_CELL, "px-3 text-left")}>Employee</th>
+              <th className={clsx(HEAD_CELL, "px-2 text-left")}>Status</th>
+              {heads.map((h, i) => (
+                <th key={h} className={clsx(HEAD_CELL, "px-1 text-center leading-tight", i === heads.length - 1 && "rounded-tr")}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -658,22 +676,27 @@ export function PostOnboardTab({
               const terminated = h.employmentStatus === "TERMINATED";
               return (
               <tr key={h.id} className={clsx("row-wash border-b border-brand-lea/5 dark:border-white/10 dark:hover:bg-white/5", selected.has(h.id) ? "bg-brand-gold/10" : terminated && "bg-brand-cloudDancer/30 dark:bg-white/5")}>
-                <td className="px-3 py-3 text-center">
-                  <input type="checkbox" checked={selected.has(h.id)} onChange={() => toggleOne(h.id)} aria-label={`Select ${h.name}`} className="h-4 w-4 align-middle" />
+                <td className="px-2 py-3 text-center align-top">
+                  <input type="checkbox" checked={selected.has(h.id)} onChange={() => toggleOne(h.id)} aria-label={`Select ${h.name}`} className="mt-0.5 h-4 w-4 align-middle" />
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-3 align-top">
                   <Link href={`/people/${h.id}`} className={clsx("font-semibold hover:underline", terminated ? "text-brand-grey dark:text-slate-400" : "text-brand-lea dark:text-slate-100")}>{h.name}</Link>
                   <div className="text-xs text-brand-grey dark:text-slate-400">{h.position ?? "—"}</div>
+                  <dl className="mt-1 grid grid-cols-[auto,1fr] gap-x-2 text-[11px] leading-snug text-brand-grey dark:text-slate-400">
+                    <dt className="font-semibold">Dept</dt>
+                    <dd className="truncate" title={h.department ?? undefined}>{h.department ?? "—"}</dd>
+                    <dt className="font-semibold">Started</dt>
+                    <dd>{fmtDate(h.startDate)}</dd>
+                    <dt className="font-semibold">Onboarded</dt>
+                    <dd>{fmtMoment(h.onboardedAt)}</dd>
+                  </dl>
                 </td>
-                <td className="px-4 py-3 text-brand-grey dark:text-slate-400">{h.department ?? "—"}</td>
-                <td className="px-4 py-3 text-brand-grey dark:text-slate-400">{fmtDate(h.startDate)}</td>
-                <td className="px-4 py-3 text-brand-grey dark:text-slate-400">{fmtMoment(h.onboardedAt)}</td>
-                <td className="px-4 py-3">
+                <td className="px-2 py-3 align-top">
                   <select
                     value={h.employmentStatus}
                     onChange={(e) => setEmployment(h.id, e.target.value as EmploymentStatus)}
                     className={clsx(
-                      "rounded border px-2 py-1 text-xs font-semibold outline-none transition",
+                      "w-full rounded border px-1.5 py-1 text-xs font-semibold outline-none transition",
                       terminated
                         ? "border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300"
                         : h.employmentStatus === "CONTRACT"
@@ -689,8 +712,8 @@ export function PostOnboardTab({
                 {h.checkins.map((c) => {
                   const skip = skips[h.id]?.[c.key];
                   return (
-                  <td key={c.key} className="px-3 py-3 text-center">
-                    <span className="inline-flex items-center gap-0.5">
+                  <td key={c.key} className="px-1 py-3 text-center align-top">
+                    <span className="inline-flex flex-wrap items-center justify-center gap-0.5">
                     {c.status === "NA" ? (
                       // Skipped: says so, and who and when, instead of DUE. One click undoes it.
                       <button
@@ -797,14 +820,13 @@ export function PostOnboardTab({
             })}
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={6 + heads.length} className="px-4 py-8 text-center text-sm text-brand-grey dark:text-slate-400">
+                <td colSpan={3 + heads.length} className="px-4 py-8 text-center text-sm text-brand-grey dark:text-slate-400">
                   No post-onboard employees match these filters.
                 </td>
               </tr>
             ) : null}
           </tbody>
         </table>
-      </div>
       <p className="border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey dark:border-white/10 dark:text-slate-400">
         Check-ins are 30 / 60 / 90-day, benefits and the social media announcement — tell me the ones you actually run and I will swap them in.
       </p>

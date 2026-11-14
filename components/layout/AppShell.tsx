@@ -67,8 +67,20 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
           />
         ) : null}
         <main className="min-w-0 flex-1">
-          {/* Spacer so the fixed mobile menu button doesn't overlap content */}
-          {showSidebar ? <div className="h-12 lg:hidden" /> : null}
+          {/* Phones: a SOLID top bar holds the menu, Feedback and SOP buttons, so
+              the page scrolls under a bar instead of under three loose floating
+              buttons that sit on top of text (feedback cmwfo53k5, Nov 13 2026).
+              The spacer keeps the page's first line out from under it; the
+              buttons stay h-9 at top-3, ending exactly at its 48px. */}
+          {showSidebar ? (
+            <>
+              <div className="h-12 lg:hidden" />
+              <div
+                aria-hidden
+                className="fixed inset-x-0 top-0 z-30 h-12 border-b border-brand-lea/10 bg-[var(--skyshare-page)] shadow-sm lg:hidden print:hidden dark:border-white/10"
+              />
+            </>
+          ) : null}
           <EnvironmentBanner />
           <ModuleAccessShell role={role} policy={policy} moduleOverrides={moduleOverrides}>
             {children}

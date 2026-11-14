@@ -58,7 +58,9 @@ export function NewHireBottomTabs({ tabs }: { tabs: BottomTab[] }) {
     // calendar's Open checklist button, Nov 3). Without the jump, ?tab= alone
     // selects the tab but leaves you at the top of a long page.
     <div id="sections" className="scroll-mt-4 space-y-3">
-      <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="New hire sections">
+      {/* Phones: an even two-by-two grid, not four chips wrapping raggedly
+          (feedback cmwfo53k5). sm and up: one row. */}
+      <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap" role="tablist" aria-label="New hire sections">
         {tabs.map((t) => {
           const on = t.key === current?.key;
           return (
@@ -69,7 +71,7 @@ export function NewHireBottomTabs({ tabs }: { tabs: BottomTab[] }) {
               aria-selected={on}
               onClick={() => setActive(t.key)}
               className={clsx(
-                "flex items-center gap-2 rounded border px-3.5 py-2 text-sm transition hover:shadow-glow",
+                "flex min-w-0 items-center justify-between gap-2 rounded border px-3 py-2 text-sm transition hover:shadow-glow sm:justify-start sm:px-3.5",
                 on
                   ? "border-brand-lea bg-brand-lea font-semibold text-white shadow-[inset_0_-3px_0_theme(colors.brand.gold)]"
                   : "border-brand-lea/10 bg-white text-brand-grey dark:border-white/10 dark:bg-brand-panel dark:text-slate-400"

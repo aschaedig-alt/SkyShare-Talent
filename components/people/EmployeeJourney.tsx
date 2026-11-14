@@ -247,8 +247,14 @@ export function EmployeeJourney({ hireId, journey, roleTitleOptions }: Props) {
           // circle — with pt-1 it was cut off square on a phone (his iPhone,
           // Nov 13, feedback cmwfo53k5). The padding gives the glow room inside
           // the clip; -mt-6 keeps the band's spacing what it was.
-          <div className="-mt-6 overflow-x-auto overflow-y-hidden pb-1">
-            <ol className="flex min-w-max pt-8">
+          // PHONES: the timeline runs DOWN the band - one role per row, circle on
+          // the left, its details beside it - instead of a sideways strip with
+          // one card stranded at the left of an empty box (feedback cmwfo53k5,
+          // Nov 13 2026: "there's tons of space ... make it better"). Nothing
+          // clips on a phone, so the glow needs no extra room there. sm and up:
+          // the horizontal strip as before, glow room included.
+          <div className="sm:-mt-6 sm:overflow-x-auto sm:overflow-y-hidden sm:pb-1">
+            <ol className="flex flex-col sm:min-w-max sm:flex-row sm:pt-8">
               {journey.roles.map((role, i) => (
                 <TimelineNode
                   key={role.id}
@@ -431,16 +437,22 @@ function TimelineNode({
   const dur = role.durationDays && role.durationDays > 0 ? duration(role.durationDays) : "";
 
   return (
-    <li className="group relative flex w-[168px] shrink-0 flex-col items-center px-1">
-      {/* Connector to the next node (behind the node) */}
+    <li className="group relative flex w-full gap-3 pb-5 last:pb-0 sm:w-[168px] sm:shrink-0 sm:flex-col sm:items-center sm:gap-0 sm:px-1 sm:pb-0">
+      {/* Connector to the next node (behind the node): down the left edge on a
+          phone, across to the right from sm up. */}
       {index < last ? (
-        <span className={clsx("absolute left-1/2 top-[19px] z-0 h-[3px] w-full -translate-y-1/2 rounded-full", segClass(last === 0 ? 1 : (index + 1) / last))} />
+        <span
+          className={clsx(
+            "absolute bottom-0 left-[20px] top-10 z-0 w-[3px] -translate-x-1/2 rounded-full sm:bottom-auto sm:left-1/2 sm:top-[19px] sm:h-[3px] sm:w-full sm:-translate-y-1/2 sm:translate-x-0",
+            segClass(last === 0 ? 1 : (index + 1) / last)
+          )}
+        />
       ) : null}
 
       {/* Node */}
       <span
         className={clsx(
-          "relative z-10 flex h-10 w-10 items-center justify-center rounded-full ring-4 ring-white transition dark:ring-brand-panel",
+          "relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ring-4 ring-white transition dark:ring-brand-panel",
           isCurrent
             ? "bg-brand-lea text-brand-gold shadow-glow"
             : role.isUpgrade
@@ -452,7 +464,7 @@ function TimelineNode({
       </span>
 
       {/* Card */}
-      <div className="mt-3 flex w-full flex-col items-center px-1 text-center">
+      <div className="flex min-w-0 flex-1 flex-col items-start text-left sm:mt-3 sm:w-full sm:flex-none sm:items-center sm:px-1 sm:text-center">
         <p className="text-sm font-semibold leading-tight text-brand-lea dark:text-slate-100">{role.title}</p>
         {subtitle ? <p className="mt-0.5 text-xs text-brand-grey dark:text-slate-400">{subtitle}</p> : null}
         <div className="mt-2">
@@ -461,8 +473,9 @@ function TimelineNode({
         <p className="mt-2 text-[11px] leading-snug text-brand-grey dark:text-slate-400">{dateLine(role)}</p>
         {dur ? <p className="text-[11px] font-semibold text-brand-eden dark:text-slate-300">{dur}</p> : null}
 
-        {/* Edit / delete — revealed on hover so the timeline stays clean */}
-        <div className="mt-1.5 flex items-center gap-0.5 opacity-0 transition focus-within:opacity-100 group-hover:opacity-100">
+        {/* Edit / delete — revealed on hover so the timeline stays clean. A
+            phone cannot hover, so there they are always shown. */}
+        <div className="mt-1.5 flex items-center gap-0.5 transition focus-within:opacity-100 group-hover:opacity-100 sm:opacity-0">
           <button
             onClick={onEdit}
             aria-label="Edit role"

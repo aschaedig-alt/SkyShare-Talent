@@ -1014,7 +1014,9 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
             </span>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        {/* Phones: the actions in an even two-column grid, each button full
+            width, instead of wrapping into ragged rows (feedback cmwfo53k5). */}
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap [&>button]:w-full sm:[&>button]:w-auto">
           {/* Onboarding them AGAIN — a rehire, or a move big enough to redo the
               paperwork. Only offered to someone who is past onboarding already;
               for a hire still working through their first checklist, the answer

@@ -1318,6 +1318,32 @@ session is marked complete, Attended orientation turns Done by itself with no cl
 
 ---
 
+### 60. The phone layout and the Post-onboard table have not been looked at on a real iPhone or her laptop
+
+**Status:** OPEN
+**Added:** 2026-11-13
+
+Feedback cmwfo53k5 (new-hire page on her iPhone "look terrible") and cmwfsem9x (Post-onboard
+table: no sideways scroll bar, header always visible). Phones now get a solid top bar
+holding the menu, SOP and Feedback buttons, so the page scrolls under a bar instead of under
+buttons floating on the text; the new-hire page's actions and tabs are even two-column grids;
+and the Journey timeline runs down the page with its edit buttons always showing. The
+Post-onboard table fits the width (Department, Started and Onboarded under the name) and its
+header sticks to the top. Checked in a browser: at 1536 wide the page has no sideways scroll,
+no cell spills, and after scrolling 1500px the header is on top; at 330 wide nothing
+overlaps, the bar is what sits under the buttons once scrolled, and desktop still has the
+side SOP tab and the sideways timeline. NOT checked: a real iPhone (Safari, its own address
+bar and notch), dark mode on a phone (the preview renders light), and clicking in the table.
+
+**How to check it, two minutes:** on the iPhone, open a new hire and scroll; on the laptop,
+open People > Post-onboard, scroll down, and click a Rate and a tick.
+
+**What would count as a pass:** on the phone nothing sits on top of text and the buttons
+read in even rows; on the laptop there is no sideways scroll bar and the column names stay
+visible while scrolling.
+
+---
+
 ## Closed
 
 ### 57. The 1–10 check-in ratings (90-day, 6-month, 12-month) have not been used by a real manager
