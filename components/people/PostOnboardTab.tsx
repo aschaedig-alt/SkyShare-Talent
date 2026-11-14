@@ -132,6 +132,21 @@ function mdy(ms: number, shortYear = false): string {
  */
 const STALE_AFTER_DAYS = 45;
 const LATE_STEP_DAYS = 15;
+/**
+ * Skim colours (his ask, Nov 14 2026: "easier when skimming the list"). Every open
+ * dated check-in sits on a tinted tile: very light grey while it is further than
+ * SOON_DAYS off, light yellow from SOON_DAYS out to the due day, light red once past
+ * due. A manager check-in whose rating link is out (waiting on the manager) is light
+ * blue instead, whatever its date. Done, skipped and N/A carry no tint, so the eye
+ * lands only on what still needs something. The legend above the grid says the same.
+ */
+const SOON_DAYS = 14;
+const TILE = {
+  later: "bg-slate-100/80 dark:bg-white/[0.05]",
+  soon: "bg-amber-50 ring-1 ring-amber-200/70 dark:bg-amber-500/10 dark:ring-amber-500/20",
+  late: "bg-red-50 ring-1 ring-red-200/70 dark:bg-red-500/10 dark:ring-red-500/25",
+  sent: "bg-brand-sweet/30 ring-1 ring-brand-sweet dark:bg-brand-sweet/15 dark:ring-brand-sweet/40"
+} as const;
 
 /** Today's calendar day in the office time zone, as UTC midnight - the same on the server and in the browser, so the day counts hydrate cleanly. */
 function officeTodayUtc(): number {
@@ -795,7 +810,19 @@ export function PostOnboardTab({
       if (saved) return { node: <span className="whitespace-nowrap text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">★ rated</span>, text: "rated" };
       if (req && req.state === "PENDING")
         return {
-          node: <span className={clsx(cap, justSent.has(rk(h.id, rated.dayMark)) && "po-slide-in inline-block")}>sent {mdy(new Date(req.lastSentAt).getTime(), true).slice(0, 5)}</span>,
+          node: (
+            <span
+              className={clsx(
+                "inline-flex items-center gap-1 whitespace-nowrap text-[10px] font-bold tabular-nums text-brand-eden dark:text-brand-sweet",
+                justSent.has(rk(h.id, rated.dayMark)) && "po-slide-in"
+              )}
+            >
+              {/* Just the plane and the date: "SENT 11/14" did not fit a 60px tile, and the blue
+                  tile already says sent. The words are in the cell label and hover. */}
+              <Send className="h-2.5 w-2.5" aria-hidden />
+              {mdy(new Date(req.lastSentAt).getTime(), true).slice(0, 5)}
+            </span>
+          ),
           text: `rating link sent ${formatMomentDateShort(req.lastSentAt)}`
         };
       if (c.status === "DONE") return { node: <span className={cap}>done</span>, text: "" };
@@ -829,6 +856,9 @@ export function PostOnboardTab({
       group === "mgr" && rated && c.status === "TODO" && late !== null && late > 0 && late < STALE_AFTER_DAYS &&
       !ratings[rk(h.id, rated.dayMark)] && !requests[rk(h.id, rated.dayMark)] && h.employmentStatus !== "TERMINATED";
     const caption = showSend ? null : captionOf(h, c, group, at, skipped);
+    const linkOut = Boolean(rated && requests[rk(h.id, rated.dayMark)]?.state === "PENDING" && !ratings[rk(h.id, rated.dayMark)]);
+    const tile =
+      c.status !== "TODO" ? "" : linkOut ? TILE.sent : late === null ? "" : late > 0 ? TILE.late : late >= -SOON_DAYS ? TILE.soon : TILE.later;
     let when = "";
     if (at !== null && late !== null) when = late > 0 ? `, ${late} days late, was due ${mdy(at)}` : late === 0 ? ", due today" : `, due ${mdy(at)}, in ${-late} days`;
     else if (at !== null && c.status === "NA" && skipped) when = `, was due ${mdy(at)}`;
@@ -837,7 +867,7 @@ export function PostOnboardTab({
     // these 24px slots (and the Send button) 31.5px tall regardless of their class.
     const slot = "flex h-6 min-h-0 w-full items-center justify-center rounded transition hover:bg-brand-gold/10 hover:shadow-glow";
     return (
-      <div className="grid grid-rows-[24px_24px] items-center justify-items-center gap-0.5">
+      <div className={clsx("grid w-full grid-cols-[minmax(0,1fr)] grid-rows-[24px_24px] items-center justify-items-center gap-0.5 rounded py-0.5", tile)}>
         <button type="button" onClick={() => setDrawerId(h.id)} title={label} aria-label={label} className={slot}>
           {markEl(c, skipped, c.status === "TODO" ? at : null, justDone.has(`${h.id}:${c.key}`))}
         </button>
@@ -1135,6 +1165,22 @@ export function PostOnboardTab({
           and <main> clips overflow - do not put overflow-hidden or overflow-x-auto
           back on these wrappers, or the header stops sticking. */}
       <div className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+        {/* The skim colours, said once (see TILE). */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-brand-lea/10 px-3 py-2 text-[11px] text-brand-grey dark:border-white/10 dark:text-slate-400">
+          {(
+            [
+              [TILE.later, `Not due yet (over ${SOON_DAYS} days)`],
+              [TILE.soon, `Due within ${SOON_DAYS} days`],
+              [TILE.late, "Past due"],
+              [TILE.sent, "Sent - waiting on the manager"]
+            ] as const
+          ).map(([tone, text]) => (
+            <span key={text} className="inline-flex items-center gap-1.5">
+              <span className={clsx("inline-block h-3.5 w-5 rounded", tone)} aria-hidden />
+              {text}
+            </span>
+          ))}
+        </div>
         {/* PHONES (below md): one card per person instead of the table - the 7 check-in
             columns cannot fit a phone without a sideways scroll, and his standing rule
             (Nov 14 2026) is that everything works on mobile, always. Same cells, same
@@ -1175,7 +1221,7 @@ export function PostOnboardTab({
                 {/* Two-item groups sit side by side; the three manager check-ins take a full row. */}
                 <div className="grid grid-cols-2 gap-1">
                 {groups.map((g) => (
-                  <div key={g.key} className={clsx("rounded px-1 pb-1", GROUP_TINT[g.key], g.cols.length > 2 && "col-span-2", g.key === "ck" && "bg-brand-sweet/10")}>
+                  <div key={g.key} className={clsx("rounded border border-brand-lea/10 px-1 pb-1 dark:border-white/10", g.cols.length > 2 && "col-span-2")}>
                     <div className="px-1 pt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-brand-edenOnDark">{g.label}</div>
                     <div className="grid" style={{ gridTemplateColumns: `repeat(${g.cols.length}, minmax(0, 1fr))` }}>
                       {g.cols.map((col) => {
@@ -1293,7 +1339,7 @@ export function PostOnboardTab({
                   {plan.map((col) => {
                     const c = h.checkins.find((x) => x.key === col.key);
                     return (
-                      <td key={col.key} className={clsx("px-1 py-1.5 text-center align-middle", GROUP_TINT[col.group as "task"], col.first && "border-l border-brand-lea/10 dark:border-white/10")}>
+                      <td key={col.key} className={clsx("px-1 py-1.5 text-center align-middle", col.first && "border-l border-brand-lea/10 dark:border-white/10")}>
                         {c ? gridCell(h, c, col.group) : null}
                       </td>
                     );
