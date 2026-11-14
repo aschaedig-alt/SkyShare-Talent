@@ -254,3 +254,22 @@ select {
     break-inside: avoid;
   }
 }
+
+/* Post-onboard grid, the one "wow" (Sample A of the Nov 14 2026 Post-onboard
+   Review, his pick): a check-in marked done draws its tick and lets one gold ring
+   fade out; a rating link just sent slides its "sent" caption up. Both are under a
+   quarter of a second and never delay a click. With reduced motion the bubble just
+   appears (the ring shows as a still outline) and the caption just appears. */
+@media (prefers-reduced-motion: no-preference) {
+  .po-done-anim { animation: po-pop 0.12s ease-out both; }
+  .po-done-anim path { stroke-dasharray: 14; stroke-dashoffset: 14; animation: po-draw 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s forwards; }
+  .po-done-anim::after { content: ""; position: absolute; inset: -3px; border-radius: 9999px; box-shadow: 0 0 0 1.5px #eaaa00; animation: po-ring 0.22s ease-out 0.2s forwards; }
+  .po-slide-in { animation: po-slide 0.15s ease-out both; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .po-done-anim { box-shadow: 0 0 0 1.5px #eaaa00; }
+}
+@keyframes po-pop { from { transform: scale(0.6); opacity: 0.2; } to { transform: none; opacity: 1; } }
+@keyframes po-draw { to { stroke-dashoffset: 0; } }
+@keyframes po-ring { to { opacity: 0; inset: -8px; } }
+@keyframes po-slide { from { transform: translateY(4px); opacity: 0; } to { transform: none; opacity: 1; } }

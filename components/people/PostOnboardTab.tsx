@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
 import { Archive, CalendarClock, Building2, Trash2, ListChecks, MessageSquareText, MessageSquareWarning, RefreshCw, Send, SkipForward, X } from "lucide-react";
 import { CheckinRatingRequestDialog, StateChip } from "@/components/people/CheckinRatingRequestDialog";
@@ -15,6 +15,7 @@ import { skipTaskEmail, skipTasksBulk, undoTaskEmailSkip } from "@/app/people/ac
 import type { TaskSkipRecord } from "@/lib/front/task-email";
 import { EmptyState, Input } from "@/components/ui";
 import { formatMomentDateShort } from "@/lib/dates/display";
+import { DEFAULT_TIMEZONE } from "@/lib/calendar/timezones";
 import { CheckinRatingModal } from "@/components/people/CheckinRatingModal";
 import { ratedCheckin, ratedCheckinForTask, ratingPoints, scaleSummary, type CheckinRatingView, type RatedCheckin } from "@/lib/onboarding/checkin-rating";
 import { pointsText } from "@/lib/interviews/scorecard";
@@ -118,6 +119,22 @@ function mdy(ms: number, shortYear = false): string {
   const yyyy = String(d.getUTCFullYear());
   return `${mm}/${dd}/${shortYear ? yyyy.slice(2) : yyyy}`;
 }
+/**
+ * Sample A of the Nov 14 2026 Post-onboard Review (his pick). An open check-in shows
+ * how late it is (+43d) or how soon it falls due (in 77d), not the date. Lateness
+ * steps up at 15 days, and from STALE_AFTER_DAYS it greys out with a "skip?" hint
+ * and no Send - by then the check-in is probably better skipped than sent late.
+ * 45 is where the review's slider started; change it here.
+ */
+const STALE_AFTER_DAYS = 45;
+const LATE_STEP_DAYS = 15;
+
+/** Today's calendar day in the office time zone, as UTC midnight - the same on the server and in the browser, so the day counts hydrate cleanly. */
+function officeTodayUtc(): number {
+  const [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: DEFAULT_TIMEZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()).split("-").map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+
 function mdyIso(iso: string | null): string {
   if (!iso) return "—";
   const ms = new Date(iso).getTime();
@@ -177,6 +194,35 @@ export function PostOnboardTab({
   const [requests, setRequests] = useState<Record<string, RatingRequestView>>({});
   const [leftNotices, setLeftNotices] = useState<RatingRequestView[]>([]);
   const [requestReload, setRequestReload] = useState(0);
+  // The two moments that animate (globals.css .po-done-anim / .po-slide-in): a cell
+  // that became DONE, or a rating link that became PENDING, since the last render.
+  // Nothing animates on first load - only a change made while the page is open.
+  const prevDoneRef = useRef<Set<string> | null>(null);
+  const prevSentRef = useRef<Set<string> | null>(null);
+  const doneNow = useMemo(() => {
+    const out = new Set<string>();
+    for (const h of hires) for (const c of h.checkins) if (c.status === "DONE") out.add(`${h.id}:${c.key}`);
+    return out;
+  }, [hires]);
+  const justDone = useMemo(() => {
+    const prev = prevDoneRef.current;
+    return prev ? new Set([...doneNow].filter((k) => !prev.has(k))) : new Set<string>();
+  }, [doneNow]);
+  useEffect(() => {
+    prevDoneRef.current = doneNow;
+  }, [doneNow]);
+  const sentNow = useMemo(
+    () => new Set(Object.entries(requests).filter(([, v]) => v.state === "PENDING").map(([k, v]) => `${k}@${v.lastSentAt}`)),
+    [requests]
+  );
+  const justSent = useMemo(() => {
+    const prev = prevSentRef.current;
+    return prev ? new Set([...sentNow].filter((k) => !prev.has(k)).map((k) => k.split("@")[0])) : new Set<string>();
+  }, [sentNow]);
+  useEffect(() => {
+    prevSentRef.current = sentNow;
+  }, [sentNow]);
+  const todayUtc = useMemo(() => officeTodayUtc(), []);
   const [openRequest, setOpenRequest] = useState<{ hire: PostOnboardHire; checkin: RatedCheckin } | null>(null);
   useEffect(() => {
     const ids = initial.map((h) => h.id);
@@ -656,7 +702,19 @@ export function PostOnboardTab({
       .map((k) => present.find((c) => c.key === k)!)
   })).filter((g) => g.cols.length);
   const plan = groups.flatMap((g) => g.cols.map((c, i) => ({ ...c, group: g.key, first: i === 0 })));
-  const colWidth = (group: string) => (group === "mgr" ? 70 : 52);
+  /**
+   * Column widths (Sample A, Nov 14 2026). Every check-in column is the same 60px so
+   * the marks centre on one line. The name column is a fixed 172px - names and job
+   * titles wrap rather than leave a wide empty gap - and Department and Started fold
+   * under the name below xl (1280), so a 1024-wide window never scrolls sideways.
+   *   xl and up:  36 + 172 + 112 + 84 + 44 + 7 x 60 = 868px, the rest stays free.
+   *   below xl:   36 + 172 + 44 + 7 x 60 = 672px.
+   * ROOM FOR MORE COLUMNS LATER, in this order: (1) a new column takes the free
+   * column on the right (about 340px at 1536, about 75px at 1280); (2) past that,
+   * fold Department and Started under the name at every width, which frees 196px;
+   * (3) then merge Social and 401k into one "Tasks 0/2" column, which frees 60px.
+   */
+  const CHECK_W = 60;
 
   /** When a dated check-in falls due: start date + its days (lib/onboarding/tasks.ts). */
   function dueAt(h: PostOnboardHire, key: string): number | null {
@@ -665,21 +723,26 @@ export function PostOnboardTab({
     return new Date(h.startDate).getTime() + days * 86_400_000;
   }
 
+  /** Whole days past due (positive) or until due (negative) for a dated check-in. */
+  function daysLate(at: number | null): number | null {
+    return at === null ? null : Math.round((todayUtc - at) / 86_400_000);
+  }
+
   /**
-   * The mark every cell starts with (his design, Nov 14 2026: "so we aren't wasting
-   * space, make the due date the clickable button instead of the circle"):
-   *   open, with a due day  -> the due date itself (MM/DD/YY), red once it is due;
-   *   done                  -> a filled green bubble with a check;
-   *   skipped               -> a filled light-orange bubble with an x;
-   *   not applicable        -> the grey N/A tag;
-   *   open, no due day      -> the empty circle (Social, 401k).
-   * SKIPPED and N/A are both stored N/A; the skip record (skips[hire][key]) tells
-   * them apart. The whole cell is the button; this is only what it shows.
+   * The top slot of a cell: one mark, always 24px tall and centred.
+   *   open, dated    -> +43d (late, red; deeper red from 15 days; grey and dashed from
+   *                     STALE_AFTER_DAYS) or "in 77d" (not due yet, quiet grey). A red
+   *                     left rule marks late so it never relies on colour alone.
+   *   done           -> filled green bubble with a check (draws itself when just done)
+   *   skipped        -> filled light-orange bubble with an x
+   *   not applicable -> the grey N/A tag
+   *   open, undated  -> the empty circle (Social, 401k)
+   * SKIPPED and N/A are both stored N/A; the skip record (skips[hire][key]) tells them apart.
    */
-  function markEl(c: Checkin, skipped = false, at: number | null = null) {
+  function markEl(c: Checkin, skipped: boolean, at: number | null, animate: boolean) {
     if (c.status === "NA")
       return skipped ? (
-        <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-orange-100 text-orange-500 dark:bg-orange-500/15 dark:text-orange-300">
+        <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">
           <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden><path d="M2.5 2.5 L7.5 7.5 M7.5 2.5 L2.5 7.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
         </span>
       ) : (
@@ -687,82 +750,98 @@ export function PostOnboardTab({
       );
     if (c.status === "DONE")
       return (
-        <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+        <span className={clsx("relative inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300", animate && "po-done-anim")}>
           <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </span>
       );
-    if (at !== null)
-      return (
-        <span
-          className={clsx(
-            "inline-flex h-[22px] items-center whitespace-nowrap rounded px-[3px] text-[10px] font-medium tracking-tight tabular-nums ring-1",
-            c.dueSoon
-              ? "bg-red-50 text-red-700 ring-red-300 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/40"
-              : "bg-white text-brand-lea ring-brand-lea/20 dark:bg-transparent dark:text-slate-200 dark:ring-white/20"
-          )}
-        >
-          {mdy(at, true)}
-        </span>
-      );
-    if (c.dueSoon) return <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white">!</span>;
-    return <span className="inline-block h-[22px] w-[22px] rounded-full border-2 border-brand-grey/30 dark:border-slate-500/50" />;
+    const late = daysLate(at);
+    if (late === null) return <span className="inline-block h-[22px] w-[22px] rounded-full border-2 border-brand-grey/60 dark:border-slate-400/60" />;
+    if (late <= 0) return <span className="whitespace-nowrap text-[11px] tabular-nums text-brand-grey dark:text-slate-400">{late === 0 ? "today" : `in ${-late}d`}</span>;
+    const tone =
+      late >= STALE_AFTER_DAYS
+        ? "border border-dashed border-brand-grey/50 border-l-2 border-l-brand-grey/70 text-brand-grey dark:border-slate-500 dark:text-slate-400"
+        : late >= LATE_STEP_DAYS
+          ? "border-l-2 border-l-red-600 bg-red-100 font-bold text-red-800 dark:border-l-red-400 dark:bg-red-500/25 dark:text-red-200"
+          : "border-l-2 border-l-red-600 bg-red-50 font-semibold text-red-700 dark:border-l-red-400 dark:bg-red-500/15 dark:text-red-300";
+    return <span className={clsx("inline-flex h-[22px] items-center whitespace-nowrap rounded px-1.5 text-[11px] tabular-nums", tone)}>+{late}d</span>;
   }
 
   function stateWord(c: Checkin, skipped = false) {
     return c.status === "DONE" ? "Done" : c.status === "NA" ? (skipped ? "Skipped" : "N/A") : c.dueSoon ? "Due" : "To do";
   }
 
-  /** The small line under a mark: what is going on with that check-in, in a word. */
-  function miniLine(h: PostOnboardHire, c: Checkin, group: string) {
+  /** The bottom slot of a cell: what it shows, and the same as words for the cell's label. */
+  function captionOf(h: PostOnboardHire, c: Checkin, group: string, at: number | null, skipped: boolean): { node: React.ReactNode; text: string } | null {
+    const late = c.status === "TODO" ? daysLate(at) : null;
     const rated = ratedCheckinForTask(c.key);
+    const cap = "whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.06em] text-brand-grey dark:text-slate-400";
     if (group === "mgr" && rated) {
       const saved = ratings[rk(h.id, rated.dayMark)];
       const req = requests[rk(h.id, rated.dayMark)];
-      if (saved) return <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">★ rated</span>;
-      if (c.status === "NA") return null;
-      if (req && req.state === "PENDING") return <span className="text-[10px] text-brand-grey dark:text-slate-400">sent {formatMomentDateShort(req.lastSentAt)}</span>;
-      if (c.status === "DONE") return <span className="text-[10px] text-brand-grey dark:text-slate-400">done</span>;
-      return null;
+      if (saved) return { node: <span className="whitespace-nowrap text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">★ rated</span>, text: "rated" };
+      if (req && req.state === "PENDING")
+        return {
+          node: <span className={clsx(cap, justSent.has(rk(h.id, rated.dayMark)) && "po-slide-in inline-block")}>sent {mdy(new Date(req.lastSentAt).getTime(), true).slice(0, 5)}</span>,
+          text: `rating link sent ${formatMomentDateShort(req.lastSentAt)}`
+        };
+      if (c.status === "DONE") return { node: <span className={cap}>done</span>, text: "" };
+    } else if (c.status !== "NA") {
+      const r = pickReply(replies[h.id]?.[c.key]);
+      if (r) {
+        const urgent = needsFollowUp(r.level) && !r.handledAt;
+        const Icon = urgent ? MessageSquareWarning : MessageSquareText;
+        return { node: <Icon className={clsx("h-3.5 w-3.5", r.handledAt ? "text-brand-lea dark:text-slate-300" : LEVEL_STYLE[r.level].icon)} aria-hidden />, text: urgent ? "reply needs action" : "replied" };
+      }
+      if (waitingOnReply(h.id, c.key)) return { node: <span className={cap}>no reply</span>, text: "no reply yet" };
     }
-    const r = pickReply(replies[h.id]?.[c.key]);
-    if (r) {
-      const urgent = needsFollowUp(r.level) && !r.handledAt;
-      const Icon = urgent ? MessageSquareWarning : MessageSquareText;
-      return <Icon className={clsx("h-3.5 w-3.5", r.handledAt ? "text-brand-lea dark:text-slate-300" : LEVEL_STYLE[r.level].icon)} aria-label={urgent ? "Reply needs action" : "Replied"} />;
-    }
-    if (waitingOnReply(h.id, c.key)) return <span className="text-[9px] font-semibold uppercase tracking-wide text-brand-grey/80 dark:text-slate-500">no reply</span>;
+    if (c.status === "NA" && skipped && at !== null)
+      return { node: <span className="whitespace-nowrap text-[10px] tabular-nums text-brand-grey dark:text-slate-400">was {mdy(at, true).slice(0, 5)}</span>, text: `was due ${mdy(at)}` };
+    if (late !== null && late >= STALE_AFTER_DAYS) return { node: <span className="whitespace-nowrap text-[10px] text-brand-grey dark:text-slate-400">skip?</span>, text: "probably better skipped" };
     return null;
   }
 
-  /** One grid cell: the mark and its line open the person's drawer; a due manager check-in also gets Send. */
+  /**
+   * One grid cell: two fixed slots, a 24px mark over a 24px caption, so every row is
+   * the same height and every mark sits on one line (Sample A). The mark (and the
+   * caption, when there is one) opens the person's drawer; a late manager check-in,
+   * before the stale line, puts a real Send button in the caption slot instead.
+   */
   function gridCell(h: PostOnboardHire, c: Checkin, group: string) {
     const skipped = Boolean(skips[h.id]?.[c.key]);
     const rated = ratedCheckinForTask(c.key);
-    const showSend =
-      group === "mgr" && rated && c.status === "TODO" && c.dueSoon && !ratings[rk(h.id, rated.dayMark)] && !requests[rk(h.id, rated.dayMark)] && h.employmentStatus !== "TERMINATED";
     const at = dueAt(h, c.key);
+    const late = c.status === "TODO" ? daysLate(at) : null;
+    const showSend =
+      group === "mgr" && rated && c.status === "TODO" && late !== null && late > 0 && late < STALE_AFTER_DAYS &&
+      !ratings[rk(h.id, rated.dayMark)] && !requests[rk(h.id, rated.dayMark)] && h.employmentStatus !== "TERMINATED";
+    const caption = showSend ? null : captionOf(h, c, group, at, skipped);
+    let when = "";
+    if (at !== null && late !== null) when = late > 0 ? `, ${late} days late, was due ${mdy(at)}` : late === 0 ? ", due today" : `, due ${mdy(at)}, in ${-late} days`;
+    else if (at !== null && c.status === "NA" && skipped) when = `, was due ${mdy(at)}`;
+    const label = `${h.name}, ${columnLabel(c)}: ${stateWord(c, skipped)}${when}${caption?.text ? `, ${caption.text}` : ""}. Open actions`;
+    const slot = "flex h-6 w-full items-center justify-center rounded transition hover:bg-brand-gold/10 hover:shadow-glow";
     return (
-      <div className="flex flex-col items-center gap-0.5">
-        <button
-          type="button"
-          onClick={() => setDrawerId(h.id)}
-          title={`${h.name} · ${columnLabel(c)}: ${stateWord(c, skipped)}${at && c.status !== "DONE" ? ` · due ${mdy(at)}` : ""} - click for actions`}
-          aria-label={`${h.name}, ${columnLabel(c)}: ${stateWord(c, skipped)}. Open actions`}
-          className="flex min-h-[38px] w-full flex-col items-center justify-start gap-0.5 rounded px-0.5 py-0.5 transition hover:bg-brand-gold/10 hover:shadow-glow"
-        >
-          {markEl(c, skipped, c.status === "TODO" ? at : null)}
-          {miniLine(h, c, group)}
+      <div className="grid grid-rows-[24px_24px] items-center justify-items-center gap-0.5">
+        <button type="button" onClick={() => setDrawerId(h.id)} title={label} aria-label={label} className={slot}>
+          {markEl(c, skipped, c.status === "TODO" ? at : null, justDone.has(`${h.id}:${c.key}`))}
         </button>
         {showSend && rated ? (
           <button
             type="button"
             onClick={() => setOpenRequest({ hire: h, checkin: rated })}
             title={`Email the hiring manager the ${rated.short} rating link - no login needed`}
-            className="inline-flex items-center gap-0.5 rounded border border-red-300 px-1.5 py-px text-[10px] font-bold text-red-700 transition hover:shadow-glow dark:border-red-500/40 dark:text-red-300"
+            aria-label={`Send ${h.name}'s ${rated.short} rating link`}
+            className="inline-flex h-[22px] items-center gap-0.5 rounded border border-red-400 px-1.5 text-[11px] font-bold text-red-700 transition hover:shadow-glow dark:border-red-500/50 dark:text-red-300"
           >
-            <Send className="h-2.5 w-2.5" /> Send
+            <Send className="h-2.5 w-2.5" aria-hidden /> Send
           </button>
-        ) : null}
+        ) : caption ? (
+          <button type="button" onClick={() => setDrawerId(h.id)} tabIndex={-1} aria-hidden className={slot}>
+            {caption.node}
+          </button>
+        ) : (
+          <span aria-hidden />
+        )}
       </div>
     );
   }
@@ -777,7 +856,7 @@ export function PostOnboardTab({
     return (
       <div key={c.key} className="flex flex-wrap items-start gap-x-3 gap-y-2 border-b border-brand-lea/10 py-3 last:border-b-0 dark:border-white/10">
         <div className="flex w-36 shrink-0 items-center gap-2">
-          {markEl(c, Boolean(skip))}
+          {markEl(c, Boolean(skip), null, false)}
           <div>
             <div className="text-sm font-semibold text-brand-lea dark:text-slate-100">{columnLabel(c)}</div>
             <div className="text-[11px] text-brand-grey dark:text-slate-400">
@@ -1029,21 +1108,83 @@ export function PostOnboardTab({
           and <main> clips overflow - do not put overflow-hidden or overflow-x-auto
           back on these wrappers, or the header stops sticking. */}
       <div className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
-        <table className="w-full table-fixed text-sm">
+        {/* PHONES (below md): one card per person instead of the table - the 7 check-in
+            columns cannot fit a phone without a sideways scroll, and his standing rule
+            (Nov 14 2026) is that everything works on mobile, always. Same cells, same
+            drawer, same A / T / C status; the cards just stack. */}
+        <div className="divide-y divide-brand-lea/10 md:hidden dark:divide-white/10">
+          <div className="px-3 py-2 text-[11px] text-brand-grey dark:text-slate-400">
+            {visible.length} {visible.length === 1 ? "person" : "people"}
+          </div>
+          {visible.map((h) => {
+            const terminated = h.employmentStatus === "TERMINATED";
+            return (
+              <div key={h.id} className={clsx("grid gap-2 px-3 py-3", selected.has(h.id) ? "bg-brand-gold/10" : terminated && "bg-brand-cloudDancer/30 dark:bg-white/5")}>
+                <div className="flex items-start gap-2">
+                  <input type="checkbox" checked={selected.has(h.id)} onChange={() => toggleOne(h.id)} aria-label={`Select ${h.name}`} className="mt-1 h-4 w-4 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <Link href={`/people/${h.id}`} className={clsx("font-semibold hover:underline", terminated ? "text-brand-grey dark:text-slate-400" : "text-brand-lea dark:text-slate-100")}>
+                      {h.name}
+                    </Link>
+                    <div className="break-words text-xs leading-snug text-brand-grey dark:text-slate-400">{h.position ?? "—"}</div>
+                    <div className="text-xs leading-snug text-brand-grey dark:text-slate-400">
+                      {h.department ?? "—"} · <span className="tabular-nums">started {mdyIso(h.startDate)}</span>
+                    </div>
+                  </div>
+                  <select
+                    value={h.employmentStatus}
+                    onChange={(e) => void setEmployment(h.id, e.target.value as EmploymentStatus)}
+                    aria-label={`${h.name} employment status`}
+                    title={`${STATUS_WORD[h.employmentStatus]} - A Active · T Terminated · C Contract`}
+                    className={clsx("h-8 w-[52px] shrink-0 cursor-pointer rounded border px-1 text-center text-xs font-bold outline-none transition hover:shadow-glow", STATUS_TONE[h.employmentStatus])}
+                  >
+                    {(["ACTIVE", "TERMINATED", "CONTRACT"] as EmploymentStatus[]).map((v) => (
+                      <option key={v} value={v} title={STATUS_WORD[v]}>
+                        {STATUS_LETTER[v]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {/* Two-item groups sit side by side; the three manager check-ins take a full row. */}
+                <div className="grid grid-cols-2 gap-1">
+                {groups.map((g) => (
+                  <div key={g.key} className={clsx("rounded px-1 pb-1", GROUP_TINT[g.key], g.cols.length > 2 && "col-span-2", g.key === "ck" && "bg-brand-sweet/10")}>
+                    <div className="px-1 pt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-brand-edenOnDark">{g.label}</div>
+                    <div className="grid" style={{ gridTemplateColumns: `repeat(${g.cols.length}, minmax(0, 1fr))` }}>
+                      {g.cols.map((col) => {
+                        const c = h.checkins.find((x) => x.key === col.key);
+                        return (
+                          <div key={col.key} className="grid justify-items-center gap-0.5 px-0.5 pt-1">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-brand-grey dark:text-slate-400">{columnLabel(col)}</span>
+                            {c ? gridCell(h, c, g.key) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                </div>
+              </div>
+            );
+          })}
+          {visible.length === 0 ? <p className="px-4 py-8 text-center text-sm text-brand-grey dark:text-slate-400">No post-onboard employees match these filters.</p> : null}
+        </div>
+        <table className="hidden w-full table-fixed text-sm md:table">
           <colgroup>
-            <col className="w-9" />
-            <col className="w-[230px]" />
-            <col className="w-[130px]" />
-            <col className="w-[88px]" />
-            <col className="w-[52px]" />
+            <col style={{ width: 36 }} />
+            <col style={{ width: 172 }} />
+            <col className="hidden xl:table-column" style={{ width: 112 }} />
+            <col className="hidden xl:table-column" style={{ width: 84 }} />
+            <col style={{ width: 44 }} />
             {plan.map((c) => (
-              <col key={c.key} style={{ width: colWidth(c.group) }} />
+              <col key={c.key} style={{ width: CHECK_W }} />
             ))}
             <col />
           </colgroup>
           <thead>
             <tr className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-brand-edenOnDark">
-              <th colSpan={5} />
+              <th colSpan={3} />
+              <th colSpan={2} className="hidden xl:table-cell" />
               {groups.map((g) => (
                 <th key={g.key} colSpan={g.cols.length} className={clsx("border-l border-brand-lea/10 px-1 pb-1.5 pt-2.5 text-center leading-tight dark:border-white/10", GROUP_HEAD[g.key], GROUP_RULE[g.key], g.key === "mgr" && "text-brand-lea dark:text-slate-100")}>
                   {g.label}
@@ -1051,13 +1192,13 @@ export function PostOnboardTab({
               ))}
               <th />
             </tr>
-            <tr className="text-[10px] font-bold uppercase tracking-[0.1em] text-brand-grey dark:text-slate-400">
-              <th className={clsx(HEAD_CELL, "rounded-tl px-2 text-center")}>
+            <tr className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">
+              <th className={clsx(HEAD_CELL, "rounded-tl px-2 text-center align-bottom")}>
                 <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" className="h-4 w-4 align-middle" />
               </th>
               <th className={clsx(HEAD_CELL, "px-3 text-left align-bottom")}>Employee</th>
-              <th className={clsx(HEAD_CELL, "px-2 text-left align-bottom")}>Department</th>
-              <th className={clsx(HEAD_CELL, "px-2 text-left align-bottom")}>Started</th>
+              <th className={clsx(HEAD_CELL, "hidden px-2 text-left align-bottom xl:table-cell")}>Department</th>
+              <th className={clsx(HEAD_CELL, "hidden px-2 text-left align-bottom xl:table-cell")}>Started</th>
               <th className={clsx(HEAD_CELL, "h-[92px] px-0 text-center align-bottom")} title="Employment status: A Active · T Terminated · C Contract">
                 <span className="inline-block whitespace-nowrap [writing-mode:vertical-rl] rotate-180">Status</span>
               </th>
@@ -1072,9 +1213,10 @@ export function PostOnboardTab({
           <tbody>
             {/* How many are due in each column, for the people shown. */}
             <tr className="border-b-2 border-brand-lea/10 text-[11px] text-brand-grey dark:border-white/10 dark:text-slate-400">
-              <td colSpan={5} className="px-3 py-1.5">
+              <td colSpan={3} className="px-3 py-1.5">
                 {visible.length} {visible.length === 1 ? "person" : "people"} · due now ↓
               </td>
+              <td colSpan={2} className="hidden xl:table-cell" />
               {plan.map((c) => {
                 const n = visible.filter((h) => h.checkins.some((x) => x.key === c.key && x.status === "TODO" && x.dueSoon)).length;
                 return (
@@ -1089,28 +1231,30 @@ export function PostOnboardTab({
               const terminated = h.employmentStatus === "TERMINATED";
               return (
                 <tr key={h.id} className={clsx("row-wash border-b border-brand-lea/5 dark:border-white/10 dark:hover:bg-white/5", selected.has(h.id) ? "bg-brand-gold/10" : terminated && "bg-brand-cloudDancer/30 dark:bg-white/5")}>
-                  <td className="px-2 py-2.5 text-center align-top">
-                    <input type="checkbox" checked={selected.has(h.id)} onChange={() => toggleOne(h.id)} aria-label={`Select ${h.name}`} className="mt-0.5 h-4 w-4 align-middle" />
+                  <td className="px-2 py-1.5 text-center align-middle">
+                    <input type="checkbox" checked={selected.has(h.id)} onChange={() => toggleOne(h.id)} aria-label={`Select ${h.name}`} className="h-4 w-4 align-middle" />
                   </td>
-                  <td className="px-3 py-2.5 align-top">
+                  <td className="px-3 py-1.5 align-middle">
                     <Link href={`/people/${h.id}`} className={clsx("font-semibold hover:underline", terminated ? "text-brand-grey dark:text-slate-400" : "text-brand-lea dark:text-slate-100")}>
                       {h.name}
                     </Link>
-                    <div className="truncate text-xs text-brand-grey dark:text-slate-400" title={h.position ?? undefined}>
-                      {h.position ?? "—"}
+                    <div className="break-words text-xs leading-snug text-brand-grey dark:text-slate-400">{h.position ?? "—"}</div>
+                    {/* Below xl, Department and Started fold in here instead of their own columns. */}
+                    <div className="text-xs leading-snug text-brand-grey dark:text-slate-400 xl:hidden">
+                      {h.department ?? "—"} · <span className="tabular-nums">{mdyIso(h.startDate)}</span>
                     </div>
                   </td>
-                  <td className="break-words px-2 py-2.5 align-top text-xs text-brand-grey dark:text-slate-400">
+                  <td className="hidden break-words px-2 py-1.5 align-middle text-xs text-brand-grey dark:text-slate-400 xl:table-cell">
                     {h.department ?? "—"}
                   </td>
-                  <td className="px-2 py-2.5 align-top text-xs tabular-nums text-brand-grey dark:text-slate-400">{mdyIso(h.startDate)}</td>
-                  <td className="px-1 py-2.5 text-center align-top">
+                  <td className="hidden px-2 py-1.5 align-middle text-xs tabular-nums text-brand-grey dark:text-slate-400 xl:table-cell">{mdyIso(h.startDate)}</td>
+                  <td className="px-1 py-1.5 text-center align-middle">
                     <select
                       value={h.employmentStatus}
                       onChange={(e) => void setEmployment(h.id, e.target.value as EmploymentStatus)}
                       aria-label={`${h.name} employment status`}
                       title={`${STATUS_WORD[h.employmentStatus]} - A Active · T Terminated · C Contract`}
-                      className={clsx("w-[42px] cursor-pointer rounded border px-0.5 py-0.5 text-center text-[11px] font-bold outline-none transition hover:shadow-glow", STATUS_TONE[h.employmentStatus])}
+                      className={clsx("h-6 w-[38px] cursor-pointer rounded border px-0.5 text-center text-[11px] font-bold outline-none transition hover:shadow-glow", STATUS_TONE[h.employmentStatus])}
                     >
                       {(["ACTIVE", "TERMINATED", "CONTRACT"] as EmploymentStatus[]).map((v) => (
                         <option key={v} value={v} title={STATUS_WORD[v]}>
@@ -1122,7 +1266,7 @@ export function PostOnboardTab({
                   {plan.map((col) => {
                     const c = h.checkins.find((x) => x.key === col.key);
                     return (
-                      <td key={col.key} className={clsx("px-0.5 py-2 text-center align-top", GROUP_TINT[col.group as "task"], col.first && "border-l border-brand-lea/10 dark:border-white/10")}>
+                      <td key={col.key} className={clsx("px-1 py-1.5 text-center align-middle", GROUP_TINT[col.group as "task"], col.first && "border-l border-brand-lea/10 dark:border-white/10")}>
                         {c ? gridCell(h, c, col.group) : null}
                       </td>
                     );
