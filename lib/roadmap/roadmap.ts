@@ -901,6 +901,8 @@ Smaller fixes and polish.
 - [x] RECORDED, from him Nov 14 2026: older check-ins that were due before the check-ins existed are marked skipped, not done, because they did not happen.
 - [x] RECORDED, from him Nov 14 2026: core value wording in the app must match HR's Core Values table (Definition and Key Behaviors) word for word, for consistency.
 - [x] RECORDED, from him Nov 14 2026: core values show a short definition first with the full section expandable on demand, so it does not get busy.
+- [x] Post-onboard bulk bar: Mark check-in skipped (Nov14, 73b75f2) - tick people, pick the check-in, Apply; counts first and asks, only open steps change, done ones are left alone, each person gets their own Skipped record (undo per person from the drawer), and a last open check-in archives as with done. Checked with writes blocked; NOT verified: a real bulk skip (needs-a-person 61).
+- [x] RECORDED, from him Nov 14 2026: he wants to be able to bulk mark check-ins skipped from the Post-onboard bulk bar.
 - [x] Phone layouts from Aimee's Nov 13 feedback (Nov13, 7fc6a9a; checklist part in 25a09b0) — candidate header stacks under the name; interview cards put the title on its own line and show edit/delete on phones (they were hover-only, so they could not be tapped and left a blank band); new-hire checklist rows and the NEXT banner stop squeezing the label to about 45px. Her screen recording turned out to show the interview drawer from before scorecards dropped the question lines (8ae0d29); at phone width the drawer now shows only the core values, so it was left alone. Not tested on a real iPhone, only at 375px emulated.
 
 ## Scheduling / Booking Links (Calendly replacement)
