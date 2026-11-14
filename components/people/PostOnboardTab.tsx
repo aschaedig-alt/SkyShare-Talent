@@ -666,16 +666,22 @@ export function PostOnboardTab({
   }
 
   /**
-   * The round mark every cell starts with: done, due, to do, skipped, or N/A.
-   * SKIPPED and N/A are both stored N/A; a skip record (skips[hire][key]) is what
-   * tells them apart. Skipped = it should have happened and did not; N/A = it never
-   * applied to this person. His call, Nov 14 2026: the grid shows the difference.
+   * The mark every cell starts with (his design, Nov 14 2026: "so we aren't wasting
+   * space, make the due date the clickable button instead of the circle"):
+   *   open, with a due day  -> the due date itself (MM/DD/YY), red once it is due;
+   *   done                  -> a filled green bubble with a check;
+   *   skipped               -> a filled light-orange bubble with an x;
+   *   not applicable        -> the grey N/A tag;
+   *   open, no due day      -> the empty circle (Social, 401k).
+   * SKIPPED and N/A are both stored N/A; the skip record (skips[hire][key]) tells
+   * them apart. The whole cell is the button; this is only what it shows.
    */
-  function markEl(c: Checkin, skipped = false) {
+  function markEl(c: Checkin, skipped = false, at: number | null = null) {
     if (c.status === "NA")
       return skipped ? (
-        // Plain text, not bold and not coloured: it should not stand out (his words, Nov 14).
-        <span className="inline-flex h-[22px] items-center px-0.5 text-[10px] text-brand-grey dark:text-slate-400">Skipped</span>
+        <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-orange-100 text-orange-500 dark:bg-orange-500/15 dark:text-orange-300">
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden><path d="M2.5 2.5 L7.5 7.5 M7.5 2.5 L2.5 7.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+        </span>
       ) : (
         <span className="inline-flex h-[22px] items-center rounded bg-brand-cloudDancer/70 px-1 text-[9px] font-bold uppercase tracking-wide text-brand-grey dark:bg-white/10 dark:text-slate-400">N/A</span>
       );
@@ -683,6 +689,19 @@ export function PostOnboardTab({
       return (
         <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
           <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </span>
+      );
+    if (at !== null)
+      return (
+        <span
+          className={clsx(
+            "inline-flex h-[22px] items-center whitespace-nowrap rounded px-[3px] text-[10px] font-medium tracking-tight tabular-nums ring-1",
+            c.dueSoon
+              ? "bg-red-50 text-red-700 ring-red-300 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/40"
+              : "bg-white text-brand-lea ring-brand-lea/20 dark:bg-transparent dark:text-slate-200 dark:ring-white/20"
+          )}
+        >
+          {mdy(at, true)}
         </span>
       );
     if (c.dueSoon) return <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white">!</span>;
@@ -694,32 +713,16 @@ export function PostOnboardTab({
   }
 
   /** The small line under a mark: what is going on with that check-in, in a word. */
-  /**
-   * The due date under an open or skipped check-in, so he can judge whether a late
-   * one is still worth sending or better skipped (Nov 14 2026). Red once it is due.
-   */
-  function dueLine(h: PostOnboardHire, c: Checkin) {
-    if (c.status === "DONE") return null;
-    const at = dueAt(h, c.key);
-    if (!at) return null;
-    const late = c.status === "TODO" && c.dueSoon;
-    return (
-      <span className={clsx("whitespace-nowrap text-[10px] tabular-nums", late ? "text-red-700 dark:text-red-300" : "text-brand-grey dark:text-slate-400")}>
-        {mdy(at, true)}
-      </span>
-    );
-  }
-
   function miniLine(h: PostOnboardHire, c: Checkin, group: string) {
     const rated = ratedCheckinForTask(c.key);
     if (group === "mgr" && rated) {
       const saved = ratings[rk(h.id, rated.dayMark)];
       const req = requests[rk(h.id, rated.dayMark)];
       if (saved) return <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">★ rated</span>;
-      if (c.status === "NA") return dueLine(h, c);
+      if (c.status === "NA") return null;
       if (req && req.state === "PENDING") return <span className="text-[10px] text-brand-grey dark:text-slate-400">sent {formatMomentDateShort(req.lastSentAt)}</span>;
       if (c.status === "DONE") return <span className="text-[10px] text-brand-grey dark:text-slate-400">done</span>;
-      return dueLine(h, c);
+      return null;
     }
     const r = pickReply(replies[h.id]?.[c.key]);
     if (r) {
@@ -728,7 +731,7 @@ export function PostOnboardTab({
       return <Icon className={clsx("h-3.5 w-3.5", r.handledAt ? "text-brand-lea dark:text-slate-300" : LEVEL_STYLE[r.level].icon)} aria-label={urgent ? "Reply needs action" : "Replied"} />;
     }
     if (waitingOnReply(h.id, c.key)) return <span className="text-[9px] font-semibold uppercase tracking-wide text-brand-grey/80 dark:text-slate-500">no reply</span>;
-    return dueLine(h, c);
+    return null;
   }
 
   /** One grid cell: the mark and its line open the person's drawer; a due manager check-in also gets Send. */
@@ -747,7 +750,7 @@ export function PostOnboardTab({
           aria-label={`${h.name}, ${columnLabel(c)}: ${stateWord(c, skipped)}. Open actions`}
           className="flex min-h-[38px] w-full flex-col items-center justify-start gap-0.5 rounded px-0.5 py-0.5 transition hover:bg-brand-gold/10 hover:shadow-glow"
         >
-          {markEl(c, skipped)}
+          {markEl(c, skipped, c.status === "TODO" ? at : null)}
           {miniLine(h, c, group)}
         </button>
         {showSend && rated ? (
