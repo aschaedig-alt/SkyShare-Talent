@@ -1357,24 +1357,34 @@ on Settings, Feedback.
 
 ---
 
-### 59. Nobody has clicked Done on a pilot's Requested iPad or credit card row
+### 59. Nobody has seen the Requested and Scheduled rows on screen, or clicked Done on one
 
-**Status:** BLOCKED ON DEPLOY
-**Added:** 2026-11-13
+**Status:** OPEN
+**Added:** 2026-11-13 (updated the same day for the Scheduled look in 7f0ab9e)
 
-A pilot's "Received iPad" and "Received company credit card" rows now show a lit
-navy-and-gold **Requested** segment with **Done** unlit, a "Click Done when it arrives"
-hint, and no strike-through. On the Onboarding grid the cell shows the word Requested
-instead of a tick. Checked: the server-rendered HTML for Cameron Morgan shows exactly that
-markup. NOT checked: anything on screen. Chrome could not reach the dev server, and Done
-was not clicked because it writes the live database.
+Both kinds of hold now look the same: their own lit navy-and-gold segment ahead of
+To do / Done / N/A, **Done** unlit, the label not struck through, and a hint under it.
+- **Requested** (a pilot's "Received iPad" and "Received company credit card"): the
+  segment says Requested; the hint says "Click Done when it arrives".
+- **Scheduled** (Attended orientation while on an upcoming session, Travel
+  accommodations while a trip is booked): the segment says Scheduled with a clock; the
+  hint says it clears itself when the orientation session (or the trip) is marked complete.
+On the Onboarding grid both cells show the word instead of a tick.
 
-**How to check it:** open a pilot hire's Checklist tab whose iPad has not arrived. Look at
-it in light and dark mode. When the iPad really arrives, click **Done**.
+Checked: the server-rendered HTML for Cameron Morgan showed the Requested markup (before
+7f0ab9e); the commit agent ran eslint and tsc on 7f0ab9e. NOT checked: anything on screen.
+Chrome could not reach the dev server, and Done was not clicked because it writes the live
+database.
 
-**What would count as a pass:** the Requested row is clearly not finished and Done looks
-like the next click; after Done the row is struck through with Done lit and the hint gone;
-on the grid that cell turns into a tick.
+**How to check it:** open a pilot hire's Checklist tab whose iPad has not arrived and who
+is on the upcoming orientation (Nov 17). Look at it in light and dark mode, and on the
+Onboarding grid. When the iPad really arrives, click **Done**. After the Nov 17 session is
+marked complete, look at Attended orientation again.
+
+**What would count as a pass:** the Requested and Scheduled words sit centred in their
+segments, and Done looks like the next click; after Done the Requested row is struck
+through with Done lit and the hint gone, and its grid cell turns into a tick; once the
+session is marked complete, Attended orientation turns Done by itself with no click.
 
 ---
 
