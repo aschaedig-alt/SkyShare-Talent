@@ -323,6 +323,14 @@ export async function recordTaskSkip(hireId: string, taskKey: string, rec: TaskS
   await writeSkips(all);
 }
 
+/** Record many skips in one read and one write (the bulk skip on the Post-onboard grid). */
+export async function recordTaskSkips(entries: Array<{ hireId: string; taskKey: string; rec: TaskSkipRecord }>): Promise<void> {
+  if (entries.length === 0) return;
+  const all = await readSkips();
+  for (const e of entries) all[recordKey(e.hireId, e.taskKey)] = e.rec;
+  await writeSkips(all);
+}
+
 export async function clearTaskSkip(hireId: string, taskKey: string): Promise<void> {
   const all = await readSkips();
   if (!(recordKey(hireId, taskKey) in all)) return;

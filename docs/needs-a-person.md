@@ -1381,6 +1381,16 @@ saves blocked: the button is on all six open rows of Chris Sharpe's drawer, and 
 sent nothing. NOT checked: a real skip. Add to the check above: skip one old check-in, reload,
 confirm it still reads Skipped, then Undo skip.
 
+**Update 2026-11-14 (bulk):** the bulk bar now has **Mark check-in skipped**: tick people,
+pick the check-in, Apply. It counts first, then asks ("Mark the 90-day check-in skipped for
+5 people? ... 3 already done - left as they are"); only open steps change, each person gets
+their own Skipped record, and anyone whose last open check-in it was is archived, as with
+done. Checked with every write blocked (only the read-only count allowed through): five
+people with the 30-day done got "Nothing to skip ... (5 already done)"; the same five on the
+90-day got the question; answering no sent nothing. NOT checked: a real bulk skip. Add to
+the check above: bulk-skip one old check-in for two people, reload, confirm both read
+Skipped, then Undo skip on each from their drawer.
+
 ---
 
 ### 62. The core value definitions now use HR's wording — two of the three places were not opened

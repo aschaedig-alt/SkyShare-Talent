@@ -4,14 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { clsx } from "clsx";
-import { Archive, CalendarClock, Building2, Trash2, ListChecks, MessageSquareText, MessageSquareWarning, RefreshCw, Send, X } from "lucide-react";
+import { Archive, CalendarClock, Building2, Trash2, ListChecks, MessageSquareText, MessageSquareWarning, RefreshCw, Send, SkipForward, X } from "lucide-react";
 import { CheckinRatingRequestDialog, StateChip } from "@/components/people/CheckinRatingRequestDialog";
 import { cancelReasonText, type RatingRequestView } from "@/lib/onboarding/checkin-rating-request-shared";
 import type { Checkin, EmploymentStatus, GridTaskStatus, PostOnboardHire } from "@/lib/data/onboarding";
 import { MAINTENANCE_TASKS } from "@/lib/onboarding/tasks";
 import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
 import { SendTaskEmailButton } from "@/components/people/SendTaskEmailButton";
-import { skipTaskEmail, undoTaskEmailSkip } from "@/app/people/actions";
+import { skipTaskEmail, skipTasksBulk, undoTaskEmailSkip } from "@/app/people/actions";
 import type { TaskSkipRecord } from "@/lib/front/task-email";
 import { EmptyState, Input } from "@/components/ui";
 import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
@@ -47,6 +47,8 @@ function fmtMoment(iso: string | null) {
 
 const POST_ONBOARD_BULK_ACTIONS: BulkAction[] = [
   { kind: "choice", key: "checkin", label: "Mark check-in done", icon: ListChecks, options: MAINTENANCE_TASKS.map((t) => ({ value: t.key, label: t.label })) },
+  // For older check-ins that fell due before the check-ins existed and did not happen (his ask, Nov 14 2026).
+  { kind: "choice", key: "skip", label: "Mark check-in skipped", icon: SkipForward, options: MAINTENANCE_TASKS.map((t) => ({ value: t.key, label: t.label })) },
   { kind: "patch", key: "archive", label: "Archive", icon: Archive, patch: { stage: "ARCHIVED" }, confirm: true, tone: "danger" },
   { kind: "date", key: "orientation", label: "Set orientation date", icon: CalendarClock },
   { kind: "text", key: "dept", label: "Set department", icon: Building2, placeholder: "Department" },
@@ -358,7 +360,8 @@ export function PostOnboardTab({
     router.refresh();
   }
 
-  async function bulkCheckin(_actionKey: string, key: string) {
+  async function bulkCheckin(actionKey: string, key: string) {
+    if (actionKey === "skip") return bulkSkip(key);
     const ids = [...selected];
     if (ids.length === 0) return;
     setBusy(true);
@@ -385,6 +388,58 @@ export function PostOnboardTab({
       );
       setSelected(new Set());
       router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Bulk "Mark check-in skipped": counts first, asks, then only the open steps go N/A. */
+  async function bulkSkip(key: string) {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    const label = MAINTENANCE_TASKS.find((t) => t.key === key)?.label ?? key;
+    setBusy(true);
+    try {
+      const pre = await skipTasksBulk(ids, key, true);
+      if (!pre.ok) {
+        window.alert(pre.error ?? "Couldn't count those check-ins.");
+        return;
+      }
+      const left = [
+        pre.done ? `${pre.done} already done` : "",
+        pre.alreadySkipped ? `${pre.alreadySkipped} already skipped` : "",
+        pre.missing ? `${pre.missing} without this check-in` : ""
+      ].filter(Boolean);
+      if (pre.open === 0) {
+        window.alert(`Nothing to skip: none of the ${ids.length} selected have the ${label} still open${left.length ? ` (${left.join(", ")})` : ""}.`);
+        return;
+      }
+      const ask = `Mark the ${label} skipped for ${pre.open} ${pre.open === 1 ? "person" : "people"}? It reads "Skipped", not done, and nobody is emailed.${left.length ? ` ${left.join(", ")} - left as they are.` : ""} Each can be undone one at a time from the person's drawer.`;
+      if (!window.confirm(ask)) return;
+      const res = await skipTasksBulk(ids, key);
+      if (!res.ok || !res.skippedAt) {
+        window.alert(res.error ?? "Couldn't skip those check-ins.");
+        return;
+      }
+      const skippedIds = new Set(res.skippedIds ?? []);
+      const archived = new Set(res.archivedIds ?? []);
+      const rec: TaskSkipRecord = { skippedAt: res.skippedAt, skippedBy: res.skippedBy ?? null };
+      setSkips((cur) => {
+        const next = { ...cur };
+        for (const id of skippedIds) next[id] = { ...(next[id] ?? {}), [key]: rec };
+        return next;
+      });
+      setHires((cur) =>
+        cur
+          .filter((h) => !archived.has(h.id))
+          .map((h) =>
+            skippedIds.has(h.id)
+              ? { ...h, checkins: h.checkins.map((c) => (c.key === key ? { ...c, status: "NA" as GridTaskStatus, dueSoon: false } : c)) }
+              : h
+          )
+      );
+      setSelected(new Set());
+      if (archived.size) router.refresh();
     } finally {
       setBusy(false);
     }

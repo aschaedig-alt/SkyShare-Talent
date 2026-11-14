@@ -31,6 +31,7 @@ import {
   getTaskSendRecord,
   recordTaskSend,
   recordTaskSkip,
+  recordTaskSkips,
   type HireForTaskEmail,
   type TaskEmailPreview,
   type TaskSendRecord,
@@ -107,6 +108,63 @@ export async function skipTaskEmail(hireId: string, taskKey: string): Promise<Ta
   // Skipping the last outstanding check-in finishes post-onboarding, the same as ticking it.
   const archived = task.group === MAINTENANCE_GROUP ? await maybeArchiveOnCheckinsComplete(hireId) : false;
   return { ok: true, skippedAt, skippedBy, archived };
+}
+
+export type BulkSkipResult = {
+  ok: boolean;
+  error?: string;
+  /** Still open (TODO) - these are the ones skipped. */
+  open: number;
+  done: number;
+  alreadySkipped: number;
+  /** Selected people who have no such step. */
+  missing: number;
+  skippedIds?: string[];
+  skippedAt?: string;
+  skippedBy?: string | null;
+  archivedIds?: string[];
+};
+
+/**
+ * Skip one post-onboard check-in (e.g. the 30-day) for many people at once - the
+ * bulk bar's "Mark check-in skipped", his ask Nov 14 2026, for older check-ins that
+ * fell due before the check-ins existed and did not happen. Only OPEN steps change:
+ * a done step stays done, a skipped one stays as it was skipped. Each gets its own
+ * who/when record, so Undo skip still works one person at a time, and anyone whose
+ * last open check-in this was is archived, the same as ticking it done.
+ * dryRun returns the counts only, for the confirm question.
+ */
+export async function skipTasksBulk(hireIds: string[], taskKey: string, dryRun = false): Promise<BulkSkipResult> {
+  const empty = { open: 0, done: 0, alreadySkipped: 0, missing: 0 };
+  if (!(await canEditPeople())) return { ok: false, error: "You don't have permission to change this checklist.", ...empty };
+  const ids = [...new Set(hireIds.filter((x) => typeof x === "string"))];
+  if (ids.length === 0) return { ok: false, error: "Select at least one person.", ...empty };
+  const tasks = await prisma.onboardingTask.findMany({
+    where: { newHireId: { in: ids }, key: taskKey, group: MAINTENANCE_GROUP },
+    select: { newHireId: true, status: true }
+  });
+  const openIds = tasks.filter((t) => t.status === "TODO").map((t) => t.newHireId);
+  const counts = {
+    open: openIds.length,
+    done: tasks.filter((t) => t.status === "DONE").length,
+    alreadySkipped: tasks.filter((t) => t.status === "NA").length,
+    missing: ids.length - tasks.length
+  };
+  if (dryRun || openIds.length === 0) return { ok: true, ...counts, skippedIds: [], archivedIds: [] };
+
+  const skippedAt = new Date().toISOString();
+  const skippedBy = await actorLabel();
+  // status TODO in the where too, so a step ticked done since the count is left alone.
+  await prisma.onboardingTask.updateMany({
+    where: { newHireId: { in: openIds }, key: taskKey, group: MAINTENANCE_GROUP, status: "TODO" },
+    data: { status: "NA", completedAt: null }
+  });
+  await recordTaskSkips(openIds.map((hireId) => ({ hireId, taskKey, rec: { skippedAt, skippedBy } })));
+  const archivedIds: string[] = [];
+  for (const hireId of openIds) {
+    if (await maybeArchiveOnCheckinsComplete(hireId)) archivedIds.push(hireId);
+  }
+  return { ok: true, ...counts, skippedIds: openIds, skippedAt, skippedBy, archivedIds };
 }
 
 /** Undo a skip: the step goes back to not done, and the record of the skip is dropped. */
