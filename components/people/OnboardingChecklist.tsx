@@ -325,20 +325,27 @@ export function OnboardingChecklist({
                 <div className="space-y-1.5">
                   {items.map((t) => {
                     const isNext = next?.task.id === t.id;
-                    // Two kinds of hold, both stored To do (lib/onboarding/holds.ts):
-                    //
-                    // SCHEDULED clears ITSELF — the session or trip being marked
-                    // complete writes Done — so it looks done: struck through,
-                    // Done lit, and a tag saying nobody has to touch it.
-                    //
-                    // REQUESTED waits on a person — HR ticks Done when the iPad or
-                    // card arrives. Asked for 2026-11-13 (option A of four): NOT
-                    // struck through and Done NOT lit, so Done reads as the next
-                    // click. It gets its own lit segment instead, and a hint under
-                    // the label. It still counts as handled for Ready.
+                    // Two kinds of hold, both stored To do (lib/onboarding/holds.ts),
+                    // shown the SAME way (his call, Nov 13 2026, option A, then
+                    // "Attended orientation is supposed to say Scheduled in the same
+                    // way as Requested"): the hold word is its own lit segment ahead
+                    // of To do / Done / N/A, Done stays unlit, the label is not
+                    // struck through, and a hint under it says what clears it.
+                    //   REQUESTED waits on a person: HR clicks Done when the iPad or
+                    //     card arrives.
+                    //   SCHEDULED clears itself: the session or trip being marked
+                    //     complete writes Done.
+                    // Both still count as handled for Ready.
                     const held = t.status === "TODO" && t.hold ? t.hold : null;
-                    const requested = held === "Requested";
-                    const shown: TaskView["status"] | "REQUESTED" = held === "Scheduled" ? "DONE" : requested ? "REQUESTED" : t.status;
+                    const shown: TaskView["status"] | "HELD" = held ? "HELD" : t.status;
+                    const holdHint =
+                      held === "Requested"
+                        ? "Click Done when it arrives"
+                        : held === "Scheduled"
+                          ? t.key === "attended_orientation"
+                            ? "Clears itself when the orientation session is marked complete"
+                            : "Clears itself when the trip or the orientation session is marked complete"
+                          : null;
                     return (
                       <div
                         key={t.id}
@@ -356,37 +363,31 @@ export function OnboardingChecklist({
                           <span className={clsx("block text-sm", shown === "DONE" ? "text-brand-grey line-through dark:text-slate-400" : t.status === "NA" ? "text-brand-grey/70 dark:text-slate-500" : clsx("text-brand-black dark:text-slate-100", isNext && "font-semibold text-brand-lea"))}>
                             {t.label}
                           </span>
-                          {requested ? (
-                            <span className="mt-0.5 block text-[11px] text-brand-eden dark:text-brand-edenOnDark">Click Done when it arrives</span>
+                          {holdHint ? (
+                            <span className="mt-0.5 block text-[11px] text-brand-eden dark:text-brand-edenOnDark">{holdHint}</span>
                           ) : null}
                         </span>
                         <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2">
-                          {held === "Scheduled" ? (
-                            // The business card's "On the next order" tag classes
-                            // (NewHireDetailWorkspace), saying it needs no click.
-                            <span
-                              title={
-                                t.key === "attended_orientation"
-                                  ? "Booked on an upcoming orientation. Clears itself when the session is marked complete."
-                                  : "Trip booked. Clears itself when the trip or the orientation session is marked complete."
-                              }
-                              className="inline-flex items-center gap-1 rounded bg-brand-sweet/25 px-2 py-0.5 text-[10px] font-semibold text-brand-lea dark:bg-brand-sweet/15 dark:text-brand-sweet"
-                            >
-                              <Clock className="h-3 w-3" aria-hidden /> Scheduled, clears itself
-                            </span>
-                          ) : null}
                           {renderTaskExtra?.(t)}
                           <div className="flex shrink-0 overflow-hidden rounded border border-brand-lea/15 dark:border-white/10">
-                            {requested ? (
+                            {held ? (
                               // A state, not an action: it is read from the
-                              // position, so clicking it could change nothing.
-                              // Done is the click that clears it.
+                              // session, trip or position, so clicking it could
+                              // change nothing. inline-flex + items-center: a span
+                              // does not centre its text the way the sibling
+                              // buttons do, so the word sat at the top (Nov 13).
                               <span
                                 aria-current="true"
-                                title="Requested — pilots always get one. Click Done when it arrives."
-                                className="bg-brand-lea px-2.5 py-1 text-xs font-semibold text-brand-gold"
+                                title={held === "Requested" ? "Requested — pilots always get one. Click Done when it arrives." : `Scheduled — ${holdHint}.`}
+                                className="inline-flex items-center bg-brand-lea px-2.5 py-1 text-xs font-semibold text-brand-gold"
                               >
-                                Requested
+                                {held === "Requested" ? (
+                                  "Requested"
+                                ) : (
+                                  <>
+                                    <Clock className="mr-1 h-3 w-3" aria-hidden /> Scheduled
+                                  </>
+                                )}
                               </span>
                             ) : null}
                             {(["TODO", "DONE", "NA"] as const).map((s) => (

@@ -48,10 +48,10 @@ function Glyph({ status, hold }: { status: GridTaskStatus; hold?: string | null 
   // Holds (lib/onboarding/holds.ts), matching the hire's checklist:
   // REQUESTED is an action still to take — HR clicks when the iPad or card
   // arrives — so it shows the word in the selected state (navy + gold), not a
-  // tick; one click on the cell writes Done. SCHEDULED clears itself, so it
-  // reads as done, and the cell's tooltip says so.
-  if (status === "TODO" && hold === "Requested")
-    return <span className="rounded bg-brand-lea px-1.5 py-0.5 text-[10px] font-semibold text-brand-gold">Requested</span>;
+  // tick; one click on the cell writes Done. SCHEDULED shows its word the same
+  // way (his call, Nov 13): it clears itself, and the cell's tooltip says so.
+  if (status === "TODO" && (hold === "Requested" || hold === "Scheduled"))
+    return <span className="inline-flex items-center rounded bg-brand-lea px-1.5 py-0.5 text-[10px] font-semibold text-brand-gold">{hold}</span>;
   if (status === "DONE" || (status === "TODO" && hold))
     return (
       <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
