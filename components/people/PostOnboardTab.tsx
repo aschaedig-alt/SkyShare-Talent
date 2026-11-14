@@ -14,7 +14,7 @@ import { SendTaskEmailButton } from "@/components/people/SendTaskEmailButton";
 import { skipTaskEmail, skipTasksBulk, undoTaskEmailSkip } from "@/app/people/actions";
 import type { TaskSkipRecord } from "@/lib/front/task-email";
 import { EmptyState, Input } from "@/components/ui";
-import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
+import { formatMomentDateShort } from "@/lib/dates/display";
 import { CheckinRatingModal } from "@/components/people/CheckinRatingModal";
 import { ratedCheckin, ratedCheckinForTask, ratingPoints, scaleSummary, type CheckinRatingView, type RatedCheckin } from "@/lib/onboarding/checkin-rating";
 import { pointsText } from "@/lib/interviews/scorecard";
@@ -38,9 +38,6 @@ const rk = (hireId: string, dayMark: number) => `${hireId}:${dayMark}`;
 
 // startDate is a chosen calendar day (UTC); onboardedAt is the moment they were
 // marked onboarded, so it reads in Mountain. See lib/dates/display.ts.
-function fmtDate(iso: string | null) {
-  return formatCalendarDayShort(iso) || "—";
-}
 function fmtMoment(iso: string | null) {
   return formatMomentDateShort(iso) || "—";
 }
@@ -109,10 +106,22 @@ const GROUP_RULE: Record<"task" | "ck" | "mgr", string> = {
   mgr: "shadow-[inset_0_-2px_0_rgba(234,170,0,0.6)]"
 };
 
-/** month/day, for the small date under an upcoming check-in. */
-function shortDay(ms: number): string {
+/**
+ * Dates on this grid are calendar days (start date + N days, read in UTC), written
+ * MM/DD/YYYY - his format, Nov 14 2026. The cells under a check-in use MM/DD/YY
+ * only because MM/DD/YYYY does not fit a 52px column; the hover gives the full one.
+ */
+function mdy(ms: number, shortYear = false): string {
   const d = new Date(ms);
-  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  const yyyy = String(d.getUTCFullYear());
+  return `${mm}/${dd}/${shortYear ? yyyy.slice(2) : yyyy}`;
+}
+function mdyIso(iso: string | null): string {
+  if (!iso) return "—";
+  const ms = new Date(iso).getTime();
+  return Number.isNaN(ms) ? "—" : mdy(ms);
 }
 
 export function PostOnboardTab({
@@ -665,7 +674,8 @@ export function PostOnboardTab({
   function markEl(c: Checkin, skipped = false) {
     if (c.status === "NA")
       return skipped ? (
-        <span className="inline-flex h-[22px] items-center rounded bg-amber-100 px-1 text-[9px] font-bold uppercase text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">Skipped</span>
+        // Plain text, not bold and not coloured: it should not stand out (his words, Nov 14).
+        <span className="inline-flex h-[22px] items-center px-0.5 text-[10px] text-brand-grey dark:text-slate-400">Skipped</span>
       ) : (
         <span className="inline-flex h-[22px] items-center rounded bg-brand-cloudDancer/70 px-1 text-[9px] font-bold uppercase tracking-wide text-brand-grey dark:bg-white/10 dark:text-slate-400">N/A</span>
       );
@@ -684,18 +694,32 @@ export function PostOnboardTab({
   }
 
   /** The small line under a mark: what is going on with that check-in, in a word. */
+  /**
+   * The due date under an open or skipped check-in, so he can judge whether a late
+   * one is still worth sending or better skipped (Nov 14 2026). Red once it is due.
+   */
+  function dueLine(h: PostOnboardHire, c: Checkin) {
+    if (c.status === "DONE") return null;
+    const at = dueAt(h, c.key);
+    if (!at) return null;
+    const late = c.status === "TODO" && c.dueSoon;
+    return (
+      <span className={clsx("whitespace-nowrap text-[10px] tabular-nums", late ? "text-red-700 dark:text-red-300" : "text-brand-grey dark:text-slate-400")}>
+        {mdy(at, true)}
+      </span>
+    );
+  }
+
   function miniLine(h: PostOnboardHire, c: Checkin, group: string) {
     const rated = ratedCheckinForTask(c.key);
     if (group === "mgr" && rated) {
       const saved = ratings[rk(h.id, rated.dayMark)];
       const req = requests[rk(h.id, rated.dayMark)];
       if (saved) return <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">★ rated</span>;
-      if (c.status === "NA") return null;
+      if (c.status === "NA") return dueLine(h, c);
       if (req && req.state === "PENDING") return <span className="text-[10px] text-brand-grey dark:text-slate-400">sent {formatMomentDateShort(req.lastSentAt)}</span>;
       if (c.status === "DONE") return <span className="text-[10px] text-brand-grey dark:text-slate-400">done</span>;
-      if (c.dueSoon) return null; // the Send button sits there instead
-      const at = dueAt(h, c.key);
-      return at ? <span className="text-[10px] text-brand-grey dark:text-slate-400">{shortDay(at)}</span> : null;
+      return dueLine(h, c);
     }
     const r = pickReply(replies[h.id]?.[c.key]);
     if (r) {
@@ -704,8 +728,7 @@ export function PostOnboardTab({
       return <Icon className={clsx("h-3.5 w-3.5", r.handledAt ? "text-brand-lea dark:text-slate-300" : LEVEL_STYLE[r.level].icon)} aria-label={urgent ? "Reply needs action" : "Replied"} />;
     }
     if (waitingOnReply(h.id, c.key)) return <span className="text-[9px] font-semibold uppercase tracking-wide text-brand-grey/80 dark:text-slate-500">no reply</span>;
-    if (c.status === "TODO" && c.dueSoon) return <span className="text-[10px] font-semibold text-red-700 dark:text-red-300">due</span>;
-    return null;
+    return dueLine(h, c);
   }
 
   /** One grid cell: the mark and its line open the person's drawer; a due manager check-in also gets Send. */
@@ -720,7 +743,7 @@ export function PostOnboardTab({
         <button
           type="button"
           onClick={() => setDrawerId(h.id)}
-          title={`${h.name} · ${columnLabel(c)}: ${stateWord(c, skipped)}${at && c.status === "TODO" ? ` · due ${formatMomentDateShort(new Date(at).toISOString())}` : ""} - click for actions`}
+          title={`${h.name} · ${columnLabel(c)}: ${stateWord(c, skipped)}${at && c.status !== "DONE" ? ` · due ${mdy(at)}` : ""} - click for actions`}
           aria-label={`${h.name}, ${columnLabel(c)}: ${stateWord(c, skipped)}. Open actions`}
           className="flex min-h-[38px] w-full flex-col items-center justify-start gap-0.5 rounded px-0.5 py-0.5 transition hover:bg-brand-gold/10 hover:shadow-glow"
         >
@@ -758,7 +781,7 @@ export function PostOnboardTab({
               {c.status === "NA" && skip
                 ? `Skipped${skip.skippedBy ? ` by ${skip.skippedBy}` : ""} ${formatMomentDateShort(skip.skippedAt)}`
                 : at
-                  ? `${c.status === "DONE" ? "Was due" : "Due"} ${formatMomentDateShort(new Date(at).toISOString())}`
+                  ? `${c.status === "DONE" ? "Was due" : "Due"} ${mdy(at)}`
                   : stateWord(c, Boolean(skip))}
             </div>
           </div>
@@ -889,7 +912,7 @@ export function PostOnboardTab({
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span>{drawerHire.position ?? "—"}</span>
               <span>· {drawerHire.department ?? "—"}</span>
-              <span>· started {fmtDate(drawerHire.startDate)}</span>
+              <span>· started {mdyIso(drawerHire.startDate)}</span>
               <span>· onboarded {fmtMoment(drawerHire.onboardedAt)}</span>
               <Link href={`/people/${drawerHire.id}`} className="font-semibold text-brand-lea underline-offset-2 hover:underline dark:text-slate-100">
                 Open profile
@@ -1077,7 +1100,7 @@ export function PostOnboardTab({
                   <td className="break-words px-2 py-2.5 align-top text-xs text-brand-grey dark:text-slate-400">
                     {h.department ?? "—"}
                   </td>
-                  <td className="px-2 py-2.5 align-top text-xs text-brand-grey dark:text-slate-400">{fmtDate(h.startDate)}</td>
+                  <td className="px-2 py-2.5 align-top text-xs tabular-nums text-brand-grey dark:text-slate-400">{mdyIso(h.startDate)}</td>
                   <td className="px-1 py-2.5 text-center align-top">
                     <select
                       value={h.employmentStatus}
