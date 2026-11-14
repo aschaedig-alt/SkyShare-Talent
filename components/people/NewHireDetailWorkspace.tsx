@@ -941,7 +941,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
   ];
 
   return (
-    <div className="space-y-4 px-5 py-5 lg:px-8">
+    <div className="space-y-4 px-3 py-3 sm:px-5 sm:py-5 lg:px-8">
       <Link
         href={hire.stage === "ACTIVE" ? "/people" : "/employees"}
         className="inline-flex items-center gap-1 text-sm font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400"

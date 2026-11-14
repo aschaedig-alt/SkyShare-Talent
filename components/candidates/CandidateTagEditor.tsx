@@ -185,7 +185,7 @@ export function CandidateTagEditor({
         <div>
           <button
             onClick={() => setShowHistorical((v) => !v)}
-            className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400 dark:hover:text-slate-200"
+            className="inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400 dark:hover:text-slate-200"
           >
             <Archive className="h-3 w-3" />
             {showHistorical ? "Hide" : "Show"} historical tags ({historical.length})

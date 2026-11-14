@@ -188,7 +188,7 @@ export function InterviewWriteUp({
   const drawerId = drawer.openId && logged.some((i) => i.id === drawer.openId) ? drawer.openId : null;
 
   return (
-    <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+    <section className="rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 sm:p-4 dark:bg-brand-panel dark:ring-white/10">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">Interviews</h2>
         {(canEdit || canAnnotate) && (
@@ -523,7 +523,9 @@ function LoggedInterview({
   return (
     <div className="group rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-semibold text-brand-lea dark:text-slate-100">{interview.title}</span>
+        {/* Its own line on a phone, so the date, Scorecard and the edit icons sit
+            together on the next one instead of wrapping one at a time. */}
+        <span className="w-full font-semibold text-brand-lea sm:w-auto dark:text-slate-100">{interview.title}</span>
         <span className="text-xs text-brand-grey dark:text-slate-400">
           {formatCalendarDayShort(interview.startDateTime)}
           {interview.interviewer ? ` · ${interview.interviewer}` : ""}
@@ -556,7 +558,10 @@ function LoggedInterview({
           <ClipboardCheck className="h-3.5 w-3.5" /> Scorecard
         </InterviewDrawerLink>
         {canEdit && (
-          <span className="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+          // Hover-revealed on a computer. A phone has no hover, so there they
+          // are simply shown: hidden, they were unreachable AND still took up
+          // a row, which left a tall blank band under every card (Aimee, Nov 13).
+          <span className="flex items-center gap-1 transition sm:opacity-0 sm:focus-within:opacity-100 sm:group-hover:opacity-100">
             <button onClick={() => setEditing(true)} aria-label="Edit this interview" className="rounded p-1 text-brand-grey transition hover:bg-white hover:text-brand-lea dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100">
               <Pencil className="h-3.5 w-3.5" />
             </button>

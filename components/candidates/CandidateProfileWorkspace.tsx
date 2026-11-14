@@ -404,12 +404,12 @@ export function CandidateProfileWorkspace({
   const boardLayout = useMemo(() => withoutRetiredPanels(savedLayout), [savedLayout]);
 
   return (
-    <div className="space-y-4 px-5 py-5 lg:px-8">
+    <div className="space-y-4 px-3 py-3 sm:px-5 sm:py-5 lg:px-8">
       {error && <div className="rounded border border-red-500/30 bg-red-50 dark:bg-red-500/15 p-3 text-sm text-red-700 dark:text-red-300">{error}</div>}
       {success && <div className="rounded border border-green-500/30 bg-green-50 dark:bg-emerald-500/15 p-3 text-sm text-green-700 dark:text-emerald-300">{success}</div>}
 
       {/* Header */}
-      <section className="rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+      <section className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 sm:p-5 dark:bg-brand-panel dark:ring-white/10">
         {/* A real target, not bare words. As a plain text link the clickable area
             was exactly the width of the letters, so a near-miss did nothing and
             read as the link being broken — the last open piece of the "Back to
@@ -445,12 +445,12 @@ export function CandidateProfileWorkspace({
             className="w-full sm:w-[22rem]"
           />
         </div>
-        <div className="mt-3 flex flex-wrap items-start gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-sweet/25 text-lg font-semibold text-brand-lea dark:text-slate-100">
+        <div className="mt-3 flex flex-wrap items-start gap-3 sm:gap-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-sweet/25 text-base font-semibold sm:h-14 sm:w-14 sm:text-lg text-brand-lea dark:text-slate-100">
             {initials(candidate.displayName) || "?"}
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">{candidate.displayName}</h1>
+            <h1 className="break-words text-xl font-semibold text-brand-lea sm:text-2xl dark:text-slate-100">{candidate.displayName}</h1>
             <p className="mt-1 text-xs font-semibold text-brand-grey dark:text-slate-400">
               {[candidate.currentTitle, candidate.stage].filter(Boolean).join(" · ") || "No title recorded"}
             </p>
@@ -463,7 +463,10 @@ export function CandidateProfileWorkspace({
               }
             />
           </div>
-          <div className="flex items-center gap-2">
+          {/* On a phone this row goes under the name instead of beside it. Beside
+              it, the name column was squeezed to ~120px, so the name broke onto
+              two lines and "Show historical tags" onto three (Aimee, Nov 13). */}
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <PaycomLinkControl candidateId={candidate.id} paycomLink={candidate.paycomLink} canEdit={canEdit} />
             <span
               className={clsx("rounded px-3 py-1 text-xs font-semibold", candidateStatusPillClass(candidate.status))}
@@ -645,7 +648,7 @@ export function CandidateProfileWorkspace({
       ) : (
         <>
           {/* Profile tabs */}
-          <div className="flex gap-1 overflow-x-auto border-b border-brand-lea/15 dark:border-white/10">
+          <div className="flex gap-1 overflow-x-auto overflow-y-hidden border-b border-brand-lea/15 dark:border-white/10">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
