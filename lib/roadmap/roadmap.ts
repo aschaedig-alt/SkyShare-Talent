@@ -896,6 +896,11 @@ Smaller fixes and polish.
 - [x] RECORDED, from him Nov 13 2026: being able to mark someone Terminated straight from the Post-onboard grid matters, so nobody reaches out to a departed employee's supervisor.
 - [x] RECORDED, from him Nov 13 2026: keep the gold glow on hover and the normal brand colours on every redesign.
 - [x] RECORDED, from him Nov 13 2026: the iPhone half of needs-a-person 60 is fine, in his words the iphone part is fine.
+- [x] Post-onboard drawer: Mark skipped beside Mark done on every open step (Nov14, 214f9de), for older check-ins that should have happened before the check-ins existed; asks first, reads Skipped with who and when, Undo skip reverses it. Checked with saves blocked; NOT verified: a real skip (needs-a-person 61).
+- [x] Core value definitions now match HR's Core Values table word for word (Nov14, 214f9de): one short line (HR's first sentence) with a More toggle that opens the full definition and the Key behaviors, the same in the check-in rating form, the interview scorecard and the recognition form. Value names unchanged, so stored ratings are unaffected. Checked on the rating form; NOT opened: the scorecard and recognition form (needs-a-person 62).
+- [x] RECORDED, from him Nov 14 2026: older check-ins that were due before the check-ins existed are marked skipped, not done, because they did not happen.
+- [x] RECORDED, from him Nov 14 2026: core value wording in the app must match HR's Core Values table (Definition and Key Behaviors) word for word, for consistency.
+- [x] RECORDED, from him Nov 14 2026: core values show a short definition first with the full section expandable on demand, so it does not get busy.
 - [x] Phone layouts from Aimee's Nov 13 feedback (Nov13, 7fc6a9a; checklist part in 25a09b0) — candidate header stacks under the name; interview cards put the title on its own line and show edit/delete on phones (they were hover-only, so they could not be tapped and left a blank band); new-hire checklist rows and the NEXT banner stop squeezing the label to about 45px. Her screen recording turned out to show the interview drawer from before scorecards dropped the question lines (8ae0d29); at phone width the drawer now shows only the core values, so it was left alone. Not tested on a real iPhone, only at 375px emulated.
 
 ## Scheduling / Booking Links (Calendly replacement)
