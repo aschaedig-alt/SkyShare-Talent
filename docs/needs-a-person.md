@@ -1415,6 +1415,30 @@ and a More that opens the rest. Compare one value against HR's table.
 **What would count as a pass:** the text matches HR's table, and the page does not look busier
 than before until More is clicked.
 
+
+---
+
+### 63. The new Post-onboard grid (Sample A) has not been used for real
+
+**Status:** OPEN
+**Added:** 2026-11-14
+
+The grid now shows days late (+43d) or "in 77d" instead of dates, every row is the same
+height, Send sits under a late manager check-in, and on a phone each person is a card.
+Checked in the in-app browser with live data at 1536, 1280, 1024, 768, 375 and 329 wide,
+light and dark, with nothing saved. NOT checked: the two animations, because they only play
+when something is really saved: marking a check-in done should draw its tick with one gold
+ring, and sending a rating link should slide "sent" in under it. Also not checked on a real
+iPhone.
+
+**How to check it:** on the live site, mark one check-in done from its drawer and watch the
+cell; send one rating link (Axel Leimer's 90-day is waiting for exactly that); then open
+People > Post-onboard on your iPhone.
+
+**What would count as a pass:** the tick draws itself and a gold ring fades; "sent" slides in
+under the 90-day; on the phone every person is a card, nothing scrolls sideways, and the
+A / T / C dropdown changes status.
+
 ---
 
 ## Closed
