@@ -1306,6 +1306,23 @@ Checked: the server-rendered HTML for Cameron Morgan showed the Requested markup
 Chrome could not reach the dev server, and Done was not clicked because it writes the live
 database.
 
+**Update 2026-11-14:**
+- **He confirmed light and dark mode look right on the checklist.**
+- **Phone, checked in the in-app browser at 375 and 329 wide.** The page was Cameron
+  Morgan's checklist (Requested x2, Scheduled x1). It was measured, not eyeballed, because
+  the pane's screenshot crops the right edge. At both widths the page is exactly screen
+  width with no sideways scroll, and none of the 20 rows has anything past its edge. The
+  hold segment drops to its own line under the label and ends 11px (329) / 12px (375)
+  inside the row. The word fills the segment's height. The orientation hint wraps to two
+  lines at 329 and stays inside.
+- **On the Onboarding grid at 329,** all 18 Scheduled/Requested cells fit their column
+  with nothing clipped.
+- **Problem found, not caused by #59:** the grid itself is 1980px wide on a 329px phone and
+  scrolls sideways, about 1.2 hires on screen at a time. The phone rule (Nov 14) says a wide
+  table gets a phone layout instead. That is a separate piece of work, not part of this item.
+- **Still not done:** clicking Done on a Requested row, and Attended orientation turning
+  Done by itself after the Nov 17 session is marked complete.
+
 **How to check it:** open a pilot hire's Checklist tab whose iPad has not arrived and who
 is on the upcoming orientation (Nov 17). Look at it in light and dark mode, and on the
 Onboarding grid. When the iPad really arrives, click **Done**. After the Nov 17 session is
