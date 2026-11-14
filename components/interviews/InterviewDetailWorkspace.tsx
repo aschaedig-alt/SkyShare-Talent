@@ -18,7 +18,7 @@ import {
   type ScorecardItem,
   withCoreValues
 } from "@/lib/interviews/scorecard";
-import { VALUE_DESCRIPTIONS } from "@/lib/compliments/constants";
+import { CoreValueDefinition } from "@/components/shared/CoreValueDefinition";
 import { InterviewerPicker } from "@/components/calendar/InterviewerPicker";
 import { Button } from "@/components/ui";
 import { RichNoteField, StoredRichText } from "@/components/richtext/RichNoteField";
@@ -128,9 +128,7 @@ function ScorecardEditor({
             item.value ? (
               <div key={idx} className="rounded border border-brand-gold/30 bg-white p-2.5 dark:border-brand-gold/20 dark:bg-brand-panel">
                 <div className="text-sm font-semibold text-brand-lea dark:text-slate-100">{item.value}</div>
-                {VALUE_DESCRIPTIONS[item.value] ? (
-                  <p className="text-[11px] text-brand-grey dark:text-slate-400">{VALUE_DESCRIPTIONS[item.value]}</p>
-                ) : null}
+                <CoreValueDefinition name={item.value} textClass="text-[11px]" />
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {RATINGS.map((r) => {
                     const active = item.rating === r.key;

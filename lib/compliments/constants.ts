@@ -77,18 +77,37 @@ export type ValueColorKey =
   (typeof VALUE_COLOR_KEYS)[keyof typeof VALUE_COLOR_KEYS];
 
 // SkyShare's core values, in display order, each mapped to one of the shared
-// value-color slots and carrying its definition (shown when a value is picked).
-// The colorKey is only a palette slot — the name is what's shown on the chip.
+// value-color slots. The colorKey is only a palette slot — the name is what's
+// shown on the chip.
+//
+// The wording is HR's, word for word, from HR's "Core Values" table (Definition
+// | Key Behaviors), sent by him on Nov 14 2026 so every place the app shows a
+// value matches the HR version. Do not reword it here; if HR changes the table,
+// copy the new text in.
+//   description  - the short line shown at first: HR's first definition sentence.
+//   definition   - HR's whole Definition cell.
+//   keyBehaviors - HR's Key Behaviors cell, one sentence per entry.
+// components/shared/CoreValueDefinition.tsx shows the short line with a More
+// toggle that opens the rest.
 export const COMPANY_VALUES: {
   name: string;
   description: string;
+  definition: string;
+  keyBehaviors: string[];
   colorKey: ValueColorKey;
   sortOrder: number;
 }[] = [
   {
     name: "Fueled by Passion",
-    description:
+    description: "Approaches work with energy, enthusiasm, and a commitment to excellence.",
+    definition:
       "Approaches work with energy, enthusiasm, and a commitment to excellence. Demonstrates a love for aviation and a drive to deliver exceptional results.",
+    keyBehaviors: [
+      "Displays enthusiasm and dedication in daily tasks and interactions.",
+      "Goes above and beyond to contribute to the company success.",
+      "Inspires and motivates others through a positive attitude and work ethic.",
+      "Continuously seeks personal and professional growth opportunities."
+    ],
     colorKey: "innovation", // blue
     sortOrder: 0
   },
@@ -96,6 +115,19 @@ export const COMPANY_VALUES: {
     name: "Team Alignment",
     description:
       "Works collaboratively across departments, aligning goals and actions with the broader team to ensure seamless operations.",
+    definition:
+      "Works collaboratively across departments, aligning goals and actions with the broader team to ensure seamless operations. Demonstrates a strong commitment to collective success by supporting team cohesion, cross-functional effectiveness, and the operation as a whole.",
+    keyBehaviors: [
+      "Actively communicates and collaborates with colleagues to achieve shared goals.",
+      "Supports team members in solving challenges and maintaining efficiency.",
+      "Demonstrates respect, trust, and accountability in all interactions.",
+      "Encourages open dialogue and constructive feedback to strengthen teamwork.",
+      "Maintains a positive and collaborative tone, even under pressure or in conflict situations.",
+      "Models respectful influence and diplomacy in high-impact decisions.",
+      "Prioritizes the success of the overall operation over individual or departmental interests.",
+      "Seeks to understand how decisions and actions affect other teams and the broader organization.",
+      "Builds strong cross-functional relationships to promote unity, transparency, and operational excellence."
+    ],
     colorKey: "teamwork", // green
     sortOrder: 1
   },
@@ -103,6 +135,14 @@ export const COMPANY_VALUES: {
     name: "Deliver the Wow",
     description:
       "Creates memorable and high-impact experiences for customers, colleagues, and partners by exceeding expectations.",
+    definition:
+      "Creates memorable and high-impact experiences for customers, colleagues, and partners by exceeding expectations.",
+    keyBehaviors: [
+      "Anticipates customer needs and provides proactive, personalized service.",
+      "Takes the initiative to exceed expectations in service and operations.",
+      "Brings creativity and innovation to problem-solving and service delivery.",
+      "Seeks continuous improvement to elevate customer and employee experiences."
+    ],
     colorKey: "customerFocus", // orange — guest delight
     sortOrder: 2
   },
@@ -110,10 +150,25 @@ export const COMPANY_VALUES: {
     name: "Solutions Focused",
     description:
       "Approaches challenges with a proactive, problem-solving mindset to ensure efficiency and effectiveness.",
+    definition:
+      "Approaches challenges with a proactive, problem-solving mindset to ensure efficiency and effectiveness. Maintains focus on outcomes, identifies root causes, and applies practical thinking to resolve issues while supporting continuous improvement.",
+    keyBehaviors: [
+      "Identifies challenges quickly and seeks appropriate solutions.",
+      "Stays calm under pressure and focuses on finding answers rather than dwelling on problems.",
+      "Encourages a culture of continuous improvement and operational efficiency.",
+      "Utilizes data, insights, and past experiences to make informed, effective decisions.",
+      "Applies critical thinking and structured problem-solving techniques to analyze and determine root causes.",
+      "Collaborates with others to brainstorm options and evaluate alternatives when solving problems."
+    ],
     colorKey: "growthMindset", // purple
     sortOrder: 3
   }
 ];
+
+/** name -> the whole HR entry, for CoreValueDefinition. */
+export const COMPANY_VALUE_BY_NAME: Record<string, (typeof COMPANY_VALUES)[number]> = Object.fromEntries(
+  COMPANY_VALUES.map((v) => [v.name, v])
+);
 
 // name -> definition, for the value picker chips / tooltips.
 export const VALUE_DESCRIPTIONS: Record<string, string> = Object.fromEntries(

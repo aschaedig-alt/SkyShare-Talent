@@ -87,7 +87,7 @@ const SCHEMA = {
 } as const;
 
 function systemPrompt(): string {
-  const values = COMPANY_VALUES.map((v) => `- ${v.colorKey}: ${v.name} — ${v.description}`).join("\n");
+  const values = COMPANY_VALUES.map((v) => `- ${v.colorKey}: ${v.name} — ${v.definition} Key behaviors: ${v.keyBehaviors.join(" ")}`).join("\n");
   const depts = DEPARTMENTS.map((d) => `- ${d.key}: ${d.label}`).join("\n");
   return [
     "You read a document of interview questions for SkyShare, a private aviation company, and return each question as structured fields for its question bank.",

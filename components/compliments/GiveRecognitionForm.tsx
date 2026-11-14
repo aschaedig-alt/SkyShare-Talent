@@ -12,6 +12,7 @@ import { Card } from "@/components/compliments/Card";
 import { PersonPicker } from "@/components/compliments/PersonPicker";
 import { createRecognition } from "@/app/compliments/actions";
 import { RecognitionStrength, STRENGTH_STOPS, VALUE_DESCRIPTIONS } from "@/lib/compliments/constants";
+import { CoreValueDefinition } from "@/components/shared/CoreValueDefinition";
 import { valueColorClasses } from "@/lib/compliments/value-colors";
 import type { RosterPerson } from "@/lib/compliments/types";
 import { RichNoteField } from "@/components/richtext/RichNoteField";
@@ -226,9 +227,7 @@ function ValuePicker({
       {selectedDefinitions.length > 0 ? (
         <div className="mt-2.5 space-y-1.5 rounded-element border-[0.5px] border-brand-lea/15 bg-brand-cloudDancer/30 px-3 py-2.5 dark:border-white/10 dark:bg-white/5">
           {selectedDefinitions.map((v) => (
-            <p key={v.id} className="text-xs leading-relaxed text-brand-grey dark:text-slate-400">
-              <span className="font-semibold text-brand-lea dark:text-slate-200">{v.name}:</span> {VALUE_DESCRIPTIONS[v.name]}
-            </p>
+            <CoreValueDefinition key={v.id} name={v.name} label />
           ))}
         </div>
       ) : null}

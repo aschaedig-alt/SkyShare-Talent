@@ -11,7 +11,7 @@ import type { Checkin, EmploymentStatus, GridTaskStatus, PostOnboardHire } from 
 import { MAINTENANCE_TASKS } from "@/lib/onboarding/tasks";
 import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
 import { SendTaskEmailButton } from "@/components/people/SendTaskEmailButton";
-import { undoTaskEmailSkip } from "@/app/people/actions";
+import { skipTaskEmail, undoTaskEmailSkip } from "@/app/people/actions";
 import type { TaskSkipRecord } from "@/lib/front/task-email";
 import { EmptyState, Input } from "@/components/ui";
 import { formatCalendarDayShort, formatMomentDateShort } from "@/lib/dates/display";
@@ -430,6 +430,26 @@ export function PostOnboardTab({
     );
   }
 
+  /**
+   * Skip a check-in from the drawer - for the older ones that should have happened
+   * before the check-ins existed: not done, because it didn't happen (his ask,
+   * Nov 14 2026). Same server step as the email dialog's skip: N/A, who and when
+   * recorded, and the last outstanding one finishes post-onboarding.
+   */
+  async function skipCheckin(h: PostOnboardHire, c: Checkin) {
+    const rated = ratedCheckinForTask(c.key);
+    const req = rated ? requests[rk(h.id, rated.dayMark)] : undefined;
+    const openLink = req && req.state === "PENDING" ? " The rating link already sent stays open - cancel it from the link if it should not be answered." : "";
+    if (!confirm(`Mark ${h.name}'s ${columnLabel(c)} as skipped? It reads "Skipped", not done, and nobody is emailed.${openLink}`)) return;
+    const res = await skipTaskEmail(h.id, c.key);
+    if (!res.ok || !res.skippedAt) {
+      alert(res.error ?? "Couldn't skip that.");
+      return;
+    }
+    markSkipped(h.id, c.key, { skippedAt: res.skippedAt, skippedBy: res.skippedBy ?? null }, !!res.archived);
+    if (res.archived) setDrawerId(null);
+  }
+
   async function undoSkip(h: PostOnboardHire, c: Checkin) {
     if (!confirm(`Undo skipping ${h.name}'s ${c.short} check-in? It goes back to not done.`)) return;
     const res = await undoTaskEmailSkip(h.id, c.key);
@@ -688,6 +708,16 @@ export function PostOnboardTab({
               {c.status === "DONE" ? "Undo done" : "Mark done"}
             </button>
           )}
+          {c.status === "TODO" && c.id ? (
+            <button
+              type="button"
+              onClick={() => void skipCheckin(h, c)}
+              title="It didn't happen (for example, it was due before check-ins existed): mark it skipped, not done"
+              className={action}
+            >
+              Mark skipped
+            </button>
+          ) : null}
           {emailKeys.has(c.key) && c.status !== "NA" ? (
             <SendTaskEmailButton
               hireId={h.id}

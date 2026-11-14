@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { clsx } from "clsx";
 import { CORE_VALUE_NAMES } from "@/lib/interviews/scorecard";
-import { VALUE_DESCRIPTIONS } from "@/lib/compliments/constants";
+import { CoreValueDefinition } from "@/components/shared/CoreValueDefinition";
 import {
   ROLE_PROGRESS,
   SCALE_COLORS,
@@ -98,7 +98,7 @@ export function CheckinScaleForm({
         return (
           <section key={value} className={card} aria-label={value}>
             <div className="text-sm font-semibold text-brand-lea dark:text-slate-100">{value}</div>
-            {VALUE_DESCRIPTIONS[value] ? <p className="text-xs text-brand-grey dark:text-slate-400">{VALUE_DESCRIPTIONS[value]}</p> : null}
+            <CoreValueDefinition name={value} />
             <p className="mt-1 text-xs font-medium text-brand-lea dark:text-slate-200">How does {first} measure up on this value?</p>
 
             <div className={clsx("mt-2 grid grid-cols-10 transition-opacity", skipped && "opacity-[0.35]")}>

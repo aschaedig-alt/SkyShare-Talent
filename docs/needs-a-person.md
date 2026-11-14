@@ -1373,6 +1373,38 @@ change someone's status to C and back to A.
 **What would count as a pass:** each change shows in the grid without a reload and sticks
 after one; the drawer's buttons do what the old grid's did; the Status letters change colour.
 
+**Update 2026-11-14:** the drawer now has **Mark skipped** next to Mark done on every open
+step, for older check-ins that should have happened before the check-ins existed ("I don't
+want to mark them as done because they didn't happen"). It asks first, then the cell reads
+N/A and the drawer reads "Skipped by (who) (date)"; Undo skip puts it back. Checked with
+saves blocked: the button is on all six open rows of Chris Sharpe's drawer, and answering no
+sent nothing. NOT checked: a real skip. Add to the check above: skip one old check-in, reload,
+confirm it still reads Skipped, then Undo skip.
+
+---
+
+### 62. The core value definitions now use HR's wording — two of the three places were not opened
+
+**Status:** OPEN
+**Added:** 2026-11-14
+
+He sent HR's Core Values table (Definition | Key Behaviors) so the app's definitions match
+HR's word for word. Each value now shows HR's first definition sentence, with a small More
+that opens HR's whole definition and its Key behaviors (Less closes it). It is one shared
+piece used in three places: the manager check-in rating form (the 1-10 form, also the
+no-login link), the interview scorecard's core value rows, and the definitions under the
+values picked on the Give recognition form. Checked in a browser: the rating form opened
+from the Post-onboard drawer showed all four values with More, and More on Team Alignment
+showed HR's full definition and all nine behaviors. NOT opened: the interview scorecard and
+the recognition form, and a manager's phone on the no-login link.
+
+**How to check it, two minutes:** open any interview and look at the Core values rows on the
+scorecard; on Compliments, start a recognition and pick a value. Each should show one line
+and a More that opens the rest. Compare one value against HR's table.
+
+**What would count as a pass:** the text matches HR's table, and the page does not look busier
+than before until More is clicked.
+
 ---
 
 ## Closed
