@@ -135,7 +135,7 @@ export const MAINTENANCE_GROUP = "MAINTENANCE";
 export const MAINTENANCE_TASKS: Array<{ key: string; label: string; short: string; dueDays: number | null }> = [
   { key: "checkin_30", label: "30-day check-in", short: "30-day", dueDays: 30 },
   { key: "checkin_60", label: "60-day check-in", short: "60-day", dueDays: 60 },
-  { key: "checkin_90", label: "90-day check-in", short: "90-day", dueDays: 90 },
+  { key: "checkin_90", label: "3-month check-in", short: "3-month", dueDays: 90 }, // "3-month" since Nov 14 2026; still 90 days
   { key: "benefits_enrolled", label: "Benefits enrolled", short: "Benefits", dueDays: null },
   // Appended rather than slotted in date-order on purpose: the stored task rows
   // carry an order of 100 + index, so inserting in the middle would renumber

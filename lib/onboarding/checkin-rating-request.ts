@@ -9,11 +9,14 @@ import { RATED_DAY_MARKS, RATED_TASK_KEYS, ratedCheckin, type RatedCheckin } fro
 import {
   RATING_LINK_DAYS,
   RATING_LINK_PATH,
+  defaultBulkRatingBodyHtml,
+  defaultBulkRatingSubject,
   defaultRatingBodyHtml,
   defaultRatingSubject,
   looksLikeEmail,
   ratingGreetingHtml,
   ratingLinkBlockHtml,
+  ratingLinksBlockHtml,
   type RatingCancelReason,
   type RatingRecipientOption,
   type RatingRequestSend,
@@ -375,7 +378,7 @@ export type SendRatingRequestResult =
 
 export async function sendRatingRequest(input: SendRatingRequestInput): Promise<SendRatingRequestResult> {
   const checkin = ratedCheckin(input.dayMark);
-  if (!checkin) return { ok: false, error: "Which check-in? (90-day, 6-month or 12-month)" };
+  if (!checkin) return { ok: false, error: "Which check-in? (3-month, 6-month or 12-month)" };
   const to = input.to.trim();
   if (!looksLikeEmail(to)) return { ok: false, error: "Enter the manager's email address." };
   const toName = input.toName?.replace(/\s+/g, " ").trim().slice(0, 80) || null;
@@ -466,6 +469,182 @@ export async function sendRatingRequest(input: SendRatingRequestInput): Promise<
     }
   }
   return { ok: true, request: toView(draft, hire.name, "PENDING"), mode: guard.mode, warnings };
+}
+
+// ---------------------------------------------------------------------------
+// Bulk: one email per manager, one link per person (his ask, Nov 14 2026: "give me
+// the ability to send the manager check-in in bulk when sending more than one to
+// the same manager"). Each person still gets their own request record and token,
+// exactly as a single send makes, so status, resend, cancel and the link page all
+// work per person; only the email is shared.
+
+export type BulkRatingPlanItem = { hireId: string; name: string };
+export type BulkRatingGroup = { to: string; toName: string | null; items: BulkRatingPlanItem[] };
+export type BulkRatingPlan = { dayMark: number; groups: BulkRatingGroup[]; skipped: Array<BulkRatingPlanItem & { reason: string }> };
+
+/** Why one person cannot be in a bulk send, or their primary supervisor. */
+async function bulkCandidate(
+  hireId: string,
+  checkin: RatedCheckin,
+  all: RequestMap
+): Promise<{ name: string; reason: string } | { name: string; to: string; toName: string | null }> {
+  const hire = await prisma.newHire.findUnique({
+    where: { id: hireId },
+    select: {
+      ...HIRE_SELECT,
+      supervisorName: true,
+      supervisorEmail: true,
+      supervisorHire: { select: { name: true, ssEmail: true, personalEmail: true } },
+      supervisor2Name: true,
+      supervisor2Email: true,
+      supervisor2Hire: { select: { name: true, ssEmail: true, personalEmail: true } }
+    }
+  });
+  if (!hire) return { name: hireId, reason: "not found" };
+  const gone = leftReason(hire as HireNow, checkin);
+  if (gone) return { name: hire.name, reason: `has left (${gone.toLowerCase()})` };
+  const task = hire.tasks.find((t) => t.key === checkin.taskKey);
+  if (task?.status === "DONE") return { name: hire.name, reason: `${checkin.short} already marked done` };
+  if (task?.status === "NA") return { name: hire.name, reason: `${checkin.short} skipped or not applicable` };
+  const rated = await prisma.hireCheckinRating.findFirst({ where: { newHireId: hire.id, dayMark: checkin.dayMark }, select: { id: true } });
+  if (rated) return { name: hire.name, reason: "already rated" };
+  const prev = all[recKey(hire.id, checkin.dayMark)];
+  const state = prev ? stateOf(prev, false) : null;
+  if (state === "PENDING") return { name: hire.name, reason: `a link is already out to ${prev.toName ?? prev.to}` };
+  if (state === "COMPLETED") return { name: hire.name, reason: "already rated through the link" };
+  const sup = resolveSupervisors(hire).find((s) => s.email);
+  if (!sup?.email) return { name: hire.name, reason: "no supervisor email on file - send it on its own" };
+  return { name: hire.name, to: sup.email.trim(), toName: sup.name ?? null };
+}
+
+/** Who would get which links: grouped by the primary supervisor's address. Nothing is written. */
+export async function planBulkRatingSend(hireIds: string[], dayMark: number): Promise<BulkRatingPlan | { error: string }> {
+  const checkin = ratedCheckin(dayMark);
+  if (!checkin) return { error: "Which check-in? (3-month, 6-month or 12-month)" };
+  const all = await readAll();
+  const groups = new Map<string, BulkRatingGroup>();
+  const skipped: BulkRatingPlan["skipped"] = [];
+  for (const id of [...new Set(hireIds)]) {
+    const c = await bulkCandidate(id, checkin, all);
+    if ("reason" in c) {
+      skipped.push({ hireId: id, name: c.name, reason: c.reason });
+      continue;
+    }
+    const k = c.to.toLowerCase();
+    const g = groups.get(k) ?? { to: c.to, toName: c.toName, items: [] };
+    g.items.push({ hireId: id, name: c.name });
+    groups.set(k, g);
+  }
+  return { dayMark, groups: [...groups.values()].sort((a, b) => b.items.length - a.items.length), skipped };
+}
+
+export type SendBulkRatingInput = { hireIds: string[]; dayMark: number; to: string; toName: string | null; subject: string | null; bodyHtml: string | null; actor: string | null };
+
+/** Send one manager one email with a link for each person. Every person is re-checked first. */
+export async function sendBulkRatingRequests(
+  input: SendBulkRatingInput
+): Promise<{ ok: true; requests: RatingRequestView[]; skipped: Array<{ name: string; reason: string }>; mode: string; warnings: string[] } | { ok: false; error: string }> {
+  const checkin = ratedCheckin(input.dayMark);
+  if (!checkin) return { ok: false, error: "Which check-in? (3-month, 6-month or 12-month)" };
+  const to = input.to.trim();
+  if (!looksLikeEmail(to)) return { ok: false, error: "That manager has no usable email address." };
+  const toName = input.toName?.replace(/\s+/g, " ").trim().slice(0, 80) || null;
+
+  const before = await readAll();
+  const people: Array<{ hireId: string; name: string }> = [];
+  const skipped: Array<{ name: string; reason: string }> = [];
+  for (const id of [...new Set(input.hireIds)]) {
+    const c = await bulkCandidate(id, checkin, before);
+    if ("reason" in c) skipped.push({ name: c.name, reason: c.reason });
+    else if (c.to.toLowerCase() !== to.toLowerCase()) skipped.push({ name: c.name, reason: `their supervisor is now ${c.toName ?? c.to}` });
+    else people.push({ hireId: id, name: c.name });
+  }
+  if (people.length === 0) return { ok: false, error: `Nothing to send: ${skipped.map((s) => `${s.name} - ${s.reason}`).join("; ") || "no one selected"}.` };
+
+  const nowIso = new Date().toISOString();
+  const expiresAt = new Date(Date.now() + RATING_LINK_DAYS * DAY_MS).toISOString();
+  const names = people.map((p) => p.name);
+  const subject = input.subject?.replace(/\s+/g, " ").trim().slice(0, 200) || defaultBulkRatingSubject(names, checkin.dayMark);
+  const edited = Boolean(input.bodyHtml && input.bodyHtml.trim());
+  const body = edited ? cleanEditedBody(input.bodyHtml as string) : defaultBulkRatingBodyHtml(names, checkin.dayMark);
+  const guard = guardDecision({ to: [to], cc: CC, subject });
+  const tokens = people.map(() => newToken());
+
+  let channelId: string;
+  let html: string;
+  try {
+    const origin = resolveOrigin(guard.mode === "production");
+    const entries = people.map((p, i) => ({ url: `${origin}${RATING_LINK_PATH}/${tokens[i]}`, employeeName: p.name }));
+    html = ratingGreetingHtml(toName) + body + ratingLinksBlockHtml(entries, expiresAt, checkin.dayMark);
+    channelId = await getOrientationChannelId();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Could not build the email." };
+  }
+
+  // Every link has to work BEFORE the email lands, so all records are written in
+  // one write first; a failed send puts every one back exactly as it was.
+  const drafts: StoredRequest[] = people.map((p, i) => ({
+    hireId: p.hireId,
+    dayMark: checkin.dayMark,
+    token: tokens[i],
+    to,
+    toName,
+    firstSentAt: nowIso,
+    lastSentAt: nowIso,
+    expiresAt,
+    sends: [{ at: nowIso, to, toName, by: input.actor, mode: guard.mode, newLink: true, edited }],
+    completedAt: null,
+    completedByName: null,
+    cancelledAt: null,
+    cancelledBy: null,
+    cancelReason: null,
+    cancelDetail: null,
+    acknowledgedAt: null
+  }));
+  const keys = people.map((p) => recKey(p.hireId, checkin.dayMark));
+  const prevs = keys.map((k) => before[k]);
+  try {
+    const all = await readAll();
+    keys.forEach((k, i) => (all[k] = drafts[i]));
+    await writeAll(all);
+  } catch {
+    return { ok: false, error: "Could not save the requests, so nothing was sent." };
+  }
+
+  let sent: SentMessage;
+  try {
+    sent = await sendEmail(channelId, { to: [to], cc: CC, subject, body: html, archive: false });
+  } catch (err) {
+    try {
+      const all = await readAll();
+      keys.forEach((k, i) => {
+        if (prevs[i]) all[k] = prevs[i];
+        else delete all[k];
+      });
+      await writeAll(all);
+    } catch {
+      /* best effort */
+    }
+    return { ok: false, error: err instanceof Error ? err.message : "Send failed." };
+  }
+
+  const warnings: string[] = [];
+  if (guard.mode !== "production") {
+    warnings.push(`This is not the production environment, so the email was ${guard.mode === "redirected" ? "redirected to the test inbox" : `handled as "${guard.mode}"`} rather than delivered to ${to}.`);
+  }
+  if (sent.conversationId) {
+    try {
+      const all = await readAll();
+      keys.forEach((k, i) => {
+        const cur = all[k];
+        if (cur && cur.token === tokens[i]) all[k] = { ...cur, sends: cur.sends.map((s) => (s.at === nowIso ? { ...s, conversationId: sent.conversationId } : s)) };
+      });
+      await writeAll(all);
+    } catch {
+      /* the conversation id is a nicety */
+    }
+  }
+  return { ok: true, requests: drafts.map((d, i) => toView(d, people[i].name, "PENDING")), skipped, mode: guard.mode, warnings };
 }
 
 export async function cancelRatingRequest(hireId: string, dayMark: number, actor: string | null, reason: RatingCancelReason = "MANUAL"): Promise<RatingRequestView | null> {

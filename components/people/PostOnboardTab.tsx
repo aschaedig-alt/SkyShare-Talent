@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
 import { Archive, CalendarClock, Building2, Trash2, ListChecks, MessageSquareText, MessageSquareWarning, RefreshCw, Send, SkipForward, X } from "lucide-react";
+import { BulkRatingSendDialog } from "@/components/people/BulkRatingSendDialog";
 import { CheckinRatingRequestDialog, StateChip } from "@/components/people/CheckinRatingRequestDialog";
 import { cancelReasonText, type RatingRequestView } from "@/lib/onboarding/checkin-rating-request-shared";
 import type { Checkin, EmploymentStatus, GridTaskStatus, PostOnboardHire } from "@/lib/data/onboarding";
@@ -17,7 +18,7 @@ import { EmptyState, Input } from "@/components/ui";
 import { formatMomentDateShort } from "@/lib/dates/display";
 import { DEFAULT_TIMEZONE } from "@/lib/calendar/timezones";
 import { CheckinRatingModal } from "@/components/people/CheckinRatingModal";
-import { ratedCheckin, ratedCheckinForTask, ratingPoints, scaleSummary, type CheckinRatingView, type RatedCheckin } from "@/lib/onboarding/checkin-rating";
+import { RATED_CHECKINS, ratedCheckin, ratedCheckinForTask, ratingPoints, scaleSummary, type CheckinRatingView, type RatedCheckin } from "@/lib/onboarding/checkin-rating";
 import { pointsText } from "@/lib/interviews/scorecard";
 import { CheckinReplyModal, LEVEL_STYLE } from "@/components/people/CheckinReplyModal";
 import { PostOnboardDrawer } from "@/components/people/PostOnboardDrawer";
@@ -47,6 +48,9 @@ const POST_ONBOARD_BULK_ACTIONS: BulkAction[] = [
   { kind: "choice", key: "checkin", label: "Mark check-in done", icon: ListChecks, options: MAINTENANCE_TASKS.map((t) => ({ value: t.key, label: t.label })) },
   // For older check-ins that fell due before the check-ins existed and did not happen (his ask, Nov 14 2026).
   { kind: "choice", key: "skip", label: "Mark check-in skipped", icon: SkipForward, options: MAINTENANCE_TASKS.map((t) => ({ value: t.key, label: t.label })) },
+  // One email per manager with a link per person (his ask, Nov 14 2026). Opens a
+  // dialog that groups the ticked people by supervisor; nothing sends from here.
+  { kind: "choice", key: "sendRating", label: "Send manager check-in", icon: Send, options: RATED_CHECKINS.map((c) => ({ value: String(c.dayMark), label: c.title })) },
   { kind: "patch", key: "archive", label: "Archive", icon: Archive, patch: { stage: "ARCHIVED" }, confirm: true, tone: "danger" },
   { kind: "date", key: "orientation", label: "Set orientation date", icon: CalendarClock },
   { kind: "text", key: "dept", label: "Set department", icon: Building2, placeholder: "Department" },
@@ -223,6 +227,7 @@ export function PostOnboardTab({
     prevSentRef.current = sentNow;
   }, [sentNow]);
   const todayUtc = useMemo(() => officeTodayUtc(), []);
+  const [bulkSend, setBulkSend] = useState<{ hireIds: string[]; dayMark: number } | null>(null);
   const [openRequest, setOpenRequest] = useState<{ hire: PostOnboardHire; checkin: RatedCheckin } | null>(null);
   useEffect(() => {
     const ids = initial.map((h) => h.id);
@@ -417,6 +422,10 @@ export function PostOnboardTab({
 
   async function bulkCheckin(actionKey: string, key: string) {
     if (actionKey === "skip") return bulkSkip(key);
+    if (actionKey === "sendRating") {
+      if (selected.size) setBulkSend({ hireIds: [...selected], dayMark: Number(key) });
+      return;
+    }
     const ids = [...selected];
     if (ids.length === 0) return;
     setBusy(true);
@@ -707,18 +716,19 @@ export function PostOnboardTab({
   })).filter((g) => g.cols.length);
   const plan = groups.flatMap((g) => g.cols.map((c, i) => ({ ...c, group: g.key, first: i === 0 })));
   /**
-   * Column widths (Sample A, Nov 14 2026). Every check-in column is the same 60px so
-   * the marks centre on one line. The name column is a fixed 172px - names and job
-   * titles wrap rather than leave a wide empty gap - and Department and Started fold
-   * under the name below xl (1280), so a 1024-wide window never scrolls sideways.
-   *   xl and up:  36 + 172 + 112 + 84 + 44 + 7 x 60 = 868px, the rest stays free.
-   *   below xl:   36 + 172 + 44 + 7 x 60 = 672px.
+   * Column widths (Sample A, Nov 14 2026; widened the same day - "a little more
+   * space on both sides" of the five dated check-ins). Social and 401k only ever
+   * hold a circle, so they stay narrow; the five dated check-ins get the room. The
+   * name column is fixed - names and job titles wrap rather than leave a wide empty
+   * gap - and Department and Started fold under the name below xl (1280), so a
+   * 1024-wide window (with its scrollbar) never scrolls sideways.
+   *   xl and up:  36 + 168 + 112 + 84 + 44 + 2 x 52 + 5 x 68 = 888px, the rest free.
+   *   below xl:   36 + 150 + 44 + 2 x 48 + 5 x 60 = 626px.
    * ROOM FOR MORE COLUMNS LATER, in this order: (1) a new column takes the free
    * column on the right (about 340px at 1536, about 75px at 1280); (2) past that,
    * fold Department and Started under the name at every width, which frees 196px;
    * (3) then merge Social and 401k into one "Tasks 0/2" column, which frees 60px.
    */
-  const CHECK_W = 60;
 
   /** When a dated check-in falls due: start date + its days (lib/onboarding/tasks.ts). */
   function dueAt(h: PostOnboardHire, key: string): number | null {
@@ -823,7 +833,9 @@ export function PostOnboardTab({
     if (at !== null && late !== null) when = late > 0 ? `, ${late} days late, was due ${mdy(at)}` : late === 0 ? ", due today" : `, due ${mdy(at)}, in ${-late} days`;
     else if (at !== null && c.status === "NA" && skipped) when = `, was due ${mdy(at)}`;
     const label = `${h.name}, ${columnLabel(c)}: ${stateWord(c, skipped)}${when}${caption?.text ? `, ${caption.text}` : ""}. Open actions`;
-    const slot = "flex h-6 w-full items-center justify-center rounded transition hover:bg-brand-gold/10 hover:shadow-glow";
+    // min-h-0: globals.css gives every button a 36px minimum tap target, which made
+    // these 24px slots (and the Send button) 31.5px tall regardless of their class.
+    const slot = "flex h-6 min-h-0 w-full items-center justify-center rounded transition hover:bg-brand-gold/10 hover:shadow-glow";
     return (
       <div className="grid grid-rows-[24px_24px] items-center justify-items-center gap-0.5">
         <button type="button" onClick={() => setDrawerId(h.id)} title={label} aria-label={label} className={slot}>
@@ -835,7 +847,7 @@ export function PostOnboardTab({
             onClick={() => setOpenRequest({ hire: h, checkin: rated })}
             title={`Email the hiring manager the ${rated.short} rating link - no login needed`}
             aria-label={`Send ${h.name}'s ${rated.short} rating link`}
-            className="inline-flex h-[22px] items-center gap-0.5 rounded border border-red-400 px-1.5 text-[11px] font-bold text-red-700 transition hover:shadow-glow dark:border-red-500/50 dark:text-red-300"
+            className="inline-flex h-[18px] min-h-0 items-center gap-0.5 rounded border border-red-400 px-1.5 text-[11px] font-bold leading-none text-red-700 transition hover:shadow-glow dark:border-red-500/50 dark:text-red-300"
           >
             <Send className="h-2.5 w-2.5" aria-hidden /> Send
           </button>
@@ -1076,7 +1088,7 @@ export function PostOnboardTab({
                 {n.hireName}
               </Link>
               <span>
-                {ratedCheckin(n.dayMark)?.short ?? "90-day"} link sent {formatMomentDateShort(n.lastSentAt)} to {n.toName ?? n.to}, not answered · {cancelReasonText(n)} ({formatMomentDateShort(n.cancelledAt)})
+                {ratedCheckin(n.dayMark)?.short ?? "3-month"} link sent {formatMomentDateShort(n.lastSentAt)} to {n.toName ?? n.to}, not answered · {cancelReasonText(n)} ({formatMomentDateShort(n.cancelledAt)})
               </span>
               <button
                 type="button"
@@ -1100,6 +1112,17 @@ export function PostOnboardTab({
           request={requests[rk(openRequest.hire.id, openRequest.checkin.dayMark)] ?? null}
           onClose={() => setOpenRequest(null)}
           onChanged={(view) => setRequests((cur) => ({ ...cur, [rk(view.hireId, view.dayMark)]: view }))}
+        />
+      ) : null}
+      {bulkSend ? (
+        <BulkRatingSendDialog
+          hireIds={bulkSend.hireIds}
+          dayMark={bulkSend.dayMark}
+          onClose={() => setBulkSend(null)}
+          onSent={(views) => {
+            setRequests((cur) => ({ ...cur, ...Object.fromEntries(views.map((v) => [rk(v.hireId, v.dayMark), v])) }));
+            setSelected(new Set());
+          }}
         />
       ) : null}
       {openReply ? <CheckinReplyModal key={openReply.messageId} reply={openReply} onClose={() => setOpenReply(null)} onSaved={replaceReply} /> : null}
@@ -1176,12 +1199,12 @@ export function PostOnboardTab({
         <table className="hidden w-full table-fixed text-sm md:table">
           <colgroup>
             <col style={{ width: 36 }} />
-            <col style={{ width: 172 }} />
+            <col className="w-[150px] xl:w-[168px]" />
             <col className="hidden xl:table-column" style={{ width: 112 }} />
             <col className="hidden xl:table-column" style={{ width: 84 }} />
             <col style={{ width: 44 }} />
             {plan.map((c) => (
-              <col key={c.key} style={{ width: CHECK_W }} />
+              <col key={c.key} className={c.group === "task" ? "w-[48px] xl:w-[52px]" : "w-[60px] xl:w-[68px]"} />
             ))}
             <col />
           </colgroup>

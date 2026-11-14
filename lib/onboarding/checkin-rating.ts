@@ -33,9 +33,9 @@ export type RatedCheckin = {
   dayMark: number;
   /** The post-hire checklist task it ticks (lib/onboarding/tasks.ts MAINTENANCE_TASKS). */
   taskKey: string;
-  /** "90-day" - column heads and short labels. */
+  /** "3-month" - column heads and short labels. */
   short: string;
-  /** "90-day check-in" - headings and email subjects. */
+  /** "3-month check-in" - headings and email subjects. */
   title: string;
   /** "their first 90 days" - in sentences about the person. */
   period: string;
@@ -44,7 +44,9 @@ export type RatedCheckin = {
 };
 
 export const RATED_CHECKINS: RatedCheckin[] = [
-  { dayMark: 90, taskKey: "checkin_90", short: "90-day", title: "90-day check-in", period: "their first 90 days", at: "90 days" },
+  // Shown as "3-month" (his call, Nov 14 2026, to match 6-month and 12-month); the
+  // stored day mark and task key stay 90 / checkin_90.
+  { dayMark: 90, taskKey: "checkin_90", short: "3-month", title: "3-month check-in", period: "their first 3 months", at: "3 months" },
   { dayMark: 180, taskKey: "checkin_180", short: "6-month", title: "6-month check-in", period: "their first 6 months", at: "6 months" },
   { dayMark: 365, taskKey: "checkin_365", short: "12-month", title: "12-month check-in", period: "their first year", at: "12 months" }
 ];

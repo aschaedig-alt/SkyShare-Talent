@@ -78,7 +78,7 @@ export async function saveCheckinRating(input: SaveCheckinRatingInput): Promise<
   const { newHireId } = input;
   if (!newHireId) return { ok: false, status: 400, message: "Which person?" };
   const checkin = ratedCheckin(input.dayMark);
-  if (!checkin) return { ok: false, status: 400, message: "Which check-in? (90-day, 6-month or 12-month)" };
+  if (!checkin) return { ok: false, status: 400, message: "Which check-in? (3-month, 6-month or 12-month)" };
   const dayMark = checkin.dayMark;
   const parsed = parseAnswers(input.answers);
   if (!parsed.ok) return { ok: false, status: 400, message: (parsed as { message: string }).message };

@@ -148,6 +148,42 @@ export function ratingLinkBlockHtml(url: string, employeeName: string, expiresAt
   );
 }
 
+/**
+ * One email to one manager with a link per person (his ask, Nov 14 2026: send the
+ * manager check-in in bulk when several go to the same manager). Same wrapper and
+ * tone as the single send; the body is still editable per send.
+ */
+export function defaultBulkRatingSubject(names: string[], dayMark: number): string {
+  if (names.length === 1) return defaultRatingSubject(names[0], dayMark);
+  return `${checkinFor(dayMark).title}s: ${names.length} people to rate`;
+}
+
+export function defaultBulkRatingBodyHtml(names: string[], dayMark: number): string {
+  if (names.length === 1) return defaultRatingBodyHtml(names[0], dayMark);
+  const count = names.length;
+  const c = checkinFor(dayMark);
+  return (
+    para(
+      `${count} of your team have reached ${c.dayMark === 365 ? "their first year" : c.at} with SkyShare. Could you take a couple of minutes for each of them to rate them on our four core values, tell us how well they have learned their role, and whether you would hire them again?`
+    ) +
+    GAP +
+    para("There is one link per person below. You don't need a login, and your answers go to HR.") +
+    GAP +
+    para("Thank you,<br />SkyShare HR")
+  );
+}
+
+/** The links, one per person, under the body - never inside the edit box. */
+export function ratingLinksBlockHtml(entries: Array<{ url: string; employeeName: string }>, expiresAt: string, dayMark: number): string {
+  const c = checkinFor(dayMark);
+  const until = new Date(expiresAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "America/Denver" });
+  return (
+    GAP +
+    entries.map((e) => para(`<a href="${escHtml(e.url)}"><b>Rate ${escHtml(e.employeeName)}: ${escHtml(c.title)}</b></a>`)).join("") +
+    para(`<span style="color: #6b7280;">Each link is just for that one person's rating and works until ${escHtml(until)}.</span>`)
+  );
+}
+
 /** A plain, permissive address check - the guard and Front do the real work. */
 export function looksLikeEmail(v: string): boolean {
   return /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/.test(v.trim());

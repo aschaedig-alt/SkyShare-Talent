@@ -4,7 +4,9 @@ import {
   acknowledgeRatingRequest,
   cancelRatingRequest,
   getRatingRequestViews,
+  planBulkRatingSend,
   ratingRecipientOptions,
+  sendBulkRatingRequests,
   sendRatingRequest
 } from "@/lib/onboarding/checkin-rating-request";
 
@@ -18,6 +20,8 @@ import {
 //   POST { action: "send", hireId, to, toName, subject, body, linkMode }
 //   POST { action: "cancel", hireId }
 //   POST { action: "acknowledge", hireId }   dismiss an "employee left" notice
+//   POST { action: "bulkPlan", hireIds, dayMark }   who would get which links, by manager (writes nothing)
+//   POST { action: "bulkSend", hireIds, dayMark, to, toName, subject, body }   one email, one link per person
 
 const MAX_IDS = 500;
 
@@ -41,6 +45,25 @@ export async function POST(request: Request) {
   const auth = await requireApiPermission("candidates:write");
   if (!auth.ok) return (auth as { ok: false; response: Response }).response;
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+  const ids = Array.isArray(body.hireIds) ? (body.hireIds as unknown[]).filter((x): x is string => typeof x === "string").slice(0, MAX_IDS) : [];
+  if (body.action === "bulkPlan") {
+    const plan = await planBulkRatingSend(ids, typeof body.dayMark === "number" ? body.dayMark : 90);
+    if ("error" in plan) return NextResponse.json({ message: plan.error }, { status: 400 });
+    return NextResponse.json(plan);
+  }
+  if (body.action === "bulkSend") {
+    const result = await sendBulkRatingRequests({
+      hireIds: ids,
+      dayMark: typeof body.dayMark === "number" ? body.dayMark : 90,
+      to: str(body.to),
+      toName: str(body.toName) || null,
+      subject: str(body.subject) || null,
+      bodyHtml: typeof body.body === "string" ? body.body : null,
+      actor: auth.user.email ?? auth.user.name ?? null
+    });
+    if (!result.ok) return NextResponse.json({ message: (result as { error: string }).error }, { status: 400 });
+    return NextResponse.json(result);
+  }
   const hireId = str(body.hireId).trim();
   if (!hireId) return NextResponse.json({ message: "Which employee?" }, { status: 400 });
   const actor = auth.user.email ?? auth.user.name ?? null;
