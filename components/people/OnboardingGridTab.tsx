@@ -183,6 +183,18 @@ export function OnboardingGridTab({
     }
   }
 
+  /** Accessible name + tooltip for a task cell — shared by the desktop grid and the phone cards. */
+  function cellLabel(task: GridHire["tasks"][number], label: string, name: string) {
+    return `${label} for ${name} — ${task.status === "TODO" && task.hold ? task.hold : STATUS_WORD[task.status]}, click to change`;
+  }
+  function cellTitle(task: GridHire["tasks"][number]) {
+    return task.status === "TODO" && task.hold === "Requested"
+      ? "Requested — click when it arrives to mark it done"
+      : task.status === "TODO" && task.hold
+        ? `${task.hold}, clears itself — click to change`
+        : "Click to change";
+  }
+
   if (hires.length === 0 && !managing) {
     return (
       <div className="space-y-3">
@@ -210,7 +222,7 @@ export function OnboardingGridTab({
         busy={bulkBusy}
       />
 
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         {/* Always visible, not gated behind a selection. Copying is read-only, and
             hiding it until you had already ticked somebody meant nobody found it. */}
         <button
@@ -245,7 +257,8 @@ export function OnboardingGridTab({
       <div className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
       <div className="border-b border-brand-lea/10 px-4 py-3 dark:border-white/10">
         <p className="text-sm text-brand-grey dark:text-slate-400">
-          Click any cell to cycle <span className="font-semibold text-brand-lea dark:text-slate-100">to-do → done → N/A</span>. Tick a name to select; scroll sideways for more.{" "}
+          <span className="hidden md:inline">Click any cell</span>
+          <span className="md:hidden">Tap any task</span> to cycle <span className="font-semibold text-brand-lea dark:text-slate-100">to-do → done → N/A</span>. Tick a name to select<span className="hidden md:inline">; scroll sideways for more</span>.{" "}
           <span className="font-semibold text-brand-lea dark:text-slate-100">Copy for email</span> puts the ticked people&apos;s details (or everyone) on the clipboard, ready to paste into a message.
         </p>
       </div>
@@ -263,7 +276,100 @@ export function OnboardingGridTab({
           this box, and this box does not scroll vertically any more — so the names
           and progress bars scroll away with the page. The classes are left in
           place because sticky left-0 on the task column still does work. */}
-      <div className="overflow-x-auto">
+      {/* PHONES (below md): one card per hire instead of the grid. At 329px the
+          table was 1980px wide and showed ~1.2 hire columns at a time behind a
+          sideways scroll; his standing rule (Nov 14 2026) is that everything works
+          on mobile, and wide tables get a phone layout, never sideways scroll.
+          Same pattern as the Post-onboard cards. Same cells, same cycle, same
+          glyphs (holds included) — the tasks just stack under each person. */}
+      <div className="divide-y divide-brand-lea/10 md:hidden dark:divide-white/10">
+        <label className="flex items-center gap-2 px-3 py-2 text-[11px] text-brand-grey dark:text-slate-400">
+          <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all hires" className="h-4 w-4" />
+          {hires.length} {hires.length === 1 ? "person" : "people"}
+        </label>
+        {hires.map((h) => {
+          const pct = h.applicableCount > 0 ? Math.round((h.doneCount / h.applicableCount) * 100) : 0;
+          return (
+            <div key={h.id} className={clsx("grid gap-2 px-3 py-3", selected.has(h.id) && "bg-brand-eden/10 dark:bg-white/10")}>
+              <div className="flex items-start gap-2">
+                <input type="checkbox" checked={selected.has(h.id)} onChange={() => toggleOne(h.id)} aria-label={`Select ${h.name}`} className="mt-1 h-4 w-4 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <Link href={`/people/${h.id}`} className="break-words font-semibold text-brand-lea hover:underline dark:text-slate-100">
+                    {h.name}
+                  </Link>
+                  <div className="break-words text-xs leading-snug text-brand-grey dark:text-slate-400">{h.position ?? "—"}</div>
+                  <div className="text-xs leading-snug text-brand-grey dark:text-slate-400">
+                    <span className="tabular-nums">Start {fmtDate(h.startDate)}</span> · <span className="tabular-nums">Orientation {fmtDate(h.orientationDate)}</span>
+                  </div>
+                </div>
+                <span className={clsx("shrink-0 rounded px-2 py-0.5 text-[10px] font-semibold", STATUS_STYLE[h.status])}>{h.status}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-brand-cloudDancer dark:bg-white/5">
+                  <span className={clsx("block h-full rounded-full", pct === 100 ? "bg-emerald-500" : "bg-brand-gold")} style={{ width: `${pct}%` }} />
+                </div>
+                <span className="shrink-0 text-[10px] tabular-nums text-brand-grey dark:text-slate-400">{h.doneCount}/{h.applicableCount} done</span>
+              </div>
+              {checklist.map((g) => {
+                const groupTasks = g.tasks.filter((t) => !t.hidden);
+                if (groupTasks.length === 0) return null;
+                return (
+                  <div key={g.key} className="rounded border border-brand-lea/10 dark:border-white/10">
+                    <div className="border-b border-brand-lea/10 bg-brand-cloudDancer/40 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-gold dark:border-white/10 dark:bg-white/5">
+                      {g.label}
+                    </div>
+                    <div className="divide-y divide-brand-lea/5 dark:divide-white/10">
+                      {groupTasks.map((def) => {
+                        const task = h.tasks.find((t) => t.key === def.key);
+                        const remind = !!task && def.email?.reminder === true && task.status === "TODO";
+                        return (
+                          <div key={def.key} className="flex items-center gap-1 text-xs">
+                            {task ? (
+                              <button
+                                type="button"
+                                onClick={() => cycle(h.id, task.id, task.status)}
+                                className="flex min-h-[40px] min-w-0 flex-1 items-center justify-between gap-2 px-2 py-1 text-left transition-colors hover:bg-brand-gold/10 dark:hover:bg-white/5"
+                                aria-label={cellLabel(task, def.label, h.name)}
+                                title={cellTitle(task)}
+                              >
+                                <span className="min-w-0 break-words text-brand-black dark:text-slate-100">{def.label}</span>
+                                <span className="shrink-0">
+                                  <Glyph status={task.status} hold={task.hold} />
+                                </span>
+                              </button>
+                            ) : (
+                              <div className="flex min-h-[40px] min-w-0 flex-1 items-center justify-between gap-2 px-2 py-1">
+                                <span className="min-w-0 break-words text-brand-grey dark:text-slate-400">{def.label}</span>
+                                <span className="shrink-0 text-brand-grey/50">–</span>
+                              </div>
+                            )}
+                            {remind && task ? (
+                              <span className="shrink-0 pr-1">
+                                <SendTaskEmailButton
+                                  compact
+                                  hireId={h.id}
+                                  taskKey={def.key}
+                                  taskLabel={`Reminder: ${def.label} — ${h.name}`}
+                                  taskStatus={task.status}
+                                  sentAt={taskSends[h.id]?.[def.key] ?? null}
+                                  canEdit
+                                  onSent={() => router.refresh()}
+                                  onReminderSent={() => router.refresh()}
+                                />
+                              </span>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+      <div className="hidden overflow-x-auto md:block">
         <table className="border-separate border-spacing-0 text-xs">
           <thead>
             <tr>
@@ -352,14 +458,8 @@ export function OnboardingGridTab({
                                 type="button"
                                 onClick={() => cycle(h.id, task.id, task.status)}
                                 className="inline-flex h-8 min-w-0 flex-1 items-center justify-center transition-colors hover:bg-brand-gold/10 dark:hover:bg-white/5"
-                                aria-label={`${def.label} for ${h.name} — ${task.status === "TODO" && task.hold ? task.hold : STATUS_WORD[task.status]}, click to change`}
-                                title={
-                                  task.status === "TODO" && task.hold === "Requested"
-                                    ? "Requested — click when it arrives to mark it done"
-                                    : task.status === "TODO" && task.hold
-                                      ? `${task.hold}, clears itself — click to change`
-                                      : "Click to change"
-                                }
+                                aria-label={cellLabel(task, def.label, h.name)}
+                                title={cellTitle(task)}
                               >
                                 <Glyph status={task.status} hold={task.hold} />
                               </button>
