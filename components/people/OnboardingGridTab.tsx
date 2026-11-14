@@ -45,8 +45,13 @@ function fmtDate(iso: string | null) {
 }
 
 function Glyph({ status, hold }: { status: GridTaskStatus; hold?: string | null }) {
-  // Scheduled / Requested reads as done here, as it does on the hire's checklist
-  // (lib/onboarding/holds.ts); the cell's tooltip names which.
+  // Holds (lib/onboarding/holds.ts), matching the hire's checklist:
+  // REQUESTED is an action still to take — HR clicks when the iPad or card
+  // arrives — so it shows the word in the selected state (navy + gold), not a
+  // tick; one click on the cell writes Done. SCHEDULED clears itself, so it
+  // reads as done, and the cell's tooltip says so.
+  if (status === "TODO" && hold === "Requested")
+    return <span className="rounded bg-brand-lea px-1.5 py-0.5 text-[10px] font-semibold text-brand-gold">Requested</span>;
   if (status === "DONE" || (status === "TODO" && hold))
     return (
       <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
@@ -348,7 +353,13 @@ export function OnboardingGridTab({
                                 onClick={() => cycle(h.id, task.id, task.status)}
                                 className="inline-flex h-8 min-w-0 flex-1 items-center justify-center transition-colors hover:bg-brand-gold/10 dark:hover:bg-white/5"
                                 aria-label={`${def.label} for ${h.name} — ${task.status === "TODO" && task.hold ? task.hold : STATUS_WORD[task.status]}, click to change`}
-                                title={task.status === "TODO" && task.hold ? `${task.hold} — click to change` : "Click to change"}
+                                title={
+                                  task.status === "TODO" && task.hold === "Requested"
+                                    ? "Requested — click when it arrives to mark it done"
+                                    : task.status === "TODO" && task.hold
+                                      ? `${task.hold}, clears itself — click to change`
+                                      : "Click to change"
+                                }
                               >
                                 <Glyph status={task.status} hold={task.hold} />
                               </button>

@@ -3,7 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, Clock, Plus } from "lucide-react";
 import { CUSTOM_GROUP, MAINTENANCE_GROUP } from "@/lib/onboarding/tasks";
 import { useCollapsedSections } from "@/lib/hooks/useCollapsedSections";
 import type { TaskView } from "@/lib/data/onboarding";
@@ -194,7 +194,9 @@ export function OnboardingChecklist({
       {next ? (
         <div className="flex flex-wrap items-center gap-3 rounded bg-gradient-to-r from-[#fdf6e3] to-[#fffdf7] px-3.5 py-2.5 ring-1 ring-brand-gold/45 dark:from-brand-gold/10 dark:to-transparent dark:ring-brand-gold/30">
           <span className="shrink-0 rounded bg-brand-gold px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.13em] text-brand-lea">Next</span>
-          <span className="min-w-0 flex-1 font-semibold text-brand-lea dark:text-slate-100">{next.task.label}</span>
+          {/* min-w-[12rem]: same phone fix as the rows below — the section name
+              and Mark done wrap under the label instead of crushing it. */}
+          <span className="min-w-[12rem] flex-1 font-semibold text-brand-lea dark:text-slate-100">{next.task.label}</span>
           <span className="shrink-0 text-sm text-brand-grey dark:text-slate-400">{next.group.label}</span>
           {canEdit ? (
             <button
@@ -323,14 +325,20 @@ export function OnboardingChecklist({
                 <div className="space-y-1.5">
                   {items.map((t) => {
                     const isNext = next?.task.id === t.id;
-                    // A held row LOOKS done, exactly like the business card's
-                    // "On the next order": struck through, Done lit, and a tag
-                    // saying why. The stored status is still To do, which is what
-                    // lets the tag clear itself — the session being completed, the
-                    // trip being completed, or the iPad / card being ticked on the
-                    // orientation page all write Done, and the tag goes.
+                    // Two kinds of hold, both stored To do (lib/onboarding/holds.ts):
+                    //
+                    // SCHEDULED clears ITSELF — the session or trip being marked
+                    // complete writes Done — so it looks done: struck through,
+                    // Done lit, and a tag saying nobody has to touch it.
+                    //
+                    // REQUESTED waits on a person — HR ticks Done when the iPad or
+                    // card arrives. Asked for 2026-11-13 (option A of four): NOT
+                    // struck through and Done NOT lit, so Done reads as the next
+                    // click. It gets its own lit segment instead, and a hint under
+                    // the label. It still counts as handled for Ready.
                     const held = t.status === "TODO" && t.hold ? t.hold : null;
-                    const shown = held ? "DONE" : t.status;
+                    const requested = held === "Requested";
+                    const shown: TaskView["status"] | "REQUESTED" = held === "Scheduled" ? "DONE" : requested ? "REQUESTED" : t.status;
                     return (
                       <div
                         key={t.id}
@@ -339,28 +347,48 @@ export function OnboardingChecklist({
                           isNext ? "bg-gradient-to-r from-brand-gold/15 to-brand-gold/[0.03] ring-1 ring-brand-gold/40" : "border border-brand-lea/10 dark:border-white/10"
                         )}
                       >
-                        <span className={clsx("min-w-0 flex-1 text-sm", shown === "DONE" ? "text-brand-grey line-through dark:text-slate-400" : t.status === "NA" ? "text-brand-grey/70 dark:text-slate-500" : clsx("text-brand-black dark:text-slate-100", isNext && "font-semibold text-brand-lea"))}>
-                          {t.label}
+                        {/* min-w-[12rem], not min-w-0: with a zero floor the label
+                            shrank to ~45px beside the buttons on a phone (Aimee,
+                            Nov 13) and flex-wrap never kicked in. Now the buttons
+                            drop under the label instead. Desktop rows are wide
+                            enough that nothing changes there. */}
+                        <span className="min-w-[12rem] flex-1">
+                          <span className={clsx("block text-sm", shown === "DONE" ? "text-brand-grey line-through dark:text-slate-400" : t.status === "NA" ? "text-brand-grey/70 dark:text-slate-500" : clsx("text-brand-black dark:text-slate-100", isNext && "font-semibold text-brand-lea"))}>
+                            {t.label}
+                          </span>
+                          {requested ? (
+                            <span className="mt-0.5 block text-[11px] text-brand-eden dark:text-brand-edenOnDark">Click Done when it arrives</span>
+                          ) : null}
                         </span>
-                        <div className="flex shrink-0 items-center gap-2">
-                          {held ? (
-                            // The same tag, in the same classes, as the business
-                            // card's "On the next order" (NewHireDetailWorkspace).
+                        <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2">
+                          {held === "Scheduled" ? (
+                            // The business card's "On the next order" tag classes
+                            // (NewHireDetailWorkspace), saying it needs no click.
                             <span
                               title={
-                                held === "Scheduled"
-                                  ? t.key === "attended_orientation"
-                                    ? "Booked on an upcoming orientation. Clears when the session is marked complete."
-                                    : "Trip booked. Clears when the trip or the orientation session is marked complete."
-                                  : "Pilots always get one. Clears when it is ticked on the orientation page."
+                                t.key === "attended_orientation"
+                                  ? "Booked on an upcoming orientation. Clears itself when the session is marked complete."
+                                  : "Trip booked. Clears itself when the trip or the orientation session is marked complete."
                               }
-                              className="rounded bg-brand-sweet/25 px-2 py-0.5 text-[10px] font-semibold text-brand-lea dark:bg-brand-sweet/15 dark:text-brand-sweet"
+                              className="inline-flex items-center gap-1 rounded bg-brand-sweet/25 px-2 py-0.5 text-[10px] font-semibold text-brand-lea dark:bg-brand-sweet/15 dark:text-brand-sweet"
                             >
-                              {held}
+                              <Clock className="h-3 w-3" aria-hidden /> Scheduled, clears itself
                             </span>
                           ) : null}
                           {renderTaskExtra?.(t)}
                           <div className="flex shrink-0 overflow-hidden rounded border border-brand-lea/15 dark:border-white/10">
+                            {requested ? (
+                              // A state, not an action: it is read from the
+                              // position, so clicking it could change nothing.
+                              // Done is the click that clears it.
+                              <span
+                                aria-current="true"
+                                title="Requested — pilots always get one. Click Done when it arrives."
+                                className="bg-brand-lea px-2.5 py-1 text-xs font-semibold text-brand-gold"
+                              >
+                                Requested
+                              </span>
+                            ) : null}
                             {(["TODO", "DONE", "NA"] as const).map((s) => (
                               <button
                                 key={s}

@@ -1357,6 +1357,27 @@ on Settings, Feedback.
 
 ---
 
+### 59. Nobody has clicked Done on a pilot's Requested iPad or credit card row
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-11-13
+
+A pilot's "Received iPad" and "Received company credit card" rows now show a lit
+navy-and-gold **Requested** segment with **Done** unlit, a "Click Done when it arrives"
+hint, and no strike-through. On the Onboarding grid the cell shows the word Requested
+instead of a tick. Checked: the server-rendered HTML for Cameron Morgan shows exactly that
+markup. NOT checked: anything on screen. Chrome could not reach the dev server, and Done
+was not clicked because it writes the live database.
+
+**How to check it:** open a pilot hire's Checklist tab whose iPad has not arrived. Look at
+it in light and dark mode. When the iPad really arrives, click **Done**.
+
+**What would count as a pass:** the Requested row is clearly not finished and Done looks
+like the next click; after Done the row is struck through with Done lit and the hint gone;
+on the grid that cell turns into a tick.
+
+---
+
 ## Closed
 
 ### 33. The candidate page's layout has not been saved since the boxes started fitting their content
