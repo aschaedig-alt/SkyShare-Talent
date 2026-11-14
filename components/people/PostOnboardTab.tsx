@@ -656,10 +656,19 @@ export function PostOnboardTab({
     return new Date(h.startDate).getTime() + days * 86_400_000;
   }
 
-  /** The round mark every cell starts with: done, due, to do, or skipped. */
-  function markEl(c: Checkin) {
+  /**
+   * The round mark every cell starts with: done, due, to do, skipped, or N/A.
+   * SKIPPED and N/A are both stored N/A; a skip record (skips[hire][key]) is what
+   * tells them apart. Skipped = it should have happened and did not; N/A = it never
+   * applied to this person. His call, Nov 14 2026: the grid shows the difference.
+   */
+  function markEl(c: Checkin, skipped = false) {
     if (c.status === "NA")
-      return <span className="inline-flex h-[22px] items-center rounded bg-brand-cloudDancer/70 px-1 text-[9px] font-bold uppercase tracking-wide text-brand-grey dark:bg-white/10 dark:text-slate-400">N/A</span>;
+      return skipped ? (
+        <span className="inline-flex h-[22px] items-center rounded bg-amber-100 px-1 text-[9px] font-bold uppercase text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">Skipped</span>
+      ) : (
+        <span className="inline-flex h-[22px] items-center rounded bg-brand-cloudDancer/70 px-1 text-[9px] font-bold uppercase tracking-wide text-brand-grey dark:bg-white/10 dark:text-slate-400">N/A</span>
+      );
     if (c.status === "DONE")
       return (
         <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
@@ -670,8 +679,8 @@ export function PostOnboardTab({
     return <span className="inline-block h-[22px] w-[22px] rounded-full border-2 border-brand-grey/30 dark:border-slate-500/50" />;
   }
 
-  function stateWord(c: Checkin) {
-    return c.status === "DONE" ? "Done" : c.status === "NA" ? "Skipped" : c.dueSoon ? "Due" : "To do";
+  function stateWord(c: Checkin, skipped = false) {
+    return c.status === "DONE" ? "Done" : c.status === "NA" ? (skipped ? "Skipped" : "N/A") : c.dueSoon ? "Due" : "To do";
   }
 
   /** The small line under a mark: what is going on with that check-in, in a word. */
@@ -701,6 +710,7 @@ export function PostOnboardTab({
 
   /** One grid cell: the mark and its line open the person's drawer; a due manager check-in also gets Send. */
   function gridCell(h: PostOnboardHire, c: Checkin, group: string) {
+    const skipped = Boolean(skips[h.id]?.[c.key]);
     const rated = ratedCheckinForTask(c.key);
     const showSend =
       group === "mgr" && rated && c.status === "TODO" && c.dueSoon && !ratings[rk(h.id, rated.dayMark)] && !requests[rk(h.id, rated.dayMark)] && h.employmentStatus !== "TERMINATED";
@@ -710,11 +720,11 @@ export function PostOnboardTab({
         <button
           type="button"
           onClick={() => setDrawerId(h.id)}
-          title={`${h.name} · ${columnLabel(c)}: ${stateWord(c)}${at && c.status === "TODO" ? ` · due ${formatMomentDateShort(new Date(at).toISOString())}` : ""} - click for actions`}
-          aria-label={`${h.name}, ${columnLabel(c)}: ${stateWord(c)}. Open actions`}
+          title={`${h.name} · ${columnLabel(c)}: ${stateWord(c, skipped)}${at && c.status === "TODO" ? ` · due ${formatMomentDateShort(new Date(at).toISOString())}` : ""} - click for actions`}
+          aria-label={`${h.name}, ${columnLabel(c)}: ${stateWord(c, skipped)}. Open actions`}
           className="flex min-h-[38px] w-full flex-col items-center justify-start gap-0.5 rounded px-0.5 py-0.5 transition hover:bg-brand-gold/10 hover:shadow-glow"
         >
-          {markEl(c)}
+          {markEl(c, skipped)}
           {miniLine(h, c, group)}
         </button>
         {showSend && rated ? (
@@ -741,7 +751,7 @@ export function PostOnboardTab({
     return (
       <div key={c.key} className="flex flex-wrap items-start gap-x-3 gap-y-2 border-b border-brand-lea/10 py-3 last:border-b-0 dark:border-white/10">
         <div className="flex w-36 shrink-0 items-center gap-2">
-          {markEl(c)}
+          {markEl(c, Boolean(skip))}
           <div>
             <div className="text-sm font-semibold text-brand-lea dark:text-slate-100">{columnLabel(c)}</div>
             <div className="text-[11px] text-brand-grey dark:text-slate-400">
@@ -749,7 +759,7 @@ export function PostOnboardTab({
                 ? `Skipped${skip.skippedBy ? ` by ${skip.skippedBy}` : ""} ${formatMomentDateShort(skip.skippedAt)}`
                 : at
                   ? `${c.status === "DONE" ? "Was due" : "Due"} ${formatMomentDateShort(new Date(at).toISOString())}`
-                  : stateWord(c)}
+                  : stateWord(c, Boolean(skip))}
             </div>
           </div>
         </div>
