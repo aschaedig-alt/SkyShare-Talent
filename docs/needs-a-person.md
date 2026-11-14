@@ -1339,7 +1339,10 @@ the skipped one, and the role answer; that check-in is ticked and the others are
 
 ### 58. A screen recording sent from an iPhone has not been played back on the Feedback page
 
-**Status:** OPEN
+**Status:** CLOSED
+**Closed:** 2026-11-13, by him: "this worked." Aimee sent a 53.6 MB iPhone screen recording
+(ScreenRecording_11-13-2026 15-48-38_1.mp4, video/mp4) on feedback cmwfmv2qd at 23:54Z
+(4:54 PM MT), after the photo-library picker fix (e9cf1c0) deployed.
 **Added:** 2026-11-13
 
 Feedback now accepts screen recordings (MP4, MOV or WEBM up to 200 MB) from the same Add
