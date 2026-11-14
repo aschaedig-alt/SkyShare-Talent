@@ -1342,6 +1342,37 @@ open People > Post-onboard, scroll down, and click a Rate and a tick.
 read in even rows; on the laptop there is no sideways scroll bar and the column names stay
 visible while scrolling.
 
+**Update 2026-11-13, from him:** "the iphone part is fine." The phone half is confirmed. The
+Post-onboard table half is now covered by item 61, because the table was rebuilt to his
+picked layout the same evening.
+
+---
+
+### 61. The rebuilt Post-onboard grid (his design #17) has not been used for real
+
+**Status:** OPEN
+**Added:** 2026-11-13
+
+He picked design #17 from the Post-onboard Designs page: columns grouped as One-time tasks
+(Social, 401k), Check-ins (30-day, 60-day) and Manager check-ins (90-day, 6-month, 12-month,
+each one column with the rating or link status under the tick); names turned sideways; a
+small A / T / C status dropdown; a due-count row; space left on the right for future
+columns; and every action in a drawer that opens from any cell. Checked in a browser at 1536
+wide with every save blocked: no sideways scroll, nothing spills, about 250px left free on
+the right, due counts 28 / 21 / 36 (60-day, 90-day, 6-month); picking T asks first and
+nothing was sent when the answer was no; a cell opened Chris Sharpe's drawer with all seven
+rows and their buttons; Escape closed it; a due manager Send opened the rating-link dialog;
+all 576 controls carry the gold hover glow; light and dark both render. NOT checked: any real
+save from the drawer (mark done, skip, send, rate), a real T (it archives the person), and
+her laptop.
+
+**How to check it, three minutes:** on People > Post-onboard, click a 30-day cell and mark it
+done, then undo it; open a due 90-day cell and send a rating link to yourself as a test;
+change someone's status to C and back to A.
+
+**What would count as a pass:** each change shows in the grid without a reload and sticks
+after one; the drawer's buttons do what the old grid's did; the Status letters change colour.
+
 ---
 
 ## Closed

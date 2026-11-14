@@ -19,6 +19,7 @@ import { CheckinRatingModal } from "@/components/people/CheckinRatingModal";
 import { ratedCheckin, ratedCheckinForTask, ratingPoints, scaleSummary, type CheckinRatingView, type RatedCheckin } from "@/lib/onboarding/checkin-rating";
 import { pointsText } from "@/lib/interviews/scorecard";
 import { CheckinReplyModal, LEVEL_STYLE } from "@/components/people/CheckinReplyModal";
+import { PostOnboardDrawer } from "@/components/people/PostOnboardDrawer";
 import { NO_REPLY_AFTER_DAYS, REPLY_LEVEL_LABEL, needsFollowUp, type CheckinReplyView } from "@/lib/onboarding/checkin-reply";
 
 /** The reply to show in a cell: an unhandled one that needs follow-up first, else the latest. */
@@ -58,6 +59,60 @@ const POST_ONBOARD_BULK_ACTIONS: BulkAction[] = [
 const HEAD_CELL =
   "sticky top-12 lg:top-0 z-10 bg-white py-3 shadow-[inset_0_-1px_0_rgba(13,44,67,0.1)] dark:bg-brand-panel dark:shadow-[inset_0_-1px_0_rgba(255,255,255,0.1)]";
 
+/**
+ * THE LAYOUT (his pick, design #17 of the Nov 13 2026 Post-onboard Designs page):
+ * one all-status view, columns grouped by what they are, narrow sideways names,
+ * a due-count row, and every action in a drawer that opens from any cell. His
+ * column order: Employee | Department | Started | Status | Social | 401k |
+ * 30-day | 60-day | 90-day | 6-month | 12-month, then space on the right left
+ * empty on purpose for columns added later.
+ *
+ * 90-day, 6-month and 12-month ARE the manager check-ins (his words): one column
+ * each, the tick and the manager's rating / rating link in the same cell.
+ * A check-in key not listed here (a future one) joins Check-ins at the end, so a
+ * new task never silently disappears from the grid.
+ */
+const COLUMN_GROUPS: Array<{ key: "task" | "ck" | "mgr"; label: string; keys: string[] }> = [
+  { key: "task", label: "One-time tasks", keys: ["social_announcement", "benefits_enrolled"] },
+  { key: "ck", label: "Check-ins", keys: ["checkin_30", "checkin_60"] },
+  { key: "mgr", label: "Manager check-ins", keys: ["checkin_90", "checkin_180", "checkin_365"] }
+];
+/** His word for the benefits step on this grid (Nov 13 2026): 401k. */
+const COLUMN_LABEL: Record<string, string> = { benefits_enrolled: "401k" };
+const columnLabel = (c: { key: string; short: string }) => COLUMN_LABEL[c.key] ?? c.short;
+
+const STATUS_LETTER: Record<EmploymentStatus, string> = { ACTIVE: "A", TERMINATED: "T", CONTRACT: "C" };
+const STATUS_WORD: Record<EmploymentStatus, string> = { ACTIVE: "Active", TERMINATED: "Terminated", CONTRACT: "Contract" };
+const STATUS_TONE: Record<EmploymentStatus, string> = {
+  ACTIVE: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300",
+  CONTRACT: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300",
+  TERMINATED: "border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300"
+};
+
+/** Group tints: the manager check-ins get a faint gold wash, the tasks a faint blue one. */
+const GROUP_TINT: Record<"task" | "ck" | "mgr", string> = {
+  task: "bg-brand-sweet/[0.08] dark:bg-white/[0.03]",
+  ck: "",
+  mgr: "bg-brand-gold/[0.07] dark:bg-brand-gold/[0.06]"
+};
+/** Opaque versions for the sticky header, or rows show through it while scrolling. */
+const GROUP_HEAD: Record<"task" | "ck" | "mgr", string> = {
+  task: "bg-[#f6f9fc] dark:bg-[#11273e]",
+  ck: "bg-white dark:bg-brand-panel",
+  mgr: "bg-[#fefbf1] dark:bg-[#162a3a]"
+};
+const GROUP_RULE: Record<"task" | "ck" | "mgr", string> = {
+  task: "shadow-[inset_0_-2px_0_rgba(13,44,67,0.15)] dark:shadow-[inset_0_-2px_0_rgba(255,255,255,0.15)]",
+  ck: "shadow-[inset_0_-2px_0_#a6c9e7]",
+  mgr: "shadow-[inset_0_-2px_0_rgba(234,170,0,0.6)]"
+};
+
+/** month/day, for the small date under an upcoming check-in. */
+function shortDay(ms: number): string {
+  const d = new Date(ms);
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+}
+
 export function PostOnboardTab({
   hires: initial,
   emailTaskKeys,
@@ -78,6 +133,8 @@ export function PostOnboardTab({
   const router = useRouter();
   const [hires, setHires] = useState(initial);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  /** The person whose drawer is open (design #17: every action lives there). */
+  const [drawerId, setDrawerId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const emailKeys = useMemo(() => new Set(emailTaskKeys), [emailTaskKeys]);
@@ -334,6 +391,12 @@ export function PostOnboardTab({
   }
 
   async function setEmployment(hireId: string, status: EmploymentStatus) {
+    const who = hires.find((h) => h.id === hireId);
+    // A one-letter dropdown is easy to hit by accident, and Terminated is not a
+    // small change: it moves them to Archived and cancels any open rating link,
+    // so nobody contacts their supervisor. Ask first.
+    if (status === "TERMINATED" && !window.confirm(`Mark ${who?.name ?? "this person"} as terminated? They move to Archived and any open rating link is cancelled, so their supervisor is not contacted.`)) return;
+    if (status === "TERMINATED" && drawerId === hireId) setDrawerId(null);
     const prev = hires;
     // Terminating moves the employee to Archived, so drop them from this list.
     setHires((cur) => (status === "TERMINATED" ? cur.filter((h) => h.id !== hireId) : cur.map((h) => (h.id === hireId ? { ...h, employmentStatus: status } : h))));
@@ -500,7 +563,162 @@ export function PostOnboardTab({
     return <EmptyState title="No post-onboard employees yet." description="Mark an active hire as onboarded and they will appear here." />;
   }
 
-  const heads = hires[0].checkins.map((c) => c.short);
+  // Column plan from the check-ins the rows actually carry (see COLUMN_GROUPS).
+  const present = hires[0].checkins.map((c) => ({ key: c.key, short: c.short }));
+  const placed = new Set(COLUMN_GROUPS.flatMap((g) => g.keys));
+  const groups = COLUMN_GROUPS.map((g) => ({
+    ...g,
+    cols: [...g.keys.filter((k) => present.some((c) => c.key === k)), ...(g.key === "ck" ? present.filter((c) => !placed.has(c.key)).map((c) => c.key) : [])]
+      .map((k) => present.find((c) => c.key === k)!)
+  })).filter((g) => g.cols.length);
+  const plan = groups.flatMap((g) => g.cols.map((c, i) => ({ ...c, group: g.key, first: i === 0 })));
+  const colWidth = (group: string) => (group === "mgr" ? 70 : 52);
+
+  /** When a dated check-in falls due: start date + its days (lib/onboarding/tasks.ts). */
+  function dueAt(h: PostOnboardHire, key: string): number | null {
+    const days = MAINTENANCE_TASKS.find((m) => m.key === key)?.dueDays ?? null;
+    if (days === null || !h.startDate) return null;
+    return new Date(h.startDate).getTime() + days * 86_400_000;
+  }
+
+  /** The round mark every cell starts with: done, due, to do, or skipped. */
+  function markEl(c: Checkin) {
+    if (c.status === "NA")
+      return <span className="inline-flex h-[22px] items-center rounded bg-brand-cloudDancer/70 px-1 text-[9px] font-bold uppercase tracking-wide text-brand-grey dark:bg-white/10 dark:text-slate-400">N/A</span>;
+    if (c.status === "DONE")
+      return (
+        <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </span>
+      );
+    if (c.dueSoon) return <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white">!</span>;
+    return <span className="inline-block h-[22px] w-[22px] rounded-full border-2 border-brand-grey/30 dark:border-slate-500/50" />;
+  }
+
+  function stateWord(c: Checkin) {
+    return c.status === "DONE" ? "Done" : c.status === "NA" ? "Skipped" : c.dueSoon ? "Due" : "To do";
+  }
+
+  /** The small line under a mark: what is going on with that check-in, in a word. */
+  function miniLine(h: PostOnboardHire, c: Checkin, group: string) {
+    const rated = ratedCheckinForTask(c.key);
+    if (group === "mgr" && rated) {
+      const saved = ratings[rk(h.id, rated.dayMark)];
+      const req = requests[rk(h.id, rated.dayMark)];
+      if (saved) return <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">★ rated</span>;
+      if (c.status === "NA") return null;
+      if (req && req.state === "PENDING") return <span className="text-[10px] text-brand-grey dark:text-slate-400">sent {formatMomentDateShort(req.lastSentAt)}</span>;
+      if (c.status === "DONE") return <span className="text-[10px] text-brand-grey dark:text-slate-400">done</span>;
+      if (c.dueSoon) return null; // the Send button sits there instead
+      const at = dueAt(h, c.key);
+      return at ? <span className="text-[10px] text-brand-grey dark:text-slate-400">{shortDay(at)}</span> : null;
+    }
+    const r = pickReply(replies[h.id]?.[c.key]);
+    if (r) {
+      const urgent = needsFollowUp(r.level) && !r.handledAt;
+      const Icon = urgent ? MessageSquareWarning : MessageSquareText;
+      return <Icon className={clsx("h-3.5 w-3.5", r.handledAt ? "text-brand-lea dark:text-slate-300" : LEVEL_STYLE[r.level].icon)} aria-label={urgent ? "Reply needs action" : "Replied"} />;
+    }
+    if (waitingOnReply(h.id, c.key)) return <span className="text-[9px] font-semibold uppercase tracking-wide text-brand-grey/80 dark:text-slate-500">no reply</span>;
+    if (c.status === "TODO" && c.dueSoon) return <span className="text-[10px] font-semibold text-red-700 dark:text-red-300">due</span>;
+    return null;
+  }
+
+  /** One grid cell: the mark and its line open the person's drawer; a due manager check-in also gets Send. */
+  function gridCell(h: PostOnboardHire, c: Checkin, group: string) {
+    const rated = ratedCheckinForTask(c.key);
+    const showSend =
+      group === "mgr" && rated && c.status === "TODO" && c.dueSoon && !ratings[rk(h.id, rated.dayMark)] && !requests[rk(h.id, rated.dayMark)] && h.employmentStatus !== "TERMINATED";
+    const at = dueAt(h, c.key);
+    return (
+      <div className="flex flex-col items-center gap-0.5">
+        <button
+          type="button"
+          onClick={() => setDrawerId(h.id)}
+          title={`${h.name} · ${columnLabel(c)}: ${stateWord(c)}${at && c.status === "TODO" ? ` · due ${formatMomentDateShort(new Date(at).toISOString())}` : ""} - click for actions`}
+          aria-label={`${h.name}, ${columnLabel(c)}: ${stateWord(c)}. Open actions`}
+          className="flex min-h-[38px] w-full flex-col items-center justify-start gap-0.5 rounded px-0.5 py-0.5 transition hover:bg-brand-gold/10 hover:shadow-glow"
+        >
+          {markEl(c)}
+          {miniLine(h, c, group)}
+        </button>
+        {showSend && rated ? (
+          <button
+            type="button"
+            onClick={() => setOpenRequest({ hire: h, checkin: rated })}
+            title={`Email the hiring manager the ${rated.short} rating link - no login needed`}
+            className="inline-flex items-center gap-0.5 rounded border border-red-300 px-1.5 py-px text-[10px] font-bold text-red-700 transition hover:shadow-glow dark:border-red-500/40 dark:text-red-300"
+          >
+            <Send className="h-2.5 w-2.5" /> Send
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+
+  /** Every action for one check-in, as a row in the drawer. */
+  function drawerRow(h: PostOnboardHire, c: Checkin, terminated: boolean) {
+    const skip = skips[h.id]?.[c.key];
+    const at = dueAt(h, c.key);
+    const r = pickReply(replies[h.id]?.[c.key]);
+    const action =
+      "rounded border border-brand-lea/20 px-2.5 py-1 text-xs font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100";
+    return (
+      <div key={c.key} className="flex flex-wrap items-start gap-x-3 gap-y-2 border-b border-brand-lea/10 py-3 last:border-b-0 dark:border-white/10">
+        <div className="flex w-36 shrink-0 items-center gap-2">
+          {markEl(c)}
+          <div>
+            <div className="text-sm font-semibold text-brand-lea dark:text-slate-100">{columnLabel(c)}</div>
+            <div className="text-[11px] text-brand-grey dark:text-slate-400">
+              {c.status === "NA" && skip
+                ? `Skipped${skip.skippedBy ? ` by ${skip.skippedBy}` : ""} ${formatMomentDateShort(skip.skippedAt)}`
+                : at
+                  ? `${c.status === "DONE" ? "Was due" : "Due"} ${formatMomentDateShort(new Date(at).toISOString())}`
+                  : stateWord(c)}
+            </div>
+          </div>
+        </div>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          {c.status === "NA" ? (
+            <button type="button" onClick={() => void undoSkip(h, c)} className={action}>
+              Undo skip
+            </button>
+          ) : (
+            <button type="button" onClick={() => void toggle(h.id, c)} className={clsx(action, c.status !== "DONE" && c.dueSoon && "border-red-300 text-red-700 dark:border-red-500/40 dark:text-red-300")}>
+              {c.status === "DONE" ? "Undo done" : "Mark done"}
+            </button>
+          )}
+          {emailKeys.has(c.key) && c.status !== "NA" ? (
+            <SendTaskEmailButton
+              hireId={h.id}
+              taskKey={c.key}
+              sentAt={taskSends[h.id]?.[c.key] ?? null}
+              taskLabel={`${c.short} check-in — ${h.name}`}
+              taskStatus={c.status}
+              canEdit
+              onSkipped={(rec, archived) => markSkipped(h.id, c.key, rec, archived)}
+              onSent={() =>
+                setHires((cur) =>
+                  cur.map((x) => (x.id === h.id ? { ...x, checkins: x.checkins.map((y) => (y.key === c.key ? { ...y, status: "DONE" as GridTaskStatus, dueSoon: false } : y)) } : x))
+                )
+              }
+            />
+          ) : null}
+          {r ? (
+            <button type="button" onClick={() => setOpenReply(r)} className={clsx(action, "inline-flex items-center gap-1")}>
+              {needsFollowUp(r.level) && !r.handledAt ? <MessageSquareWarning className="h-3.5 w-3.5" /> : <MessageSquareText className="h-3.5 w-3.5" />}
+              Reply · {r.handledAt ? "handled" : REPLY_LEVEL_LABEL[r.level]}
+            </button>
+          ) : waitingOnReply(h.id, c.key) ? (
+            <span className="text-[11px] text-brand-grey dark:text-slate-400">Sent {formatMomentDateShort(taskSends[h.id]?.[c.key])}, no reply yet</span>
+          ) : null}
+          {ratingControls(h, c, terminated)}
+        </div>
+      </div>
+    );
+  }
+
+  const drawerHire = drawerId ? hires.find((h) => h.id === drawerId) ?? null : null;
 
   return (
     <div className="space-y-3">
@@ -566,6 +784,45 @@ export function PostOnboardTab({
           </button>
         ) : null}
       </div>
+      {drawerHire ? (
+        <PostOnboardDrawer
+          title={drawerHire.name}
+          eyebrow="Post-onboard"
+          escapeEnabled={!rating && !openRequest && !openReply}
+          onClose={() => setDrawerId(null)}
+          subtitle={
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span>{drawerHire.position ?? "—"}</span>
+              <span>· {drawerHire.department ?? "—"}</span>
+              <span>· started {fmtDate(drawerHire.startDate)}</span>
+              <span>· onboarded {fmtMoment(drawerHire.onboardedAt)}</span>
+              <Link href={`/people/${drawerHire.id}`} className="font-semibold text-brand-lea underline-offset-2 hover:underline dark:text-slate-100">
+                Open profile
+              </Link>
+            </span>
+          }
+        >
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded bg-white p-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+            <span className="text-xs font-semibold text-brand-grey dark:text-slate-400">Status</span>
+            <select
+              value={drawerHire.employmentStatus}
+              onChange={(e) => void setEmployment(drawerHire.id, e.target.value as EmploymentStatus)}
+              aria-label={`${drawerHire.name} employment status`}
+              className={clsx("rounded border px-2 py-1 text-xs font-semibold outline-none transition hover:shadow-glow", STATUS_TONE[drawerHire.employmentStatus])}
+            >
+              <option value="ACTIVE">Active</option>
+              <option value="CONTRACT">Contract</option>
+              <option value="TERMINATED">Terminated</option>
+            </select>
+          </div>
+          <div className="rounded bg-white px-3 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+            {plan.map((col) => {
+              const c = drawerHire.checkins.find((x) => x.key === col.key);
+              return c ? drawerRow(drawerHire, c, drawerHire.employmentStatus === "TERMINATED") : null;
+            })}
+          </div>
+        </PostOnboardDrawer>
+      ) : null}
       {rating ? (
         <CheckinRatingModal
           key={rk(rating.hire.id, rating.checkin.dayMark)}
@@ -643,193 +900,131 @@ export function PostOnboardTab({
       ) : null}
       {openReply ? <CheckinReplyModal key={openReply.messageId} reply={openReply} onClose={() => setOpenReply(null)} onSaved={replaceReply} /> : null}
       <BulkActionBar count={selected.size} actions={POST_ONBOARD_BULK_ACTIONS} onApply={applyBulk} onChoice={bulkCheckin} onDelete={deleteSelected} onClear={() => setSelected(new Set())} busy={busy} />
-      {/* NO sideways scroll and a header that stays put (feedback cmwfsem9x, Nov 13
-          2026): the table is fixed-layout at the panel's width, so the check-in
-          columns share what is left instead of pushing the table wider, and
-          Department / Started / Onboarded sit under the name (rows may be
-          taller; "there's tons of space"). The header is sticky against the
-          WINDOW, which only works because nothing between here and <main> clips
-          overflow - do not put overflow-hidden or overflow-x-auto back on these
-          wrappers, or the header stops sticking. */}
+      {/* NO sideways scroll and a header that stays put (feedback cmwfsem9x), now in
+          his picked layout (design #17). The table is fixed-layout at the panel's
+          width: fixed narrow columns on the left, and the last column takes what is
+          left, kept empty on purpose for columns added later. The header row is
+          sticky against the WINDOW, which only works because nothing between here
+          and <main> clips overflow - do not put overflow-hidden or overflow-x-auto
+          back on these wrappers, or the header stops sticking. */}
       <div className="rounded bg-white shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <table className="w-full table-fixed text-sm">
           <colgroup>
-            <col className="w-10" />
-            <col className="w-[24%]" />
-            <col className="w-[8.5rem]" />
-            {heads.map((h) => (
-              <col key={h} />
+            <col className="w-9" />
+            <col className="w-[230px]" />
+            <col className="w-[130px]" />
+            <col className="w-[88px]" />
+            <col className="w-[52px]" />
+            {plan.map((c) => (
+              <col key={c.key} style={{ width: colWidth(c.group) }} />
             ))}
+            <col />
           </colgroup>
           <thead>
-            <tr className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey dark:text-slate-400">
-              <th className={clsx(HEAD_CELL, "rounded-tl px-2 text-center")}><input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" className="h-4 w-4 align-middle" /></th>
-              <th className={clsx(HEAD_CELL, "px-3 text-left")}>Employee</th>
-              <th className={clsx(HEAD_CELL, "px-2 text-left")}>Status</th>
-              {heads.map((h, i) => (
-                <th key={h} className={clsx(HEAD_CELL, "px-1 text-center leading-tight", i === heads.length - 1 && "rounded-tr")}>{h}</th>
+            <tr className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-brand-edenOnDark">
+              <th colSpan={5} />
+              {groups.map((g) => (
+                <th key={g.key} colSpan={g.cols.length} className={clsx("border-l border-brand-lea/10 px-1 pb-1.5 pt-2.5 text-center leading-tight dark:border-white/10", GROUP_HEAD[g.key], GROUP_RULE[g.key], g.key === "mgr" && "text-brand-lea dark:text-slate-100")}>
+                  {g.label}
+                </th>
               ))}
+              <th />
+            </tr>
+            <tr className="text-[10px] font-bold uppercase tracking-[0.1em] text-brand-grey dark:text-slate-400">
+              <th className={clsx(HEAD_CELL, "rounded-tl px-2 text-center")}>
+                <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" className="h-4 w-4 align-middle" />
+              </th>
+              <th className={clsx(HEAD_CELL, "px-3 text-left align-bottom")}>Employee</th>
+              <th className={clsx(HEAD_CELL, "px-2 text-left align-bottom")}>Department</th>
+              <th className={clsx(HEAD_CELL, "px-2 text-left align-bottom")}>Started</th>
+              <th className={clsx(HEAD_CELL, "h-[92px] px-0 text-center align-bottom")} title="Employment status: A Active · T Terminated · C Contract">
+                <span className="inline-block whitespace-nowrap [writing-mode:vertical-rl] rotate-180">Status</span>
+              </th>
+              {plan.map((c) => (
+                <th key={c.key} className={clsx(HEAD_CELL, GROUP_HEAD[c.group as "task"], "h-[92px] px-0 text-center align-bottom", c.first && "border-l border-brand-lea/10 dark:border-white/10")} title={columnLabel(c)}>
+                  <span className="inline-block whitespace-nowrap [writing-mode:vertical-rl] rotate-180">{columnLabel(c)}</span>
+                </th>
+              ))}
+              <th className={clsx(HEAD_CELL, "rounded-tr border-l border-dashed border-brand-lea/10 dark:border-white/10")} aria-hidden />
             </tr>
           </thead>
           <tbody>
+            {/* How many are due in each column, for the people shown. */}
+            <tr className="border-b-2 border-brand-lea/10 text-[11px] text-brand-grey dark:border-white/10 dark:text-slate-400">
+              <td colSpan={5} className="px-3 py-1.5">
+                {visible.length} {visible.length === 1 ? "person" : "people"} · due now ↓
+              </td>
+              {plan.map((c) => {
+                const n = visible.filter((h) => h.checkins.some((x) => x.key === c.key && x.status === "TODO" && x.dueSoon)).length;
+                return (
+                  <td key={c.key} className={clsx("py-1.5 text-center tabular-nums", GROUP_TINT[c.group as "task"], c.first && "border-l border-brand-lea/10 dark:border-white/10")}>
+                    {n ? <span className="font-bold text-red-700 dark:text-red-300">{n}</span> : "—"}
+                  </td>
+                );
+              })}
+              <td className="border-l border-dashed border-brand-lea/10 dark:border-white/10" />
+            </tr>
             {visible.map((h) => {
               const terminated = h.employmentStatus === "TERMINATED";
               return (
-              <tr key={h.id} className={clsx("row-wash border-b border-brand-lea/5 dark:border-white/10 dark:hover:bg-white/5", selected.has(h.id) ? "bg-brand-gold/10" : terminated && "bg-brand-cloudDancer/30 dark:bg-white/5")}>
-                <td className="px-2 py-3 text-center align-top">
-                  <input type="checkbox" checked={selected.has(h.id)} onChange={() => toggleOne(h.id)} aria-label={`Select ${h.name}`} className="mt-0.5 h-4 w-4 align-middle" />
-                </td>
-                <td className="px-3 py-3 align-top">
-                  <Link href={`/people/${h.id}`} className={clsx("font-semibold hover:underline", terminated ? "text-brand-grey dark:text-slate-400" : "text-brand-lea dark:text-slate-100")}>{h.name}</Link>
-                  <div className="text-xs text-brand-grey dark:text-slate-400">{h.position ?? "—"}</div>
-                  <dl className="mt-1 grid grid-cols-[auto,1fr] gap-x-2 text-[11px] leading-snug text-brand-grey dark:text-slate-400">
-                    <dt className="font-semibold">Dept</dt>
-                    <dd className="truncate" title={h.department ?? undefined}>{h.department ?? "—"}</dd>
-                    <dt className="font-semibold">Started</dt>
-                    <dd>{fmtDate(h.startDate)}</dd>
-                    <dt className="font-semibold">Onboarded</dt>
-                    <dd>{fmtMoment(h.onboardedAt)}</dd>
-                  </dl>
-                </td>
-                <td className="px-2 py-3 align-top">
-                  <select
-                    value={h.employmentStatus}
-                    onChange={(e) => setEmployment(h.id, e.target.value as EmploymentStatus)}
-                    className={clsx(
-                      "w-full rounded border px-1.5 py-1 text-xs font-semibold outline-none transition",
-                      terminated
-                        ? "border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-300"
-                        : h.employmentStatus === "CONTRACT"
-                          ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300"
-                          : "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300"
-                    )}
-                  >
-                    <option value="ACTIVE">Active</option>
-                    <option value="CONTRACT">Contract</option>
-                    <option value="TERMINATED">Terminated</option>
-                  </select>
-                </td>
-                {h.checkins.map((c) => {
-                  const skip = skips[h.id]?.[c.key];
-                  return (
-                  <td key={c.key} className="px-1 py-3 text-center align-top">
-                    <span className="inline-flex flex-wrap items-center justify-center gap-0.5">
-                    {c.status === "NA" ? (
-                      // Skipped: says so, and who and when, instead of DUE. One click undoes it.
-                      <button
-                        type="button"
-                        onClick={() => void undoSkip(h, c)}
-                        title={
-                          skip
-                            ? `Skipped${skip.skippedBy ? ` by ${skip.skippedBy}` : ""} on ${formatMomentDateShort(skip.skippedAt)} - click to undo`
-                            : "Not applicable - click to undo"
-                        }
-                        className="inline-flex items-center rounded border border-brand-lea/15 bg-brand-cloudDancer/60 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-grey transition hover:bg-brand-gold/10 hover:text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-400 dark:hover:text-slate-100"
-                      >
-                        {skip ? "Skipped" : "N/A"}
-                      </button>
-                    ) : (
-                    <button
-                      type="button"
-                      onClick={() => toggle(h.id, c)}
-                      title={c.status === "DONE" ? "Done — click to undo" : c.dueSoon ? "Due — click when complete" : "Click when complete"}
-                      className="inline-flex items-center justify-center rounded transition hover:bg-brand-gold/10"
-                    >
-                      {c.status === "DONE" ? (
-                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-                          <svg width="13" height="13" viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                        </span>
-                      ) : c.dueSoon ? (
-                        <span className="inline-flex animate-pulse items-center gap-1 rounded bg-red-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm ring-2 ring-red-300 dark:ring-red-500/40">
-                          due
-                        </span>
-                      ) : (
-                        <span className="inline-block h-4 w-4 rounded-full border-2 border-brand-grey/30" />
-                      )}
-                    </button>
-                    )}
-                    {/* Only the check-ins that have been pointed at a template get
-                        an envelope. Putting one on all five would add a column of
-                        icons to a grid whose whole job is being scannable. A
-                        skipped one has nothing left to send until it is undone. */}
-                    {emailKeys.has(c.key) && c.status !== "NA" ? (
-                      <SendTaskEmailButton
-                        compact
-                        hireId={h.id}
-                        taskKey={c.key}
-                        sentAt={taskSends[h.id]?.[c.key] ?? null}
-                        taskLabel={`${c.short} check-in — ${h.name}`}
-                        taskStatus={c.status}
-                        canEdit
-                        onSkipped={(rec, archived) => markSkipped(h.id, c.key, rec, archived)}
-                        onSent={() =>
-                          setHires((cur) =>
-                            cur.map((x) =>
-                              x.id === h.id
-                                ? {
-                                    ...x,
-                                    checkins: x.checkins.map((y) =>
-                                      y.key === c.key ? { ...y, status: "DONE" as GridTaskStatus, dueSoon: false } : y
-                                    )
-                                  }
-                                : x
-                            )
-                          )
-                        }
-                      />
-                    ) : null}
-                    {(() => {
-                      const r = pickReply(replies[h.id]?.[c.key]);
-                      if (r) {
-                        const handled = Boolean(r.handledAt);
-                        const urgent = needsFollowUp(r.level) && !handled;
-                        const Icon = urgent ? MessageSquareWarning : MessageSquareText;
-                        const more = (replies[h.id]?.[c.key]?.length ?? 1) - 1;
-                        return (
-                          <button
-                            type="button"
-                            onClick={() => setOpenReply(r)}
-                            title={`Replied ${formatMomentDateShort(r.receivedAt)} · ${handled ? "Handled" : REPLY_LEVEL_LABEL[r.level]}: ${r.triage.summary}${more > 0 ? ` (+${more} more)` : ""}`}
-                            aria-label={`${h.name} replied to the ${c.short} check-in: ${handled ? "handled" : REPLY_LEVEL_LABEL[r.level]}`}
-                            className="relative inline-flex items-center justify-center rounded p-1 transition hover:bg-brand-gold/15 dark:hover:bg-white/10"
-                          >
-                            <Icon className={clsx("h-4 w-4", handled ? "text-brand-lea dark:text-slate-300" : LEVEL_STYLE[r.level].icon)} />
-                            {urgent ? <span className="absolute right-0 top-0 h-1.5 w-1.5 rounded-full bg-red-600" /> : null}
-                          </button>
-                        );
-                      }
-                      if (waitingOnReply(h.id, c.key)) {
-                        return (
-                          <span
-                            className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wide text-brand-grey/80 dark:text-slate-500"
-                            title={`Sent ${formatMomentDateShort(taskSends[h.id]?.[c.key])}, no reply yet`}
-                          >
-                            no reply
-                          </span>
-                        );
-                      }
-                      return null;
-                    })()}
-                    </span>
-                    {ratingControls(h, c, terminated)}
+                <tr key={h.id} className={clsx("row-wash border-b border-brand-lea/5 dark:border-white/10 dark:hover:bg-white/5", selected.has(h.id) ? "bg-brand-gold/10" : terminated && "bg-brand-cloudDancer/30 dark:bg-white/5")}>
+                  <td className="px-2 py-2.5 text-center align-top">
+                    <input type="checkbox" checked={selected.has(h.id)} onChange={() => toggleOne(h.id)} aria-label={`Select ${h.name}`} className="mt-0.5 h-4 w-4 align-middle" />
                   </td>
-                  );
-                })}
-              </tr>
+                  <td className="px-3 py-2.5 align-top">
+                    <Link href={`/people/${h.id}`} className={clsx("font-semibold hover:underline", terminated ? "text-brand-grey dark:text-slate-400" : "text-brand-lea dark:text-slate-100")}>
+                      {h.name}
+                    </Link>
+                    <div className="truncate text-xs text-brand-grey dark:text-slate-400" title={h.position ?? undefined}>
+                      {h.position ?? "—"}
+                    </div>
+                  </td>
+                  <td className="break-words px-2 py-2.5 align-top text-xs text-brand-grey dark:text-slate-400">
+                    {h.department ?? "—"}
+                  </td>
+                  <td className="px-2 py-2.5 align-top text-xs text-brand-grey dark:text-slate-400">{fmtDate(h.startDate)}</td>
+                  <td className="px-1 py-2.5 text-center align-top">
+                    <select
+                      value={h.employmentStatus}
+                      onChange={(e) => void setEmployment(h.id, e.target.value as EmploymentStatus)}
+                      aria-label={`${h.name} employment status`}
+                      title={`${STATUS_WORD[h.employmentStatus]} - A Active · T Terminated · C Contract`}
+                      className={clsx("w-[42px] cursor-pointer rounded border px-0.5 py-0.5 text-center text-[11px] font-bold outline-none transition hover:shadow-glow", STATUS_TONE[h.employmentStatus])}
+                    >
+                      {(["ACTIVE", "TERMINATED", "CONTRACT"] as EmploymentStatus[]).map((v) => (
+                        <option key={v} value={v} title={STATUS_WORD[v]}>
+                          {STATUS_LETTER[v]}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  {plan.map((col) => {
+                    const c = h.checkins.find((x) => x.key === col.key);
+                    return (
+                      <td key={col.key} className={clsx("px-0.5 py-2 text-center align-top", GROUP_TINT[col.group as "task"], col.first && "border-l border-brand-lea/10 dark:border-white/10")}>
+                        {c ? gridCell(h, c, col.group) : null}
+                      </td>
+                    );
+                  })}
+                  <td className="border-l border-dashed border-brand-lea/10 dark:border-white/10" />
+                </tr>
               );
             })}
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={3 + heads.length} className="px-4 py-8 text-center text-sm text-brand-grey dark:text-slate-400">
+                <td colSpan={6 + plan.length} className="px-4 py-8 text-center text-sm text-brand-grey dark:text-slate-400">
                   No post-onboard employees match these filters.
                 </td>
               </tr>
             ) : null}
           </tbody>
         </table>
-      <p className="border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey dark:border-white/10 dark:text-slate-400">
-        Check-ins are 30 / 60 / 90-day, benefits and the social media announcement — tell me the ones you actually run and I will swap them in.
-      </p>
+        <p className="flex flex-wrap gap-x-4 gap-y-1 border-t border-brand-lea/10 px-4 py-3 text-xs text-brand-grey dark:border-white/10 dark:text-slate-400">
+          <span>
+            <b className="text-brand-lea dark:text-slate-100">Status:</b> A Active · T Terminated · C Contract
+          </span>
+          <span>Click any check-in to open the person: mark done, skip, send the email, read a reply, rate, or send the rating link.</span>
+        </p>
       </div>
     </div>
   );
