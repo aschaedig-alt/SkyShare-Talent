@@ -242,8 +242,13 @@ export function EmployeeJourney({ hireId, journey, roleTitleOptions }: Props) {
             description="Record this employee's first role to start their journey."
           />
         ) : (
-          <div className="overflow-x-auto pb-1">
-            <ol className="flex min-w-max pt-1">
+          // The scroller clips everything outside it, and the current role's
+          // gold glow (--glow, 18px blur + 3px spread) reaches ~21px past the
+          // circle — with pt-1 it was cut off square on a phone (his iPhone,
+          // Nov 13, feedback cmwfo53k5). The padding gives the glow room inside
+          // the clip; -mt-6 keeps the band's spacing what it was.
+          <div className="-mt-6 overflow-x-auto overflow-y-hidden pb-1">
+            <ol className="flex min-w-max pt-8">
               {journey.roles.map((role, i) => (
                 <TimelineNode
                   key={role.id}
