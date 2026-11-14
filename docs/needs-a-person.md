@@ -1439,6 +1439,30 @@ People > Post-onboard on your iPhone.
 under the 90-day; on the phone every person is a card, nothing scrolls sideways, and the
 A / T / C dropdown changes status.
 
+
+---
+
+### 64. Nobody has bulk-sent manager check-ins yet
+
+**Status:** OPEN
+**Added:** 2026-11-14
+
+People > Post-onboard: tick several people, choose **Send manager check-in** in the bulk bar,
+pick 3-month, 6-month or 12-month, and Apply. A dialog groups them by supervisor, so each
+manager gets ONE email with a link per person (subject and wording editable per email), and
+shows who was left out and why (already sent, already rated, skipped, no supervisor email,
+left). Checked in the in-app browser with live data and every send blocked: nine ticked
+people split into Rich Paden (3 links), Harry Mitchel (2) and Chantil Hughes (1), with
+Axel Leimer, Bryan Weber (links already out) and Elijah Hall (skipped) left out. NOT checked:
+a real send, the email as the manager sees it, and the links opening.
+
+**How to check it:** send one real bulk email to a manager with two or more people due (or
+type yourself in as a test first), then open the email.
+
+**What would count as a pass:** one email arrives with one "Rate [name]: 3-month check-in"
+link per person; each link opens that person's form; after sending, each person's cell on
+the grid shows "sent".
+
 ---
 
 ## Closed
