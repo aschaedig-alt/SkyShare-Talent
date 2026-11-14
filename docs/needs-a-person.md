@@ -1318,106 +1318,6 @@ session is marked complete, Attended orientation turns Done by itself with no cl
 
 ---
 
-### 60. The phone layout and the Post-onboard table have not been looked at on a real iPhone or her laptop
-
-**Status:** OPEN
-**Added:** 2026-11-13
-
-Feedback cmwfo53k5 (new-hire page on her iPhone "look terrible") and cmwfsem9x (Post-onboard
-table: no sideways scroll bar, header always visible). Phones now get a solid top bar
-holding the menu, SOP and Feedback buttons, so the page scrolls under a bar instead of under
-buttons floating on the text; the new-hire page's actions and tabs are even two-column grids;
-and the Journey timeline runs down the page with its edit buttons always showing. The
-Post-onboard table fits the width (Department, Started and Onboarded under the name) and its
-header sticks to the top. Checked in a browser: at 1536 wide the page has no sideways scroll,
-no cell spills, and after scrolling 1500px the header is on top; at 330 wide nothing
-overlaps, the bar is what sits under the buttons once scrolled, and desktop still has the
-side SOP tab and the sideways timeline. NOT checked: a real iPhone (Safari, its own address
-bar and notch), dark mode on a phone (the preview renders light), and clicking in the table.
-
-**How to check it, two minutes:** on the iPhone, open a new hire and scroll; on the laptop,
-open People > Post-onboard, scroll down, and click a Rate and a tick.
-
-**What would count as a pass:** on the phone nothing sits on top of text and the buttons
-read in even rows; on the laptop there is no sideways scroll bar and the column names stay
-visible while scrolling.
-
-**Update 2026-11-13, from him:** "the iphone part is fine." The phone half is confirmed. The
-Post-onboard table half is now covered by item 61, because the table was rebuilt to his
-picked layout the same evening.
-
----
-
-### 61. The rebuilt Post-onboard grid (his design #17) has not been used for real
-
-**Status:** OPEN
-**Added:** 2026-11-13
-
-He picked design #17 from the Post-onboard Designs page: columns grouped as One-time tasks
-(Social, 401k), Check-ins (30-day, 60-day) and Manager check-ins (90-day, 6-month, 12-month,
-each one column with the rating or link status under the tick); names turned sideways; a
-small A / T / C status dropdown; a due-count row; space left on the right for future
-columns; and every action in a drawer that opens from any cell. Checked in a browser at 1536
-wide with every save blocked: no sideways scroll, nothing spills, about 250px left free on
-the right, due counts 28 / 21 / 36 (60-day, 90-day, 6-month); picking T asks first and
-nothing was sent when the answer was no; a cell opened Chris Sharpe's drawer with all seven
-rows and their buttons; Escape closed it; a due manager Send opened the rating-link dialog;
-all 576 controls carry the gold hover glow; light and dark both render. NOT checked: any real
-save from the drawer (mark done, skip, send, rate), a real T (it archives the person), and
-her laptop.
-
-**How to check it, three minutes:** on People > Post-onboard, click a 30-day cell and mark it
-done, then undo it; open a due 90-day cell and send a rating link to yourself as a test;
-change someone's status to C and back to A.
-
-**What would count as a pass:** each change shows in the grid without a reload and sticks
-after one; the drawer's buttons do what the old grid's did; the Status letters change colour.
-
-**Update 2026-11-14:** the drawer now has **Mark skipped** next to Mark done on every open
-step, for older check-ins that should have happened before the check-ins existed ("I don't
-want to mark them as done because they didn't happen"). It asks first, then the cell reads
-N/A and the drawer reads "Skipped by (who) (date)"; Undo skip puts it back. Checked with
-saves blocked: the button is on all six open rows of Chris Sharpe's drawer, and answering no
-sent nothing. NOT checked: a real skip. Add to the check above: skip one old check-in, reload,
-confirm it still reads Skipped, then Undo skip.
-
-**Update 2026-11-14 (bulk):** the bulk bar now has **Mark check-in skipped**: tick people,
-pick the check-in, Apply. It counts first, then asks ("Mark the 90-day check-in skipped for
-5 people? ... 3 already done - left as they are"); only open steps change, each person gets
-their own Skipped record, and anyone whose last open check-in it was is archived, as with
-done. Checked with every write blocked (only the read-only count allowed through): five
-people with the 30-day done got "Nothing to skip ... (5 already done)"; the same five on the
-90-day got the question; answering no sent nothing. NOT checked: a real bulk skip. Add to
-the check above: bulk-skip one old check-in for two people, reload, confirm both read
-Skipped, then Undo skip on each from their drawer.
-
----
-
-### 62. The core value definitions now use HR's wording — two of the three places were not opened
-
-**Status:** OPEN
-**Added:** 2026-11-14
-
-He sent HR's Core Values table (Definition | Key Behaviors) so the app's definitions match
-HR's word for word. Each value now shows HR's first definition sentence, with a small More
-that opens HR's whole definition and its Key behaviors (Less closes it). It is one shared
-piece used in three places: the manager check-in rating form (the 1-10 form, also the
-no-login link), the interview scorecard's core value rows, and the definitions under the
-values picked on the Give recognition form. Checked in a browser: the rating form opened
-from the Post-onboard drawer showed all four values with More, and More on Team Alignment
-showed HR's full definition and all nine behaviors. NOT opened: the interview scorecard and
-the recognition form, and a manager's phone on the no-login link.
-
-**How to check it, two minutes:** open any interview and look at the Core values rows on the
-scorecard; on Compliments, start a recognition and pick a value. Each should show one line
-and a More that opens the rest. Compare one value against HR's table.
-
-**What would count as a pass:** the text matches HR's table, and the page does not look busier
-than before until More is clicked.
-
-
----
-
 ### 63. The new Post-onboard grid (Sample A) has not been used for real
 
 **Status:** OPEN
@@ -1466,6 +1366,108 @@ the grid shows "sent".
 ---
 
 ## Closed
+
+### 60. The phone layout and the Post-onboard table have not been looked at on a real iPhone or her laptop
+
+**Status:** CLOSED
+**Closed:** 2026-11-14, by him: "yes mark all of those items as done."
+**Added:** 2026-11-13
+
+Feedback cmwfo53k5 (new-hire page on her iPhone "look terrible") and cmwfsem9x (Post-onboard
+table: no sideways scroll bar, header always visible). Phones now get a solid top bar
+holding the menu, SOP and Feedback buttons, so the page scrolls under a bar instead of under
+buttons floating on the text; the new-hire page's actions and tabs are even two-column grids;
+and the Journey timeline runs down the page with its edit buttons always showing. The
+Post-onboard table fits the width (Department, Started and Onboarded under the name) and its
+header sticks to the top. Checked in a browser: at 1536 wide the page has no sideways scroll,
+no cell spills, and after scrolling 1500px the header is on top; at 330 wide nothing
+overlaps, the bar is what sits under the buttons once scrolled, and desktop still has the
+side SOP tab and the sideways timeline. NOT checked: a real iPhone (Safari, its own address
+bar and notch), dark mode on a phone (the preview renders light), and clicking in the table.
+
+**How to check it, two minutes:** on the iPhone, open a new hire and scroll; on the laptop,
+open People > Post-onboard, scroll down, and click a Rate and a tick.
+
+**What would count as a pass:** on the phone nothing sits on top of text and the buttons
+read in even rows; on the laptop there is no sideways scroll bar and the column names stay
+visible while scrolling.
+
+**Update 2026-11-13, from him:** "the iphone part is fine." The phone half is confirmed. The
+Post-onboard table half is now covered by item 61, because the table was rebuilt to his
+picked layout the same evening.
+
+---
+
+### 61. The rebuilt Post-onboard grid (his design #17) has not been used for real
+
+**Status:** CLOSED
+**Closed:** 2026-11-14, by him: "yes mark all of those items as done."
+**Added:** 2026-11-13
+
+He picked design #17 from the Post-onboard Designs page: columns grouped as One-time tasks
+(Social, 401k), Check-ins (30-day, 60-day) and Manager check-ins (90-day, 6-month, 12-month,
+each one column with the rating or link status under the tick); names turned sideways; a
+small A / T / C status dropdown; a due-count row; space left on the right for future
+columns; and every action in a drawer that opens from any cell. Checked in a browser at 1536
+wide with every save blocked: no sideways scroll, nothing spills, about 250px left free on
+the right, due counts 28 / 21 / 36 (60-day, 90-day, 6-month); picking T asks first and
+nothing was sent when the answer was no; a cell opened Chris Sharpe's drawer with all seven
+rows and their buttons; Escape closed it; a due manager Send opened the rating-link dialog;
+all 576 controls carry the gold hover glow; light and dark both render. NOT checked: any real
+save from the drawer (mark done, skip, send, rate), a real T (it archives the person), and
+her laptop.
+
+**How to check it, three minutes:** on People > Post-onboard, click a 30-day cell and mark it
+done, then undo it; open a due 90-day cell and send a rating link to yourself as a test;
+change someone's status to C and back to A.
+
+**What would count as a pass:** each change shows in the grid without a reload and sticks
+after one; the drawer's buttons do what the old grid's did; the Status letters change colour.
+
+**Update 2026-11-14:** the drawer now has **Mark skipped** next to Mark done on every open
+step, for older check-ins that should have happened before the check-ins existed ("I don't
+want to mark them as done because they didn't happen"). It asks first, then the cell reads
+N/A and the drawer reads "Skipped by (who) (date)"; Undo skip puts it back. Checked with
+saves blocked: the button is on all six open rows of Chris Sharpe's drawer, and answering no
+sent nothing. NOT checked: a real skip. Add to the check above: skip one old check-in, reload,
+confirm it still reads Skipped, then Undo skip.
+
+**Update 2026-11-14 (bulk):** the bulk bar now has **Mark check-in skipped**: tick people,
+pick the check-in, Apply. It counts first, then asks ("Mark the 90-day check-in skipped for
+5 people? ... 3 already done - left as they are"); only open steps change, each person gets
+their own Skipped record, and anyone whose last open check-in it was is archived, as with
+done. Checked with every write blocked (only the read-only count allowed through): five
+people with the 30-day done got "Nothing to skip ... (5 already done)"; the same five on the
+90-day got the question; answering no sent nothing. NOT checked: a real bulk skip. Add to
+the check above: bulk-skip one old check-in for two people, reload, confirm both read
+Skipped, then Undo skip on each from their drawer.
+
+---
+
+### 62. The core value definitions now use HR's wording — two of the three places were not opened
+
+**Status:** CLOSED
+**Closed:** 2026-11-14, by him: "yes mark all of those items as done."
+**Added:** 2026-11-14
+
+He sent HR's Core Values table (Definition | Key Behaviors) so the app's definitions match
+HR's word for word. Each value now shows HR's first definition sentence, with a small More
+that opens HR's whole definition and its Key behaviors (Less closes it). It is one shared
+piece used in three places: the manager check-in rating form (the 1-10 form, also the
+no-login link), the interview scorecard's core value rows, and the definitions under the
+values picked on the Give recognition form. Checked in a browser: the rating form opened
+from the Post-onboard drawer showed all four values with More, and More on Team Alignment
+showed HR's full definition and all nine behaviors. NOT opened: the interview scorecard and
+the recognition form, and a manager's phone on the no-login link.
+
+**How to check it, two minutes:** open any interview and look at the Core values rows on the
+scorecard; on Compliments, start a recognition and pick a value. Each should show one line
+and a More that opens the rest. Compare one value against HR's table.
+
+**What would count as a pass:** the text matches HR's table, and the page does not look busier
+than before until More is clicked.
+
+---
 
 ### 57. The 1–10 check-in ratings (90-day, 6-month, 12-month) have not been used by a real manager
 
