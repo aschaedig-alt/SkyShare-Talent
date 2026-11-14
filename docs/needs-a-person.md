@@ -1244,40 +1244,6 @@ points with "Meets on all N = N", and the interview's combined score sits beside
 
 ---
 
-### 55. The 90-day rating link has never been emailed to a manager, or opened by one
-
-**Status:** BLOCKED ON DEPLOY
-**Added:** 2026-11-11
-
-Feedback cmwcq16o7: Post-onboard now has **Send to manager** under each person's Rate
-button. It emails the hiring manager a no-login link (/rate/...) to that one person's
-90-day form; the tab shows Sent / Completed / Expired / Cancelled, with resend (same link
-or a new one) and cancel; and if the person is terminated, cancelled or archived first,
-the link dies and a notice above the grid says why. Checked locally on a throwaway TEST
-hire (20 checks, all passed, all test rows deleted): the form opens for that one person,
-refuses an empty answer, takes one submission, saves the rating, ticks the 90-day check-in
-done, refuses a second submission, shows Completed on the tab; a terminated employee's
-link stops working and the notice lists them; and the send dialog opens on the real tab
-with the supervisors filled in. NOT checked: **no email has gone out through it at all**
-— the local test ran with sends BLOCKED, never redirected — so the Front send, how the
-email looks in an inbox, and a link opened from a phone outside the app are all untested.
-A local send would also refuse to build a localhost link for a real recipient, which is
-why this waits for the deploy.
-
-**How to check it, about three minutes:** on the live site, open People > Post-onboard,
-press **Send to manager** on someone, choose **Someone else** and type your own address,
-and send. Open the email on your phone, tap the link, rate, and send. Then reload
-Post-onboard.
-
-**What would count as a pass:** the email arrives with the link under the message; the
-link opens a SkyShare page with only that person's form and no sidebar, without signing
-in; after sending it says thank you; Post-onboard shows that person as Completed with a
-rating in the Values column, and their 90-day check-in ticked. Opening the link again
-says it has already been submitted. (It was your address, so it was a real test of a
-real person's rating — re-rate them properly afterwards, or tell a session to remove it.)
-
----
-
 ### 56. Interview drawer: not tried on a phone, and no scorecard saved, edited or deleted from inside it
 
 **Status:** OPEN
@@ -1295,45 +1261,6 @@ a test interview, add a scorecard in the drawer, edit it, and delete it.
 
 **What would count as a pass:** on the phone the drawer fills the screen with no sideways
 scroll; each scorecard change shows in the drawer straight away, with no reload.
-
----
-
-### 57. The 1–10 check-in ratings (90-day, 6-month, 12-month) have not been used by a real manager
-
-**Status:** OPEN - deployed Nov 13 (dc4c33b), not yet used by a real manager
-**Added:** 2026-11-13
-
-His picks, Nov 13. The check-in rating is one form shared by the manager's link and
-HR's dialog: four core values on a 1–10 scale (1 Does not meet, 2–3 Below the bar, 4–5
-Can develop, 6–7 Meets, 8–9 Exceeds, 10 Sets the standard; red 1–3, amber 4–5, green
-6–10), "Haven't seen it yet" per value, "How well has [name] learned their role so far?"
-(Behind / On track / Ahead), and hire-again asked last. NO answer needs a reason (his
-call: a required box makes supervisors switch to a higher score or Yes). The same form
-now also runs at 6 months and 12 months: the post-hire checklist gained 6-month and
-12-month check-ins, each with its own Rate and Send under its tick on Post-onboard, its
-own rating, and its own link. Each score is also stored as its interview word, so
-points and the interview comparison work as before.
-
-Checked locally on throwaway TEST hires (all rows removed):
-- a 1–3 and a No submit with no reason;
-- a 6-month link says 6-month and "at 6 months", saves its own rating and ticks only the
-  6-month check-in;
-- HR's 12-month save ticks the 12-month check-in;
-- a terminated person's 12-month link dies and the notice names the 12-month;
-- the tab shows the new columns, with Rate and Send under 90-day, 6-month and 12-month.
-
-The link page was looked at at phone width in the in-app browser, with a real tap.
-NOT checked: HR's rating dialog was not opened on screen, and no real manager has used
-the new form.
-
-**How to check it, about three minutes:** after the deploy, open Post-onboard, press
-**Send** under someone's 90-day (or 6-month) check-in, choose **Someone else** and
-type your own address. Fill it in on your phone, picking a 2 and "Haven't seen it yet"
-for one value, and send.
-
-**What would count as a pass:** nothing asks you to explain the 2 or a No; after
-sending, that check-in shows points, and the hover lists the 1–10 scores, "not seen" for
-the skipped one, and the role answer; that check-in is ticked and the others are not.
 
 ---
 
@@ -1392,6 +1319,81 @@ session is marked complete, Attended orientation turns Done by itself with no cl
 ---
 
 ## Closed
+
+### 57. The 1–10 check-in ratings (90-day, 6-month, 12-month) have not been used by a real manager
+
+**Status:** CLOSED
+**Closed:** 2026-11-13, by him: "They're both done."
+**Added:** 2026-11-13
+
+His picks, Nov 13. The check-in rating is one form shared by the manager's link and
+HR's dialog: four core values on a 1–10 scale (1 Does not meet, 2–3 Below the bar, 4–5
+Can develop, 6–7 Meets, 8–9 Exceeds, 10 Sets the standard; red 1–3, amber 4–5, green
+6–10), "Haven't seen it yet" per value, "How well has [name] learned their role so far?"
+(Behind / On track / Ahead), and hire-again asked last. NO answer needs a reason (his
+call: a required box makes supervisors switch to a higher score or Yes). The same form
+now also runs at 6 months and 12 months: the post-hire checklist gained 6-month and
+12-month check-ins, each with its own Rate and Send under its tick on Post-onboard, its
+own rating, and its own link. Each score is also stored as its interview word, so
+points and the interview comparison work as before.
+
+Checked locally on throwaway TEST hires (all rows removed):
+- a 1–3 and a No submit with no reason;
+- a 6-month link says 6-month and "at 6 months", saves its own rating and ticks only the
+  6-month check-in;
+- HR's 12-month save ticks the 12-month check-in;
+- a terminated person's 12-month link dies and the notice names the 12-month;
+- the tab shows the new columns, with Rate and Send under 90-day, 6-month and 12-month.
+
+The link page was looked at at phone width in the in-app browser, with a real tap.
+NOT checked: HR's rating dialog was not opened on screen, and no real manager has used
+the new form.
+
+**How to check it, about three minutes:** after the deploy, open Post-onboard, press
+**Send** under someone's 90-day (or 6-month) check-in, choose **Someone else** and
+type your own address. Fill it in on your phone, picking a 2 and "Haven't seen it yet"
+for one value, and send.
+
+**What would count as a pass:** nothing asks you to explain the 2 or a No; after
+sending, that check-in shows points, and the hover lists the 1–10 scores, "not seen" for
+the skipped one, and the role answer; that check-in is ticked and the others are not.
+
+---
+
+### 55. The 90-day rating link has never been emailed to a manager, or opened by one
+
+**Status:** CLOSED
+**Closed:** 2026-11-13, by him: "They're both done." The live site had already shown it working: a rating link sent from production on Nov 12 to jonathan@skyshare.com (Jonathan Schaedig) was opened and submitted the same minute.
+**Added:** 2026-11-11
+
+Feedback cmwcq16o7: Post-onboard now has **Send to manager** under each person's Rate
+button. It emails the hiring manager a no-login link (/rate/...) to that one person's
+90-day form; the tab shows Sent / Completed / Expired / Cancelled, with resend (same link
+or a new one) and cancel; and if the person is terminated, cancelled or archived first,
+the link dies and a notice above the grid says why. Checked locally on a throwaway TEST
+hire (20 checks, all passed, all test rows deleted): the form opens for that one person,
+refuses an empty answer, takes one submission, saves the rating, ticks the 90-day check-in
+done, refuses a second submission, shows Completed on the tab; a terminated employee's
+link stops working and the notice lists them; and the send dialog opens on the real tab
+with the supervisors filled in. NOT checked: **no email has gone out through it at all**
+— the local test ran with sends BLOCKED, never redirected — so the Front send, how the
+email looks in an inbox, and a link opened from a phone outside the app are all untested.
+A local send would also refuse to build a localhost link for a real recipient, which is
+why this waits for the deploy.
+
+**How to check it, about three minutes:** on the live site, open People > Post-onboard,
+press **Send to manager** on someone, choose **Someone else** and type your own address,
+and send. Open the email on your phone, tap the link, rate, and send. Then reload
+Post-onboard.
+
+**What would count as a pass:** the email arrives with the link under the message; the
+link opens a SkyShare page with only that person's form and no sidebar, without signing
+in; after sending it says thank you; Post-onboard shows that person as Completed with a
+rating in the Values column, and their 90-day check-in ticked. Opening the link again
+says it has already been submitted. (It was your address, so it was a real test of a
+real person's rating — re-rate them properly afterwards, or tell a session to remove it.)
+
+---
 
 ### 33. The candidate page's layout has not been saved since the boxes started fitting their content
 
