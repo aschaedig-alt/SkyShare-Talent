@@ -1342,9 +1342,12 @@ A / T / C dropdown changes status.
 
 ---
 
+## Closed
+
 ### 64. Nobody has bulk-sent manager check-ins yet
 
-**Status:** OPEN
+**Status:** CLOSED
+**Closed:** 2026-11-14, by him: "64 is done."
 **Added:** 2026-11-14
 
 People > Post-onboard: tick several people, choose **Send manager check-in** in the bulk bar,
@@ -1364,8 +1367,6 @@ link per person; each link opens that person's form; after sending, each person'
 the grid shows "sent".
 
 ---
-
-## Closed
 
 ### 60. The phone layout and the Post-onboard table have not been looked at on a real iPhone or her laptop
 
