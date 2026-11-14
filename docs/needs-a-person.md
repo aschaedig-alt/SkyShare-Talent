@@ -1320,6 +1320,9 @@ database.
 - **Problem found, not caused by #59:** the grid itself is 1980px wide on a 329px phone and
   scrolls sideways, about 1.2 hires on screen at a time. The phone rule (Nov 14) says a wide
   table gets a phone layout instead. That is a separate piece of work, not part of this item.
+  **Fixed the same day (commit agent, Nov 14):** another session built the phone layout in
+  cb5f93d. Below md each hire is now a card and nothing scrolls sideways at 375 or 329. A real
+  tap on it is item 65.
 - **Still not done:** clicking Done on a Requested row, and Attended orientation turning
   Done by itself after the Nov 17 session is marked complete.
 
@@ -1356,6 +1359,28 @@ People > Post-onboard on your iPhone.
 under the 90-day; on the phone every person is a card, nothing scrolls sideways, and the
 A / T / C dropdown changes status.
 
+
+---
+
+### 65. Nobody has tapped a task on the New hires grid's phone cards
+
+**Status:** OPEN
+**Added:** 2026-11-14
+
+People > New hires > Checklist grid on a phone (below md) is now one card per hire: name,
+position, start and orientation dates, status chip, progress bar, then the tasks grouped by
+section (cb5f93d). Each task row is a button with the same cycle as the desktop cell
+(to-do, done, N/A), hold words included, and reminder steps keep their email button.
+Measured at 375 and 329, light and dark: nothing past the screen edge, no inner scrolling.
+NOT checked: an actual tap, because every tap writes the live database. Not looked at on a
+real iPhone either.
+
+**How to check it:** on your iPhone, open People > New hires > Checklist grid, tap one task
+on a hire to cycle it, then tap it back to where it was.
+
+**What would count as a pass:** each person is a card with nothing scrolling sideways; a tap
+moves the task to the next state and the progress bar and done count change with it; the
+same task shows the same state on the desktop grid.
 
 ---
 
