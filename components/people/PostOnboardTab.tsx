@@ -133,20 +133,21 @@ function mdy(ms: number, shortYear = false): string {
 const STALE_AFTER_DAYS = 45;
 const LATE_STEP_DAYS = 15;
 /**
- * Skim colours (his ask, Nov 14 2026: "easier when skimming the list"). Every open
- * dated check-in sits on a tinted tile: very light grey while it is further than
- * SOON_DAYS off, light yellow from SOON_DAYS out to the due day, light red once past
- * due. A manager check-in whose rating link is out (waiting on the manager) is light
- * blue instead, whatever its date. Done, skipped and N/A carry no tint, so the eye
- * lands only on what still needs something. The legend above the grid says the same.
+ * Skim colours (his ask, Nov 14 2026: "easier when skimming the list"; settled the
+ * same day after the five-reviewer audit). Only a check-in that needs HR gets a
+ * tile: light yellow from SOON_DAYS out to the due day, light red once past due.
+ * Not due yet is plain text, no tile (his pick: the grey tiles drowned the few that
+ * matter). Once a manager rating link is sent, the check-in is no longer HR's
+ * problem: its days lose their colour and the caption is a light-grey pill with a
+ * paper plane and the sent date (his words: "once the check-in has been sent, even
+ * if late, I don't need the red text anymore"). Done, skipped and N/A carry no tile.
  */
 const SOON_DAYS = 14;
 const TILE = {
-  later: "bg-slate-100/80 dark:bg-white/[0.05]",
   soon: "bg-amber-50 ring-1 ring-amber-200/70 dark:bg-amber-500/10 dark:ring-amber-500/20",
-  late: "bg-red-50 ring-1 ring-red-200/70 dark:bg-red-500/10 dark:ring-red-500/25",
-  sent: "bg-brand-sweet/30 ring-1 ring-brand-sweet dark:bg-brand-sweet/15 dark:ring-brand-sweet/40"
+  late: "bg-red-50 ring-1 ring-red-200/70 dark:bg-red-500/10 dark:ring-red-500/25"
 } as const;
+const SENT_PILL = "inline-flex items-center gap-1 whitespace-nowrap rounded bg-slate-100 px-1.5 py-px text-[10px] font-medium tabular-nums text-brand-lea dark:bg-white/10 dark:text-slate-200";
 
 /** Today's calendar day in the office time zone, as UTC midnight - the same on the server and in the browser, so the day counts hydrate cleanly. */
 function officeTodayUtc(): number {
@@ -768,7 +769,7 @@ export function PostOnboardTab({
    *   open, undated  -> the empty circle (Social, 401k)
    * SKIPPED and N/A are both stored N/A; the skip record (skips[hire][key]) tells them apart.
    */
-  function markEl(c: Checkin, skipped: boolean, at: number | null, animate: boolean) {
+  function markEl(c: Checkin, skipped: boolean, at: number | null, animate: boolean, linkOut = false) {
     if (c.status === "NA")
       return skipped ? (
         <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">
@@ -786,6 +787,8 @@ export function PostOnboardTab({
     const late = daysLate(at);
     if (late === null) return <span className="inline-block h-[22px] w-[22px] rounded-full border-2 border-brand-grey/60 dark:border-slate-400/60" />;
     if (late <= 0) return <span className="whitespace-nowrap text-[11px] tabular-nums text-brand-grey dark:text-slate-400">{late === 0 ? "today" : `in ${-late}d`}</span>;
+    // Sent: still shows how late, but in plain ink - it is with the manager now.
+    if (linkOut) return <span className="whitespace-nowrap text-[11px] tabular-nums text-brand-lea dark:text-slate-200">+{late}d</span>;
     const tone =
       late >= STALE_AFTER_DAYS
         ? "border border-dashed border-brand-grey/50 border-l-2 border-l-brand-grey/70 text-brand-grey dark:border-slate-500 dark:text-slate-400"
@@ -803,22 +806,18 @@ export function PostOnboardTab({
   function captionOf(h: PostOnboardHire, c: Checkin, group: string, at: number | null, skipped: boolean): { node: React.ReactNode; text: string } | null {
     const late = c.status === "TODO" ? daysLate(at) : null;
     const rated = ratedCheckinForTask(c.key);
-    const cap = "whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.06em] text-brand-grey dark:text-slate-400";
+    // Every caption the same: 10px, lower case, medium, grey (his ask, Nov 14 2026: no mixed caps).
+    const cap = "whitespace-nowrap text-[10px] font-medium text-brand-grey dark:text-slate-400";
     if (group === "mgr" && rated) {
       const saved = ratings[rk(h.id, rated.dayMark)];
       const req = requests[rk(h.id, rated.dayMark)];
-      if (saved) return { node: <span className="whitespace-nowrap text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">★ rated</span>, text: "rated" };
+      if (saved) return { node: <span className="whitespace-nowrap text-[10px] font-medium text-emerald-700 dark:text-emerald-300">★ rated</span>, text: "rated" };
       if (req && req.state === "PENDING")
         return {
           node: (
-            <span
-              className={clsx(
-                "inline-flex items-center gap-1 whitespace-nowrap text-[10px] font-bold tabular-nums text-brand-eden dark:text-brand-sweet",
-                justSent.has(rk(h.id, rated.dayMark)) && "po-slide-in"
-              )}
-            >
-              {/* Just the plane and the date: "SENT 11/14" did not fit a 60px tile, and the blue
-                  tile already says sent. The words are in the cell label and hover. */}
+            <span className={clsx(SENT_PILL, justSent.has(rk(h.id, rated.dayMark)) && "po-slide-in")}>
+              {/* The plane and the date in a light-grey pill (his pick). "SENT 11/14" did not
+                  fit a 60px cell; the words are in the cell label and hover. */}
               <Send className="h-2.5 w-2.5" aria-hidden />
               {mdy(new Date(req.lastSentAt).getTime(), true).slice(0, 5)}
             </span>
@@ -836,8 +835,8 @@ export function PostOnboardTab({
       if (waitingOnReply(h.id, c.key)) return { node: <span className={cap}>no reply</span>, text: "no reply yet" };
     }
     if (c.status === "NA" && skipped && at !== null)
-      return { node: <span className="whitespace-nowrap text-[10px] tabular-nums text-brand-grey dark:text-slate-400">was {mdy(at, true).slice(0, 5)}</span>, text: `was due ${mdy(at)}` };
-    if (late !== null && late >= STALE_AFTER_DAYS) return { node: <span className="whitespace-nowrap text-[10px] text-brand-grey dark:text-slate-400">skip?</span>, text: "probably better skipped" };
+      return { node: <span className={clsx(cap, "tabular-nums")}>was {mdy(at, true).slice(0, 5)}</span>, text: `was due ${mdy(at)}` };
+    if (late !== null && late >= STALE_AFTER_DAYS) return { node: <span className={cap}>skip?</span>, text: "probably better skipped" };
     return null;
   }
 
@@ -857,8 +856,7 @@ export function PostOnboardTab({
       !ratings[rk(h.id, rated.dayMark)] && !requests[rk(h.id, rated.dayMark)] && h.employmentStatus !== "TERMINATED";
     const caption = showSend ? null : captionOf(h, c, group, at, skipped);
     const linkOut = Boolean(rated && requests[rk(h.id, rated.dayMark)]?.state === "PENDING" && !ratings[rk(h.id, rated.dayMark)]);
-    const tile =
-      c.status !== "TODO" ? "" : linkOut ? TILE.sent : late === null ? "" : late > 0 ? TILE.late : late >= -SOON_DAYS ? TILE.soon : TILE.later;
+    const tile = c.status !== "TODO" || linkOut || late === null ? "" : late > 0 ? TILE.late : late >= -SOON_DAYS ? TILE.soon : "";
     let when = "";
     if (at !== null && late !== null) when = late > 0 ? `, ${late} days late, was due ${mdy(at)}` : late === 0 ? ", due today" : `, due ${mdy(at)}, in ${-late} days`;
     else if (at !== null && c.status === "NA" && skipped) when = `, was due ${mdy(at)}`;
@@ -869,7 +867,7 @@ export function PostOnboardTab({
     return (
       <div className={clsx("grid w-full grid-cols-[minmax(0,1fr)] grid-rows-[24px_24px] items-center justify-items-center gap-0.5 rounded py-0.5", tile)}>
         <button type="button" onClick={() => setDrawerId(h.id)} title={label} aria-label={label} className={slot}>
-          {markEl(c, skipped, c.status === "TODO" ? at : null, justDone.has(`${h.id}:${c.key}`))}
+          {markEl(c, skipped, c.status === "TODO" ? at : null, justDone.has(`${h.id}:${c.key}`), linkOut)}
         </button>
         {showSend && rated ? (
           <button
@@ -1169,10 +1167,8 @@ export function PostOnboardTab({
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-brand-lea/10 px-3 py-2 text-[11px] text-brand-grey dark:border-white/10 dark:text-slate-400">
           {(
             [
-              [TILE.later, `Not due yet (over ${SOON_DAYS} days)`],
               [TILE.soon, `Due within ${SOON_DAYS} days`],
-              [TILE.late, "Past due"],
-              [TILE.sent, "Sent - waiting on the manager"]
+              [TILE.late, "Past due"]
             ] as const
           ).map(([tone, text]) => (
             <span key={text} className="inline-flex items-center gap-1.5">
@@ -1180,6 +1176,13 @@ export function PostOnboardTab({
               {text}
             </span>
           ))}
+          <span className="inline-flex items-center gap-1.5">
+            <span className={SENT_PILL} aria-hidden>
+              <Send className="h-2.5 w-2.5" />
+              11/14
+            </span>
+            Rating link sent - waiting on the manager
+          </span>
         </div>
         {/* PHONES (below md): one card per person instead of the table - the 7 check-in
             columns cannot fit a phone without a sideways scroll, and his standing rule
@@ -1256,10 +1259,10 @@ export function PostOnboardTab({
           </colgroup>
           <thead>
             <tr className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-eden dark:text-brand-edenOnDark">
-              <th colSpan={3} />
+              <th colSpan={2} />
               <th colSpan={2} className="hidden xl:table-cell" />
               {groups.map((g) => (
-                <th key={g.key} colSpan={g.cols.length} className={clsx("border-l border-brand-lea/10 px-1 pb-1.5 pt-2.5 text-center leading-tight dark:border-white/10", GROUP_HEAD[g.key], GROUP_RULE[g.key], g.key === "mgr" && "text-brand-lea dark:text-slate-100")}>
+                <th key={g.key} colSpan={g.cols.length + (g.key === "task" ? 1 : 0)} className={clsx("border-l border-brand-lea/10 px-1 pb-1.5 pt-2.5 text-center leading-tight dark:border-white/10", GROUP_HEAD[g.key], GROUP_RULE[g.key], g.key === "mgr" && "text-brand-lea dark:text-slate-100")}>
                   {g.label}
                 </th>
               ))}
@@ -1272,11 +1275,11 @@ export function PostOnboardTab({
               <th className={clsx(HEAD_CELL, "px-3 text-left align-bottom")}>Employee</th>
               <th className={clsx(HEAD_CELL, "hidden px-2 text-left align-bottom xl:table-cell")}>Department</th>
               <th className={clsx(HEAD_CELL, "hidden px-2 text-left align-bottom xl:table-cell")}>Started</th>
-              <th className={clsx(HEAD_CELL, "h-[92px] px-0 text-center align-bottom")} title="Employment status: A Active · T Terminated · C Contract">
+              <th className={clsx(HEAD_CELL, GROUP_HEAD.task, "h-[92px] border-l border-brand-lea/10 px-0 text-center align-bottom dark:border-white/10")} title="Employment status: A Active · T Terminated · C Contract">
                 <span className="inline-block whitespace-nowrap [writing-mode:vertical-rl] rotate-180">Status</span>
               </th>
               {plan.map((c) => (
-                <th key={c.key} className={clsx(HEAD_CELL, GROUP_HEAD[c.group as "task"], "h-[92px] px-0 text-center align-bottom", c.first && "border-l border-brand-lea/10 dark:border-white/10")} title={columnLabel(c)}>
+                <th key={c.key} className={clsx(HEAD_CELL, GROUP_HEAD[c.group as "task"], "h-[92px] px-0 text-center align-bottom", c.first && c.group !== "task" && "border-l border-brand-lea/10 dark:border-white/10")} title={columnLabel(c)}>
                   <span className="inline-block whitespace-nowrap [writing-mode:vertical-rl] rotate-180">{columnLabel(c)}</span>
                 </th>
               ))}
@@ -1286,14 +1289,24 @@ export function PostOnboardTab({
           <tbody>
             {/* How many are due in each column, for the people shown. */}
             <tr className="border-b-2 border-brand-lea/10 text-[11px] text-brand-grey dark:border-white/10 dark:text-slate-400">
-              <td colSpan={3} className="px-3 py-1.5">
-                {visible.length} {visible.length === 1 ? "person" : "people"} · due now ↓
+              <td colSpan={2} className="px-3 py-1.5">
+                {visible.length} {visible.length === 1 ? "person" : "people"} · need you now ↓
               </td>
               <td colSpan={2} className="hidden xl:table-cell" />
+              <td className={clsx("border-l border-brand-lea/10 dark:border-white/10", GROUP_TINT.task)} />
               {plan.map((c) => {
-                const n = visible.filter((h) => h.checkins.some((x) => x.key === c.key && x.status === "TODO" && x.dueSoon)).length;
+                // Past due AND still HR's to act on: a sent rating link or a saved rating no
+                // longer counts (his ask, Nov 14 2026), so the number matches the red tiles.
+                const rc = ratedCheckinForTask(c.key);
+                const n = visible.filter((h) =>
+                  h.checkins.some(
+                    (x) =>
+                      x.key === c.key && x.status === "TODO" && x.dueSoon &&
+                      !(rc && (requests[rk(h.id, rc.dayMark)]?.state === "PENDING" || ratings[rk(h.id, rc.dayMark)]))
+                  )
+                ).length;
                 return (
-                  <td key={c.key} className={clsx("py-1.5 text-center tabular-nums", GROUP_TINT[c.group as "task"], c.first && "border-l border-brand-lea/10 dark:border-white/10")}>
+                  <td key={c.key} className={clsx("py-1.5 text-center tabular-nums", GROUP_TINT[c.group as "task"], c.first && c.group !== "task" && "border-l border-brand-lea/10 dark:border-white/10")}>
                     {n ? <span className="font-bold text-red-700 dark:text-red-300">{n}</span> : "—"}
                   </td>
                 );
@@ -1321,7 +1334,7 @@ export function PostOnboardTab({
                     {h.department ?? "—"}
                   </td>
                   <td className="hidden px-2 py-1.5 align-middle text-xs tabular-nums text-brand-grey dark:text-slate-400 xl:table-cell">{mdyIso(h.startDate)}</td>
-                  <td className="px-1 py-1.5 text-center align-middle">
+                  <td className="border-l border-brand-lea/10 px-1 py-1.5 text-center align-middle dark:border-white/10">
                     <select
                       value={h.employmentStatus}
                       onChange={(e) => void setEmployment(h.id, e.target.value as EmploymentStatus)}
@@ -1339,7 +1352,7 @@ export function PostOnboardTab({
                   {plan.map((col) => {
                     const c = h.checkins.find((x) => x.key === col.key);
                     return (
-                      <td key={col.key} className={clsx("px-1 py-1.5 text-center align-middle", col.first && "border-l border-brand-lea/10 dark:border-white/10")}>
+                      <td key={col.key} className={clsx("px-1 py-1.5 text-center align-middle", col.first && col.group !== "task" && "border-l border-brand-lea/10 dark:border-white/10")}>
                         {c ? gridCell(h, c, col.group) : null}
                       </td>
                     );
