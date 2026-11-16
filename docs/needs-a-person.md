@@ -1386,7 +1386,7 @@ same task shows the same state on the desktop grid.
 
 ### 70. A question marked "Not asked" has not been seen in the interview popup, or in dark mode
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN — deployed 2026-11-16 (caf0f9f)
 **Added:** 2026-11-16
 
 Each question on an interview guide has a **Not asked** button. It folds the question to one
