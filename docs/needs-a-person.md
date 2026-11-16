@@ -1386,7 +1386,7 @@ same task shows the same state on the desktop grid.
 
 ### 69. The interview card's 8px value line and the reordered popup have not been seen in dark mode, and Accept all has not been pressed
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN — deployed 2026-11-16 (25b880c)
 **Added:** 2026-11-16
 
 From his review of Chase Anderson's interview. A candidate's interview card now shows the
@@ -1431,6 +1431,10 @@ guide, press Evaluate answers again and see whether it makes the same mistake.
 
 **What would count as a pass:** your corrections are listed in plain words; later
 evaluations follow them on similar answers; nothing you set yourself was changed by it.
+
+**Update 2026-11-16 (commit agent, read-only on the live database):** the first real
+corrections are stored: 3 active, 3 in all, so the evaluator now has three of his lessons to
+read on its next run. Whether it follows them is still to be seen on the next interview.
 
 ---
 
@@ -1494,6 +1498,10 @@ exists on a real candidate, Chase Anderson's "Interview Guide - PDP" (10 questio
 answered, 8 rated by Evaluate answers, one answer with an extra value ticked). It is linked
 to the candidate but to NO interview yet, so the Interview guides section on an interview
 still has nothing to show. Dark mode still not looked at.
+Later the same day the guide was linked to his Recruiter Screen (Nov 16, Aimee Schaedig),
+which also has a scorecard (Strong yes; Fueled by Passion Exceeds, the other three Meets);
+all 10 answers are rated and confirmed by hand. So a guide is now on a real interview end
+to end; dark mode is what is left.
 
 ---
 
