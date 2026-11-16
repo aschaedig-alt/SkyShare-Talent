@@ -49,6 +49,7 @@ const PATH_MODULES: Array<[string, ModuleId]> = [
   ["/interviews", "calendar"],
   ["/calendar", "calendar"],
   ["/api/interview-questions", "interview-questions"],
+  ["/api/interview-guides", "interview-questions"],
   ["/interview-questions", "interview-questions"],
   ["/api/booking-hosts", "scheduling"],
   ["/api/booking-types", "scheduling"],

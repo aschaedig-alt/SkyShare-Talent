@@ -1046,6 +1046,7 @@ model Candidate {
   files                CandidateFile[]
   applications         CandidateApplication[]
   interviews           Interview[]
+  interviewGuides      InterviewGuide[]
   metrics              CandidateMetric[]
   duplicateAsPrimary   DuplicateReviewItem[]  @relation("DuplicateCandidatePrimary")
   duplicateAsSecondary DuplicateReviewItem[]  @relation("DuplicateCandidateSecondary")
@@ -1555,6 +1556,7 @@ model Interview {
   candidate            Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   job                  Job?       @relation(fields: [jobId], references: [id], onDelete: SetNull)
   scorecards           InterviewScorecard[]
+  guides               InterviewGuide[]
 
   @@index([candidateId])
   @@index([jobId])
@@ -1581,6 +1583,71 @@ model InterviewScorecard {
   interview      Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
 
   @@index([interviewId])
+}
+
+// An interview guide built from the Question Bank and USED in an interview: the
+// questions picked for it, the answer the candidate gave to each, and a draft
+// judgement of each answer. Asked for Nov 16 2026 after a pilot interview.
+//
+// Linked to a candidate and, usually, to one of their interviews. Both are
+// optional so a guide can be built before the interview is on file and linked
+// afterwards. Several guides may hang off one interview (one per interviewer).
+// Core values are NOT rated here: they are rated on the interview's scorecard,
+// which the guide page shows underneath, so there is one place they live.
+model InterviewGuide {
+  id            String    @id @default(cuid())
+  title         String
+  candidateId   String?
+  interviewId   String?
+  // DeptKey the guide was built for; null = all departments.
+  departmentKey String?
+  // Who asked the questions (display name), and who saved it (email).
+  interviewer   String?
+  createdBy     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  candidate     Candidate?           @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  interview     Interview?           @relation(fields: [interviewId], references: [id], onDelete: SetNull)
+  items         InterviewGuideItem[]
+
+  @@index([candidateId])
+  @@index([interviewId])
+}
+
+// One question on a guide. The question's wording and guidance are COPIED from
+// the bank when the guide is made, so editing or deleting a bank question later
+// never changes what was actually asked. questionId is kept as a plain pointer
+// (no foreign key) for the same reason.
+model InterviewGuideItem {
+  id               String    @id @default(cuid())
+  guideId          String
+  questionId       String?
+  sortOrder        Int       @default(0)
+  text             String    // rich-text HTML, as stored in the bank
+  category         String?
+  coreValuesJson   String?   // JSON array of colorKeys
+  // Values the ANSWER showed beyond the ones the question was written for,
+  // ticked by the interviewer during the interview (JSON array of colorKeys).
+  // The question's own values stay in coreValuesJson; this holds only extras.
+  shownValuesJson  String?
+  strongAnswer     String?
+  listenFor        String?
+  // What the candidate said. Stored rich-note format (lib/richtext/stored.ts).
+  answer           String?
+  // STRONG | ADEQUATE | WEAK | NOT_ANSWERED; null = not judged yet.
+  // Deliberately a String so the scale can change while it is being tuned.
+  strength         String?
+  evaluationNote   String?
+  // AI (the draft judge) | INTERVIEWER (set by hand, which the judge never overwrites).
+  evaluationSource String?
+  evaluatedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  guide            InterviewGuide @relation(fields: [guideId], references: [id], onDelete: Cascade)
+
+  @@index([guideId])
 }
 
 model GoogleCalendarConnection {

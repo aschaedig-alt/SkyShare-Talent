@@ -11,6 +11,7 @@ import {
 import { parseStringArray } from "@/lib/json";
 import type { ViewerScope } from "@/lib/auth/viewer-scope";
 import { isCandidateVisible } from "@/lib/auth/candidate-scope";
+import { getGuidesForInterview, type GuideView } from "@/lib/data/interview-guides";
 
 export type ScorecardView = {
   id: string;
@@ -47,6 +48,8 @@ export type InterviewDetail = {
   scorecards: ScorecardView[];
   aggregate: { score: Points | null; count: number; recommendations: Partial<Record<RecommendationKey, number>> };
   interviewers: Array<{ name: string; role: string; departments: string[] }>;
+  /** Interview guides used in this interview: questions asked and the answers given (Nov 16 2026). */
+  guides: GuideView[];
 };
 
 // Same shape lib/data/candidates.ts reads: [{ name, email }]. Names only here.
@@ -153,6 +156,8 @@ export async function getInterviewDetail(id: string, viewer: ViewerScope | null)
     .filter((h) => h.name.trim())
     .map((h) => ({ name: h.name, role: h.role, departments: parseStringArray(h.departmentsJson) }));
 
+  const guides = await getGuidesForInterview(interview.id);
+
   return {
     id: interview.id,
     title: interview.title,
@@ -181,6 +186,7 @@ export async function getInterviewDetail(id: string, viewer: ViewerScope | null)
       count: scorecards.length,
       recommendations
     },
-    interviewers
+    interviewers,
+    guides
   };
 }

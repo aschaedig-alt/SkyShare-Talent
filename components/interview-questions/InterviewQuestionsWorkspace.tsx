@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type DragEvent, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Search, ListChecks, GripVertical, ChevronUp, ChevronDown, Copy, FileUp, Paintbrush } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ListChecks, GripVertical, ChevronUp, ChevronDown, Copy, FileUp, Paintbrush, Wand2 } from "lucide-react";
 import type { InterviewQuestionItem } from "@/lib/data/interview-questions";
 import { COMPANY_VALUES } from "@/lib/compliments/constants";
 import { DEPARTMENTS, DEPARTMENT_LABELS } from "@/lib/calendar/departments";
@@ -12,6 +13,7 @@ import { RichTextEditor, RichTextView } from "@/components/richtext/RichTextEdit
 import { questionHtml, questionPlain } from "@/lib/interview-questions/rich";
 import { GuidanceBlocks } from "@/components/interview-questions/GuidanceBlocks";
 import { QuestionImport } from "@/components/interview-questions/QuestionImport";
+import { CoreValueTally } from "@/components/interview-guides/CoreValueTally";
 import { describeStyle, fieldStyle, QUESTION_FIELD_LABEL, type QuestionField } from "@/lib/interview-questions/format";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -281,6 +283,15 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
   const [importing, setImporting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [formatUndo, setFormatUndo] = useState<{ label: string; count: number } | null>(null);
+  /**
+   * Questions ticked for a guide, in the order ticked (Nov 16 2026: "from the
+   * question bank side, select each question I want to show up in the guide and
+   * then build the guide from that"). Active questions only.
+   */
+  const [selected, setSelected] = useState<string[]>([]);
+  function toggleSelected(id: string) {
+    setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  }
 
   const loadFormatUndo = useCallback(async () => {
     try {
@@ -536,6 +547,37 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
         </span>
       </section>
 
+      {/* Tick questions for a guide. Select all takes every ACTIVE question
+          shown by the filters above; Unselect all clears the ticks. */}
+      <section className="z-20 space-y-2 rounded bg-white px-3 py-2.5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10 lg:sticky lg:top-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">Pick questions for a guide:</span>
+        <button
+          type="button"
+          onClick={() =>
+            setSelected((cur) => [...cur, ...filtered.filter((q) => q.isActive && !cur.includes(q.id)).map((q) => q.id)])
+          }
+          disabled={filtered.every((q) => !q.isActive || selected.includes(q.id))}
+          className="rounded border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea transition hover:shadow-glow disabled:cursor-default disabled:opacity-40 disabled:hover:shadow-none dark:border-white/10 dark:text-slate-100"
+        >
+          Select all
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelected([])}
+          disabled={selected.length === 0}
+          className="rounded border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea transition hover:shadow-glow disabled:cursor-default disabled:opacity-40 disabled:hover:shadow-none dark:border-white/10 dark:text-slate-100"
+        >
+          Unselect all
+        </button>
+        <span className="text-xs text-brand-grey dark:text-slate-400">{selected.length} ticked</span>
+      </div>
+      <CoreValueTally
+        questions={selected.map((id) => byId.get(id)).filter((q): q is InterviewQuestionItem => Boolean(q))}
+        label={`Core values in the ticked questions`}
+      />
+      </section>
+
       {orderError ? (
         <p className="rounded bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:bg-red-500/15 dark:text-red-300">{orderError}</p>
       ) : null}
@@ -619,6 +661,18 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
                   dropTarget ? "ring-2 ring-brand-gold" : "ring-brand-lea/10 dark:ring-white/10"
                 } ${item.isActive ? "" : "opacity-60"} ${dragId === item.id ? "opacity-40" : ""}`}
               >
+                {/* Tick for a guide. Inactive questions stay out of new guides. */}
+                <div className="shrink-0 pt-1">
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(item.id)}
+                    onChange={() => toggleSelected(item.id)}
+                    disabled={!item.isActive}
+                    aria-label="Use this question in a guide"
+                    title={item.isActive ? "Tick to use this question in a guide" : "Inactive questions are left out of new guides"}
+                    className="h-4 w-4 accent-[#0d2c43] disabled:opacity-30"
+                  />
+                </div>
                 {/* Reorder handle + arrows */}
                 <div className="flex shrink-0 flex-col items-center gap-0.5 pt-0.5">
                   <button type="button" onClick={() => up && moveTo(item.id, up.id)} disabled={!up || savingOrder} title="Move up" aria-label="Move up" className={reorderBtn}>
@@ -699,6 +753,26 @@ export function InterviewQuestionsWorkspace({ questions }: { questions: Intervie
           })
         )}
       </section>
+
+      {/* The selection bar stays in view while ticking down a long list. */}
+      {selected.length > 0 ? (
+        <div className="sticky bottom-3 z-20 flex flex-wrap items-center justify-between gap-2 rounded border border-brand-gold/50 bg-brand-lea px-4 py-3 text-sm text-white shadow-panel">
+          <span className="font-semibold">
+            {selected.length} question{selected.length === 1 ? "" : "s"} ticked
+          </span>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setSelected([])} className="rounded px-2 py-1 text-xs font-semibold text-white/75 transition hover:text-white">
+              Unselect all
+            </button>
+            <Link
+              href={`/interview-questions/guide?q=${selected.map(encodeURIComponent).join(",")}`}
+              className="inline-flex items-center gap-1.5 rounded bg-white px-3 py-1.5 text-sm font-semibold text-brand-lea transition hover:shadow-glow"
+            >
+              <Wand2 className="h-4 w-4" /> Build guide from these
+            </Link>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

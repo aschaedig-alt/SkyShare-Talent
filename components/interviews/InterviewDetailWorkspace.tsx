@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Pencil, Trash2, ClipboardCheck, Star, ChevronDown, ChevronRight } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, ClipboardCheck, Star, ChevronDown, ChevronRight, ClipboardList, ExternalLink } from "lucide-react";
 import type { InterviewDetail, ScorecardView } from "@/lib/data/interview-detail";
 import {
   RATINGS,
@@ -25,6 +25,9 @@ import { RichNoteField, StoredRichText } from "@/components/richtext/RichNoteFie
 import { formatDateTimeWithZone } from "@/lib/calendar/format";
 import { RichTextView } from "@/components/richtext/RichTextEditor";
 import { interviewOutcomeLabel, interviewOutcomeTone } from "@/lib/interviews/constants";
+import { questionHtml } from "@/lib/interview-questions/rich";
+import { STRENGTH_LABEL, strengthTone } from "@/lib/interview-guides/constants";
+import { COMPANY_VALUES } from "@/lib/compliments/constants";
 
 function recoTone(key: RecommendationKey): string {
   switch (key) {
@@ -471,6 +474,82 @@ export function OutcomeChip({ outcome }: { outcome: string | null }) {
   return <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${interviewOutcomeTone(outcome)}`}>{label}</span>;
 }
 
+/**
+ * The interview guides used in this interview: each question asked, the answer
+ * typed in, and its rating. Read-only here; answers are typed on the guide page
+ * (Nov 16 2026). Questions with no answer are listed so a gap is visible.
+ */
+export function InterviewGuidesBody({ detail }: { detail: InterviewDetail }) {
+  const build = `/interview-questions/guide?interviewId=${encodeURIComponent(detail.id)}`;
+  return (
+    <div className="space-y-3">
+      {detail.guides.map((g) => (
+        <div key={g.id} className="rounded bg-white p-4 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <span className="font-semibold text-brand-lea dark:text-slate-100">{g.title}</span>
+              <span className="ml-2 text-xs text-brand-grey dark:text-slate-400">
+                {g.interviewer ? `${g.interviewer} · ` : ""}
+                {g.answered} of {g.items.length} answered
+              </span>
+            </div>
+            <Link
+              href={`/interview-questions/guides/${g.id}`}
+              className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-brand-lea underline-offset-2 hover:underline dark:text-slate-100"
+            >
+              <ExternalLink className="h-3.5 w-3.5" /> Open guide
+            </Link>
+          </div>
+          <ol className="mt-2 space-y-2">
+            {g.items.map((it, i) => (
+              <li key={it.id} className="border-t border-brand-lea/10 pt-2 text-sm dark:border-white/10">
+                <div className="flex gap-2">
+                  <span className="shrink-0 text-xs font-semibold text-brand-grey dark:text-slate-400">{i + 1}.</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <RichTextView html={questionHtml(it.text)} className="min-w-0 flex-1 !text-sm font-medium !text-brand-black dark:!text-slate-100 [&_p:first-child]:mt-0" />
+                      {it.strength ? (
+                        <span
+                          title={it.evaluationSource === "AI" ? "Draft suggestion" : "Set by the interviewer"}
+                          className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-semibold ${strengthTone(it.strength)}`}
+                        >
+                          {STRENGTH_LABEL[it.strength]}
+                          {it.evaluationSource === "AI" ? " (draft)" : ""}
+                        </span>
+                      ) : null}
+                    </div>
+                    {it.shownValues.length ? (
+                      <p className="mt-1 text-[11px] text-brand-grey dark:text-slate-400">
+                        Also showed:{" "}
+                        <span className="font-semibold text-brand-lea dark:text-slate-100">
+                          {it.shownValues.map((k) => COMPANY_VALUES.find((v) => v.colorKey === k)?.name ?? k).join(", ")}
+                        </span>
+                      </p>
+                    ) : null}
+                    {it.answer ? (
+                      <div className="mt-1 border-l-2 border-brand-sweet/40 pl-2">
+                        <StoredRichText value={it.answer} className="!text-xs !text-brand-grey dark:!text-slate-300" />
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-xs text-brand-grey/70 dark:text-slate-500">No answer typed.</p>
+                    )}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ))}
+      <Link
+        href={build}
+        className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"
+      >
+        <ClipboardList className="h-4 w-4" /> {detail.guides.length ? "Build another guide for this interview" : "Build a guide for this interview"}
+      </Link>
+    </div>
+  );
+}
+
 /** Write-up and scorecards, both open, each collapsible. The drawer and the full page both render this. */
 export function InterviewBody({
   detail,
@@ -485,6 +564,9 @@ export function InterviewBody({
     <div className="space-y-5">
       <CollapsibleSection title="Write-up" badge={<OutcomeChip outcome={detail.outcome} />}>
         <InterviewWriteUpBody detail={detail} />
+      </CollapsibleSection>
+      <CollapsibleSection title={`Interview guides (${detail.guides.length})`}>
+        <InterviewGuidesBody detail={detail} />
       </CollapsibleSection>
       <CollapsibleSection
         title={`Scorecards (${detail.scorecards.length})`}
