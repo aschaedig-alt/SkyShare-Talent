@@ -1384,6 +1384,30 @@ same task shows the same state on the desktop grid.
 
 ---
 
+### 67. "Fill from transcript" on an interview guide has never been saved through, or opened on a phone
+
+**Status:** OPEN
+**Added:** 2026-11-16
+
+The guide page has a **Fill from transcript** button: paste the interview transcript and
+each question's answer is drafted in the candidate's own words, cleaned up, then shown in
+a preview to tick, edit and save. Checked by the session: the drafting itself, on her real
+"Interview Guide - PDP" questions with a made-up transcript, both directly and through the
+live route on localhost (10 questions back, the 5 asked answered in first person with filler
+removed and a follow-up folded in, a mention of a wife and new baby left out, the 5 not asked
+left blank). NOT checked: pressing Save in the dialog (it writes to the live database, and no
+real guide was touched), a REAL Granola transcript (the Granola connector does not hand out
+transcripts on her plan), and the dialog on a phone or in dark mode.
+
+**How to check it:** after a real interview, open its guide, press Fill from transcript, paste
+the whole Granola transcript, look over the drafts, save them, then press Evaluate answers.
+
+**What would count as a pass:** each saved answer sits under the right question after a
+reload, reads like the candidate said it, adds nothing they did not say, and an answer you
+had already typed was only replaced where you ticked it.
+
+---
+
 ### 66. No interview guide has been used on a real interview yet, and none has been seen in dark mode
 
 **Status:** OPEN

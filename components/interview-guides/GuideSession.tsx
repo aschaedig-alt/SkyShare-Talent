@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Sparkles, Trash2, Link2, Eye, EyeOff, Star, Check, Plus } from "lucide-react";
+import { ArrowLeft, Sparkles, Trash2, Link2, Eye, EyeOff, Star, Check, Plus, FileText } from "lucide-react";
 import type { GuideItemView, GuideView } from "@/lib/data/interview-guides";
 import type { InterviewDetail } from "@/lib/data/interview-detail";
 import { COMPANY_VALUES } from "@/lib/compliments/constants";
@@ -15,6 +15,7 @@ import { CATEGORY_LABELS } from "@/components/interview-questions/GuideBuilder";
 import { InterviewScorecards } from "@/components/interviews/InterviewDetailWorkspace";
 import { CoreValueChart } from "@/components/interview-guides/CoreValueChart";
 import { GuideLinkPicker, LINK_HINT, type PickedCandidate } from "@/components/interview-guides/GuideLinkPicker";
+import { TranscriptFillModal } from "@/components/interview-guides/TranscriptFillModal";
 import { Button } from "@/components/ui";
 import { questionHtml } from "@/lib/interview-questions/rich";
 import { formatDateTimeWithZone } from "@/lib/calendar/format";
@@ -265,6 +266,7 @@ export function GuideSession({ initial }: { initial: GuideView }) {
   const [linkError, setLinkError] = useState<string | null>(null);
   const [evaluating, setEvaluating] = useState(false);
   const [evalMessage, setEvalMessage] = useState<string | null>(null);
+  const [transcriptOpen, setTranscriptOpen] = useState(false);
 
   const answered = guide.items.filter((i) => (i.answer ?? "").replace(/<[^>]*>/g, "").trim()).length;
 
@@ -385,10 +387,16 @@ export function GuideSession({ initial }: { initial: GuideView }) {
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className={headCls}>Questions · {guide.items.length}</h2>
-          <button type="button" onClick={() => setShowGuidance((v) => !v)} className="inline-flex items-center gap-1 text-xs font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400">
-            {showGuidance ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />} {showGuidance ? "Hide" : "Show"} strong answer &amp; listen for
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" onClick={() => setShowGuidance((v) => !v)} className="inline-flex items-center gap-1 text-xs font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400">
+              {showGuidance ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />} {showGuidance ? "Hide" : "Show"} strong answer &amp; listen for
+            </button>
+            <Button variant="secondary" size="sm" onClick={() => setTranscriptOpen(true)}>
+              <FileText className="h-4 w-4" /> Fill from transcript
+            </Button>
+          </div>
         </div>
+        <TranscriptFillModal open={transcriptOpen} onClose={() => setTranscriptOpen(false)} guideId={guide.id} items={guide.items} onSaved={onItemSaved} />
         <ol className="space-y-3">
           {guide.items.map((item, i) => (
             <QuestionCard key={item.id} guideId={guide.id} item={item} index={i} showGuidance={showGuidance} onSaved={onItemSaved} />
