@@ -27,7 +27,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
   const items = await prisma.interviewGuideItem.findMany({ where: { guideId: id }, orderBy: { sortOrder: "asc" } });
   const plan = items
-    .filter((it) => storedToPlain(it.answer).trim())
+    // A question marked Not asked is never judged.
+    .filter((it) => !it.skipped && storedToPlain(it.answer).trim())
     .map((it) => {
       const shown = parseStringArray(it.shownValuesJson);
       const removed = parseStringArray(it.removedValuesJson);

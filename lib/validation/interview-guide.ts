@@ -33,5 +33,7 @@ export const guideItemUpdateSchema = z.object({
   // The answer's WHOLE set of values, ticked or unticked, including the
   // question's own (Nov 16 2026: an asked value can be unticked). Preferred
   // over shownValues; when both are sent this one wins.
-  values: z.array(z.enum(CORE_VALUE_KEYS)).max(10).optional()
+  values: z.array(z.enum(CORE_VALUE_KEYS)).max(10).optional(),
+  // "Not asked" in this interview (Nov 16 2026). Nothing typed is deleted.
+  skipped: z.boolean().optional()
 });

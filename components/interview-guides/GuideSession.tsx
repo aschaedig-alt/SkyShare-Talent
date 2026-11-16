@@ -19,7 +19,7 @@ import { splitValues, VALUE_KEYS } from "@/lib/interview-guides/values";
 import { GuideLinkPicker, LINK_HINT, type PickedCandidate } from "@/components/interview-guides/GuideLinkPicker";
 import { TranscriptFillModal } from "@/components/interview-guides/TranscriptFillModal";
 import { Button } from "@/components/ui";
-import { questionHtml } from "@/lib/interview-questions/rich";
+import { questionHtml, questionPlain } from "@/lib/interview-questions/rich";
 import { formatDateTimeWithZone } from "@/lib/calendar/format";
 import { ANSWER_STRENGTHS, STRENGTH_HINT, STRENGTH_LABEL, strengthTone, type AnswerStrength } from "@/lib/interview-guides/constants";
 
@@ -107,12 +107,55 @@ function QuestionCard({
 
   const dirty = answer !== savedValue.current;
 
+  // "Not asked" (Nov 16 2026). Shown at once; put back if the save fails.
+  function setSkipped(next: boolean) {
+    onSaved({ id: item.id, skipped: next });
+    void patch({ skipped: next }).then((ok) => {
+      if (!ok) onSaved({ id: item.id, skipped: !next });
+    });
+  }
+
+  // A question not asked is ALWAYS folded to one grey line, however often the
+  // guide is reopened, so you scroll straight past it (his ask). No chips, no
+  // rating. Anything typed before is kept and comes back with Mark as asked.
+  if (item.skipped) {
+    const hasNotes = Boolean((item.answer ?? "").replace(/<[^>]*>/g, "").trim());
+    return (
+      <li className="flex items-center gap-2 rounded border border-dashed border-brand-lea/15 bg-white/50 px-4 py-2 text-xs text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+        <span className="shrink-0 font-semibold">{index + 1}.</span>
+        <span className="min-w-0 flex-1 truncate" title={questionPlain(item.text)}>
+          {questionPlain(item.text)}
+        </span>
+        <span className="shrink-0 rounded bg-brand-lea/5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-grey dark:bg-white/10 dark:text-slate-400">
+          Not asked{hasNotes ? " · has notes" : ""}
+        </span>
+        <button
+          type="button"
+          onClick={() => setSkipped(false)}
+          className="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold text-brand-lea transition hover:shadow-glow dark:text-slate-100"
+        >
+          Mark as asked
+        </button>
+      </li>
+    );
+  }
+
   return (
     <li className={panelCls}>
       <div className="flex gap-2">
         <span className="shrink-0 text-sm font-semibold text-brand-grey dark:text-slate-400">{index + 1}.</span>
         <div className="min-w-0 flex-1">
-          <RichTextView html={questionHtml(item.text)} className="font-medium !text-brand-black dark:!text-slate-100 [&_p:first-child]:mt-0" />
+          <div className="flex items-start gap-2">
+            <RichTextView html={questionHtml(item.text)} className="min-w-0 flex-1 font-medium !text-brand-black dark:!text-slate-100 [&_p:first-child]:mt-0" />
+            <button
+              type="button"
+              onClick={() => setSkipped(true)}
+              title="You did not ask this one: fold it away and leave it out of the scoring. Nothing typed is deleted."
+              className="shrink-0 rounded border border-brand-lea/20 px-2 py-0.5 text-[11px] font-semibold text-brand-grey transition hover:text-brand-lea hover:shadow-glow dark:border-white/10 dark:text-slate-400"
+            >
+              Not asked
+            </button>
+          </div>
           <div className="mt-1 flex flex-wrap gap-1">
             {item.category ? (
               <span className="rounded bg-brand-cloudDancer/70 px-1.5 py-0.5 text-[10px] font-semibold text-brand-grey dark:bg-white/5 dark:text-slate-400">
@@ -284,7 +327,9 @@ export function GuideSession({ initial }: { initial: GuideView }) {
   // correction is recorded.
   const [learnTick, setLearnTick] = useState(0);
 
-  const answered = guide.items.filter((i) => (i.answer ?? "").replace(/<[^>]*>/g, "").trim()).length;
+  const asked = guide.items.filter((i) => !i.skipped);
+  const notAsked = guide.items.length - asked.length;
+  const answered = asked.filter((i) => (i.answer ?? "").replace(/<[^>]*>/g, "").trim()).length;
 
   function onItemSaved(next: Partial<GuideItemView> & { id: string }) {
     setGuide((g) => ({ ...g, items: g.items.map((it) => (it.id === next.id ? { ...it, ...next } : it)) }));
@@ -380,7 +425,7 @@ export function GuideSession({ initial }: { initial: GuideView }) {
           ) : null}
           {guide.interviewer ? <span>· {guide.interviewer}</span> : null}
           <span>
-            · {answered} of {guide.items.length} answered
+            · {answered} of {asked.length} answered{notAsked ? ` · ${notAsked} not asked` : ""}
           </span>
         </div>
       </section>

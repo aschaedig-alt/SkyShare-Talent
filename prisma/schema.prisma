@@ -1644,6 +1644,11 @@ model InterviewGuideItem {
   listenFor        String?
   // What the candidate said. Stored rich-note format (lib/richtext/stored.ts).
   answer           String?
+  // Not asked in this interview (Nov 16 2026: "I don't always ask 100% of the same
+  // questions"). The question stays on the guide, folded to one line, and is
+  // left out of the evaluator, the chart and the popup. Nothing typed is deleted;
+  // un-skipping brings it all back.
+  skipped          Boolean   @default(false)
   // STRONG | ADEQUATE | WEAK | NOT_ANSWERED; null = not judged yet.
   // Deliberately a String so the scale can change while it is being tuned.
   strength         String?

@@ -1384,6 +1384,28 @@ same task shows the same state on the desktop grid.
 
 ---
 
+### 70. A question marked "Not asked" has not been seen in the interview popup, or in dark mode
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-11-16
+
+Each question on an interview guide has a **Not asked** button. It folds the question to one
+grey line (always folded when the guide is reopened), hides its chips and rating, and leaves
+it out of the evaluator, the core values chart and the answered count; **Mark as asked**
+brings it back with anything typed. Checked by the session on localhost with a throwaway
+guide (deleted after): both buttons clicked in the browser and read back from the database,
+folded after a reload, and the evaluator judged only the asked answer. NOT checked: how a
+skipped question looks in the interview popup (the sample guide was not linked to an
+interview), and dark mode.
+
+**How to check it:** on Chance Hanks's guide mark the questions you did not ask as Not asked,
+then open his interview's popup from his Interviews tab.
+
+**What would count as a pass:** each skipped question is one grey "Not asked" line in the
+popup and on the guide page, and the core values chart counts only the asked answers.
+
+---
+
 ### 69. The interview card's 8px value line and the reordered popup have not been seen in dark mode, and Accept all has not been pressed
 
 **Status:** OPEN — deployed 2026-11-16 (25b880c)

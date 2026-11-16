@@ -25,7 +25,7 @@ import { RichNoteField, StoredRichText } from "@/components/richtext/RichNoteFie
 import { formatDateTimeWithZone } from "@/lib/calendar/format";
 import { RichTextView } from "@/components/richtext/RichTextEditor";
 import { interviewOutcomeLabel, interviewOutcomeTone } from "@/lib/interviews/constants";
-import { questionHtml } from "@/lib/interview-questions/rich";
+import { questionHtml, questionPlain } from "@/lib/interview-questions/rich";
 import { STRENGTH_LABEL, strengthTone } from "@/lib/interview-guides/constants";
 import { COMPANY_VALUES } from "@/lib/compliments/constants";
 
@@ -499,7 +499,15 @@ export function InterviewGuidesBody({ detail }: { detail: InterviewDetail }) {
             </Link>
           </div>
           <ol className="mt-2 space-y-2">
-            {g.items.map((it, i) => (
+            {g.items.map((it, i) =>
+              it.skipped ? (
+                // Not asked in this interview: one grey line, nothing else (Nov 16 2026).
+                <li key={it.id} className="flex gap-2 border-t border-brand-lea/10 pt-2 text-xs text-brand-grey dark:border-white/10 dark:text-slate-500">
+                  <span className="shrink-0 font-semibold">{i + 1}.</span>
+                  <span className="min-w-0 flex-1 truncate">{questionPlain(it.text)}</span>
+                  <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide">Not asked</span>
+                </li>
+              ) : (
               <li key={it.id} className="border-t border-brand-lea/10 pt-2 text-sm dark:border-white/10">
                 <div className="flex gap-2">
                   <span className="shrink-0 text-xs font-semibold text-brand-grey dark:text-slate-400">{i + 1}.</span>
@@ -548,7 +556,8 @@ export function InterviewGuidesBody({ detail }: { detail: InterviewDetail }) {
                   </div>
                 </div>
               </li>
-            ))}
+              )
+            )}
           </ol>
         </div>
       ))}

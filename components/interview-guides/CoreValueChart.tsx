@@ -35,7 +35,7 @@ const HEX: Record<string, string> = {
 
 type Row = { key: string; name: string; color: string; asked: number[]; also: number[]; total: number };
 
-const answeredOf = (it: GuideItemView) => Boolean((it.answer ?? "").replace(/<[^>]*>/g, "").trim()) && it.strength !== "NOT_ANSWERED";
+const answeredOf = (it: GuideItemView) => !it.skipped && Boolean((it.answer ?? "").replace(/<[^>]*>/g, "").trim()) && it.strength !== "NOT_ANSWERED";
 
 function useStoredView(): [View, (v: View) => void] {
   const [view, setView] = useState<View>("bars");
@@ -270,7 +270,7 @@ export function CoreValueChart({ items }: { items: GuideItemView[] }) {
         <div>
           <div className={R.listTitle}>Core values heard in the answers</div>
           <div className={`${R.tileSub} mt-0.5`}>
-            {answered} of {items.length} questions answered
+            {answered} of {items.filter((it) => !it.skipped).length} questions answered
             {answered ? (
               missing ? (
                 <span className="ml-2 inline-flex items-center gap-1 font-semibold text-amber-700 dark:text-amber-300">

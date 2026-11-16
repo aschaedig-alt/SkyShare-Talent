@@ -26,6 +26,8 @@ export type GuideItemView = {
   strongAnswer: string;
   listenFor: string;
   answer: string | null;
+  /** Not asked in this interview: folded on the page, left out of scoring. */
+  skipped: boolean;
   strength: AnswerStrength | null;
   evaluationNote: string | null;
   evaluationSource: EvaluationSource | null;
@@ -79,6 +81,7 @@ function toView(g: GuideRow): GuideView {
     strongAnswer: it.strongAnswer ?? "",
     listenFor: it.listenFor ?? "",
     answer: it.answer,
+    skipped: it.skipped,
     strength: isAnswerStrength(it.strength) ? it.strength : null,
     evaluationNote: it.evaluationNote,
     evaluationSource: it.evaluationSource === "AI" || it.evaluationSource === "INTERVIEWER" ? it.evaluationSource : null,
@@ -98,7 +101,7 @@ function toView(g: GuideRow): GuideView {
       ? { id: g.interview.id, title: g.interview.title, startDateTime: g.interview.startDateTime.toISOString(), timezone: g.interview.timezone }
       : null,
     items,
-    answered: items.filter((i) => (i.answer ?? "").trim()).length
+    answered: items.filter((i) => !i.skipped && (i.answer ?? "").trim()).length
   };
 }
 

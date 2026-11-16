@@ -46,7 +46,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       removedValuesJson?: string | null;
       valuesSource?: string | null;
       valuesNote?: string | null;
+      skipped?: boolean;
     } = {};
+    if (data.skipped !== undefined) update.skipped = data.skipped;
 
     if (data.answer !== undefined) {
       update.answer = data.answer;
@@ -140,7 +142,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         removedValues: removed,
         values: answerValues(asked, shown, removed),
         valuesSource: saved.valuesSource,
-        valuesNote: saved.valuesNote
+        valuesNote: saved.valuesNote,
+        skipped: saved.skipped
       }
     });
   } catch (error) {
