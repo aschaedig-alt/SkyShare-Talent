@@ -1402,7 +1402,13 @@ guide, so it was left for him).
 open his interview popup. Switch to dark mode and look at his Interviews tab and the popup.
 
 **What would count as a pass:** the "(draft)" labels are gone and stay gone after a reload;
-the 8px line is readable in both light and dark.
+the value line is readable in both light and dark.
+
+**Update 2026-11-16 (his layout from dev tools):** the 8px line is replaced. Each value is now
+two centred lines (name over rating) at the date's size (text-xs, 10.5px), evenly spaced, and
+the Scorecard button has its icon on top, flush right, with the hover-only edit and delete
+icons moved before the values. Checked in his Chrome at 1536 wide (11px top, right and
+bottom; 17-18px between values) and on a phone; still NOT checked in dark mode.
 
 ---
 

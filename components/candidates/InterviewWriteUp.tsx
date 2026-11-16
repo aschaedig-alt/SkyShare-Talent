@@ -40,20 +40,22 @@ export type InterviewView = {
 };
 
 /**
- * The four core value ratings, very small, beside the Scorecard button.
+ * The four core value ratings beside the Scorecard button.
  *
- * His picks, Nov 16 2026: option A of four samples (full value names), at 8px,
- * and ONLY the values: the recommendation and the points stay in the popup.
- * Several interviewers: each value's average rating, rounded to the nearest step.
+ * His layout, Nov 16 2026 (he set it up in the browser's dev tools and sent a
+ * screenshot): each value on two lines, the name over its rating, centred, at
+ * the same size as the date beside the title (text-xs), the four equally spaced.
+ * Only the values: the recommendation and points stay in the popup. Several
+ * interviewers: each value's average rating, nearest step.
  */
 function ScoreLine({ summary }: { summary: ScoreSummary }) {
   if (summary.values.length === 0) return null;
   return (
-    <span className="flex min-w-0 flex-1 flex-wrap items-center justify-start gap-x-1.5 gap-y-0 text-[8px] leading-tight text-brand-grey sm:justify-end dark:text-slate-400">
-      {summary.values.map((v, i) => (
-        <span key={v.name} className="whitespace-nowrap">
-          {i ? "· " : ""}
-          {v.name} <span className="font-semibold text-brand-lea dark:text-slate-100">{v.label}</span>
+    <span className="grid min-w-0 grid-cols-2 gap-x-5 gap-y-1.5 text-xs leading-tight sm:grid-cols-4">
+      {summary.values.map((v) => (
+        <span key={v.name} className="flex flex-col items-center text-center">
+          <span className="text-brand-grey sm:whitespace-nowrap dark:text-slate-400">{v.name}</span>
+          <span className="font-semibold text-brand-lea dark:text-slate-100">{v.label}</span>
         </span>
       ))}
     </span>
@@ -577,16 +579,8 @@ function LoggedInterview({
         {/* The scores and the button travel together: the scores wrap onto a
             second small line before the button would leave its place. */}
         {/* Its own row on a phone (under the date); beside the title from sm up. */}
-        <span className="flex w-full min-w-0 items-center justify-between gap-2 sm:ml-auto sm:w-auto sm:flex-1 sm:justify-end">
-          {interview.scoreSummary ? <ScoreLine summary={interview.scoreSummary} /> : null}
-          <InterviewDrawerLink
-            interviewId={interview.id}
-            onOpen={onOpen}
-            className="inline-flex shrink-0 items-center gap-1 rounded border border-brand-lea/20 px-2 py-0.5 text-[11px] font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"
-          >
-            <ClipboardCheck className="h-3.5 w-3.5" /> Scorecard
-          </InterviewDrawerLink>
-        </span>
+        {/* Edit and delete sit BEFORE the values now, so the Scorecard button is
+            the last thing on the row, flush right (his layout, Nov 16 2026). */}
         {canEdit && (
           // Hover-revealed on a computer. A phone has no hover, so there they
           // are simply shown: hidden, they were unreachable AND still took up
@@ -609,18 +603,31 @@ function LoggedInterview({
             </button>
           </span>
         )}
+        <span className="flex w-full min-w-0 items-center justify-between gap-5 sm:ml-auto sm:w-auto sm:justify-end">
+          {interview.scoreSummary ? <ScoreLine summary={interview.scoreSummary} /> : null}
+          {/* Icon on top, label under it, centred: a shorter button, so the
+              values get more of the row. */}
+          <InterviewDrawerLink
+            interviewId={interview.id}
+            onOpen={onOpen}
+            className="inline-flex shrink-0 flex-col items-center gap-0.5 rounded border border-brand-lea/20 bg-white/60 px-2.5 py-1 text-[11px] font-semibold leading-none text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+          >
+            <ClipboardCheck className="h-3.5 w-3.5" />
+            Scorecard
+          </InterviewDrawerLink>
+        </span>
       </div>
       {interview.nextStep && (
-        <div className="mt-2 text-xs text-brand-lea dark:text-slate-200">
+        <div className="mt-3 text-xs text-brand-lea dark:text-slate-200">
           <span className="rounded bg-brand-gold/15 px-2 py-1 font-medium">Next: {interview.nextStep}</span>
         </div>
       )}
       {interview.notesHtml ? (
-        <div className="mt-2 rounded border border-brand-lea/10 bg-white/70 p-2.5 dark:border-white/10 dark:bg-white/5">
+        <div className="mt-3 rounded border border-brand-lea/10 bg-white/70 p-2.5 dark:border-white/10 dark:bg-white/5">
           <RichTextView html={interview.notesHtml} />
         </div>
       ) : interview.notes?.trim() ? (
-        <p className="mt-2 whitespace-pre-wrap rounded border border-brand-lea/10 bg-white/70 p-2 text-xs text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+        <p className="mt-3 whitespace-pre-wrap rounded border border-brand-lea/10 bg-white/70 p-2 text-xs text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
           {interview.notes.trim()}
         </p>
       ) : null}
