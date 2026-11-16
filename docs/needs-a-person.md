@@ -1386,7 +1386,7 @@ same task shows the same state on the desktop grid.
 
 ### 68. The evaluator's value calls and its learning have only been tried on a made-up guide
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN — deployed 2026-11-16 (b6ebd49)
 **Added:** 2026-11-16
 
 On a guide's page, every core value chip now ticks and unticks (a question's own value can
@@ -1434,6 +1434,13 @@ the whole Granola transcript, look over the drafts, save them, then press Evalua
 reload, reads like the candidate said it, adds nothing they did not say, and an answer you
 had already typed was only replaced where you ticked it.
 
+**Update 2026-11-16 (commit agent, read-only on the live database):** Chase Anderson's
+"Interview Guide - PDP" now holds answers on all 10 questions and a rating on 8, set by
+Evaluate answers, last changed 20:40 UTC; at 19:48 UTC it had none. So answers have been
+saved through for real on one guide. Not known from the data: whether they came through Fill
+from transcript or were typed, and whether they read right. The phone and dark mode checks are
+still open.
+
 ---
 
 ### 66. No interview guide has been used on a real interview yet, and none has been seen in dark mode
@@ -1459,6 +1466,12 @@ chart.
 **What would count as a pass:** the answers, chips and ratings are still there after a
 reload; the chart counts match the chips; the interview shows the guide; everything is
 readable in dark mode.
+
+**Update 2026-11-16 (commit agent, read-only on the live database):** a second guide now
+exists on a real candidate, Chase Anderson's "Interview Guide - PDP" (10 questions, 10
+answered, 8 rated by Evaluate answers, one answer with an extra value ticked). It is linked
+to the candidate but to NO interview yet, so the Interview guides section on an interview
+still has nothing to show. Dark mode still not looked at.
 
 ---
 
