@@ -1384,6 +1384,32 @@ same task shows the same state on the desktop grid.
 
 ---
 
+### 66. No interview guide has been used on a real interview yet, and none has been seen in dark mode
+
+**Status:** OPEN
+**Added:** 2026-11-16
+
+Interview Questions now builds guides (c17fd7f): tick questions in the bank or generate a
+random set, save the guide to a candidate and one of their interviews, then on the guide
+page type each answer, tap the core value chips the answer showed, rate it Strong /
+Adequate / Weak / Did not answer, and see the Core values heard chart as Bars, Pie or
+Numbers. The interview's scorecard sits underneath, and the guide shows on the interview
+under Interview guides. He and the session checked it in a browser at desktop and phone
+width. NOT checked: dark mode, and a guide linked to a real candidate's interview end to end
+(no real candidate was touched). The commit agent read the live table on Nov 16: one guide,
+his "Pilot Guide" (19 questions, no candidate, no answers).
+
+**How to check it:** before or during a real interview, save a guide to that candidate and
+interview; type a couple of answers, tap a chip and rate one; open the interview and find
+the guide under Interview guides. Switch to dark mode and look at the guide page and the
+chart.
+
+**What would count as a pass:** the answers, chips and ratings are still there after a
+reload; the chart counts match the chips; the interview shows the guide; everything is
+readable in dark mode.
+
+---
+
 ## Closed
 
 ### 64. Nobody has bulk-sent manager check-ins yet
