@@ -8,18 +8,8 @@ import { CANDIDATE_DEPARTMENTS } from "@/lib/candidates/departments";
 import { CandidateApplicationsPanel } from "@/components/candidates/CandidateApplicationsPanel";
 import { CandidateRow } from "@/components/candidates/CandidateRow";
 import type { CandidateStage } from "@/lib/candidates/stages";
+import { stagePill } from "@/lib/candidates/stage-pill";
 import { Button } from "@/components/ui";
-
-/** Color a stage pill by keyword so the pipeline reads at a glance. */
-function stagePill(stage: string | null) {
-  const s = (stage ?? "").toLowerCase();
-  if (!stage) return "border-brand-lea/15 bg-brand-cloudDancer/60 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400";
-  if (s.includes("hire") || s.includes("offer")) return "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
-  if (s.includes("interview") || s.includes("screen")) return "border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300";
-  if (s.includes("reject") || s.includes("declin") || s.includes("withdraw")) return "border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400";
-  if (s.includes("new") || s.includes("appl") || s.includes("lead")) return "border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300";
-  return "border-brand-gold/30 bg-brand-gold/10 text-brand-lea dark:text-slate-100";
-}
 
 function initials(name: string) {
   return name

@@ -6,6 +6,10 @@ import { getRecentInterviews } from "@/lib/data/recent-interviews";
 import { RECENT_INTERVIEW_WINDOWS, interviewOutcomeLabel, interviewOutcomeTone } from "@/lib/interviews/constants";
 import { formatCalendarDayShort } from "@/lib/dates/display";
 import { EmptyState } from "@/components/ui";
+import { CandidateStageCell } from "@/components/candidates/CandidateStageCell";
+import { getStageList } from "@/lib/data/candidate-stages";
+import { stagePillClass } from "@/lib/candidates/stage-pill";
+import { isAdminOrRecruiter } from "@/lib/auth/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -30,11 +34,17 @@ export default async function RecentInterviewsPage({
   // "all" is an explicit choice; no parameter means the signed-in person.
   const who = params.who === "all" ? null : (params.who ?? access.email ?? null);
 
-  const { rows, interviewers } = await getRecentInterviews({
-    windowDays,
-    interviewerEmail: who,
-    viewer: access.viewer
-  });
+  const [{ rows, interviewers }, stageList] = await Promise.all([
+    getRecentInterviews({
+      windowDays,
+      interviewerEmail: who,
+      viewer: access.viewer
+    }),
+    getStageList()
+  ]);
+  // Same gate as the Candidates list. The PATCH route decides in the end; this
+  // only decides whether a dropdown or a read-only pill is drawn.
+  const canEdit = isAdminOrRecruiter(access.role);
 
   const chip = "rounded border px-3 py-1.5 text-sm font-semibold transition";
   const chipOn = "border-brand-lea bg-brand-lea text-white";
@@ -94,6 +104,7 @@ export default async function RecentInterviewsPage({
             <thead>
               <tr className="border-b border-brand-lea/10 text-left text-[10px] font-bold uppercase tracking-wide text-brand-grey dark:border-white/10 dark:text-slate-400">
                 <th className="px-4 py-3">Candidate</th>
+                <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Interviewed</th>
                 <th className="px-4 py-3">By</th>
                 <th className="px-4 py-3">Outcome</th>
@@ -109,9 +120,24 @@ export default async function RecentInterviewsPage({
                     <Link href={`/candidates/${r.candidateId}`} className="font-semibold text-brand-lea hover:text-brand-eden dark:text-slate-100">
                       {r.candidateName}
                     </Link>
+                    {/* Title only: the stage now has its own column, so repeating
+                        it here would say it twice. */}
                     <span className="block text-xs text-brand-grey dark:text-slate-400">
-                      {[r.currentTitle, r.stage].filter(Boolean).join(" · ") || "No title recorded"}
+                      {r.currentTitle || "No title recorded"}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {/* The SAME control as the Candidates list (asked for
+                        2026-11-16), so a status change here and there is one
+                        write through PATCH /api/candidates/[id]. */}
+                    <CandidateStageCell
+                      candidateId={r.candidateId}
+                      candidateName={r.candidateName}
+                      stage={r.stage}
+                      pillClass={stagePillClass(r.stage, stageList)}
+                      canEdit={canEdit}
+                      stageList={stageList}
+                    />
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-brand-grey dark:text-slate-400">
                     {formatCalendarDayShort(r.interviewedAt)}
