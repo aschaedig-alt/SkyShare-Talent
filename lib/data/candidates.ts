@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { METRIC_DEFS, type MetricKind } from "@/lib/extraction/pilot-metrics";
+import { summarizeScorecards, type ScoreSummary } from "@/lib/interviews/scorecard-summary";
 import { parseStringArray } from "@/lib/json";
 import { normalizeEmail, normalizeName } from "@/lib/candidates/normalize";
 import { parseOfferSteps } from "@/lib/offers/steps";
@@ -561,6 +562,8 @@ export type CandidateProfileData = {
     outcome: string | null;
     rating: number | null;
     nextStep: string | null;
+    /** Recommendation, points and the four value ratings, for the line beside the Scorecard button. Null when not scored, or hidden from this viewer. */
+    scoreSummary: ScoreSummary | null;
   }>;
   // Historical Candidate Archive surfaces. `origin` is internal (PAYCOM | JAZZ |
   // MANUAL); `isHistorical` is true when the profile carries legacy (Jazz) data,
@@ -1737,7 +1740,9 @@ export async function getCandidateProfileData(
         }
       },
       interviews: {
-        orderBy: { startDateTime: "asc" }
+        orderBy: { startDateTime: "asc" },
+        // For the score line on each interview card (Nov 16 2026).
+        include: { scorecards: { select: { recommendation: true, itemsJson: true } } }
       },
       aiSummary: true,
       candidateTags: { include: { tag: { select: { label: true, color: true } } } },
@@ -2162,7 +2167,8 @@ export async function getCandidateProfileData(
         interviewerEmail: interview.interviewerEmail,
         outcome: visible ? interview.outcome : null,
         rating: visible ? interview.rating : null,
-        nextStep: visible ? interview.nextStep : null
+        nextStep: visible ? interview.nextStep : null,
+        scoreSummary: visible ? summarizeScorecards(interview.scorecards) : null
       };
     }),
     origin: candidate.origin,

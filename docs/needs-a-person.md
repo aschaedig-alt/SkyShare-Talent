@@ -1384,6 +1384,28 @@ same task shows the same state on the desktop grid.
 
 ---
 
+### 69. The interview card's 8px value line and the reordered popup have not been seen in dark mode, and Accept all has not been pressed
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-11-16
+
+From his review of Chase Anderson's interview. A candidate's interview card now shows the
+four core value ratings from its scorecard at 8px beside the Scorecard button (no
+recommendation, no points); the popup opens on the scorecard, then the interview guide,
+with no write-up; each guide question shows the values its answer touched as gold chips;
+and the guide page has **Accept all draft suggestions**. The session checked all of it on
+Chase's real records, read-only, at her laptop width (1536) and on a phone. NOT checked:
+dark mode, and pressing Accept all (it would have accepted the two drafts on his real
+guide, so it was left for him).
+
+**How to check it:** on Chase Anderson's guide press **Accept all draft suggestions**, then
+open his interview popup. Switch to dark mode and look at his Interviews tab and the popup.
+
+**What would count as a pass:** the "(draft)" labels are gone and stay gone after a reload;
+the 8px line is readable in both light and dark.
+
+---
+
 ### 68. The evaluator's value calls and its learning have only been tried on a made-up guide
 
 **Status:** OPEN — deployed 2026-11-16 (b6ebd49)

@@ -9,6 +9,7 @@ import { INTERVIEW_OUTCOMES, INTERVIEW_TYPES, interviewOutcomeTone, interviewOut
 import { formatCalendarDayShort } from "@/lib/dates/display";
 import { EmptyState } from "@/components/ui";
 import { InterviewDrawer, InterviewDrawerLink, useInterviewDrawerParam } from "@/components/interviews/InterviewDrawer";
+import type { ScoreSummary } from "@/lib/interviews/scorecard-summary";
 
 /**
  * Record an interview that already happened, with the notes pasted in.
@@ -34,7 +35,30 @@ export type InterviewView = {
   outcome: string | null;
   rating: number | null;
   nextStep: string | null;
+  /** The score line beside the Scorecard button. Optional: older callers do not pass it. */
+  scoreSummary?: ScoreSummary | null;
 };
+
+/**
+ * The four core value ratings, very small, beside the Scorecard button.
+ *
+ * His picks, Nov 16 2026: option A of four samples (full value names), at 8px,
+ * and ONLY the values: the recommendation and the points stay in the popup.
+ * Several interviewers: each value's average rating, rounded to the nearest step.
+ */
+function ScoreLine({ summary }: { summary: ScoreSummary }) {
+  if (summary.values.length === 0) return null;
+  return (
+    <span className="flex min-w-0 flex-1 flex-wrap items-center justify-start gap-x-1.5 gap-y-0 text-[8px] leading-tight text-brand-grey sm:justify-end dark:text-slate-400">
+      {summary.values.map((v, i) => (
+        <span key={v.name} className="whitespace-nowrap">
+          {i ? "· " : ""}
+          {v.name} <span className="font-semibold text-brand-lea dark:text-slate-100">{v.label}</span>
+        </span>
+      ))}
+    </span>
+  );
+}
 
 const label = "text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400";
 
@@ -550,13 +574,19 @@ function LoggedInterview({
             values + questions). Always visible, because this was the only way in
             that nobody could find. A real link, so ctrl-click still opens the
             full page in a new tab. */}
-        <InterviewDrawerLink
-          interviewId={interview.id}
-          onOpen={onOpen}
-          className="ml-auto inline-flex items-center gap-1 rounded border border-brand-lea/20 px-2 py-0.5 text-[11px] font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"
-        >
-          <ClipboardCheck className="h-3.5 w-3.5" /> Scorecard
-        </InterviewDrawerLink>
+        {/* The scores and the button travel together: the scores wrap onto a
+            second small line before the button would leave its place. */}
+        {/* Its own row on a phone (under the date); beside the title from sm up. */}
+        <span className="flex w-full min-w-0 items-center justify-between gap-2 sm:ml-auto sm:w-auto sm:flex-1 sm:justify-end">
+          {interview.scoreSummary ? <ScoreLine summary={interview.scoreSummary} /> : null}
+          <InterviewDrawerLink
+            interviewId={interview.id}
+            onOpen={onOpen}
+            className="inline-flex shrink-0 items-center gap-1 rounded border border-brand-lea/20 px-2 py-0.5 text-[11px] font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"
+          >
+            <ClipboardCheck className="h-3.5 w-3.5" /> Scorecard
+          </InterviewDrawerLink>
+        </span>
         {canEdit && (
           // Hover-revealed on a computer. A phone has no hover, so there they
           // are simply shown: hidden, they were unreachable AND still took up

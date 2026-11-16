@@ -311,6 +311,27 @@ export function GuideSession({ initial }: { initial: GuideView }) {
     }
   }
 
+  const draftRatings = guide.items.filter((i) => i.evaluationSource === "AI").length;
+  const draftValues = guide.items.filter((i) => i.valuesSource === "AI").length;
+  const [accepting, setAccepting] = useState(false);
+
+  // Make every remaining draft the interviewer's own, so "(draft)" goes.
+  async function acceptAll() {
+    setAccepting(true);
+    setEvalMessage(null);
+    try {
+      const res = await fetch(`/api/interview-guides/${guide.id}/accept`, { method: "POST" });
+      const out = (await res.json().catch(() => ({}))) as { message?: string; guide?: GuideView; ratings?: number; values?: number };
+      if (!res.ok || !out.guide) throw new Error(out.message ?? "Could not accept the suggestions.");
+      setGuide(out.guide);
+      setEvalMessage(`Accepted ${out.ratings ?? 0} rating${out.ratings === 1 ? "" : "s"} and ${out.values ?? 0} value call${out.values === 1 ? "" : "s"}. They are yours now.`);
+    } catch (caught) {
+      setEvalMessage(caught instanceof Error ? caught.message : "Could not accept the suggestions.");
+    } finally {
+      setAccepting(false);
+    }
+  }
+
   async function evaluate() {
     setEvaluating(true);
     setEvalMessage(null);
@@ -444,8 +465,19 @@ export function GuideSession({ initial }: { initial: GuideView }) {
           <Button onClick={evaluate} disabled={evaluating || answered === 0}>
             <Sparkles className="h-4 w-4" /> {evaluating ? "Evaluating…" : "Evaluate answers"}
           </Button>
+          {draftRatings + draftValues > 0 ? (
+            <Button variant="secondary" onClick={acceptAll} disabled={accepting || evaluating}>
+              <Check className="h-4 w-4" /> {accepting ? "Accepting…" : "Accept all draft suggestions"}
+            </Button>
+          ) : null}
           {evalMessage ? <span className="text-xs text-brand-grey dark:text-slate-400">{evalMessage}</span> : null}
         </div>
+        {draftRatings + draftValues > 0 ? (
+          <p className="mt-2 text-xs text-brand-grey dark:text-slate-400">
+            {draftRatings} rating{draftRatings === 1 ? "" : "s"} and {draftValues} value call{draftValues === 1 ? "" : "s"} are still drafts. Accepting
+            makes them yours; the evaluator leaves them alone after, and the &ldquo;(draft)&rdquo; label goes.
+          </p>
+        ) : null}
         <LearnedPanel refreshKey={`${learnTick}-${evalMessage ?? ""}`} />
       </section>
 

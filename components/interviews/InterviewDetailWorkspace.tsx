@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Pencil, Trash2, ClipboardCheck, Star, ChevronDown, ChevronRight, ClipboardList, ExternalLink } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, ClipboardCheck, Star, ChevronDown, ChevronRight, ClipboardList, ExternalLink, Check } from "lucide-react";
 import type { InterviewDetail, ScorecardView } from "@/lib/data/interview-detail";
 import {
   RATINGS,
@@ -488,10 +488,8 @@ export function InterviewGuidesBody({ detail }: { detail: InterviewDetail }) {
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <span className="font-semibold text-brand-lea dark:text-slate-100">{g.title}</span>
-              <span className="ml-2 text-xs text-brand-grey dark:text-slate-400">
-                {g.interviewer ? `${g.interviewer} · ` : ""}
-                {g.answered} of {g.items.length} answered
-              </span>
+              {/* No "N of M answered": skipping a question is often right (his call, Nov 16 2026). */}
+              {g.interviewer ? <span className="ml-2 text-xs text-brand-grey dark:text-slate-400">{g.interviewer}</span> : null}
             </div>
             <Link
               href={`/interview-questions/guides/${g.id}`}
@@ -518,22 +516,26 @@ export function InterviewGuidesBody({ detail }: { detail: InterviewDetail }) {
                         </span>
                       ) : null}
                     </div>
-                    {it.shownValues.length || it.removedValues.length ? (
-                      <p className="mt-1 text-[11px] text-brand-grey dark:text-slate-400">
-                        {it.shownValues.length ? (
-                          <>
-                            Also showed:{" "}
-                            <span className="font-semibold text-brand-lea dark:text-slate-100">{it.shownValues.map((k) => COMPANY_VALUES.find((v) => v.colorKey === k)?.name ?? k).join(", ")}</span>
-                          </>
-                        ) : null}
-                        {it.shownValues.length && it.removedValues.length ? " · " : null}
-                        {it.removedValues.length ? (
-                          <>
-                            Did not show:{" "}
-                            <span className="font-semibold text-brand-lea dark:text-slate-100">{it.removedValues.map((k) => COMPANY_VALUES.find((v) => v.colorKey === k)?.name ?? k).join(", ")}</span>
-                          </>
-                        ) : null}
-                        {it.valuesSource === "AI" ? " (draft)" : null}
+                    {/* The values this answer touched, as gold chips on the line under
+                        the question (his pick, Nov 16 2026); untouched values are not
+                        listed. "(draft)" until the interviewer accepts them. */}
+                    {it.values.length ? (
+                      <div className="mt-1 flex flex-wrap items-center gap-1">
+                        {it.values.map((k) => (
+                          <span
+                            key={k}
+                            className="inline-flex items-center gap-0.5 rounded border border-brand-gold/60 bg-brand-gold/15 px-1.5 py-0.5 text-[10px] font-semibold text-brand-lea dark:text-slate-100"
+                          >
+                            <Check className="h-2.5 w-2.5" />
+                            {COMPANY_VALUES.find((v) => v.colorKey === k)?.name ?? k}
+                          </span>
+                        ))}
+                        {it.valuesSource === "AI" ? <span className="text-[10px] text-brand-grey dark:text-slate-400">(draft)</span> : null}
+                      </div>
+                    ) : it.answer ? (
+                      // Answered, but no value ticked: say so, so a blank never reads as missing data.
+                      <p className="mt-1 text-[10px] text-brand-grey dark:text-slate-400">
+                        No core value shown{it.valuesSource === "AI" ? " (draft)" : ""}
                       </p>
                     ) : null}
                     {it.answer ? (
@@ -561,23 +563,25 @@ export function InterviewGuidesBody({ detail }: { detail: InterviewDetail }) {
 }
 
 /** Write-up and scorecards, both open, each collapsible. The drawer and the full page both render this. */
+/**
+ * Scorecards first, then the interview guides (his order, Nov 16 2026). The
+ * write-up is NOT in the popup: he opens it from the candidate's Interviews tab,
+ * where the write-up is already on the page. The full page (showWriteUp) keeps
+ * it, last, since a pasted link or a ctrl-click lands there with nothing else.
+ */
 export function InterviewBody({
   detail,
   onChanged,
-  onEditingChange
+  onEditingChange,
+  showWriteUp = false
 }: {
   detail: InterviewDetail;
   onChanged: () => void;
   onEditingChange?: (editing: boolean) => void;
+  showWriteUp?: boolean;
 }) {
   return (
     <div className="space-y-5">
-      <CollapsibleSection title="Write-up" badge={<OutcomeChip outcome={detail.outcome} />}>
-        <InterviewWriteUpBody detail={detail} />
-      </CollapsibleSection>
-      <CollapsibleSection title={`Interview guides (${detail.guides.length})`}>
-        <InterviewGuidesBody detail={detail} />
-      </CollapsibleSection>
       <CollapsibleSection
         title={`Scorecards (${detail.scorecards.length})`}
         badge={
@@ -588,6 +592,14 @@ export function InterviewBody({
       >
         <InterviewScorecards detail={detail} onChanged={onChanged} onEditingChange={onEditingChange} />
       </CollapsibleSection>
+      <CollapsibleSection title={`Interview guides (${detail.guides.length})`}>
+        <InterviewGuidesBody detail={detail} />
+      </CollapsibleSection>
+      {showWriteUp ? (
+        <CollapsibleSection title="Write-up" badge={<OutcomeChip outcome={detail.outcome} />}>
+          <InterviewWriteUpBody detail={detail} />
+        </CollapsibleSection>
+      ) : null}
     </div>
   );
 }
@@ -624,7 +636,7 @@ export function InterviewDetailWorkspace({ detail }: { detail: InterviewDetail }
         </div>
       </section>
 
-      <InterviewBody detail={detail} onChanged={() => router.refresh()} />
+      <InterviewBody detail={detail} onChanged={() => router.refresh()} showWriteUp />
     </div>
   );
 }
