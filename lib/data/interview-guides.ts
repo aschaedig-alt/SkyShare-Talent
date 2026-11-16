@@ -3,6 +3,7 @@ import type { Prisma } from "@/prisma/generated/client/client";
 import { parseStringArray } from "@/lib/json";
 import type { ViewerScope } from "@/lib/auth/viewer-scope";
 import { candidateScopeWhere, isCandidateVisible } from "@/lib/auth/candidate-scope";
+import { answerValues, valuesSetByHand } from "@/lib/interview-guides/values";
 import { isAnswerStrength, type AnswerStrength, type EvaluationSource } from "@/lib/interview-guides/constants";
 
 export type GuideItemView = {
@@ -12,8 +13,16 @@ export type GuideItemView = {
   category: string | null;
   /** The values the question was written for (from the bank, at save time). */
   coreValues: string[];
-  /** Values the answer showed beyond those, ticked during the interview. */
+  /** Values the answer showed beyond those ("also showed"). */
   shownValues: string[];
+  /** Asked values the answer did NOT show (unticked). */
+  removedValues: string[];
+  /** The answer's values: (coreValues - removedValues) + shownValues. See lib/interview-guides/values.ts. */
+  values: string[];
+  /** Who set the answer's values: AI (draft evaluator), INTERVIEWER, or null (left as the question's own). */
+  valuesSource: EvaluationSource | null;
+  /** The evaluator's one-line reason for its values. */
+  valuesNote: string | null;
   strongAnswer: string;
   listenFor: string;
   answer: string | null;
@@ -47,13 +56,26 @@ const guideInclude = {
 type GuideRow = Prisma.InterviewGuideGetPayload<{ include: typeof guideInclude }>;
 
 function toView(g: GuideRow): GuideView {
-  const items: GuideItemView[] = g.items.map((it) => ({
+  const items: GuideItemView[] = g.items.map((it) => {
+    const coreValues = parseStringArray(it.coreValuesJson);
+    const shownValues = parseStringArray(it.shownValuesJson);
+    const removedValues = parseStringArray(it.removedValuesJson);
+    return {
     id: it.id,
     questionId: it.questionId,
     text: it.text,
     category: it.category,
-    coreValues: parseStringArray(it.coreValuesJson),
-    shownValues: parseStringArray(it.shownValuesJson),
+    coreValues,
+    shownValues,
+    removedValues,
+    values: answerValues(coreValues, shownValues, removedValues),
+    valuesSource:
+      it.valuesSource === "AI" || it.valuesSource === "INTERVIEWER"
+        ? it.valuesSource
+        : valuesSetByHand(null, shownValues, removedValues)
+          ? "INTERVIEWER"
+          : null,
+    valuesNote: it.valuesNote,
     strongAnswer: it.strongAnswer ?? "",
     listenFor: it.listenFor ?? "",
     answer: it.answer,
@@ -61,7 +83,8 @@ function toView(g: GuideRow): GuideView {
     evaluationNote: it.evaluationNote,
     evaluationSource: it.evaluationSource === "AI" || it.evaluationSource === "INTERVIEWER" ? it.evaluationSource : null,
     evaluatedAt: it.evaluatedAt?.toISOString() ?? null
-  }));
+    };
+  });
   return {
     id: g.id,
     title: g.title,

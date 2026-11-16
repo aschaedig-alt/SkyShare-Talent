@@ -14,6 +14,8 @@ import { InterviewTabs } from "@/components/interview-questions/InterviewTabs";
 import { CATEGORY_LABELS } from "@/components/interview-questions/GuideBuilder";
 import { InterviewScorecards } from "@/components/interviews/InterviewDetailWorkspace";
 import { CoreValueChart } from "@/components/interview-guides/CoreValueChart";
+import { LearnedPanel } from "@/components/interview-guides/LearnedPanel";
+import { splitValues, VALUE_KEYS } from "@/lib/interview-guides/values";
 import { GuideLinkPicker, LINK_HINT, type PickedCandidate } from "@/components/interview-guides/GuideLinkPicker";
 import { TranscriptFillModal } from "@/components/interview-guides/TranscriptFillModal";
 import { Button } from "@/components/ui";
@@ -86,14 +88,15 @@ function QuestionCard({
     void patch({ answer: latest.current });
   }
 
-  function toggleShown(key: string) {
-    const next = item.shownValues.includes(key) ? item.shownValues.filter((k) => k !== key) : [...item.shownValues, key];
+  function toggleValue(key: string) {
+    const next = item.values.includes(key) ? item.values.filter((k) => k !== key) : [...item.values, key];
     // Shown at once; put back if the save fails, so the page never shows a
     // tick that is not saved.
-    const before = item.shownValues;
-    onSaved({ id: item.id, shownValues: next });
-    void patch({ shownValues: next }).then((ok) => {
-      if (!ok) onSaved({ id: item.id, shownValues: before });
+    const before = { values: item.values, shownValues: item.shownValues, removedValues: item.removedValues, valuesSource: item.valuesSource, valuesNote: item.valuesNote };
+    const { shown, removed } = splitValues(item.coreValues, next);
+    onSaved({ id: item.id, values: VALUE_KEYS.filter((k) => next.includes(k)), shownValues: shown, removedValues: removed, valuesSource: "INTERVIEWER", valuesNote: null });
+    void patch({ values: next }).then((ok) => {
+      if (!ok) onSaved({ id: item.id, ...before });
     });
   }
 
@@ -149,47 +152,57 @@ function QuestionCard({
             </span>
           </div>
 
-          {/* Option A, his pick Nov 16 2026: the four values as chips. The ones
-              the question was written for are lit and marked "asked"; tap any
-              other the answer showed and it is marked "also showed". */}
+          {/* The four values as chips (his pick, Nov 16 2026). Every chip
+              toggles: the question's own values start ticked and can be
+              unticked ("asked, not shown"); any other can be ticked ("also
+              showed"). The draft evaluator can set them too, marked as its
+              suggestion until he changes one. */}
           <div className="mt-3">
             <span className="text-xs font-semibold text-brand-lea dark:text-slate-100">Values this answer showed</span>
-            <span className="ml-1.5 text-[11px] text-brand-grey dark:text-slate-400">tap to add</span>
+            <span className="ml-1.5 text-[11px] text-brand-grey dark:text-slate-400">tap to change</span>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {COMPANY_VALUES.map((v) => {
                 const asked = item.coreValues.includes(v.colorKey);
-                const also = item.shownValues.includes(v.colorKey);
-                if (asked) {
-                  return (
-                    <span
-                      key={v.colorKey}
-                      title="The question was written for this value"
-                      className="rounded border border-brand-gold/60 bg-brand-gold/15 px-2.5 py-1 text-[11px] font-semibold text-brand-lea dark:text-slate-100"
-                    >
-                      {v.name} <span className="font-normal text-brand-grey dark:text-slate-400">· asked</span>
-                    </span>
-                  );
-                }
+                const on = item.values.includes(v.colorKey);
+                const label = asked ? (on ? "asked" : "asked, not shown") : on ? "also showed" : null;
+                const cls = on
+                  ? asked
+                    ? "border-brand-gold/70 bg-brand-gold/15 text-brand-lea dark:text-slate-100"
+                    : "border-brand-gold bg-brand-lea text-white"
+                  : asked
+                    ? "border-dashed border-brand-lea/30 text-brand-grey dark:border-white/20 dark:text-slate-500"
+                    : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400";
                 return (
                   <button
                     key={v.colorKey}
                     type="button"
-                    aria-pressed={also}
-                    onClick={() => toggleShown(v.colorKey)}
-                    title={also ? "Remove: the answer did not show this after all" : "The answer showed this value too"}
-                    className={`rounded border px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow ${
-                      also
-                        ? "border-brand-gold bg-brand-lea text-white"
-                        : "border-brand-lea/20 text-brand-grey hover:text-brand-lea dark:border-white/10 dark:text-slate-400"
-                    }`}
+                    aria-pressed={on}
+                    onClick={() => toggleValue(v.colorKey)}
+                    title={
+                      on
+                        ? "Untick: the answer did not show this value"
+                        : asked
+                          ? "Tick again: the answer did show this value"
+                          : "Tick: the answer showed this value too"
+                    }
+                    className={`rounded border px-2.5 py-1 text-[11px] font-semibold transition hover:shadow-glow ${cls}`}
                   >
-                    {also ? <Check className="mr-1 inline h-3 w-3 align-[-1px]" /> : <Plus className="mr-1 inline h-3 w-3 align-[-1px]" />}
-                    {v.name}
-                    {also ? <span className="font-normal text-white/75"> · also showed</span> : null}
+                    {on ? <Check className="mr-1 inline h-3 w-3 align-[-1px]" /> : <Plus className="mr-1 inline h-3 w-3 align-[-1px]" />}
+                    <span className={!on && asked ? "line-through" : undefined}>{v.name}</span>
+                    {label ? (
+                      <span className={`font-normal no-underline ${on && !asked ? "text-white/75" : "text-brand-grey dark:text-slate-400"}`}> · {label}</span>
+                    ) : null}
                   </button>
                 );
               })}
             </div>
+            {item.valuesSource === "AI" ? (
+              <p className="mt-1.5 text-[11px] text-brand-grey dark:text-slate-400">
+                <Sparkles className="mr-1 inline h-3 w-3 align-[-1px] text-brand-eden dark:text-brand-sweet" />
+                <span className="font-semibold text-brand-eden dark:text-brand-sweet">Draft suggestion</span>
+                {item.valuesNote ? ` — ${item.valuesNote}` : ""} Tap a value to change it; the evaluator learns from what you change.
+              </p>
+            ) : null}
           </div>
 
           <div className="mt-3">
@@ -221,7 +234,7 @@ function QuestionCard({
                 {item.evaluationSource === "AI" ? (
                   <>
                     <span className="font-semibold text-brand-eden dark:text-brand-sweet">Draft suggestion</span>
-                    {item.evaluationNote ? ` — ${item.evaluationNote}` : ""} Click a rating to set your own.
+                    {item.evaluationNote ? ` — ${item.evaluationNote}` : ""} Click a rating to set your own; the evaluator learns from what you change.
                   </>
                 ) : (
                   <span className="font-semibold text-brand-lea dark:text-slate-100">Your rating. The draft evaluator leaves it alone.</span>
@@ -267,11 +280,15 @@ export function GuideSession({ initial }: { initial: GuideView }) {
   const [evaluating, setEvaluating] = useState(false);
   const [evalMessage, setEvalMessage] = useState<string | null>(null);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
+  // Bumped on every save, so the "what it has learned" count re-reads after a
+  // correction is recorded.
+  const [learnTick, setLearnTick] = useState(0);
 
   const answered = guide.items.filter((i) => (i.answer ?? "").replace(/<[^>]*>/g, "").trim()).length;
 
   function onItemSaved(next: Partial<GuideItemView> & { id: string }) {
     setGuide((g) => ({ ...g, items: g.items.map((it) => (it.id === next.id ? { ...it, ...next } : it)) }));
+    setLearnTick((n) => n + 1);
   }
 
   async function saveLink() {
@@ -299,10 +316,13 @@ export function GuideSession({ initial }: { initial: GuideView }) {
     setEvalMessage(null);
     try {
       const res = await fetch(`/api/interview-guides/${guide.id}/evaluate`, { method: "POST" });
-      const out = (await res.json().catch(() => ({}))) as { message?: string; judged?: number; guide?: GuideView };
+      const out = (await res.json().catch(() => ({}))) as { message?: string; judged?: number; lessonsUsed?: number; guide?: GuideView };
       if (!res.ok || !out.guide) throw new Error(out.message ?? "Could not evaluate the answers.");
       setGuide(out.guide);
-      setEvalMessage(`Suggested a rating for ${out.judged} answer${out.judged === 1 ? "" : "s"}.`);
+      setEvalMessage(
+        `Suggested a rating and values for ${out.judged} answer${out.judged === 1 ? "" : "s"}` +
+          (out.lessonsUsed ? `, following ${out.lessonsUsed} of your past correction${out.lessonsUsed === 1 ? "" : "s"}.` : ".")
+      );
     } catch (caught) {
       setEvalMessage(caught instanceof Error ? caught.message : "Could not evaluate the answers.");
     } finally {
@@ -410,9 +430,15 @@ export function GuideSession({ initial }: { initial: GuideView }) {
           <Sparkles className="h-3.5 w-3.5" /> Evaluate the answers (draft)
         </h2>
         <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
-          Reads each answer you typed against the question&apos;s Strong answer and Listen for notes and suggests Strong,
-          Adequate, Weak or Did not answer, with a one-line reason. It is a first version and not tuned yet: it judges your
-          notes, not the interview itself, so short notes can read as weak answers. Ratings you set yourself are never changed.
+          Reads each question and answer and suggests two things: a rating (Strong, Adequate, Weak or Did not answer) and
+          which core values the answer actually showed, unticking a value the question was written for if the answer did
+          not show it and adding any other it did, each with a one-line reason. Anything you set yourself is never changed.
+          It judges the answer notes, not the interview itself, so short notes can read as weak answers.
+        </p>
+        <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
+          <b className="font-semibold text-brand-lea dark:text-slate-100">It learns from you:</b> when you change a rating or
+          a value it suggested, that correction is saved, and on later runs it is shown your most recent corrections as
+          examples to follow. It is not retrained; remove a correction below and it is forgotten.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <Button onClick={evaluate} disabled={evaluating || answered === 0}>
@@ -420,6 +446,7 @@ export function GuideSession({ initial }: { initial: GuideView }) {
           </Button>
           {evalMessage ? <span className="text-xs text-brand-grey dark:text-slate-400">{evalMessage}</span> : null}
         </div>
+        <LearnedPanel refreshKey={`${learnTick}-${evalMessage ?? ""}`} />
       </section>
 
       {/* Core values */}

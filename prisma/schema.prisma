@@ -1631,6 +1631,15 @@ model InterviewGuideItem {
   // ticked by the interviewer during the interview (JSON array of colorKeys).
   // The question's own values stay in coreValuesJson; this holds only extras.
   shownValuesJson  String?
+  // Values the question was written for that the interviewer (or the draft
+  // evaluator) unticked: the answer did not show them. JSON array of colorKeys.
+  // The answer's values are (coreValuesJson - removedValuesJson) + shownValuesJson.
+  removedValuesJson String?
+  // Who last set the two lists above: AI (the draft evaluator) | INTERVIEWER.
+  // Null with either list set means the interviewer (rows from before Nov 16).
+  valuesSource     String?
+  // The evaluator's one-line reason for the values it picked.
+  valuesNote       String?
   strongAnswer     String?
   listenFor        String?
   // What the candidate said. Stored rich-note format (lib/richtext/stored.ts).
@@ -1648,6 +1657,34 @@ model InterviewGuideItem {
   guide            InterviewGuide @relation(fields: [guideId], references: [id], onDelete: Cascade)
 
   @@index([guideId])
+}
+
+// A correction the interviewer made to the draft answer evaluator: what it said
+// and what the interviewer changed it to. The evaluator reads the most recent
+// active ones as worked examples on its next run, which is how it "learns" from
+// him (Nov 16 2026: "When I change things over time, it learns what I changed").
+// It is not model training: remove a row (active = false) and it is forgotten.
+// guideId/itemId are plain pointers, no foreign key, so a lesson outlives the
+// guide it came from. The question and answer are copied as plain text.
+model InterviewEvalCorrection {
+  id           String   @id @default(cuid())
+  // STRENGTH (the Strong/Adequate/Weak rating) | VALUES (which core values it showed)
+  kind         String
+  guideId      String?
+  itemId       String?
+  questionText String
+  answerText   String
+  askedJson    String?  // the values the question was written for
+  aiValue      String   // the evaluator's call: a strength, or a JSON array of colorKeys
+  humanValue   String   // the interviewer's call, same shape
+  aiNote       String?
+  active       Boolean  @default(true)
+  createdBy    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([active, updatedAt])
+  @@index([itemId, kind])
 }
 
 model GoogleCalendarConnection {

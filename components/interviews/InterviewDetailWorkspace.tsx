@@ -518,12 +518,22 @@ export function InterviewGuidesBody({ detail }: { detail: InterviewDetail }) {
                         </span>
                       ) : null}
                     </div>
-                    {it.shownValues.length ? (
+                    {it.shownValues.length || it.removedValues.length ? (
                       <p className="mt-1 text-[11px] text-brand-grey dark:text-slate-400">
-                        Also showed:{" "}
-                        <span className="font-semibold text-brand-lea dark:text-slate-100">
-                          {it.shownValues.map((k) => COMPANY_VALUES.find((v) => v.colorKey === k)?.name ?? k).join(", ")}
-                        </span>
+                        {it.shownValues.length ? (
+                          <>
+                            Also showed:{" "}
+                            <span className="font-semibold text-brand-lea dark:text-slate-100">{it.shownValues.map((k) => COMPANY_VALUES.find((v) => v.colorKey === k)?.name ?? k).join(", ")}</span>
+                          </>
+                        ) : null}
+                        {it.shownValues.length && it.removedValues.length ? " · " : null}
+                        {it.removedValues.length ? (
+                          <>
+                            Did not show:{" "}
+                            <span className="font-semibold text-brand-lea dark:text-slate-100">{it.removedValues.map((k) => COMPANY_VALUES.find((v) => v.colorKey === k)?.name ?? k).join(", ")}</span>
+                          </>
+                        ) : null}
+                        {it.valuesSource === "AI" ? " (draft)" : null}
                       </p>
                     ) : null}
                     {it.answer ? (

@@ -5,11 +5,19 @@ import { requireApiUser, authFailureResponse } from "@/lib/auth/route-auth";
 import { guideItemUpdateSchema } from "@/lib/validation/interview-guide";
 import { resolveGuideWrite } from "@/lib/interview-guides/access.server";
 import { parseStringArray } from "@/lib/json";
+import { answerValues, splitValues, VALUE_KEYS } from "@/lib/interview-guides/values";
+import { recordCorrection } from "@/lib/interview-guides/learning.server";
 
 /**
- * Save one question's answer, or set its judgement by hand. A judgement set
- * here is marked INTERVIEWER, and the draft judge never overwrites those.
- * Editing the ANSWER clears an AI judgement, since it judged the old words.
+ * Save one question's answer, set its rating by hand, or set which core values
+ * the answer showed. Anything set here is marked INTERVIEWER, and the draft
+ * evaluator never overwrites those.
+ *
+ * Editing the ANSWER clears whatever the evaluator said about it (rating and
+ * values), since it judged the old words.
+ *
+ * Changing a call the evaluator made is recorded as a lesson it reads on later
+ * runs (lib/interview-guides/learning.server.ts).
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string; itemId: string }> }) {
   const auth = await requireApiUser();
@@ -23,6 +31,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const item = await prisma.interviewGuideItem.findFirst({ where: { id: itemId, guideId: id } });
     if (!item) return NextResponse.json({ message: "Question not found on this guide." }, { status: 404 });
 
+    const asked = parseStringArray(item.coreValuesJson);
+    const shownBefore = parseStringArray(item.shownValuesJson);
+    const removedBefore = parseStringArray(item.removedValuesJson);
+    const valuesBefore = answerValues(asked, shownBefore, removedBefore);
+
     const update: {
       answer?: string | null;
       strength?: string | null;
@@ -30,16 +43,29 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       evaluationSource?: string | null;
       evaluatedAt?: Date | null;
       shownValuesJson?: string | null;
+      removedValuesJson?: string | null;
+      valuesSource?: string | null;
+      valuesNote?: string | null;
     } = {};
+
     if (data.answer !== undefined) {
       update.answer = data.answer;
-      if ((data.answer ?? "") !== (item.answer ?? "") && item.evaluationSource === "AI") {
-        update.strength = null;
-        update.evaluationNote = null;
-        update.evaluationSource = null;
-        update.evaluatedAt = null;
+      if ((data.answer ?? "") !== (item.answer ?? "")) {
+        if (item.evaluationSource === "AI") {
+          update.strength = null;
+          update.evaluationNote = null;
+          update.evaluationSource = null;
+          update.evaluatedAt = null;
+        }
+        if (item.valuesSource === "AI") {
+          update.shownValuesJson = null;
+          update.removedValuesJson = null;
+          update.valuesSource = null;
+          update.valuesNote = null;
+        }
       }
     }
+
     if (data.strength !== undefined) {
       update.strength = data.strength;
       update.evaluationSource = data.strength ? "INTERVIEWER" : null;
@@ -48,14 +74,59 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       if (data.evaluationNote === undefined && item.evaluationSource === "AI") update.evaluationNote = null;
     }
     if (data.evaluationNote !== undefined) update.evaluationNote = data.evaluationNote?.trim() || null;
-    if (data.shownValues !== undefined) {
-      const asked = new Set(parseStringArray(item.coreValuesJson));
-      const extra = [...new Set(data.shownValues)].filter((v) => !asked.has(v));
-      update.shownValuesJson = extra.length ? JSON.stringify(extra) : null;
+
+    // The answer's values: `values` is the whole set (lets an asked value be
+    // unticked); `shownValues` is the older extras-only form, still accepted.
+    let valuesAfter: string[] | null = null;
+    if (data.values !== undefined) {
+      const picked = new Set<string>(data.values);
+      valuesAfter = VALUE_KEYS.filter((k) => picked.has(k));
+    } else if (data.shownValues !== undefined) {
+      valuesAfter = answerValues(asked, data.shownValues, removedBefore);
+    }
+    if (valuesAfter) {
+      const { shown, removed } = splitValues(asked, valuesAfter);
+      update.shownValuesJson = shown.length ? JSON.stringify(shown) : null;
+      update.removedValuesJson = removed.length ? JSON.stringify(removed) : null;
+      update.valuesSource = "INTERVIEWER";
+      if (item.valuesSource === "AI") update.valuesNote = null;
     }
 
     const saved = await prisma.interviewGuideItem.update({ where: { id: itemId }, data: update });
     await prisma.interviewGuide.update({ where: { id }, data: { updatedAt: new Date() } });
+
+    // Lessons for the evaluator. Best effort: a failure here must not lose the save.
+    try {
+      if (data.strength !== undefined && (item.evaluationSource === "AI" || item.evaluationSource === "INTERVIEWER")) {
+        await recordCorrection({
+          kind: "STRENGTH",
+          item: saved,
+          fromAi: item.evaluationSource === "AI",
+          aiValue: item.strength ?? "NONE",
+          aiNote: item.evaluationNote,
+          humanValue: data.strength ?? "NONE",
+          createdBy: auth.user.email
+        });
+      }
+      // From AI: a new lesson. Already the interviewer's: updates a lesson only
+      // if one exists for this answer (recordCorrection never creates then).
+      if (valuesAfter && (item.valuesSource === "AI" || item.valuesSource === "INTERVIEWER")) {
+        await recordCorrection({
+          kind: "VALUES",
+          item: saved,
+          fromAi: item.valuesSource === "AI",
+          aiValue: JSON.stringify(valuesBefore),
+          aiNote: item.valuesNote,
+          humanValue: JSON.stringify(valuesAfter),
+          createdBy: auth.user.email
+        });
+      }
+    } catch (lessonError) {
+      console.error("Recording an evaluator lesson failed:", lessonError);
+    }
+
+    const shown = parseStringArray(saved.shownValuesJson);
+    const removed = parseStringArray(saved.removedValuesJson);
     return NextResponse.json({
       ok: true,
       item: {
@@ -65,7 +136,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         evaluationNote: saved.evaluationNote,
         evaluationSource: saved.evaluationSource,
         evaluatedAt: saved.evaluatedAt?.toISOString() ?? null,
-        shownValues: parseStringArray(saved.shownValuesJson)
+        shownValues: shown,
+        removedValues: removed,
+        values: answerValues(asked, shown, removed),
+        valuesSource: saved.valuesSource,
+        valuesNote: saved.valuesNote
       }
     });
   } catch (error) {

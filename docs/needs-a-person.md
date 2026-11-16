@@ -1384,6 +1384,34 @@ same task shows the same state on the desktop grid.
 
 ---
 
+### 68. The evaluator's value calls and its learning have only been tried on a made-up guide
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-11-16
+
+On a guide's page, every core value chip now ticks and unticks (a question's own value can
+be unticked: "asked, not shown"); **Evaluate answers** suggests which values each answer
+showed as well as its rating; and when you change a rating or a value it suggested, that
+correction is saved and shown to it as an example on later runs. A **What it has learned
+from you** list under the button shows each correction with an × to forget it. Checked by
+the session on localhost against a throwaway guide with made-up answers: untick by hand,
+evaluate (it unticked Fueled by Passion on "tell me about yourself" and added Deliver the
+Wow and Team Alignment, each with a reason, and left hand-set values alone), two
+corrections stored, a second run reported using both, a chip tapped in the browser became a
+third, and the × forgot it. The guide and all three test corrections were then deleted, so
+the live evaluator has learned nothing yet. NOT checked: a real interview's answers, whether
+the corrections actually change its later calls in a way he agrees with (that takes several
+real interviews), and the page in dark mode.
+
+**How to check it:** after a real interview, press Evaluate answers, change any value or
+rating you disagree with, then open What it has learned from you. On the next interview's
+guide, press Evaluate answers again and see whether it makes the same mistake.
+
+**What would count as a pass:** your corrections are listed in plain words; later
+evaluations follow them on similar answers; nothing you set yourself was changed by it.
+
+---
+
 ### 67. "Fill from transcript" on an interview guide has never been saved through, or opened on a phone
 
 **Status:** OPEN

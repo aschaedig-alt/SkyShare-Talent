@@ -247,8 +247,10 @@ export function CoreValueChart({ items }: { items: GuideItemView[] }) {
       const also: number[] = [];
       items.forEach((it, i) => {
         if (!answeredOf(it)) return;
+        // it.values already drops asked values that were unticked.
+        if (!it.values.includes(v.colorKey)) return;
         if (it.coreValues.includes(v.colorKey)) asked.push(i + 1);
-        else if (it.shownValues.includes(v.colorKey)) also.push(i + 1);
+        else also.push(i + 1);
       });
       return { key: v.colorKey, name: v.name, color: HEX[v.colorKey] ?? "#888780", asked, also, total: asked.length + also.length };
     });

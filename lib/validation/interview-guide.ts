@@ -29,5 +29,9 @@ export const guideItemUpdateSchema = z.object({
   evaluationNote: z.string().trim().max(1000).nullable().optional(),
   // Core values this answer showed BEYOND the question's own (ticked during the
   // interview). The route drops any that the question was already written for.
-  shownValues: z.array(z.enum(CORE_VALUE_KEYS)).max(10).optional()
+  shownValues: z.array(z.enum(CORE_VALUE_KEYS)).max(10).optional(),
+  // The answer's WHOLE set of values, ticked or unticked, including the
+  // question's own (Nov 16 2026: an asked value can be unticked). Preferred
+  // over shownValues; when both are sent this one wins.
+  values: z.array(z.enum(CORE_VALUE_KEYS)).max(10).optional()
 });
