@@ -1384,6 +1384,26 @@ same task shows the same state on the desktop grid.
 
 ---
 
+### 71. Nobody has changed a candidate's status from Recent interviews yet
+
+**Status:** OPEN — deployed 2026-11-16 (d551076)
+**Added:** 2026-11-16
+
+From Aimee's feedback cmwjv67c: Candidates > Recent interviews now has a Status column with
+the same dropdown as the Candidates list, saving through the same route and shown only to
+admins and recruiters (others see a plain pill). Checked by the session over HTTP on local
+dev: the page loads, 11 dropdowns for 11 candidates, each showing its current stage. NOT
+checked: changing a stage from the new dropdown (local dev writes the live database), and
+the page on a phone (it already scrolled sideways there, and is now one column wider).
+
+**How to check it:** on Recent interviews, change one candidate's status from the dropdown,
+then open their profile.
+
+**What would count as a pass:** the new status shows on the row after a reload and on their
+profile, the same as a change made from the Candidates list.
+
+---
+
 ### 70. A question marked "Not asked" has not been seen in the interview popup, or in dark mode
 
 **Status:** OPEN — deployed 2026-11-16 (caf0f9f)
