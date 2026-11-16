@@ -1466,37 +1466,6 @@ read on its next run. Whether it follows them is still to be seen on the next in
 
 ---
 
-### 67. "Fill from transcript" on an interview guide has never been saved through, or opened on a phone
-
-**Status:** OPEN
-**Added:** 2026-11-16
-
-The guide page has a **Fill from transcript** button: paste the interview transcript and
-each question's answer is drafted in the candidate's own words, cleaned up, then shown in
-a preview to tick, edit and save. Checked by the session: the drafting itself, on her real
-"Interview Guide - PDP" questions with a made-up transcript, both directly and through the
-live route on localhost (10 questions back, the 5 asked answered in first person with filler
-removed and a follow-up folded in, a mention of a wife and new baby left out, the 5 not asked
-left blank). NOT checked: pressing Save in the dialog (it writes to the live database, and no
-real guide was touched), a REAL Granola transcript (the Granola connector does not hand out
-transcripts on her plan), and the dialog on a phone or in dark mode.
-
-**How to check it:** after a real interview, open its guide, press Fill from transcript, paste
-the whole Granola transcript, look over the drafts, save them, then press Evaluate answers.
-
-**What would count as a pass:** each saved answer sits under the right question after a
-reload, reads like the candidate said it, adds nothing they did not say, and an answer you
-had already typed was only replaced where you ticked it.
-
-**Update 2026-11-16 (commit agent, read-only on the live database):** Chase Anderson's
-"Interview Guide - PDP" now holds answers on all 10 questions and a rating on 8, set by
-Evaluate answers, last changed 20:40 UTC; at 19:48 UTC it had none. So answers have been
-saved through for real on one guide. Not known from the data: whether they came through Fill
-from transcript or were typed, and whether they read right. The phone and dark mode checks are
-still open.
-
----
-
 ### 66. No interview guide has been used on a real interview yet, and none has been seen in dark mode
 
 **Status:** OPEN
@@ -1534,6 +1503,38 @@ to end; dark mode is what is left.
 ---
 
 ## Closed
+
+### 67. "Fill from transcript" on an interview guide has never been saved through, or opened on a phone
+
+**Status:** CLOSED
+**Closed:** 2026-11-16, by him: "close item 67. its working"
+**Added:** 2026-11-16
+
+The guide page has a **Fill from transcript** button: paste the interview transcript and
+each question's answer is drafted in the candidate's own words, cleaned up, then shown in
+a preview to tick, edit and save. Checked by the session: the drafting itself, on her real
+"Interview Guide - PDP" questions with a made-up transcript, both directly and through the
+live route on localhost (10 questions back, the 5 asked answered in first person with filler
+removed and a follow-up folded in, a mention of a wife and new baby left out, the 5 not asked
+left blank). NOT checked: pressing Save in the dialog (it writes to the live database, and no
+real guide was touched), a REAL Granola transcript (the Granola connector does not hand out
+transcripts on her plan), and the dialog on a phone or in dark mode.
+
+**How to check it:** after a real interview, open its guide, press Fill from transcript, paste
+the whole Granola transcript, look over the drafts, save them, then press Evaluate answers.
+
+**What would count as a pass:** each saved answer sits under the right question after a
+reload, reads like the candidate said it, adds nothing they did not say, and an answer you
+had already typed was only replaced where you ticked it.
+
+**Update 2026-11-16 (commit agent, read-only on the live database):** Chase Anderson's
+"Interview Guide - PDP" now holds answers on all 10 questions and a rating on 8, set by
+Evaluate answers, last changed 20:40 UTC; at 19:48 UTC it had none. So answers have been
+saved through for real on one guide. Not known from the data: whether they came through Fill
+from transcript or were typed, and whether they read right. The phone and dark mode checks are
+still open.
+
+---
 
 ### 64. Nobody has bulk-sent manager check-ins yet
 
