@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight, ExternalLink, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, Printer, X } from "lucide-react";
 import type { InterviewDetail } from "@/lib/data/interview-detail";
 import { InterviewBody } from "@/components/interviews/InterviewDetailWorkspace";
 import { useDialogClose } from "@/lib/hooks/useDialogClose";
@@ -248,6 +248,14 @@ export function InterviewDrawer({
                 </button>
               </>
             ) : null}
+            {/* The interview laid out for paper: print, or save as a PDF (Nov 17 2026). New tab, so the popup stays. */}
+            <Link
+              href={`/interviews/${interviewId}/print`}
+              target="_blank"
+              className="ml-1 inline-flex items-center gap-1 rounded border border-brand-lea/20 px-2 py-1 text-[11px] font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"
+            >
+              <Printer className="h-3.5 w-3.5" /> PDF
+            </Link>
             <Link
               href={`/interviews/${interviewId}`}
               className="ml-1 inline-flex items-center gap-1 rounded border border-brand-lea/20 px-2 py-1 text-[11px] font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"

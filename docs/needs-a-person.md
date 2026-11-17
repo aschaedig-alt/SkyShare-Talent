@@ -1384,6 +1384,30 @@ same task shows the same state on the desktop grid.
 
 ---
 
+### 73. The interview PDF has only been printed by the session, headlessly, for one candidate
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-11-17
+
+An interview can be printed or saved as a PDF: **PDF** in the interview popup (new tab) or
+**Print or save as PDF** on the full interview page opens /interviews/&lt;id&gt;/print, a Letter
+sheet with Include checkboxes (All, Scorecard, Interview notes, Interview guide; all on).
+Page 1 is the header, the scorecard and the notes, with the notes' text shrunk (never below
+8px) until they fit; the guide's asked questions start on page 2, Not asked ones left out.
+Checked by the session on Chase Anderson only, by printing the page with headless Chrome
+and reading the text of each page (4 pages; notes fitted at 10px; page 2 opens with the
+questions), and by clicking every checkbox combination in Chrome. NOT checked: the print
+dialog itself (Save as PDF and a real printer), a write-up long enough to hit the 8px floor,
+an interview with more than one scorecard, and a phone.
+
+**How to check it:** open an interview's popup, press **PDF**, then **Print or save as PDF**,
+choose Save as PDF, and open the file. Try it once with a long write-up.
+
+**What would count as a pass:** page 1 holds the header, scorecard and notes; questions
+start on page 2; nothing is cut off; the file is named after the candidate and interview.
+
+---
+
 ### 72. Saved guides: nobody has saved, edited, used or added one yet
 
 **Status:** OPEN — deployed 2026-11-16 (92dada5)
