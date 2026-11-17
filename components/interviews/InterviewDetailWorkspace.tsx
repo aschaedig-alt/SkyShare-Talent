@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Pencil, Trash2, ClipboardCheck, Star, ChevronDown, ChevronRight, ClipboardList, ExternalLink, Check } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, ClipboardCheck, Star, ChevronDown, ChevronRight, ExternalLink, Check } from "lucide-react";
 import type { InterviewDetail, ScorecardView } from "@/lib/data/interview-detail";
 import {
   RATINGS,
@@ -28,6 +28,7 @@ import { interviewOutcomeLabel, interviewOutcomeTone } from "@/lib/interviews/co
 import { questionHtml, questionPlain } from "@/lib/interview-questions/rich";
 import { STRENGTH_LABEL, strengthTone } from "@/lib/interview-guides/constants";
 import { COMPANY_VALUES } from "@/lib/compliments/constants";
+import { AddSavedGuide } from "@/components/interview-guides/AddSavedGuide";
 
 function recoTone(key: RecommendationKey): string {
   switch (key) {
@@ -480,7 +481,6 @@ export function OutcomeChip({ outcome }: { outcome: string | null }) {
  * (Nov 16 2026). Questions with no answer are listed so a gap is visible.
  */
 export function InterviewGuidesBody({ detail }: { detail: InterviewDetail }) {
-  const build = `/interview-questions/guide?interviewId=${encodeURIComponent(detail.id)}`;
   return (
     <div className="space-y-3">
       {detail.guides.map((g) => (
@@ -561,12 +561,10 @@ export function InterviewGuidesBody({ detail }: { detail: InterviewDetail }) {
           </ol>
         </div>
       ))}
-      <Link
-        href={build}
-        className="inline-flex items-center gap-1.5 rounded border border-brand-lea/20 px-3 py-2 text-sm font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"
-      >
-        <ClipboardList className="h-4 w-4" /> {detail.guides.length ? "Build another guide for this interview" : "Build a guide for this interview"}
-      </Link>
+      {/* Pick a saved guide for this interview (Aimee, Nov 16 2026: "i save a
+          guide then i choose which guide i want to add to the interview"). The
+          picker also carries the "Build a new guide" link. */}
+      <AddSavedGuide interviewId={detail.id} hasGuides={detail.guides.length > 0} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Wand2, Copy, Check, ChevronUp, ChevronDown, X, Search, Save, ListChecks, Shuffle } from "lucide-react";
@@ -13,14 +13,7 @@ import { RichTextView } from "@/components/richtext/RichTextEditor";
 import { questionHtml, questionPlain } from "@/lib/interview-questions/rich";
 import { GuidanceBlocks } from "@/components/interview-questions/GuidanceBlocks";
 import { CoreValueTally } from "@/components/interview-guides/CoreValueTally";
-import {
-  CONTROL_CLS,
-  FIELD_CLS,
-  FIELD_LABEL_CLS,
-  GuideLinkPicker,
-  LINK_HINT,
-  type PickedCandidate
-} from "@/components/interview-guides/GuideLinkPicker";
+import { CONTROL_CLS, FIELD_CLS, FIELD_LABEL_CLS, type PickedCandidate } from "@/components/interview-guides/GuideLinkPicker";
 
 // Build an interview guide — rebuilt Nov 16 2026 after he ran a pilot interview
 // with it. What he asked for:
@@ -30,6 +23,12 @@ import {
 //   - save the guide for that interview, linked to the candidate, so answers
 //     can be typed in against each question (the guide page) and the guide
 //     shows on the candidate's interview.
+//
+// Reworked the same evening after Aimee asked for it (feedback, Nov 16 2026):
+//   "i save a guide then i choose which guide i want to add to the interview."
+// So saving here makes a SAVED guide (reusable, on nobody), and the same
+// builder edits one (the editing prop). Arriving from an interview still lets
+// you add a one-off straight to it, or save it and add it in one go.
 
 export const CATEGORY_LABELS: Record<string, string> = {
   BEHAVIORAL: "Behavioral",
@@ -97,7 +96,9 @@ export function GuideBuilder({
   questions,
   initialPick = [],
   initialCandidate = null,
-  initialInterviewId = null
+  initialInterviewId = null,
+  editing = null,
+  top = null
 }: {
   questions: InterviewQuestionItem[];
   /** Question ids ticked in the question bank (?q=). */
@@ -105,25 +106,31 @@ export function GuideBuilder({
   /** Arriving from an interview's "Build a guide" link. */
   initialCandidate?: PickedCandidate | null;
   initialInterviewId?: string | null;
+  /** Editing an existing SAVED guide rather than making a new one. */
+  editing?: { id: string; title: string; departmentKey: string | null } | null;
+  /** Shown under the tabs (the saved guide's "Use for an interview" panel). */
+  top?: ReactNode;
 }) {
   const router = useRouter();
   const active = useMemo(() => questions.filter((q) => q.isActive), [questions]);
   const byId = useMemo(() => new Map(questions.map((q) => [q.id, q])), [questions]);
 
   const [picked, setPicked] = useState<string[]>(() => [...new Set(initialPick)].filter((id) => byId.has(id)));
-  const [dept, setDept] = useState("all");
+  const [dept, setDept] = useState(editing?.departmentKey ?? "all");
   const [values, setValues] = useState<Set<string>>(new Set());
   const [countText, setCountText] = useState("8");
   const [search, setSearch] = useState("");
   const [shortNote, setShortNote] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const [candidate, setCandidate] = useState<PickedCandidate | null>(initialCandidate);
-  const [interviewId, setInterviewId] = useState<string | null>(initialInterviewId);
+  // Only set when you arrived from an interview's "Build a new guide" link.
+  const candidate: PickedCandidate | null = !editing && initialInterviewId ? initialCandidate : null;
+  const interviewId = candidate ? initialInterviewId : null;
   const [interviewer, setInterviewer] = useState("");
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(editing?.title ?? "");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedNote, setSavedNote] = useState<string | null>(null);
 
   const pickedSet = new Set(picked);
   const guide = picked.map((id) => byId.get(id)).filter((q): q is InterviewQuestionItem => Boolean(q));
@@ -195,25 +202,60 @@ export function GuideBuilder({
     }
   }
 
-  async function save() {
+  async function send(url: string, method: "POST" | "PUT", body: unknown): Promise<{ id?: string }> {
+    const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const out = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
+    if (!res.ok) throw new Error(out.message ?? "Could not save the guide.");
+    return out;
+  }
+
+  /**
+   *   "saved"      a new SAVED guide (reusable), then open it
+   *   "saved+use"  a new saved guide, then use it for the interview you came from
+   *   "once"       straight onto the interview you came from, nothing saved
+   *   "edit"       save changes to the saved guide being edited
+   */
+  async function save(kind: "saved" | "saved+use" | "once" | "edit") {
+    const name = title.trim();
+    if (kind !== "once" && !name) {
+      setSaveError("Give the guide a name, so you can pick it for an interview later.");
+      return;
+    }
     setSaving(true);
     setSaveError(null);
+    setSavedNote(null);
+    const departmentKey = dept === "all" ? null : dept;
     try {
-      const res = await fetch("/api/interview-guides", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      if (kind === "edit" && editing) {
+        await send(`/api/interview-guides/${editing.id}/questions`, "PUT", { questionIds: picked, title: name, departmentKey });
+        setSavedNote("Saved. Interviews it was already used for keep the questions they had.");
+        setSaving(false);
+        router.refresh();
+        return;
+      }
+      if (kind === "once") {
+        const out = await send("/api/interview-guides", "POST", {
           questionIds: picked,
           candidateId: candidate?.id ?? null,
           interviewId,
           interviewer: interviewer.trim() || null,
-          title: title.trim() || undefined,
-          departmentKey: dept === "all" ? null : dept
-        })
-      });
-      const body = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
-      if (!res.ok || !body.id) throw new Error(body.message ?? "Could not save the guide.");
-      router.push(`/interview-questions/guides/${body.id}`);
+          title: name || undefined,
+          departmentKey
+        });
+        router.push(`/interview-questions/guides/${out.id}`);
+        return;
+      }
+      const made = await send("/api/interview-guides", "POST", { questionIds: picked, title: name, departmentKey, asTemplate: true });
+      if (kind === "saved+use") {
+        const used = await send(`/api/interview-guides/${made.id}/use`, "POST", {
+          candidateId: candidate?.id ?? null,
+          interviewId,
+          interviewer: interviewer.trim() || null
+        });
+        router.push(`/interview-questions/guides/${used.id}`);
+        return;
+      }
+      router.push(`/interview-questions/guides/${made.id}`);
     } catch (caught) {
       setSaveError(caught instanceof Error ? caught.message : "Could not save the guide.");
       setSaving(false);
@@ -228,15 +270,18 @@ export function GuideBuilder({
       <section className="overflow-hidden rounded bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Interview &amp; evaluation</p>
         <h1 className="mt-0.5 flex items-center gap-2 text-2xl font-semibold text-white sm:text-3xl">
-          <Wand2 className="h-7 w-7 shrink-0" /> Build an interview guide
+          <Wand2 className="h-7 w-7 shrink-0" /> {editing ? `Edit ${editing.title}` : "Build an interview guide"}
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-white/75">
-          Pick the questions you want, generate a random set, or both. Save it for the candidate&apos;s interview and you
-          get a page to type each answer into, which then shows on their interview.
+          {editing
+            ? "Add, remove or reorder questions, or rename the guide. Interviews it was already used for keep the questions they had."
+            : "Pick the questions you want, generate a random set, or both. Save it as a guide, then pick it for each interview."}
         </p>
       </section>
 
-      <InterviewTabs active="guide" />
+      <InterviewTabs active={editing ? "saved" : "guide"} />
+
+      {top}
 
       {/* Coverage of the four core values by what is picked. Stays in view while
           ticking down the bank on a computer; on a phone it scrolls with the
@@ -434,37 +479,48 @@ export function GuideBuilder({
 
           <section className={panelCls}>
             <h2 className={`${headCls} flex items-center gap-1.5`}>
-              <Save className="h-3.5 w-3.5" /> Save for an interview
+              <Save className="h-3.5 w-3.5" /> {editing ? "Save changes" : candidate ? `For ${candidate.displayName}'s interview` : "Save guide"}
             </h2>
             <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
-              Saving copies the questions as they are now, so later edits to the bank never change what was asked.
+              {editing
+                ? "Each time the guide is used, its questions are copied fresh from the bank, so a wording fixed in the bank is what gets asked."
+                : candidate
+                  ? "Add these questions to this interview only, or also keep them as a saved guide to pick for later interviews."
+                  : "A saved guide is a set of questions you keep. Pick it for an interview from the interview itself or from the guide's page; each interview gets its own copy to type answers into."}
             </p>
-            {/* One grid for all four boxes, so they line up in two even columns
-                (stacked on a phone). His feedback Nov 16 2026. */}
+            {/* One grid, two even columns (stacked on a phone). */}
             <div className="mt-4 grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2">
-              <GuideLinkPicker candidate={candidate} interviewId={interviewId} onCandidate={setCandidate} onInterview={setInterviewId} />
               <label className={FIELD_CLS}>
-                <span className={FIELD_LABEL_CLS}>Interviewer</span>
-                <input value={interviewer} onChange={(e) => setInterviewer(e.target.value)} placeholder="Defaults to you" className={CONTROL_CLS} />
+                <span className={FIELD_LABEL_CLS}>Guide name</span>
+                <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Pilot phone screen" className={CONTROL_CLS} />
               </label>
-              <label className={FIELD_CLS}>
-                <span className={FIELD_LABEL_CLS}>Name for this guide</span>
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder={candidate ? `Interview guide — ${candidate.displayName}` : "Interview guide"}
-                  className={CONTROL_CLS}
-                />
-              </label>
-            </div>
-            <p className="mt-3 text-xs text-brand-grey dark:text-slate-400">{LINK_HINT}</p>
-            <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-brand-lea/10 pt-4 dark:border-white/10">
-              <Button onClick={save} disabled={saving || guide.length === 0}>
-                <Save className="h-4 w-4" /> {saving ? "Saving…" : "Save guide and start"}
-              </Button>
-              {!candidate && guide.length > 0 ? (
-                <span className="text-xs text-brand-grey dark:text-slate-400">No candidate picked — you can link one on the next page.</span>
+              {candidate ? (
+                <label className={FIELD_CLS}>
+                  <span className={FIELD_LABEL_CLS}>Interviewer</span>
+                  <input value={interviewer} onChange={(e) => setInterviewer(e.target.value)} placeholder="Defaults to you" className={CONTROL_CLS} />
+                </label>
               ) : null}
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-brand-lea/10 pt-4 dark:border-white/10">
+              {editing ? (
+                <Button onClick={() => void save("edit")} disabled={saving || guide.length === 0}>
+                  <Save className="h-4 w-4" /> {saving ? "Saving…" : "Save changes"}
+                </Button>
+              ) : candidate ? (
+                <>
+                  <Button onClick={() => void save("once")} disabled={saving || guide.length === 0}>
+                    <Save className="h-4 w-4" /> {saving ? "Saving…" : "Add to this interview"}
+                  </Button>
+                  <Button variant="secondary" onClick={() => void save("saved+use")} disabled={saving || guide.length === 0}>
+                    Save as a guide and add
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => void save("saved")} disabled={saving || guide.length === 0}>
+                  <Save className="h-4 w-4" /> {saving ? "Saving…" : "Save guide"}
+                </Button>
+              )}
+              {savedNote ? <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">{savedNote}</span> : null}
               {saveError ? <span className="text-xs font-medium text-red-700 dark:text-red-300">{saveError}</span> : null}
             </div>
           </section>

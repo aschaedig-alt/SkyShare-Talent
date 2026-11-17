@@ -12,8 +12,27 @@ export const guideCreateSchema = z.object({
   candidateId: z.string().min(1).nullable().optional(),
   interviewId: z.string().min(1).nullable().optional(),
   departmentKey: z.enum(QUESTION_DEPARTMENTS).nullable().optional(),
-  interviewer: z.string().trim().max(120).nullable().optional()
+  interviewer: z.string().trim().max(120).nullable().optional(),
+  // A SAVED guide (reusable, picked per interview). Ignores candidateId and
+  // interviewId: a saved guide is never on anybody.
+  asTemplate: z.boolean().optional()
 });
+
+/** Replace a SAVED guide's questions (and optionally its name / department). */
+export const guideQuestionsSchema = z.object({
+  title: z.string().trim().min(1, "Give the guide a name.").max(200).optional(),
+  questionIds: z.array(z.string().min(1)).min(1, "Pick at least one question.").max(GUIDE_MAX_QUESTIONS),
+  departmentKey: z.enum(QUESTION_DEPARTMENTS).nullable().optional()
+});
+
+/** Use a SAVED guide for one interview: copies it onto that interview. */
+export const guideUseSchema = z
+  .object({
+    candidateId: z.string().min(1).nullable().optional(),
+    interviewId: z.string().min(1).nullable().optional(),
+    interviewer: z.string().trim().max(120).nullable().optional()
+  })
+  .refine((d) => Boolean(d.candidateId || d.interviewId), { message: "Pick the candidate or interview to use this guide for." });
 
 export const guideUpdateSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),

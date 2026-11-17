@@ -30,6 +30,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (data.title !== undefined) update.title = data.title;
     if (data.interviewer !== undefined) update.interviewer = data.interviewer?.trim() || null;
     if (data.candidateId !== undefined || data.interviewId !== undefined) {
+      // A saved guide is never on anybody: it is USED for an interview, which
+      // copies it (POST ./use), so the saved one stays for the next interview.
+      const saved = await prisma.interviewGuide.findUnique({ where: { id }, select: { isTemplate: true } });
+      if (saved?.isTemplate) {
+        return NextResponse.json({ message: "A saved guide is not linked to an interview. Use it for one instead." }, { status: 400 });
+      }
       const link = await resolveLink(
         auth.user,
         data.candidateId === undefined ? access.candidateId : data.candidateId,

@@ -1604,6 +1604,13 @@ model InterviewGuide {
   // Who asked the questions (display name), and who saved it (email).
   interviewer   String?
   createdBy     String?
+  // A SAVED guide: a reusable set of questions, never linked to a candidate or
+  // interview and never answered. Using one for an interview COPIES its
+  // questions into a new, ordinary guide (isTemplate false) on that interview,
+  // so the Saved guides tab lists the handful of guides you keep, not every
+  // interview (Aimee, Nov 16 2026: "i save a guide then i choose which guide i
+  // want to add to the interview").
+  isTemplate    Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -1613,6 +1620,7 @@ model InterviewGuide {
 
   @@index([candidateId])
   @@index([interviewId])
+  @@index([isTemplate])
 }
 
 // One question on a guide. The question's wording and guidance are COPIED from

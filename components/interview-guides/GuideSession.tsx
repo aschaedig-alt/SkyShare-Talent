@@ -399,14 +399,46 @@ export function GuideSession({ initial }: { initial: GuideView }) {
   async function remove() {
     if (!window.confirm(`Delete "${guide.title}" and every answer typed into it? This cannot be undone.`)) return;
     const res = await fetch(`/api/interview-guides/${guide.id}`, { method: "DELETE" });
-    if (res.ok) router.push("/interview-questions/guides");
+    // Back to the interview it was on; used guides no longer list under Saved guides.
+    if (res.ok) router.push(guide.interview ? `/interviews/${guide.interview.id}` : "/interview-questions/guides");
+  }
+
+  // Keep this guide's questions as a SAVED guide, to pick for later interviews
+  // (Nov 16 2026). Copies the questions only; answers stay on this guide.
+  const [keepNote, setKeepNote] = useState<{ ok: boolean; text: string; id?: string } | null>(null);
+  async function keepAsSaved() {
+    const suggested = guide.title.split(" — ")[0] || guide.title;
+    const name = window.prompt("Name for the saved guide", suggested)?.trim();
+    if (!name) return;
+    setKeepNote(null);
+    try {
+      const res = await fetch("/api/interview-guides", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          asTemplate: true,
+          title: name,
+          departmentKey: guide.departmentKey,
+          questionIds: guide.items.map((i) => i.questionId).filter((q): q is string => Boolean(q))
+        })
+      });
+      const out = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
+      if (!res.ok || !out.id) throw new Error(out.message ?? "Could not save the guide.");
+      setKeepNote({ ok: true, text: `Saved as "${name}".`, id: out.id });
+    } catch (caught) {
+      setKeepNote({ ok: false, text: caught instanceof Error ? caught.message : "Could not save the guide." });
+    }
   }
 
   return (
     <div className="space-y-5 px-4 py-5 sm:px-5 lg:px-8">
       <section className="overflow-hidden rounded bg-gradient-to-br from-brand-lea to-brand-eden p-6 shadow-panel">
-        <Link href="/interview-questions/guides" className="inline-flex items-center gap-1 text-xs font-semibold text-white/70 transition hover:text-white">
-          <ArrowLeft className="h-3.5 w-3.5" /> Saved guides
+        {/* Back to where a used guide lives: its interview. */}
+        <Link
+          href={guide.interview ? `/interviews/${guide.interview.id}` : "/interview-questions/guides"}
+          className="inline-flex items-center gap-1 text-xs font-semibold text-white/70 transition hover:text-white"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> {guide.interview ? "The interview" : "Saved guides"}
         </Link>
         <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Interview guide</p>
         <h1 className="mt-0.5 break-words text-2xl font-semibold text-white">{guide.title}</h1>
@@ -543,7 +575,24 @@ export function GuideSession({ initial }: { initial: GuideView }) {
         )}
       </section>
 
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {keepNote ? (
+          <span className={`text-xs font-medium ${keepNote.ok ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}`}>
+            {keepNote.text}{" "}
+            {keepNote.id ? (
+              <Link href={`/interview-questions/guides/${keepNote.id}`} className="underline underline-offset-2">
+                Open it
+              </Link>
+            ) : null}
+          </span>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => void keepAsSaved()}
+          className="inline-flex items-center gap-1.5 rounded px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-brand-lea dark:text-slate-400 dark:hover:text-slate-100"
+        >
+          <Plus className="h-4 w-4" /> Keep these questions as a saved guide
+        </button>
         <button type="button" onClick={remove} className="inline-flex items-center gap-1.5 rounded px-3 py-2 text-sm font-semibold text-brand-grey transition hover:text-red-600 dark:text-slate-400 dark:hover:text-red-300">
           <Trash2 className="h-4 w-4" /> Delete this guide
         </button>

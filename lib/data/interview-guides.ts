@@ -37,6 +37,8 @@ export type GuideItemView = {
 export type GuideView = {
   id: string;
   title: string;
+  /** A saved, reusable guide (no candidate, no answers). See the schema comment. */
+  isTemplate: boolean;
   departmentKey: string | null;
   interviewer: string | null;
   createdBy: string | null;
@@ -91,6 +93,7 @@ function toView(g: GuideRow): GuideView {
   return {
     id: g.id,
     title: g.title,
+    isTemplate: g.isTemplate,
     departmentKey: g.departmentKey,
     interviewer: g.interviewer,
     createdBy: g.createdBy,
@@ -119,20 +122,50 @@ export async function getInterviewGuide(id: string, viewer: ViewerScope | null):
 
 /** Every guide used in one interview, oldest first. Caller has already scoped the interview. */
 export async function getGuidesForInterview(interviewId: string): Promise<GuideView[]> {
-  const rows = await prisma.interviewGuide.findMany({ where: { interviewId }, include: guideInclude, orderBy: { createdAt: "asc" } });
+  const rows = await prisma.interviewGuide.findMany({ where: { interviewId, isTemplate: false }, include: guideInclude, orderBy: { createdAt: "asc" } });
   return rows.map(toView);
 }
 
-/** Saved guides, newest first, for the Saved guides tab. */
-export async function getRecentGuides(viewer: ViewerScope | null, take = 100): Promise<GuideView[]> {
+/**
+ * The SAVED guides: the reusable ones you keep and pick from per interview.
+ * Never linked to a candidate, so the candidate allowlist has nothing to hide;
+ * the module gate on the page is the access check. Alphabetical, because this
+ * is a short list you pick from by name, not a feed.
+ */
+export async function getSavedGuides(): Promise<GuideView[]> {
+  const rows = await prisma.interviewGuide.findMany({ where: { isTemplate: true }, include: guideInclude, orderBy: { title: "asc" } });
+  return rows.map(toView);
+}
+
+/** Just enough to fill a "pick a saved guide" dropdown. */
+export type SavedGuideOption = { id: string; title: string; questionCount: number };
+
+export async function getSavedGuideOptions(): Promise<SavedGuideOption[]> {
+  const rows = await prisma.interviewGuide.findMany({
+    where: { isTemplate: true },
+    select: { id: true, title: true, _count: { select: { items: true } } },
+    orderBy: { title: "asc" }
+  });
+  return rows.map((r) => ({ id: r.id, title: r.title, questionCount: r._count.items }));
+}
+
+/**
+ * Guides used for a candidate but not (or no longer) on any interview. Every
+ * other used guide lives on its interview and is reached from there; these
+ * would otherwise be reachable from nowhere, so the Saved guides tab lists
+ * them separately rather than letting them go missing.
+ */
+export async function getUnlinkedGuides(viewer: ViewerScope | null): Promise<GuideView[]> {
   const scope = candidateScopeWhere(viewer);
   const rows = await prisma.interviewGuide.findMany({
-    // A scoped viewer sees only guides on candidates they may see; a guide not
-    // yet linked to anybody is visible to everyone who can open the bank.
-    where: scope ? { OR: [{ candidateId: null }, { candidate: scope }] } : undefined,
+    where: {
+      isTemplate: false,
+      interviewId: null,
+      ...(scope ? { OR: [{ candidateId: null }, { candidate: scope }] } : {})
+    },
     include: guideInclude,
     orderBy: { updatedAt: "desc" },
-    take
+    take: 100
   });
   return rows.map(toView);
 }
