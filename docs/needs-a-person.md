@@ -1453,6 +1453,10 @@ choose Save as PDF, and open the file. Try it once with a long write-up.
 **What would count as a pass:** page 1 holds the header, scorecard and notes; questions
 start on page 2; nothing is cut off; the file is named after the candidate and interview.
 
+**Update 2026-11-17:** he tried it on the live site, through the real print dialog: "i tried
+it and it worked." Still not tried: a write-up long enough to hit the 8px floor, an interview
+with several scorecards, and a phone.
+
 ---
 
 ### 72. Saved guides: nobody has saved, edited, used or added one yet
