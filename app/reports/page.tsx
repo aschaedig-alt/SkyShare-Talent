@@ -2,6 +2,7 @@ import { ReportsWorkspace } from "@/components/reports/ReportsWorkspace";
 import { getReportsData } from "@/lib/data/reports";
 import { getHeadcountHistory } from "@/lib/data/headcount-history";
 import { getQualityOfHire } from "@/lib/quality-of-hire/report";
+import { getCheckinReport } from "@/lib/quality-of-hire/checkins";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { getWorkspaceBranding, resolveBrandingLogo } from "@/lib/data/branding";
 
@@ -22,14 +23,24 @@ export default async function ReportsPage() {
   //
   // Quality of Hire names why each person left (Paycom's term reasons), so it is
   // loaded for admins only and the tab is not shown to anyone else.
-  const [data, branding, headcount, qoh] = await Promise.all([
+  // The check-in ratings carry hiring managers' notes about named employees, so
+  // they are admins-only on the same terms.
+  const [data, branding, headcount, qoh, checkins] = await Promise.all([
     getReportsData(viewer),
     getWorkspaceBranding(),
     getHeadcountHistory(),
-    role === "ADMIN" ? getQualityOfHire() : Promise.resolve(null)
+    role === "ADMIN" ? getQualityOfHire() : Promise.resolve(null),
+    role === "ADMIN" ? getCheckinReport() : Promise.resolve(null)
   ]);
 
   return (
-    <ReportsWorkspace data={data} headcount={headcount} qoh={qoh} logoDataUrl={resolveBrandingLogo(branding, "reports")} canShare={role === "ADMIN"} />
+    <ReportsWorkspace
+      data={data}
+      headcount={headcount}
+      qoh={qoh}
+      checkins={checkins}
+      logoDataUrl={resolveBrandingLogo(branding, "reports")}
+      canShare={role === "ADMIN"}
+    />
   );
 }

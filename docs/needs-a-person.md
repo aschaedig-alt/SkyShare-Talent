@@ -1384,6 +1384,53 @@ same task shows the same state on the desktop grid.
 
 ---
 
+### 75. A person's Check-ins tab has not been opened in a browser, on a phone or in dark mode
+
+**Status:** OPEN
+**Added:** 2026-11-17
+
+Each person's profile (/people/<id>) has a new Check-ins tab, admins only (his call, Nov 17:
+"Yes, on the profile"): one card per check-in at 3, 6 and 12 months. A rated one shows the
+four scores in the form's colors, role progress, hire again, a "for HR to talk to" line and
+the manager's note; an unrated one says Not rated yet, Marked not needed, or Ticked done
+without a rating. It stays there after the person is archived. Checked by the session: it
+renders on the server with live data for Grace Ward (follow-up, note), Elijah Hall (3-month
+marked not needed, 6-month rated) and Scott Strahan (nothing rated), and the live page
+/people/<Grace Ward>?tab=checkins carries the tab, its "1 of 3 rated" chip and the follow-up
+line. NOT checked: clicking the tab, a phone, dark mode, and that a non-admin does not see it.
+
+**How to check it, one minute:** open Grace Ward's profile, click Check-ins; then the same
+on your phone and in dark mode. If you can, sign in as a non-admin and confirm the tab is
+not there.
+
+**What would count as a pass:** three cards, the rated one with its colored scores and note;
+no sideways scroll on a phone; no Check-ins tab for a non-admin.
+
+---
+
+### 74. Reports > Check-ins has not been opened in a browser, on a phone or in dark mode
+
+**Status:** OPEN
+**Added:** 2026-11-17
+
+A new admin-only tab, Reports > Check-ins: every 3-, 6- and 12-month check-in rating,
+including people already archived (until now nothing showed a rating once someone left
+Post-onboard). It has the headline "would hire again" figure, four tiles, a "Talk to" list
+(any score 1 to 3, a No to hire again, or Behind in the role), where each check-in stands,
+ratings by manager, and every rating as a colored score row with the manager's note behind
+a button. Checked by the session: it renders on the server with live data (18 ratings, 2 to
+talk to, 7 managers, 8 notes, 20 profile links), the live Reports page carries the tab and
+its data, and loading it leaves the rating-link store untouched. NOT checked: clicking the
+tab and the 3-month / 6-month / 12-month filter, a note's button, a phone, dark mode.
+
+**How to check it, two minutes:** Reports > Check-ins. Click each filter, open a manager's
+note, then look at it on your phone and in dark mode.
+
+**What would count as a pass:** the filters change the figures; notes open and close;
+on a phone every rating is a card with its four scores in a row and nothing scrolls sideways.
+
+---
+
 ### 73. The interview PDF has only been printed by the session, headlessly, for one candidate
 
 **Status:** OPEN — deployed 2026-11-17 (db5604f)

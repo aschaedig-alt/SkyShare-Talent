@@ -18,6 +18,8 @@ import { QualityOfHireReport } from "@/components/reports/QualityOfHireReport";
 import { R } from "@/components/reports/report-ui";
 import type { HeadcountHistory } from "@/lib/data/headcount-history";
 import type { QualityOfHire } from "@/lib/quality-of-hire/report";
+import type { CheckinReport as CheckinReportData } from "@/lib/quality-of-hire/checkins";
+import { CheckinReport } from "@/components/reports/CheckinReport";
 import { formatCalendarDay, formatMomentDate } from "@/lib/dates/display";
 
 type ReportsWorkspaceProps = {
@@ -26,6 +28,8 @@ type ReportsWorkspaceProps = {
   headcount?: HeadcountHistory | null;
   /** Quality of Hire - admins only (it names why each person left), never the share link. */
   qoh?: QualityOfHire | null;
+  /** Post-hire check-in ratings - admins only (managers' notes about named people), never the share link. */
+  checkins?: CheckinReportData | null;
   logoDataUrl?: string | null;
   canShare?: boolean;
 };
@@ -1318,11 +1322,14 @@ const REPORT_TABS = [
   // those employees are still here."
   { id: "headcount", label: "Headcount & Tenure" },
   // The Q4 2026 rock. Shown only to admins, who are the only ones given its data.
-  { id: "qoh", label: "Quality of Hire" }
+  { id: "qoh", label: "Quality of Hire" },
+  // Every 3-, 6- and 12-month check-in rating (his pick, Nov 17 2026). Admins only:
+  // it carries managers' notes about named employees.
+  { id: "checkins", label: "Check-ins" }
 ] as const;
 type ReportTab = (typeof REPORT_TABS)[number]["id"];
 
-export function ReportsWorkspace({ data, headcount = null, qoh = null, logoDataUrl, canShare = false }: ReportsWorkspaceProps) {
+export function ReportsWorkspace({ data, headcount = null, qoh = null, checkins = null, logoDataUrl, canShare = false }: ReportsWorkspaceProps) {
   const [tab, setTab] = useState<ReportTab>("progression");
   return (
     <div className={R.page}>
@@ -1353,7 +1360,7 @@ export function ReportsWorkspace({ data, headcount = null, qoh = null, logoDataU
       {/* Sub-tabs — one report at a time. The active tab is the only one rendered,
           so "Export PDF" prints exactly what's on screen. */}
       <div className={R.tabBar}>
-        {REPORT_TABS.filter((t) => t.id !== "qoh" || qoh).map((t) => (
+        {REPORT_TABS.filter((t) => (t.id !== "qoh" || qoh) && (t.id !== "checkins" || checkins)).map((t) => (
           <button
             key={t.id}
             type="button"
@@ -1381,6 +1388,7 @@ export function ReportsWorkspace({ data, headcount = null, qoh = null, logoDataU
       {tab === "documents" ? <DocumentCurrency dc={data.documentCurrency} /> : null}
       {tab === "headcount" && headcount ? <HeadcountTenureReport history={headcount} /> : null}
       {tab === "qoh" && qoh ? <QualityOfHireReport qoh={qoh} canUpload /> : null}
+      {tab === "checkins" && checkins ? <CheckinReport report={checkins} /> : null}
     </div>
   );
 }

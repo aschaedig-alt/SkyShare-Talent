@@ -255,6 +255,18 @@ export async function getRatingRequestViews(hireIds: string[]): Promise<{ reques
   return { requests, leftNotices };
 }
 
+/**
+ * Every check-in request, for Reports > Check-ins. READ ONLY: the same views as
+ * getRatingRequestViews, with "employee left" worked out in memory and NOT saved -
+ * a report render must never write the shared store. (Post-onboard's next load
+ * persists those cancellations as it always has.)
+ */
+export async function readAllRatingRequestViews(): Promise<RatingRequestView[]> {
+  const all = await readAll();
+  const { hires, rated } = await settle(all);
+  return Object.entries(all).map(([k, rec]) => toView(rec, hires.get(rec.hireId)?.name ?? "A former employee", stateOf(rec, rated.has(k))));
+}
+
 // ---------------------------------------------------------------------------
 // The public side: /rate/<token>.
 

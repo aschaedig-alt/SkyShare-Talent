@@ -11,6 +11,7 @@ import { getOnboardingArchives } from "@/lib/data/onboarding-rounds";
 import { getCardOrdersForHire } from "@/lib/data/business-cards";
 import { FLEET_POSITIONS } from "@/lib/fleet/positions";
 import { NewHireDetailWorkspace } from "@/components/people/NewHireDetailWorkspace";
+import { getCheckinRowsForHire } from "@/lib/quality-of-hire/checkins";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,9 @@ export default async function NewHirePage({ params }: { params: Promise<{ id: st
   // hire. The trade: a request for an id that does not exist now pays for the
   // id-scoped reads before it 404s. They all come back empty, and a 404 here is
   // rare — this page is reached from a list of hires that exist.
-  const [hire, travelTrips, travelLoyalty, journey, onboardingArchives, cardOrders, sections, checklistRows, taskEmails, sendStatus] = await Promise.all([
+  // Check-in ratings carry the hiring manager's notes about this person, so only
+  // admins get them (the same line Reports > Check-ins draws); null hides the tab.
+  const [hire, travelTrips, travelLoyalty, journey, onboardingArchives, cardOrders, sections, checklistRows, taskEmails, sendStatus, checkinRatings] = await Promise.all([
     getNewHireDetail(id),
     getTravelTripsForNewHire(id),
     getNewHireLoyalty(id),
@@ -35,7 +38,8 @@ export default async function NewHirePage({ params }: { params: Promise<{ id: st
     getChecklistSections(),
     buildChecklistRows(),
     getTaskEmailMap(),
-    getHireSendStatus(id)
+    getHireSendStatus(id),
+    access.role === "ADMIN" ? getCheckinRowsForHire(id) : Promise.resolve(null)
   ]);
   if (!hire) {
     notFound();
@@ -55,6 +59,7 @@ export default async function NewHirePage({ params }: { params: Promise<{ id: st
       checklistRows={checklistRows}
       emailTaskKeys={Object.keys(taskEmails)}
       canEdit={hasPermission(access.role, "candidates:write")}
+      checkinRatings={checkinRatings}
     />
   );
 }

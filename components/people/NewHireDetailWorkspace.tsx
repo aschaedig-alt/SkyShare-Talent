@@ -12,6 +12,9 @@ import { EmployeeJourney } from "@/components/people/EmployeeJourney";
 import { HireDetailsAccordion, type DetailSection } from "@/components/people/HireDetailsAccordion";
 import { OnboardingChecklist } from "@/components/people/OnboardingChecklist";
 import { NewHireBottomTabs, type BottomTab } from "@/components/people/NewHireBottomTabs";
+import { CheckinRatingsPanel } from "@/components/people/CheckinRatingsPanel";
+import type { CheckinRow } from "@/lib/quality-of-hire/checkins";
+import { RATED_CHECKINS } from "@/lib/onboarding/checkin-rating";
 import { BusinessCardPanel } from "@/components/people/BusinessCardPanel";
 import { SendOnboardingEmailButton } from "@/components/people/SendOnboardingEmailButton";
 import { SendContactsEmailButton } from "@/components/people/SendContactsEmailButton";
@@ -52,6 +55,8 @@ function fmtDay(iso: string | null) {
 
 type Props = {
   hire: NewHireDetail;
+  /** The 3-, 6- and 12-month check-in ratings - admins only; null hides the Check-ins tab. */
+  checkinRatings?: CheckinRow[] | null;
   travelTrips: TravelTripView[];
   travelLoyalty: TravelerLoyalty;
   journey: Journey;
@@ -88,7 +93,7 @@ function cardStatusLabel(status: string): string {
   return isCardStatus(status) ? CARD_STATUS_LABEL[status] : status.toLowerCase().replace(/_/g, " ");
 }
 
-export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journey, onboardingArchives, cardOrders, roleTitleOptions, sendStatus, sections, checklistRows, emailTaskKeys, canEdit }: Props) {
+export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journey, onboardingArchives, cardOrders, roleTitleOptions, sendStatus, sections, checklistRows, emailTaskKeys, canEdit, checkinRatings = null }: Props) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskView[]>(hire.tasks);
   // Lifted for the same reason tasks is: the tab chip, the HR field, the checklist
@@ -929,6 +934,18 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
         />
       )
     },
+    // Admins only: the page passes the ratings for admins and null for everyone else.
+    ...(checkinRatings
+      ? [
+          {
+            key: "checkins",
+            label: "Check-ins",
+            chip: `${checkinRatings.length} of ${RATED_CHECKINS.length} rated`,
+            chipWarn: checkinRatings.some((r) => r.followUp.length > 0),
+            content: <CheckinRatingsPanel ratings={checkinRatings} tasks={tasks} />
+          }
+        ]
+      : []),
     {
       key: "history",
       label: "History",
