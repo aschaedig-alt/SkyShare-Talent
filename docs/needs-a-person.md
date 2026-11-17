@@ -1386,7 +1386,7 @@ same task shows the same state on the desktop grid.
 
 ### 73. The interview PDF has only been printed by the session, headlessly, for one candidate
 
-**Status:** BLOCKED ON DEPLOY
+**Status:** OPEN — deployed 2026-11-17 (db5604f)
 **Added:** 2026-11-17
 
 An interview can be printed or saved as a PDF: **PDF** in the interview popup (new tab) or
