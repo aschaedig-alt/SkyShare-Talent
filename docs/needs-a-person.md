@@ -1384,6 +1384,30 @@ same task shows the same state on the desktop grid.
 
 ---
 
+### 72. Saved guides: nobody has saved, edited, used or added one yet
+
+**Status:** OPEN — deployed 2026-11-16 (92dada5)
+**Added:** 2026-11-16
+
+From Aimee's feedback cmwjxo24d: the Saved guides tab now lists only reusable guides (today
+just the Pilot Guide, flagged as saved by the session); each opens to edit its questions or
+use it for an interview, which copies it onto that interview and leaves the saved one as it
+was; an interview has an Add a saved guide picker; and a used guide can be kept as a new
+saved guide. The session checked the pages over HTTP only (each loads; the tab lists the
+Pilot Guide alone; its editor shows 18 questions and names the deleted passion question).
+NOT clicked: save, edit, use, add or keep, because each writes the live database; nor looked
+at on a phone. The commit agent read the live data back on Nov 16: 3 guides, only the Pilot
+Guide saved; Chase Anderson's and Chance Hanks's guides unchanged, with their answers.
+
+**How to check it:** on Interview Questions > Saved guides, open the Pilot Guide, change one
+question and save; then open an interview and add the Pilot Guide from Add a saved guide.
+
+**What would count as a pass:** the edit sticks after a reload; the interview gets its own
+copy with the questions the saved guide has now; the saved guide is still on the tab
+unchanged by the interview; the earlier interviews' guides are unchanged.
+
+---
+
 ### 71. Nobody has changed a candidate's status from Recent interviews yet
 
 **Status:** OPEN — deployed 2026-11-16 (d551076)
