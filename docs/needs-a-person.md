@@ -1338,146 +1338,6 @@ session is marked complete, Attended orientation turns Done by itself with no cl
 
 ---
 
-### 63. The new Post-onboard grid (Sample A) has not been used for real
-
-**Status:** OPEN
-**Added:** 2026-11-14
-
-The grid now shows days late (+43d) or "in 77d" instead of dates, every row is the same
-height, Send sits under a late manager check-in, and on a phone each person is a card.
-Checked in the in-app browser with live data at 1536, 1280, 1024, 768, 375 and 329 wide,
-light and dark, with nothing saved. NOT checked: the two animations, because they only play
-when something is really saved: marking a check-in done should draw its tick with one gold
-ring, and sending a rating link should slide "sent" in under it. Also not checked on a real
-iPhone.
-
-**How to check it:** on the live site, mark one check-in done from its drawer and watch the
-cell; send one rating link (Axel Leimer's 90-day is waiting for exactly that); then open
-People > Post-onboard on your iPhone.
-
-**What would count as a pass:** the tick draws itself and a gold ring fades; "sent" slides in
-under the 90-day; on the phone every person is a card, nothing scrolls sideways, and the
-A / T / C dropdown changes status.
-
-
----
-
-### 65. Nobody has tapped a task on the New hires grid's phone cards
-
-**Status:** OPEN
-**Added:** 2026-11-14
-
-People > New hires > Checklist grid on a phone (below md) is now one card per hire: name,
-position, start and orientation dates, status chip, progress bar, then the tasks grouped by
-section (cb5f93d). Each task row is a button with the same cycle as the desktop cell
-(to-do, done, N/A), hold words included, and reminder steps keep their email button.
-Measured at 375 and 329, light and dark: nothing past the screen edge, no inner scrolling.
-NOT checked: an actual tap, because every tap writes the live database. Not looked at on a
-real iPhone either.
-
-**How to check it:** on your iPhone, open People > New hires > Checklist grid, tap one task
-on a hire to cycle it, then tap it back to where it was.
-
-**What would count as a pass:** each person is a card with nothing scrolling sideways; a tap
-moves the task to the next state and the progress bar and done count change with it; the
-same task shows the same state on the desktop grid.
-
----
-
-### 72. Saved guides: nobody has saved, edited, used or added one yet
-
-**Status:** OPEN — deployed 2026-11-16 (92dada5)
-**Added:** 2026-11-16
-
-From Aimee's feedback cmwjxo24d: the Saved guides tab now lists only reusable guides (today
-just the Pilot Guide, flagged as saved by the session); each opens to edit its questions or
-use it for an interview, which copies it onto that interview and leaves the saved one as it
-was; an interview has an Add a saved guide picker; and a used guide can be kept as a new
-saved guide. The session checked the pages over HTTP only (each loads; the tab lists the
-Pilot Guide alone; its editor shows 18 questions and names the deleted passion question).
-NOT clicked: save, edit, use, add or keep, because each writes the live database; nor looked
-at on a phone. The commit agent read the live data back on Nov 16: 3 guides, only the Pilot
-Guide saved; Chase Anderson's and Chance Hanks's guides unchanged, with their answers.
-
-**How to check it:** on Interview Questions > Saved guides, open the Pilot Guide, change one
-question and save; then open an interview and add the Pilot Guide from Add a saved guide.
-
-**What would count as a pass:** the edit sticks after a reload; the interview gets its own
-copy with the questions the saved guide has now; the saved guide is still on the tab
-unchanged by the interview; the earlier interviews' guides are unchanged.
-
----
-
-### 71. Nobody has changed a candidate's status from Recent interviews yet
-
-**Status:** OPEN — deployed 2026-11-16 (d551076)
-**Added:** 2026-11-16
-
-From Aimee's feedback cmwjv67c: Candidates > Recent interviews now has a Status column with
-the same dropdown as the Candidates list, saving through the same route and shown only to
-admins and recruiters (others see a plain pill). Checked by the session over HTTP on local
-dev: the page loads, 11 dropdowns for 11 candidates, each showing its current stage. NOT
-checked: changing a stage from the new dropdown (local dev writes the live database), and
-the page on a phone (it already scrolled sideways there, and is now one column wider).
-
-**How to check it:** on Recent interviews, change one candidate's status from the dropdown,
-then open their profile.
-
-**What would count as a pass:** the new status shows on the row after a reload and on their
-profile, the same as a change made from the Candidates list.
-
----
-
-### 70. A question marked "Not asked" has not been seen in the interview popup, or in dark mode
-
-**Status:** OPEN — deployed 2026-11-16 (caf0f9f)
-**Added:** 2026-11-16
-
-Each question on an interview guide has a **Not asked** button. It folds the question to one
-grey line (always folded when the guide is reopened), hides its chips and rating, and leaves
-it out of the evaluator, the core values chart and the answered count; **Mark as asked**
-brings it back with anything typed. Checked by the session on localhost with a throwaway
-guide (deleted after): both buttons clicked in the browser and read back from the database,
-folded after a reload, and the evaluator judged only the asked answer. NOT checked: how a
-skipped question looks in the interview popup (the sample guide was not linked to an
-interview), and dark mode.
-
-**How to check it:** on Chance Hanks's guide mark the questions you did not ask as Not asked,
-then open his interview's popup from his Interviews tab.
-
-**What would count as a pass:** each skipped question is one grey "Not asked" line in the
-popup and on the guide page, and the core values chart counts only the asked answers.
-
----
-
-### 69. The interview card's 8px value line and the reordered popup have not been seen in dark mode, and Accept all has not been pressed
-
-**Status:** OPEN — deployed 2026-11-16 (25b880c)
-**Added:** 2026-11-16
-
-From his review of Chase Anderson's interview. A candidate's interview card now shows the
-four core value ratings from its scorecard at 8px beside the Scorecard button (no
-recommendation, no points); the popup opens on the scorecard, then the interview guide,
-with no write-up; each guide question shows the values its answer touched as gold chips;
-and the guide page has **Accept all draft suggestions**. The session checked all of it on
-Chase's real records, read-only, at her laptop width (1536) and on a phone. NOT checked:
-dark mode, and pressing Accept all (it would have accepted the two drafts on his real
-guide, so it was left for him).
-
-**How to check it:** on Chase Anderson's guide press **Accept all draft suggestions**, then
-open his interview popup. Switch to dark mode and look at his Interviews tab and the popup.
-
-**What would count as a pass:** the "(draft)" labels are gone and stay gone after a reload;
-the value line is readable in both light and dark.
-
-**Update 2026-11-16 (his layout from dev tools):** the 8px line is replaced. Each value is now
-two centred lines (name over rating) at the date's size (text-xs, 10.5px), evenly spaced, and
-the Scorecard button has its icon on top, flush right, with the hover-only edit and delete
-icons moved before the values. Checked in his Chrome at 1536 wide (11px top, right and
-bottom; 17-18px between values) and on a phone; still NOT checked in dark mode.
-
----
-
 ### 68. The evaluator's value calls and its learning have only been tried on a made-up guide
 
 **Status:** OPEN — deployed 2026-11-16 (b6ebd49)
@@ -1510,9 +1370,60 @@ read on its next run. Whether it follows them is still to be seen on the next in
 
 ---
 
+## Closed
+
+### 63. The new Post-onboard grid (Sample A) has not been used for real
+
+**Status:** CLOSED
+**Closed:** 2026-11-17, by him: "please mark 63, 65, 66, 69, 70, 71, 72 as complete"
+**Added:** 2026-11-14
+
+The grid now shows days late (+43d) or "in 77d" instead of dates, every row is the same
+height, Send sits under a late manager check-in, and on a phone each person is a card.
+Checked in the in-app browser with live data at 1536, 1280, 1024, 768, 375 and 329 wide,
+light and dark, with nothing saved. NOT checked: the two animations, because they only play
+when something is really saved: marking a check-in done should draw its tick with one gold
+ring, and sending a rating link should slide "sent" in under it. Also not checked on a real
+iPhone.
+
+**How to check it:** on the live site, mark one check-in done from its drawer and watch the
+cell; send one rating link (Axel Leimer's 90-day is waiting for exactly that); then open
+People > Post-onboard on your iPhone.
+
+**What would count as a pass:** the tick draws itself and a gold ring fades; "sent" slides in
+under the 90-day; on the phone every person is a card, nothing scrolls sideways, and the
+A / T / C dropdown changes status.
+
+
+---
+
+### 65. Nobody has tapped a task on the New hires grid's phone cards
+
+**Status:** CLOSED
+**Closed:** 2026-11-17, by him: "please mark 63, 65, 66, 69, 70, 71, 72 as complete"
+**Added:** 2026-11-14
+
+People > New hires > Checklist grid on a phone (below md) is now one card per hire: name,
+position, start and orientation dates, status chip, progress bar, then the tasks grouped by
+section (cb5f93d). Each task row is a button with the same cycle as the desktop cell
+(to-do, done, N/A), hold words included, and reminder steps keep their email button.
+Measured at 375 and 329, light and dark: nothing past the screen edge, no inner scrolling.
+NOT checked: an actual tap, because every tap writes the live database. Not looked at on a
+real iPhone either.
+
+**How to check it:** on your iPhone, open People > New hires > Checklist grid, tap one task
+on a hire to cycle it, then tap it back to where it was.
+
+**What would count as a pass:** each person is a card with nothing scrolling sideways; a tap
+moves the task to the next state and the progress bar and done count change with it; the
+same task shows the same state on the desktop grid.
+
+---
+
 ### 66. No interview guide has been used on a real interview yet, and none has been seen in dark mode
 
-**Status:** OPEN
+**Status:** CLOSED
+**Closed:** 2026-11-17, by him: "please mark 63, 65, 66, 69, 70, 71, 72 as complete"
 **Added:** 2026-11-16
 
 Interview Questions now builds guides (c17fd7f): tick questions in the bank or generate a
@@ -1546,7 +1457,103 @@ to end; dark mode is what is left.
 
 ---
 
-## Closed
+### 69. The interview card's 8px value line and the reordered popup have not been seen in dark mode, and Accept all has not been pressed
+
+**Status:** CLOSED
+**Closed:** 2026-11-17, by him: "please mark 63, 65, 66, 69, 70, 71, 72 as complete"
+**Added:** 2026-11-16
+
+From his review of Chase Anderson's interview. A candidate's interview card now shows the
+four core value ratings from its scorecard at 8px beside the Scorecard button (no
+recommendation, no points); the popup opens on the scorecard, then the interview guide,
+with no write-up; each guide question shows the values its answer touched as gold chips;
+and the guide page has **Accept all draft suggestions**. The session checked all of it on
+Chase's real records, read-only, at her laptop width (1536) and on a phone. NOT checked:
+dark mode, and pressing Accept all (it would have accepted the two drafts on his real
+guide, so it was left for him).
+
+**How to check it:** on Chase Anderson's guide press **Accept all draft suggestions**, then
+open his interview popup. Switch to dark mode and look at his Interviews tab and the popup.
+
+**What would count as a pass:** the "(draft)" labels are gone and stay gone after a reload;
+the value line is readable in both light and dark.
+
+**Update 2026-11-16 (his layout from dev tools):** the 8px line is replaced. Each value is now
+two centred lines (name over rating) at the date's size (text-xs, 10.5px), evenly spaced, and
+the Scorecard button has its icon on top, flush right, with the hover-only edit and delete
+icons moved before the values. Checked in his Chrome at 1536 wide (11px top, right and
+bottom; 17-18px between values) and on a phone; still NOT checked in dark mode.
+
+---
+
+### 70. A question marked "Not asked" has not been seen in the interview popup, or in dark mode
+
+**Status:** CLOSED
+**Closed:** 2026-11-17, by him: "please mark 63, 65, 66, 69, 70, 71, 72 as complete"
+**Added:** 2026-11-16
+
+Each question on an interview guide has a **Not asked** button. It folds the question to one
+grey line (always folded when the guide is reopened), hides its chips and rating, and leaves
+it out of the evaluator, the core values chart and the answered count; **Mark as asked**
+brings it back with anything typed. Checked by the session on localhost with a throwaway
+guide (deleted after): both buttons clicked in the browser and read back from the database,
+folded after a reload, and the evaluator judged only the asked answer. NOT checked: how a
+skipped question looks in the interview popup (the sample guide was not linked to an
+interview), and dark mode.
+
+**How to check it:** on Chance Hanks's guide mark the questions you did not ask as Not asked,
+then open his interview's popup from his Interviews tab.
+
+**What would count as a pass:** each skipped question is one grey "Not asked" line in the
+popup and on the guide page, and the core values chart counts only the asked answers.
+
+---
+
+### 71. Nobody has changed a candidate's status from Recent interviews yet
+
+**Status:** CLOSED
+**Closed:** 2026-11-17, by him: "please mark 63, 65, 66, 69, 70, 71, 72 as complete"
+**Added:** 2026-11-16
+
+From Aimee's feedback cmwjv67c: Candidates > Recent interviews now has a Status column with
+the same dropdown as the Candidates list, saving through the same route and shown only to
+admins and recruiters (others see a plain pill). Checked by the session over HTTP on local
+dev: the page loads, 11 dropdowns for 11 candidates, each showing its current stage. NOT
+checked: changing a stage from the new dropdown (local dev writes the live database), and
+the page on a phone (it already scrolled sideways there, and is now one column wider).
+
+**How to check it:** on Recent interviews, change one candidate's status from the dropdown,
+then open their profile.
+
+**What would count as a pass:** the new status shows on the row after a reload and on their
+profile, the same as a change made from the Candidates list.
+
+---
+
+### 72. Saved guides: nobody has saved, edited, used or added one yet
+
+**Status:** CLOSED
+**Closed:** 2026-11-17, by him: "please mark 63, 65, 66, 69, 70, 71, 72 as complete"
+**Added:** 2026-11-16
+
+From Aimee's feedback cmwjxo24d: the Saved guides tab now lists only reusable guides (today
+just the Pilot Guide, flagged as saved by the session); each opens to edit its questions or
+use it for an interview, which copies it onto that interview and leaves the saved one as it
+was; an interview has an Add a saved guide picker; and a used guide can be kept as a new
+saved guide. The session checked the pages over HTTP only (each loads; the tab lists the
+Pilot Guide alone; its editor shows 18 questions and names the deleted passion question).
+NOT clicked: save, edit, use, add or keep, because each writes the live database; nor looked
+at on a phone. The commit agent read the live data back on Nov 16: 3 guides, only the Pilot
+Guide saved; Chase Anderson's and Chance Hanks's guides unchanged, with their answers.
+
+**How to check it:** on Interview Questions > Saved guides, open the Pilot Guide, change one
+question and save; then open an interview and add the Pilot Guide from Add a saved guide.
+
+**What would count as a pass:** the edit sticks after a reload; the interview gets its own
+copy with the questions the saved guide has now; the saved guide is still on the tab
+unchanged by the interview; the earlier interviews' guides are unchanged.
+
+---
 
 ### 74. Reports > Check-ins has not been opened in a browser, on a phone or in dark mode
 
