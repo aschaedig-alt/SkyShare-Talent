@@ -41,6 +41,8 @@ export type RatedCheckin = {
   period: string;
   /** "90 days" - "compared with where we would expect someone to be at ..." */
   at: string;
+  /** An anytime check-in (see ANYTIME_BASE): no checklist task, nothing to tick or archive. */
+  anytime?: true;
 };
 
 export const RATED_CHECKINS: RatedCheckin[] = [
@@ -53,14 +55,73 @@ export const RATED_CHECKINS: RatedCheckin[] = [
 export const RATED_DAY_MARKS = RATED_CHECKINS.map((c) => c.dayMark);
 export const RATED_TASK_KEYS = RATED_CHECKINS.map((c) => c.taskKey);
 
+// ---------------------------------------------------------------------------
+// ANYTIME CHECK-INS (his ask, Nov 19 2026: a manager check-in for someone who has
+// been here 1 year 7 months - there was no way to send one after the first year).
+//
+// The same questionnaire and the same no-login link, for anyone past their first
+// year, sent whenever HR chooses. Its day mark ENCODES the person's tenure in whole
+// calendar months on the day it is sent: ANYTIME_BASE + months (10019 = 1 year 7
+// months). Months, not days, so the label is exact ("Check-in at 1 year 7 months"
+// matches the calendar - a day count cannot, months differ in length), and two sends
+// in the same month are one check-in (a resend), not two. Each is its own rating
+// (HireCheckinRating is one per person per day mark), sorts in time order, and can
+// never be mistaken for the 90/180/365 ones. It has no checklist task: saving one
+// ticks nothing and archives nobody, and archived people - most people past a
+// year - can still be asked (only terminated or cancelled counts as gone).
+
+export const ANYTIME_BASE = 10_000;
+const ANYTIME_MIN_MONTHS = 12;
+const ANYTIME_MAX_MONTHS = 720;
+
+export function isAnytimeDayMark(v: unknown): v is number {
+  return typeof v === "number" && Number.isInteger(v) && v >= ANYTIME_BASE + ANYTIME_MIN_MONTHS && v <= ANYTIME_BASE + ANYTIME_MAX_MONTHS;
+}
+
+/** "1 year 7 months" for a tenure in whole months. */
+export function tenureWords(months: number): string {
+  const years = Math.floor(months / 12);
+  const rest = months % 12;
+  const y = years ? `${years} year${years === 1 ? "" : "s"}` : "";
+  const m = rest ? `${rest} month${rest === 1 ? "" : "s"}` : "";
+  return [y, m].filter(Boolean).join(" ") || "under a month";
+}
+
+function anytimeCheckin(dayMark: number): RatedCheckin {
+  const words = tenureWords(dayMark - ANYTIME_BASE);
+  return { dayMark, taskKey: "", short: words, title: `Check-in at ${words}`, period: `their ${words} with us`, at: words, anytime: true };
+}
+
+/** Today's date in Mountain time, as [year, month 0-11, day] - after 6pm Mountain, UTC is already tomorrow. */
+function mountainToday(now: Date): [number, number, number] {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", year: "numeric", month: "numeric", day: "numeric" }).formatToParts(now);
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+  return [get("year"), get("month") - 1, get("day")];
+}
+
+/**
+ * The anytime day mark for a check-in sent today: ANYTIME_BASE + whole calendar
+ * months since the start date (a start date is a calendar day, read in UTC like
+ * every other one in the app). Null before a year, or with no start date.
+ */
+export function anytimeDayMarkFor(startDate: string | Date | null | undefined, now: Date = new Date()): number | null {
+  if (!startDate) return null;
+  const s = new Date(startDate);
+  if (Number.isNaN(s.getTime())) return null;
+  const [ty, tm, td] = mountainToday(now);
+  let months = (ty - s.getUTCFullYear()) * 12 + (tm - s.getUTCMonth());
+  if (td < s.getUTCDate()) months--;
+  return months >= ANYTIME_MIN_MONTHS ? ANYTIME_BASE + Math.min(months, ANYTIME_MAX_MONTHS) : null;
+}
+
 export function ratedCheckin(dayMark: number): RatedCheckin | null {
-  return RATED_CHECKINS.find((c) => c.dayMark === dayMark) ?? null;
+  return RATED_CHECKINS.find((c) => c.dayMark === dayMark) ?? (isAnytimeDayMark(dayMark) ? anytimeCheckin(dayMark) : null);
 }
 export function ratedCheckinForTask(taskKey: string): RatedCheckin | null {
   return RATED_CHECKINS.find((c) => c.taskKey === taskKey) ?? null;
 }
 export function isRatedDayMark(v: unknown): v is number {
-  return typeof v === "number" && RATED_DAY_MARKS.includes(v);
+  return typeof v === "number" && (RATED_DAY_MARKS.includes(v) || isAnytimeDayMark(v));
 }
 
 /** The 90-day mark, kept for callers that only ever meant the 90-day rating (Quality of Hire tracking). */

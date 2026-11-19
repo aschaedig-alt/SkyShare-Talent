@@ -124,7 +124,7 @@ export function defaultRatingBodyHtml(employeeName: string, dayMark: number): st
   const c = checkinFor(dayMark);
   return (
     para(
-      `${name} has reached ${c.dayMark === 365 ? "their first year" : c.at} with SkyShare. Could you take a couple of minutes to rate them on our four core values, tell us how well they have learned their role, and whether you would hire them again?`
+      `${name} ${c.anytime ? `has been with SkyShare for ${c.at}` : `has reached ${c.dayMark === 365 ? "their first year" : c.at} with SkyShare`}. Could you take a couple of minutes to rate them on our four core values, tell us how well they have learned their role, and whether you would hire them again?`
     ) +
     GAP +
     para("You don't need a login - just open the link below. Your answers go to HR.") +

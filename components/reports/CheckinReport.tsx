@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { clsx } from "clsx";
 import { R } from "@/components/reports/report-ui";
 import { CORE_VALUE_NAMES, RATING_LABEL, type RatingKey } from "@/lib/interviews/scorecard";
-import { ROLE_PROGRESS_LABEL, SCALE_COLORS, scoreWord } from "@/lib/onboarding/checkin-rating";
+import { ROLE_PROGRESS_LABEL, SCALE_COLORS, isAnytimeDayMark, ratedCheckin, scoreWord } from "@/lib/onboarding/checkin-rating";
 import type { CheckinReport as Report, CheckinRow } from "@/lib/quality-of-hire/checkins";
 import { formatMomentDate } from "@/lib/dates/display";
 
@@ -16,7 +16,9 @@ import { formatMomentDate } from "@/lib/dates/display";
 // The data and its rules are in lib/quality-of-hire/checkins.ts.
 
 export const SHORT = ["Passion", "Team", "Wow", "Solutions"];
-const MARK: Record<number, string> = { 90: "3-month", 180: "6-month", 365: "12-month" };
+// An anytime check-in (past the first year) is labeled by tenure: "1 year 7 months".
+const markLabel = (m: number) => ratedCheckin(m)?.short ?? "Check-in";
+const isAnytime = (m: number) => isAnytimeDayMark(m);
 const NOW: Record<CheckinRow["now"], string | null> = {
   POST_ONBOARD: null,
   ACTIVE: null,
@@ -24,7 +26,7 @@ const NOW: Record<CheckinRow["now"], string | null> = {
   LEFT: "Left",
   MISSING: "Record deleted"
 };
-type Filter = "all" | 90 | 180 | 365;
+type Filter = "all" | 90 | 180 | 365 | "anytime";
 
 const avg = (xs: (number | null)[]) => {
   const n = xs.filter((x): x is number => x !== null);
@@ -108,7 +110,10 @@ function Row({ r }: { r: CheckinRow }) {
 
 export function CheckinReport({ report }: { report: Report }) {
   const [filter, setFilter] = useState<Filter>("all");
-  const rows = useMemo(() => (filter === "all" ? report.rows : report.rows.filter((r) => r.dayMark === filter)), [report.rows, filter]);
+  const rows = useMemo(
+    () => (filter === "all" ? report.rows : filter === "anytime" ? report.rows.filter((r) => isAnytime(r.dayMark)) : report.rows.filter((r) => r.dayMark === filter)),
+    [report.rows, filter]
+  );
 
   const again = rows.filter((r) => r.hireAgain === true).length;
   const answeredAgain = rows.filter((r) => r.hireAgain !== null).length;
@@ -119,15 +124,19 @@ export function CheckinReport({ report }: { report: Report }) {
   const flags = rows.filter((r) => r.followUp.length);
   const scored = allScores.filter((s): s is number => s !== null);
 
-  const groups = ([90, 180, 365] as const)
-    .map((m) => ({ m, rows: rows.filter((r) => r.dayMark === m).sort((a, b) => (avg(a.scores) ?? 11) - (avg(b.scores) ?? 11)) }))
-    .filter((g) => g.rows.length);
+  const byAvg = (a: CheckinRow, b: CheckinRow) => (avg(a.scores) ?? 11) - (avg(b.scores) ?? 11);
+  const groups = [
+    ...([90, 180, 365] as const).map((m) => ({ key: String(m), title: `${markLabel(m)} check-in`, rows: rows.filter((r) => r.dayMark === m).sort(byAvg) })),
+    // One group for every anytime check-in, longest-serving last.
+    { key: "anytime", title: "Anytime check-ins", rows: rows.filter((r) => isAnytime(r.dayMark)).sort((a, b) => a.dayMark - b.dayMark) }
+  ].filter((g) => g.rows.length);
 
   const segs: Array<{ id: Filter; label: string }> = [
     { id: "all", label: "All" },
     { id: 90, label: "3-month" },
     { id: 180, label: "6-month" },
-    { id: 365, label: "12-month" }
+    { id: 365, label: "12-month" },
+    { id: "anytime", label: "Anytime" }
   ];
 
   return (
@@ -137,7 +146,7 @@ export function CheckinReport({ report }: { report: Report }) {
           <div className={R.eyebrow}>Quality of Hire</div>
           <h2 className={R.title}>Post-hire check-ins</h2>
           <p className={R.lede}>
-            Every rating from the 3-, 6- and 12-month check-ins: the hiring manager&apos;s 1 to 10 on each core value, how well the person has learned the role, and whether
+            Every rating from the 3-, 6- and 12-month check-ins, and any anytime check-in sent after the first year: the hiring manager&apos;s 1 to 10 on each core value, how well the person has learned the role, and whether
             they would hire them again. People who have since been archived or left stay on this list.
           </p>
         </div>
@@ -210,7 +219,7 @@ export function CheckinReport({ report }: { report: Report }) {
                       <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                         <Person r={r} />
                         <span className={clsx("text-[11px]", R.muted)}>
-                          {MARK[r.dayMark]} · {day(r.ratedOn)}
+                          {isAnytime(r.dayMark) ? `Check-in at ${markLabel(r.dayMark)}` : markLabel(r.dayMark)} · {day(r.ratedOn)}
                         </span>
                       </div>
                       <p className="mt-1 text-sm text-brand-lea dark:text-slate-200">
@@ -306,9 +315,9 @@ export function CheckinReport({ report }: { report: Report }) {
             <div className={clsx(R.th, "px-0")}>Again</div>
           </div>
           {groups.map((g) => (
-            <div key={g.m} className="mt-3">
+            <div key={g.key} className="mt-3">
               <div className={R.listTitle}>
-                {MARK[g.m]} check-in - {g.rows.length}
+                {g.title} - {g.rows.length}
               </div>
               <ul className={R.tbody}>
                 {g.rows.map((r) => (

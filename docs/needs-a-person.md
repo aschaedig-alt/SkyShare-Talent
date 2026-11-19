@@ -1370,6 +1370,34 @@ read on its next run. Whether it follows them is still to be seen on the next in
 
 ---
 
+### 78. No anytime check-in has been sent, answered or seen in a browser yet
+
+**Status:** OPEN
+**Added:** 2026-11-19
+
+Past their first year, HR can now send the manager the same check-in at any time, from the
+person's profile > Check-ins > Anytime check-ins > "Send a check-in (1 year 7 months)" (his
+ask, Nov 19). It uses the same dialog, link and form as the 3/6/12-month ones, is named for
+the person's tenure in whole calendar months, ticks nothing and archives nobody, and works for
+archived people (only terminated or cancelled blocks it). Checked by the session: the month
+math agrees with the calendar on 4,804 start dates and four "today"s (including after 6pm
+Mountain); for Claire Monro (archived, started Apr 7 2025) it offers "Check-in at 1 year 7
+months" to Dave Esmond and does not treat her as left, while her 12-month one still does; the
+email reads "has been with SkyShare for 1 year 7 months"; her live profile serves the section
+and the button. NOT checked, because each step emails or writes for real: sending one, the
+manager opening and submitting the form, the rating then showing on the profile and on
+Reports > Check-ins (Anytime filter), resend and cancel, a phone, dark mode.
+
+**How to check it, five minutes:** on the profile of the person you want, Check-ins tab, press
+Send a check-in, send it to the manager (or to yourself first). Open the link, submit, reload
+the profile.
+
+**What would count as a pass:** the email says the right tenure; the form opens without a
+login; after it is sent the rating shows under Anytime check-ins and on Reports > Check-ins
+under Anytime; nothing on the person's checklist changes.
+
+---
+
 ### 77. The remote orientation email has never been built from its real Front template, and the remote panel has never been used
 
 **Status:** BLOCKED ON DEPLOY, and on a Front template that does not exist yet

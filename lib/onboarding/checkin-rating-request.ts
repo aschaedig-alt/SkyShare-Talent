@@ -5,7 +5,7 @@ import { sendEmail, type SentMessage } from "@/lib/front/messages";
 import { guardDecision } from "@/lib/front/send-guard";
 import { cleanEditedBody } from "@/lib/front/sanitize-body";
 import { resolveSupervisors } from "@/lib/front/orientation-email";
-import { RATED_DAY_MARKS, RATED_TASK_KEYS, ratedCheckin, type RatedCheckin } from "@/lib/onboarding/checkin-rating";
+import { RATED_TASK_KEYS, ratedCheckin, type RatedCheckin } from "@/lib/onboarding/checkin-rating";
 import {
   RATING_LINK_DAYS,
   RATING_LINK_PATH,
@@ -157,6 +157,9 @@ export function leftReason(hire: Pick<HireNow, "stage" | "employmentStatus" | "c
     return `Marked terminated${day ? `, last day${day}` : ""}`;
   }
   if (hire.canceled) return "Hire cancelled";
+  // An anytime check-in is for people past their first year, most of whom are
+  // archived by then - archived is a current employee for it, never "left".
+  if (checkin.anytime) return null;
   const checkinOpen = !hire.tasks.some((t) => t.key === checkin.taskKey && (t.status === "DONE" || t.status === "NA"));
   if (hire.stage === "ARCHIVED" && checkinOpen) return "Archived";
   return null;
@@ -204,7 +207,8 @@ async function settle(all: RequestMap): Promise<{ hires: Map<string, HireNow>; r
   const ids = [...new Set(keys.map((k) => all[k].hireId))];
   const [hires, ratings] = await Promise.all([
     prisma.newHire.findMany({ where: { id: { in: ids } }, select: HIRE_SELECT }),
-    prisma.hireCheckinRating.findMany({ where: { newHireId: { in: ids }, dayMark: { in: RATED_DAY_MARKS } }, select: { newHireId: true, dayMark: true, updatedAt: true } })
+    // Every day mark, anytime check-ins included (each request is matched to its own mark below).
+    prisma.hireCheckinRating.findMany({ where: { newHireId: { in: ids } }, select: { newHireId: true, dayMark: true, updatedAt: true } })
   ]);
   const byId = new Map(hires.map((h) => [h.id, h as HireNow]));
   // Rated in the app AFTER the request went out - an older rating is what the

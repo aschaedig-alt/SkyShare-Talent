@@ -138,8 +138,10 @@ export function CheckinRatingRequestDialog({
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">Ask the manager to rate {hireName}: {checkin.title}</h2>
         <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
           Emails the hiring manager a link to {hireName}&apos;s {checkin.title} form - the four core values on the 1&ndash;10 scale, how well they have learned the role, and &ldquo;would you hire again?&rdquo;. No login
-          needed, it works once, for {RATING_LINK_DAYS} days, and it shows them no other ratings. When they send it, the rating appears here and the
-          {checkin.short} check-in is marked done.
+          needed, it works once, for {RATING_LINK_DAYS} days, and it shows them no other ratings.{" "}
+          {checkin.anytime
+            ? `When they send it, the rating appears on ${hireName}'s profile and on Reports > Check-ins. Nothing on their checklist changes.`
+            : `When they send it, the rating appears here and the ${checkin.short} check-in is marked done.`}
         </p>
 
         {current ? (

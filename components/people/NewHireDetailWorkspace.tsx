@@ -954,9 +954,22 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
           {
             key: "checkins",
             label: "Check-ins",
-            chip: `${checkinRatings.length} of ${RATED_CHECKINS.length} rated`,
+            chip: (() => {
+              const standard = checkinRatings.filter((r) => RATED_CHECKINS.some((c) => c.dayMark === r.dayMark)).length;
+              const extra = checkinRatings.length - standard;
+              return `${standard} of ${RATED_CHECKINS.length} rated${extra ? ` + ${extra} more` : ""}`;
+            })(),
             chipWarn: checkinRatings.some((r) => r.followUp.length > 0),
-            content: <CheckinRatingsPanel ratings={checkinRatings} tasks={tasks} />
+            content: (
+              <CheckinRatingsPanel
+                ratings={checkinRatings}
+                tasks={tasks}
+                hireId={hire.id}
+                hireName={hire.name}
+                startDate={hire.startDate}
+                gone={hire.employmentStatus === "TERMINATED" || hire.canceled}
+              />
+            )
           }
         ]
       : []),

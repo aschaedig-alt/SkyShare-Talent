@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { CORE_VALUE_NAMES } from "@/lib/interviews/scorecard";
-import { RATED_CHECKINS, RATED_DAY_MARKS, readScale, cleanRatings, type RoleProgressKey } from "@/lib/onboarding/checkin-rating";
+import { RATED_CHECKINS, isRatedDayMark, readScale, cleanRatings, type RoleProgressKey } from "@/lib/onboarding/checkin-rating";
 import { readAllRatingRequestViews } from "@/lib/onboarding/checkin-rating-request";
 import { richTextToPlain } from "@/lib/richtext/sanitize";
 
@@ -116,15 +116,15 @@ function toRow(r: RatingRecord, h: HireBits | undefined): CheckinRow {
 /** One person's check-in ratings, 3-month first - the profile's Check-ins tab. Admins only (the caller gates it). */
 export async function getCheckinRowsForHire(newHireId: string): Promise<CheckinRow[]> {
   const [ratings, hire] = await Promise.all([
-    prisma.hireCheckinRating.findMany({ where: { newHireId, dayMark: { in: RATED_DAY_MARKS } }, orderBy: { dayMark: "asc" } }),
+    prisma.hireCheckinRating.findMany({ where: { newHireId }, orderBy: { dayMark: "asc" } }),
     prisma.newHire.findUnique({ where: { id: newHireId }, select: HIRE_SELECT })
   ]);
-  return ratings.map((r) => toRow(r, hire ?? undefined));
+  return ratings.filter((r) => isRatedDayMark(r.dayMark)).map((r) => toRow(r, hire ?? undefined));
 }
 
 export async function getCheckinReport(now: Date = new Date()): Promise<CheckinReport> {
   const [ratings, requests, post] = await Promise.all([
-    prisma.hireCheckinRating.findMany({ where: { dayMark: { in: RATED_DAY_MARKS } }, orderBy: { createdAt: "desc" } }),
+    prisma.hireCheckinRating.findMany({ orderBy: { createdAt: "desc" } }),
     readAllRatingRequestViews(),
     prisma.newHire.findMany({
       where: { stage: "POST_ONBOARD", canceled: false },
@@ -134,7 +134,7 @@ export async function getCheckinReport(now: Date = new Date()): Promise<CheckinR
 
   const hires = await prisma.newHire.findMany({ where: { id: { in: [...new Set(ratings.map((r) => r.newHireId))] } }, select: HIRE_SELECT });
   const byId = new Map(hires.map((h) => [h.id, h]));
-  const rows: CheckinRow[] = ratings.map((r) => toRow(r, byId.get(r.newHireId)));
+  const rows: CheckinRow[] = ratings.filter((r) => isRatedDayMark(r.dayMark)).map((r) => toRow(r, byId.get(r.newHireId)));
 
   const status: CheckinStatus[] = RATED_CHECKINS.map((c) => {
     const mine = requests.filter((q) => q.dayMark === c.dayMark);
