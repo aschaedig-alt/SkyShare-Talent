@@ -1357,6 +1357,9 @@ iPhone, tap Add to contacts, and save. If you can, try it on an Android phone to
 **What would count as a pass:** the phone offers Create New Contact (iPhone) or imports it
 (Android), and the saved contact has the right name, title, phone and work email.
 
+**Update 2026-11-19:** tested on phones after the deploy (email button, card page, Add to
+contacts, and the QR code) and reported working: "it is great." Left open for him to close.
+
 ---
 
 ### 68. The evaluator's value calls and its learning have only been tried on a made-up guide
