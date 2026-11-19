@@ -1370,6 +1370,35 @@ read on its next run. Whether it follows them is still to be seen on the next in
 
 ---
 
+### 77. The remote orientation email has never been built from its real Front template, and the remote panel has never been used
+
+**Status:** BLOCKED ON DEPLOY, and on a Front template that does not exist yet
+**Added:** 2026-11-19
+
+The "4. Remote prep" orientation email finds its Front template by name,
+**4. (Remote) New Hire Orientation**. On 2026-11-19 no template by that name
+existed: the full template list returned 85 and none was a remote one. Until
+he creates it in Front (he chose to, Nov 19; the wording lives only in Front),
+the Send button shows a "create it in Front" message and sends nothing. What was
+checked: the link and Meet-link fill against sample markup, the in-person refusal,
+the not-yet-created error, and the invitation still building unchanged. What was
+NOT checked: a preview built from the real template, any send, and the panel's
+Save buttons. Saving writes to the live database, so it wasn't clicked from a dev
+session.
+
+**How to check it, about five minutes:** create the template in Front. Open an
+upcoming session with someone marked Remote. Under **Remote attendees**, add the
+video and presentation links and save, and save a lunch card. Then press
+**Send…** in the **4. Remote prep** column, change a word in the editable body
+box, tick test mode, and send it to hrotasks@.
+
+**What would count as a pass:** the test email arrives with the session date, a
+clickable Meet link, the links list, your edited word, no leftover "delete this
+part" text and no warnings you didn't expect. The template in Front is unchanged
+afterwards. The links and lunch card are still there after a reload.
+
+---
+
 ## Closed
 
 ### 76. Nobody has opened a sent contact card on a real phone yet

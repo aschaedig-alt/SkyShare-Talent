@@ -17,6 +17,7 @@ import {
   orientationTemplateMeta,
   type OrientationTemplateKey
 } from "@/lib/orientation/email-templates-meta";
+import { fillRemotePlaceholders, getRemoteLinks } from "@/lib/orientation/remote-kit";
 import { frontFetch } from "./client";
 import { cleanEditedBody, EDITED_BODY_WARNING } from "./sanitize-body";
 
@@ -52,18 +53,33 @@ type FrontTemplate = { id: string; name: string; subject: string; body: string }
     (a rebuild changes the id). Keeps the send working without a code change. */
 async function fetchTemplate(key: OrientationTemplateKey): Promise<FrontTemplate> {
   const def = orientationTemplate(key);
-  try {
-    return await frontFetch<FrontTemplate>(`/message_templates/${def.id}`);
-  } catch {
-    const page = await frontFetch<{ _results: FrontTemplate[] }>("/message_templates");
-    const match = page._results.find((t) => t.name?.trim() === def.frontName);
-    if (!match) {
-      throw new Error(
-        `Front template "${def.frontName}" not found. It may have been renamed — check Front, then update ORIENTATION_TEMPLATES.`
-      );
+  // A blank id means "known only by name" (the remote template, added before it
+  // existed in Front). Requesting /message_templates/ with no id would return the
+  // LIST, which is not a template and would be sent as an empty email.
+  if (def.id) {
+    try {
+      return await frontFetch<FrontTemplate>(`/message_templates/${def.id}`);
+    } catch {
+      // fall through to the name lookup
     }
-    return match;
   }
+  // Every page, not just the first: the workspace has 85+ templates and Front
+  // pages them, so a name lookup on page one alone can miss a real template.
+  let path: string | null = "/message_templates?limit=100";
+  for (let guard = 0; path && guard < 10; guard++) {
+    const page: { _results: FrontTemplate[]; _pagination?: { next?: string | null } } = await frontFetch(path);
+    const match = page._results.find((t) => t.name?.trim() === def.frontName);
+    if (match) return match;
+    path = page._pagination?.next ?? null; // absolute URL; frontFetch accepts it
+  }
+  if (key === "remote") {
+    throw new Error(
+      `The Front template "${def.frontName}" doesn't exist yet. Create it in Front with exactly that name, using [Day, Date], [Meet Link] and [Orientation Links] where those should go, and this send will work without any other change.`
+    );
+  }
+  throw new Error(
+    `Front template "${def.frontName}" not found. It may have been renamed — check Front, then update ORIENTATION_TEMPLATES.`
+  );
 }
 
 // --- template cleanup -------------------------------------------------------
@@ -459,6 +475,10 @@ type AttendeeForEmail = {
   name: string;
   ssEmail: string | null;
   personalEmail: string | null;
+  /** The attendee's NA / NEEDED / ARRANGED / REMOTE flag. Only read by the
+      remote-only template, which refuses anyone not marked REMOTE. Optional so
+      the reminder cron, which never sends that template, needn't select it. */
+  travelStatus?: string | null;
 } & SupervisorFields;
 
 type ResolvedSupervisor = { name: string | null; email: string | null; linked: boolean };
@@ -494,6 +514,8 @@ type SessionForEmail = {
   /** Street address. OPTIONAL on purpose: a caller that does not select it simply
       gets no location override, rather than every call site breaking. */
   address?: string | null;
+  /** The session's Google Meet link — fills [Meet Link] in the remote template. */
+  meetLink?: string | null;
 };
 
 function greetingHtml(name: string): string {
@@ -534,6 +556,13 @@ export async function buildOrientationEmail(
   bodyOverride?: string | null
 ): Promise<OrientationEmailPreview> {
   const def = orientationTemplate(key);
+  // Checked BEFORE the template fetch, so an in-person hire in a bulk selection
+  // is skipped with the real reason rather than with a Front error.
+  if (def.remoteOnly && attendee.travelStatus !== "REMOTE") {
+    throw new Error(
+      `${attendee.name} isn't marked Remote — this email is only for people joining by video. Set their attendance to Remote first if that's what they're doing.`
+    );
+  }
   const tpl = await fetchTemplate(key);
   const warnings: string[] = [];
   const isTest = Boolean(testTo?.trim());
@@ -631,6 +660,15 @@ export async function buildOrientationEmail(
   // Separate from the changes: things the override could NOT check, which have
   // to be said out loud rather than left looking like agreement.
   warnings.push(...overrides.warnings);
+
+  // The remote template's links and Meet link. The links are the STANDING list
+  // (lib/orientation/remote-kit.ts), so a new video link is changed once in the
+  // app rather than in Front; the Meet link is this session's own.
+  if (key === "remote") {
+    const remote = fillRemotePlaceholders(bodyFill.text, await getRemoteLinks(), session.meetLink);
+    bodyFill.text = remote.text;
+    warnings.push(...remote.warnings);
+  }
   // Dedupe case-insensitively, and keep cc from repeating anyone already in to.
   const seen = new Set<string>();
   const finalTo = toList.map((t) => t.trim()).filter((t) => t && !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));

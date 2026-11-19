@@ -12,6 +12,7 @@ import { formatUsd } from "@/lib/travel/constants";
 import { describeOffNormal, mapsSearchUrl, resolveSessionPlace, type UsedPlace } from "@/lib/orientation/places";
 import { ORIENTATION_TEMPLATE_META } from "@/lib/orientation/email-templates-meta";
 import { OrientationEmailPanel } from "./OrientationEmailPanel";
+import { RemoteAttendeesPanel } from "./RemoteAttendeesPanel";
 import { OrientationCalendarPanel } from "./OrientationCalendarPanel";
 import { OffNormalChip } from "./OffNormalNotice";
 import { SessionTimePlaceEditor } from "./SessionTimePlaceEditor";
@@ -839,12 +840,26 @@ export function OrientationSessionDetail({
       {/* Sending + who's had what. Replaces the old tick-only tracker: the app can
           now send the team's real Front templates, so the five slots the app had
           invented (invitation / confirm_request / … ) are gone. */}
+      {/* People joining by video: the standing links the remote email carries,
+          and each one's lunch delivery. Above the email panel because it is
+          what that panel's "4. Remote prep" column sends. */}
+      {attendees.length > 0 ? (
+        <RemoteAttendeesPanel
+          sessionId={session.id}
+          meetLink={session.meetLink}
+          attendees={attendees
+            .filter((a) => a.travelStatus === "REMOTE")
+            .map((a) => ({ id: a.id, name: a.name, prepSent: a.sentTemplateKeys.includes("remote") }))}
+        />
+      ) : null}
+
       {attendees.length > 0 ? (
         <OrientationEmailPanel
           sessionId={session.id}
           attendees={attendees.map((a) => ({
             id: a.id,
             name: a.name,
+            remote: a.travelStatus === "REMOTE",
             sentTemplateKeys: a.sentTemplateKeys,
             sends: a.sends
           }))}

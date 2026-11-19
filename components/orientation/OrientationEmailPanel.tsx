@@ -54,6 +54,8 @@ type SendRecord = {
 type AttendeeRow = {
   id: string;
   name: string;
+  /** Marked Remote (joining by video). Gates the remote-only template's column. */
+  remote?: boolean;
   sentTemplateKeys: string[];
   /** templateKey -> what the APP sent. Absent = ticked by hand. */
   sends: Record<string, SendRecord>;
@@ -120,7 +122,7 @@ function AudienceChip({ audience, className }: { audience: OrientationTemplateMe
     numbered template is which. */
 function TemplateLegend() {
   return (
-    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+    <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
       {ORIENTATION_TEMPLATE_META.map((t) => (
         <div
           key={t.key}
@@ -310,6 +312,19 @@ export function OrientationEmailPanel({
                 {ORIENTATION_TEMPLATE_META.map((t) => {
                   const sent = a.sentTemplateKeys.includes(t.key);
                   const record = a.sends[t.key];
+                  // An in-person attendee never gets the remote email, so the
+                  // cell says so instead of offering a Send that would be refused.
+                  // Unless it already went (they were remote, then changed) —
+                  // then the record still shows, because it really happened.
+                  if (t.remoteOnly && !a.remote && !sent) {
+                    return (
+                      <td key={t.key} className="px-2 py-2 text-center align-top">
+                        <span className="text-[11px] text-brand-grey dark:text-slate-500" title="Only for attendees marked Remote">
+                          — in person
+                        </span>
+                      </td>
+                    );
+                  }
                   // Three states, not two. "The app sent it, here is when" is a
                   // different fact from "somebody ticked a box", and the grid used
                   // to render both as the same green tick.

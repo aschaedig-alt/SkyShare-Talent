@@ -77,6 +77,7 @@ async function loadAttendee(attendeeId: string) {
     select: {
       id: true,
       sentTemplateKeys: true,
+      travelStatus: true,
       newHire: {
         select: {
           id: true,
@@ -93,9 +94,27 @@ async function loadAttendee(attendeeId: string) {
           supervisor2Hire: { select: { name: true, ssEmail: true, personalEmail: true } }
         }
       },
-      session: { select: { id: true, date: true, endsAt: true, location: true, address: true } }
+      session: { select: { id: true, date: true, endsAt: true, location: true, address: true, meetLink: true } }
     }
   });
+}
+
+type LoadedAttendee = NonNullable<Awaited<ReturnType<typeof loadAttendee>>>;
+
+/** The two arguments every build site passes. One helper so the remote fields
+    (travelStatus, meetLink) cannot be passed at one call site and forgotten at
+    another — preview and send must build the identical email. */
+function emailInputs(a: LoadedAttendee) {
+  return {
+    attendee: { ...a.newHire, travelStatus: a.travelStatus },
+    session: {
+      date: a.session.date.toISOString(),
+      endsAt: a.session.endsAt ? a.session.endsAt.toISOString() : null,
+      location: a.session.location,
+      address: a.session.address,
+      meetLink: a.session.meetLink
+    }
+  };
 }
 
 /** Build (but do not send) the exact email, so it can be approved first. */
@@ -110,12 +129,8 @@ export async function previewOrientationEmail(
   if (!a) return { ok: false, error: "Attendee not found." };
 
   try {
-    const preview = await buildOrientationEmail(key, a.newHire, {
-      date: a.session.date.toISOString(),
-      endsAt: a.session.endsAt ? a.session.endsAt.toISOString() : null,
-      location: a.session.location,
-      address: a.session.address
-    }, testTo);
+    const input = emailInputs(a);
+    const preview = await buildOrientationEmail(key, input.attendee, input.session, testTo);
     return { ok: true, preview, alreadySent: parseKeys(a.sentTemplateKeys).includes(key) };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Couldn't build the email." };
@@ -152,12 +167,8 @@ export async function sendOrientationEmail(
 
   try {
     orientationTemplate(key); // rejects an unknown key before anything is sent
-    const email = await buildOrientationEmail(key, a.newHire, {
-      date: a.session.date.toISOString(),
-      endsAt: a.session.endsAt ? a.session.endsAt.toISOString() : null,
-      location: a.session.location,
-      address: a.session.address
-    }, testTo, bodyOverride);
+    const input = emailInputs(a);
+    const email = await buildOrientationEmail(key, input.attendee, input.session, testTo, bodyOverride);
     const channelId = await getOrientationChannelId();
 
     const sent = await sendEmail(channelId, {
@@ -275,12 +286,8 @@ export async function previewOrientationEmailBatch(
     }
     const alreadySent = parseKeys(a.sentTemplateKeys).includes(key);
     try {
-      const preview = await buildOrientationEmail(key, a.newHire, {
-        date: a.session.date.toISOString(),
-        endsAt: a.session.endsAt ? a.session.endsAt.toISOString() : null,
-        location: a.session.location,
-        address: a.session.address
-      });
+      const input = emailInputs(a);
+      const preview = await buildOrientationEmail(key, input.attendee, input.session);
       rows.push({
         attendeeId,
         name: a.newHire.name,
