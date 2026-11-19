@@ -9,6 +9,7 @@ import type { CheckinRow } from "@/lib/quality-of-hire/checkins";
 import { Score, SHORT } from "@/components/reports/CheckinReport";
 import { CheckinRatingRequestDialog, StateChip } from "@/components/people/CheckinRatingRequestDialog";
 import { formatMomentDate, formatMomentDateShort } from "@/lib/dates/display";
+import { buttonClasses } from "@/components/ui/Button";
 
 // The profile's Check-ins tab (his call, Nov 17 2026: "Yes, on the profile"). One
 // card per check-in - 3, 6 and 12 months - so a person's ratings stay visible after
@@ -120,19 +121,25 @@ export function CheckinRatingsPanel({
       })}
 
       <div className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 p-3 dark:border-white/10 dark:bg-white/5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="min-w-0">
-            <div className="text-sm font-semibold text-brand-lea dark:text-slate-100">Anytime check-ins</div>
-            <p className="text-[11px] text-brand-grey dark:text-slate-400">
-              After the first year, send the manager the same check-in whenever you want one. It is named for how long {hireName} has been here when it goes out.
-            </p>
-          </div>
-          {anytimeMark !== null && !gone && openAnytime.length === 0 && !ratings.some((r) => r.dayMark === anytimeMark) ? (
-            <button type="button" className={button} onClick={() => setDialog({ dayMark: anytimeMark, request: null })}>
-              Send a check-in ({ratedCheckin(anytimeMark)?.short})
-            </button>
-          ) : null}
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-brand-lea dark:text-slate-100">Anytime check-ins</div>
+          <p className="text-[11px] text-brand-grey dark:text-slate-400">
+            After the first year, send the manager the same check-in whenever you want one. It is named for how long {hireName} has been here when it goes out.
+          </p>
         </div>
+        {/* The send button sits on its own row, under the text you read first, in
+            the gold call-to-action style. It used to be a small outlined button at
+            the far right of the heading row, and he could not find it (Nov 19 2026:
+            "i dont see a way to send it to someone"). Full width on a phone. */}
+        {anytimeMark !== null && !gone && openAnytime.length === 0 && !ratings.some((r) => r.dayMark === anytimeMark) ? (
+          <button
+            type="button"
+            className={buttonClasses({ variant: "gold", className: "mt-3 w-full sm:w-auto" })}
+            onClick={() => setDialog({ dayMark: anytimeMark, request: null })}
+          >
+            Send a check-in to the manager ({ratedCheckin(anytimeMark)?.short})
+          </button>
+        ) : null}
         {gone ? (
           <p className="mt-2 text-[11px] text-brand-grey dark:text-slate-400">{hireName} has left, so no new check-in can be sent.</p>
         ) : anytimeMark !== null && ratings.some((r) => r.dayMark === anytimeMark) ? (
