@@ -1338,30 +1338,6 @@ session is marked complete, Attended orientation turns Done by itself with no cl
 
 ---
 
-### 76. Nobody has opened a sent contact card on a real phone yet
-
-**Status:** OPEN — deployed 2026-11-19 (6fe79c3)
-**Added:** 2026-11-19
-
-The Send contact card email now goes to people chosen in its dialog (linked supervisors
-ticked, anyone else added by name or address) and carries an **Add to your contacts** button
-to a no-login card page; the dialog also shows a QR code of that link. The session checked
-the page and the .vcf over HTTP on local dev (both load; a wrong link shows nothing about
-the person; no horizontal scroll at 375 light and dark) and built Raymond Cardenas's email
-without sending it. NOT checked: scanning the QR and saving the contact on a real iPhone and
-an Android phone (the link points at the live site, so it needs this deploy), and a real send.
-
-**How to check it:** open a new hire's Send contact card dialog, scan its QR code with your
-iPhone, tap Add to contacts, and save. If you can, try it on an Android phone too.
-
-**What would count as a pass:** the phone offers Create New Contact (iPhone) or imports it
-(Android), and the saved contact has the right name, title, phone and work email.
-
-**Update 2026-11-19:** tested on phones after the deploy (email button, card page, Add to
-contacts, and the QR code) and reported working: "it is great." Left open for him to close.
-
----
-
 ### 68. The evaluator's value calls and its learning have only been tried on a made-up guide
 
 **Status:** OPEN — deployed 2026-11-16 (b6ebd49)
@@ -1395,6 +1371,31 @@ read on its next run. Whether it follows them is still to be seen on the next in
 ---
 
 ## Closed
+
+### 76. Nobody has opened a sent contact card on a real phone yet
+
+**Status:** CLOSED
+**Closed:** 2026-11-19, by him: "Close 76"
+**Added:** 2026-11-19
+
+The Send contact card email now goes to people chosen in its dialog (linked supervisors
+ticked, anyone else added by name or address) and carries an **Add to your contacts** button
+to a no-login card page; the dialog also shows a QR code of that link. The session checked
+the page and the .vcf over HTTP on local dev (both load; a wrong link shows nothing about
+the person; no horizontal scroll at 375 light and dark) and built Raymond Cardenas's email
+without sending it. NOT checked: scanning the QR and saving the contact on a real iPhone and
+an Android phone (the link points at the live site, so it needs this deploy), and a real send.
+
+**How to check it:** open a new hire's Send contact card dialog, scan its QR code with your
+iPhone, tap Add to contacts, and save. If you can, try it on an Android phone too.
+
+**What would count as a pass:** the phone offers Create New Contact (iPhone) or imports it
+(Android), and the saved contact has the right name, title, phone and work email.
+
+**Update 2026-11-19:** tested on phones after the deploy (email button, card page, Add to
+contacts, and the QR code) and reported working: "it is great." Left open for him to close.
+
+---
 
 ### 63. The new Post-onboard grid (Sample A) has not been used for real
 
