@@ -6,6 +6,9 @@ import { TickedNotSentNote } from "@/components/shared/TickedNotSentNote";
 import { EmailBodyEditor } from "@/components/shared/EmailBodyEditor";
 import { formatMomentDate } from "@/lib/dates/display";
 import type { FrontTemplateSummary } from "@/lib/front/templates";
+import type { ContactRecipient } from "@/lib/front/supervisor-contact-email";
+import { ContactRecipientList, type RecipientRow } from "@/components/people/ContactRecipientList";
+import { CardLinkQr } from "@/components/people/CardLinkQr";
 import { PhoneNumber } from "@/components/shared/PhoneNumber";
 import {
   chooseSupervisorContactTemplate,
@@ -48,6 +51,20 @@ type Props = {
   sentAt?: string | null;
 };
 
+// WHO IT GOES TO IS CHOSEN IN THE DIALOG (Nov 19 2026). Asked for as: "send the
+// new hires contact card to multiple people, 2 supervisors linked to the new hire
+// and another supervisor ... be able to select who i send it to". The linked
+// supervisors start ticked; anyone else on the roster, or a typed address, can be
+// added. The list is passed to the preview AND back to the send, so the people
+// she read are the people it goes to. The email carries a button to the hire's
+// no-login card page (/welcome/card/<token>), whose "Add to contacts" opens the
+// .vcf in the phone's BROWSER — the only route that reliably offers "Create New
+// Contact" on both iPhone and Android. An attached .vcf did not (Nov 19 2026).
+
+function checkedRecipients(rows: RecipientRow[]): ContactRecipient[] {
+  return rows.filter((r) => r.checked && r.email).map((r) => ({ name: r.name, email: r.email as string }));
+}
+
 export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canEdit, onSent, sentAt = null }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -62,6 +79,8 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
   const [loadError, setLoadError] = useState<string | null>(null);
   const [templateId, setTemplateId] = useState("");
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [rows, setRows] = useState<RecipientRow[]>([]);
+  const previewSeq = useRef(0);
   const fetched = useRef(false);
 
   // The template list is read from Front when the dialog opens rather than shipped
@@ -99,9 +118,47 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
     setResult(null);
     setBody(null);
     setSaveError(null);
+    setRows([]);
     const next = await previewSupervisorContactEmail(hireId);
     setRes(next);
     setTemplateId(next.template?.templateId ?? "");
+    // The linked supervisors, ticked. One with no address is listed but cannot be
+    // ticked, so it is visible why they are not getting it.
+    setRows(
+      (next.targets?.supervisors ?? []).map((s, i) => ({
+        key: `linked-${i}`,
+        name: s.name,
+        email: s.email,
+        detail: i === 0 ? "Supervisor" : "Second supervisor",
+        checked: Boolean(s.email),
+      }))
+    );
+    setLoading(false);
+  }
+
+  function currentTemplate() {
+    return templateId
+      ? {
+          templateId,
+          templateName: templates?.find((t) => t.id === templateId)?.name ?? res?.template?.templateName ?? templateId,
+        }
+      : null;
+  }
+
+  // Re-preview when the list changes so the greeting ("Hi A, B and C") and the To
+  // line are what will go out. The body she may have edited is kept — it does not
+  // depend on who it goes to.
+  async function changeRows(next: RecipientRow[]) {
+    setRows(next);
+    const chosen = currentTemplate();
+    if (!chosen) return;
+    // Ticking two boxes quickly fires two previews; only the latest may land, or
+    // the To line could show a list she has already changed.
+    const mine = ++previewSeq.current;
+    setLoading(true);
+    const fresh = await previewSupervisorContactEmail(hireId, chosen, checkedRecipients(next));
+    if (mine !== previewSeq.current) return;
+    setRes(fresh);
     setLoading(false);
   }
 
@@ -117,9 +174,13 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
       templateId: id,
       templateName: templates?.find((t) => t.id === id)?.name ?? id,
     };
+    const mine = ++previewSeq.current;
     setLoading(true);
-    setRes(await previewSupervisorContactEmail(hireId, chosen));
-    setLoading(false);
+    const fresh = await previewSupervisorContactEmail(hireId, chosen, checkedRecipients(rows));
+    if (mine === previewSeq.current) {
+      setRes(fresh);
+      setLoading(false);
+    }
     // Remembered for every hire after this one. A failure here is NOT fatal to the
     // send — the chosen template is passed to it explicitly — so it is reported as
     // "it will not be remembered", not as "you cannot send".
@@ -129,13 +190,7 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
 
   async function confirmSend() {
     setSending(true);
-    const chosen = templateId
-      ? {
-          templateId,
-          templateName: templates?.find((t) => t.id === templateId)?.name ?? res?.template?.templateName ?? templateId,
-        }
-      : null;
-    const sent = await sendSupervisorContactEmail(hireId, body, chosen);
+    const sent = await sendSupervisorContactEmail(hireId, body, currentTemplate(), checkedRecipients(rows));
     setResult(sent);
     setSending(false);
     if (sent.ok) onSent();
@@ -152,8 +207,11 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
       setResult(null);
       setBody(null);
       setSaveError(null);
+      setRows([]);
     }, 200);
   }
+
+  const chosenCount = checkedRecipients(rows).length;
 
   const targets = res?.targets;
   const p = res?.preview;
@@ -163,16 +221,17 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
   return (
     <>
       <Button size="sm" variant="secondary" onClick={openPreview}>
-        {sentAt ? "Resend to supervisor" : "Send to supervisor"}
+        {sentAt ? "Resend contact card" : "Send contact card"}
       </Button>
 
       <Modal open={open} onClose={close} busy={sending} maxWidth="max-w-3xl">
         <h2 className="text-lg font-semibold text-brand-lea dark:text-slate-100">
-          Send {hireName}&apos;s contact details to their supervisor
+          Send {hireName}&apos;s contact card
         </h2>
         <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-          Meant for once the offer letter is signed. This hands their supervisor the name, title, mobile number and
-          SkyShare email below &mdash; so read it before you send it.
+          Their supervisors are ticked to start &mdash; add anyone else who should have it. Each person gets the name,
+          title, mobile number and SkyShare email below, plus an &ldquo;Add to your contacts&rdquo; button that saves
+          the card on their phone. Read it before you send it.
         </p>
 
         {loading && (
@@ -236,23 +295,29 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
 
             {targets && (
               <>
+                <ContactRecipientList hireId={hireId} rows={rows} onChange={changeRows} disabled={sending} />
+
                 <dl className="mt-3 grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm">
-                  <dt className="font-semibold text-brand-grey dark:text-slate-400">To</dt>
-                  <dd className="text-brand-black dark:text-slate-100">
-                    {targets.supervisors
-                      .filter((s) => s.email)
-                      .map((s) => (s.name ? `${s.name} (${s.email})` : s.email))
-                      .join(", ")}
-                  </dd>
                   <dt className="font-semibold text-brand-grey dark:text-slate-400">Cc</dt>
                   <dd className="text-brand-black dark:text-slate-100">{targets.cc.join(", ")}</dd>
                   {p ? (
                     <>
                       <dt className="font-semibold text-brand-grey dark:text-slate-400">Subject</dt>
                       <dd className="text-brand-black dark:text-slate-100">{p.subject}</dd>
+                      <dt className="font-semibold text-brand-grey dark:text-slate-400">Card link</dt>
+                      <dd className="break-all text-brand-black dark:text-slate-100">
+                        <a href={p.cardUrl} target="_blank" rel="noreferrer" className="text-brand-eden underline dark:text-brand-sweet">
+                          {p.cardUrl}
+                        </a>{" "}
+                        <span className="text-brand-grey dark:text-slate-400">
+                          &mdash; the button in the email opens this; tapping &ldquo;Add to contacts&rdquo; there saves {hireName} on an iPhone or Android
+                        </span>
+                      </dd>
                     </>
                   ) : null}
                 </dl>
+
+                {p ? <CardLinkQr url={p.cardUrl} name={hireName} /> : null}
 
                 {targets.warnings.map((w) => (
                   <p
@@ -358,7 +423,7 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
                     edited={body}
                     onChange={setBody}
                     disabled={sending}
-                    note="The contact details are part of this body, so if you rewrite it, keep the ones you want to share in it."
+                    note="The contact details and the Add to your contacts button are part of this body, so if you rewrite it, keep them in it."
                   />
                 </div>
               </>
@@ -368,14 +433,14 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
               <Button variant="secondary" onClick={close} disabled={sending}>
                 Cancel
               </Button>
-              <Button onClick={confirmSend} disabled={sending || !p}>
+              <Button onClick={confirmSend} disabled={sending || loading || !p || chosenCount === 0}>
                 {sending
                   ? "Sending…"
-                  : !p
-                    ? "Choose a template first"
-                    : body === null
-                      ? `Send to ${p.to.join(", ")}`
-                      : `Send edited copy to ${p.to.join(", ")}`}
+                  : chosenCount === 0
+                    ? "Choose who it goes to"
+                    : !p
+                      ? "Choose a template first"
+                      : `Send ${body === null ? "" : "edited copy "}to ${p.to.length === 1 ? "1 person" : `${p.to.length} people`}`}
               </Button>
             </div>
           </>

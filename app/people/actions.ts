@@ -46,6 +46,7 @@ import {
   recordSupervisorContactSend,
   resolveSupervisorContactTargets,
   setSupervisorContactTemplate,
+  type ContactRecipient,
   type SupervisorContactEmailPreview,
   type SupervisorContactSendRecord,
   type SupervisorContactTargets,
@@ -847,6 +848,8 @@ async function loadHireForSupervisorEmail(hireId: string) {
       businessCardTitle: true,
       phone: true,
       ssEmail: true,
+      department: true,
+      location: true,
       supervisorName: true,
       supervisorEmail: true,
       supervisorHire: { select: { name: true, ssEmail: true, personalEmail: true } },
@@ -882,7 +885,9 @@ export async function chooseSupervisorContactTemplate(
  */
 export async function previewSupervisorContactEmail(
   hireId: string,
-  template?: SupervisorContactTemplate | null
+  template?: SupervisorContactTemplate | null,
+  /** The dialog's recipient list. Omitted on first open = the linked supervisors. */
+  recipients?: ContactRecipient[] | null
 ): Promise<SupervisorContactPreviewResult> {
   if (!(await canEditPeople())) {
     return { ok: false, error: "You don't have permission to send this email." };
@@ -903,9 +908,13 @@ export async function previewSupervisorContactEmail(
   const chosen = template ?? (await getSupervisorContactTemplate());
   const alreadySent = await getSupervisorContactSendRecord(hireId);
   if (!chosen) return { ok: true, targets, template: null, alreadySent };
+  // Nobody chosen yet (no supervisor linked, or she unticked everyone): there is
+  // nothing to preview, and building would report it as a Front problem.
+  const effective = recipients ?? targets.supervisors.filter((s) => s.email);
+  if (effective.length === 0) return { ok: true, targets, template: chosen, alreadySent };
 
   try {
-    const preview = await buildSupervisorContactEmail(hire, null, chosen);
+    const preview = await buildSupervisorContactEmail(hire, null, chosen, recipients);
     return { ok: true, targets, template: chosen, preview, alreadySent };
   } catch (err) {
     // The recipients and the card are still good — only Front failed. Keeping ok
@@ -933,7 +942,10 @@ export async function previewSupervisorContactEmail(
 export async function sendSupervisorContactEmail(
   hireId: string,
   bodyOverride?: string | null,
-  template?: SupervisorContactTemplate | null
+  template?: SupervisorContactTemplate | null,
+  /** The list she approved in the dialog — passed back so the preview's
+   *  recipients are the send's recipients. */
+  recipients?: ContactRecipient[] | null
 ): Promise<SupervisorContactSendResult> {
   if (!(await canEditPeople())) {
     return { ok: false, error: "You don't have permission to send this email." };
@@ -946,7 +958,7 @@ export async function sendSupervisorContactEmail(
   let email: SupervisorContactEmailPreview;
   let channelId: string;
   try {
-    email = await buildSupervisorContactEmail(hire, bodyOverride, template);
+    email = await buildSupervisorContactEmail(hire, bodyOverride, template, recipients);
     channelId = await getOrientationChannelId();
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Could not build the email." };

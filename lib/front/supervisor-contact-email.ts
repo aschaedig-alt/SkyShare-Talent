@@ -3,6 +3,7 @@ import { splitCandidateName } from "@/lib/candidates/normalize";
 import { resolveSupervisors } from "./orientation-email";
 import { fetchTemplate } from "./templates";
 import { cleanEditedBody } from "./sanitize-body";
+import { buildHireCardUrl, cardLinkOrigin, ensureHireCardToken } from "@/lib/new-hire-contacts/hire-card-link";
 
 // The REVERSE of the contacts-link email.
 //
@@ -124,6 +125,9 @@ export type HireForSupervisorEmail = {
   businessCardTitle: string | null;
   phone: string | null;
   ssEmail: string | null;
+  /** Optional: only used to fill the attached contact card. */
+  department?: string | null;
+  location?: string | null;
   supervisorName: string | null;
   supervisorEmail: string | null;
   supervisorHire?: { name: string; ssEmail: string | null; personalEmail: string | null } | null;
@@ -139,13 +143,51 @@ export type SupervisorContactCard = {
   title: string | null;
   phone: string | null;
   email: string | null;
+  /** Card-only extras — they go in the attached .vcf, not in the email text. */
+  department?: string | null;
+  location?: string | null;
 };
+
+/** One person the email goes to. The send dialog builds this list: the linked
+ *  supervisors start ticked, and anyone else can be added. */
+export type ContactRecipient = { name: string | null; email: string };
+
+/** A sanity cap, not a policy — this carries a personal mobile number. */
+export const MAX_CONTACT_RECIPIENTS = 10;
+
+const EMAIL_SHAPE = /^[^\s@<>",;]+@[^\s@<>",;]+\.[^\s@<>",;]+$/;
+
+/**
+ * Clean and validate a recipient list from the dialog. Dedupes by address
+ * (case-insensitive), keeping the first name seen. Throws — so nothing goes out —
+ * on an address that is not an address, an empty list, or too many.
+ */
+export function normalizeContactRecipients(list: ContactRecipient[]): ContactRecipient[] {
+  const seen = new Set<string>();
+  const out: ContactRecipient[] = [];
+  for (const r of list) {
+    const email = r.email?.trim() ?? "";
+    if (!EMAIL_SHAPE.test(email)) {
+      throw new Error(`"${email || "(blank)"}" is not an email address.`);
+    }
+    const key = email.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ name: r.name?.trim() || null, email });
+  }
+  if (out.length === 0) throw new Error("Choose at least one person to send this to.");
+  if (out.length > MAX_CONTACT_RECIPIENTS) {
+    throw new Error(`That is ${out.length} people — send to ${MAX_CONTACT_RECIPIENTS} or fewer at a time.`);
+  }
+  return out;
+}
 
 type ResolvedSupervisor = ReturnType<typeof resolveSupervisors>[number];
 
 export type SupervisorContactTargets = {
-  /** Addresses that will actually receive it — one per supervisor slot that has
-   *  an address. Never empty; a hire with none throws instead. */
+  /** The DEFAULT recipients — one per linked supervisor slot that has an address.
+   *  The dialog starts with these ticked. May be empty (nobody linked yet); the
+   *  dialog then asks who it goes to, and the build refuses an empty list. */
   to: string[];
   cc: string[];
   supervisors: ResolvedSupervisor[];
@@ -165,16 +207,13 @@ export function resolveSupervisorContactTargets(hire: HireForSupervisorEmail): S
   const supervisors = resolveSupervisors(hire);
   const to = supervisors.map((s) => s.email).filter((e): e is string => Boolean(e));
 
-  // Wording lifted from buildOrientationEmail's supervisor branch, because it is
-  // the same fact about the same two fields and two different sentences for it
-  // would be two things to keep true. A throw, so nothing goes out.
-  if (to.length === 0) {
-    throw new Error(
-      `${hire.name} has no supervisor on file — link one (or type an address) on their profile before sending their contact details.`
-    );
-  }
-
+  // No supervisor on file is no longer a hard stop (Nov 19 2026): the dialog lets
+  // her pick who it goes to, so a hire with nobody linked can still be sent to
+  // whoever she adds. The build refuses an empty list, so nothing goes nowhere.
   const warnings: string[] = [];
+  if (to.length === 0) {
+    warnings.push(`${hire.name} has no supervisor with an email on file — add who this goes to below.`);
+  }
   // A slot filled with a name but no address can't receive the email — say so
   // rather than quietly sending to only one of the two.
   const missing = supervisors.filter((s) => !s.email).map((s) => s.name);
@@ -199,13 +238,20 @@ export function resolveSupervisorContactTargets(hire: HireForSupervisorEmail): S
     to,
     cc: CC,
     supervisors,
-    hireCard: { name: hire.name, title, phone, email },
+    hireCard: {
+      name: hire.name,
+      title,
+      phone,
+      email,
+      department: hire.department?.trim() || null,
+      location: hire.location?.trim() || null,
+    },
     warnings,
   };
 }
 
 /** The hire's card, in the template's own Verdana/9pt, appended under the body. */
-function hireCardHtml(card: SupervisorContactCard): string {
+function hireCardHtml(card: SupervisorContactCard, cardUrl: string): string {
   const rows = [
     `<b>${esc(card.name)}</b>`,
     card.title ? esc(card.title) : null,
@@ -219,8 +265,37 @@ function hireCardHtml(card: SupervisorContactCard): string {
     `<span style="font-family: Verdana, sans-serif;">` +
     `<span style="background-color: transparent; font-size: 9pt;">` +
     rows.join("<br />") +
+    `</span></span></div>` +
+    // The link to the card page — see lib/new-hire-contacts/hire-card-link.ts for
+    // why this is a link and not an attached .vcf. Inline styles only, since mail
+    // clients drop stylesheets; navy + white matches the page it opens.
+    `<div><br /></div>` +
+    `<div style="line-height: 1.5;" dir="ltr">` +
+    `<a href="${esc(cardUrl)}" style="display: inline-block; background-color: #0d2c43; color: #ffffff; ` +
+    `font-family: Verdana, sans-serif; font-size: 9pt; font-weight: bold; text-decoration: none; ` +
+    `padding: 10px 16px; border-radius: 4px;">Add ${esc(card.name)} to your contacts</a>` +
+    `</div>` +
+    `<div style="line-height: 1.5;" dir="ltr">` +
+    `<span style="font-family: Verdana, sans-serif;">` +
+    `<span style="background-color: transparent; font-size: 8pt; color: #5f6b77;">` +
+    `Open this on your phone and tap the button to save ${esc(card.name)} as a contact.` +
     `</span></span></div>`
   );
+}
+
+function greetingNames(recipients: ContactRecipient[]): string {
+  const names = recipients
+    .map((r) => {
+      if (!r.name) return null;
+      const { firstName } = splitCandidateName(r.name);
+      return firstName || r.name.split(/\s+/)[0] || null;
+    })
+    .filter((n): n is string => Boolean(n));
+  // A recipient added by address alone has no name to greet; if NOBODY has one,
+  // fall back to "there" rather than greeting an email address.
+  if (names.length === 0) return "there";
+  if (names.length === 1) return names[0];
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
 export type SupervisorContactEmailPreview = {
@@ -243,6 +318,10 @@ export type SupervisorContactEmailPreview = {
   /** Repeated here so the confirm dialog and the send read the same object. */
   hireCard: SupervisorContactCard;
   supervisors: ResolvedSupervisor[];
+  /** Exactly who it goes to, with names — what the dialog's list resolved to. */
+  recipients: ContactRecipient[];
+  /** The no-login card page the email's button opens — shown in the dialog. */
+  cardUrl: string;
   warnings: string[];
 };
 
@@ -261,13 +340,25 @@ export type SupervisorContactEmailPreview = {
  * card is part of the body, so an edited body is whatever she typed, card
  * included — the append does not run again over it. The dialog says so next to
  * the box.
+ *
+ * `recipientsOverride` is the dialog's list (Nov 19 2026: "send the new hire's
+ * contact card to multiple people, 2 supervisors linked to the new hire and
+ * another supervisor"). Omitted, it defaults to the linked supervisors, which is
+ * what this always sent to.
  */
 export async function buildSupervisorContactEmail(
   hire: HireForSupervisorEmail,
   bodyOverride?: string | null,
-  templateOverride?: SupervisorContactTemplate | null
+  templateOverride?: SupervisorContactTemplate | null,
+  recipientsOverride?: ContactRecipient[] | null
 ): Promise<SupervisorContactEmailPreview> {
   const targets = resolveSupervisorContactTargets(hire);
+  const recipients = normalizeContactRecipients(
+    recipientsOverride ??
+      targets.supervisors
+        .filter((s): s is ResolvedSupervisor & { email: string } => Boolean(s.email))
+        .map((s) => ({ name: s.name, email: s.email }))
+  );
 
   const template = templateOverride ?? (await getSupervisorContactTemplate());
   if (!template) {
@@ -278,21 +369,21 @@ export async function buildSupervisorContactEmail(
 
   const tpl = await fetchTemplate(template.templateId, template.templateName);
 
-  const first =
-    targets.supervisors
-      .map((s) => {
-        const { firstName } = splitCandidateName(s.name);
-        return firstName || s.name?.split(/\s+/)[0] || null;
-      })
-      .filter((n): n is string => Boolean(n))
-      .join(" and ") || "there";
+  const first = greetingNames(recipients);
+
+  // Minted here, so the PREVIEW already carries the real link: if she edits the
+  // body, what she edits is what goes out, and a placeholder in it would go out
+  // broken. Reused on every later build, so this is one write per hire, ever.
+  const cardUrl = buildHireCardUrl(cardLinkOrigin(), await ensureHireCardToken(hire.id));
 
   const edited = Boolean(bodyOverride && bodyOverride.trim());
-  const bodyHtml = edited ? cleanEditedBody(bodyOverride as string) : tpl.body + hireCardHtml(targets.hireCard);
+  const bodyHtml = edited
+    ? cleanEditedBody(bodyOverride as string)
+    : tpl.body + hireCardHtml(targets.hireCard, cardUrl);
   const greeting = greetingHtml(first);
 
   return {
-    to: targets.to,
+    to: recipients.map((r) => r.email),
     cc: targets.cc,
     firstName: first,
     subject: tpl.subject,
@@ -304,7 +395,12 @@ export async function buildSupervisorContactEmail(
     edited,
     hireCard: targets.hireCard,
     supervisors: targets.supervisors,
-    warnings: targets.warnings,
+    recipients,
+    cardUrl,
+    // With an explicit list she has already chosen who gets it, so the "nobody
+    // linked" / "no address for X" notes about the DEFAULT list no longer apply —
+    // the dialog showed them before she chose.
+    warnings: recipientsOverride ? [] : targets.warnings,
   };
 }
 

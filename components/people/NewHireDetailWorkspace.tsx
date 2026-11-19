@@ -754,10 +754,24 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
         // the form's unsaved draft — naming a card that has not shipped yet would be
         // a small lie on a phone screen.
         [
-          <div key="make-contact" className="flex items-center gap-3">
+          <div key="make-contact" className="flex flex-wrap items-center gap-3">
             <MakeContactButton hireId={hire.id} hireName={hire.name} />
+            {/* The same send as the checklist row's, reachable for anyone —
+                including a hire whose checklist predates that row. Emails their
+                card to whoever she picks (supervisors pre-ticked). */}
+            <SendSupervisorContactButton
+              hireId={hire.id}
+              hireName={hire.name}
+              taskStatus={tasks.find((x) => x.key === "supervisor_contact_sent")?.status ?? "TODO"}
+              sentAt={sendStatus.supervisor}
+              canEdit={canEdit}
+              onSent={() =>
+                setTasks((cur) => cur.map((x) => (x.key === "supervisor_contact_sent" ? { ...x, status: "DONE" } : x)))
+              }
+            />
             <span className="text-xs text-brand-grey dark:text-slate-400">
-              Adds them to your phone&apos;s contacts, so you can share the card on from there.
+              Make contact adds them to your phone. Send contact card emails their card to their supervisors and
+              anyone else you choose.
             </span>
           </div>
         ]
