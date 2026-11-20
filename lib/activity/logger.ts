@@ -44,7 +44,11 @@ export type ActivityType =
   // A source spelling given a tidy name, or one tidy name folded into another,
   // on Reports > Sources. SourceAlias keeps only the latest editor; this is the
   // history, so "who decided bizjet was BizJetJobs" has an answer.
-  | "SOURCE_NAME_CHANGED";
+  | "SOURCE_NAME_CHANGED"
+  // An ADMIN borrowing another account's view (lib/auth/view-as.ts). Logged
+  // under the ADMIN's own identity, with the target as the entity.
+  | "VIEW_AS_STARTED"
+  | "VIEW_AS_ENDED";
 
 export interface ActivityLogPayload {
   userId?: string;

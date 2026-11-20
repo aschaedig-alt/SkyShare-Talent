@@ -1370,6 +1370,32 @@ read on its next run. Whether it follows them is still to be seen on the next in
 
 ---
 
+### 80. View as has never been started or exited by clicking, on the live site
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-11-20
+
+Settings > Team members has a **View as** button on every other person's row. It borrows
+their identity, read-only, for up to 60 minutes, with a navy-and-gold bar at the top and an
+**Exit View as** button. What WAS checked, on a local test server with real sign-in switched
+on and a test session already in View as as a Hiring Manager: the session reported the Hiring
+Manager instead of the admin; Settings, Reports and People refused them while Candidates
+loaded; the sidebar shrank from five areas to their two; and every write (an API POST, a PATCH
+and a server-action POST) came back 403 while the same PATCH as the plain admin got its normal
+answer. NOT checked: pressing **View as** and **Exit View as** themselves. Both go through
+next-auth's session update and write a line to the Activity log, and that log is the live
+database. Also not checked on a phone, or in dark mode.
+
+**How to check it, about two minutes:** on the live site open Settings > Team members, press
+**View as** on someone with narrowed access, look around, then press **Exit View as**.
+
+**What would count as a pass:** you land on their home page with the bar showing their name
+and only their areas in the sidebar; trying to save anything says it is read-only; Exit takes
+you back to Team members as yourself; Settings > Activity shows one "Started viewing as" and
+one "Stopped viewing as" under your name.
+
+---
+
 ### 79. The Values in Action department budgets have not been seen signed in on the live site, or in dark mode
 
 **Status:** OPEN — deployed 2026-11-19 (6fed87a)

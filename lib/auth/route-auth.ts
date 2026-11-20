@@ -35,6 +35,13 @@ export type ApiRouteUser = {
   // repo while ~200 API routes read candidate data — which is precisely why the
   // department restriction had never applied anywhere except the list query.
   viewer: ViewerScope | null;
+  // Set only while an ADMIN is viewing as this user (lib/auth/view-as.ts): the
+  // admin's own user id. Every field above is the borrowed account's — that is
+  // what makes the gates real — so anything that RECORDS who did something on a
+  // GET (an audit row, say) must credit this id instead, or it files the
+  // admin's look-around under somebody else's name. Writes are blocked outright
+  // in middleware.ts; this is only for the side effects of reading.
+  viewAsBy?: string | null;
 };
 
 export type ApiAuthResult =
@@ -118,7 +125,8 @@ async function resolveSessionUser(): Promise<ApiAuthResult> {
       name: session.user.name ?? null,
       role,
       authMode: "session",
-      viewer
+      viewer,
+      viewAsBy: session.viewAs?.realUserId ?? null
     }
   };
 }

@@ -62,7 +62,8 @@ export async function GET(_request: Request, context: RouteContext) {
 
     await prisma.auditEvent.create({
       data: {
-        actorId: auth.user.id,
+        // Under View as, the admin opened it — not the person being viewed as.
+        actorId: auth.user.viewAsBy ?? auth.user.id,
         eventType: "CANDIDATE_FILE_OPEN",
         entityType: "CandidateFile",
         entityId: file.id,
@@ -71,7 +72,10 @@ export async function GET(_request: Request, context: RouteContext) {
           candidateId: file.candidateId,
           filename: file.displayFilename || file.originalFilename,
           authMode: auth.user.authMode,
-          openedByEmail: auth.user.email
+          openedByEmail: auth.user.email,
+          // Non-null only under View as: then openedByEmail is the account being
+          // viewed as, and the actor above is the admin.
+          viewAsBy: auth.user.viewAsBy ?? null
         })
       }
     });

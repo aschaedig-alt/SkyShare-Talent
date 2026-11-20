@@ -6,6 +6,7 @@ import {
   serializeViewPreference,
   viewPreferenceFromParams
 } from "@/lib/candidates/view-preference";
+import { isMutatingMethod, isViewAsActive } from "@/lib/auth/view-as-token";
 
 const protectedPagePrefixes = [
   "/approvals",
@@ -270,6 +271,32 @@ export async function middleware(request: NextRequest) {
     rememberCandidateView(request, response);
     return response;
   };
+
+  // VIEW AS IS READ-ONLY (lib/auth/view-as.ts). While an admin is borrowing
+  // somebody's view, every request that could change data is refused — API
+  // calls and server actions alike (a server action is a POST to the page's own
+  // path, which is why this runs before the protected-path check and covers
+  // every path). The database is shared and live, and anything written here
+  // would be recorded under the other person's name. /api/auth is exempt so that
+  // exiting view-as and signing out still work.
+  if (
+    isMutatingMethod(request.method) &&
+    isAuthRequired() &&
+    authSecret() &&
+    !pathname.startsWith("/api/auth/") &&
+    request.cookies.getAll().some((c) => c.name.includes("next-auth.session-token"))
+  ) {
+    const viewAsToken = await getToken({ req: request, secret: authSecret() }).catch(() => null);
+    if (viewAsToken && isViewAsActive(viewAsToken.viewAs)) {
+      return NextResponse.json(
+        {
+          message:
+            "You are viewing as another user, which is read-only. Exit View as (the bar at the top of the page) to make changes."
+        },
+        { status: 403 }
+      );
+    }
+  }
 
   if (!isProtectedPath(pathname) || !isAuthRequired()) {
     return passThrough();

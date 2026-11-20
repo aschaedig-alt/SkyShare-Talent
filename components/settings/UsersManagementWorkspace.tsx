@@ -7,6 +7,7 @@ import { useDialogClose } from "@/lib/hooks/useDialogClose";
 import { TeamMemberAccessModal, type AccessDraft } from "@/components/settings/TeamMemberAccessModal";
 import { SCOPING_DEPARTMENTS } from "@/lib/auth/scoping-options";
 import type { UserModuleOverrides } from "@/lib/auth/user-module-access";
+import { requestViewAs } from "@/components/layout/ViewAsBanner";
 
 /** Mirrors lib/auth/roles.isHrTeam default, for the label only. Not a gate. */
 function isAdminOrRecruiterRole(role: string): boolean {
@@ -82,6 +83,29 @@ export function UsersManagementWorkspace({
   // Escape closes the remove-access modal (unless mid-save), matching its
   // click-outside behavior below.
   useDialogClose(() => { if (!saving) setRemoving(null); }, Boolean(removing));
+
+  // View as: which row's request is in flight.
+  const [viewAsPending, setViewAsPending] = useState<string | null>(null);
+
+  const startViewAs = async (user: UserWithPermissions) => {
+    setViewAsPending(user.id);
+    try {
+      const session = await requestViewAs(user.id);
+      if (!session?.viewAs) {
+        // The server said no, or there is no real session. Local dev bypasses
+        // sign-in entirely, so View as only works where auth is real.
+        throw new Error(
+          "View as did not start. It needs a real sign-in (it does nothing on local dev, which bypasses auth) and an ADMIN account."
+        );
+      }
+      // Full load so every server component re-renders as them. "/" sends the
+      // admin to whatever home THAT person would land on.
+      window.location.assign("/");
+    } catch (err) {
+      flash("error", err instanceof Error ? err.message : "View as did not start.");
+      setViewAsPending(null);
+    }
+  };
 
   const flash = (type: "success" | "error", text: string) => {
     setMessage({ type, text });
@@ -440,7 +464,7 @@ export function UsersManagementWorkspace({
                         </button>
                       </div>
                     ) : (
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => {
                             setEditingUserId(user.id);
@@ -450,6 +474,19 @@ export function UsersManagementWorkspace({
                         >
                           Change Role
                         </button>
+                        {/* View as — see the app exactly as this person does, read-only.
+                            Hidden for yourself. The server re-checks that you are an
+                            ADMIN; this button is only the request. */}
+                        {user.id !== currentUserId && (
+                          <button
+                            onClick={() => startViewAs(user)}
+                            disabled={viewAsPending !== null}
+                            title="See the app exactly as this person sees it. Read-only."
+                            className="rounded border border-brand-lea/20 px-3 py-1 text-xs font-semibold text-brand-lea transition hover:bg-brand-gold/10 disabled:opacity-50 dark:border-white/10 dark:text-slate-100"
+                          >
+                            {viewAsPending === user.id ? "Opening…" : "View as"}
+                          </button>
+                        )}
                         {/* Full offboarding — blocks + deletes. Hidden for yourself. */}
                         {user.id !== currentUserId && (
                           <button

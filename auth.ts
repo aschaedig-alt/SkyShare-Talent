@@ -6,6 +6,8 @@ import { isRoleName, type RoleName } from "@/lib/auth/roles";
 import { isEmailBlocked } from "@/lib/auth/blocklist";
 import { logActivity } from "@/lib/activity/logger";
 import { claimInviteForUser } from "@/lib/auth/invites";
+import { endViewAs, refreshViewAs, startViewAs } from "@/lib/auth/view-as";
+import { isViewAsActive } from "@/lib/auth/view-as-token";
 
 // Record a sign-in attempt to the activity log so admins can see who tried to get
 // in and why they were turned away. Only what actually reaches us is capturable:
@@ -247,7 +249,9 @@ export const authOptions: NextAuthOptions = {
       await logSignInAttempt(user.email, allowed, allowed ? "ok" : "not_allowed_domain");
       return allowed;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      // token.email / token.id / token.role are ALWAYS the real signed-in account,
+      // including while viewing as somebody else. Never let them become the target.
       const email = (user?.email ?? token.email)?.trim().toLowerCase();
 
       if (!email) {
@@ -260,12 +264,54 @@ export const authOptions: NextAuthOptions = {
       token.id = dbUser?.id ?? token.sub;
       token.role = role;
 
+      // View as (lib/auth/view-as.ts). Start/stop arrive as a session update —
+      // POST /api/auth/session, CSRF-checked by next-auth — carrying
+      // { viewAs: "<userId>" } or { viewAs: null }. The browser's request is only a
+      // REQUEST: startViewAs re-checks the real account's database role.
+      const real = { realUserId: token.id, realEmail: email, realRole: role };
+      const request = trigger === "update" && session && typeof session === "object" ? (session as { viewAs?: unknown }) : null;
+      if (request && "viewAs" in request) {
+        if (token.viewAs) {
+          await endViewAs({ ...real, state: token.viewAs, reason: "exited" });
+          delete token.viewAs;
+        }
+        if (typeof request.viewAs === "string" && request.viewAs) {
+          const started = await startViewAs({ ...real, targetUserId: request.viewAs });
+          if (started) token.viewAs = started;
+        }
+      } else if (token.viewAs) {
+        const refreshed = await refreshViewAs({ ...real, state: token.viewAs });
+        if (refreshed) token.viewAs = refreshed;
+        else delete token.viewAs;
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = typeof token.id === "string" ? token.id : token.sub ?? "";
         session.user.role = isRoleName(String(token.role)) ? (token.role as RoleName) : "VIEWER";
+
+        // Viewing as somebody: from here on, every gate in the app sees THEM.
+        // isViewAsActive also checks expiry, so a cookie that could not be
+        // rewritten (a server component cannot set one) still stops on time.
+        if (isViewAsActive(token.viewAs)) {
+          const target = token.viewAs;
+          session.viewAs = {
+            realUserId: session.user.id,
+            realEmail: session.user.email ?? null,
+            realName: session.user.name ?? null,
+            startedAt: target.startedAt,
+            expiresAt: target.expiresAt
+          };
+          session.user = {
+            id: target.userId,
+            email: target.email,
+            name: target.name,
+            image: null,
+            role: target.role
+          };
+        }
       }
 
       return session;

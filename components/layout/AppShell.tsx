@@ -8,6 +8,7 @@ import { resolveUserHome } from "@/lib/data/user-home";
 import { resolveViewerScope } from "@/lib/auth/viewer-scope";
 import { getWorkspaceBranding, resolveBrandingLogo } from "@/lib/data/branding";
 import { EnvironmentBanner } from "@/components/layout/EnvironmentBanner";
+import { ViewAsBanner } from "@/components/layout/ViewAsBanner";
 import { ModuleAccessShell } from "@/components/layout/ModuleAccessShell";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { SopBookmark } from "@/components/handbook/SopBookmark";
@@ -80,6 +81,15 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
                 className="fixed inset-x-0 top-0 z-30 h-12 border-b border-brand-lea/10 bg-[var(--skyshare-page)] shadow-sm lg:hidden print:hidden dark:border-white/10"
               />
             </>
+          ) : null}
+          {session?.viewAs && session.user ? (
+            <ViewAsBanner
+              viewingName={session.user.name ?? null}
+              viewingEmail={session.user.email ?? null}
+              viewingRole={session.user.role}
+              realEmail={session.viewAs.realEmail}
+              expiresAt={session.viewAs.expiresAt}
+            />
           ) : null}
           <EnvironmentBanner />
           <ModuleAccessShell role={role} policy={policy} moduleOverrides={moduleOverrides}>
