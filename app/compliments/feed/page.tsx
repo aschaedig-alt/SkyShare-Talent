@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { clsx } from "clsx";
+import { FEED_ENABLED } from "@/lib/compliments/constants";
 import { getFeedRecognitions, type FeedFilter } from "@/lib/data/compliments";
 import { Card } from "@/components/compliments/Card";
 import { RecognitionCard } from "@/components/compliments/RecognitionCard";
@@ -18,6 +20,8 @@ function filterFromParam(value: string | undefined): FeedFilter {
 }
 
 export default async function FeedPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
+  // Switched off with the tab (see FEED_ENABLED); the page below is kept as-is.
+  if (!FEED_ENABLED) notFound();
   const sp = await searchParams;
   const filter = filterFromParam(sp.filter);
   const recognitions = await getFeedRecognitions(filter);

@@ -50,12 +50,20 @@ const NON_FLIGHT_DEPT = /fbo|accounting|finance|maintenance|\bmx\b|sales|marketi
 // Journey spells some departments more than one way. These are the ones Aimee
 // combined on 2026-11-05 (her "Correct Department" column over the tab's own
 // department table); every other spelling is shown as recorded.
+//
+// 2026-11-19: he renamed departments to "FlightOps | Pilots", "FlightOps | Cabin
+// Attendants" and "FBO | SVR" / "FBO | DVO" / "FBO | OGD". The new crew names fold
+// into FlightOps here so this report keeps Aimee's grouping; the old names stay
+// mapped for anything recorded before the rename.
 const DEPARTMENT_GROUP: Record<string, string> = {
   "FlightOps | Managed Client": "FlightOps",
+  "FlightOps | Pilots": "FlightOps",
+  "FlightOps | Cabin Attendants": "FlightOps",
   Pilot: "FlightOps",
   MX: "Maintenance",
   "Maintenance | SLC": "Maintenance",
-  SVR: "SVR FBO"
+  SVR: "FBO | SVR",
+  "SVR FBO": "FBO | SVR"
 };
 const departmentGroup = (d: string) => DEPARTMENT_GROUP[d.trim()] ?? d.trim();
 

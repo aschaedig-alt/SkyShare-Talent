@@ -174,3 +174,9 @@ export const COMPANY_VALUE_BY_NAME: Record<string, (typeof COMPANY_VALUES)[numbe
 export const VALUE_DESCRIPTIONS: Record<string, string> = Object.fromEntries(
   COMPANY_VALUES.map((v) => [v.name, v.description])
 );
+
+// The company recognition wall ("Feed"). Switched OFF Nov 19 2026: Kevin's
+// approved "SkyShare Values in Action" program is private by default with no
+// social feed. The page, its data read and FeedEngagement are kept intact so
+// the design is not lost - flip this to true to bring the tab and route back.
+export const FEED_ENABLED = false;

@@ -11,7 +11,7 @@ import { Check } from "lucide-react";
 import { Card } from "@/components/compliments/Card";
 import { PersonPicker } from "@/components/compliments/PersonPicker";
 import { createRecognition } from "@/app/compliments/actions";
-import { RecognitionStrength, STRENGTH_STOPS, VALUE_DESCRIPTIONS } from "@/lib/compliments/constants";
+import { FEED_ENABLED, RecognitionStrength, STRENGTH_STOPS, VALUE_DESCRIPTIONS } from "@/lib/compliments/constants";
 import { CoreValueDefinition } from "@/components/shared/CoreValueDefinition";
 import { valueColorClasses } from "@/lib/compliments/value-colors";
 import type { RosterPerson } from "@/lib/compliments/types";
@@ -71,7 +71,7 @@ export function GiveRecognitionForm({ roster, values, strengthPoints, defaultRec
     startTransition(async () => {
       const result = await createRecognition(data);
       if (result.ok) {
-        router.push("/compliments/feed");
+        router.push(FEED_ENABLED ? "/compliments/feed" : "/compliments");
       } else {
         setServerError(result.error ?? "Something went wrong. Try again.");
       }

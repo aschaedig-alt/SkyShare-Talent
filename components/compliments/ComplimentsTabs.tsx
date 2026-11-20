@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
+import { FEED_ENABLED } from "@/lib/compliments/constants";
 
 const BASE_TABS = [
   { href: "/compliments", label: "Dashboard", exact: true },
@@ -11,7 +12,7 @@ const BASE_TABS = [
   { href: "/compliments/feed", label: "Feed", exact: false },
   { href: "/compliments/rewards", label: "Rewards", exact: false },
   { href: "/compliments/analytics", label: "Insights", exact: false }
-];
+].filter((t) => FEED_ENABLED || t.href !== "/compliments/feed");
 
 const ADMIN_TAB = { href: "/compliments/budget", label: "Budget", exact: false };
 

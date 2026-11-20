@@ -5,6 +5,8 @@ import { Card } from "@/components/compliments/Card";
 import { MetricCard } from "@/components/compliments/MetricCard";
 import { RewardCatalogAdmin } from "@/components/compliments/RewardCatalogAdmin";
 import { ProgramSettingsForm } from "@/components/compliments/ProgramSettingsForm";
+import { DepartmentBudgets } from "@/components/compliments/DepartmentBudgets";
+import { getDepartmentBudgets } from "@/lib/data/values-in-action";
 
 export const dynamic = "force-dynamic";
 
@@ -32,13 +34,18 @@ export default async function BudgetPage() {
   }
 
   const settings = await getComplimentsSettings();
-  const b = await getBudgetData(settings);
+  const [b, deptBudgets] = await Promise.all([
+    getBudgetData(settings),
+    getDepartmentBudgets(settings.perPersonQuarterUsd)
+  ]);
   const overBudget = b.thisMonthSpendUsd > b.monthlyBudgetUsd && b.monthlyBudgetUsd > 0;
   const maxCategory = Math.max(1, ...b.byCategory.map((c) => c.dollars));
   const maxMonthly = Math.max(1, ...b.monthly.map((m) => Math.max(m.awardedUsd, m.redeemedUsd)));
 
   return (
     <div className="space-y-4">
+      <DepartmentBudgets data={deptBudgets} />
+
       <div>
         <h2 className="text-lg font-medium text-brand-lea dark:text-slate-100">Budget &amp; cost overview</h2>
         <p className="text-sm text-brand-grey dark:text-slate-400">
