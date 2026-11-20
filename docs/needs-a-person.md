@@ -1370,6 +1370,25 @@ read on its next run. Whether it follows them is still to be seen on the next in
 
 ---
 
+### 79. The Values in Action department budgets have not been seen signed in on the live site, or in dark mode
+
+**Status:** OPEN — deployed 2026-11-19 (6fed87a)
+**Added:** 2026-11-19
+
+Compliments > Budget (admin) now opens with each department's quarterly budget ($25 per
+employee counted on the first day of the quarter, contractors and no-starts out) and who can
+spend it. The recognition feed is switched off. The session checked the page over HTTP on
+local dev (which skips sign-in) and at phone widths; the commit agent re-ran the numbers on
+live data: Q4 2026, 175 people, $4,375, 19 departments, everyone with someone to spend it.
+NOT checked: the page signed in on the live site, and dark mode.
+
+**How to check it:** on the live site open Compliments > Budget, then switch to dark mode.
+
+**What would count as a pass:** the department list shows the same totals ($4,375 for Q4
+2026), each row names who can spend it, and everything is readable in dark mode.
+
+---
+
 ### 78. No anytime check-in has been sent, answered or seen in a browser yet
 
 **Status:** OPEN
