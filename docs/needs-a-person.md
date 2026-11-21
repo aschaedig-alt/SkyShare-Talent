@@ -1370,6 +1370,34 @@ read on its next run. Whether it follows them is still to be seen on the next in
 
 ---
 
+### 81. The trimmed contact card, Just the contact, and Active have not been tried on real phones or live data
+
+**Status:** OPEN — deployed 2026-11-21 (4bdb9b5)
+**Added:** 2026-11-21
+
+From Aimee's feedback (cmwkyt6vc, cmwqqv5hi). Make contact now asks whether this is a new
+contact or one already on the phone; for an existing one it hands over only the details she
+ticks, because the iPhone's Add to Existing Contact adds every line it is given (her recording
+showed the phone and both emails doubled). Send contact card has a **Just the contact** option:
+a short editable note with the card, no new-hire wording, no checklist tick. Each application
+has an **Active** button. Checked by the session in desktop Chrome and phone emulation: the
+trimmed card files (each detail on its own), the menu, the send preview for Flynn McFarland
+(cancelled, nothing sent), and the Active button's layout. NOT checked: on a real iPhone, a
+trimmed card through Add to Existing Contact adding only the ticked lines; on a real Android
+phone, what opening a trimmed card does (a new contact or a merge); a Just the contact email
+opened on a real phone; pressing Send or Active on live data.
+
+**How to check it:** on your iPhone, open a person you already have in Contacts, press Make
+contact, choose the existing-contact option with one detail ticked, and add it. Try the same
+on an Android phone. Send yourself a Just the contact for someone already working here and
+open it on your phone. Press Active on one application.
+
+**What would count as a pass:** the existing contact gains only the ticked detail, with no
+doubled lines; the Just the contact email reads right and its button saves the card; Active
+lights and the candidate still reads as open in the lists.
+
+---
+
 ### 80. View as has never been started or exited by clicking, on the live site
 
 **Status:** BLOCKED ON DEPLOY
