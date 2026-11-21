@@ -1673,7 +1673,19 @@ function formatLocation(city: string | null, state: string | null) {
   return [city, state].filter(Boolean).join(", ") || null;
 }
 
-const PRIVATE_NOTE_PLACEHOLDER = "Only visible to the assigned interviewer, their department's hiring managers, and Admin/Recruiter.";
+/** True when an Activity row would tell its reader a private HR note exists. */
+function activityRevealsPrivateNote(row: { description: string; metadata: string | null }, privateNoteIds: Set<string>): boolean {
+  if (/\bprivate (?:paycom |hr )?note\b|\bhr-only note\b/i.test(row.description)) return true;
+  if (!row.metadata) return false;
+  try {
+    const noteId = (JSON.parse(row.metadata) as { noteId?: unknown }).noteId;
+    return typeof noteId === "string" && privateNoteIds.has(noteId);
+  } catch {
+    return false;
+  }
+}
+
+const PRIVATE_NOTE_PLACEHOLDER ="Only visible to the assigned interviewer, their department's hiring managers, and Admin/Recruiter.";
 
 // THE CHOKEPOINT for reading one candidate.
 //
@@ -1894,6 +1906,7 @@ export async function getCandidateProfileData(
 
   // Per-candidate activity history (edits, note add/remove, dedupe, etc.), and the
   // tidy source names (~70 rows) that turn each application's spelling into one name.
+  const privateNoteIds = new Set(candidate.notes.filter((n) => n.hrOnly).map((n) => n.id));
   const [activityRows, sourceNames] = await Promise.all([
     prisma.activityLog.findMany({
       where: { entityType: "Candidate", entityId: candidate.id },
@@ -2106,7 +2119,13 @@ export async function getCandidateProfileData(
           updatedAt: note.updatedAt.toISOString()
         };
       }),
-    activity: activityRows.map((row) => ({
+    // An Activity row about a private note gives away that one exists ("Copied a
+    // private Paycom note (RICHARD PADEN, ...) to Luke Webb as an HR-only note" -
+    // seen by View as Alex Andrade on the live site, Nov 21). Outside HR, drop any
+    // row whose metadata points at a private note, or whose wording says so.
+    activity: activityRows
+      .filter((row) => viewerIsHr || !activityRevealsPrivateNote(row, privateNoteIds))
+      .map((row) => ({
       id: row.id,
       activityType: row.activityType,
       description: row.description,

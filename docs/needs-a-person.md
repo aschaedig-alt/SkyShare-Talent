@@ -42,6 +42,8 @@ live) · `CLOSED`.
 **Status:** BLOCKED ON DEPLOY - failed on the live site 2026-11-21 (timeline leak), fixed in code that day
 **Added:** 2026-09-11
 
+**Sweep 2026-11-21:** After the deploy (d2afba5), View as Alex Andrade: Luke Webb's page no longer contains the note text ("Medium feelings" absent). Still FAILED on one point: his Activity list showed "Copied a private Paycom note (RICHARD PADEN, 6/19/2026 | 1:10 PM) to Luke Webb as an HR-only note", which tells a non-HR viewer one exists. Fixed in lib/data/candidates.ts the same day (rows pointing at a private note, by metadata noteId or wording, are dropped outside HR); against the live table it hides exactly 5 rows, one per private note. BLOCKED ON DEPLOY again: afterwards View as Alex and confirm /candidates/cmrtlf1kx000028rmteibvsbw contains neither "Medium feelings" nor "private Paycom note".
+
 **Sweep 2026-11-21:** FAILED on the live site, now fixed in code, BLOCKED ON DEPLOY. View as Alex Andrade: Luke Webb's page HTML carried his private HR note ("Post interview (private Paycom note by Rich Paden...) Medium feelings...") inside the Timeline data, though the Notes tab correctly left it out; the same for Rich Paden. Cause: lib/data/candidates.ts built the timeline from every note with no hrOnly check, and put interview notes in it without the interviewer-visibility check. Fixed: the timeline now drops private notes and redacts restricted ones exactly like the Notes and Interviews tabs. After the deploy: View as Alex, fetch /candidates/cmrtlf1kx000028rmteibvsbw and confirm "Medium feelings" is absent.
 
 A note marked private is removed from the query rather than hidden in the page, so
@@ -707,33 +709,6 @@ on the card if it has one, then Save changes and reload the page.
 the place you dropped it, Fractional shows 5 aircraft, nothing else on the chart moved,
 and the Chief Pilot box reads Cameron Morgan.
 
-### 39. The daily sheet check has never run on the live site, and no suggestion has been used for real
-
-**Status:** BLOCKED ON DEPLOY - failed on the live site 2026-11-21 (renamed tab broke every scan since Nov 10), fixed that day
-**Added:** 2026-11-03
-
-**Sweep 2026-11-21:** FAILED on the live site, now fixed, BLOCKED ON DEPLOY. Fleet > Crew showed "Last scanned Nov 10, 5:43 AM MT" and "The scan could not read the sheet: Unable to parse range: 'CJ'!A1:L80". The sheet tab "CJ" had been renamed "CJ GA", and one missing tab failed the whole read, so nothing has been checked for 11 days. Fixed: the tab list says "CJ GA", and a missing tab is now named on the panel instead of failing the scan. Dry run against the real sheet and live chart, nothing stored: missingTabs [], 74 agree, 2 suggestions (Nick Lembo in training on PC-12; a CJ2 SIC seat count). After the deploy, press Scan now.
-
-Feedback cmw13vxfx: every morning (12:30 UTC) the app reads the per-aircraft tabs of
-"Recruiting Status Tracking" as the skyshare-calendar-sync service account and lists the
-differences on Fleet → Crew as suggestions: each one shows what the chart has now, what
-the sheet says and the exact tab and row, with Keep as is / Use suggestion / Change with
-modifications. Checked on Nov 3 on this computer against the real sheet and chart: 68
-people agree, 13 suggestions, every one applies cleanly; the panel's buttons, the edit
-form and both error paths worked in Chrome with every save blocked, and a save echoed back
-moved Elijah Hall on screen. **Nothing was saved**, and the scheduled run can only happen
-on the live site. The live site uses the account's ORIGINAL key (Vercel); the Sheets API
-and the sheet sharing were set up Nov 3, so it should read, but that has not been seen.
-
-**How to check it:** the morning after the deploy, open Fleet → Crew. The Sheet check
-panel should say "Last scanned" with that morning's time. Then use one suggestion you
-agree with (for example a seat count) and reload, and press Keep as is on one you do
-not, then reload again.
-
-**What would count as a pass:** the panel shows a scan from that morning rather than an
-error, the suggestion you used is reflected on the chart after the reload, and the one
-you kept is gone from the list (it appears under "already decided").
-
 ### 40. The Paycom notes scan has never hit a Paycom sign-out, and its alert may not reach a phone
 
 **Status:** OPEN
@@ -1152,6 +1127,35 @@ afterwards. The links and lunch card are still there after a reload.
 ---
 
 ## Closed
+
+### 39. The daily sheet check has never run on the live site, and no suggestion has been used for real
+
+**Status:** CLOSED 2026-11-21, by the sweep session on his instruction that day ("if they work, you can mark them as done"). After the deploy (d2afba5), Scan now on Fleet > Crew as Aimee: "Last scanned Nov 21, 3:33 PM MT", no error, "74 people match the sheet exactly", 1 suggestion (CJ2 first officers: chart 0 open / 1 on hold, sheet 1 open / 1 on hold, CJ2 tab row 6), 1 already decided.
+**Added:** 2026-11-03
+
+**Sweep 2026-11-21:** FAILED on the live site, now fixed, BLOCKED ON DEPLOY. Fleet > Crew showed "Last scanned Nov 10, 5:43 AM MT" and "The scan could not read the sheet: Unable to parse range: 'CJ'!A1:L80". The sheet tab "CJ" had been renamed "CJ GA", and one missing tab failed the whole read, so nothing has been checked for 11 days. Fixed: the tab list says "CJ GA", and a missing tab is now named on the panel instead of failing the scan. Dry run against the real sheet and live chart, nothing stored: missingTabs [], 74 agree, 2 suggestions (Nick Lembo in training on PC-12; a CJ2 SIC seat count). After the deploy, press Scan now.
+
+Feedback cmw13vxfx: every morning (12:30 UTC) the app reads the per-aircraft tabs of
+"Recruiting Status Tracking" as the skyshare-calendar-sync service account and lists the
+differences on Fleet → Crew as suggestions: each one shows what the chart has now, what
+the sheet says and the exact tab and row, with Keep as is / Use suggestion / Change with
+modifications. Checked on Nov 3 on this computer against the real sheet and chart: 68
+people agree, 13 suggestions, every one applies cleanly; the panel's buttons, the edit
+form and both error paths worked in Chrome with every save blocked, and a save echoed back
+moved Elijah Hall on screen. **Nothing was saved**, and the scheduled run can only happen
+on the live site. The live site uses the account's ORIGINAL key (Vercel); the Sheets API
+and the sheet sharing were set up Nov 3, so it should read, but that has not been seen.
+
+**How to check it:** the morning after the deploy, open Fleet → Crew. The Sheet check
+panel should say "Last scanned" with that morning's time. Then use one suggestion you
+agree with (for example a seat count) and reload, and press Keep as is on one you do
+not, then reload again.
+
+**What would count as a pass:** the panel shows a scan from that morning rather than an
+error, the suggestion you used is reflected on the chart after the reload, and the one
+you kept is gone from the list (it appears under "already decided").
+
+---
 
 ### 1. A task email has never actually been sent
 
