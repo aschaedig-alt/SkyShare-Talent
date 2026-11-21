@@ -37,39 +37,12 @@ live) · `CLOSED`.
 ---
 
 ## Open
-
-### 1. A task email has never actually been sent
-
-**Status:** OPEN
-**Added:** 2026-09-11
-
-Every checklist step that emails through Front is built, previewed and measured,
-but **no message has ever gone out through it** — not a test, not a real one.
-Measured 2026-09-11: the send log for this path has never been written at all. Of
-the seven `WorkspaceSetting` rows in scope `front`, three are send logs and all
-three are populated — `orientation-sends`, `onboarding-sends` and
-`contacts-link-sends` — while `task-email-sends` is simply not there. So email
-does go out of this app; it has just never gone out of **this** path.
-
-The test send is also the shape Front has never been asked for here: from the
-hrotasks channel back **to** hrotasks is a mailbox emailing itself.
-
-**How to check it, about a minute:** open any new hire, go to the Checklist tab,
-press **Send email** on a step that has one, then press **Send as test to
-hrotasks@skyshare.com**. Then look in the HR Onboarding inbox in Front. The test
-deliberately leaves no trace — it does not tick the step and does not write a send
-record — so it is safe to do on a real person.
-
-**What would count as a pass:** the message arrives, the greeting reads "Hi
-&lt;their first name&gt;", the subject is prefixed `[TEST — would have gone to …]`,
-and the links in the body are clickable.
-
----
-
 ### 2. Private HR notes have never been loaded by a non-HR viewer
 
-**Status:** OPEN — the deploy it was waiting on landed 2026-09-11
+**Status:** BLOCKED ON DEPLOY - failed on the live site 2026-11-21 (timeline leak), fixed in code that day
 **Added:** 2026-09-11
+
+**Sweep 2026-11-21:** FAILED on the live site, now fixed in code, BLOCKED ON DEPLOY. View as Alex Andrade: Luke Webb's page HTML carried his private HR note ("Post interview (private Paycom note by Rich Paden...) Medium feelings...") inside the Timeline data, though the Notes tab correctly left it out; the same for Rich Paden. Cause: lib/data/candidates.ts built the timeline from every note with no hrOnly check, and put interview notes in it without the interviewer-visibility check. Fixed: the timeline now drops private notes and redacts restricted ones exactly like the Notes and Interviews tabs. After the deploy: View as Alex, fetch /candidates/cmrtlf1kx000028rmteibvsbw and confirm "Medium feelings" is absent.
 
 A note marked private is removed from the query rather than hidden in the page, so
 it is absent from the network response and not merely invisible. That is the right
@@ -144,8 +117,10 @@ still counted as filling their seat.
 
 ### 6. No part of the 2026-09-11/12 overnight fix batch has been seen in dark mode
 
-**Status:** OPEN
+**Status:** BLOCKED ON DEPLOY - all passed 2026-11-21 except the /jobs preview, fixed that day
 **Added:** 2026-09-12
+
+**Sweep 2026-11-21:** Checked on the live site in dark mode (contrast scan on every text node, plus screenshots): Crew chart Find a person panel readable; Reports selected tab has its gold ring; today's square (21) on the month calendar is the gold one; Maintenance chart nothing under 3:1. FAILED: the job-post preview on /jobs - its Job Summary paragraph was light grey on the white preview paper (1.48:1). Fixed in components/job-preview/FormattedJobPost.tsx, BLOCKED ON DEPLOY. Also seen: the 7.5px Assistant Chief Pilot label on the crew chart is 2.4:1 in dark mode.
 
 79 fixes landed overnight and the dark-mode ones are the largest group. Every contrast
 figure behind them is either measured by the Round 1 Chrome pass **before** the fix or
@@ -269,6 +244,8 @@ unchanged.
 **Half closed:** 2026-09-23, by him: the test send from a real pilot candidate (Sagar Dave) passed. What is left is the carry-over below.
 **Added:** 2026-09-22
 
+**Sweep 2026-11-21:** Read-only DB: no candidate has any PRD tick stored (preHireTasksJson null on all), so a carry-over cannot have happened yet.
+
 The PRD section now also appears on a candidate's Checklists tab, and what is ticked there
 carries onto the hire's checklist on the move into onboarding. Exercised end to end on a
 TEST-tagged throwaway candidate that was then deleted: a tick was stored on the candidate,
@@ -291,6 +268,8 @@ candidate by first name; after the move, the PRD rows match what was set on the 
 
 **Status:** OPEN — deployed 2026-09-22; he will test it with a second login
 **Added:** 2026-09-22
+
+**Sweep 2026-11-21:** No account today has People without editing it (the three hiring managers have no People area; checked by View as), so this cannot happen with the current team. It stays open only for the day such an account exists.
 
 Every detail on the new hire page now saves when you leave the field, and the Save
 details button is gone. Round-tripped on a real record locally (a value typed, saved,
@@ -326,63 +305,12 @@ title, time and location match.
 ---
 
 
-### 16. Nobody outside HR has loaded the offer-details box, and it is the one box that holds pay
-
-**Status:** OPEN — deployed 2026-09-22; he will test it with a second login
-**Added:** 2026-09-22
-
-The hiring manager's offer details now sit on the offer itself, so the candidate's Offers
-tab and the hire's checklist show the same box. It is the ONLY place in this app allowed
-to hold a pay amount — his decision on 2026-09-22, choosing the version WITH the five pay
-lines over the version without. The gate is server-side in both directions: a non-HR
-session is told "allowed: false" and is never sent the text.
-
-Round-tripped locally on a real offer (typed, left the field, read back from the database,
-then cleared — that application holds nothing now). What could NOT be checked here: local
-dev signs everyone in as an admin with no viewer scope, so the HR gate itself has never
-actually refused anybody.
-
-**How to check it, under a minute:** sign in as somebody who is NOT on the HR team
-(hrTeam false, or a role outside admin/recruiter) and open a candidate's Offers tab.
-
-**What would count as a pass:** no "Offer details from the hiring manager" box at all —
-not an empty one, not a greyed one. Then, as HR, paste a real hiring-manager message over
-the thirteen lines and confirm it is still there after a reload.
-
----
-
-
-### 18. Nothing on a job's Pilot requirement tab that SAVES has been pressed
-
-**Status:** OPEN — deployed 2026-09-23
-**Added:** 2026-09-23
-
-Pilot Requirements is now a tab on each job, and the Role block is the one place a pilot job's
-seat, aircraft, base, operator and pay text are edited - one save writes the job and its
-requirement together, which is the fix for the two drifting apart. Everything was read and
-checked in a browser: old links forward to the right job's tab, the Praetor 600 mismatch flag
-shows, the blocks carry the right numbers, the Requirement 1 of N switcher swaps, and Save stays
-disabled until a person picks which of two disagreeing values is right. What was deliberately
-NOT done, on a live database: pressing any of it. Role Save, Make the requirement inactive too,
-Keep it active, Set one up, Attach, the requirement editor's Save, the fleet-position save and
-the moved Export CSV are typechecked only.
-
-**How to check it, about three minutes:** on one real pilot job whose values you know are right
-- say Gulfstream G200 First Officer - open Pilot requirement, press Edit role, add one word to
-the end of the pay text and Save, then take the word out and Save again. (A save that changes
-nothing records nothing, so retyping a value as it was proves nothing - this check said to do
-exactly that until 2026-09-23.) Then open the Matchboard for that role.
-
-**What would count as a pass:** both saves stick after a reload, two Change history rows appear
-naming you with the pay text before and after, and the Matchboard role still scores the same
-people.
-
----
-
 ### 19. Nobody without admin rights has opened the new Pilot requirement tab
 
 **Status:** OPEN — deployed 2026-09-23 with the recruiter split; needs a login that is not an admin
 **Added:** 2026-09-23
+
+**Sweep 2026-11-21:** Viewer half PASSED (View as Alex Andrade: Pilot requirement tab read-only, no Edit role, no Keep it active / Set one up / Attach). Recruiter half: View as Kevin Sherman shows Edit role and none of the four requirement writes; he also sees Edit requirement, Active/Inactive and Add aircraft, which is the later deliberate canEditScoring grant (fleet position and managed aircraft). The save itself was proven as Aimee in #18. Left: Kevin saving once himself.
 
 The Role block's Save - seat, aircraft, base, operator and pay text - needs jobs:write, which the
 admins and the recruiter (Kevin Sherman is the only one) hold. That was his call on 2026-09-23:
@@ -441,34 +369,12 @@ readable in dark mode.
 
 ---
 
-### 22. Nobody outside HR has searched since the search started reading notes
-
-**Status:** OPEN — deployed 2026-09-23 (the search in 6b70f75, left-out words in 5aa7610); needs a login that is not HR
-**Added:** 2026-09-23
-
-The candidate search can now look in notes ("Search in" > Notes). A private HR note is searched
-for the HR team only - the same rule every note read follows - so a hiring manager searching a
-word that appears only in someone's private note must not find that person, and must not see
-them counted under Notes. Local dev signs everyone in as an admin, so the non-HR side has never
-run.
-
-Since the same day's follow-up, a word with a minus in front ("leave out") looks everywhere,
-notes included, and says how many people it left out - so the same private note must not leave
-anybody out for a hiring manager either, or show in that count.
-
-**How to check it, about two minutes:** as HR, add a private note with an unusual word
-("zebrafish") to one candidate. Sign in as a hiring manager and search that word, then search
-`-zebrafish`. Then delete the note.
-
-**What would count as a pass:** the hiring manager's search finds nobody, and the "Found in" row
-shows Notes 0; and `-zebrafish` reads "not zebrafish anywhere · nobody left out".
-
----
-
 ### 23. No Pilot Application has arrived since search started reading them by layout
 
 **Status:** OPEN — deployed 2026-09-23 with 6b70f75, confirmed live; waits on a Pilot Application arriving
 **Added:** 2026-09-23
+
+**Sweep 2026-11-21:** Stored side PASSED: 43 Pilot Applications have arrived since Sep 23 (newest Jonathan Gleisberg Nov 18, Gaurav Lachhwani Nov 11), every one with searchText and none containing "NAME:". Left: searching one in the UI.
 
 Search reads a signed Pilot Application by its answers - read by layout, the form's printed
 labels left out, and the "position applying for" line counted as a job applied to. The 1,300
@@ -558,25 +464,6 @@ then open their checklist from their name. Set somebody's travel to Remote.
 
 **What would count as a pass:** the checklist shows "Received company credit card" done, and
 the Remote person no longer counts in "Out-of-town", "Travel booked" or "Travel spend".
-
----
-
-### 28. Nobody without admin rights has opened Reports > Sources
-
-**Status:** OPEN — deployed 2026-09-29
-**Added:** 2026-09-29
-
-Reports > Sources (/reports/sources) lets an admin or recruiter give a source spelling its tidy
-name, or rename a source - "How people found us" on the Reports tab bar. The save route refuses
-anybody without EDIT on Reports, and was checked over HTTP; what was not checked is the page
-itself for somebody without it, because local dev signs everybody in as an admin, so there the
-Rename and Save controls always show.
-
-**How to check it, about a minute:** signed in as a hiring manager (or anyone who is not an admin
-or recruiter), open Reports and click "How people found us".
-
-**What would count as a pass:** the page shows both tables, the "Counts as" column reads as plain
-text, and there are no Rename or Save buttons.
 
 ---
 
@@ -753,6 +640,8 @@ three files save; Undo puts the report back as it was; Save again restores it.
 **Status:** OPEN (deployed 2026-10-30, bee8ebc)
 **Added:** 2026-10-30
 
+**Sweep 2026-11-21:** Read-only DB: every offer date set since Oct 30 equals the Mountain day of its tick (Teya Clarke, Steve Cox, Matt Smith, both Logros), and Jake Aoki's earlier typed Offer sent (Nov 16) was left alone - consistent, but nothing records that the auto-fill wrote them. Paycom mail IS reaching HR Onboarding (Front: "Pending Offer Approval" Nov 20, "Final Review of New Hire Onboarding" Nov 20). Still unproven: an Offer Accepted notice filling Offer signed - Teya (Nov 10) and Steve Cox (Nov 19) still read sweep-pending in the Paycom log.
+
 Ticking "Offer letter sent to candidate" or "Candidate signed offer letter" now fills the
 hire's Offer sent / Offer signed date when that field is blank, and Paycom's "Offer
 Accepted" notice fills Offer signed with the day it arrived. Paycom's subjects also stopped
@@ -820,8 +709,10 @@ and the Chief Pilot box reads Cameron Morgan.
 
 ### 39. The daily sheet check has never run on the live site, and no suggestion has been used for real
 
-**Status:** OPEN (deployed 2026-11-03, 2addb48)
+**Status:** BLOCKED ON DEPLOY - failed on the live site 2026-11-21 (renamed tab broke every scan since Nov 10), fixed that day
 **Added:** 2026-11-03
+
+**Sweep 2026-11-21:** FAILED on the live site, now fixed, BLOCKED ON DEPLOY. Fleet > Crew showed "Last scanned Nov 10, 5:43 AM MT" and "The scan could not read the sheet: Unable to parse range: 'CJ'!A1:L80". The sheet tab "CJ" had been renamed "CJ GA", and one missing tab failed the whole read, so nothing has been checked for 11 days. Fixed: the tab list says "CJ GA", and a missing tab is now named on the panel instead of failing the scan. Dry run against the real sheet and live chart, nothing stored: missingTabs [], 74 agree, 2 suggestions (Nick Lembo in training on PC-12; a CJ2 SIC seat count). After the deploy, press Scan now.
 
 Feedback cmw13vxfx: every morning (12:30 UTC) the app reads the per-aircraft tabs of
 "Recruiting Status Tracking" as the skyshare-calendar-sync service account and lists the
@@ -870,35 +761,12 @@ waiting mentions.
 
 ---
 
-### 41. The Paycom email log has not been opened in a browser, and the scan has not added a row to it yet
-
-**Status:** OPEN (deployed 2026-11-06, ad10840)
-**Added:** 2026-11-06
-
-Candidates > Paycom email log (/candidates/paycom-log) lists every Paycom email in Aimee's
-Gmail since Jan 1 2025: 2,649 rows, re-counted against the live data. The page returned
-200 locally with no error, but nobody has looked at it or clicked its filters. The
-scheduled Paycom notes scan now has a new first step that adds each new email to the log;
-that step has not run yet.
-
-**How to check it:**
-
-- Open the page on the live site. Click a month, a kind of email and an outcome tile, then
-  search a candidate's name.
-- After the next scheduled scan, check that today's Paycom emails appear at the top.
-- Optionally, open it with a login that is not HR. The personal and HR-only rows should be
-  hidden, with a count saying so.
-
-**What would count as a pass:** the filters change the rows, names link to the right
-profiles, new emails appear after a scan, and a non-HR login sees no personal or HR-only
-rows.
-
----
-
 ### 42. Nobody has clicked "Report to a role" or changed a leadership role holder yet
 
 **Status:** OPEN
 **Added:** 2026-11-10
+
+**Sweep 2026-11-21:** Live site: People > Leadership roles shows Cameron Morgan (85 report to it) and Alex Andrade (84). Russ Herman's profile read "Chief Pilot · follows the role"; Unlink, then Link a supervisor > Chief Pilot, saved (DB: supervisorRoleKey chief-pilot, updated 22:01Z) and reads the same after reload. Found and fixed: the page then wrongly warned "Leave site?" (components/people/NewHireDetailWorkspace.tsx), and the Unlink button went white-on-white on hover in dark mode (SupervisorPicker.tsx). Left: a real holder change.
 
 Supervisor slots can now follow a role: Chief Pilot (Cameron Morgan) and Assistant Chief
 Pilot (Alex Andrade). 77 current pilots were moved onto those roles in the live database
@@ -923,36 +791,6 @@ role sticks after a reload, and a real holder change updates every follower's su
 
 ---
 
-### 43. Nobody has saved a scorecard with the core values, or an offer's recruiter and hiring manager, yet
-
-**Status:** CLOSED 2026-11-11 - he tested both halves on the live site. The offer's
-recruiter and hiring manager stuck after a reload, and Declined kept Save grey until a
-reason was picked. After the Scorecard link went onto each interview on the candidate's
-Interviews tab (5490627), he added a scorecard: the four core values came first, the
-ratings saved, and they were still there when reopened with the pencil.
-**Added:** 2026-11-10
-
-Two Quality of Hire tracking pieces for Dec 10 are built. Every interview scorecard now
-opens with the four core values (Fueled by Passion, Team Alignment, Deliver the Wow,
-Solutions Focused), each rated Exceeds to Does Not Meet; and an offer has Recruiter and
-Hiring manager boxes, with a reason now required when an offer is marked declined by hand.
-Checked locally in Chrome: the scorecard editor shows the four values with their rating
-buttons, and the offer shows both boxes. Checked by direct request: a declined offer with
-no reason is refused, and the offer read back unchanged. Nothing was saved, because
-localhost writes the live database.
-
-**How to check it, about two minutes:**
-
-- Open an interview, Add scorecard, rate the four core values and one question, save.
-  Reopen it with the pencil: the ratings should still be there, values first.
-- On a candidate's Offers tab with an offer started, type a recruiter and a hiring
-  manager, click away, reload: both should stay.
-- Set an offer to Declined: Save stays grey until a reason is picked or typed.
-
-**What would count as a pass:** all three stick after a reload.
-
----
-
 ### 44. Nobody has saved a 90-day check-in rating yet, and the People page would not come alive locally to click it
 
 **Status:** OPEN - three of four passed. His second live test 2026-11-11, after the due
@@ -968,6 +806,8 @@ UPDATE 2026-11-12 (commit agent): the Jonathan Siswick rating was only his test 
 his request; his 90-day check-in stays open on purpose. The one rating now on file is Axel Leimer's,
 saved 2026-11-12 through the emailed rating link (entered by "Rating link (Jonathan Schaedig)").
 **Added:** 2026-11-10
+
+**Sweep 2026-11-21:** 21 ratings are now on file (13 at 90 days, 8 at 6 months), all through the emailed rating link. Still not seen: "Mark done without a rating".
 
 People > Post-onboard has a new Values column. Ticking a 90-day check-in done now opens a
 short form first: the hiring manager's 1-4 rating of the four core values, "Would you
@@ -993,31 +833,6 @@ is not this change. Nothing was saved, because localhost writes the live databas
 
 ---
 
-### 45. The tracking check on the Quality of Hire tab has not been looked at in a browser
-
-**Status:** CLOSED 2026-11-11 - he checked it on the live site and all four checks passed:
-recent offers listed with gaps marked missing, the offer he filled showed both ticks, names
-open the candidate, and the 90-day list shows day counts.
-**Added:** 2026-11-10
-
-Reports > Quality of Hire now has a "Tracking check" section: every offer made since
-Dec 10 (until then, a practice run over the last 30 days) with four marks - interviews
-logged, recruiter, hiring manager, and a decline reason if declined - plus 90-day ratings
-due. Checked: it runs on live data (practice run, 9 offers since Oct 12, 0 with all four,
-6 with no interview logged, 13 ratings due), the section renders on the server with all 9
-rows, and the live Reports page carries its data. NOT checked: looking at it in a
-browser. On localhost the Reports page, like the People page (item 44), loads but never
-comes alive, in the in-app pane and in Chrome.
-
-**How to check it, one minute, on the live site after deploy:** open Reports > Quality of
-Hire and scroll to "Tracking check".
-
-**What would count as a pass:** the practice run lists the recent offers, the gaps say
-"missing", each name opens the candidate, and the 90-day list shows people with their day
-count.
-
----
-
 ### 46. No training sheet has been imported since imports stopped doubling rows
 
 **Status:** OPEN
@@ -1038,32 +853,6 @@ Import, then Save training.
 **What would count as a pass:** the message says mostly "updated" and few or no "new", and
 no pilot appears twice for the same training. (Two rows already there before the fix stay
 until someone X's one out, for example Jonathan Gleisberg's undated Tentative row.)
-
----
-
-### 47. Nobody has saved a question-bank question in the new editor or dragged one into order
-
-**Status:** OPEN
-**Added:** 2026-11-11
-
-Feedback cmwcjtm5k: the question bank's Question box is now the notes editor (bold,
-italics, lists, blank lines), and the guidance under it is two separate editors, "Strong
-answer" and "Listen for" (existing questions are split at read time; the old prefixes
-become the labels). A question can carry several core values, and questions can be dragged
-(or moved with arrows) into order. Later check, same way: the two-block form opened with
-the old "Strong answer: ... Listen for: ..." text correctly split and sent them separately.
-Checked in Chrome with every save blocked: the editor loaded existing text, Enter-Enter and
-bold produced a blank line and bold text in what would be saved, two core values went in
-the save, and Move down swapped two questions and sent the new order. The server side was
-checked separately (the saved text keeps the blank line and drops anything unsafe). Nothing
-was actually saved, and the drag itself was not performed with a mouse.
-
-**How to check it, two minutes:** edit one question, add a blank line and some bold, tick a
-second core value, put something in both Strong answer and Listen for, save, and reload.
-Then drag one question above another and reload.
-
-**What would count as a pass:** the blank line, bold, both value tags and both guidance
-blocks are still there after the reload, and the new order holds.
 
 ---
 
@@ -1106,6 +895,8 @@ feed, and the calendar edit shows in the write-up on the profile.
 **Status:** BLOCKED ON DEPLOY
 **Added:** 2026-11-11
 
+**Sweep 2026-11-21:** Mostly passed. Mark handled and the level override have been used for real (Chris Sharpe handled Nov 17 by Aimee; Ryan Christensen and Riley Wooden overridden). The morning run files replies at 14:37Z on Nov 13, 16, 17 and 19 - a fixed daily time, though there is no run log; note the cron is 13:45 UTC, 6:45am Mountain in winter, not 7:45. No non-HR account has People at all. Grace Ward's reply is still unhandled. Left: the Check for replies button on the live site.
+
 Replies to the check-in emails ("Re: Just checking in") are now read out of Front, sorted
 by Claude, and shown on the Post-onboard grid, the dashboard and the person page. Checked
 locally against the live data: the four real replies were filed (Grace Ward as Needs
@@ -1127,54 +918,12 @@ follow-up list, the non-HR user sees no reply icons at all, and the log line is 
 
 ---
 
-### 50. Paycom steps that never happened: no profile page looked at since, and the scan's sweep has not run yet
-
-**Status:** OPEN
-**Added:** 2026-11-11
-
-Paycom steps she clicked past are now removed from the interview and notes history when there
-is no note AND no calendar event that day (his approval, Nov 11). 50 were removed in two passes
-and checked against the live database (457 to 407 rows; undo tested). Teya's example and the
-May 2025 to Jan 2026 calendar gap were settled the same day. NOT checked: (1) no candidate page
-was opened in a browser after the removals, so the profile's Interviews and Notes tabs are
-proven only by the database counts; (2) the scheduled Paycom notes scan has not yet run its new
-step 0b (scripts/paycom-status-steps.ts --sweep --apply), so the going-forward half is untested.
-
-**How to check it, three minutes:** open Annie Mader's candidate page (a step was removed for
-her Feb 2 2026 Additional Interview) and look at the Interviews and Notes tabs. After the next
-scan run, read its summary for the sweep line.
-
-**What would count as a pass:** no "Additional Interview (Paycom)" on Feb 2 2026 on her page,
-and the scan summary reports the sweep (usually "removed 0") without an error.
-
----
-
-### 51. "Not Selected - Past Interview" and the two-date timeline have not been looked at on the live site
-
-**Status:** BLOCKED ON DEPLOY
-**Added:** 2026-11-11
-
-41 applications that Paycom calls "Not Selected - Past Interview" said "Failed Interview" in the
-app; they were reworded in the live database (undo tested), and the candidate timeline now shows
-"Applied" on the application date and the outcome on Paycom's disposition date, on the right
-calendar day. Checked from the local dev server against the live data: Stephen Cox's page served
-Applied 04/30 and 05/26 and Not Selected - Past Interview 05/20 and 06/17, matching Paycom. NOT
-checked: (1) nobody has LOOKED at the rendered timeline — the in-app browser cannot render this
-app's pages, so only the data the page receives was read; (2) the live site, which keeps the old
-one-entry timeline until this deploys (the reworded label shows there already).
-
-**How to check it, two minutes:** after the deploy, open Stephen Cox's candidate page, Timeline
-tab, beside his Paycom candidate profile (115698).
-
-**What would count as a pass:** each application shows an "Applied" line and its outcome line,
-with the same dates and wording as Paycom's Application Date and Dispositioned columns.
-
----
-
 ### 52. Question bank: Duplicate, "Apply this formatting to all questions" and Import have never saved for real
 
 **Status:** OPEN
 **Added:** 2026-11-11
+
+**Sweep 2026-11-21:** Duplicate PASSED (see #47: the copy saved with its category and both core values). Apply this formatting to all questions was pressed on 2026-11-21 and opened a native confirm box, which froze the tab for the session's tools; it was left for him to press Cancel. Afterwards: delete the TEST COPY question from the bank. Import and both Undos still unchecked.
 
 Feedback cmwcmsbwn: each question has a Duplicate button; each box in the edit form has
 "Apply this formatting to all questions" (with an Undo bar); and "Import from a document"
@@ -1199,51 +948,6 @@ for word, sits at the end of the bank, and Undo removes it.
 
 ---
 
-### 53. Current employee / Former employee: no real hire, termination or cancel has moved a candidate yet
-
-**Status:** OPEN
-**Added:** 2026-11-11
-
-Aimee feedback cmwclwrfp and cmwclxn4v. A candidate linked to an employee record now reads
-Current employee or Former employee, and moves automatically when the employee record is
-hired, terminated, reactivated, put on contract, canceled, rehired or imported. 173 of 185
-linked candidates were backfilled on Nov 11 with an undo file (read back by the commit agent:
-125 Current employee and Hired, 45 Former employee and Hired, 128 hire and 45 employment-ended
-timeline entries). NOT checked: none of the automatic hooks has run for a real person yet, and
-the Status picker in the candidate Edit form has not been clicked.
-
-**How to check it, three minutes:** the next time someone is moved to onboarding, or an
-employee is marked terminated, open their candidate page. Separately, open any candidate's
-Edit form and look at the Status list.
-
-**What would count as a pass:** the header pill says Current employee (or Former employee),
-the timeline has an entry saying why, and the Status list shows Active, Current employee,
-Former employee, Inactive and Archived.
-
----
-
-### 54. Rating points: no 90-day rating exists yet to show the new points, and no scorecard has been saved under them
-
-**Status:** OPEN
-**Added:** 2026-11-11
-
-Feedback cmwcobn71: interview scorecards and the 90-day check-in rating are now scored in
-points that add up (Exceeds 1.5, Meets 1, Can Develop 0.5, Does Not Meet 0), shown against
-"Meets on all N = N", instead of an average out of 4. Ratings are stored as names, not
-numbers, so nothing was rewritten. Checked: the one rated scorecard on file (5 items) now
-shows 6.5 pts against a par of 5 on its interview page, which renders without error; all
-four values rated Meets give 4 points, all Exceeds 6. NOT checked: the Post-onboard tab's
-rating cell with a real rating (the table holds 0 ratings today), and a scorecard saved
-after the change.
-
-**How to check it, two minutes:** rate one hire's 90-day check-in on People > Post-onboard
-(Meets on all four), and save one interview scorecard with a mix of ratings.
-
-**What would count as a pass:** the Post-onboard cell reads 4 pts; the scorecard shows its
-points with "Meets on all N = N", and the interview's combined score sits beside it.
-
----
-
 ### 56. Interview drawer: not tried on a phone, and no scorecard saved, edited or deleted from inside it
 
 **Status:** OPEN
@@ -1264,33 +968,12 @@ scroll; each scorecard change shows in the drawer straight away, with no reload.
 
 ---
 
-### 58. A screen recording sent from an iPhone has not been played back on the Feedback page
-
-**Status:** CLOSED
-**Closed:** 2026-11-13, by him: "this worked." Aimee sent a 53.6 MB iPhone screen recording
-(ScreenRecording_11-13-2026 15-48-38_1.mp4, video/mp4) on feedback cmwfmv2qd at 23:54Z
-(4:54 PM MT), after the photo-library picker fix (e9cf1c0) deployed.
-**Added:** 2026-11-13
-
-Feedback now accepts screen recordings (MP4, MOV or WEBM up to 200 MB) from the same Add
-button (feedback cmwfkklis, from an iPhone). The video goes up in 3 MB parts through the app
-and is stitched together in S3. It was tested end to end on the dev server against the live
-bucket with a 7 MB test video, then deleted. NOT checked: picking a video in the feedback
-panel by hand (Chrome could not reach that dev server), and a real iPhone recording.
-
-**How to check it:** record your screen on the iPhone, open Feedback, choose **Add a
-screenshot, photo or video** (label changed Nov 13), pick the recording from Videos in the photo
-library and send it. Also a pass check: the photo library offers Videos, not only Photos and Files.
-
-**What would count as a pass:** the button counts up to 100 percent, then the video plays
-on Settings, Feedback.
-
----
-
 ### 59. Nobody has seen the Requested and Scheduled rows on screen, or clicked Done on one
 
 **Status:** OPEN
 **Added:** 2026-11-13 (updated the same day for the Scheduled look in 7f0ab9e)
+
+**Sweep 2026-11-21:** Attended orientation PASSED: the Nov 17 session is COMPLETE and all four attendees' Attended orientation went DONE 186ms after it (2026-11-17T18:38:32Z), with no clicks. Still not done: Done on a pilot's Requested iPad or credit card (12 pilot rows still Requested).
 
 Both kinds of hold now look the same: their own lit navy-and-gold segment ahead of
 To do / Done / N/A, **Done** unlit, the label not struck through, and a hint under it.
@@ -1407,55 +1090,12 @@ decided.
 
 ---
 
-### 80. View as has never been started or exited by clicking, on the live site
-
-**Status:** BLOCKED ON DEPLOY
-**Added:** 2026-11-20
-
-Settings > Team members has a **View as** button on every other person's row. It borrows
-their identity, read-only, for up to 60 minutes, with a navy-and-gold bar at the top and an
-**Exit View as** button. What WAS checked, on a local test server with real sign-in switched
-on and a test session already in View as as a Hiring Manager: the session reported the Hiring
-Manager instead of the admin; Settings, Reports and People refused them while Candidates
-loaded; the sidebar shrank from five areas to their two; and every write (an API POST, a PATCH
-and a server-action POST) came back 403 while the same PATCH as the plain admin got its normal
-answer. NOT checked: pressing **View as** and **Exit View as** themselves. Both go through
-next-auth's session update and write a line to the Activity log, and that log is the live
-database. Also not checked on a phone, or in dark mode.
-
-**How to check it, about two minutes:** on the live site open Settings > Team members, press
-**View as** on someone with narrowed access, look around, then press **Exit View as**.
-
-**What would count as a pass:** you land on their home page with the bar showing their name
-and only their areas in the sidebar; trying to save anything says it is read-only; Exit takes
-you back to Team members as yourself; Settings > Activity shows one "Started viewing as" and
-one "Stopped viewing as" under your name.
-
----
-
-### 79. The Values in Action department budgets have not been seen signed in on the live site, or in dark mode
-
-**Status:** OPEN — deployed 2026-11-19 (6fed87a)
-**Added:** 2026-11-19
-
-Compliments > Budget (admin) now opens with each department's quarterly budget ($25 per
-employee counted on the first day of the quarter, contractors and no-starts out) and who can
-spend it. The recognition feed is switched off. The session checked the page over HTTP on
-local dev (which skips sign-in) and at phone widths; the commit agent re-ran the numbers on
-live data: Q4 2026, 175 people, $4,375, 19 departments, everyone with someone to spend it.
-NOT checked: the page signed in on the live site, and dark mode.
-
-**How to check it:** on the live site open Compliments > Budget, then switch to dark mode.
-
-**What would count as a pass:** the department list shows the same totals ($4,375 for Q4
-2026), each row names who can spend it, and everything is readable in dark mode.
-
----
-
 ### 78. No anytime check-in has been sent, answered or seen in a browser yet
 
 **Status:** OPEN
 **Added:** 2026-11-19
+
+**Sweep 2026-11-21:** One anytime check-in has been sent (a day-10019 request in onboarding/checkin-rating-requests, 1 year 7 months); it has not been answered yet.
 
 Past their first year, HR can now send the manager the same check-in at any time, from the
 person's profile > Check-ins > Anytime check-ins > "Send a check-in (1 year 7 months)" (his
@@ -1485,6 +1125,8 @@ under Anytime; nothing on the person's checklist changes.
 **Status:** BLOCKED ON DEPLOY, and on a Front template that does not exist yet
 **Added:** 2026-11-19
 
+**Sweep 2026-11-21:** The Front template "4. (Remote) New Hire Orientation" now exists (seen in the template list on 2026-11-21). Still blocked: there is no upcoming orientation session to try it on.
+
 The "4. Remote prep" orientation email finds its Front template by name,
 **4. (Remote) New Hire Orientation**. On 2026-11-19 no template by that name
 existed: the full template list returned 85 and none was a remote one. Until
@@ -1510,6 +1152,392 @@ afterwards. The links and lunch card are still there after a reload.
 ---
 
 ## Closed
+
+### 1. A task email has never actually been sent
+
+**Status:** CLOSED 2026-11-21, by the sweep session on his instruction that day ("if they work, you can mark them as done"). On the live site (Chrome, signed in as Aimee), Cameron Morgan's checklist > Confirm Pilot App on file > Send email > Send as test to hrotasks@skyshare.com. Read back from Front's API: HR Onboarding (inb_cru56) newest conversation at 2026-11-21T22:04:27Z, subject "[TEST — would have gone to camhawk42@gmail.com] SkyShare - Pilot Application Webform Request", from and to hrotasks@skyshare.com, body starts "Hi Cameron,", 4 href links (Adobe Sign webform). The step was not ticked. The test left one unassigned conversation in HR Onboarding.
+**Added:** 2026-09-11
+
+Every checklist step that emails through Front is built, previewed and measured,
+but **no message has ever gone out through it** — not a test, not a real one.
+Measured 2026-09-11: the send log for this path has never been written at all. Of
+the seven `WorkspaceSetting` rows in scope `front`, three are send logs and all
+three are populated — `orientation-sends`, `onboarding-sends` and
+`contacts-link-sends` — while `task-email-sends` is simply not there. So email
+does go out of this app; it has just never gone out of **this** path.
+
+The test send is also the shape Front has never been asked for here: from the
+hrotasks channel back **to** hrotasks is a mailbox emailing itself.
+
+**How to check it, about a minute:** open any new hire, go to the Checklist tab,
+press **Send email** on a step that has one, then press **Send as test to
+hrotasks@skyshare.com**. Then look in the HR Onboarding inbox in Front. The test
+deliberately leaves no trace — it does not tick the step and does not write a send
+record — so it is safe to do on a real person.
+
+**What would count as a pass:** the message arrives, the greeting reads "Hi
+&lt;their first name&gt;", the subject is prefixed `[TEST — would have gone to …]`,
+and the links in the body are clickable.
+
+---
+
+### 16. Nobody outside HR has loaded the offer-details box, and it is the one box that holds pay
+
+**Status:** CLOSED 2026-11-21, by the sweep session on his instruction that day ("if they work, you can mark them as done"). Non-HR half: View as Alex Andrade (hiring manager) on the live site; GET /api/candidate-applications/cmqvr4s3p0efpxcrmn9xeffzs/offer-details returned {"allowed":false,"text":null,"at":null,"by":null}, and his Offers page HTML for Cameron Morgan contained neither "Offer details from the hiring manager" nor "Training Contract Length". HR half: 10 applications hold offerDetailsText saved by HR between Oct 26 and Nov 3 and still on file.
+**Added:** 2026-09-22
+
+The hiring manager's offer details now sit on the offer itself, so the candidate's Offers
+tab and the hire's checklist show the same box. It is the ONLY place in this app allowed
+to hold a pay amount — his decision on 2026-09-22, choosing the version WITH the five pay
+lines over the version without. The gate is server-side in both directions: a non-HR
+session is told "allowed: false" and is never sent the text.
+
+Round-tripped locally on a real offer (typed, left the field, read back from the database,
+then cleared — that application holds nothing now). What could NOT be checked here: local
+dev signs everyone in as an admin with no viewer scope, so the HR gate itself has never
+actually refused anybody.
+
+**How to check it, under a minute:** sign in as somebody who is NOT on the HR team
+(hrTeam false, or a role outside admin/recruiter) and open a candidate's Offers tab.
+
+**What would count as a pass:** no "Offer details from the hiring manager" box at all —
+not an empty one, not a greyed one. Then, as HR, paste a real hiring-manager message over
+the thirteen lines and confirm it is still there after a reload.
+
+---
+
+### 18. Nothing on a job's Pilot requirement tab that SAVES has been pressed
+
+**Status:** CLOSED 2026-11-21, by the sweep session on his instruction that day ("if they work, you can mark them as done"). As Aimee on Gulfstream G200 First Officer: Edit role, pay "10,000 annually" -> "10,000 annually base", Save; reload showed it and Change history "Changed pay · Nov 21, 2:55 PM · aschaedig@skyshare.com · Pay: 10,000 annually to 10,000 annually base". Then removed the word and saved; reload shows PAY "10,000 annually" and a second history row the other way (9 saved edits). The job ends identical, so the Matchboard cannot have moved.
+**Added:** 2026-09-23
+
+Pilot Requirements is now a tab on each job, and the Role block is the one place a pilot job's
+seat, aircraft, base, operator and pay text are edited - one save writes the job and its
+requirement together, which is the fix for the two drifting apart. Everything was read and
+checked in a browser: old links forward to the right job's tab, the Praetor 600 mismatch flag
+shows, the blocks carry the right numbers, the Requirement 1 of N switcher swaps, and Save stays
+disabled until a person picks which of two disagreeing values is right. What was deliberately
+NOT done, on a live database: pressing any of it. Role Save, Make the requirement inactive too,
+Keep it active, Set one up, Attach, the requirement editor's Save, the fleet-position save and
+the moved Export CSV are typechecked only.
+
+**How to check it, about three minutes:** on one real pilot job whose values you know are right
+- say Gulfstream G200 First Officer - open Pilot requirement, press Edit role, add one word to
+the end of the pay text and Save, then take the word out and Save again. (A save that changes
+nothing records nothing, so retyping a value as it was proves nothing - this check said to do
+exactly that until 2026-09-23.) Then open the Matchboard for that role.
+
+**What would count as a pass:** both saves stick after a reload, two Change history rows appear
+naming you with the pay text before and after, and the Matchboard role still scores the same
+people.
+
+---
+
+### 22. Nobody outside HR has searched since the search started reading notes
+
+**Status:** CLOSED 2026-11-21, by the sweep session on his instruction that day ("if they work, you can mark them as done"). View as Rich Paden (hiring manager, Executive, not HR), who can see Sam Jaffari and Luke Webb: /candidates?q=guaranteed&in=notes found nobody, and q=-guaranteed read "nobody left out". Positive control as Aimee: the same Notes search found Sam Jaffari (the word is only in his private note). Alex Andrade's search also found nobody, but he cannot see Jaffari at all, so his result proves nothing.
+**Added:** 2026-09-23
+
+The candidate search can now look in notes ("Search in" > Notes). A private HR note is searched
+for the HR team only - the same rule every note read follows - so a hiring manager searching a
+word that appears only in someone's private note must not find that person, and must not see
+them counted under Notes. Local dev signs everyone in as an admin, so the non-HR side has never
+run.
+
+Since the same day's follow-up, a word with a minus in front ("leave out") looks everywhere,
+notes included, and says how many people it left out - so the same private note must not leave
+anybody out for a hiring manager either, or show in that count.
+
+**How to check it, about two minutes:** as HR, add a private note with an unusual word
+("zebrafish") to one candidate. Sign in as a hiring manager and search that word, then search
+`-zebrafish`. Then delete the note.
+
+**What would count as a pass:** the hiring manager's search finds nobody, and the "Found in" row
+shows Notes 0; and `-zebrafish` reads "not zebrafish anywhere · nobody left out".
+
+---
+
+### 28. Nobody without admin rights has opened Reports > Sources
+
+**Status:** CLOSED 2026-11-21, by the sweep session on his instruction that day ("if they work, you can mark them as done"). No account today can hold Reports without editing it: the three hiring managers (Alex Andrade, Rich Paden, Jonathan Schaedig) have no Reports area at all (View as: /reports/sources renders "Page not found"), and the only other non-admin is the recruiter, who has edit. So no Rename or Save can reach a non-editor. Reopen if a view-only Reports account is ever created.
+**Added:** 2026-09-29
+
+Reports > Sources (/reports/sources) lets an admin or recruiter give a source spelling its tidy
+name, or rename a source - "How people found us" on the Reports tab bar. The save route refuses
+anybody without EDIT on Reports, and was checked over HTTP; what was not checked is the page
+itself for somebody without it, because local dev signs everybody in as an admin, so there the
+Rename and Save controls always show.
+
+**How to check it, about a minute:** signed in as a hiring manager (or anyone who is not an admin
+or recruiter), open Reports and click "How people found us".
+
+**What would count as a pass:** the page shows both tables, the "Counts as" column reads as plain
+text, and there are no Rename or Save buttons.
+
+---
+
+### 41. The Paycom email log has not been opened in a browser, and the scan has not added a row to it yet
+
+**Status:** CLOSED 2026-11-21, by the sweep session on his instruction that day ("if they work, you can mark them as done"). Live site: the month link gave only Oct rows (?month=2026-10, 62 rows); the "Interview recorded 4" tile gave exactly 4 rows (Jeongho Choi, Teya Clarke x2, Steven Cox) whose names link to /candidates/<id>; the newest rows are Raymond Cardenas Nov 20, which the 2-hourly scan logged (its run report: "One was new and got logged"). Non-HR: View as Alex Andrade shows "578 more hidden for your access (HR-only, personal, or outside your candidates)".
+**Added:** 2026-11-06
+
+Candidates > Paycom email log (/candidates/paycom-log) lists every Paycom email in Aimee's
+Gmail since Jan 1 2025: 2,649 rows, re-counted against the live data. The page returned
+200 locally with no error, but nobody has looked at it or clicked its filters. The
+scheduled Paycom notes scan now has a new first step that adds each new email to the log;
+that step has not run yet.
+
+**How to check it:**
+
+- Open the page on the live site. Click a month, a kind of email and an outcome tile, then
+  search a candidate's name.
+- After the next scheduled scan, check that today's Paycom emails appear at the top.
+- Optionally, open it with a login that is not HR. The personal and HR-only rows should be
+  hidden, with a count saying so.
+
+**What would count as a pass:** the filters change the rows, names link to the right
+profiles, new emails appear after a scan, and a non-HR login sees no personal or HR-only
+rows.
+
+---
+
+### 43. Nobody has saved a scorecard with the core values, or an offer's recruiter and hiring manager, yet
+
+**Status:** CLOSED 2026-11-11 - he tested both halves on the live site. The offer's
+recruiter and hiring manager stuck after a reload, and Declined kept Save grey until a
+reason was picked. After the Scorecard link went onto each interview on the candidate's
+Interviews tab (5490627), he added a scorecard: the four core values came first, the
+ratings saved, and they were still there when reopened with the pencil.
+**Added:** 2026-11-10
+
+Two Quality of Hire tracking pieces for Dec 10 are built. Every interview scorecard now
+opens with the four core values (Fueled by Passion, Team Alignment, Deliver the Wow,
+Solutions Focused), each rated Exceeds to Does Not Meet; and an offer has Recruiter and
+Hiring manager boxes, with a reason now required when an offer is marked declined by hand.
+Checked locally in Chrome: the scorecard editor shows the four values with their rating
+buttons, and the offer shows both boxes. Checked by direct request: a declined offer with
+no reason is refused, and the offer read back unchanged. Nothing was saved, because
+localhost writes the live database.
+
+**How to check it, about two minutes:**
+
+- Open an interview, Add scorecard, rate the four core values and one question, save.
+  Reopen it with the pencil: the ratings should still be there, values first.
+- On a candidate's Offers tab with an offer started, type a recruiter and a hiring
+  manager, click away, reload: both should stay.
+- Set an offer to Declined: Save stays grey until a reason is picked or typed.
+
+**What would count as a pass:** all three stick after a reload.
+
+---
+
+### 45. The tracking check on the Quality of Hire tab has not been looked at in a browser
+
+**Status:** CLOSED 2026-11-11 - he checked it on the live site and all four checks passed:
+recent offers listed with gaps marked missing, the offer he filled showed both ticks, names
+open the candidate, and the 90-day list shows day counts.
+**Added:** 2026-11-10
+
+Reports > Quality of Hire now has a "Tracking check" section: every offer made since
+Dec 10 (until then, a practice run over the last 30 days) with four marks - interviews
+logged, recruiter, hiring manager, and a decline reason if declined - plus 90-day ratings
+due. Checked: it runs on live data (practice run, 9 offers since Oct 12, 0 with all four,
+6 with no interview logged, 13 ratings due), the section renders on the server with all 9
+rows, and the live Reports page carries its data. NOT checked: looking at it in a
+browser. On localhost the Reports page, like the People page (item 44), loads but never
+comes alive, in the in-app pane and in Chrome.
+
+**How to check it, one minute, on the live site after deploy:** open Reports > Quality of
+Hire and scroll to "Tracking check".
+
+**What would count as a pass:** the practice run lists the recent offers, the gaps say
+"missing", each name opens the candidate, and the 90-day list shows people with their day
+count.
+
+---
+
+### 47. Nobody has saved a question-bank question in the new editor or dragged one into order
+
+**Status:** CLOSED 2026-11-21, by the sweep session on his instruction that day ("if they work, you can mark them as done"). Live site: duplicated "What questions do you have for me?", added a blank line and bold, a third core value, both guidance boxes, saved; after reload the stored HTML is <p><strong>TEST COPY</strong></p><p></p><p>What questions...</p> with the blank paragraph 17.5px tall, three value tags, Strong answer and Listen for intact. Move down, then a real mouse drag of the grip, each held after reload. Note: blank lines at the very START of a box are trimmed on save. The TEST COPY question is still in the bank and must be deleted (see #52).
+**Added:** 2026-11-11
+
+Feedback cmwcjtm5k: the question bank's Question box is now the notes editor (bold,
+italics, lists, blank lines), and the guidance under it is two separate editors, "Strong
+answer" and "Listen for" (existing questions are split at read time; the old prefixes
+become the labels). A question can carry several core values, and questions can be dragged
+(or moved with arrows) into order. Later check, same way: the two-block form opened with
+the old "Strong answer: ... Listen for: ..." text correctly split and sent them separately.
+Checked in Chrome with every save blocked: the editor loaded existing text, Enter-Enter and
+bold produced a blank line and bold text in what would be saved, two core values went in
+the save, and Move down swapped two questions and sent the new order. The server side was
+checked separately (the saved text keeps the blank line and drops anything unsafe). Nothing
+was actually saved, and the drag itself was not performed with a mouse.
+
+**How to check it, two minutes:** edit one question, add a blank line and some bold, tick a
+second core value, put something in both Strong answer and Listen for, save, and reload.
+Then drag one question above another and reload.
+
+**What would count as a pass:** the blank line, bold, both value tags and both guidance
+blocks are still there after the reload, and the new order holds.
+
+---
+
+### 50. Paycom steps that never happened: no profile page looked at since, and the scan's sweep has not run yet
+
+**Status:** CLOSED 2026-11-21, by the sweep session on his instruction that day ("if they work, you can mark them as done"). Annie Mader's live page has no 2026-02-02 Additional Interview (her interviews: HR Interview 01-23, HM Interview 01-30 and notes; read-only DB agrees). Her Activity still holds the Nov 6 backfill row "Recorded a Paycom interview invite ... Additional Interview, February 2nd", which is consistent with the Nov 11 rule. The 2-hourly scan's latest report: "the sweep removed nothing (0 steps)", no error.
+**Added:** 2026-11-11
+
+Paycom steps she clicked past are now removed from the interview and notes history when there
+is no note AND no calendar event that day (his approval, Nov 11). 50 were removed in two passes
+and checked against the live database (457 to 407 rows; undo tested). Teya's example and the
+May 2025 to Jan 2026 calendar gap were settled the same day. NOT checked: (1) no candidate page
+was opened in a browser after the removals, so the profile's Interviews and Notes tabs are
+proven only by the database counts; (2) the scheduled Paycom notes scan has not yet run its new
+step 0b (scripts/paycom-status-steps.ts --sweep --apply), so the going-forward half is untested.
+
+**How to check it, three minutes:** open Annie Mader's candidate page (a step was removed for
+her Feb 2 2026 Additional Interview) and look at the Interviews and Notes tabs. After the next
+scan run, read its summary for the sweep line.
+
+**What would count as a pass:** no "Additional Interview (Paycom)" on Feb 2 2026 on her page,
+and the scan summary reports the sweep (usually "removed 0") without an error.
+
+---
+
+### 51. "Not Selected - Past Interview" and the two-date timeline have not been looked at on the live site
+
+**Status:** CLOSED 2026-11-21, by the sweep session on his instruction that day ("if they work, you can mark them as done"). Stephen Cox's live Timeline tab, rendered and clicked in Chrome: Not Selected - Past Interview Jun 17 2026 (CJ3+ Captain), Applied May 26, Not Selected - Past Interview May 20 (Phenom 100 Captain), Applied Apr 30 - the dates and wording this item lists from Paycom.
+**Added:** 2026-11-11
+
+41 applications that Paycom calls "Not Selected - Past Interview" said "Failed Interview" in the
+app; they were reworded in the live database (undo tested), and the candidate timeline now shows
+"Applied" on the application date and the outcome on Paycom's disposition date, on the right
+calendar day. Checked from the local dev server against the live data: Stephen Cox's page served
+Applied 04/30 and 05/26 and Not Selected - Past Interview 05/20 and 06/17, matching Paycom. NOT
+checked: (1) nobody has LOOKED at the rendered timeline — the in-app browser cannot render this
+app's pages, so only the data the page receives was read; (2) the live site, which keeps the old
+one-entry timeline until this deploys (the reworded label shows there already).
+
+**How to check it, two minutes:** after the deploy, open Stephen Cox's candidate page, Timeline
+tab, beside his Paycom candidate profile (115698).
+
+**What would count as a pass:** each application shows an "Applied" line and its outcome line,
+with the same dates and wording as Paycom's Application Date and Dispositioned columns.
+
+---
+
+### 53. Current employee / Former employee: no real hire, termination or cancel has moved a candidate yet
+
+**Status:** CLOSED 2026-11-21, by the sweep session on his instruction that day ("if they work, you can mark them as done"). Status list in the candidate Edit form (Stephen Cox, opened and cancelled): Active, Current employee, Former employee, Inactive, Archived. Automatic moves since Nov 11, read-only DB (timelineEvent sourceType NewHire): Jake Aoki, Raymond Cardenas and Steven Cox -> Current employee on their move to onboarding; Carolyn Sanchez and Joel Garcia -> Former employee on termination; Jordan Pashayan and Brandon Edwards -> Inactive on cancel, each with a why line.
+**Added:** 2026-11-11
+
+Aimee feedback cmwclwrfp and cmwclxn4v. A candidate linked to an employee record now reads
+Current employee or Former employee, and moves automatically when the employee record is
+hired, terminated, reactivated, put on contract, canceled, rehired or imported. 173 of 185
+linked candidates were backfilled on Nov 11 with an undo file (read back by the commit agent:
+125 Current employee and Hired, 45 Former employee and Hired, 128 hire and 45 employment-ended
+timeline entries). NOT checked: none of the automatic hooks has run for a real person yet, and
+the Status picker in the candidate Edit form has not been clicked.
+
+**How to check it, three minutes:** the next time someone is moved to onboarding, or an
+employee is marked terminated, open their candidate page. Separately, open any candidate's
+Edit form and look at the Status list.
+
+**What would count as a pass:** the header pill says Current employee (or Former employee),
+the timeline has an entry saying why, and the Status list shows Active, Current employee,
+Former employee, Inactive and Archived.
+
+---
+
+### 54. Rating points: no 90-day rating exists yet to show the new points, and no scorecard has been saved under them
+
+**Status:** CLOSED 2026-11-21, by the sweep session on his instruction that day ("if they work, you can mark them as done"). Scorecard half: interview cmw116x4p (Christian Kuffer, scorecard saved Nov 18) shows "2 pts · Meets on all 4 = 4" and a Combined score (four Can Develop x 0.5 = 2). Post-onboard half superseded: the grid was rebuilt around the 1-10 check-in form (Nov 13), so there is no points cell any more; 21 real ratings are on file.
+**Added:** 2026-11-11
+
+Feedback cmwcobn71: interview scorecards and the 90-day check-in rating are now scored in
+points that add up (Exceeds 1.5, Meets 1, Can Develop 0.5, Does Not Meet 0), shown against
+"Meets on all N = N", instead of an average out of 4. Ratings are stored as names, not
+numbers, so nothing was rewritten. Checked: the one rated scorecard on file (5 items) now
+shows 6.5 pts against a par of 5 on its interview page, which renders without error; all
+four values rated Meets give 4 points, all Exceeds 6. NOT checked: the Post-onboard tab's
+rating cell with a real rating (the table holds 0 ratings today), and a scorecard saved
+after the change.
+
+**How to check it, two minutes:** rate one hire's 90-day check-in on People > Post-onboard
+(Meets on all four), and save one interview scorecard with a mix of ratings.
+
+**What would count as a pass:** the Post-onboard cell reads 4 pts; the scorecard shows its
+points with "Meets on all N = N", and the interview's combined score sits beside it.
+
+---
+
+### 58. A screen recording sent from an iPhone has not been played back on the Feedback page
+
+**Status:** CLOSED
+**Closed:** 2026-11-13, by him: "this worked." Aimee sent a 53.6 MB iPhone screen recording
+(ScreenRecording_11-13-2026 15-48-38_1.mp4, video/mp4) on feedback cmwfmv2qd at 23:54Z
+(4:54 PM MT), after the photo-library picker fix (e9cf1c0) deployed.
+**Added:** 2026-11-13
+
+Feedback now accepts screen recordings (MP4, MOV or WEBM up to 200 MB) from the same Add
+button (feedback cmwfkklis, from an iPhone). The video goes up in 3 MB parts through the app
+and is stitched together in S3. It was tested end to end on the dev server against the live
+bucket with a 7 MB test video, then deleted. NOT checked: picking a video in the feedback
+panel by hand (Chrome could not reach that dev server), and a real iPhone recording.
+
+**How to check it:** record your screen on the iPhone, open Feedback, choose **Add a
+screenshot, photo or video** (label changed Nov 13), pick the recording from Videos in the photo
+library and send it. Also a pass check: the photo library offers Videos, not only Photos and Files.
+
+**What would count as a pass:** the button counts up to 100 percent, then the video plays
+on Settings, Feedback.
+
+---
+
+### 80. View as has never been started or exited by clicking, on the live site
+
+**Status:** CLOSED 2026-11-21, by the sweep session on his instruction that day ("if they work, you can mark them as done"). Live site: View as on Alex Andrade, Rich Paden, Jonathan Schaedig and Kevin Sherman. Each landed on /candidates with the navy-and-gold bar and only their areas (Alex: 6 links; Kevin: 18). A DELETE while viewing returned 403 "You are viewing as another user, which is read-only." Exit returned to Team members as Aimee with viewAs null. Settings > Activity: "Started viewing as Alex Andrade (HIRING_MANAGER), read-only · 2:44 PM" and "Stopped viewing as Alex Andrade (exited) · 2:50 PM" (and the same pair from Nov 20). Not checked: on a phone.
+**Added:** 2026-11-20
+
+Settings > Team members has a **View as** button on every other person's row. It borrows
+their identity, read-only, for up to 60 minutes, with a navy-and-gold bar at the top and an
+**Exit View as** button. What WAS checked, on a local test server with real sign-in switched
+on and a test session already in View as as a Hiring Manager: the session reported the Hiring
+Manager instead of the admin; Settings, Reports and People refused them while Candidates
+loaded; the sidebar shrank from five areas to their two; and every write (an API POST, a PATCH
+and a server-action POST) came back 403 while the same PATCH as the plain admin got its normal
+answer. NOT checked: pressing **View as** and **Exit View as** themselves. Both go through
+next-auth's session update and write a line to the Activity log, and that log is the live
+database. Also not checked on a phone, or in dark mode.
+
+**How to check it, about two minutes:** on the live site open Settings > Team members, press
+**View as** on someone with narrowed access, look around, then press **Exit View as**.
+
+**What would count as a pass:** you land on their home page with the bar showing their name
+and only their areas in the sidebar; trying to save anything says it is read-only; Exit takes
+you back to Team members as yourself; Settings > Activity shows one "Started viewing as" and
+one "Stopped viewing as" under your name.
+
+---
+
+### 79. The Values in Action department budgets have not been seen signed in on the live site, or in dark mode
+
+**Status:** CLOSED 2026-11-21, by the sweep session on his instruction that day ("if they work, you can mark them as done"). Live site, signed in: Compliments > Budget shows Q4 2026, $4,375, 175 employees, 19 departments, each row naming who can spend it. Dark mode: screenshot readable; contrast scan found nothing under 3:1 on real text.
+**Added:** 2026-11-19
+
+Compliments > Budget (admin) now opens with each department's quarterly budget ($25 per
+employee counted on the first day of the quarter, contractors and no-starts out) and who can
+spend it. The recognition feed is switched off. The session checked the page over HTTP on
+local dev (which skips sign-in) and at phone widths; the commit agent re-ran the numbers on
+live data: Q4 2026, 175 people, $4,375, 19 departments, everyone with someone to spend it.
+NOT checked: the page signed in on the live site, and dark mode.
+
+**How to check it:** on the live site open Compliments > Budget, then switch to dark mode.
+
+**What would count as a pass:** the department list shows the same totals ($4,375 for Q4
+2026), each row names who can spend it, and everything is readable in dark mode.
+
+---
 
 ### 76. Nobody has opened a sent contact card on a real phone yet
 

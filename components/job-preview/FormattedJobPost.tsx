@@ -96,6 +96,11 @@ function formatSecondaryLocation(value?: string | null) {
   return value;
 }
 
+/* The preview is white "paper" in both themes (.preview-paper), so its text must
+   not take RichText's default dark:text-slate-300 - that was light grey on white
+   in dark mode (needs-a-person #6, Nov 21). */
+const PAPER_PARAGRAPH = "text-sm leading-6 text-brand-black/82";
+
 const blockColorClasses: Record<BlockTextColor, string> = {
   BLACK: "text-brand-black/82",
   LEA: "text-brand-lea",
@@ -215,7 +220,10 @@ export function FormattedJobPost({
           title="Job Summary"
           sourceBadges={showSourceBadges ? <SourceBadge label="From Job Field" tone="field" /> : null}
         >
-          <RichTextParagraphs value={job.summary || "Add a concise, role-specific job summary."} />
+          <RichTextParagraphs
+            value={job.summary || "Add a concise, role-specific job summary."}
+            paragraphClassName={PAPER_PARAGRAPH}
+          />
         </Section>
 
         {reusableBlocks.map((instance) => {
@@ -280,6 +288,7 @@ export function FormattedJobPost({
                   ? `${job.location}. Secondary location: ${job.secondaryLocation}.`
                   : job.location || "Add the primary location before publishing."
               }
+              paragraphClassName={PAPER_PARAGRAPH}
             />
           </Section>
         )}

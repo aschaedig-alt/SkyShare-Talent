@@ -1803,7 +1803,7 @@ export async function getCandidateProfileData(
     ? {
         applicationCount: candidate.applications.length,
         interviewers,
-        hasNotes: candidate.notes.length > 0,
+        hasNotes: candidate.notes.some((n) => !n.hrOnly || viewerIsHr),
         declinedOffer,
         resumeArchived,
         hired
@@ -1858,22 +1858,38 @@ export async function getCandidateProfileData(
       }
       return entries;
     }),
-    ...candidate.interviews.map((i) => ({
-      id: `iv-${i.id}`,
-      type: "INTERVIEWED",
-      title: i.title,
-      detail: [i.interviewer, i.notes?.trim()].filter(Boolean).join(" · ") || null,
-      occurredAt: i.startDateTime.toISOString(),
-      origin: i.source === "JAZZ" ? "JAZZ" : "PAYCOM"
-    })),
-    ...candidate.notes.map((n) => ({
-      id: `note-${n.id}`,
-      type: n.source === "JAZZ_FEEDBACK" ? "INTERVIEW_NOTE" : "NOTE",
-      title: n.body.replace(/\s+/g, " ").slice(0, 240),
-      detail: null as string | null,
-      occurredAt: n.createdAt.toISOString(),
-      origin: n.source === "JAZZ_FEEDBACK" || n.source === "JAZZ" ? "JAZZ" : "PAYCOM"
-    }))
+    // The timeline is serialized into the page like every other field, so it must
+    // apply the SAME visibility rules as the Notes and Interviews tabs below.
+    // Until Nov 21 it did not: a private HR note's text, and interview notes the
+    // viewer may not read, reached a hiring manager here (found by View as on the
+    // live site, needs-a-person #2). Private notes are dropped, not redacted.
+    ...candidate.interviews.map((i) => {
+      const authoredByViewer = Boolean(
+        viewer?.email && i.interviewerEmail && i.interviewerEmail.toLowerCase() === viewer.email.toLowerCase()
+      );
+      const notes = canSeeContent(authoredByViewer) ? i.notes?.trim() : null;
+      return {
+        id: `iv-${i.id}`,
+        type: "INTERVIEWED",
+        title: i.title,
+        detail: [i.interviewer, notes].filter(Boolean).join(" · ") || null,
+        occurredAt: i.startDateTime.toISOString(),
+        origin: i.source === "JAZZ" ? "JAZZ" : "PAYCOM"
+      };
+    }),
+    ...candidate.notes
+      .filter((n) => !n.hrOnly || viewerIsHr)
+      .map((n) => {
+        const visible = canSeeContent(Boolean(viewer?.userId && n.authorId === viewer.userId));
+        return {
+          id: `note-${n.id}`,
+          type: n.source === "JAZZ_FEEDBACK" ? "INTERVIEW_NOTE" : "NOTE",
+          title: visible ? n.body.replace(/\s+/g, " ").slice(0, 240) : PRIVATE_NOTE_PLACEHOLDER,
+          detail: null as string | null,
+          occurredAt: n.createdAt.toISOString(),
+          origin: n.source === "JAZZ_FEEDBACK" || n.source === "JAZZ" ? "JAZZ" : "PAYCOM"
+        };
+      })
   ].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
 
   // Per-candidate activity history (edits, note add/remove, dedupe, etc.), and the

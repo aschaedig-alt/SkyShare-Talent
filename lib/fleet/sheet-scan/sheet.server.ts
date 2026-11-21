@@ -16,14 +16,25 @@ export function isSheetScanConfigured(): boolean {
   return Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY);
 }
 
-export async function readAircraftTabs(): Promise<Record<string, unknown[][]>> {
+/**
+ * `missing` names every expected tab the sheet no longer has. Until Nov 21 2026 one
+ * renamed tab ("CJ" became "CJ GA") made batchGet reject the WHOLE read with
+ * "Unable to parse range", so the panel showed only that error for eleven days and
+ * no tab was checked. Now the existing tabs are read and the missing ones named.
+ */
+export async function readAircraftTabs(): Promise<{ tabs: Record<string, unknown[][]>; missing: string[] }> {
   const auth = new google.auth.JWT({
     email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
     key: (process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY ?? "").replace(/\\n/g, "\n"),
     scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"]
   });
   const sheets = google.sheets({ version: "v4", auth });
-  const tabs = Object.keys(SHEET_TABS);
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID, fields: "sheets.properties.title" });
+  const present = new Set((meta.data.sheets ?? []).map((s) => s.properties?.title ?? ""));
+  const expected = Object.keys(SHEET_TABS);
+  const missing = expected.filter((t) => !present.has(t));
+  const tabs = expected.filter((t) => present.has(t));
+  if (!tabs.length) return { tabs: {}, missing };
   const res = await sheets.spreadsheets.values.batchGet({
     spreadsheetId: SHEET_ID,
     // A1:L80 covers every block on every tab with room to grow (the deepest,
@@ -34,5 +45,5 @@ export async function readAircraftTabs(): Promise<Record<string, unknown[][]>> {
   (res.data.valueRanges ?? []).forEach((vr, i) => {
     out[tabs[i]] = (vr.values ?? []) as unknown[][];
   });
-  return out;
+  return { tabs: out, missing };
 }

@@ -185,7 +185,12 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
     failed: null
   });
 
-  async function saveFields(patch: Record<string, unknown>, opts: { refresh?: boolean } = {}) {
+  // `serverSet`: fields the server writes as a side effect of this patch. They are
+  // recorded as saved too, or the unsaved-changes guard below sees them as edited.
+  async function saveFields(
+    patch: Record<string, unknown>,
+    opts: { refresh?: boolean; serverSet?: Record<string, unknown> } = {}
+  ) {
     setSaveState((s) => ({ ...s, inFlight: s.inFlight + 1, failed: null }));
     try {
       const res = await fetch(`/api/new-hires/${hire.id}`, {
@@ -199,7 +204,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
         const p = (await res.json().catch(() => null)) as { message?: string } | null;
         throw new Error(p?.message ?? "Could not save.");
       }
-      for (const [k, v] of Object.entries(patch)) {
+      for (const [k, v] of Object.entries({ ...opts.serverSet, ...patch })) {
         if (k in saved.current) (saved.current as Record<string, unknown>)[k] = v;
       }
       setSavedView({ ...saved.current });
@@ -698,7 +703,13 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
               [nameKey]: "",
               [emailKey]: ""
             }));
-            void saveFields({ [roleKeyKey]: r.key });
+            // The server sets the link to the holder and clears the typed fallback;
+            // record that as saved, or the page warned "Leave site?" after an Unlink
+            // then re-pick (found Nov 21, needs-a-person #42).
+            void saveFields(
+              { [roleKeyKey]: r.key },
+              { serverSet: { [linkedIdKey]: r.holder?.id ?? "", [nameKey]: "", [emailKey]: "" } }
+            );
           }}
           // Linking or unlinking a supervisor is a click, not typing, so it saves
           // at once. Only the id is stored; the name and address shown beside it

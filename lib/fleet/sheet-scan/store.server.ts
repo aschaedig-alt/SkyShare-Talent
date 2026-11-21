@@ -45,9 +45,17 @@ async function save(state: ScanState) {
 }
 
 /** Compare the sheet with the live chart right now, without storing anything. */
-export async function compareNow(): Promise<CompareResult> {
-  const [{ groups }, tabs] = await Promise.all([getCrewRoster(), readAircraftTabs()]);
-  return compareSheetToChart(groups, tabs);
+export async function compareNow(): Promise<CompareResult & { missingTabs: string[] }> {
+  const [{ groups }, { tabs, missing }] = await Promise.all([getCrewRoster(), readAircraftTabs()]);
+  return { ...compareSheetToChart(groups, tabs), missingTabs: missing };
+}
+
+/** Shown on the panel instead of a failure: the scan ran, but did not cover these tabs. */
+function missingTabsMessage(missing: string[]): string | null {
+  if (!missing.length) return null;
+  const list = missing.map((t) => `"${t}"`).join(", ");
+  const one = missing.length === 1;
+  return `The sheet no longer has ${one ? "a tab named" : "tabs named"} ${list}, so ${one ? "its" : "their"} pilots were not checked. If a tab was renamed, the app's tab list needs the new name.`;
 }
 
 /**
@@ -63,12 +71,12 @@ export async function runScan(): Promise<ScanState> {
     return state;
   }
   try {
-    const result = await compareNow();
+    const { missingTabs, ...result } = await compareNow();
     // Forget decisions for suggestions that no longer exist, so the map cannot
     // grow forever; a decision on a live suggestion is kept.
     const live = new Set(result.suggestions.map((s) => s.id));
     const decided = Object.fromEntries(Object.entries(prev.decided).filter(([id]) => live.has(id)));
-    const state: ScanState = { scannedAt: new Date().toISOString(), error: null, result, decided };
+    const state: ScanState = { scannedAt: new Date().toISOString(), error: missingTabsMessage(missingTabs), result, decided };
     await save(state);
     return state;
   } catch (e) {

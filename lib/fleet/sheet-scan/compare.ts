@@ -42,7 +42,10 @@ export const SHEET_TABS: Record<string, { fractional?: string; blank?: string; a
   CJ2: { fractional: "CJ2" },
   "PC-12": { fractional: "PC-12" },
   "CJ3 Utah": { blank: "Citation CJ3+" },
-  CJ: { blank: "N443BC" },
+  // Renamed on the sheet from "CJ" to "CJ GA" (Georgia) around Nov 10 2026, which
+  // failed every scan until Nov 21 - see readAircraftTabs, which now skips a
+  // missing tab and names it instead of failing the whole read.
+  "CJ GA": { blank: "N443BC" },
   M2: { blank: "N785PD" },
   "Phenom 100": { blank: "N450JF" },
   "Phenom 300e / Longitude": { blank: "N409KG" }

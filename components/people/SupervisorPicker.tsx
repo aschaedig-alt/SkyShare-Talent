@@ -124,7 +124,7 @@ export function SupervisorPicker({
               Nobody holds this role right now — <Link href="/people/leadership-roles" className="font-semibold underline">set who does</Link>.
             </div>
           </div>
-          <button type="button" onClick={onUnlink} className="rounded border border-brand-lea/20 px-2 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-white dark:border-white/10 dark:text-slate-100">
+          <button type="button" onClick={onUnlink} className="rounded border border-brand-lea/20 px-2 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-white dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/10">
             Unlink
           </button>
         </div>
@@ -147,7 +147,7 @@ export function SupervisorPicker({
               {linkedEmail ? `${linkedEmail} · read from their record` : "No email on their record — the cc will be skipped"}
             </div>
           </div>
-          <button type="button" onClick={onUnlink} className="rounded border border-brand-lea/20 px-2 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-white dark:border-white/10 dark:text-slate-100">
+          <button type="button" onClick={onUnlink} className="rounded border border-brand-lea/20 px-2 py-1 text-[11px] font-semibold text-brand-lea transition hover:bg-white dark:border-white/10 dark:text-slate-100 dark:hover:bg-white/10">
             Unlink
           </button>
         </div>
