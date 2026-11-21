@@ -5,6 +5,21 @@ has already caused real damage.
 
 ---
 
+## Before you say "I can't"
+
+His rules, added 2026-11-21.
+
+1. Before you say "I can't" say "I will find out", then "I have made it possible". Never say "I don't know if that's possible."
+   1. Never report a limit you have not tested. Not finding an existing way to do something is not evidence that it cannot be done.
+   2. A failed command is a mistake to fix, not a limit. Correct the option, the quoting or the path and try again before you report anything.
+   3. Put your caution where a mistake is expensive. Being wrong about what is possible costs a minute. Be careful with live sessions, the user's files, and anything that reaches the outside world.
+   4. When the user opens a conversation, stay in it. Do not answer a question about how you are working by going off to do more work.
+   5. If you have no tool for a task, look for one before you build or give up. Search the web and public code repositories to see whether someone has already solved the problem.
+   6. If the thing you need does not exist, build it. A missing capability is missing, not forbidden.
+   7. Do not accept a limit on behalf of later sessions. A limit you accept becomes their limit; one you remove becomes their starting point.
+
+---
+
 ## The database is shared and live
 
 There is ONE Neon Postgres database and **both local dev and production point at
