@@ -923,7 +923,7 @@ follow-up list, the non-HR user sees no reply icons at all, and the log line is 
 **Status:** OPEN
 **Added:** 2026-11-11
 
-**Sweep 2026-11-21:** Duplicate PASSED (see #47: the copy saved with its category and both core values). Apply this formatting to all questions was pressed on 2026-11-21 and opened a native confirm box, which froze the tab for the session's tools; it was left for him to press Cancel. Afterwards: delete the TEST COPY question from the bank. Import and both Undos still unchecked.
+**Sweep 2026-11-21:** Duplicate PASSED (see #47: the copy saved with its category and both core values). Apply this formatting to all questions PASSED for real: he pressed Yes on its confirm, and all questions were rewritten at 22:19:21Z with font-size 18px (undo record "Question: Large", 22 rows). Its Undo PASSED: POST action "undo" (the same call the Undo bar makes) returned restored 21, skipped 1 (the TEST COPY, which he had already deleted), and the live table then held 21 questions, 0 with any font-size, 0 TEST COPY. Left: Import from a document, and its Undo.
 
 Feedback cmwcmsbwn: each question has a Duplicate button; each box in the edit form has
 "Apply this formatting to all questions" (with an Undo bar); and "Import from a document"
