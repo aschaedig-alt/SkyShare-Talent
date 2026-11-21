@@ -1396,6 +1396,15 @@ open it on your phone. Press Active on one application.
 doubled lines; the Just the contact email reads right and its button saves the card; Active
 lights and the candidate still reads as open in the lists.
 
+**Update 2026-11-21, from him — the Make contact flow asks the wrong question first:** "This
+isn't how it works on an iPhone. On an iPhone, you have to choose 'Create new contact' or 'Add
+to existing contact,' so from this view, I can't tell if this contact already exists." The app's
+menu asks "Not in your phone yet?" or "Already in your phone?" before the phone shows its own
+Create New Contact / Add to Existing Contact sheet, and the app cannot see the phone's contacts,
+so the person has to guess. The trimmed card is only useful if they already know. Open as a
+design question on the roadmap; the iPhone test above cannot be done as written until it is
+decided.
+
 ---
 
 ### 80. View as has never been started or exited by clicking, on the live site
