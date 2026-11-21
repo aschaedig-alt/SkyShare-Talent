@@ -37,32 +37,6 @@ live) · `CLOSED`.
 ---
 
 ## Open
-### 2. Private HR notes have never been loaded by a non-HR viewer
-
-**Status:** BLOCKED ON DEPLOY - failed on the live site 2026-11-21 (timeline leak), fixed in code that day
-**Added:** 2026-09-11
-
-**Sweep 2026-11-21:** After the deploy (d2afba5), View as Alex Andrade: Luke Webb's page no longer contains the note text ("Medium feelings" absent). Still FAILED on one point: his Activity list showed "Copied a private Paycom note (RICHARD PADEN, 6/19/2026 | 1:10 PM) to Luke Webb as an HR-only note", which tells a non-HR viewer one exists. Fixed in lib/data/candidates.ts the same day (rows pointing at a private note, by metadata noteId or wording, are dropped outside HR); against the live table it hides exactly 5 rows, one per private note. BLOCKED ON DEPLOY again: afterwards View as Alex and confirm /candidates/cmrtlf1kx000028rmteibvsbw contains neither "Medium feelings" nor "private Paycom note".
-
-**Sweep 2026-11-21:** FAILED on the live site, now fixed in code, BLOCKED ON DEPLOY. View as Alex Andrade: Luke Webb's page HTML carried his private HR note ("Post interview (private Paycom note by Rich Paden...) Medium feelings...") inside the Timeline data, though the Notes tab correctly left it out; the same for Rich Paden. Cause: lib/data/candidates.ts built the timeline from every note with no hrOnly check, and put interview notes in it without the interviewer-visibility check. Fixed: the timeline now drops private notes and redacts restricted ones exactly like the Notes and Interviews tabs. After the deploy: View as Alex, fetch /candidates/cmrtlf1kx000028rmteibvsbw and confirm "Medium feelings" is absent.
-
-A note marked private is removed from the query rather than hidden in the page, so
-it is absent from the network response and not merely invisible. That is the right
-shape and it is the shape the code has. What has never happened is **somebody who
-is not HR actually loading the page**: local dev bypasses auth, so every request
-here runs as an admin and the non-HR branch cannot be exercised at all.
-
-**How to check it:** have somebody with a non-HR login — a hiring manager, not
-Aimee, Hannah or Kevin — open a candidate who has a private note on them, and
-confirm they cannot see it. The code is live: production serves the build from
-commit b06b85c, confirmed by fetching its stylesheet and finding it byte-identical
-to the local build of that commit.
-
-**What would count as a pass:** they do not see the note, and they also do not see
-a gap, a count, or a "1 hidden" marker that tells them one exists.
-
----
-
 ### 3. The new hire vCard has never been opened on a phone
 
 **Status:** OPEN
@@ -1127,6 +1101,32 @@ afterwards. The links and lunch card are still there after a reload.
 ---
 
 ## Closed
+
+### 2. Private HR notes have never been loaded by a non-HR viewer
+
+**Status:** CLOSED 2026-11-21, by the sweep session on his instruction that day ("if they work, you can mark them as done"). After b0863e1 deployed: View as Alex Andrade (HIRING_MANAGER), GET /candidates/cmrtlf1kx000028rmteibvsbw (Luke Webb) returned his page with "Medium feelings" absent, "private Paycom note" absent, "HR-only note" absent, while 6 ordinary "Copied a Paycom note" Activity lines still showed. Positive control as Aimee (HR) on the same page: both "Medium feelings" and "private Paycom note" present. The note and every sign of it are gone for a non-HR viewer and still there for HR.
+**Added:** 2026-09-11
+
+**Sweep 2026-11-21:** After the deploy (d2afba5), View as Alex Andrade: Luke Webb's page no longer contains the note text ("Medium feelings" absent). Still FAILED on one point: his Activity list showed "Copied a private Paycom note (RICHARD PADEN, 6/19/2026 | 1:10 PM) to Luke Webb as an HR-only note", which tells a non-HR viewer one exists. Fixed in lib/data/candidates.ts the same day (rows pointing at a private note, by metadata noteId or wording, are dropped outside HR); against the live table it hides exactly 5 rows, one per private note. BLOCKED ON DEPLOY again: afterwards View as Alex and confirm /candidates/cmrtlf1kx000028rmteibvsbw contains neither "Medium feelings" nor "private Paycom note".
+
+**Sweep 2026-11-21:** FAILED on the live site, now fixed in code, BLOCKED ON DEPLOY. View as Alex Andrade: Luke Webb's page HTML carried his private HR note ("Post interview (private Paycom note by Rich Paden...) Medium feelings...") inside the Timeline data, though the Notes tab correctly left it out; the same for Rich Paden. Cause: lib/data/candidates.ts built the timeline from every note with no hrOnly check, and put interview notes in it without the interviewer-visibility check. Fixed: the timeline now drops private notes and redacts restricted ones exactly like the Notes and Interviews tabs. After the deploy: View as Alex, fetch /candidates/cmrtlf1kx000028rmteibvsbw and confirm "Medium feelings" is absent.
+
+A note marked private is removed from the query rather than hidden in the page, so
+it is absent from the network response and not merely invisible. That is the right
+shape and it is the shape the code has. What has never happened is **somebody who
+is not HR actually loading the page**: local dev bypasses auth, so every request
+here runs as an admin and the non-HR branch cannot be exercised at all.
+
+**How to check it:** have somebody with a non-HR login — a hiring manager, not
+Aimee, Hannah or Kevin — open a candidate who has a private note on them, and
+confirm they cannot see it. The code is live: production serves the build from
+commit b06b85c, confirmed by fetching its stylesheet and finding it byte-identical
+to the local build of that commit.
+
+**What would count as a pass:** they do not see the note, and they also do not see
+a gap, a count, or a "1 hidden" marker that tells them one exists.
+
+---
 
 ### 39. The daily sheet check has never run on the live site, and no suggestion has been used for real
 
