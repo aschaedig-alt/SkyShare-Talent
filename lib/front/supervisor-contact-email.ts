@@ -250,6 +250,31 @@ export function resolveSupervisorContactTargets(hire: HireForSupervisorEmail): S
   };
 }
 
+/**
+ * JUST THE CONTACT — for somebody who already works here (Aimee, feedback Nov 21
+ * 2026: "these are people who already employees for us and someone else needs
+ * their contact. I wanna be able to just send them that contact and it not be a
+ * whole new hire email"). Built in rather than a Front template so it works with
+ * nothing set up, and it never replaces the remembered new-hire template. The
+ * card and the Add-to-contacts button are appended exactly as for the new-hire
+ * email, and the body is editable per send like every other template send.
+ */
+export type ContactEmailKind = "intro" | "contact";
+export const CONTACT_ONLY_TEMPLATE_NAME = "Just the contact";
+
+function contactOnlyTemplate(name: string): { id: string; name: string; subject: string; body: string } {
+  return {
+    id: "",
+    name: CONTACT_ONLY_TEMPLATE_NAME,
+    subject: `Contact information: ${name}`,
+    body:
+      `<div style="line-height: 1.5;" dir="ltr"><span style="font-family: Verdana, sans-serif;">` +
+      `<span style="background-color: transparent; font-size: 9pt;">` +
+      `Here is ${esc(name)}&#39;s contact information.` +
+      `</span></span></div>`,
+  };
+}
+
 /** The hire's card, in the template's own Verdana/9pt, appended under the body. */
 function hireCardHtml(card: SupervisorContactCard, cardUrl: string): string {
   const rows = [
@@ -350,7 +375,11 @@ export async function buildSupervisorContactEmail(
   hire: HireForSupervisorEmail,
   bodyOverride?: string | null,
   templateOverride?: SupervisorContactTemplate | null,
-  recipientsOverride?: ContactRecipient[] | null
+  recipientsOverride?: ContactRecipient[] | null,
+  /** "intro" = the new-hire email from the chosen Front template (what this
+   *  always sent). "contact" = just the person's contact card, for someone who
+   *  already works here — see CONTACT_ONLY_TEMPLATE. */
+  kind: ContactEmailKind = "intro"
 ): Promise<SupervisorContactEmailPreview> {
   const targets = resolveSupervisorContactTargets(hire);
   const recipients = normalizeContactRecipients(
@@ -360,14 +389,18 @@ export async function buildSupervisorContactEmail(
         .map((s) => ({ name: s.name, email: s.email }))
   );
 
-  const template = templateOverride ?? (await getSupervisorContactTemplate());
-  if (!template) {
-    throw new Error(
-      "No Front template has been chosen for this email yet. Pick one in this window — it is remembered for every hire after this."
-    );
+  let tpl: { id: string; name: string; subject: string; body: string };
+  if (kind === "contact") {
+    tpl = contactOnlyTemplate(hire.name);
+  } else {
+    const template = templateOverride ?? (await getSupervisorContactTemplate());
+    if (!template) {
+      throw new Error(
+        "No Front template has been chosen for this email yet. Pick one in this window — it is remembered for every hire after this."
+      );
+    }
+    tpl = await fetchTemplate(template.templateId, template.templateName);
   }
-
-  const tpl = await fetchTemplate(template.templateId, template.templateName);
 
   const first = greetingNames(recipients);
 

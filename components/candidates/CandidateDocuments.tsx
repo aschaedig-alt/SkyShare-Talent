@@ -384,8 +384,12 @@ export function CandidateDocuments({ candidateId, files }: CandidateDocumentsPro
 
       {/* Tab strip + layout toggle (only when there are documents) */}
       {files.length > 0 && (
-      <div className="flex items-center gap-2 border-b border-brand-lea/10 px-2 py-1.5 dark:border-white/10">
-        <div className="flex items-center gap-1 overflow-x-auto">
+      <div className="flex flex-wrap items-center gap-2 border-b border-brand-lea/10 px-2 py-1.5 dark:border-white/10">
+        {/* WRAPS rather than scrolling sideways: three file names were 578px in a
+            464px strip at a 1280 window (Aimee: "you know i hate the sideways
+            scroll bar", feedback Nov 17 2026). min-w-0 + flex-1 so the strip
+            takes the room left by the layout toggle instead of pushing it. */}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
           {filteredFiles.map((file) => {
             const Icon = fileIcon(file);
             const active = effectiveLayout === "single" && file.id === activeFile?.id;

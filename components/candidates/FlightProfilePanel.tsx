@@ -236,11 +236,11 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
         <div className="mt-3 grid grid-cols-2 gap-2">
           {confirmed.map((m) => m.key === "certificates" ? (
             <div key={m.id} className="group col-span-2 rounded bg-brand-cloudDancer/45 px-2.5 py-2 dark:bg-white/5">
-              <div className="flex items-center gap-2">
-                <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey dark:text-slate-400">{m.label}</div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <div className="min-w-0 text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey [overflow-wrap:anywhere] dark:text-slate-400">{m.label}</div>
                 <span className="text-[10px] text-brand-grey dark:text-slate-400">{checklistCount(buildChecklist(checklistInput(m)))}</span>
                 {editingId !== m.id && (
-                  <button onClick={() => setEditingId(m.id)} className="ml-auto text-brand-grey opacity-0 transition group-hover:opacity-100 focus:opacity-100 dark:text-slate-400" aria-label="Edit certificates">
+                  <button onClick={() => setEditingId(m.id)} className="ml-auto shrink-0 text-brand-grey opacity-0 transition group-hover:opacity-100 focus:opacity-100 dark:text-slate-400" aria-label="Edit certificates">
                     <Pencil className="h-3 w-3" />
                   </button>
                 )}
@@ -260,11 +260,16 @@ export function FlightProfilePanel({ candidateId, metrics, hasDocuments }: Fligh
               </div>
             </div>
           ) : (
-            <div key={m.id} className="group rounded bg-brand-cloudDancer/45 px-2.5 py-2 dark:bg-white/5">
-              <div className="flex items-center justify-between">
-                <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey dark:text-slate-400">{m.label}</div>
+            <div key={m.id} className="group min-w-0 rounded bg-brand-cloudDancer/45 px-2.5 py-2 dark:bg-white/5">
+              {/* min-w-0 + a label that may break, and a pencil that may not
+                  shrink: at 1536px this column is 186px, a tile is ~89px, and
+                  "SINGLE PILOT" plus the hover pencil was 5px wider than that —
+                  an INVISIBLE button (opacity-0) was what put the sideways
+                  scrollbar under the whole panel (Aimee, feedback Nov 17 2026). */}
+              <div className="flex items-start justify-between gap-1">
+                <div className="min-w-0 text-[10px] font-bold uppercase tracking-[0.08em] text-brand-grey [overflow-wrap:anywhere] dark:text-slate-400">{m.label}</div>
                 {editingId !== m.id && (
-                  <button onClick={() => startEdit(m)} className="text-brand-grey opacity-0 transition group-hover:opacity-100 dark:text-slate-400" aria-label="Edit">
+                  <button onClick={() => startEdit(m)} className="shrink-0 text-brand-grey opacity-0 transition group-hover:opacity-100 dark:text-slate-400" aria-label="Edit">
                     <Pencil className="h-3 w-3" />
                   </button>
                 )}

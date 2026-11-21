@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { clsx } from "clsx";
 import { HOUSE_WORDINGS, WORDING_TO_STAGE } from "@/lib/candidates/disposition-vocabulary";
+import { applicationOutcome } from "@/lib/candidates/buckets";
 
 /**
  * Set an application's outcome, and its reason, from the candidate's own page.
@@ -43,6 +44,23 @@ import { HOUSE_WORDINGS, WORDING_TO_STAGE } from "@/lib/candidates/disposition-v
 /** The three he asked for, in his order. */
 const OUTCOMES = ["Hired", "Rejected", "Saved For Later"] as const;
 
+/**
+ * ACTIVE: the application is still being worked (Aimee, feedback Nov 17 2026:
+ * "we dont really have something to show which position someone is active on.
+ * so maybe a button that says active probably instead of new").
+ *
+ * The button SAVES the house wording "New" and is LIT by applicationOutcome(),
+ * not by a new word, on purpose. applicationOutcome() is the one definition the
+ * lists and buckets use, and it files any wording it does not recognise as
+ * Denied, so storing the literal "Active" would have shown the person as
+ * rejected everywhere else. Through it, Paycom's own "In Hiring Process" lights
+ * Active too, and "In Hiring Process - Scheduled to be Denied" does not.
+ */
+const ACTIVE_WORDING = "New";
+function isActiveWording(wording: string): boolean {
+  return Boolean(wording.trim()) && applicationOutcome(wording, null) === "Active";
+}
+
 /** wording -> outcome, and the reverse, both straight off the shared map. */
 function outcomeOf(wording: string): string | null {
   return WORDING_TO_STAGE[wording] ?? null;
@@ -70,9 +88,11 @@ export function ApplicationStatusPicker({ applicationId, candidateId, value, can
 
   const outcome = current ? outcomeOf(current) : null;
   const reasons = outcome ? reasonsFor(outcome) : [];
+  const activeNow = isActiveWording(current);
   // A wording the map has never met — keep showing it rather than pretending the
-  // row is empty.
-  const unknown = Boolean(current) && outcome === null;
+  // row is empty. Paycom's "In Hiring Process" is not a house wording but IS
+  // understood (it lights Active), so it gets no "not one of the house wordings" note.
+  const unknown = Boolean(current) && outcome === null && !activeNow;
 
   if (!canEdit) {
     return current ? <span className="text-xs text-brand-grey dark:text-slate-400">{current}</span> : null;
@@ -107,6 +127,24 @@ export function ApplicationStatusPicker({ applicationId, candidateId, value, can
   return (
     <div className="mt-2">
       <div className="flex flex-wrap items-center gap-1.5">
+        <button
+          onClick={() => {
+            // Already active (including Paycom's "In Hiring Process"): leave the
+            // stored wording alone rather than overwrite it with "New".
+            if (!activeNow) void save(ACTIVE_WORDING);
+          }}
+          disabled={busy}
+          aria-pressed={activeNow}
+          title="Still being worked for this position"
+          className={clsx(
+            "rounded border px-2 py-1 text-[11px] font-semibold transition disabled:opacity-50",
+            activeNow
+              ? "border-brand-gold bg-brand-lea text-white dark:bg-brand-sweet dark:text-brand-lea"
+              : "border-brand-lea/20 text-brand-grey hover:border-brand-gold hover:text-brand-lea dark:border-white/10 dark:text-slate-400 dark:hover:text-slate-100"
+          )}
+        >
+          Active
+        </button>
         {OUTCOMES.map((o) => {
           const active = outcome === o;
           return (
@@ -129,7 +167,8 @@ export function ApplicationStatusPicker({ applicationId, candidateId, value, can
 
         {/* An outcome outside his three — Withdrew, Offer, Knocked Out, New. Shown
             so the control never misrepresents the row, but not offered as a button. */}
-        {outcome && !OUTCOMES.includes(outcome as (typeof OUTCOMES)[number]) ? (
+        {/* "New" is no longer shown here: it is the Active button above. */}
+        {outcome && !activeNow && !OUTCOMES.includes(outcome as (typeof OUTCOMES)[number]) ? (
           <span className="rounded border border-brand-lea/20 bg-brand-cloudDancer/60 px-2 py-1 text-[11px] font-semibold text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
             {outcome}
           </span>

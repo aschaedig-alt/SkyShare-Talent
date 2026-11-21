@@ -51,6 +51,7 @@ import {
   type SupervisorContactSendRecord,
   type SupervisorContactTargets,
   type SupervisorContactTemplate,
+  type ContactEmailKind,
 } from "@/lib/front/supervisor-contact-email";
 
 // Sending the "Start Your Onboarding Journey" email. This is deliberately a two-step
@@ -887,7 +888,9 @@ export async function previewSupervisorContactEmail(
   hireId: string,
   template?: SupervisorContactTemplate | null,
   /** The dialog's recipient list. Omitted on first open = the linked supervisors. */
-  recipients?: ContactRecipient[] | null
+  recipients?: ContactRecipient[] | null,
+  /** "contact" = just the card, no new-hire wording and no Front template. */
+  kind: ContactEmailKind = "intro"
 ): Promise<SupervisorContactPreviewResult> {
   if (!(await canEditPeople())) {
     return { ok: false, error: "You don't have permission to send this email." };
@@ -907,14 +910,15 @@ export async function previewSupervisorContactEmail(
 
   const chosen = template ?? (await getSupervisorContactTemplate());
   const alreadySent = await getSupervisorContactSendRecord(hireId);
-  if (!chosen) return { ok: true, targets, template: null, alreadySent };
+  // "Just the contact" needs no template, so it can preview before one exists.
+  if (!chosen && kind !== "contact") return { ok: true, targets, template: null, alreadySent };
   // Nobody chosen yet (no supervisor linked, or she unticked everyone): there is
   // nothing to preview, and building would report it as a Front problem.
   const effective = recipients ?? targets.supervisors.filter((s) => s.email);
   if (effective.length === 0) return { ok: true, targets, template: chosen, alreadySent };
 
   try {
-    const preview = await buildSupervisorContactEmail(hire, null, chosen, recipients);
+    const preview = await buildSupervisorContactEmail(hire, null, chosen, recipients, kind);
     return { ok: true, targets, template: chosen, preview, alreadySent };
   } catch (err) {
     // The recipients and the card are still good — only Front failed. Keeping ok
@@ -945,7 +949,8 @@ export async function sendSupervisorContactEmail(
   template?: SupervisorContactTemplate | null,
   /** The list she approved in the dialog — passed back so the preview's
    *  recipients are the send's recipients. */
-  recipients?: ContactRecipient[] | null
+  recipients?: ContactRecipient[] | null,
+  kind: ContactEmailKind = "intro"
 ): Promise<SupervisorContactSendResult> {
   if (!(await canEditPeople())) {
     return { ok: false, error: "You don't have permission to send this email." };
@@ -958,7 +963,7 @@ export async function sendSupervisorContactEmail(
   let email: SupervisorContactEmailPreview;
   let channelId: string;
   try {
-    email = await buildSupervisorContactEmail(hire, bodyOverride, template, recipients);
+    email = await buildSupervisorContactEmail(hire, bodyOverride, template, recipients, kind);
     channelId = await getOrientationChannelId();
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Could not build the email." };
@@ -999,6 +1004,13 @@ export async function sendSupervisorContactEmail(
     warnings.push(
       `This is not the production environment, so the message was ${guard.mode === "redirected" ? "redirected to the test inbox" : `handled as "${guard.mode}"`} rather than delivered to ${toLabel}.`
     );
+  }
+
+  // "Just the contact" is not the new-hire step: it neither ticks the checklist
+  // item nor overwrites the new-hire send record (which is what the "Already sent"
+  // warning and the Resend label read). The message is in Front like any other.
+  if (kind === "contact") {
+    return { ok: true, conversationId: sent.conversationId, sentAt, to: toLabel, warnings: warnings.length ? warnings : undefined };
   }
 
   try {

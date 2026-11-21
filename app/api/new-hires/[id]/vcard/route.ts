@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUser, authFailureResponse } from "@/lib/auth/route-auth";
 import { buildVcardFile } from "@/lib/new-hire-contacts/vcard";
+import { parseVcardParts } from "@/lib/new-hire-contacts/vcard-parts";
 
 // One employee's .vcf, so a recruiter on a phone can tap "Make contact" and have
 // the person land in their Contacts app.
@@ -25,7 +26,11 @@ function safeFilename(name: string): string {
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function GET(_request: Request, context: RouteContext) {
+// ?only=phone,work,home,title,location — the card with ONLY those details, for
+// adding to a contact already on the phone. See lib/new-hire-contacts/vcard-parts.ts.
+// No parameter is the whole card, exactly as before.
+
+export async function GET(request: Request, context: RouteContext) {
   const auth = await requireApiUser();
   if (!auth.ok) {
     return authFailureResponse(auth);
@@ -50,15 +55,16 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ message: "That person could not be found." }, { status: 404 });
   }
 
+  const parts = parseVcardParts(new URL(request.url).searchParams.get("only"));
   const body = buildVcardFile([
     {
       fullName: hire.name,
-      title: hire.position,
-      department: hire.department,
-      phone: hire.phone,
-      workEmail: hire.ssEmail,
-      homeEmail: hire.personalEmail,
-      workLocation: hire.location
+      title: parts.has("title") ? hire.position : null,
+      department: parts.has("title") ? hire.department : null,
+      phone: parts.has("phone") ? hire.phone : null,
+      workEmail: parts.has("work") ? hire.ssEmail : null,
+      homeEmail: parts.has("home") ? hire.personalEmail : null,
+      workLocation: parts.has("location") ? hire.location : null
     }
   ]);
 

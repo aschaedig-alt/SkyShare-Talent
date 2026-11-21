@@ -487,7 +487,11 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
           // Saves itself on the way out of the box — see saveFields.
           onBlur={() => commit(key)}
           className={clsx(
-            "mt-1 w-full rounded border px-3 py-2 text-sm outline-none transition",
+            // h-10 FIXED: a date input and a number input are not the same height
+            // at the same padding (the date one carries its picker icon), which is
+            // what made "Seniority #" read smaller than the dates either side of it
+            // (Aimee, feedback Nov 17 2026). One height for every box in a row.
+            "mt-1 h-10 w-full rounded border px-3 py-2 text-sm outline-none transition",
             off
               ? "border-dashed border-brand-lea/15 bg-brand-cloudDancer/40 text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-500"
               : "border-brand-lea/15 bg-white text-brand-lea focus:border-brand-gold focus:shadow-glow dark:border-white/10 dark:bg-brand-field dark:text-slate-100"
@@ -524,8 +528,14 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
   function readOnlyField(label: string, value: string | null, ownedBy: string) {
     return (
       <div className="block">
-        <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">{label}</span>
-        <p className="mt-1 w-full rounded border border-dashed border-brand-lea/15 bg-white/60 px-3 py-2 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-field/60 dark:text-slate-100">
+        {/* Same fixed 14px label row and 40px box as field(), so a read-only box
+            sits level with an editable one beside it. Without it this label took
+            its natural line height and pushed the box ~5px below the Managed
+            aircraft box in the same row (Aimee, feedback Nov 17 2026). */}
+        <span className="flex h-[14px] items-end leading-none">
+          <span className="truncate text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-brand-grey dark:text-slate-400">{label}</span>
+        </span>
+        <p className="mt-1 flex h-10 w-full items-center truncate rounded border border-dashed border-brand-lea/15 bg-white/60 px-3 text-sm text-brand-lea dark:border-white/10 dark:bg-brand-field/60 dark:text-slate-100">
           {value && value.trim() ? value : <span className="text-brand-grey/60 dark:text-slate-500">—</span>}
         </p>
         <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-brand-grey/70 dark:text-slate-500">
@@ -754,8 +764,23 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
         // the form's unsaved draft — naming a card that has not shipped yet would be
         // a small lie on a phone screen.
         [
-          <div key="make-contact" className="flex flex-wrap items-center gap-3">
-            <MakeContactButton hireId={hire.id} hireName={hire.name} />
+          // items-start: the Make contact menu opens in the page flow and is tall;
+          // centred, the buttons beside it floated down to its middle.
+          <div key="make-contact" className="flex flex-wrap items-start gap-3">
+            <MakeContactButton
+              hireId={hire.id}
+              hireName={hire.name}
+              // What is on file, so "Already in your phone?" can show each value
+              // beside its tick box. Read from the form state, so it matches the
+              // boxes above it (the card itself is built from the saved record).
+              details={{
+                phone: details.phone,
+                work: details.ssEmail,
+                home: details.personalEmail,
+                title: [details.position, details.department].filter((v) => v.trim()).join(" · "),
+                location: details.location
+              }}
+            />
             {/* The same send as the checklist row's, reachable for anyone —
                 including a hire whose checklist predates that row. Emails their
                 card to whoever she picks (supervisors pre-ticked). */}
@@ -764,6 +789,7 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
               hireName={hire.name}
               taskStatus={tasks.find((x) => x.key === "supervisor_contact_sent")?.status ?? "TODO"}
               sentAt={sendStatus.supervisor}
+              startDate={details.startDate || null}
               canEdit={canEdit}
               onSent={() =>
                 setTasks((cur) => cur.map((x) => (x.key === "supervisor_contact_sent" ? { ...x, status: "DONE" } : x)))
@@ -827,9 +853,16 @@ export function NewHireDetailWorkspace({ hire, travelTrips, travelLoyalty, journ
           field("Aircraft service date", "aircraftServiceDate", "date")
         ],
         [
+          // FOUR cells, on the same four-column grid as the row above, so the
+          // tail box lines up under Birthday instead of being a third of the
+          // row wide on a grid of its own (Aimee: "the managed aircraft tail
+          // box is still not in the right place spacing wise", Nov 17 2026).
+          // The fourth is display:none below lg, so on a phone or a narrow
+          // window it is not a grid item and leaves no gap.
           field("Managed aircraft (tail #)", "managedAircraft"),
           readOnlyField("Business card", cardStatusLabel(cardStatus), "the Business cards panel"),
-          readOnlyField("Card title", hire.businessCardTitle, "the Business cards panel")
+          readOnlyField("Card title", hire.businessCardTitle, "the Business cards panel"),
+          <div key="spacer" aria-hidden className="hidden lg:block" />
         ],
         ...(managedPilotControl ? [[managedPilotControl]] : []),
         [field("Birth country", "birthCountry"), field("Citizenship", "citizenshipCountry")],

@@ -648,7 +648,10 @@ export function CandidateProfileWorkspace({
       ) : (
         <>
           {/* Profile tabs */}
-          <div className="flex gap-1 overflow-x-auto overflow-y-hidden border-b border-brand-lea/15 dark:border-white/10">
+          {/* WRAPS onto a second line rather than scrolling sideways: nine tabs
+              are ~760px and a phone has ~310 (always-works-on-mobile; Aimee,
+              "you know i hate the sideways scroll bar", Nov 17 2026). */}
+          <div className="flex flex-wrap gap-1 border-b border-brand-lea/15 dark:border-white/10">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;

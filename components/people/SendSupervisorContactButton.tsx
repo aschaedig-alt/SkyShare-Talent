@@ -6,7 +6,7 @@ import { TickedNotSentNote } from "@/components/shared/TickedNotSentNote";
 import { EmailBodyEditor } from "@/components/shared/EmailBodyEditor";
 import { formatMomentDate } from "@/lib/dates/display";
 import type { FrontTemplateSummary } from "@/lib/front/templates";
-import type { ContactRecipient } from "@/lib/front/supervisor-contact-email";
+import type { ContactEmailKind, ContactRecipient } from "@/lib/front/supervisor-contact-email";
 import { ContactRecipientList, type RecipientRow } from "@/components/people/ContactRecipientList";
 import { CardLinkQr } from "@/components/people/CardLinkQr";
 import { PhoneNumber } from "@/components/shared/PhoneNumber";
@@ -49,7 +49,21 @@ type Props = {
    *  step ticked by hand is not a send, and reading "Resend" on one is what made
    *  a hand-ticked PRD step look like a sent email on 2026-09-09. */
   sentAt?: string | null;
+  /** Start date (YYYY-MM-DD). Someone already started gets "Just the contact" by
+   *  default rather than the new-hire introduction. */
+  startDate?: string | null;
 };
+
+// WHICH EMAIL. "intro" is the new-hire introduction from the chosen Front
+// template, and ticks the checklist step. "contact" is just the person's card,
+// for somebody who already works here (Aimee, feedback Nov 21 2026: "I wanna be
+// able to just send them that contact and it not be a whole new hire email").
+// It needs no template and touches neither the checklist nor the send record.
+function defaultKind(taskStatus: Props["taskStatus"], startDate: string | null | undefined): ContactEmailKind {
+  if (taskStatus === "DONE") return "contact";
+  const today = new Date().toISOString().slice(0, 10);
+  return startDate && startDate < today ? "contact" : "intro";
+}
 
 // WHO IT GOES TO IS CHOSEN IN THE DIALOG (Nov 19 2026). Asked for as: "send the
 // new hires contact card to multiple people, 2 supervisors linked to the new hire
@@ -65,8 +79,9 @@ function checkedRecipients(rows: RecipientRow[]): ContactRecipient[] {
   return rows.filter((r) => r.checked && r.email).map((r) => ({ name: r.name, email: r.email as string }));
 }
 
-export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canEdit, onSent, sentAt = null }: Props) {
+export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canEdit, onSent, sentAt = null, startDate = null }: Props) {
   const [open, setOpen] = useState(false);
+  const [kind, setKind] = useState<ContactEmailKind>(() => defaultKind(taskStatus, startDate));
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [res, setRes] = useState<SupervisorContactPreviewResult | null>(null);
@@ -119,7 +134,9 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
     setBody(null);
     setSaveError(null);
     setRows([]);
-    const next = await previewSupervisorContactEmail(hireId);
+    const startKind = defaultKind(taskStatus, startDate);
+    setKind(startKind);
+    const next = await previewSupervisorContactEmail(hireId, undefined, undefined, startKind);
     setRes(next);
     setTemplateId(next.template?.templateId ?? "");
     // The linked supervisors, ticked. One with no address is listed but cannot be
@@ -151,12 +168,12 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
   async function changeRows(next: RecipientRow[]) {
     setRows(next);
     const chosen = currentTemplate();
-    if (!chosen) return;
+    if (!chosen && kind === "intro") return;
     // Ticking two boxes quickly fires two previews; only the latest may land, or
     // the To line could show a list she has already changed.
     const mine = ++previewSeq.current;
     setLoading(true);
-    const fresh = await previewSupervisorContactEmail(hireId, chosen, checkedRecipients(next));
+    const fresh = await previewSupervisorContactEmail(hireId, chosen, checkedRecipients(next), kind);
     if (mine !== previewSeq.current) return;
     setRes(fresh);
     setLoading(false);
@@ -176,7 +193,7 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
     };
     const mine = ++previewSeq.current;
     setLoading(true);
-    const fresh = await previewSupervisorContactEmail(hireId, chosen, checkedRecipients(rows));
+    const fresh = await previewSupervisorContactEmail(hireId, chosen, checkedRecipients(rows), "intro");
     if (mine === previewSeq.current) {
       setRes(fresh);
       setLoading(false);
@@ -188,12 +205,27 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
     if (!saved.ok) setSaveError(saved.error ?? "This choice could not be saved for next time.");
   }
 
+  // Switching re-previews with the other kind. A hand-edited body is dropped,
+  // since it was an edit of the OTHER email's wording.
+  async function switchKind(next: ContactEmailKind) {
+    if (next === kind) return;
+    setKind(next);
+    setBody(null);
+    const mine = ++previewSeq.current;
+    setLoading(true);
+    const fresh = await previewSupervisorContactEmail(hireId, currentTemplate(), checkedRecipients(rows), next);
+    if (mine !== previewSeq.current) return;
+    setRes(fresh);
+    setLoading(false);
+  }
+
   async function confirmSend() {
     setSending(true);
-    const sent = await sendSupervisorContactEmail(hireId, body, currentTemplate(), checkedRecipients(rows));
+    const sent = await sendSupervisorContactEmail(hireId, body, currentTemplate(), checkedRecipients(rows), kind);
     setResult(sent);
     setSending(false);
-    if (sent.ok) onSent();
+    // Only the new-hire introduction is the checklist step.
+    if (sent.ok && kind === "intro") onSent();
   }
 
   function close() {
@@ -234,6 +266,40 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
           the card on their phone. Read it before you send it.
         </p>
 
+        {/* Which email: one question, two answers. */}
+        {!result ? (
+          <fieldset className="mt-3 grid gap-2 sm:grid-cols-2" disabled={sending}>
+            <legend className="sr-only">Which email</legend>
+            {(
+              [
+                ["contact", "Just the contact", "Their card and an Add to contacts button. For someone who already works here. Does not tick the checklist."],
+                ["intro", "New hire introduction", "The new-hire email from your Front template, with their card. Ticks the supervisor checklist step."],
+              ] as const
+            ).map(([k, title, hint]) => (
+              <label
+                key={k}
+                className={`flex cursor-pointer items-start gap-2 rounded border p-2.5 text-sm transition ${
+                  kind === k
+                    ? "border-brand-gold bg-brand-lea/5 dark:bg-white/10"
+                    : "border-brand-lea/15 hover:shadow-glow dark:border-white/10"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name={`contact-kind-${hireId}`}
+                  checked={kind === k}
+                  onChange={() => void switchKind(k)}
+                  className="mt-0.5 shrink-0"
+                />
+                <span>
+                  <span className="block font-semibold text-brand-lea dark:text-slate-100">{title}</span>
+                  <span className="block text-xs text-brand-grey dark:text-slate-400">{hint}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+        ) : null}
+
         {loading && (
           <p className="mt-3 text-sm text-brand-grey dark:text-slate-400">Loading&hellip;</p>
         )}
@@ -250,7 +316,7 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
               <>
                 <div className="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-800 dark:border-green-500/40 dark:bg-green-500/10 dark:text-green-300">
                   Sent to {result.to}.
-                  {result.warnings?.length
+                  {result.warnings?.length || kind === "contact"
                     ? ""
                     : ` The checklist item is now marked done${
                         result.conversationId ? " and linked to the Front conversation" : ""
@@ -282,7 +348,7 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
 
         {!result && (
           <>
-            {res?.alreadySent && (
+            {kind === "intro" && res?.alreadySent && (
               <p className="mt-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
                 Already sent to {res.alreadySent.to} on {formatMomentDate(res.alreadySent.sentAt)}
                 {res.alreadySent.sentBy ? ` by ${res.alreadySent.sentBy}` : ""}. Sending again will deliver a second
@@ -291,7 +357,7 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
             )}
 
             {/* The other half of the same truth: ticked, but this app never sent it. */}
-            {!res?.alreadySent && taskStatus === "DONE" ? <TickedNotSentNote what="the supervisor step" /> : null}
+            {kind === "intro" && !res?.alreadySent && taskStatus === "DONE" ? <TickedNotSentNote what="the supervisor step" /> : null}
 
             {targets && (
               <>
@@ -362,6 +428,7 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
 
             {/* The picker renders whatever else went wrong, because choosing a
                 template is usually the thing that fixes it. */}
+            {kind === "intro" ? (
             <div className="mt-3">
               <label className="block text-xs font-semibold text-brand-grey dark:text-slate-400">
                 Front template
@@ -390,20 +457,21 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
                 contact details above are added to the end of it automatically.
               </p>
             </div>
+            ) : null}
 
-            {loadError ? (
+            {kind === "intro" && loadError ? (
               <p className="mt-2 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
                 {loadError}
               </p>
             ) : null}
 
-            {res?.templateError ? (
+            {kind === "intro" && res?.templateError ? (
               <p className="mt-2 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
                 {res.templateError}
               </p>
             ) : null}
 
-            {saveError ? (
+            {kind === "intro" && saveError ? (
               <p className="mt-2 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
                 {saveError} You can still send this one.
               </p>
@@ -412,9 +480,18 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
             {p ? (
               <>
                 <p className="mt-3 text-xs text-brand-grey dark:text-slate-400">
-                  Body is the live Front template &ldquo;{p.templateName}&rdquo;, fetched just now, with{" "}
-                  {hireName}&apos;s details added at the end. Change the wording below for this send if you need to
-                  &mdash; the template in Front stays as it is.
+                  {kind === "contact" ? (
+                    <>
+                      A short note with {hireName}&apos;s details and the Add to contacts button. Change the wording
+                      below for this send if you need to.
+                    </>
+                  ) : (
+                    <>
+                      Body is the live Front template &ldquo;{p.templateName}&rdquo;, fetched just now, with{" "}
+                      {hireName}&apos;s details added at the end. Change the wording below for this send if you need to
+                      &mdash; the template in Front stays as it is.
+                    </>
+                  )}
                 </p>
                 <div className="mt-2">
                   <EmailBodyEditor
@@ -439,7 +516,9 @@ export function SendSupervisorContactButton({ hireId, hireName, taskStatus, canE
                   : chosenCount === 0
                     ? "Choose who it goes to"
                     : !p
-                      ? "Choose a template first"
+                      ? kind === "intro"
+                        ? "Choose a template first"
+                        : "Loading…"
                       : `Send ${body === null ? "" : "edited copy "}to ${p.to.length === 1 ? "1 person" : `${p.to.length} people`}`}
               </Button>
             </div>
