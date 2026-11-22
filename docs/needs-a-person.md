@@ -1002,6 +1002,34 @@ read on its next run. Whether it follows them is still to be seen on the next in
 
 ---
 
+### 83. No in-app sign-off link has been sent by email, filled in on a phone, or seen in dark mode
+
+**Status:** OPEN
+**Added:** 2026-11-21
+
+The definitions sign-off moved from the Google Form into Journey (his ask, Nov 21): Reports >
+Sign-off > "Send a sign-off link" emails one hiring manager a no-login link (/signoff/<token>)
+for the departments ticked, with the email body editable before it goes; the form shows the
+draft definitions and the 14 questions (his Google Form wording); question 14 is the sign-off.
+Checked by the session against the local site with one test record written straight into the
+store (then removed; the store is empty again): the form page renders with the departments
+filled in; a bad link says so; an incomplete submit is refused with the missing questions
+named; a full submit saves, a second submit is refused, and the link then says "Thank you";
+unknown departments and choices are dropped and markup is stripped; the Reports tab, the HR
+route and the live /reports page show the sign-off ("2 of 15"); the email was built (not
+sent) and reads correctly. NOT checked: a real send through Front (it needs the deployed site,
+since a localhost link is refused for a real send), the Send dialog clicked in a browser,
+resend and cancel, filling the form on a phone, dark mode.
+
+**How to check it, five minutes, after deploy:** Reports > Sign-off > Send a sign-off link to
+yourself, tick one department, edit a line of the email, send. Open the email on your phone,
+fill the form in, then reload Reports > Sign-off.
+
+**What would count as a pass:** the email has your edit and the link; the form is easy on a
+phone; after sending, the tab shows your sign-off and its answers.
+
+---
+
 ### 82. Reports > Sign-off has not been opened in a browser, on a phone or in dark mode
 
 **Status:** OPEN
