@@ -228,7 +228,7 @@ export function signoffGreetingHtml(recipientName: string | null): string {
 }
 
 export function defaultSignoffSubject(): string {
-  return "Quality of Hire: your sign-off on the good-hire definitions";
+  return "Quick sign-off: what makes a good hire";
 }
 
 function joinList(items: string[]): string {
@@ -236,20 +236,18 @@ function joinList(items: string[]): string {
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
+// Short and plain on purpose (his ask, Nov 21: "shorter, more clear, and more human
+// sounding"). HR can still edit it for each send.
 export function defaultSignoffBodyHtml(departments: string[]): string {
   const for_ = departments.length ? ` for ${esc(joinList(departments))}` : "";
   return (
-    para(
-      "We are setting down how we decide whether a hire worked out: what counts as a good hire and a bad hire, and the numbers we will track each quarter. Before anyone is labeled, the hiring manager for each department confirms or corrects the draft."
-    ) +
+    para(`We're putting down in writing what makes a good hire at SkyShare, and I'd like your input${for_}.`) +
     GAP +
-    para(
-      `Could you answer 14 short questions${for_} by ${SIGNOFF_DUE}? It takes about 15 minutes. The draft definitions are at the top of the form, and your answers are your department's sign-off - there is no second round.`
-    ) +
+    para(`It's a short form, about 15 minutes, no login needed. Your answers are your sign-off, so there's nothing to approve later.`) +
     GAP +
-    para("You don't need a login - just open the link below.") +
+    para(`Could you fill it out by ${SIGNOFF_DUE}?`) +
     GAP +
-    para("Thank you,<br />SkyShare HR")
+    para("Thanks,<br />SkyShare HR")
   );
 }
 
@@ -258,7 +256,7 @@ export function signoffLinkBlockHtml(url: string, expiresAt: string): string {
   return (
     GAP +
     para(`<a href="${esc(url)}" style="font-weight: bold;">Open your sign-off form</a>`) +
-    para(`<span style="color: #63666a;">The link works until ${esc(until)} and needs no login.</span>`)
+    para(`<span style="color: #63666a;">The link works until ${esc(until)}.</span>`)
   );
 }
 
