@@ -147,7 +147,7 @@ export function SignoffForm({ token, toName, departments }: { token: string; toN
         </label>
         <fieldset className="mt-4">
           <legend className="text-sm font-semibold text-brand-lea dark:text-slate-100">Which department(s) are you answering for?</legend>
-          <p className={help}>HR ticked the ones they expect; change them if they are wrong.</p>
+          <p className={help}>{departments.length ? "HR ticked the ones they expect; change them if they are wrong." : "Tick every department you sign off for."}</p>
           <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
             {SIGNOFF_DEPARTMENTS.map((d) => {
               const on = a.departments.includes(d);

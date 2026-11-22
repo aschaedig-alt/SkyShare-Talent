@@ -1021,6 +1021,15 @@ sent) and reads correctly. NOT checked: a real send through Front (it needs the 
 since a localhost link is refused for a real send), the Send dialog clicked in a browser,
 resend and cancel, filling the form on a phone, dark mode.
 
+Added the same day (his ask): "Send sign-off links" sends to many at once - a checklist of every
+current employee, the 24 suggested sign-offs first with their departments ticked (found by
+name, by the Chief Pilot / Assistant Chief Pilot role, or by the Lead Cabin Attendant title;
+the DO is Harry Mitchel, added by the commit agent), anyone else addable by email, one
+editable email, one link each; people already waiting or signed off are skipped and named.
+Checked by the session: the list builds from live data (24 suggested, 155 others, 179 in all,
+none unmatched; re-run by the commit agent) and the skip rule works on two test records, removed after. NOT checked: the
+checklist clicked in a browser, and a real send to many.
+
 **How to check it, five minutes, after deploy:** Reports > Sign-off > Send a sign-off link to
 yourself, tick one department, edit a line of the email, send. Open the email on your phone,
 fill the form in, then reload Reports > Sign-off.

@@ -33,6 +33,54 @@ export const SIGNOFF_DEPARTMENTS = [
   "Human Resources"
 ];
 
+/**
+ * Who signs off, suggested at the top of the send list (from his "Who signs off"
+ * table on the sign-off page, Nov 21 2026). Each is found among current employees
+ * by name, by leadership role (whoever holds it now) or by job title, with the
+ * departments that person signs off for already ticked. HR can untick, add anyone
+ * else, or change departments before sending. "DO" in his table is the Director of
+ * Operations, held by Harry Mitchel (title "VP of Flight Operations | DO"); matched by
+ * name, since a title search for "DO" also hits "DoM". Update it if the DO changes.
+ */
+export type SuggestedSignoff = { name?: string; role?: "chief-pilot" | "assistant-chief-pilot"; title?: string; departments: string[] };
+export const SIGNOFF_SUGGESTED: SuggestedSignoff[] = [
+  { role: "chief-pilot", departments: ["Pilots: light and midsize", "Pilots: heavy", "Pilots: Managed"] },
+  { role: "assistant-chief-pilot", departments: ["Pilots: light and midsize", "Pilots: heavy", "Pilots: Managed"] },
+  { name: "Joe Muscente", departments: ["Pilots: Managed"] },
+  { title: "Lead Cabin Attendant", departments: ["Cabin Attendants"] },
+  { name: "Cory Bengtzen", departments: ["Pilots: heavy", "Pilots: Managed", "Cabin Attendants", "Sales"] },
+  { name: "Jonathan Schaedig", departments: ["Maintenance", "OGD Base Support"] },
+  { name: "Rich Paden", departments: ["Maintenance"] },
+  { name: "Robert Patrick", departments: ["Maintenance"] },
+  { name: "Mike Newton", departments: ["SkyOps", "Detailing"] },
+  { name: "Kevin Sherman", departments: ["OGD Base Support", "Human Resources"] },
+  { name: "Jonathan Delgado", departments: ["DVO FBO"] },
+  { name: "Britt Harmon", departments: ["SVR FBO"] },
+  { name: "Jared Esselman", departments: ["SVR FBO"] },
+  { name: "Chantil Hughes", departments: ["SVR FBO"] },
+  { name: "Andrea Kay", departments: ["Accounting and Finance"] },
+  { name: "Mike Perley", departments: ["Accounting and Finance"] },
+  { name: "Tommy Aoki", departments: ["Accounting and Finance"] },
+  { name: "Keith Rabin", departments: ["Sales"] },
+  { name: "Jason Bercan", departments: ["Sales"] },
+  { name: "Ryan Brinkman", departments: ["Sales"] },
+  { name: "Dave Esmond", departments: ["Marketing"] },
+  { name: "Brooks Black", departments: ["Detailing"] },
+  { name: "Ricky Lee", departments: ["Safety"] },
+  { name: "Harry Mitchel", departments: ["Pilots: heavy", "Pilots: Managed", "Cabin Attendants", "Safety"] }
+];
+
+/** One person the send list offers. */
+export type SignoffRecipient = { id: string; name: string; email: string; position: string | null; department: string | null };
+export type SignoffRecipientList = {
+  /** Suggested sign-offs found among current employees, in table order, with their departments. */
+  suggested: { recipient: SignoffRecipient; departments: string[] }[];
+  /** Every other current employee with an email, alphabetical. */
+  others: SignoffRecipient[];
+  /** Suggestions that matched nobody (or more than one person), named so HR knows. */
+  unmatched: string[];
+};
+
 /** The draft definitions the managers are signing off, shown at the top of the form. */
 export const SIGNOFF_DEFINITIONS: { name: string; text: string }[] = [
   {

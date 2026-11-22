@@ -6,6 +6,7 @@ import { R } from "@/components/reports/report-ui";
 import { summarizeSignoffs, type SummaryQuestion, type Who } from "@/lib/quality-of-hire/signoff-form";
 import { SIGNOFF_DEPARTMENTS, SIGNOFF_DUE, SIGNOFF_STATE_LABEL, type SignoffRequestView } from "@/lib/quality-of-hire/signoff-questions";
 import { SignoffSendDialog } from "@/components/reports/SignoffSendDialog";
+import { SignoffBulkSendDialog } from "@/components/reports/SignoffBulkSendDialog";
 import { formatMomentDate, formatMomentDateShort } from "@/lib/dates/display";
 
 // Reports > Sign-off - milestone 2 of the Quality of Hire rock. HR sends each hiring
@@ -69,6 +70,7 @@ function Question({ q, total }: { q: SummaryQuestion; total: number }) {
 export function SignoffAnswersReport({ data }: { data: SignoffReportData }) {
   const [requests, setRequests] = useState<SignoffRequestView[]>(data.requests);
   const [dialog, setDialog] = useState<{ request: SignoffRequestView | null } | null>(null);
+  const [bulk, setBulk] = useState(false);
   const s = useMemo(() => summarizeSignoffs(requests), [requests]);
   const upsert = (v: SignoffRequestView) => setRequests((cur) => [v, ...cur.filter((r) => r.id !== v.id)]);
   const signedOff = s.questions.find((q) => q.key === "q14");
@@ -85,8 +87,8 @@ export function SignoffAnswersReport({ data }: { data: SignoffReportData }) {
           </p>
         </div>
         <div className={R.controls}>
-          <button type="button" onClick={() => setDialog({ request: null })} className={R.pageButton}>
-            Send a sign-off link
+          <button type="button" onClick={() => setBulk(true)} className={R.pageButton}>
+            Send sign-off links
           </button>
         </div>
       </div>
@@ -170,7 +172,7 @@ export function SignoffAnswersReport({ data }: { data: SignoffReportData }) {
             })}
           </ul>
         ) : (
-          <p className={R.footnote}>No links sent yet. Use &quot;Send a sign-off link&quot; for each hiring manager.</p>
+          <p className={R.footnote}>No links sent yet. Use &quot;Send sign-off links&quot; to pick who gets one.</p>
         )}
         <p className={R.footnote}>
           Who signs off for each department is on the{" "}
@@ -209,6 +211,7 @@ export function SignoffAnswersReport({ data }: { data: SignoffReportData }) {
         ))}
 
       {dialog ? <SignoffSendDialog request={dialog.request} onClose={() => setDialog(null)} onChanged={upsert} /> : null}
+      {bulk ? <SignoffBulkSendDialog onClose={() => setBulk(false)} onSent={(views) => views.forEach(upsert)} /> : null}
     </section>
   );
 }

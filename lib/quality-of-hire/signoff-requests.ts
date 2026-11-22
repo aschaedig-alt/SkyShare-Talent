@@ -4,8 +4,12 @@ import { getOrientationChannelId } from "@/lib/front/config";
 import { sendEmail } from "@/lib/front/messages";
 import { guardDecision } from "@/lib/front/send-guard";
 import { cleanEditedBody } from "@/lib/front/sanitize-body";
+import { CURRENT_EMPLOYEE_WHERE } from "@/lib/data/current-employee";
 import {
   SIGNOFF_DEPARTMENTS,
+  SIGNOFF_SUGGESTED,
+  type SignoffRecipient,
+  type SignoffRecipientList,
   SIGNOFF_LINK_DAYS,
   SIGNOFF_LINK_PATH,
   defaultSignoffBodyHtml,
@@ -149,7 +153,8 @@ export async function sendSignoffRequest(input: SendSignoffInput): Promise<SendS
   if (!looksLikeEmail(to)) return { ok: false, error: "Enter the manager's email address." };
   const toName = input.toName?.replace(/\s+/g, " ").trim().slice(0, 80) || null;
   const departments = [...new Set(input.departments.filter((d) => SIGNOFF_DEPARTMENTS.includes(d)))];
-  if (!departments.length) return { ok: false, error: "Tick the department(s) this person signs off for." };
+  // Departments are optional (Nov 21: send to anyone picked from the employee list);
+  // with none ticked, the person ticks their own on the form.
 
   const prev = input.id ? (await readAll())[input.id] : undefined;
   if (input.id && !prev) return { ok: false, error: "That request no longer exists." };
@@ -227,6 +232,93 @@ export async function sendSignoffRequest(input: SendSignoffInput): Promise<SendS
   }
   const saved = (await readAll())[id];
   return { ok: true, request: toView(saved ?? draft), warnings };
+}
+
+/**
+ * The people the send screen offers (his ask, Nov 21: "a list of all of the
+ * SkyShare employees ... putting the one who signs off first ... let me add
+ * others"). Current employees only (CURRENT_EMPLOYEE_WHERE - contractors excluded,
+ * as everywhere); the suggested sign-offs first, found by name, leadership role or
+ * job title, each with the departments they sign off for.
+ */
+export async function listSignoffRecipients(): Promise<SignoffRecipientList> {
+  const [emps, roles] = await Promise.all([
+    prisma.newHire.findMany({ where: CURRENT_EMPLOYEE_WHERE, select: { id: true, name: true, position: true, department: true, ssEmail: true, personalEmail: true } }),
+    // Read-only: who holds each leadership role now (listLeadershipRoles would create missing rows).
+    prisma.leadershipRole.findMany({ select: { key: true, holderHireId: true } })
+  ]);
+  const people: SignoffRecipient[] = emps
+    .map((e) => ({ id: e.id, name: e.name, email: (e.ssEmail?.trim() || e.personalEmail?.trim() || ""), position: e.position?.trim() || null, department: e.department?.trim() || null }))
+    .filter((p) => looksLikeEmail(p.email));
+  const byId = new Map(people.map((p) => [p.id, p]));
+
+  const suggested: SignoffRecipientList["suggested"] = [];
+  const unmatched: string[] = [];
+  for (const s of SIGNOFF_SUGGESTED) {
+    let hits: SignoffRecipient[] = [];
+    let label = s.name ?? s.title ?? s.role ?? "";
+    if (s.role) {
+      const holder = roles.find((r) => r.key === s.role)?.holderHireId;
+      const p = holder ? byId.get(holder) : undefined;
+      hits = p ? [p] : [];
+      label = s.role === "chief-pilot" ? "Chief Pilot" : "Assistant Chief Pilot";
+    } else if (s.name) {
+      const parts = s.name.toLowerCase().split(/\s+/);
+      hits = people.filter((p) => parts.every((w) => p.name.toLowerCase().includes(w)));
+    } else if (s.title) {
+      const t = s.title.toLowerCase();
+      hits = people.filter((p) => (p.position ?? "").toLowerCase().includes(t));
+    }
+    if (hits.length !== 1) {
+      unmatched.push(`${label}${hits.length > 1 ? ` (${hits.length} people match)` : ""}`);
+      continue;
+    }
+    const existing = suggested.find((x) => x.recipient.id === hits[0].id);
+    if (existing) existing.departments = [...new Set([...existing.departments, ...s.departments])];
+    else suggested.push({ recipient: hits[0], departments: s.departments });
+  }
+  const taken = new Set(suggested.map((x) => x.recipient.id));
+  const others = people.filter((p) => !taken.has(p.id)).sort((a, b) => a.name.localeCompare(b.name));
+  return { suggested, others, unmatched };
+}
+
+export type BulkSignoffResult = { sent: SignoffRequestView[]; skipped: { name: string; reason: string }[]; failed: { name: string; error: string }[]; warnings: string[] };
+
+/**
+ * One editable email, one link each. A person who already has a link waiting, or has
+ * already signed off, is skipped and named (use Resend on their row instead).
+ * Sent one after another, never in parallel, so the store is never written twice at once.
+ */
+export async function sendSignoffToMany(input: {
+  recipients: { name: string | null; email: string; departments: string[] }[];
+  subject: string | null;
+  bodyHtml: string | null;
+  actor: string | null;
+}): Promise<BulkSignoffResult> {
+  const out: BulkSignoffResult = { sent: [], skipped: [], failed: [], warnings: [] };
+  const all = Object.values(await readAll());
+  const seen = new Set<string>();
+  for (const r of input.recipients.slice(0, 200)) {
+    const email = r.email.trim().toLowerCase();
+    const name = r.name?.trim() || r.email;
+    if (seen.has(email)) continue;
+    seen.add(email);
+    const mine = all.filter((x) => x.to.toLowerCase() === email);
+    if (mine.some((x) => stateOf(x) === "COMPLETED")) {
+      out.skipped.push({ name, reason: "already signed off" });
+      continue;
+    }
+    if (mine.some((x) => stateOf(x) === "PENDING")) {
+      out.skipped.push({ name, reason: "already has a link waiting - use Resend on their row" });
+      continue;
+    }
+    const res = await sendSignoffRequest({ id: null, to: r.email, toName: r.name, departments: r.departments, subject: input.subject, bodyHtml: input.bodyHtml, actor: input.actor });
+    if (res.ok) {
+      out.sent.push(res.request);
+      for (const w of res.warnings) if (!out.warnings.includes(w)) out.warnings.push(w);
+    } else out.failed.push({ name, error: (res as { error: string }).error });
+  }
+  return out;
 }
 
 export async function cancelSignoffRequest(id: string, actor: string | null): Promise<SignoffRequestView | null> {
