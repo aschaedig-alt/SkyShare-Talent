@@ -3,6 +3,7 @@ import { getReportsData } from "@/lib/data/reports";
 import { getHeadcountHistory } from "@/lib/data/headcount-history";
 import { getQualityOfHire } from "@/lib/quality-of-hire/report";
 import { getCheckinReport } from "@/lib/quality-of-hire/checkins";
+import { readSignoffAnswers, SIGNOFF_DEPARTMENTS, SIGNOFF_LINKS } from "@/lib/quality-of-hire/signoff-form";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 import { getWorkspaceBranding, resolveBrandingLogo } from "@/lib/data/branding";
 
@@ -25,12 +26,14 @@ export default async function ReportsPage() {
   // loaded for admins only and the tab is not shown to anyone else.
   // The check-in ratings carry hiring managers' notes about named employees, so
   // they are admins-only on the same terms.
-  const [data, branding, headcount, qoh, checkins] = await Promise.all([
+  const [data, branding, headcount, qoh, checkins, signoffAnswers] = await Promise.all([
     getReportsData(viewer),
     getWorkspaceBranding(),
     getHeadcountHistory(),
     role === "ADMIN" ? getQualityOfHire() : Promise.resolve(null),
-    role === "ADMIN" ? getCheckinReport() : Promise.resolve(null)
+    role === "ADMIN" ? getCheckinReport() : Promise.resolve(null),
+    // The sign-off form's answers, read live from its Google Sheet (admins only).
+    role === "ADMIN" ? readSignoffAnswers() : Promise.resolve(null)
   ]);
 
   return (
@@ -39,6 +42,7 @@ export default async function ReportsPage() {
       headcount={headcount}
       qoh={qoh}
       checkins={checkins}
+      signoff={signoffAnswers ? { links: { ...SIGNOFF_LINKS }, departments: SIGNOFF_DEPARTMENTS, answers: signoffAnswers } : null}
       logoDataUrl={resolveBrandingLogo(branding, "reports")}
       canShare={role === "ADMIN"}
     />

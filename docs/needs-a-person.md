@@ -1002,6 +1002,27 @@ read on its next run. Whether it follows them is still to be seen on the next in
 
 ---
 
+### 82. Reports > Sign-off has not been opened in a browser, on a phone or in dark mode
+
+**Status:** OPEN
+**Added:** 2026-11-21
+
+A new admin-only Reports tab holds the definitions sign-off form's links (the form to send,
+editing it, the answers Sheet, the sign-off page) and reads the answers live from the Sheet:
+how many of the 15 departments have answered, which are still to answer, who answered, a
+count with names for every choice on questions 1-9 and 11, and every written answer. Checked
+by the session: it reads the live Sheet (his test answer "aimee test" on all 16 questions;
+Q11's 10 ticks all counted after his rewording was matched), renders on the server with 4
+links and no table, and the live /reports page carries the tab and the data with no error
+page. NOT checked: clicking the tab, a phone, dark mode, and a real hiring manager's answer.
+
+**How to check it, one minute:** Reports > Sign-off. Open each link; read one question.
+
+**What would count as a pass:** the links open the right Google files; each question shows
+its answers with names; on a phone nothing scrolls sideways.
+
+---
+
 ### 81. The trimmed contact card, Just the contact, and Active have not been tried on real phones or live data
 
 **Status:** OPEN — deployed 2026-11-21 (4bdb9b5)
