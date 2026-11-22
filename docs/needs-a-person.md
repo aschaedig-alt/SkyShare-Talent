@@ -1049,6 +1049,11 @@ page. NOT checked: clicking the tab, a phone, dark mode, and a real hiring manag
 **What would count as a pass:** the links open the right Google files; each question shows
 its answers with names; on a phone nothing scrolls sideways.
 
+**Update 2026-11-21 (commit agent):** superseded the same day. The Google Form was retired
+before anyone was sent it, and Reports > Sign-off was rebuilt to send no-login links from
+Journey and show their answers (1df4a42); it no longer reads the Google Sheet. What is left
+to check is item 83. Left open for him to close.
+
 ---
 
 ### 81. The trimmed contact card, Just the contact, and Active have not been tried on real phones or live data
