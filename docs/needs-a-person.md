@@ -1163,6 +1163,29 @@ afterwards. The links and lunch card are still there after a reload.
 
 ---
 
+### 85. Nobody has saved an HR's call on Quality of Hire, and the category tiles have not been seen live
+
+**Status:** OPEN
+**Added:** 2026-11-23
+
+Commit 589ffe9 sorts every hire into the Good Hire Criteria categories and adds an "HR's
+call" picker for admins. The commit agent re-counted the categories read-only against
+live data (2021-2025: 151 good, 38 bad, 34 regretted loss, 16 not counted, 5 too soon,
+8 needs a call). The session saw the tiles and opened the Needs a call list on its local
+page. But no call has ever been saved, because saving one writes live data. Nobody has
+looked at the live site either.
+
+**How to check it:** on the live site, Reports > Quality of Hire. Tap the Needs a call
+tile: 8 people should be listed. Use the HR's call picker to record one real decision
+HR has already made, e.g. the first-year quitter HR now calls a Satisfactory hire. Then
+reload.
+
+**What would count as a pass:** after the reload the call is still there. That person
+has moved to the Satisfactory tile and the tile counts went up and down by one. Clearing
+the call puts them back where they were.
+
+---
+
 ### 84. The would-hire-back answers have not been seen on the live Quality of Hire page
 
 **Status:** OPEN
@@ -1177,8 +1200,10 @@ phone layout still scrolls sideways (unchanged by this work).
 Nicholas Smout (started Apr 14 2025) and one of the yes answers, e.g. Echo Campbell
 (started Jan 4 2021).
 
-**What would count as a pass:** Smout's Why column says "Wouldn't hire back: bad hire",
-Campbell's says "Would hire back: regretted loss", and hires still here show neither.
+**What would count as a pass:** Smout's Category column says Bad hire, with "Quit in year
+one; HR would not hire them back" under it; Campbell's says Regretted loss, with "Quit in
+year one; HR would hire them back". (Changed Nov 23 by 589ffe9: the answer now shows
+under the Category column, no longer in the Why column.)
 
 ---
 
