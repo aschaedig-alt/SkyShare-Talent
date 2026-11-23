@@ -1163,6 +1163,25 @@ afterwards. The links and lunch card are still there after a reload.
 
 ---
 
+### 84. The would-hire-back answers have not been seen on the live Quality of Hire page
+
+**Status:** OPEN
+**Added:** 2026-11-23
+
+HR's 59 answers (37 yes, 22 no) are stored live and the commit agent re-counted them
+read-only. The session saw them on its local page (37 "Would hire back", 22 "Wouldn't
+hire back"), but nobody has looked on the live site after the deploy, and that table's
+phone layout still scrolls sideways (unchanged by this work).
+
+**How to check it:** on the live site, Reports > Quality of Hire > Every hire, find
+Nicholas Smout (started Apr 14 2025) and one of the yes answers, e.g. Echo Campbell
+(started Jan 4 2021).
+
+**What would count as a pass:** Smout's Why column says "Wouldn't hire back: bad hire",
+Campbell's says "Would hire back: regretted loss", and hires still here show neither.
+
+---
+
 ## Closed
 
 ### 2. Private HR notes have never been loaded by a non-HR viewer
