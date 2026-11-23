@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import type { QohHire, QualityOfHire } from "@/lib/quality-of-hire/report";
@@ -10,6 +10,7 @@ import { QualityOfHireInterviews } from "@/components/reports/QualityOfHireInter
 import { QualityOfHireTracking } from "@/components/reports/QualityOfHireTracking";
 import { R } from "@/components/reports/report-ui";
 import { formatCalendarDay } from "@/lib/dates/display";
+import { CALL_CATEGORIES, CATEGORY_META, CATEGORY_ORDER, DECIDED, categorize, type CallCategory, type Categorized, type QohCategory } from "@/lib/quality-of-hire/categories";
 
 // The Reports "Quality of Hire" tab - the Q4 2026 rock. His measures: interviews per
 // candidate, time from application to offer, how often offers are turned down, and
@@ -17,9 +18,10 @@ import { formatCalendarDay } from "@/lib/dates/display";
 // figures is in lib/quality-of-hire/report.ts; the uploads it reads are described in
 // lib/quality-of-hire/imports.ts. Built from report-ui.ts like every report.
 //
-// No hire is called "good" or "bad" here: those definitions are waiting on
-// leadership's sign-off (roadmap, Quality of Hire). Until then the report says what
-// happened - left inside a year, voluntarily or not - and leaves the verdict alone.
+// Every hire is sorted into the Good Hire Criteria categories (Good, Satisfactory,
+// Neutral, Bad, Regretted loss, Too soon, Not counted - agreed by HR Nov 23 2026). The
+// rules live in lib/quality-of-hire/categories.ts and nowhere else; an admin can record
+// HR's call on one hire where the data cannot decide (lib/quality-of-hire/category-calls.ts).
 
 type Group = "all" | "pilots" | "others";
 const GROUPS: Array<{ id: Group; label: string }> = [
@@ -116,10 +118,61 @@ function SituationalButton({ h }: { h: QohHire }) {
   );
 }
 
+/** Admin only: record HR's call on one hire (Satisfactory, Neutral, Bad...), or clear it. */
+function CategoryCallSelect({ h }: { h: QohHire }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  async function send(category: CallCategory | null, note?: string) {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/reports/quality-of-hire/category-call", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ newHireId: h.id, start: h.start, category, note })
+      });
+      if (res.ok) router.refresh();
+      else window.alert(((await res.json().catch(() => ({}))) as { message?: string }).message ?? "That did not save.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <select
+      className={clsx(R.select, "mt-1 block")}
+      value=""
+      disabled={busy}
+      aria-label={`HR's call for ${h.name}`}
+      onChange={(ev) => {
+        const v = ev.target.value;
+        if (!v) return;
+        if (v === "CLEAR") {
+          void send(null);
+          return;
+        }
+        const category = v as CallCategory;
+        const note = window.prompt(`Why ${CATEGORY_META[category].label}? (optional)`, h.call?.note ?? "");
+        if (note === null) return;
+        void send(category, note);
+      }}
+    >
+      <option value="">{h.call ? "Change HR's call" : "HR's call"}</option>
+      {CALL_CATEGORIES.map((c) => (
+        <option key={c} value={c}>
+          {CATEGORY_META[c].label}
+        </option>
+      ))}
+      {h.call ? <option value="CLEAR">Clear HR&apos;s call</option> : null}
+    </select>
+  );
+}
+
 export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; canUpload: boolean }) {
   const years = useMemo(() => [...new Set(qoh.hires.map((h) => h.year))].sort((a, b) => a - b), [qoh.hires]);
   const [group, setGroup] = useState<Group>("all");
   const [year, setYear] = useState<number | "all">("all");
+  const [catFilter, setCatFilter] = useState<QohCategory | null>(null);
+  const [listOpen, setListOpen] = useState(false);
+  const listRef = useRef<HTMLDetailsElement>(null);
 
   const inYear = (y: number) => year === "all" || y === year;
   const hires = qoh.hires.filter(
@@ -144,6 +197,22 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
   const untyped = earlyLeavers.length - situational - vol - invol;
   const groupWord = group === "all" ? "people" : group === "pilots" ? "pilots" : "support-role people";
   const yearWord = year === "all" ? `since ${years[0] ?? ""}` : `in ${year}`;
+
+  // The Good Hire Criteria verdict on every hire in this view.
+  const catKey = (h: QohHire) => `${h.id}|${h.start}`;
+  const catOf = new Map<string, Categorized>(hires.map((h) => [catKey(h), categorize(h)]));
+  const catCounts = Object.fromEntries(CATEGORY_ORDER.map((c) => [c, 0])) as Record<QohCategory, number>;
+  for (const c of catOf.values()) catCounts[c.category] += 1;
+  const decided = DECIDED.reduce((s, c) => s + catCounts[c], 0);
+  const listed = catFilter ? hires.filter((h) => catOf.get(catKey(h))?.category === catFilter) : hires;
+  const pickCategory = (c: QohCategory) => {
+    const next = catFilter === c ? null : c;
+    setCatFilter(next);
+    if (next) {
+      setListOpen(true);
+      requestAnimationFrame(() => listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
+  };
 
   // left within a year, by interviews on record
   const ivBuckets = ["0", "1", "2", "3", "4+"].map((label) => ({
@@ -263,6 +332,33 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
           <div className={R.tileSub}>
             {hires.length - leavers.length} of {hires.length} hires
           </div>
+        </div>
+      </div>
+
+      <div className={R.box}>
+        <div className={R.sectionLabel}>Good hire or bad hire - the Good Hire Criteria</div>
+        <p className={R.footnote}>
+          {decided} of the {hires.length} hires in this view have a verdict
+          {catCounts.NEEDS_CALL ? `, and ${catCounts.NEEDS_CALL} need a call from HR and the hiring manager` : ""}. Shares are of the hires with a verdict. Pick
+          a category to list those people.
+        </p>
+        <div className={R.tiles}>
+          {CATEGORY_ORDER.map((c) => (
+            <button
+              key={c}
+              type="button"
+              aria-pressed={catFilter === c}
+              onClick={() => pickCategory(c)}
+              className={clsx(R.tile, "text-left transition hover:shadow-glow", catFilter === c && "ring-2 ring-brand-gold")}
+            >
+              <div className={R.tileLabel}>{CATEGORY_META[c].label}</div>
+              <div className={R.tileValue}>{catCounts[c]}</div>
+              <div className={R.tileSub}>
+                {DECIDED.includes(c) ? `${pct(catCounts[c], decided)} · ` : ""}
+                {CATEGORY_META[c].hint}
+              </div>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -437,10 +533,17 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
         </div>
       ) : null}
 
-      <details className="mt-5">
-        <summary className={clsx(R.listTitle, "cursor-pointer")}>Every hire in this view - {hires.length}</summary>
+      <details ref={listRef} className="mt-5" open={listOpen} onToggle={(ev) => setListOpen(ev.currentTarget.open)}>
+        <summary className={clsx(R.listTitle, "cursor-pointer")}>
+          {catFilter ? `${CATEGORY_META[catFilter].label} - ${listed.length}` : `Every hire in this view - ${hires.length}`}
+        </summary>
+        {catFilter ? (
+          <button type="button" className={clsx(R.smallButton, "mt-2")} onClick={() => setCatFilter(null)}>
+            Show every hire
+          </button>
+        ) : null}
         <div className={R.tableWrap}>
-          <table className={clsx(R.table, "min-w-[960px]")}>
+          <table className={clsx(R.table, "min-w-[1100px]")}>
             <thead className={R.thead}>
               <tr>
                 <th className={R.th}>Person</th>
@@ -449,11 +552,12 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
                 <th className={clsx(R.th, "text-right")}>Interviews</th>
                 <th className={clsx(R.th, "text-right")}>Apply to offer</th>
                 <th className={R.th}>Left</th>
+                <th className={R.th}>Category</th>
                 <th className={R.th}>Why</th>
               </tr>
             </thead>
             <tbody className={R.tbody}>
-              {hires.map((h) => (
+              {listed.map((h) => (
                 <tr key={`${h.id}-${h.start}`} className={R.tr}>
                   <td className={R.td}>
                     <Link href={`/people/${h.id}`} className={R.link}>
@@ -483,14 +587,14 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
                     )}
                   </td>
                   <td className={R.td}>
+                    <span className={R.chip}>{CATEGORY_META[catOf.get(catKey(h))?.category ?? "NEEDS_CALL"].label}</span>
+                    <span className={clsx("block text-[11px]", R.muted)}>{catOf.get(catKey(h))?.why}</span>
+                    {canUpload ? <CategoryCallSelect h={h} /> : null}
+                  </td>
+                  <td className={R.td}>
                     {h.situational ? <span className={clsx(R.chip, "mr-2")}>Situational</span> : h.voluntary ? <span className={clsx(R.chip, "mr-2")}>{h.voluntary === "V" ? "Voluntary" : "Involuntary"}</span> : null}
                     <span className={h.reason ? undefined : R.muted}>{h.stillHere ? "" : h.reason ?? "not recorded"}</span>
                     {h.situational ? <span className={clsx("block text-[11px]", R.muted)}>{h.situational}</span> : null}
-                    {h.wouldHireBack ? (
-                      <span className={clsx("block text-[11px]", R.muted)} title="HR's answer for a first-year quitter with no check-in">
-                        {h.wouldHireBack === "YES" ? "Would hire back: regretted loss" : "Wouldn't hire back: bad hire"}
-                      </span>
-                    ) : null}
                     {canUpload && !h.stillHere ? <SituationalButton h={h} /> : null}
                   </td>
                 </tr>
