@@ -486,6 +486,11 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
                     {h.situational ? <span className={clsx(R.chip, "mr-2")}>Situational</span> : h.voluntary ? <span className={clsx(R.chip, "mr-2")}>{h.voluntary === "V" ? "Voluntary" : "Involuntary"}</span> : null}
                     <span className={h.reason ? undefined : R.muted}>{h.stillHere ? "" : h.reason ?? "not recorded"}</span>
                     {h.situational ? <span className={clsx("block text-[11px]", R.muted)}>{h.situational}</span> : null}
+                    {h.wouldHireBack ? (
+                      <span className={clsx("block text-[11px]", R.muted)} title="HR's answer for a first-year quitter with no check-in">
+                        {h.wouldHireBack === "YES" ? "Would hire back: regretted loss" : "Wouldn't hire back: bad hire"}
+                      </span>
+                    ) : null}
                     {canUpload && !h.stillHere ? <SituationalButton h={h} /> : null}
                   </td>
                 </tr>
