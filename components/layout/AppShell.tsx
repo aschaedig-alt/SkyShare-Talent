@@ -21,7 +21,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = (await headers()).get("x-pathname") ?? "";
   // /rate/ is the hiring manager's no-login 90-day rating link (feedback cmwcq16o7).
   // /signoff/ is a hiring manager's no-login Quality of Hire sign-off (Nov 21 2026).
-  if (pathname.startsWith("/book") || pathname.startsWith("/r/") || pathname.startsWith("/welcome") || pathname.startsWith("/rate/") || pathname.startsWith("/signoff/")) {
+  if (pathname.startsWith("/book") || pathname.startsWith("/r/") || pathname.startsWith("/welcome") || pathname.startsWith("/rate/") || pathname.startsWith("/signoff/") || pathname.startsWith("/christmas")) {
     return (
       <div className="min-h-screen bg-[var(--skyshare-page)] text-brand-black dark:text-slate-100">{children}</div>
     );

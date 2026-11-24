@@ -181,7 +181,13 @@ export function EventsOverview({ upcoming, past, calendar, reorderCount, roster 
             doing, and when to reorder the swag.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/events/exec-hunt"
+            className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"
+          >
+            🎄 Christmas scavenger hunt
+          </Link>
           {reorderCount > 0 ? (
             <Link
               href="/events/supplies"

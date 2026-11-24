@@ -2464,3 +2464,90 @@ model EventMeeting {
 
   @@index([eventId])
 }
+
+// ---------------------------------------------------------------------------
+// "Where's the Executive?" — the Christmas party QR scavenger hunt (Dec 11 2026).
+//
+// Five executives, three hidden pictures each, one permanent QR code per picture.
+// Guests scan with their phone camera and claim the find with no login: a guest
+// is an anonymous browser token, not a User or NewHire. Everything here is
+// self-contained — nothing outside these four tables references them, so the
+// whole game can be reset (guests + discoveries) without touching the printed
+// codes, which live on ExecHuntPicture.publicKey and are never regenerated.
+// ---------------------------------------------------------------------------
+
+// The one settings row (id "default").
+model ExecHuntConfig {
+  id              String    @id @default("default")
+  // Off until somebody turns it on, so a code scanned before the party says so.
+  enabled         Boolean   @default(false)
+  opensAt         DateTime?
+  closesAt        DateTime?
+  // The projector page: whether to show a leaderboard at all, and with names.
+  showLeaderboard Boolean   @default(true)
+  showNames       Boolean   @default(true)
+  updatedAt       DateTime  @updatedAt
+}
+
+model ExecHuntExecutive {
+  id                String    @id @default(cuid())
+  // "cory" — stable, used in URLs and photo paths.
+  slug              String    @unique
+  name              String
+  sortOrder         Int       @default(0)
+  // The uploaded photo, in file storage. Null = show the placeholder.
+  photoKey          String?
+  photoContentType  String?
+  photoUpdatedAt    DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  pictures ExecHuntPicture[]
+}
+
+model ExecHuntPicture {
+  id          String   @id @default(cuid())
+  executiveId String
+  number      Int
+  // "cory-1" — human label.
+  slug        String   @unique
+  // "cory-1-k7f3p9" — what the printed QR code points at. The random tail is
+  // generated ONCE and never changes, so a code printed today still works on
+  // the night, and nobody can claim "cory-2" by editing the URL from "cory-1".
+  publicKey   String   @unique
+  createdAt   DateTime @default(now())
+
+  executive   ExecHuntExecutive @relation(fields: [executiveId], references: [id], onDelete: Cascade)
+  discoveries ExecHuntDiscovery[]
+
+  @@unique([executiveId, number])
+}
+
+// One phone (one browser). Two guests can share a name; they are told apart by
+// the token their browser holds, never by the name.
+model ExecHuntGuest {
+  id          String   @id @default(cuid())
+  // sha256 of the random token kept in the browser (localStorage + cookie).
+  tokenHash   String   @unique
+  name        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  discoveries ExecHuntDiscovery[]
+}
+
+model ExecHuntDiscovery {
+  id        String   @id @default(cuid())
+  guestId   String
+  pictureId String
+  createdAt DateTime @default(now())
+
+  guest   ExecHuntGuest   @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  picture ExecHuntPicture @relation(fields: [pictureId], references: [id], onDelete: Cascade)
+
+  // THE duplicate guard: a guest can hold each picture once, enforced by the
+  // database, so a double-tap or a re-scan can never count twice.
+  @@unique([guestId, pictureId])
+  @@index([pictureId])
+  @@index([createdAt])
+}

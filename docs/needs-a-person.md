@@ -1207,6 +1207,35 @@ under the Category column, no longer in the Why column.)
 
 ---
 
+### 86. "Where's the Executive?" has never been scanned with a real phone, a printed card, or a non-admin login
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-11-24
+
+The Christmas party scavenger hunt (Events > Christmas scavenger hunt) was tested
+on a laptop: every claim case over HTTP, the scan page in a 375px browser, the live
+display at 1920x1080, the PDFs rendered to images. Four things were not:
+
+1. **A phone camera scanning a printed code.** The codes point at the live site, so
+   nothing can be scanned until this is deployed.
+2. **A photo upload.** Not tried, because from a laptop it writes the live S3 bucket.
+3. **A non-admin account.** Local dev bypasses login, so the 404 on the admin page
+   and the 403 on its API for a viewer / hiring manager were checked in code only.
+4. **The hangar Wi-Fi.** All 200 guests share one public IP; the per-IP limit is set
+   to 900 claims a minute so it should never bite, but it has not met a real crowd.
+
+**How to check it:** after deploy, turn the game on (Settings tab), print the
+one-page PDF, scan two codes with an iPhone and an Android phone, scan one twice,
+upload one executive photo, and open /events/exec-hunt signed in as a hiring
+manager. Then press Reset before the party.
+
+**What would count as a pass:** first scan asks for a name, second one does not,
+the repeat says "You've already found this one!", the photo shows on the scan page
+and the cards PDF, the hiring manager gets a 404, and Reset leaves the printed
+codes working.
+
+---
+
 ### 87. The event to-do tracker has not been used on a phone, or with a real meeting transcript
 
 **Status:** OPEN
