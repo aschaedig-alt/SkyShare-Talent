@@ -2332,6 +2332,7 @@ model Event {
   attendees EventAttendee[]
   supplies  EventSupply[]
   tasks     EventTask[]
+  meetings  EventMeeting[]
 
   @@index([status])
   @@index([startsAt])
@@ -2429,10 +2430,37 @@ model EventTask {
   owner     String?
   dueAt     DateTime?
   done      Boolean   @default(false)
+  // TODO | IN_PROGRESS | BLOCKED | DONE (lib/events/constants.ts TASK_STATUSES).
+  // Added Nov 24 2026 for party planning. done stays, kept in step on every
+  // write (done = status DONE); rows that predate this read as DONE when done is
+  // true, so no backfill was run against the live table.
+  status    String    @default("TODO")
+  notes     String?
+  // The planning meeting this was pulled out of, when it came from a transcript.
+  meetingId String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  event   Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  meeting EventMeeting? @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+
+  @@index([eventId])
+  @@index([meetingId])
+}
+
+// A planning meeting whose transcript was uploaded to an event. The transcript
+// is kept so a task can always be traced back to what was actually said.
+model EventMeeting {
+  id         String    @id @default(cuid())
+  eventId    String
+  title      String
+  heldAt     DateTime?
+  fileName   String?
+  transcript String
+  createdAt  DateTime  @default(now())
+
+  event Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tasks EventTask[]
 
   @@index([eventId])
 }

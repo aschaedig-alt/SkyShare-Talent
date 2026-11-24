@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { prisma } from "@/lib/prisma";
+import { isTaskStatus } from "@/lib/events/constants";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -13,9 +14,17 @@ export async function PATCH(request: Request, ctx: Ctx) {
   try {
     const body = (await request.json()) as Record<string, unknown>;
     const data: Record<string, unknown> = {};
-    if (typeof body.done === "boolean") data.done = body.done;
+    // status and done are one fact stored twice: whichever is sent, both move.
+    if (isTaskStatus(body.status)) {
+      data.status = body.status;
+      data.done = body.status === "DONE";
+    } else if (typeof body.done === "boolean") {
+      data.done = body.done;
+      data.status = body.done ? "DONE" : "TODO";
+    }
     if (typeof body.label === "string" && body.label.trim()) data.label = body.label.trim();
     if (typeof body.owner === "string") data.owner = body.owner.trim() || null;
+    if (typeof body.notes === "string") data.notes = body.notes.trim() || null;
     if (typeof body.dueAt === "string") {
       if (!body.dueAt) {
         data.dueAt = null;

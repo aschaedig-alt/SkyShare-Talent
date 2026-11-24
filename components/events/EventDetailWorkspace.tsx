@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ExternalLink, Mail, Plane, Truck } from "lucide-react";
@@ -14,8 +14,9 @@ import {
   eventTypeLabel
 } from "@/lib/events/constants";
 import type { AttendeeView, EventDetail, SupplyLineView, TaskView } from "@/lib/data/events";
-import { officeDayKey, zoneForValue } from "@/lib/dates/display";
+import { zoneForValue } from "@/lib/dates/display";
 import { RichNoteField } from "@/components/richtext/RichNoteField";
+import { EventTaskTracker } from "@/components/events/EventTaskTracker";
 
 const FIELD =
   "w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100";
@@ -72,6 +73,9 @@ export function EventDetailWorkspace({ event }: { event: EventDetail }) {
   const [attendees, setAttendees] = useState<AttendeeView[]>(event.attendees);
   const [supplies, setSupplies] = useState<SupplyLineView[]>(event.supplies);
   const [tasks, setTasks] = useState<TaskView[]>(event.tasks);
+  // useState only reads its argument once, so a to-do added (or imported) and
+  // then router.refresh()ed never appeared until a full reload. Follow the server.
+  useEffect(() => setTasks(event.tasks), [event.tasks]);
 
   const [personId, setPersonId] = useState("");
   const [personRole, setPersonRole] = useState("");
@@ -104,16 +108,13 @@ export function EventDetailWorkspace({ event }: { event: EventDetail }) {
   const [supplyId, setSupplyId] = useState("");
   const [supplyLabel, setSupplyLabel] = useState("");
   const [supplyQty, setSupplyQty] = useState("1");
-  const [taskLabel, setTaskLabel] = useState("");
-  const [taskOwner, setTaskOwner] = useState("");
-  const [taskDue, setTaskDue] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Recomputed from live state so the header numbers move with the toggles.
   const confirmed = useMemo(() => attendees.filter((a) => a.status === "CONFIRMED").length, [attendees]);
   const packed = useMemo(() => supplies.filter((s) => s.packed).length, [supplies]);
-  const openTasks = useMemo(() => tasks.filter((t) => !t.done).length, [tasks]);
+  const openTasks = useMemo(() => tasks.filter((t) => t.status !== "DONE").length, [tasks]);
   const shortLines = useMemo(() => supplies.filter((s) => s.short && !s.packed), [supplies]);
 
   const where = [event.venue, [event.city, event.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ");
@@ -214,34 +215,6 @@ export function EventDetailWorkspace({ event }: { event: EventDetail }) {
   async function removeSupply(s: SupplyLineView) {
     setSupplies((cur) => cur.filter((x) => x.id !== s.id));
     await send(`/api/events/supplies/${s.id}`, null, "DELETE");
-    router.refresh();
-  }
-
-  async function addTask() {
-    if (!taskLabel.trim()) return;
-    setBusy(true);
-    setError(null);
-    const ok = await send(`/api/events/${event.id}/tasks`, { label: taskLabel, owner: taskOwner, dueAt: taskDue }, "POST");
-    setBusy(false);
-    if (!ok) {
-      setError("Unable to add that item.");
-      return;
-    }
-    setTaskLabel("");
-    setTaskOwner("");
-    setTaskDue("");
-    router.refresh();
-  }
-
-  async function toggleTask(t: TaskView) {
-    const next = !t.done;
-    setTasks((cur) => cur.map((x) => (x.id === t.id ? { ...x, done: next } : x)));
-    await send(`/api/events/tasks/${t.id}`, { done: next });
-  }
-
-  async function removeTask(t: TaskView) {
-    setTasks((cur) => cur.filter((x) => x.id !== t.id));
-    await send(`/api/events/tasks/${t.id}`, null, "DELETE");
     router.refresh();
   }
 
@@ -566,70 +539,16 @@ export function EventDetailWorkspace({ event }: { event: EventDetail }) {
           </section>
         ) : null}
 
-        {/* What we need */}
-        <section className={CARD}>
-          <h2 className={H2}>What we need</h2>
-          <p className="mt-1 text-xs text-brand-grey dark:text-slate-400">
-            The to-do list for this event — order the banner, ship the box, book the table.
-          </p>
-          <ul className="mt-3 space-y-2">
-            {tasks.length === 0 ? (
-              <li className="py-2 text-center text-xs text-brand-grey dark:text-slate-400">
-                Nothing on the list yet.
-              </li>
-            ) : (
-              tasks.map((t) => {
-                // dueAt is a calendar day written by a type="date" input, so it is
-                // stored at midnight UTC. Comparing that to an instant made the task
-                // read overdue from 6pm Mountain the day BEFORE it was due, while the
-                // label beside it still said tomorrow. Compare day keys instead: its
-                // UTC day against today's Mountain day (YYYY-MM-DD sorts with <).
-                const overdue = !t.done && t.dueAt && t.dueAt.slice(0, 10) < officeDayKey(new Date());
-                return (
-                  <li key={t.id} className="flex items-start gap-2 text-xs">
-                    <input
-                      type="checkbox"
-                      checked={t.done}
-                      onChange={() => toggleTask(t)}
-                      className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-brand-gold"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className={
-                          t.done
-                            ? "text-brand-grey line-through dark:text-slate-500"
-                            : "text-brand-lea dark:text-slate-100"
-                        }
-                      >
-                        {t.label}
-                      </p>
-                      <p className="text-[11px] text-brand-grey dark:text-slate-400">
-                        {t.owner ? `${t.owner}` : "Unassigned"}
-                        {t.dueAt ? ` · due ${fmtDate(t.dueAt, { month: "short", day: "numeric" })}` : ""}
-                        {overdue ? " · overdue" : ""}
-                      </p>
-                    </div>
-                    <button className={REMOVE} onClick={() => removeTask(t)}>
-                      Remove
-                    </button>
-                  </li>
-                );
-              })
-            )}
-          </ul>
-
-          <div className="mt-3 space-y-2 border-t border-brand-lea/10 pt-3 dark:border-white/10">
-            <Input value={taskLabel} onChange={(e) => setTaskLabel(e.target.value)} placeholder="What is needed?" />
-            <div className="flex gap-2">
-              <Input value={taskOwner} onChange={(e) => setTaskOwner(e.target.value)} placeholder="Owner" />
-              <Input type="date" value={taskDue} onChange={(e) => setTaskDue(e.target.value)} />
-              <Button size="sm" onClick={addTask} disabled={busy || !taskLabel.trim()}>
-                Add
-              </Button>
-            </div>
-          </div>
-        </section>
       </div>
+
+      {/* What we need — the to-do tracker, full width so a long planning list has room */}
+      <EventTaskTracker
+        eventId={event.id}
+        tasks={tasks}
+        setTasks={setTasks}
+        meetings={event.meetings}
+        ownerSuggestions={event.ownerSuggestions}
+      />
 
       {/* What we're bringing */}
       <section className={CARD}>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { prisma } from "@/lib/prisma";
+import { isTaskStatus } from "@/lib/events/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,9 @@ export async function POST(request: Request, ctx: Ctx) {
         eventId: id,
         label,
         dueAt,
-        owner: typeof body.owner === "string" && body.owner.trim() ? body.owner.trim() : null
+        owner: typeof body.owner === "string" && body.owner.trim() ? body.owner.trim() : null,
+        notes: typeof body.notes === "string" && body.notes.trim() ? body.notes.trim() : null,
+        ...(isTaskStatus(body.status) ? { status: body.status, done: body.status === "DONE" } : {})
       }
     });
     return NextResponse.json({ ok: true, id: task.id });

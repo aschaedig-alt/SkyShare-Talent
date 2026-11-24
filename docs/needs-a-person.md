@@ -1207,6 +1207,32 @@ under the Category column, no longer in the Why column.)
 
 ---
 
+### 87. The event to-do tracker has not been used on a phone, or with a real meeting transcript
+
+**Status:** OPEN
+**Added:** 2026-11-24
+
+The to-do tracker on an event page (status, owner, notes, filter by person) and its
+"Import from a meeting" dialog were tested on a laptop: the AI read on a sample
+transcript, save, status changes, notes and undo over HTTP; the dialog's review
+step in Chrome at desktop width. Two things were not:
+
+1. **Phone width.** Chrome would not shrink the window, so the tracker and the
+   dialog were never looked at at 375px. Built as stacked cards with wrapping rows
+   (no table), but unseen.
+2. **A real planning transcript.** Only a short made-up one was read. A real hour-long
+   meeting, with people talking over each other, has not been tried.
+
+**How to check it:** open the 2026 Christmas Holiday Party event on a phone, then
+import the first real planning-meeting transcript and read the suggested list
+before saving.
+
+**What would count as a pass:** nothing runs off the side of the phone screen, and
+the suggested to-dos name the right people (or leave the owner blank where nobody
+took it on).
+
+---
+
 ## Closed
 
 ### 2. Private HR notes have never been loaded by a non-HR viewer

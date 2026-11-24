@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { OPEN_EVENT_STATUSES, isEventType, stockState, type StockState } from "@/lib/events/constants";
+import { OPEN_EVENT_STATUSES, effectiveTaskStatus, isEventType, stockState, type StockState } from "@/lib/events/constants";
 import { officeDayKey, startOfOfficeDay } from "@/lib/dates/display";
 import type { ExtractedEvent } from "@/lib/events/event-email-ai";
 
@@ -53,6 +53,21 @@ export type TaskView = {
   owner: string | null;
   dueAt: string | null;
   done: boolean;
+  /** TODO | IN_PROGRESS | BLOCKED | DONE — see effectiveTaskStatus. */
+  status: string;
+  notes: string | null;
+  /** The planning meeting it was pulled from, when it came from a transcript. */
+  meetingId: string | null;
+  meetingTitle: string | null;
+};
+
+export type MeetingView = {
+  id: string;
+  title: string;
+  heldAt: string | null;
+  fileName: string | null;
+  createdAt: string;
+  taskCount: number;
 };
 
 export type PersonRef = {
@@ -97,6 +112,10 @@ export type EventDetail = {
   attendees: AttendeeView[];
   supplies: SupplyLineView[];
   tasks: TaskView[];
+  /** Planning meetings whose transcripts were uploaded, newest first. */
+  meetings: MeetingView[];
+  /** Names to suggest in a task's Owner box: anyone on the event, then the roster. */
+  ownerSuggestions: string[];
   /** Everyone who could be added — the active roster, minus who is already on. */
   roster: PersonRef[];
   /** The stock room, for the "add a supply" picker. */
@@ -211,7 +230,14 @@ export async function getEventDetail(id: string): Promise<EventDetail | null> {
         include: { supplyItem: { select: { onHand: true } } },
         orderBy: { createdAt: "asc" }
       },
-      tasks: { orderBy: [{ done: "asc" }, { dueAt: "asc" }, { createdAt: "asc" }] }
+      tasks: {
+        orderBy: [{ done: "asc" }, { dueAt: "asc" }, { createdAt: "asc" }],
+        include: { meeting: { select: { title: true } } }
+      },
+      meetings: {
+        orderBy: [{ heldAt: "desc" }, { createdAt: "desc" }],
+        select: { id: true, title: true, heldAt: true, fileName: true, createdAt: true, _count: { select: { tasks: true } } }
+      }
     }
   });
   if (!event) return null;
@@ -273,8 +299,23 @@ export async function getEventDetail(id: string): Promise<EventDetail | null> {
       label: t.label,
       owner: t.owner,
       dueAt: iso(t.dueAt),
-      done: t.done
+      done: t.done,
+      status: effectiveTaskStatus(t),
+      notes: t.notes,
+      meetingId: t.meetingId,
+      meetingTitle: t.meeting?.title ?? null
     })),
+    meetings: event.meetings.map((m) => ({
+      id: m.id,
+      title: m.title,
+      heldAt: iso(m.heldAt),
+      fileName: m.fileName,
+      createdAt: m.createdAt.toISOString(),
+      taskCount: m._count.tasks
+    })),
+    ownerSuggestions: Array.from(
+      new Set([...event.attendees.map((a) => a.newHire.name), ...roster.map((p) => p.name)].filter(Boolean))
+    ),
     roster: roster.filter((p) => !takenIds.has(p.id)),
     stockRoom
   };

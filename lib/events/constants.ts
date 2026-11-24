@@ -58,6 +58,30 @@ export const SUPPLY_CATEGORIES = [
 
 export type SupplyCategory = (typeof SUPPLY_CATEGORIES)[number]["value"];
 
+// Where a planning to-do stands (Nov 24 2026, for party planning). EventTask.done
+// is kept in step: done is true exactly when the status is DONE.
+export const TASK_STATUSES = [
+  { value: "TODO", label: "Not started" },
+  { value: "IN_PROGRESS", label: "In progress" },
+  { value: "BLOCKED", label: "Waiting / blocked" },
+  { value: "DONE", label: "Done" }
+] as const;
+
+export type TaskStatus = (typeof TASK_STATUSES)[number]["value"];
+
+export function isTaskStatus(v: unknown): v is TaskStatus {
+  return typeof v === "string" && TASK_STATUSES.some((o) => o.value === v);
+}
+
+/** Rows written before status existed carry only done; read those as DONE. */
+export function effectiveTaskStatus(t: { status: string | null; done: boolean }): TaskStatus {
+  if (t.done) return "DONE";
+  return isTaskStatus(t.status) && t.status !== "DONE" ? t.status : "TODO";
+}
+
+export const taskStatusLabel = (v: string | null | undefined) =>
+  TASK_STATUSES.find((o) => o.value === v)?.label ?? v ?? "—";
+
 // An event still on the calendar — the ones that hold supplies and need people.
 //
 // PENDING is deliberately NOT here. An invitation we have not accepted must not
