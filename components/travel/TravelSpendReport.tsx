@@ -296,7 +296,13 @@ function SortableTh({
 export function TravelSpendReport({ trips }: { trips: TravelSpendRow[] }) {
   const years = useMemo(() => [...new Set(trips.map((t) => t.year))].sort((a, b) => a - b), [trips]);
 
-  const [year, setYear] = useState<number | null>(years[years.length - 1] ?? null);
+  // Opens on THIS year. It used to open on the last year with any trip, so one
+  // trip booked for next January took the whole report over (the Reports review,
+  // 2026-11-24, found it opening on 2027).
+  const [year, setYear] = useState<number | null>(() => {
+    const now = new Date().getFullYear();
+    return years.includes(now) ? now : ([...years].reverse().find((y) => y < now) ?? years[years.length - 1] ?? null);
+  });
   const [month, setMonth] = useState<number | null>(null);
   const [department, setDepartment] = useState<CandidateDepartmentKey | null>(null);
   const [outcome, setOutcome] = useState<OutcomeFilter>("ALL");

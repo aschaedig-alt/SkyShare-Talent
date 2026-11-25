@@ -53,8 +53,8 @@ export const DECIDED: QohCategory[] = ["GOOD", "SATISFACTORY", "NEUTRAL", "BAD",
 
 /** Paycom reasons that are about the person. */
 export const PERSON_REASONS = new Set(["Performance", "Misconduct / Policy Violation(s)", "Gross Misconduct", "Failure to Complete Trg/Cert"]);
-const LAYOFF_REASONS = new Set(["Position Elimination / Layoff"]);
-const NOT_COUNTED_QUITS = new Set(["Moving", "Retirement"]);
+export const LAYOFF_REASONS = new Set(["Position Elimination / Layoff"]);
+export const NOT_COUNTED_QUITS = new Set(["Moving", "Retirement"]);
 
 /** The 12-month core values average below which a "yes, would hire again" still gets a second look. */
 export const VALUES_FLOOR = 6;

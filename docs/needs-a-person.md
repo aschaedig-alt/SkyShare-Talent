@@ -1311,6 +1311,31 @@ then shows you as "emailed".
 
 ---
 
+### 90. Nobody without admin rights has opened the new Reports library
+
+**Status:** OPEN
+**Added:** 2026-11-24
+
+Reports became a library on Nov 24 (his pick of five redesigns): a side list of
+reports, At a glance first, each report on its own link. Hire quality and Manager
+check-ins are admins only - the side list leaves them out for anyone else, the At a
+glance cards about hire quality are not sent to them, and typing either URL sends
+them back to At a glance. Local dev signs everyone in as an admin, so the session saw
+only the admin view. Checked by the session: every page answers 200 and renders the
+library; desktop, 375px and 329px (no sideways scroll on At a glance or Turnover);
+dark mode on At a glance. NOT checked: a non-admin's view, Export PDF's printed
+layout, and the Share button on Fleet progression from its new place in the toolbar.
+
+**How to check it, about three minutes:** sign in on the live site as someone who is
+not an admin but can see Reports. Open Data > Reports. Then type
+/reports/hiring/quality into the address bar.
+
+**What would count as a pass:** the side list shows no Hire quality or Manager
+check-ins, At a glance shows no "Left in their first year" or "Good hires" card, and
+the typed URL lands back on At a glance.
+
+---
+
 ## Closed
 
 ### 2. Private HR notes have never been loaded by a non-HR viewer

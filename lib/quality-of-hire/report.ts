@@ -47,7 +47,7 @@ const OFFER_BACKFILL_DAY = Date.UTC(2026, 6, 20);
 /** The CEO's calendar id in the calendar file - "met Cory before hire" on the report. */
 export const CEO_INTERVIEWER = "cb";
 /** An exit row belongs to the hire period whose last day is within this of its term date. */
-const EXIT_MATCH_DAYS = 45;
+export const EXIT_MATCH_DAYS = 45;
 
 const NON_FLIGHT_DEPT = /fbo|accounting|finance|maintenance|\bmx\b|sales|marketing|human resources|safety|skyops|detailing|svr/i;
 

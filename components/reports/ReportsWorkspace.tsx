@@ -11,31 +11,14 @@ import type { FleetStaffing } from "@/lib/data/fleet-staffing";
 // Prisma, and a value import from a client component pulls it into the browser
 // bundle and 500s the page with "Can not resolve fs".
 import { SKYSHARE_LADDER, ladderRank, nextRungs } from "@/lib/fleet/pilot-ladder";
-import { TravelSpendReport } from "@/components/travel/TravelSpendReport";
-import { ReportShareButton } from "@/components/reports/ReportShareButton";
-import { HeadcountTenureReport } from "@/components/reports/HeadcountTenureReport";
-import { QualityOfHireReport } from "@/components/reports/QualityOfHireReport";
 import { R } from "@/components/reports/report-ui";
-import type { HeadcountHistory } from "@/lib/data/headcount-history";
-import type { QualityOfHire } from "@/lib/quality-of-hire/report";
-import type { CheckinReport as CheckinReportData } from "@/lib/quality-of-hire/checkins";
-import { CheckinReport } from "@/components/reports/CheckinReport";
-import { SignoffAnswersReport, type SignoffReportData } from "@/components/reports/SignoffAnswersReport";
 import { formatCalendarDay, formatMomentDate } from "@/lib/dates/display";
 
-type ReportsWorkspaceProps = {
-  data: ReportsData;
-  /** Headcount and tenure by year - loaded by app/reports only, never the share link. */
-  headcount?: HeadcountHistory | null;
-  /** Quality of Hire - admins only (it names why each person left), never the share link. */
-  qoh?: QualityOfHire | null;
-  /** Post-hire check-in ratings - admins only (managers' notes about named people), never the share link. */
-  checkins?: CheckinReportData | null;
-  /** The definitions sign-off form: links and live answers - admins only, never the share link. */
-  signoff?: SignoffReportData | null;
-  logoDataUrl?: string | null;
-  canShare?: boolean;
-};
+// This file used to hold the tabbed Reports page as well. Since 2026-11-24 every
+// report has its own page in the Reports library (app/reports/*, the side list in
+// components/reports/ReportsLibrary.tsx); what is left here is Fleet progression,
+// which the library page and the public share link (SharedFleetProgression) both use.
+// Document currency left Reports the same day: no document had an expiry date set.
 
 // Chosen calendar days (start dates, expiries) read in UTC; real moments — an
 // orientation session, a flight's departure — read in Mountain. See
@@ -1250,151 +1233,5 @@ export function PilotProgressions({
         </>
       )}
     </section>
-  );
-}
-
-function DocumentCurrency({ dc }: { dc: ReportsData["documentCurrency"] }) {
-  return (
-    <section className={R.panel}>
-      <p className={R.eyebrow}>Document currency</p>
-      {/* text-xl, not text-base: every report title is the same size (report-ui.ts). */}
-      <h2 className={R.title}>Expiring &amp; expired candidate documents</h2>
-
-      <div className={R.tiles}>
-        {[
-          { label: "Expired", value: dc.counts.expired, tone: "text-red-600 dark:text-red-300" },
-          { label: "Due ≤ 30 days", value: dc.counts.due30, tone: "text-amber-600 dark:text-amber-300" },
-          { label: "Due ≤ 90 days", value: dc.counts.due90, tone: "text-brand-lea dark:text-slate-100" },
-          { label: "Tracked total", value: dc.counts.total, tone: "text-brand-grey dark:text-slate-400" }
-        ].map((c) => (
-          <div key={c.label} className="rounded border border-brand-lea/10 bg-brand-cloudDancer/45 p-3 dark:border-white/10 dark:bg-white/5">
-            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey dark:text-slate-400">{c.label}</div>
-            <div className={`mt-1 text-xl font-semibold ${c.tone}`}>{c.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {dc.upcoming.length > 0 ? (
-        // overflow-y-hidden pins the other axis — setting overflow-x alone makes
-        // overflow-y compute to auto and quietly adds a second scrollbar.
-        <div className="mt-4 overflow-x-auto overflow-y-hidden">
-          <table className="w-full min-w-[560px] border-collapse text-left text-sm">
-            <thead className="bg-brand-cloudDancer/60 text-[11px] uppercase tracking-[0.14em] text-brand-grey dark:bg-white/5 dark:text-slate-400">
-              <tr>
-                <th className="px-3 py-2 font-bold">Candidate</th>
-                <th className="px-3 py-2 font-bold">Document</th>
-                <th className="px-3 py-2 font-bold">Expires</th>
-                <th className="px-3 py-2 font-bold">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-brand-lea/10 dark:divide-white/10">
-              {dc.upcoming.map((item, i) => {
-                const tone = item.status === "expired" ? "text-red-600 dark:text-red-300" : item.status === "due30" ? "text-amber-600 dark:text-amber-300" : "text-brand-lea dark:text-slate-100";
-                return (
-                  <tr key={i} className="row-wash">
-                    <td className="px-3 py-2">
-                      <Link href={`/candidates/${item.candidateId}`} className="font-semibold text-brand-lea transition hover:text-brand-eden dark:text-slate-100 dark:hover:text-brand-edenOnDark">
-                        {item.candidateName}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-2 text-brand-black/80 dark:text-slate-300">{item.documentType ?? item.displayFilename}</td>
-                    <td className="px-3 py-2 text-brand-grey dark:text-slate-400">{fmtDate(item.expiresAt)}</td>
-                    <td className={`px-3 py-2 font-semibold ${tone}`}>
-                      {item.days < 0 ? `expired ${Math.abs(item.days)}d ago` : `${item.days}d left`}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p className="mt-3 text-sm text-brand-grey dark:text-slate-400">
-          No documents are expired or expiring within 90 days. Set expiry dates on Medical, Passport, and license documents to track currency here.
-        </p>
-      )}
-    </section>
-  );
-}
-
-const REPORT_TABS = [
-  { id: "progression", label: "Fleet Progression" },
-  { id: "travel", label: "Travel Spend" },
-  { id: "documents", label: "Document Currency" },
-  // Aimee, Sep 29: "in 2020 we had xx employees, xx of them were pilots, xx of
-  // those employees are still here."
-  { id: "headcount", label: "Headcount & Tenure" },
-  // The Q4 2026 rock. Shown only to admins, who are the only ones given its data.
-  { id: "qoh", label: "Quality of Hire" },
-  // Every 3-, 6- and 12-month check-in rating (his pick, Nov 17 2026). Admins only:
-  // it carries managers' notes about named employees.
-  { id: "checkins", label: "Check-ins" },
-  // The definitions sign-off form's links and live answers (Nov 21 2026). Admins only.
-  { id: "signoff", label: "Sign-off" }
-] as const;
-type ReportTab = (typeof REPORT_TABS)[number]["id"];
-
-export function ReportsWorkspace({ data, headcount = null, qoh = null, checkins = null, signoff = null, logoDataUrl, canShare = false }: ReportsWorkspaceProps) {
-  const [tab, setTab] = useState<ReportTab>("progression");
-  return (
-    <div className={R.page}>
-      <section className={R.pageHeader}>
-        <div>
-          <p className={R.eyebrow}>Talent analytics</p>
-          <h1 className={R.pageTitle}>Reports</h1>
-          <p className={R.pageLede}>
-            Pick a report below. Everything is clickable, down to the person.
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-3">
-          {canShare && tab === "progression" ? <ReportShareButton /> : null}
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className={R.pageButton}
-          >
-            <Download className="h-4 w-4" /> Export PDF
-          </button>
-          {logoDataUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoDataUrl} alt="Workspace logo" className="h-12 w-auto object-contain" />
-          ) : null}
-        </div>
-      </section>
-
-      {/* Sub-tabs — one report at a time. The active tab is the only one rendered,
-          so "Export PDF" prints exactly what's on screen. */}
-      <div className={R.tabBar}>
-        {REPORT_TABS.filter((t) => (t.id !== "qoh" || qoh) && (t.id !== "checkins" || checkins) && (t.id !== "signoff" || signoff)).map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            aria-pressed={tab === t.id}
-            className={clsx(R.tab, tab === t.id ? SEGMENT_ON : SEGMENT_OFF)}
-          >
-            {t.label}
-          </button>
-        ))}
-        {/* Its own page, not a tab: it has an audit list to work through and a URL
-            worth sending somebody. A real link, so it opens in a new tab too. */}
-        <Link href="/reports/sources" className={clsx(R.tab, "ml-auto", SEGMENT_OFF)}>
-          How people found us →
-        </Link>
-      </div>
-
-      {/* staffing is passed HERE and deliberately not on the public share link —
-          open requisitions and target headcounts behind a token URL is his call
-          to make, not a side effect of adding the panel. */}
-      {tab === "progression" ? <PilotProgressions upgrades={data.pilotUpgrades} staffing={data.fleetStaffing} /> : null}
-      {/* Travel spend lives beside the year panel it shares with the Travel page
-          (components/travel/TravelSpendReport.tsx), so the two cannot drift. */}
-      {tab === "travel" ? <TravelSpendReport trips={data.travelSpend.trips} /> : null}
-      {tab === "documents" ? <DocumentCurrency dc={data.documentCurrency} /> : null}
-      {tab === "headcount" && headcount ? <HeadcountTenureReport history={headcount} /> : null}
-      {tab === "qoh" && qoh ? <QualityOfHireReport qoh={qoh} canUpload /> : null}
-      {tab === "checkins" && checkins ? <CheckinReport report={checkins} /> : null}
-      {tab === "signoff" && signoff ? <SignoffAnswersReport data={signoff} /> : null}
-    </div>
   );
 }

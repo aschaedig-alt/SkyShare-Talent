@@ -707,7 +707,7 @@ export function CandidateProfileWorkspace({
                 ) : (
                   <span>not recorded</span>
                 )}{" "}
-                <Link href="/reports/sources" className="text-xs font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-slate-300">
+                <Link href="/reports/hiring/sources" className="text-xs font-semibold text-brand-eden underline-offset-2 hover:underline dark:text-slate-300">
                   all sources →
                 </Link>
               </p>

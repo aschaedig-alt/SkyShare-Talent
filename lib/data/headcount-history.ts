@@ -72,7 +72,7 @@ export type { EmploymentType, HeadcountPerson, RosterEntry } from "@/lib/reports
 
 const YEAR_DAYS = 365.25;
 
-type Period = { start: Date; end: Date | null };
+export type Period = { start: Date; end: Date | null };
 type Role = { title: string; seat: string | null; fleetPositionSlug: string | null; startDate: Date; endDate: Date | null };
 
 
@@ -167,7 +167,7 @@ function day(d: Date): number {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
 
-function covers(p: { start: Date; end: Date | null }, d: Date): boolean {
+export function covers(p: { start: Date; end: Date | null }, d: Date): boolean {
   const on = day(d);
   return day(p.start) <= on && (!p.end || day(p.end) >= on);
 }
@@ -182,10 +182,10 @@ function isYearEnd(d: Date): boolean {
   return d.getUTCMonth() === 11 && d.getUTCDate() === 31;
 }
 
-type Placed = { status: string; periods: Period[]; contract: Period[] };
+export type Placed = { status: string; periods: Period[]; contract: Period[] };
 
 /** Contractor on a date, by the rule above. Today is the app's status, which is live. */
-function contractorOn(p: Placed, d: Date, isToday: boolean): boolean {
+export function contractorOn(p: Placed, d: Date, isToday: boolean): boolean {
   if (isToday) return p.status === "CONTRACT";
   if (p.contract.some((c) => covers(c, d))) return true;
   return p.contract.length === 0 && p.status === "CONTRACT" && p.periods.some((x) => !x.end && covers(x, d));

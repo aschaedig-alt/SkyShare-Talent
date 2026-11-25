@@ -11,6 +11,7 @@ import { QualityOfHireTracking } from "@/components/reports/QualityOfHireTrackin
 import { R } from "@/components/reports/report-ui";
 import { formatCalendarDay } from "@/lib/dates/display";
 import { CALL_CATEGORIES, CATEGORY_META, CATEGORY_ORDER, DECIDED, categorize, type CallCategory, type Categorized, type QohCategory } from "@/lib/quality-of-hire/categories";
+import { early } from "@/lib/quality-of-hire/summary";
 
 // The Reports "Quality of Hire" tab - the Q4 2026 rock. His measures: interviews per
 // candidate, time from application to offer, how often offers are turned down, and
@@ -41,11 +42,8 @@ function median(xs: number[]): number | null {
   return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
 }
 
-/** Left within a year, over the hires that can answer it. */
-function early(hs: QohHire[]): { left: number; of: number } {
-  const known = hs.filter((h) => h.left365 !== null);
-  return { left: known.filter((h) => h.left365 === 1).length, of: known.length };
-}
+// early() - left within a year - lives in lib/quality-of-hire/summary.ts, shared
+// with the Reports "At a glance" card so the two cannot disagree.
 
 function Rate({ hs }: { hs: QohHire[] }) {
   const e = early(hs);

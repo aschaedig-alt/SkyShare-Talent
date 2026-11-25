@@ -1,50 +1,75 @@
-import { ReportsWorkspace } from "@/components/reports/ReportsWorkspace";
-import { getReportsData } from "@/lib/data/reports";
-import { getHeadcountHistory } from "@/lib/data/headcount-history";
-import { getQualityOfHire } from "@/lib/quality-of-hire/report";
-import { getCheckinReport } from "@/lib/quality-of-hire/checkins";
-import { listSignoffRequests } from "@/lib/quality-of-hire/signoff-requests";
+import { ReportsGlance, type GlanceData } from "@/components/reports/ReportsGlance";
 import { requireModulePageAccess } from "@/lib/data/module-access";
-import { getWorkspaceBranding, resolveBrandingLogo } from "@/lib/data/branding";
+import { getRollingTurnover } from "@/lib/data/rolling-turnover";
+import { getHeadcountHistory } from "@/lib/data/headcount-history";
+import { getFleetStaffing } from "@/lib/data/fleet-staffing";
+import { getTravelSpendReport } from "@/lib/data/travel";
+import { getQualityOfHire } from "@/lib/quality-of-hire/report";
+import { DECIDED, categorize } from "@/lib/quality-of-hire/categories";
+import { DEFAULT_TIMEZONE } from "@/lib/calendar/timezones";
+import { early } from "@/lib/quality-of-hire/summary";
 
 export const dynamic = "force-dynamic";
 
-export default async function ReportsPage() {
-  const { role, viewer } = await requireModulePageAccess("reports");
-  // The document-currency panel lists candidate names as profile links, so this
-  // report has to respect the same narrowing the candidate list does.
-  //
-  // In parallel: getWorkspaceBranding takes no arguments and reads nothing from
-  // the report data. app/r/[token]/page.tsx runs the same pair this way (without
-  // viewer, because the public share route deliberately has no one to scope to).
-  //
-  // Headcount history is loaded HERE rather than in getReportsData: that loader
-  // also feeds the public share link (app/r/[token]), which shows only the
-  // progression report and must not carry a roster of past employees by name.
-  //
-  // Quality of Hire names why each person left (Paycom's term reasons), so it is
-  // loaded for admins only and the tab is not shown to anyone else.
-  // The check-in ratings carry hiring managers' notes about named employees, so
-  // they are admins-only on the same terms.
-  const [data, branding, headcount, qoh, checkins, signoffRequests] = await Promise.all([
-    getReportsData(viewer),
-    getWorkspaceBranding(),
+// Reports > At a glance. Only the figures travel to the browser, never the rosters
+// behind them: Headcount's history names past employees, and Hire quality (admins
+// only) names why people left.
+export default async function ReportsGlancePage() {
+  const { role } = await requireModulePageAccess("reports");
+  const isHr = role === "ADMIN";
+  const [turnover, headcount, staffing, travel, qoh] = await Promise.all([
+    getRollingTurnover(),
     getHeadcountHistory(),
-    role === "ADMIN" ? getQualityOfHire() : Promise.resolve(null),
-    role === "ADMIN" ? getCheckinReport() : Promise.resolve(null),
-    // The definitions sign-off links and their answers (admins only).
-    role === "ADMIN" ? listSignoffRequests() : Promise.resolve(null)
+    getFleetStaffing(),
+    getTravelSpendReport(),
+    isHr ? getQualityOfHire() : Promise.resolve(null)
   ]);
 
-  return (
-    <ReportsWorkspace
-      data={data}
-      headcount={headcount}
-      qoh={qoh}
-      checkins={checkins}
-      signoff={signoffRequests ? { requests: signoffRequests, pageUrl: "https://claude.ai/artifact/4QTzmvR92JLwxFiWZTMqdZ" } : null}
-      logoDataUrl={resolveBrandingLogo(branding, "reports")}
-      canShare={role === "ADMIN"}
-    />
-  );
+  const today = headcount.years.find((y) => y.isToday) ?? null;
+  const lastYearEnd = today ? headcount.years.find((y) => y.year === today.year - 1) ?? null : null;
+
+  // The year Hiring travel opens on: this one (a booked future trip never takes it over).
+  const thisYear = Number(new Intl.DateTimeFormat("en-US", { timeZone: DEFAULT_TIMEZONE, year: "numeric" }).format(new Date()));
+  const yearTrips = travel.trips.filter((t) => t.year === thisYear);
+  const travelTotal = yearTrips.reduce((s, t) => s + t.total, 0);
+
+  // Hire quality's own "everyone, all years" view: contractors at hire left out.
+  const hires = qoh ? qoh.hires.filter((h) => !h.contractor) : [];
+  const cats = hires.map((h) => categorize(h).category);
+  const count = (c: string) => cats.filter((x) => x === c).length;
+  const decided = DECIDED.reduce((s, c) => s + count(c), 0);
+
+  const data: GlanceData = {
+    turnover,
+    headcount: today
+      ? {
+          today: today.employees,
+          pilots: today.pilots,
+          others: today.employees - today.pilots,
+          change: today.employees - (lastYearEnd?.employees ?? today.employees),
+          sinceYear: today.year - 1
+        }
+      : null,
+    seats: { filled: staffing.totals.filled, target: staffing.totals.target, open: staffing.totals.open, training: staffing.totals.training },
+    travel: yearTrips.length
+      ? {
+          year: thisYear,
+          total: travelTotal,
+          trips: yearTrips.length,
+          hiredShare: travelTotal ? yearTrips.filter((t) => t.hired).reduce((s, t) => s + t.total, 0) / travelTotal : null
+        }
+      : null,
+    quality: qoh
+      ? {
+          leftEarly: early(hires),
+          since: hires.length ? Math.min(...hires.map((h) => h.year)) : null,
+          good: count("GOOD"),
+          bad: count("BAD"),
+          regretted: count("REGRETTED"),
+          decided
+        }
+      : null
+  };
+
+  return <ReportsGlance data={data} />;
 }

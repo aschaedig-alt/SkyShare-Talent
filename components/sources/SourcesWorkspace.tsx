@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { clsx } from "clsx";
@@ -41,17 +40,9 @@ export function SourcesWorkspace({ audit, canEdit }: { audit: SourceAudit; canEd
   }, [audit.spellings, filter, onlyName]);
 
   return (
-    <div className={R.page}>
-      <section className={R.pageHeader}>
-        <div>
-          <p className={R.eyebrow}>Talent analytics</p>
-          <h1 className={R.pageTitle}>How people found us</h1>
-          <p className={R.pageLede}>Every source a person gave, on every application, and the list that keeps each source to one name.</p>
-        </div>
-        <Link href="/reports" className={R.pageButton}>
-          ← All reports
-        </Link>
-      </section>
+    // Sits inside the Reports library (app/reports/layout.tsx), which supplies the
+    // page, the side list and the way back - so no page header of its own.
+    <div className="space-y-4">
 
       <section className={R.panel}>
         <div className={R.header}>
