@@ -447,6 +447,7 @@ model NewHire {
   cardOrderLines       BusinessCardOrderLine[]
   eventAttendances     EventAttendee[]
   eventsOwned          Event[]
+  partyStoreAccounts   PartyStoreAccount[]
 
   @@index([stage])
   // The centralized "who actually works here" filter (employmentStatus ACTIVE and
@@ -2333,6 +2334,7 @@ model Event {
   supplies  EventSupply[]
   tasks     EventTask[]
   meetings  EventMeeting[]
+  stores    PartyStore[]
 
   @@index([status])
   @@index([startsAt])
@@ -2550,4 +2552,126 @@ model ExecHuntDiscovery {
   @@unique([guestId, pictureId])
   @@index([pictureId])
   @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Party store — the Christmas party point of sale (built Nov 24 2026).
+//
+// Every current employee (CURRENT_EMPLOYEE_WHERE: full and part time, never
+// contractors; guests get nothing) has store credit — $100 for the 2026 party.
+// Credit is spent at the register on the night; anything left can be spent
+// later through a personal no-login link, as a PRE-ORDER that HR fills.
+// No expiry (his answer, Nov 24 2026). Completely separate from the Values in
+// Action / TrueWare credit.
+//
+// A BALANCE IS NEVER STORED. It is always startingCents minus the lines of the
+// person's orders that are not CANCELED, so it cannot drift from the orders.
+// Stock the same way: on hand = startingQty - sold - held by open pre-orders.
+// Money is integer cents throughout.
+// ---------------------------------------------------------------------------
+
+model PartyStore {
+  id                  String   @id @default(cuid())
+  eventId             String?
+  name                String
+  startingCreditCents Int      @default(10000)
+  registerOpen        Boolean  @default(true)
+  preordersOpen       Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  event    Event?              @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  items    PartyStoreItem[]
+  accounts PartyStoreAccount[]
+  orders   PartyStoreOrder[]
+
+  @@index([eventId])
+}
+
+model PartyStoreItem {
+  id          String   @id @default(cuid())
+  storeId     String
+  // One row per sellable thing; a size is its own row ("Fleece quarter-zip - L").
+  name        String
+  priceCents  Int
+  startingQty Int      @default(0)
+  // Retired rather than deleted once anything has sold, so the books still add up.
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  store PartyStore            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  lines PartyStoreOrderLine[]
+
+  @@index([storeId])
+}
+
+// Created the first time an employee is checked in, charged, or sent a link —
+// the balance sheet shows everyone else at the store's starting credit without
+// needing a row, so a hire added next week simply appears.
+model PartyStoreAccount {
+  id            String    @id @default(cuid())
+  storeId       String
+  newHireId     String
+  // Frozen when the row is made, so changing the store default later does not
+  // move anyone who already has an account.
+  startingCents Int
+  checkedInAt   DateTime?
+  checkedInBy   String?
+  // The personal pre-order link (/store/<token>). Kept readable, not hashed, on
+  // purpose: HR needs to copy or re-send it at any time, and what it unlocks is
+  // spending this person's own store credit on a pre-order HR still has to fill.
+  linkToken     String?   @unique
+  linkCreatedAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  store   PartyStore        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  // Restrict, not Cascade: deleting or merging away an employee must not silently
+  // erase what they bought (the business-card orders were lost exactly that way).
+  newHire NewHire           @relation(fields: [newHireId], references: [id], onDelete: Restrict)
+  orders  PartyStoreOrder[]
+
+  @@unique([storeId, newHireId])
+  @@index([newHireId])
+}
+
+model PartyStoreOrder {
+  id          String    @id @default(cuid())
+  storeId     String
+  accountId   String
+  // SALE = rung up at the register. PREORDER = placed later from the personal link.
+  kind        String
+  // SALE: COMPLETE | CANCELED.  PREORDER: PENDING | FULFILLED | CANCELED.
+  status      String
+  totalCents  Int
+  // Who rang it up (an app user's email), or "employee link".
+  createdBy   String?
+  note        String?
+  createdAt   DateTime  @default(now())
+  fulfilledAt DateTime?
+  canceledAt  DateTime?
+
+  store   PartyStore            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  account PartyStoreAccount     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  lines   PartyStoreOrderLine[]
+
+  @@index([storeId, createdAt])
+  @@index([accountId])
+}
+
+model PartyStoreOrderLine {
+  id        String @id @default(cuid())
+  orderId   String
+  itemId    String
+  quantity  Int
+  // The price at the moment of sale, so a later price change does not rewrite history.
+  unitCents Int
+
+  order PartyStoreOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  item  PartyStoreItem  @relation(fields: [itemId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([itemId])
 }

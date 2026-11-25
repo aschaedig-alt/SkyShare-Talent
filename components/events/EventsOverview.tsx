@@ -188,6 +188,12 @@ export function EventsOverview({ upcoming, past, calendar, reorderCount, roster 
           >
             🎄 Christmas scavenger hunt
           </Link>
+          <Link
+            href="/events/store"
+            className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"
+          >
+            Party store
+          </Link>
           {reorderCount > 0 ? (
             <Link
               href="/events/supplies"

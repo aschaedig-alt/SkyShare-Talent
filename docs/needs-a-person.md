@@ -1262,6 +1262,34 @@ took it on).
 
 ---
 
+### 88. The party store has never run on two registers at once, on the venue Wi-Fi, or behind a real login
+
+**Status:** BLOCKED ON DEPLOY
+**Added:** 2026-11-24
+
+The Christmas party store (Events > Party store) was tested on a laptop against a
+throwaway TEST store, since deleted: check-in, sales, over-balance and sold-out
+refusals, two simultaneous charges for the last item (one won, one was told sold
+out), refunds, pre-orders from the personal link, cancel, pick-up, a contractor
+refused, CSV export, and the employee page at 375px. Three things were not:
+
+1. **A real login.** Local dev bypasses sign-in, so a viewer / hiring manager
+   getting a 404 on the store pages and a 403 on its API was checked in code only.
+2. **Several registers on the hangar Wi-Fi.** Each register re-reads the store every
+   10 seconds; that has not met a real crowd or a weak connection.
+3. **An employee opening their link on their own phone**, from an email or text.
+
+**How to check it:** after deploy, open the store, add two real items, and ring up
+one test sale each from two devices at the same time; then refund them. Send your
+own pre-order link to your phone and place and cancel a pre-order. Open
+/events/store signed in as a hiring manager.
+
+**What would count as a pass:** both devices show the same balances within ten
+seconds, the refunds put the credit back, the phone page works, and the hiring
+manager gets a 404.
+
+---
+
 ## Closed
 
 ### 2. Private HR notes have never been loaded by a non-HR viewer
