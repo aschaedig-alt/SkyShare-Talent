@@ -10,6 +10,7 @@ import type { CategoryCall, HireCheckin } from "@/lib/quality-of-hire/categories
 import { RATED_DAY_MARKS, readScale } from "@/lib/onboarding/checkin-rating";
 import { getQohTracking, type QohTracking } from "@/lib/quality-of-hire/tracking";
 import { latestBatch, type StoredBatch, type CalendarInterview, type ExitRow, type InterviewKind, type QohSource, type Voluntary } from "@/lib/quality-of-hire/imports";
+import { currentDepartmentName } from "@/lib/people/department-names";
 
 // ---------------------------------------------------------------------------
 // Quality of Hire - the Reports tab, Q4 2026 rock. His brief, 2026-10-27: use
@@ -57,19 +58,20 @@ const NON_FLIGHT_DEPT = /fbo|accounting|finance|maintenance|\bmx\b|sales|marketi
 //
 // 2026-11-19: he renamed departments to "FlightOps | Pilots", "FlightOps | Cabin
 // Attendants" and "FBO | SVR" / "FBO | DVO" / "FBO | OGD". The new crew names fold
-// into FlightOps here so this report keeps Aimee's grouping; the old names stay
-// mapped for anything recorded before the rename.
+// into FlightOps here so this report keeps Aimee's grouping.
+//
+// Every OLD spelling still in the role history ("OGD FBO", "Detailing", "SVR",
+// plain "Sales"...) is first turned into today's name by currentDepartmentName,
+// the one map shared with the employee journey (Aimee, feedback cmwtuqny0, Nov 23:
+// the table showed old and new names side by side).
 const DEPARTMENT_GROUP: Record<string, string> = {
-  "FlightOps | Managed Client": "FlightOps",
   "FlightOps | Pilots": "FlightOps",
-  "FlightOps | Cabin Attendants": "FlightOps",
-  Pilot: "FlightOps",
-  MX: "Maintenance",
-  "Maintenance | SLC": "Maintenance",
-  SVR: "FBO | SVR",
-  "SVR FBO": "FBO | SVR"
+  "FlightOps | Cabin Attendants": "FlightOps"
 };
-const departmentGroup = (d: string) => DEPARTMENT_GROUP[d.trim()] ?? d.trim();
+const departmentGroup = (d: string, profileDepartment: string | null) => {
+  const name = currentDepartmentName(d, profileDepartment) ?? "";
+  return DEPARTMENT_GROUP[name] ?? name;
+};
 
 export type QohHire = {
   id: string;
@@ -341,7 +343,7 @@ export async function getQualityOfHire(now: Date = new Date(), override: QohOver
 
       const role = roleOn(roles, start) ?? roles.find((r) => Math.abs(day(r.startDate) - day(start)) <= 60 * DAY && (!end || day(r.startDate) <= day(end))) ?? null;
       const recordedDepartment = role?.department || h.department || "";
-      const department = departmentGroup(recordedDepartment);
+      const department = departmentGroup(recordedDepartment, h.department ?? null);
       const pilot = role ? (isPilotRole(role) ? "Pilot" : "Non-pilot") : NON_FLIGHT_DEPT.test(recordedDepartment) ? "Non-pilot" : "Role not recorded";
 
       // the application behind this hire

@@ -3,6 +3,7 @@ import { positionFor } from "@/lib/fleet/positions";
 import { computeTenure } from "@/lib/data/tenure";
 import { ensureInitialRole } from "@/lib/data/ensure-initial-role";
 import { airframeOf, isUpgradeStep } from "@/lib/fleet/pilot-ladder";
+import { currentDepartmentName } from "@/lib/people/department-names";
 
 // ---------------------------------------------------------------------------
 // Employee journey — the sequence of roles a person has held at SkyShare, plus
@@ -121,7 +122,7 @@ export async function getEmployeeJourney(hireId: string): Promise<EmployeeJourne
   // Backfill: an existing hire with a position + start date but no recorded role
   // gets their initial "HIRE" entry the first time their journey is viewed.
   await ensureInitialRole(hireId);
-  const [roles, stintRows] = (await Promise.all([
+  const [roles, stintRows, profile] = (await Promise.all([
     prisma.roleAssignment.findMany({
       where: { newHireId: hireId },
       select: {
@@ -137,8 +138,11 @@ export async function getEmployeeJourney(hireId: string): Promise<EmployeeJourne
         createdAt: true
       }
     }),
-    prisma.employmentStint.findMany({ where: { newHireId: hireId }, orderBy: { startDate: "asc" }, select: { startDate: true, endDate: true, note: true } })
-  ])) as [RawRole[], { startDate: Date; endDate: Date | null; note: string | null }[]];
+    prisma.employmentStint.findMany({ where: { newHireId: hireId }, orderBy: { startDate: "asc" }, select: { startDate: true, endDate: true, note: true } }),
+    // Only to settle an old department name that was split person by person
+    // (lib/people/department-names.ts).
+    prisma.newHire.findUnique({ where: { id: hireId }, select: { department: true } })
+  ])) as [RawRole[], { startDate: Date; endDate: Date | null; note: string | null }[], { department: string | null } | null];
 
   const stints: JourneyStint[] = stintRows.map((s) => ({ start: iso(s.startDate), end: iso(s.endDate), note: s.note }));
 
@@ -153,7 +157,9 @@ export async function getEmployeeJourney(hireId: string): Promise<EmployeeJourne
       title: r.title,
       seat: seatOf(r),
       aircraft: r.aircraft,
-      department: r.department,
+      // Shown under today's name: role history keeps the spelling of its day
+      // ("OGD FBO", "Detailing"), the profiles were renamed Nov 19.
+      department: currentDepartmentName(r.department, profile?.department ?? null),
       startDate: iso(r.startDate),
       endDate: iso(r.endDate),
       transitionType: (r.transitionType as TransitionType) ?? "HIRE",
