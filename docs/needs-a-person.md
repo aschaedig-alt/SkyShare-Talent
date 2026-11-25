@@ -1360,6 +1360,38 @@ count and leaves answered links alone.
 
 ---
 
+### 94. The party guest list and the invoice scan have never been used for real
+
+**Status:** OPEN
+**Added:** 2026-11-25
+
+Two Events features shipped Nov 25. A company event's Guests tab lists everyone on the
+event roster (194 people on Nov 25: 179 current employees plus 15 contractors) with
+attending, not attending or no response, plus one, guest name, allergies and the other
+RSVP answers. It re-reads the linked RSVP Google Sheet each time the tab opens, takes a
+CSV, Excel or PDF upload, has Undo last update, and sends a BCC reminder from hrotasks@.
+Supplies has Scan an invoice: Claude reads the invoice and mock-ups, names each item from
+the invoice line, crops its picture, and saves nothing until HR confirms. Checked by the
+session: a read-only preview of the real RSVP sheet (65 rows, all 65 matched, 61
+attending, 4 not, nothing saved), a scan of the 5 sample PDFs (4 items, names, quantities
+and prices right), and the picture crop on a static test page. NOT checked: either
+dialog in the app in a browser (the dev build broke mid-test), linking the sheet,
+an upload, a reminder send, saving a scan, and the phone and dark-mode layout of the
+Guests tab and the scan dialog.
+
+**How to check it, about ten minutes:** Aimee opens People > Company Events > 2026
+Christmas Holiday Party > Guests on the live site, links the RSVP sheet and reads the
+preview before confirming. Then she sends a reminder to herself only. In Supplies she
+scans one real invoice with its mock-up and saves it, then opens both on a phone, in dark
+mode too.
+
+**What would count as a pass:** about 61 attending and 4 not attending after linking,
+the reminder arrives once from hrotasks@ with nobody visible in To, the saved item has
+the invoice line's name and its own picture on the Supplies list, Undo last scan removes
+it, and nothing runs off the side of the phone screen.
+
+---
+
 ### 89. The party store credit email has never been sent — not even to the test inbox
 
 **Status:** OPEN — waiting on him, by his choice
