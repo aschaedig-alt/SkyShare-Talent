@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import type { QohHire, QualityOfHire } from "@/lib/quality-of-hire/report";
 import { QualityOfHireInterviews } from "@/components/reports/QualityOfHireInterviews";
+import { QohPeopleList } from "@/components/reports/QohPeopleList";
 import { R } from "@/components/reports/report-ui";
 import { formatCalendarDay } from "@/lib/dates/display";
 import { CALL_CATEGORIES, CATEGORY_META, CATEGORY_ORDER, DECIDED, categorize, type CallCategory, type Categorized, type QohCategory } from "@/lib/quality-of-hire/categories";
@@ -51,18 +52,8 @@ function Rate({ hs }: { hs: QohHire[] }) {
   );
 }
 
-const KIND_LABEL: Record<keyof QohHire["kinds"], string> = {
-  recruiter_screen: "recruiter screen",
-  manager_video: "manager interview",
-  in_person: "in person",
-  other: "other"
-};
-
-function interviewTitle(h: QohHire): string {
-  const parts = (Object.keys(h.kinds) as Array<keyof QohHire["kinds"]>).filter((k) => h.kinds[k]).map((k) => `${h.kinds[k]} ${KIND_LABEL[k]}`);
-  const from = h.interviewsFrom === "calendar" ? "from the calendar file" : "logged in the app";
-  return parts.length ? `${parts.join(", ")} - ${from}${h.metCeo ? ", met Cory" : ""}` : `none found - ${from}`;
-}
+// The interview breakdown that used to be a hover title on the old table is in each
+// person's story now (components/reports/QohPeopleList.tsx).
 
 // Offers by year and why they were turned down moved to their own report on Nov 24
 // 2026 (components/reports/OffersReport.tsx), with Aimee's note on "Other".
@@ -235,7 +226,8 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
             again; contractors at hire are left out of every rate.
           </p>
         </div>
-        <div className={R.controls}>
+        {/* max-w-full: R.controls never shrinks, so at 329px the year picker sat 33px off the page. */}
+        <div className={clsx(R.controls, "max-w-full")}>
           <div className={R.segmentGroup}>
             {GROUPS.map((g) => (
               <button key={g.id} type="button" onClick={() => setGroup(g.id)} aria-pressed={group === g.id} className={clsx(R.segment, group === g.id ? R.segmentOn : R.segmentOff)}>
@@ -476,66 +468,23 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
             Show every hire
           </button>
         ) : null}
-        <div className={R.tableWrap}>
-          <table className={clsx(R.table, "min-w-[1100px]")}>
-            <thead className={R.thead}>
-              <tr>
-                <th className={R.th}>Person</th>
-                <th className={R.th}>Started</th>
-                <th className={R.th}>Role at hire</th>
-                <th className={clsx(R.th, "text-right")}>Interviews</th>
-                <th className={clsx(R.th, "text-right")}>Apply to offer</th>
-                <th className={R.th}>Left</th>
-                <th className={R.th}>Category</th>
-                <th className={R.th}>Why</th>
-              </tr>
-            </thead>
-            <tbody className={R.tbody}>
-              {listed.map((h) => (
-                <tr key={`${h.id}-${h.start}`} className={R.tr}>
-                  <td className={R.td}>
-                    <Link href={`/people/${h.id}`} className={R.link}>
-                      {h.name}
-                    </Link>
-                    {h.rehire ? <span className={clsx(R.chip, "ml-2")}>rehire</span> : null}
-                  </td>
-                  <td className={R.td}>{formatCalendarDay(h.start)}</td>
-                  <td className={R.td}>
-                    {h.role ?? <span className={R.muted}>not recorded</span>}
-                    <span className={clsx("block text-[11px]", R.muted)}>{h.department || "—"}</span>
-                  </td>
-                  <td className={R.num} title={h.interviews === null ? "Not searched" : interviewTitle(h)}>
-                    {h.interviews ?? <span className={R.muted}>—</span>}
-                    {h.metCeo ? <span className={clsx(R.chip, "ml-2")}>Cory</span> : null}
-                  </td>
-                  <td className={R.num}>{h.daysApplyToOffer === null ? <span className={R.muted}>—</span> : `${h.daysApplyToOffer} d`}</td>
-                  <td className={R.td}>
-                    {h.stillHere ? (
-                      <span className={R.muted}>still here</span>
-                    ) : (
-                      <>
-                        {formatCalendarDay(h.end)}
-                        {h.rosterExit ? <span className={R.muted} title="A year-end roster date - the real last day is later"> †</span> : null}
-                        {h.left365 === 1 ? <span className={clsx(R.chip, "ml-2")}>year one</span> : null}
-                      </>
-                    )}
-                  </td>
-                  <td className={R.td}>
-                    <span className={R.chip}>{CATEGORY_META[catOf.get(catKey(h))?.category ?? "NEEDS_CALL"].label}</span>
-                    <span className={clsx("block text-[11px]", R.muted)}>{catOf.get(catKey(h))?.why}</span>
-                    {canUpload ? <CategoryCallSelect h={h} /> : null}
-                  </td>
-                  <td className={R.td}>
-                    {h.situational ? <span className={clsx(R.chip, "mr-2")}>Situational</span> : h.voluntary ? <span className={clsx(R.chip, "mr-2")}>{h.voluntary === "V" ? "Voluntary" : "Involuntary"}</span> : null}
-                    <span className={h.reason ? undefined : R.muted}>{h.stillHere ? "" : h.reason ?? "not recorded"}</span>
-                    {h.situational ? <span className={clsx("block text-[11px]", R.muted)}>{h.situational}</span> : null}
-                    {canUpload && !h.stillHere ? <SituationalButton h={h} /> : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {/* Redesigned Nov 25 2026 (Aimee, feedback cmww9dqdj): seven columns on the line,
+            the rest in each person's story when clicked. No sideways scroll. */}
+        <QohPeopleList
+          hires={listed}
+          verdict={(h) => catOf.get(catKey(h))}
+          interviewers={qoh.interviewers}
+          hrControls={
+            canUpload
+              ? (h) => (
+                  <>
+                    <CategoryCallSelect h={h} />
+                    {!h.stillHere ? <SituationalButton h={h} /> : null}
+                  </>
+                )
+              : null
+          }
+        />
       </details>
 
       <p className={R.footnote}>
@@ -543,7 +492,8 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
         {qoh.calendarSpan ? ` (hires ${formatCalendarDay(qoh.calendarSpan.from)} to ${formatCalendarDay(qoh.calendarSpan.to)})` : ""}, and from interviews
         logged in the app, whichever found more. The calendar file cannot see David&apos;s or Harry&apos;s own calendars, nor most FBO line hiring; a hire
         after it was made counts only what is logged in the app. Applications begin mid-2023 and real offer dates in 2026, so the speed figures stand on few
-        hires. Protected characteristics are not read anywhere in this report.
+        hires. A † after a last day means it came from a year-end roster, so the real day is later. Protected characteristics are not read anywhere in this
+        report.
       </p>
     </section>
   );
