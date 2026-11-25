@@ -1404,7 +1404,7 @@ count and leaves answered links alone.
 **Added:** 2026-11-25
 
 Two Events features shipped Nov 25. A company event's Guests tab lists everyone on the
-event roster (194 people on Nov 25: 179 current employees plus 15 contractors) with
+event roster narrowed to current employees (179 on Nov 25; contractors are left out, his call) with
 attending, not attending or no response, plus one, guest name, allergies and the other
 RSVP answers. It re-reads the linked RSVP Google Sheet each time the tab opens, takes a
 CSV, Excel or PDF upload, has Undo last update, and sends a BCC reminder from hrotasks@.
@@ -1427,6 +1427,26 @@ mode too.
 the reminder arrives once from hrotasks@ with nobody visible in To, the saved item has
 the invoice line's name and its own picture on the Supplies list, Undo last scan removes
 it, and nothing runs off the side of the phone screen.
+
+---
+
+### 95. The new Hire quality people list has not been opened on a real phone
+
+**Status:** OPEN
+**Added:** 2026-11-25
+
+The Hire quality people list was redesigned on Nov 25 (his picks): seven columns on
+each line, and clicking a person opens their story as a timeline, horizontal or
+vertical. Checked by the session on live data at 1536x695 in light and dark: 327 hires,
+no sideways scroll, one person open at a time. Phone widths (375 and 329) were checked
+in browser emulation only. NOT checked: a real iPhone or Android.
+
+**How to check it, about two minutes:** open Data > Reports > Hire quality on a phone,
+scroll the people list, open one person, then open another.
+
+**What would count as a pass:** nothing runs off the side of the screen, each person is
+a small card, the story reads top to bottom, and opening the second person closes the
+first.
 
 ---
 
