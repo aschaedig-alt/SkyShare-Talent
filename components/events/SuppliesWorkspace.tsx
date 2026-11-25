@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
@@ -9,6 +9,7 @@ import { Badge, Button, EmptyState, Input, Modal } from "@/components/ui";
 import { SUPPLY_CATEGORIES, supplyCategoryLabel } from "@/lib/events/constants";
 import type { SupplyItemView } from "@/lib/data/events";
 import { formatMixedDayShort } from "@/lib/dates/display";
+import { InvoiceScanModal } from "@/components/events/InvoiceScanModal";
 
 const FIELD =
   "w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-lea outline-none transition focus:border-brand-gold disabled:opacity-60 dark:border-white/10 dark:bg-[#0f2033] dark:text-slate-100";
@@ -39,6 +40,24 @@ export function SuppliesWorkspace({ items }: { items: SupplyItemView[] }) {
   const [error, setError] = useState<string | null>(null);
   const [showRetired, setShowRetired] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  // Scan a supplier invoice (Aimee's feedback cmwwjnqfj): lib/events/invoice-scan.ts.
+  const [scanning, setScanning] = useState(false);
+  const [scanNotice, setScanNotice] = useState<string | null>(null);
+  const [undo, setUndo] = useState<{ note: string; at: string } | null>(null);
+  useEffect(() => {
+    void fetch("/api/events/supply-items/scan")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { undo?: { note: string; at: string } | null } | null) => setUndo(d?.undo ?? null))
+      .catch(() => {});
+  }, [items]);
+
+  async function undoScan() {
+    if (!undo || !window.confirm(`Undo "${undo.note}"? New items from that scan are removed and topped-up counts go back.`)) return;
+    const res = await fetch("/api/events/supply-items/scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "undo" }) });
+    const d = (await res.json().catch(() => ({}))) as { removed?: number; retired?: number; restored?: number };
+    setScanNotice(res.ok ? `Undone: ${d.removed ?? 0} removed${d.retired ? `, ${d.retired} retired (an event lists them)` : ""}, ${d.restored ?? 0} counts put back.` : "Could not undo that.");
+    router.refresh();
+  }
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState<string>("SWAG");
@@ -105,9 +124,28 @@ export function SuppliesWorkspace({ items }: { items: SupplyItemView[] }) {
           <Link href="/events" className="text-xs font-semibold text-brand-eden hover:underline dark:text-brand-sweet">
             ← Events
           </Link>
+          {undo ? (
+            <Button variant="ghost" onClick={() => void undoScan()} title={undo.note}>
+              Undo last scan
+            </Button>
+          ) : null}
+          <Button variant="ghost" onClick={() => setScanning(true)}>
+            Scan an invoice
+          </Button>
           <Button onClick={() => setAdding(true)}>+ New supply</Button>
         </div>
       </section>
+      {scanNotice ? <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">{scanNotice}</p> : null}
+      {scanning ? (
+        <InvoiceScanModal
+          onClose={() => setScanning(false)}
+          onDone={(message) => {
+            setScanning(false);
+            setScanNotice(message);
+            router.refresh();
+          }}
+        />
+      ) : null}
 
       {needsOrder.length > 0 ? (
         <div className="rounded border border-amber-300 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/15">
@@ -157,11 +195,25 @@ export function SuppliesWorkspace({ items }: { items: SupplyItemView[] }) {
                       )}
                     >
                       <td className="py-2 pr-2">
-                        <p className="font-semibold text-brand-lea dark:text-slate-100">{item.name}</p>
-                        <p className="text-[11px] text-brand-grey dark:text-slate-400">
-                          per {item.unit}
-                          {item.vendor ? ` · ${item.vendor}` : ""}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          {item.photoUpdatedAt ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- an app route behind login, not a public asset
+                            <img
+                              src={`/api/events/supply-items/${item.id}/photo?v=${encodeURIComponent(item.photoUpdatedAt)}`}
+                              alt=""
+                              className="h-10 w-10 shrink-0 rounded bg-white object-contain ring-1 ring-brand-lea/10 dark:ring-white/10"
+                            />
+                          ) : null}
+                          <div className="min-w-0">
+                            <p className="font-semibold text-brand-lea dark:text-slate-100">{item.name}</p>
+                            <p className="text-[11px] text-brand-grey dark:text-slate-400">
+                              per {item.unit}
+                              {item.vendor ? ` · ${item.vendor}` : ""}
+                              {item.unitCost !== null ? ` · ${item.unitCost.toFixed(2)} each` : ""}
+                            </p>
+                            {item.notes ? <p className="max-w-md text-[11px] text-brand-grey dark:text-slate-400">{item.notes}</p> : null}
+                          </div>
+                        </div>
                       </td>
                       <td className="px-1 py-2 text-brand-grey dark:text-slate-400">
                         {supplyCategoryLabel(item.category)}

@@ -77,7 +77,8 @@ export function EventDetailWorkspace({
   event,
   tab = "overview",
   storeTab = null,
-  activitiesTab = null
+  activitiesTab = null,
+  guestsTab = null
 }: {
   event: EventDetail;
   /** Company events only: the open tab. */
@@ -85,6 +86,8 @@ export function EventDetailWorkspace({
   /** Rendered on the server for the open tab only. */
   storeTab?: ReactNode;
   activitiesTab?: ReactNode;
+  /** Company events: the party guest list (every employee, RSVP sheet, reminders). */
+  guestsTab?: ReactNode;
 }) {
   const router = useRouter();
   const internal = event.audience === "INTERNAL";
@@ -908,7 +911,7 @@ export function EventDetailWorkspace({
           {suppliesCard}
         </>
       ) : null}
-      {tab === "guests" ? guestsCard : null}
+      {tab === "guests" ? guestsTab ?? guestsCard : null}
       {tab === "todos" ? trackerCard : null}
       {tab === "store" ? storeTab : null}
       {tab === "activities" ? activitiesTab : null}

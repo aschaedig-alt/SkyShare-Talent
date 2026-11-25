@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getSupplyPhotos } from "@/lib/events/invoice-scan";
 import { OPEN_EVENT_STATUSES, effectiveTaskStatus, isEventType, stockState, type StockState } from "@/lib/events/constants";
 import { officeDayKey, startOfOfficeDay } from "@/lib/dates/display";
 import type { ExtractedEvent } from "@/lib/events/event-email-ai";
@@ -168,6 +169,8 @@ export type SupplyItemView = {
   state: StockState;
   /** Which upcoming events are holding this item. */
   claims: { eventId: string; eventName: string; startsAt: string; quantity: number }[];
+  /** When its picture (from an invoice scan) last changed, or null for none - lib/events/invoice-scan.ts. */
+  photoUpdatedAt: string | null;
 };
 
 function personName(n: { name: string }) {
@@ -392,6 +395,7 @@ export async function getSupplyItems(): Promise<SupplyItemView[]> {
   // in the reorder maths depending on where the code ran.
   const cutoff = startOfOfficeDay(officeDayKey(new Date())) ?? new Date();
 
+  const photos = await getSupplyPhotos();
   const items = await prisma.supplyItem.findMany({
     orderBy: [{ active: "desc" }, { name: "asc" }],
     include: {
@@ -428,7 +432,8 @@ export async function getSupplyItems(): Promise<SupplyItemView[]> {
         eventName: line.event.name,
         startsAt: line.event.startsAt.toISOString(),
         quantity: line.quantity
-      }))
+      })),
+      photoUpdatedAt: photos[item.id]?.updatedAt ?? null
     };
   });
 }

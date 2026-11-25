@@ -7,6 +7,8 @@ import { getStoreSummary } from "@/lib/party-store/server";
 import { getExecHuntAdminProps } from "@/lib/exec-hunt/admin-props";
 import { EventDetailWorkspace } from "@/components/events/EventDetailWorkspace";
 import { EventActivities } from "@/components/events/EventActivities";
+import { EventGuestList } from "@/components/events/EventGuestList";
+import { zoneForValue } from "@/lib/dates/display";
 import { PartyStoreWorkspace } from "@/components/party-store/PartyStoreWorkspace";
 import { NewStoreForm } from "@/components/party-store/NewStoreForm";
 import { ExecHuntAdmin } from "@/components/exec-hunt/ExecHuntAdmin";
@@ -74,5 +76,12 @@ export async function EventPage({
     );
   }
 
-  return <EventDetailWorkspace event={event} tab={tab} storeTab={storeTab} activitiesTab={activitiesTab} />;
+  // The party guest list (Aimee, Nov 25 2026): every employee, the live RSVP sheet, reminders.
+  let guestsTab = null;
+  if (tab === "guests") {
+    const day = new Intl.DateTimeFormat("en-US", { timeZone: zoneForValue(event.startsAt), weekday: "long", month: "short", day: "numeric" }).format(new Date(event.startsAt));
+    guestsTab = <EventGuestList key="guests" eventId={event.id} eventName={event.name} eventWhen={`${day}${event.venue ? ` at ${event.venue}` : ""}`} canWrite={canWrite} />;
+  }
+
+  return <EventDetailWorkspace event={event} tab={tab} storeTab={storeTab} activitiesTab={activitiesTab} guestsTab={guestsTab} />;
 }

@@ -129,7 +129,7 @@ flowchart TD
   </div>
   <p class="caption">The blue spine is what you do in the app, top to bottom. The dotted-texture box is what the system ticks on its own. The gold box is done by hand outside the app — the offer letter lives in Paycom.</p>
 
-  <h2>The eight steps</h2>
+  <h2>The nine steps</h2>
   <div class="steps">
 
     <div class="step">
@@ -192,9 +192,20 @@ flowchart TD
     <div class="step">
       <span class="screen">Onboarding record</span>
       <h3>Mark them onboarded</h3>
-      <p class="do">Once the checklist is done, click <span class="btn navy">Mark onboarded</span> in the button row at the top of their onboarding record — not <b>Archive</b>, and not <b>Mark as former employee</b>. They move to the <b>Post-onboard</b> tab, which holds four check-ins: 30-day, 60-day, 90-day and <b>Benefits enrolled</b>.</p>
+      <p class="do">Once the checklist is done, click <span class="btn navy">Mark onboarded</span> in the button row at the top of their onboarding record — not <b>Archive</b>, and not <b>Mark as former employee</b>. They move to the <b>Post-onboard</b> tab, which holds seven items: the 30-day and 60-day check-ins, <b>Benefits enrolled</b>, <b>Social media announcement</b>, and the three manager check-ins — <b>3-month</b>, <b>6-month</b> and <b>12-month</b> (step 9).</p>
       <div class="seen"><b>Doing several at once?</b> Open the <span class="btn tab">Checklist</span> tab on <b>Onboarding → New hires</b>. The grid is one column per person — tick the checkbox at the top of each person's column, and a bulk <span class="btn ghost">Mark onboarded</span> appears in the action bar above the grid.</div>
-      <div class="autonote"><span>🗂️</span><div><b>What happens after:</b> when all four Post-onboard check-ins are ticked — 30-day, 60-day, 90-day <i>and</i> Benefits enrolled — they auto-move to <b>Archived</b> as a <i>current</i> employee. On the Archived tab, click <b>Current employees</b> to find them — the other two filters are <b>All</b> and <b>Former (terminated)</b>.</div></div>
+      <div class="autonote"><span>🗂️</span><div><b>What happens after:</b> when all seven Post-onboard items are ticked or marked skipped — up to and including the 12-month check-in — they auto-move to <b>Archived</b> as a <i>current</i> employee. On the Archived tab, click <b>Current employees</b> to find them — the other two filters are <b>All</b> and <b>Former (terminated)</b>.</div></div>
+    </div>
+
+    <div class="step">
+      <span class="screen">Onboarding → New hires → Post-onboard</span>
+      <h3>Get the manager's rating at 3, 6 and 12 months</h3>
+      <p class="do">At each manager check-in the hiring manager rates the person 1&ndash;10 on the four core values, says how well they have learned the role, and whether they would hire them again. Send them the form by email — no login needed. Click the person's <b>3-month</b>, <b>6-month</b> or <b>12-month</b> cell, then <span class="btn ghost">Send</span> under that check-in. Pick who it goes to and click <span class="btn navy">Send to &lt;their address&gt;</span>. The link works once, for 30 days.</p>
+      <div class="seen"><b>Several at once?</b> Tick each person's checkbox on the left, then choose <span class="btn ghost">Send manager check-in</span> in the action bar and pick the check-in. Under <b>Send to</b>, choose <b>Their supervisor</b>, <b>Their second supervisor</b>, <b>Both supervisors</b> or <b>Someone else</b>. Each manager gets one email with a link per person.</div>
+      <div class="seen"><b>Two supervisors on one person</b> (for example the Chief Pilot and the Assistant Chief Pilot): choose <b>Both supervisors</b>. Each gets their own link. The rating that shows everywhere is the <i>average</i> of the two; open the person's profile, <b>Check-ins</b> tab, and click <b>View both scores</b> to see each one. If they disagree on "would hire again" it counts as <b>No</b>. To add a second supervisor after the first link went out, open that link and tick <b>Keep &lt;name&gt;'s link too</b>.</div>
+      <div class="watch"><b>A link is already out and you want someone else to rate instead?</b> In the bulk send, tick <b>Replace links already out</b> — without it, anyone with a link waiting is left out of the send and listed under <b>Left out</b> with the reason. Replacing stops the old link working.</div>
+      <div class="watch"><b>To stop links that will not be answered</b>, tick the people and choose <span class="btn ghost">Cancel check-in links</span>, then the check-in. It says how many links it will stop before it does. If one of two supervisors has already answered, cancelling the other saves the first one's rating on its own.</div>
+      <div class="autonote"><span>🔄</span><div><b>The check-in ticks itself</b> when the rating comes in — for two supervisors, once both have answered. The cell shows the date the link went out, or <b>1/2</b> while one of two is still waiting. You can also enter a rating yourself with <span class="btn ghost">Rate</span>, which ticks it the same way.</div></div>
     </div>
 
   </div>
@@ -209,13 +220,13 @@ flowchart TD
     <h3>Run it, then reset — cleanly</h3>
     <ol>
       <li><b>Tag your test person <span class="tag">TEST</span></b> when you add them — type <code>TEST</code> into the <b>Tags (comma-separated)</b> field on the New candidate box, before you click <b>Create candidate</b>. That tag is the only thing that lets anyone delete them afterwards, and dev and production share one live database, so an untagged practice hire is a real hire.</li>
-      <li><b>Run all eight steps above</b> with that candidate — a fake name is fine, e.g. "ZZ Test Pilot."</li>
+      <li><b>Run the first eight steps above</b> with that candidate (step 9 comes months later) — a fake name is fine, e.g. "ZZ Test Pilot."</li>
       <li><b>Reset when done:</b> open their candidate profile and click <span class="btn ghost" style="border-color:var(--bad);color:var(--bad)">Delete test</span> — Admins only, and only on a TEST-tagged record, so ask an Admin if you are a Recruiter. In the box that opens, tick <b>"Also delete the onboarding record this candidate produced"</b>, type the person's name into <b>Type the name to confirm</b>, and click <b>Delete permanently</b>.</li>
       <li><b>Test login accounts:</b> remove them under <b>Settings → Team Members → Remove access</b> (Admins only). If you create throwaway logins often, sign them up with a <code>+test</code> email so they can be deleted outright.</li>
     </ol>
   </div>
 
   <footer>
-    Updated Jul 22, 2026 for the three-step background check and Paycom auto-ticking. If a screen doesn't match this SOP, tell the Recruiting Manager (<b>Aimee Schaedig</b>) what you saw.
+    Updated Nov 25, 2026 for the Post-onboard check-ins and the manager rating link (step 9); Jul 22, 2026 for the three-step background check and Paycom auto-ticking. If a screen doesn't match this SOP, tell the Recruiting Manager (<b>Aimee Schaedig</b>) what you saw.
   </footer>
 </div>
