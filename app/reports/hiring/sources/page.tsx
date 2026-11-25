@@ -11,5 +11,5 @@ export const dynamic = "force-dynamic";
 export default async function SourcesReportPage() {
   const { role, rule } = await requireModulePageAccess("reports");
   const canEdit = role === "ADMIN" || role === "RECRUITER" || rule.accessLevel === "EDIT" || rule.accessLevel === "FULL_ACCESS";
-  return <SourcesWorkspace audit={await getSourceAudit()} canEdit={canEdit} />;
+  return <SourcesWorkspace audit={await getSourceAudit()} canEdit={canEdit} mode="report" />;
 }

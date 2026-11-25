@@ -209,6 +209,26 @@ type Saved<T> = (StoredBatch<T> & { id: string }) | null;
 /** Files to use in place of the saved ones - a dry run of an upload, never stored. */
 export type QohOverride = { terminations?: Saved<ExitRow>; termTypes?: Saved<ExitRow>; interviews?: Saved<CalendarInterview> };
 
+type SavedBatch = { id: string; file: string; savedAt: string; uploadedBy: string | null; rows: Array<{ newHireId: string | null }> } | null;
+
+/** What an upload holds, for the upload panel: the file, who saved it, rows and how many matched a person. */
+export function importInfo(b: SavedBatch): QohImportInfo {
+  return b ? { id: b.id, file: b.file, savedAt: b.savedAt, uploadedBy: b.uploadedBy, rows: b.rows.length, matched: b.rows.filter((r) => r.newHireId).length } : null;
+}
+
+/**
+ * The three Hire quality uploads, on their own - for Data > Imports, where the upload
+ * panel moved on Nov 24 2026 - without building the whole report.
+ */
+export async function getQohImports(): Promise<Record<QohSource, QohImportInfo>> {
+  const [terminations, termTypes, interviews] = await Promise.all([
+    latestBatch<ExitRow>("terminations"),
+    latestBatch<ExitRow>("termTypes"),
+    latestBatch<CalendarInterview>("interviews")
+  ]);
+  return { terminations: importInfo(terminations), termTypes: importInfo(termTypes), interviews: importInfo(interviews) };
+}
+
 export async function getQualityOfHire(now: Date = new Date(), override: QohOverride = {}): Promise<QualityOfHire> {
   const [people, apps, interviews, terminations, termTypes, calendar, situational, tracking, rehireAnswers, categoryCalls, ratings] = await Promise.all([
     prisma.newHire.findMany({
@@ -457,9 +477,6 @@ export async function getQualityOfHire(now: Date = new Date(), override: QohOver
       return { year, reached: m.size, accepted: n("accepted"), declined: n("declined"), rescinded: n("rescinded"), open: n("open") };
     });
 
-  type Saved = { id: string; file: string; savedAt: string; uploadedBy: string | null; rows: Array<{ newHireId: string | null }> } | null;
-  const info = (b: Saved): QohImportInfo =>
-    b ? { id: b.id, file: b.file, savedAt: b.savedAt, uploadedBy: b.uploadedBy, rows: b.rows.length, matched: b.rows.filter((r) => r.newHireId).length } : null;
 
   // interviewer handles: a person's SkyShare address, else a login's; exact only
   const handles = new Set((calendar?.rows ?? []).flatMap((r) => canonicalHandles(r.interviewers)));
@@ -487,7 +504,7 @@ export async function getQualityOfHire(now: Date = new Date(), override: QohOver
     declineReasons: [...reasons.entries()].map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count),
     neverStarted,
     mismatches,
-    imports: { terminations: info(terminations), termTypes: info(termTypes), interviews: info(calendar) },
+    imports: { terminations: importInfo(terminations), termTypes: importInfo(termTypes), interviews: importInfo(calendar) },
     calendarSpan,
     interviewers,
     tracking

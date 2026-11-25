@@ -5,13 +5,11 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import type { QohHire, QualityOfHire } from "@/lib/quality-of-hire/report";
-import { QualityOfHireUploads } from "@/components/reports/QualityOfHireUploads";
 import { QualityOfHireInterviews } from "@/components/reports/QualityOfHireInterviews";
-import { QualityOfHireTracking } from "@/components/reports/QualityOfHireTracking";
 import { R } from "@/components/reports/report-ui";
 import { formatCalendarDay } from "@/lib/dates/display";
 import { CALL_CATEGORIES, CATEGORY_META, CATEGORY_ORDER, DECIDED, categorize, type CallCategory, type Categorized, type QohCategory } from "@/lib/quality-of-hire/categories";
-import { early } from "@/lib/quality-of-hire/summary";
+import { early, median } from "@/lib/quality-of-hire/summary";
 
 // The Reports "Quality of Hire" tab - the Q4 2026 rock. His measures: interviews per
 // candidate, time from application to offer, how often offers are turned down, and
@@ -35,15 +33,8 @@ function pct(part: number, whole: number): string {
   return whole ? `${Math.round((part / whole) * 100)}%` : "—";
 }
 
-function median(xs: number[]): number | null {
-  if (!xs.length) return null;
-  const s = [...xs].sort((a, b) => a - b);
-  const m = Math.floor(s.length / 2);
-  return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
-}
-
-// early() - left within a year - lives in lib/quality-of-hire/summary.ts, shared
-// with the Reports "At a glance" card so the two cannot disagree.
+// early() and median() live in lib/quality-of-hire/summary.ts, shared with the
+// Reports "At a glance" card and the Offers report so none of them can disagree.
 
 function Rate({ hs }: { hs: QohHire[] }) {
   const e = early(hs);
@@ -73,10 +64,8 @@ function interviewTitle(h: QohHire): string {
   return parts.length ? `${parts.join(", ")} - ${from}${h.metCeo ? ", met Cory" : ""}` : `none found - ${from}`;
 }
 
-// Aimee, 2026-11-05: a declined offer marked "Other" usually means the person took
-// another offer - better pay, closer to home so they need not relocate, or a schedule
-// they prefer. People seldom say which.
-const OTHER_DECLINE = "Usually another offer: better pay, no relocation, or a preferred schedule";
+// Offers by year and why they were turned down moved to their own report on Nov 24
+// 2026 (components/reports/OffersReport.tsx), with Aimee's note on "Other".
 
 /** Admin only: mark one exit as situational (caused by the business), or clear it. */
 function SituationalButton({ h }: { h: QohHire }) {
@@ -415,7 +404,33 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
         </div>
       </div>
 
-      <QualityOfHireTracking tracking={qoh.tracking} />
+      {/* The to-do pieces left this report on Nov 24 2026 (the Reports redesign he
+          picked): a report is read and shared, a worklist is worked through. */}
+      {canUpload ? (
+        <p className={R.note}>
+          Moved out of this report: the offer tracking check is on{" "}
+          <Link href="/offers" className={R.link}>
+            Recruiting &gt; Offers
+          </Link>
+          , 3-month ratings due are on{" "}
+          <Link href="/people?tab=post" className={R.link}>
+            People &gt; Post-onboard
+          </Link>
+          , offers by year on{" "}
+          <Link href="/reports/hiring/offers" className={R.link}>
+            Reports &gt; Offers
+          </Link>
+          , Paycom mismatches on{" "}
+          <Link href="/cleanup" className={R.link}>
+            Data &gt; Cleanup
+          </Link>{" "}
+          and the uploads on{" "}
+          <Link href="/imports" className={R.link}>
+            Data &gt; Imports
+          </Link>
+          .
+        </p>
+      ) : null}
 
       <QualityOfHireInterviews hires={hires} interviewers={qoh.interviewers} />
 
@@ -451,85 +466,6 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
           </table>
         </div>
       </div>
-
-      <div className={clsx(R.box, "grid gap-6 lg:grid-cols-[1.4fr_1fr]")}>
-        <div>
-          <div className={R.sectionLabel}>Offers, by year applied - all roles</div>
-          <div className={R.tableWrap}>
-            <table className={R.table}>
-              <thead className={R.thead}>
-                <tr>
-                  <th className={R.th}>Year</th>
-                  <th className={clsx(R.th, "text-right")}>Reached an offer</th>
-                  <th className={clsx(R.th, "text-right")}>Accepted</th>
-                  <th className={clsx(R.th, "text-right")}>Declined</th>
-                  <th className={clsx(R.th, "text-right")}>Rescinded</th>
-                  <th className={clsx(R.th, "text-right")}>Turned down</th>
-                </tr>
-              </thead>
-              <tbody className={R.tbody}>
-                {[...qoh.offers].reverse().map((o) => (
-                  <tr key={o.year} className={clsx(R.tr, year === o.year && "bg-brand-gold/10")}>
-                    <td className={R.td}>{o.year}</td>
-                    <td className={R.num}>{o.reached}</td>
-                    <td className={R.num}>{o.accepted}</td>
-                    <td className={R.num}>{o.declined}</td>
-                    <td className={R.num}>{o.rescinded}</td>
-                    <td className={R.num}>{pct(o.declined, o.accepted + o.declined)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className={R.footnote}>
-            One row per candidate per year. Applications start mid-2023, so earlier hires have no offer on file. Accepted and never started: {qoh.neverStarted}.
-          </p>
-        </div>
-        <div>
-          <div className={R.sectionLabel}>Why offers were turned down</div>
-          <ul className="mt-2 divide-y divide-brand-lea/10 dark:divide-white/10">
-            {qoh.declineReasons.map((r) => (
-              <li key={r.reason} className="flex items-baseline justify-between gap-3 py-2 text-sm">
-                <span className={r.reason === "No reason recorded" ? R.muted : undefined}>
-                  {r.reason}
-                  {/^other$/i.test(r.reason) ? <span className={clsx("block text-[11px]", R.muted)}>{OTHER_DECLINE}</span> : null}
-                </span>
-                <span className="tabular-nums">{r.count}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      {qoh.mismatches.length ? (
-        <div className={R.box}>
-          <div className={R.sectionLabel}>Paycom and Journey disagree - {qoh.mismatches.length}</div>
-          <p className={R.footnote}>
-            Paycom says these people left, and Journey has no last day near it. Most are a leaver Journey has not been told about; a Dec 31 date is a year-end
-            roster, where Paycom&apos;s is the real day. Nothing here changes anybody&apos;s record.
-          </p>
-          <ul className="mt-2 divide-y divide-brand-lea/10 dark:divide-white/10">
-            {qoh.mismatches.map((m) => (
-              <li key={`${m.name}-${m.paycomLeft}`} className="flex flex-wrap items-baseline justify-between gap-3 py-2 text-sm">
-                {m.id ? (
-                  <Link href={`/people/${m.id}`} className={R.link}>
-                    {m.name}
-                  </Link>
-                ) : (
-                  <span className={R.strong}>{m.name}</span>
-                )}
-                <span className={R.muted}>
-                  Paycom: left {formatCalendarDay(m.paycomLeft) || "—"} · Journey:{" "}
-                  {m.journey
-                    .split(", ")
-                    .map((x) => (/^\d{4}-\d{2}-\d{2}$/.test(x) ? `left ${formatCalendarDay(x)}` : x))
-                    .join(", ")}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
 
       <details ref={listRef} className="mt-5" open={listOpen} onToggle={(ev) => setListOpen(ev.currentTarget.open)}>
         <summary className={clsx(R.listTitle, "cursor-pointer")}>
@@ -609,8 +545,6 @@ export function QualityOfHireReport({ qoh, canUpload }: { qoh: QualityOfHire; ca
         after it was made counts only what is logged in the app. Applications begin mid-2023 and real offer dates in 2026, so the speed figures stand on few
         hires. Protected characteristics are not read anywhere in this report.
       </p>
-
-      {canUpload ? <QualityOfHireUploads imports={qoh.imports} /> : null}
     </section>
   );
 }

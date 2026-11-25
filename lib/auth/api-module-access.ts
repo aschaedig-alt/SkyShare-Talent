@@ -98,6 +98,8 @@ const PATH_MODULES: Array<[string, ModuleId]> = [
   ["/duplicate-review", "duplicate-review"],
   ["/api/reports-share", "reports"],
   ["/reports", "reports"],
+  // Data > Cleanup (Nov 24 2026): upkeep lifted out of Reports, on Reports access.
+  ["/cleanup", "reports"],
   ["/archive", "archive"],
   ["/handbook", "handbook"],
 

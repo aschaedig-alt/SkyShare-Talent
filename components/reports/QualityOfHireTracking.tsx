@@ -1,10 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { clsx } from "clsx";
-import type { QohTracking, RatingDue, TrackedOffer } from "@/lib/quality-of-hire/tracking";
-import { CheckinRatingModal } from "@/components/people/CheckinRatingModal";
+import type { QohTracking, TrackedOffer } from "@/lib/quality-of-hire/tracking";
 import { R } from "@/components/reports/report-ui";
 import { formatCalendarDay } from "@/lib/dates/display";
 
@@ -13,6 +11,11 @@ import { formatCalendarDay } from "@/lib/dates/display";
 // the hiring manager, and a reason on any declined offer. Checked on Dec 17. Before
 // Dec 10 it runs over the last 30 days as practice. The rules are in
 // lib/quality-of-hire/tracking.ts.
+//
+// It sat inside Hire quality until Nov 24 2026; it is a worklist, so it now sits on
+// Recruiting > Offers, admins only (app/offers/page.tsx). The 90-day (3-month)
+// ratings that were listed under it are on People > Post-onboard, in the 3-month
+// column under Manager check-ins.
 
 const STATUS: Record<string, string> = { SENT: "Sent", SIGNED: "Signed", DECLINED: "Declined" };
 
@@ -33,48 +36,48 @@ function Row({ o }: { o: TrackedOffer }) {
         </Link>
         <span className={clsx("block text-[11px]", R.muted)}>{o.job ?? "—"}</span>
       </td>
-      <td className={R.td}>
+      <td data-l="Offer" className={R.td}>
         {STATUS[o.status] ?? o.status}
         <span className={clsx("block text-[11px]", R.muted)}>{formatCalendarDay(o.offerOn)}</span>
       </td>
-      <td className={R.td}>
-        <Mark ok={o.has.interviews}>
-          {o.interviews}
-          <span className={clsx("ml-1 text-[11px]", R.muted)}>{o.valuesScored ? "· values rated" : "· no values"}</span>
-        </Mark>
-        {o.interviewList.length ? (
-          <ul className={clsx("mt-1 space-y-0.5 text-[11px]", R.muted)}>
-            {o.interviewList.map((i) => (
-              <li key={`${i.on}-${i.type}`} className="whitespace-nowrap">
-                {formatCalendarDay(i.on)} · {i.type}
-              </li>
-            ))}
-          </ul>
-        ) : null}
+      <td data-l="Interviews" className={R.td}>
+        {/* One block, so on a phone (R.stackTable) the dates sit under the count, not beside it. */}
+        <div>
+          <Mark ok={o.has.interviews}>
+            {o.interviews}
+            <span className={clsx("ml-1 text-[11px]", R.muted)}>{o.valuesScored ? "· values rated" : "· no values"}</span>
+          </Mark>
+          {o.interviewList.length ? (
+            <ul className={clsx("mt-1 space-y-0.5 text-[11px]", R.muted)}>
+              {o.interviewList.map((i) => (
+                <li key={`${i.on}-${i.type}`} className="sm:whitespace-nowrap">
+                  {formatCalendarDay(i.on)} · {i.type}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       </td>
-      <td className={R.td}>
+      <td data-l="Recruiter" className={R.td}>
         <Mark ok={o.has.recruiter}>{o.recruiter}</Mark>
       </td>
-      <td className={R.td}>
+      <td data-l="Hiring manager" className={R.td}>
         <Mark ok={o.has.hiringManager}>{o.hiringManager}</Mark>
       </td>
-      <td className={R.td}>{o.status === "DECLINED" ? <Mark ok={o.has.reason}>{o.declineReason}</Mark> : <span className={R.muted}>—</span>}</td>
-      <td className={R.td}>{o.complete ? <span className={R.strong}>All four</span> : <span className={R.muted}>{4 - Object.values(o.has).filter(Boolean).length} missing</span>}</td>
+      <td data-l="Decline reason" className={R.td}>{o.status === "DECLINED" ? <Mark ok={o.has.reason}>{o.declineReason}</Mark> : <span className={R.muted}>—</span>}</td>
+      <td data-l="Result" className={R.td}>{o.complete ? <span className={R.strong}>All four</span> : <span className={R.muted}>{4 - Object.values(o.has).filter(Boolean).length} missing</span>}</td>
     </tr>
   );
 }
 
 export function QualityOfHireTracking({ tracking }: { tracking: QohTracking }) {
   const complete = tracking.offers.filter((o) => o.complete).length;
-  // Rated from here as well as from People > Post-onboard: this list is where he
-  // looked for it (test run, Nov 11). A saved rating drops the person off the list.
-  const [due, setDue] = useState<RatingDue[]>(tracking.ratingsDue);
-  const [rating, setRating] = useState<RatingDue | null>(null);
   return (
-    <div className={R.box}>
-      <div className={R.sectionLabel}>
+    <section className={R.panel}>
+      <p className={R.eyebrow}>Quality of Hire · HR only</p>
+      <h2 className={R.title}>
         {tracking.practice ? `Tracking check, practice run - offers since ${formatCalendarDay(tracking.from)}` : `Tracking check - offers since ${formatCalendarDay(tracking.from)}`}
-      </div>
+      </h2>
       <p className={R.footnote}>
         Every offer made needs four things on record: interviews logged (ideally with the core values rated), the recruiter, the hiring manager, and a reason
         if it was declined.{" "}
@@ -91,7 +94,7 @@ export function QualityOfHireTracking({ tracking }: { tracking: QohTracking }) {
       </div>
       {tracking.offers.length ? (
         <div className={R.tableWrap}>
-          <table className={clsx(R.table, "min-w-[860px]")}>
+          <table className={clsx(R.table, "min-w-[860px]", R.stackTable)}>
             <thead className={R.thead}>
               <tr>
                 <th className={R.th}>Candidate</th>
@@ -114,46 +117,13 @@ export function QualityOfHireTracking({ tracking }: { tracking: QohTracking }) {
         <p className={R.footnote}>No offers made in this window yet.</p>
       )}
 
-      <div className={clsx(R.sectionLabel, "mt-5")}>90-day ratings due - {due.length}</div>
       <p className={R.footnote}>
-        People past day 90 with no rating yet. Click Rate and enter the hiring manager&apos;s answers. The same rating is on People &gt; Post-onboard, in the Values column.
+        3-month ratings due are on{" "}
+        <Link href="/people?tab=post" className={R.link}>
+          People &gt; Post-onboard
+        </Link>
+        , in the 3-month column under Manager check-ins.
       </p>
-      {due.length ? (
-        <ul className="mt-2 divide-y divide-brand-lea/10 dark:divide-white/10">
-          {due.map((p) => (
-            <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 py-2 text-sm">
-              <Link href={`/people/${p.id}`} className={R.link}>
-                {p.name}
-              </Link>
-              <span className="flex items-center gap-3">
-                <span className={R.muted}>
-                  started {formatCalendarDay(p.startDate)} · day {p.day}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setRating(p)}
-                  className="rounded border border-brand-lea/20 px-2.5 py-0.5 text-[11px] font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"
-                >
-                  Rate
-                </button>
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {rating ? (
-        <CheckinRatingModal
-          open
-          name={rating.name}
-          newHireId={rating.id}
-          initial={null}
-          onClose={() => setRating(null)}
-          onSaved={() => {
-            setDue((cur) => cur.filter((p) => p.id !== rating.id));
-            setRating(null);
-          }}
-        />
-      ) : null}
-    </div>
+    </section>
   );
 }

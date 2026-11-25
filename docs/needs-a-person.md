@@ -1330,13 +1330,24 @@ library; desktop, 375px and 329px (no sideways scroll on At a glance or Turnover
 dark mode on At a glance. NOT checked: a non-admin's view, Export PDF's printed
 layout, and the Share button on Fleet progression from its new place in the toolbar.
 
-**How to check it, about three minutes:** sign in on the live site as someone who is
-not an admin but can see Reports. Open Data > Reports. Then type
-/reports/hiring/quality into the address bar.
+**Added by phase 2 (Nov 24, not yet checked either):** Offers became its own report
+(/reports/hiring/offers, HR only), the offer tracking check moved to Recruiting >
+Offers, the Hire quality uploads moved to Data > Imports, and a new Data > Cleanup page
+holds source renaming and the Paycom mismatches. All four are admin-only in part. A
+real rename on Cleanup and a real upload on Imports have not been tried from their new
+places either, because both write live data.
 
-**What would count as a pass:** the side list shows no Hire quality or Manager
-check-ins, At a glance shows no "Left in their first year" or "Good hires" card, and
-the typed URL lands back on At a glance.
+**How to check it, about five minutes:** sign in on the live site as someone who is
+not an admin but can see Reports. Open Data > Reports. Then type
+/reports/hiring/quality and /reports/hiring/offers into the address bar. Then open
+Recruiting > Offers, Data > Imports and Data > Cleanup.
+
+**What would count as a pass:** the side list shows no Hire quality, Manager
+check-ins or Offers, At a glance shows no "Left in their first year" or "Good hires"
+card, and both typed URLs land back on At a glance. Offers shows no Tracking check,
+Imports shows no Hire quality uploads, and Cleanup shows the source names but not
+"Paycom and Journey disagree". As an admin, one source rename on Cleanup sticks after
+a reload.
 
 ---
 

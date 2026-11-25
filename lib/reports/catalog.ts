@@ -29,6 +29,7 @@ export const REPORTS: ReportEntry[] = [
   { id: "progression", group: "Pilots", title: "Fleet progression", question: "Are pilot seats filled, and how do pilots move up?", href: "/reports/pilots/progression" },
   { id: "quality", group: "Hiring", title: "Hire quality", question: "Are we hiring well?", href: "/reports/hiring/quality", hrOnly: true },
   { id: "check-ins", group: "Hiring", title: "Manager check-ins", question: "What do managers say about new hires?", href: "/reports/hiring/check-ins", hrOnly: true },
+  { id: "offers", group: "Hiring", title: "Offers", question: "Do people accept our offers?", href: "/reports/hiring/offers", hrOnly: true },
   { id: "sources", group: "Hiring", title: "Where hires come from", question: "How did people find us?", href: "/reports/hiring/sources" },
   { id: "travel", group: "Costs", title: "Hiring travel", question: "What does hiring travel cost?", href: "/reports/costs/travel" }
 ];

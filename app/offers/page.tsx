@@ -1,5 +1,7 @@
 import { OffersWorkspace } from "@/components/offers/OffersWorkspace";
+import { QualityOfHireTracking } from "@/components/reports/QualityOfHireTracking";
 import { getOffersBoard } from "@/lib/data/offers";
+import { getQohTracking } from "@/lib/quality-of-hire/tracking";
 import { requireModulePageAccess } from "@/lib/data/module-access";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +16,18 @@ export default async function OffersPage() {
   // accounts the allowlist narrows. Without the viewer it server-rendered the whole
   // offer pipeline - names, emails and decline reasons - straight into their sidebar.
   const access = await requireModulePageAccess("candidates");
-  const board = await getOffersBoard(access.viewer);
-  return <OffersWorkspace board={board} />;
+  // The Quality of Hire tracking check (milestone 4) moved here from Reports on Nov 24
+  // 2026: it is a worklist of offers. ADMINS ONLY - its loader is not narrowed by the
+  // candidate allowlist, so nobody else may be handed it.
+  const [board, tracking] = await Promise.all([getOffersBoard(access.viewer), access.role === "ADMIN" ? getQohTracking() : Promise.resolve(null)]);
+  return (
+    <>
+      <OffersWorkspace board={board} />
+      {tracking ? (
+        <div className="px-5 pb-5 lg:px-8">
+          <QualityOfHireTracking tracking={tracking} />
+        </div>
+      ) : null}
+    </>
+  );
 }

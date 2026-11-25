@@ -15,6 +15,7 @@ const protectedPagePrefixes = [
   "/calendar",
   "/candidates",
   "/changes",
+  "/cleanup",
   "/command-center",
   "/compliments",
   "/duplicate-review",

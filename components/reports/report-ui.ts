@@ -91,6 +91,11 @@ export const R = {
   thead: "bg-brand-cloudDancer/60 text-[11px] uppercase tracking-[0.14em] text-brand-grey dark:bg-white/5 dark:text-slate-400",
   th: "px-3 py-2 font-bold",
   tbody: "divide-y divide-brand-lea/10 dark:divide-white/10",
+  /** Add to `table` when the table must not scroll sideways on a phone (his rule,
+   *  Nov 14 2026): under 640px each row becomes a small card, one line per cell, and a
+   *  cell's data-l="Column name" is shown as its label. The first cell is the row's name. */
+  stackTable:
+    "max-sm:block max-sm:min-w-0 max-sm:[&_thead]:hidden max-sm:[&_tbody]:block max-sm:[&_tr]:block max-sm:[&_tr]:py-2 max-sm:[&_td]:flow-root max-sm:[&_td]:px-1 max-sm:[&_td]:py-0.5 max-sm:[&_td]:text-right max-sm:[&_td:first-child]:text-left max-sm:[&_td]:before:float-left max-sm:[&_td]:before:mr-3 max-sm:[&_td]:before:text-left max-sm:[&_td]:before:text-[11px] max-sm:[&_td]:before:font-semibold max-sm:[&_td]:before:uppercase max-sm:[&_td]:before:tracking-[0.14em] max-sm:[&_td]:before:text-brand-grey max-sm:[&_td]:before:content-[attr(data-l)] dark:max-sm:[&_td]:before:text-slate-400",
   tr: "row-wash",
   td: "px-3 py-2",
   num: "px-3 py-2 text-right tabular-nums",

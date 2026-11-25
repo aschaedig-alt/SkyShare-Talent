@@ -5,6 +5,7 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import { ChevronDown, ChevronUp, ChevronsUpDown, Download } from "lucide-react";
 import { TravelSpendYear } from "@/components/travel/TravelSpendYear";
+import { R } from "@/components/reports/report-ui";
 import { CANDIDATE_DEPARTMENTS, type CandidateDepartmentKey } from "@/lib/candidates/departments";
 import {
   TRAVEL_PURPOSES,
@@ -635,7 +636,8 @@ export function TravelSpendReport({ trips }: { trips: TravelSpendRow[] }) {
             because setting x alone computes y to auto. No height cap: the
             table grows with the trips and the page scrolls. */}
         <div className="mt-3 overflow-x-auto overflow-y-hidden">
-          <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+          {/* Stacks into one card per trip on a phone instead of scrolling sideways (R.stackTable). */}
+          <table className={clsx("w-full min-w-[760px] border-collapse text-left text-sm", R.stackTable)}>
             <thead className="bg-brand-cloudDancer/60 text-[11px] uppercase tracking-[0.14em] text-brand-grey dark:bg-white/5 dark:text-slate-400">
               <tr>
                 <SortableTh label="Traveler" sortKey="traveler" sort={sort} onSort={onSort} />
@@ -677,7 +679,7 @@ export function TravelSpendReport({ trips }: { trips: TravelSpendRow[] }) {
                           {r.route ?? "Route not set"} · {travelStatusLabel(r.status)}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-brand-black/80 dark:text-slate-300">
+                      <td data-l="Department" className="px-3 py-2 text-brand-black/80 dark:text-slate-300">
                         {spendDepartmentLabel(r.department)}
                         {r.departmentAmbiguous ? (
                           <span
@@ -688,13 +690,13 @@ export function TravelSpendReport({ trips }: { trips: TravelSpendRow[] }) {
                           </span>
                         ) : null}
                       </td>
-                      <td className="px-3 py-2 text-brand-black/80 dark:text-slate-300">{travelPurposeLabel(r.purpose)}</td>
-                      <td className="px-3 py-2">
+                      <td data-l="Purpose" className="px-3 py-2 text-brand-black/80 dark:text-slate-300">{travelPurposeLabel(r.purpose)}</td>
+                      <td data-l="Hired or not" className="px-3 py-2">
                         <span className={clsx("rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide", OUTCOME_CHIP[rowOutcome])}>
                           {SPEND_OUTCOME_LABELS[rowOutcome]}
                         </span>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-2 tabular-nums text-brand-black/80 dark:text-slate-300">
+                      <td data-l="Month" className="whitespace-nowrap px-3 py-2 tabular-nums text-brand-black/80 dark:text-slate-300">
                         {MONTH_LABELS[r.month]} {r.year}
                         {r.monthInferred ? (
                           <span
@@ -705,7 +707,7 @@ export function TravelSpendReport({ trips }: { trips: TravelSpendRow[] }) {
                           </span>
                         ) : null}
                       </td>
-                      <td className="px-3 py-2 text-right font-semibold tabular-nums text-brand-lea dark:text-slate-100">
+                      <td data-l="Cost" className="px-3 py-2 text-right font-semibold tabular-nums text-brand-lea dark:text-slate-100">
                         {formatUsd(r.total)}
                         {r.itemsMissingCost > 0 ? (
                           <div

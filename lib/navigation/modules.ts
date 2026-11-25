@@ -266,6 +266,9 @@ export const navigationGroups: readonly NavigationGroup[] = [
           { id: "imports", href: "/imports", label: "Imports / Uploads", icon: Import },
           { id: "duplicate-review", href: "/duplicate-review", label: "Duplicate Review", icon: CheckCircle2 },
           { id: "reports", href: "/reports", label: "Reports", icon: BarChart3 },
+          // Upkeep that used to sit inside Reports (Nov 24 2026): source names and the
+          // Paycom-vs-Journey leaver list. Rides on Reports access, as the rename route does.
+          { id: "reports", href: "/cleanup", label: "Cleanup", icon: Wrench },
           { id: "archive", href: "/archive", label: "Historical Archive", icon: Database },
           { id: "handbook", href: "/handbook", label: "Handbook", icon: BookOpen }
         ]

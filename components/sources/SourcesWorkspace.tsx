@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { clsx } from "clsx";
@@ -24,11 +25,21 @@ async function save(body: unknown): Promise<string | null> {
   return data?.message ?? "That did not save.";
 }
 
-export function SourcesWorkspace({ audit, canEdit }: { audit: SourceAudit; canEdit: boolean }) {
+/**
+ * Two places, one component, so the counts cannot drift between them (Nov 24 2026,
+ * Reports phase 2):
+ *   "report"  - Reports > Hiring > Where hires come from: the figures, read-only.
+ *   "cleanup" - Data > Cleanup > Source names: renaming sources and naming
+ *               spellings, which is upkeep rather than a report.
+ */
+export function SourcesWorkspace({ audit, canEdit, mode = "report" }: { audit: SourceAudit; canEdit: boolean; mode?: "report" | "cleanup" }) {
   const [filter, setFilter] = useState("");
   const [onlyName, setOnlyName] = useState<string | null>(null);
   const t = audit.totals;
   const top = audit.sources[0];
+  const cleanup = mode === "cleanup";
+  // Renaming happens on Cleanup only; the report never shows the inputs.
+  const editHere = cleanup && canEdit;
 
   const spellings = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -46,17 +57,38 @@ export function SourcesWorkspace({ audit, canEdit }: { audit: SourceAudit; canEd
 
       <section className={R.panel}>
         <div className={R.header}>
-          <div>
-            <p className={R.eyebrow}>Sources</p>
-            <h2 className={R.title}>Where applicants and hires came from</h2>
-            <p className={R.lede}>
-              Paycom records two for each application — where they <span className={R.term}>arrived from</span>, and what they{" "}
-              <span className={R.term}>said</span> when asked how they heard about us — and both are kept, on every application a person made. The
-              JazzHR years carry one channel per person. Capitals, spaces, &ldquo;www.&rdquo; and &ldquo;.com&rdquo; never make a new source.
-            </p>
-          </div>
+          {cleanup ? (
+            <div>
+              <p className={R.eyebrow}>Cleanup</p>
+              <h2 className={R.title}>Source names</h2>
+              <p className={R.lede}>
+                Every spelling a source has arrived as, and the one name it counts under on Reports &gt; Where hires come from. Renaming a source, or
+                giving a spelling a name, changes no application, and every change is on the Activity log.
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p className={R.eyebrow}>Hiring</p>
+              <h2 className={R.title}>Where applicants and hires came from</h2>
+              <p className={R.lede}>
+                Paycom records two for each application — where they <span className={R.term}>arrived from</span>, and what they{" "}
+                <span className={R.term}>said</span> when asked how they heard about us — and both are kept, on every application a person made. The
+                JazzHR years carry one channel per person. Capitals, spaces, &ldquo;www.&rdquo; and &ldquo;.com&rdquo; never make a new source.
+              </p>
+            </div>
+          )}
         </div>
 
+        {cleanup ? (
+          <div className={R.note}>
+            <span className={R.strong}>{n(t.unmapped)}</span> {t.unmapped === 1 ? "spelling has" : "spellings have"} no name yet
+            {t.unmapped ? " - they are listed first below, shaded." : ", so every source counts under one name."}
+            {canEdit ? "" : " You can see these, but changing a name needs a recruiter, an admin, or edit rights on Reports."}
+          </div>
+        ) : null}
+
+        {cleanup ? null : (
+        <>
         <div className={R.hero}>
           <div className={R.heroRow}>
             <span className={R.heroFigure}>{n(audit.sources.length)}</span>
@@ -75,7 +107,7 @@ export function SourcesWorkspace({ audit, canEdit }: { audit: SourceAudit; canEd
             { label: "Two places on one application", value: n(t.paycomWithBoth), sub: "arrived from one, said another · both kept" },
             { label: "More than one, over time", value: n(t.peopleWithSeveral), sub: "people whose applications name 2+ sources" },
             { label: "Say who referred them", value: n(t.referralNames), sub: "applications with a referral name" },
-            { label: "Spellings without a name", value: n(t.unmapped), sub: t.unmapped ? "listed first below · give each a name" : "every spelling counts under a name" }
+            { label: "Spellings without a name", value: n(t.unmapped), sub: t.unmapped ? "named on Data > Cleanup" : "every spelling counts under a name" }
           ].map((c) => (
             <div key={c.label} className={R.tile}>
               <div className={R.tileLabel}>{c.label}</div>
@@ -84,11 +116,13 @@ export function SourcesWorkspace({ audit, canEdit }: { audit: SourceAudit; canEd
             </div>
           ))}
         </div>
+        </>
+        )}
 
         <div className="mt-5">
           <div className={R.sectionLabel}>Sources — a person counts once under each source they named</div>
           <div className={R.tableWrap}>
-            <table className={clsx(R.table, canEdit ? "min-w-[760px]" : "min-w-[520px]")}>
+            <table className={clsx(R.table, editHere ? "min-w-[760px]" : clsx("min-w-[520px]", R.stackTable))}>
               <thead className={R.thead}>
                 <tr>
                   <th className={R.th}>Source</th>
@@ -96,18 +130,26 @@ export function SourcesWorkspace({ audit, canEdit }: { audit: SourceAudit; canEd
                   <th className={clsx(R.th, "text-right")} title="Paycom applications naming it, either way">Paycom applications</th>
                   <th className={clsx(R.th, "text-right")} title="An application marked Hired, or an employee record">Hired</th>
                   <th className={clsx(R.th, "text-right")}>Spellings</th>
-                  {canEdit ? <th className={R.th}>Rename, or fold into another</th> : null}
+                  {editHere ? <th className={R.th}>Rename, or fold into another</th> : null}
                 </tr>
               </thead>
               <tbody className={R.tbody}>
                 {audit.sources.map((s) => (
-                  <SourceRow key={s.name} s={s} names={audit.names} canEdit={canEdit} selected={onlyName === s.name} onSelect={(name) => setOnlyName(onlyName === name ? null : name)} />
+                  <SourceRow
+                    key={s.name}
+                    s={s}
+                    names={audit.names}
+                    canEdit={editHere}
+                    selected={onlyName === s.name}
+                    onSelect={cleanup ? (name) => setOnlyName(onlyName === name ? null : name) : null}
+                  />
                 ))}
               </tbody>
             </table>
           </div>
         </div>
 
+        {cleanup ? (
         <div className="mt-5">
           <div className="flex flex-wrap items-end justify-between gap-2">
             <div className={R.sectionLabel}>Every spelling — as it arrived, and the source it counts as</div>
@@ -154,19 +196,43 @@ export function SourcesWorkspace({ audit, canEdit }: { audit: SourceAudit; canEd
             ))}
           </datalist>
         </div>
+        ) : null}
 
         <p className={clsx(R.footnote, "mt-5")}>
           Paycom&apos;s two fields come from its applicant Source Report, matched to each application by its Paycom application number; an application
           newer than the last import picks its source up the next time the report is loaded. Hired means an application marked Hired, or an employee
           record. Renaming a source, or giving a spelling a name, changes no application — only the name it counts under — and every change is on the
           Activity log.
+          {cleanup ? null : (
+            <>
+              {" "}
+              Source names are kept on{" "}
+              <Link href="/cleanup" className={R.link}>
+                Data &gt; Cleanup
+              </Link>
+              .
+            </>
+          )}
         </p>
       </section>
     </div>
   );
 }
 
-function SourceRow({ s, names, canEdit, selected, onSelect }: { s: SourceSummary; names: string[]; canEdit: boolean; selected: boolean; onSelect: (name: string) => void }) {
+function SourceRow({
+  s,
+  names,
+  canEdit,
+  selected,
+  onSelect
+}: {
+  s: SourceSummary;
+  names: string[];
+  canEdit: boolean;
+  selected: boolean;
+  /** Cleanup only: a source name filters the spelling list below. */
+  onSelect: ((name: string) => void) | null;
+}) {
   const router = useRouter();
   const [to, setTo] = useState(s.name);
   const [busy, setBusy] = useState(false);
@@ -175,15 +241,27 @@ function SourceRow({ s, names, canEdit, selected, onSelect }: { s: SourceSummary
   return (
     <tr className={clsx(R.tr, selected && "bg-brand-gold/10")}>
       <td className={R.td}>
-        <button type="button" onClick={() => onSelect(s.name)} aria-pressed={selected} className={clsx(R.link, "underline-offset-2 hover:underline")}>
-          {s.name}
-        </button>
+        {onSelect ? (
+          <button type="button" onClick={() => onSelect(s.name)} aria-pressed={selected} className={clsx(R.link, "underline-offset-2 hover:underline")}>
+            {s.name}
+          </button>
+        ) : (
+          <span className={R.strong}>{s.name}</span>
+        )}
         {!s.mapped ? <span className={clsx(R.chip, "ml-1.5 border-amber-400/60 text-amber-600 dark:text-amber-300")}>no name yet</span> : null}
       </td>
-      <td className={clsx(R.num, "font-semibold text-brand-lea dark:text-slate-100")}>{n(s.people)}</td>
-      <td className={R.num}>{n(s.applications)}</td>
-      <td className={clsx(R.num, !s.hired && R.muted)}>{n(s.hired)}</td>
-      <td className={R.num}>{s.spellings}</td>
+      <td data-l="People" className={clsx(R.num, "font-semibold text-brand-lea dark:text-slate-100")}>
+        {n(s.people)}
+      </td>
+      <td data-l="Paycom applications" className={R.num}>
+        {n(s.applications)}
+      </td>
+      <td data-l="Hired" className={clsx(R.num, !s.hired && R.muted)}>
+        {n(s.hired)}
+      </td>
+      <td data-l="Spellings" className={R.num}>
+        {s.spellings}
+      </td>
       {canEdit ? (
         <td className={R.td}>
           <div className="flex items-center gap-1.5">
