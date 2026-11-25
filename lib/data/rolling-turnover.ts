@@ -7,13 +7,18 @@ import { getSituationalMarks, periodKey } from "@/lib/quality-of-hire/situationa
 import { EXIT_MATCH_DAYS } from "@/lib/quality-of-hire/report";
 import { LAYOFF_REASONS, NOT_COUNTED_QUITS } from "@/lib/quality-of-hire/categories";
 import { TURNOVER_DEPARTMENTS, turnoverDepartment, type TurnoverDepartment } from "@/lib/reports/turnover-departments";
+import { rollingAt, type MonthCell, type RollingTurnover, type TurnoverHistory } from "@/lib/reports/rolling-turnover-math";
+
+export type { MonthCell, RollingTurnover, TurnoverHistory, TurnoverSeries } from "@/lib/reports/rolling-turnover-math";
 
 // ROLLING 12-MONTH TURNOVER - the Turnover Manager Dashboard's measure, from Journey.
 //
 // For each month: everyone who left in the 12 months up to that month, divided by
 // the average month-end headcount over those same 12 months. The current month ends
 // today. He asked for these charts on Reports on 2026-11-24, from the dashboard he
-// built in May 2026 out of Paycom exports.
+// built in May 2026 out of Paycom exports, and the same day for its Month and Year
+// pickers - so every month back to the start of Journey's history is counted here,
+// once, and the rolling arithmetic lives in lib/reports/rolling-turnover-math.ts.
 //
 // Who counts is exactly Headcount & tenure's rule (periodsOf, contractorOn): employees
 // only, contractors on the day left out, test records left out, canceled hires (no
@@ -22,38 +27,18 @@ import { TURNOVER_DEPARTMENTS, turnoverDepartment, type TurnoverDepartment } fro
 //
 // "Leave out" is Hire quality's Not counted rule: layoffs, moving, retirement (the
 // Paycom reason on the matching exit row, matched within EXIT_MATCH_DAYS as Hire
-// quality does), and any exit marked as caused by the business.
-
-export type TurnoverSeries = {
-  /** Rolling turnover at each point, in percent, one decimal. */
-  rate: number[];
-  /** The same, leaving out layoffs, moves, retirement and business-caused exits. */
-  leaveOut: number[];
-  /** Exits in the 12 months up to the last point. */
-  exits: number;
-  exitsLeftOut: number;
-  /** Average month-end headcount over the 12 months up to the last point. */
-  avgHeadcount: number;
-};
-
-export type RollingTurnover = {
-  /** Today, YYYY-MM-DD: the last point's month ends here. */
-  asOf: string;
-  points: Array<{ key: string; label: string; long: string }>;
-  company: TurnoverSeries;
-  departments: Array<{ name: TurnoverDepartment; series: TurnoverSeries }>;
-  /** People Journey could not place in a department (the dashboard's N/A, which it never charts). */
-  unplaced: { avgHeadcount: number; exits: number };
-};
+// quality does), and any exit marked as caused by the business. An exit with no
+// Paycom row (every exit before 2021: its exit files start in 2021) has no reason,
+// so it is never left out.
 
 const DAY = 86_400_000;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+/** Nobody's history is read before this: the employee import starts in 2010. */
+const EARLIEST = Date.UTC(2010, 0, 1);
 const dayOf = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 const iso = (t: number) => new Date(t).toISOString().slice(0, 10);
-const round1 = (n: number) => Math.round(n * 10) / 10;
 
-type Cell = { head: number; exits: number; exitsLeftOut: number };
 type Role = { title: string; startDate: Date; endDate: Date | null };
 
 /** The title on a day: the role covering it (latest start wins), else the last one begun before it. */
@@ -77,20 +62,9 @@ function officeToday(now: Date): number {
   return Date.UTC(y, m - 1, d);
 }
 
-export async function getRollingTurnover(now: Date = new Date(), pointCount = 12): Promise<RollingTurnover> {
+/** Every month's counts, from the first month anybody worked here to this one. */
+export async function getTurnoverHistory(now: Date = new Date()): Promise<TurnoverHistory> {
   const today = officeToday(now);
-  const t = new Date(today);
-  // pointCount rolling points need 11 more months of headcount behind the first.
-  const span = pointCount + 11;
-  const first = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() - (span - 1), 1));
-  const months = Array.from({ length: span }, (_, i) => {
-    const y = first.getUTCFullYear();
-    const m = first.getUTCMonth() + i;
-    const start = Date.UTC(y, m, 1);
-    const end = Math.min(Date.UTC(y, m + 1, 0), today);
-    const d = new Date(start);
-    return { start, end, isToday: end === today, key: iso(start).slice(0, 7), label: MONTHS[d.getUTCMonth()], long: `${LONG[d.getUTCMonth()]} ${d.getUTCFullYear()}` };
-  });
 
   const [rows, terminations, termTypes, situational] = await Promise.all([
     prisma.newHire.findMany({
@@ -112,44 +86,69 @@ export async function getRollingTurnover(now: Date = new Date(), pointCount = 12
     getSituationalMarks()
   ]);
 
+  const people = rows
+    .filter((r) => !isTestTagged(r.tags))
+    .map((r) => ({ r, periods: periodsOf(r) }))
+    .filter((p) => p.periods.length > 0);
+
+  const firstStart = Math.max(EARLIEST, Math.min(today, ...people.flatMap((p) => p.periods.map((x) => dayOf(x.start)))));
+  const f = new Date(firstStart);
+  const t = new Date(today);
+  const count = (t.getUTCFullYear() - f.getUTCFullYear()) * 12 + (t.getUTCMonth() - f.getUTCMonth()) + 1;
+  const months = Array.from({ length: count }, (_, i) => {
+    const y = f.getUTCFullYear();
+    const m = f.getUTCMonth() + i;
+    const start = Date.UTC(y, m, 1);
+    const d = new Date(start);
+    const yy = String(d.getUTCFullYear()).slice(2);
+    return {
+      start,
+      end: Math.min(Date.UTC(y, m + 1, 0), today),
+      key: iso(start).slice(0, 7),
+      label: `${MONTHS[d.getUTCMonth()]} '${yy}`,
+      long: `${LONG[d.getUTCMonth()]} ${d.getUTCFullYear()}`
+    };
+  });
+  const last = months.length - 1;
+
   const exitRows = new Map<string, ExitRow[]>();
-  for (const r of [...(terminations?.rows ?? []), ...(termTypes?.rows ?? [])]) {
-    if (!r.newHireId || !r.termDate) continue;
-    exitRows.set(r.newHireId, [...(exitRows.get(r.newHireId) ?? []), r]);
+  for (const x of [...(terminations?.rows ?? []), ...(termTypes?.rows ?? [])]) {
+    if (!x.newHireId || !x.termDate) continue;
+    exitRows.set(x.newHireId, [...(exitRows.get(x.newHireId) ?? []), x]);
   }
 
-  const groups: Array<TurnoverDepartment | "N/A" | "Company"> = [...TURNOVER_DEPARTMENTS, "N/A", "Company"];
-  const cells = new Map(groups.map((g) => [g, months.map((): Cell => ({ head: 0, exits: 0, exitsLeftOut: 0 }))]));
-  const add = (g: TurnoverDepartment | null, i: number, f: (c: Cell) => void) => {
-    f((cells.get(g ?? "N/A") as Cell[])[i]);
-    f((cells.get("Company") as Cell[])[i]);
+  const blank = () => months.map((): MonthCell => ({ head: 0, exits: 0, exitsLeftOut: 0 }));
+  const company = blank();
+  const unplaced = blank();
+  const byDept = new Map<TurnoverDepartment, MonthCell[]>(TURNOVER_DEPARTMENTS.map((d) => [d, blank()]));
+  const add = (g: TurnoverDepartment | null, i: number, fn: (c: MonthCell) => void) => {
+    fn((g ? byDept.get(g) : unplaced)![i]);
+    fn(company[i]);
   };
 
-  for (const r of rows) {
-    if (isTestTagged(r.tags)) continue;
-    const periods = periodsOf(r);
-    if (!periods.length) continue;
+  for (const { r, periods } of people) {
     const placed: Placed = { status: r.employmentStatus, periods, contract: r.contractPeriods.map((c) => ({ start: c.startDate, end: c.endDate })) };
     const deptOn = (d: Date) => turnoverDepartment(r.department, titleOn(r.roleAssignments, d));
 
-    months.forEach((m, i) => {
-      const end = new Date(m.end);
-      if (periods.some((p) => covers(p, end)) && !contractorOn(placed, end, m.isToday)) add(deptOn(end), i, (c) => c.head++);
-    });
+    // Month-end headcount: once a month however many periods cover it, as Headcount does.
+    for (let i = 0; i <= last; i++) {
+      const end = new Date(months[i].end);
+      if (periods.some((p) => covers(p, end)) && !contractorOn(placed, end, i === last)) add(deptOn(end), i, (c) => c.head++);
+    }
 
     for (const p of periods) {
-      if (!p.end) continue;
-      const left = dayOf(p.end);
-      if (left > today) continue;
-      const i = months.findIndex((m) => left >= m.start && left <= m.end);
+      const s = dayOf(p.start);
+      const e = p.end ? dayOf(p.end) : null;
+      // The exit, in the month it happened.
+      if (e === null || e > today || !p.end) continue;
+      const i = months.findIndex((m) => e >= m.start && e <= m.end);
       if (i < 0 || contractorOn(placed, p.end, false)) continue;
       const near = (exitRows.get(r.id) ?? [])
-        .map((x) => ({ x, gap: Math.abs(Date.parse(`${x.termDate}T00:00:00Z`) - left) }))
+        .map((x) => ({ x, gap: Math.abs(Date.parse(`${x.termDate}T00:00:00Z`) - e) }))
         .filter((o) => o.gap <= EXIT_MATCH_DAYS * DAY)
         .sort((a, b) => a.gap - b.gap)[0]?.x;
       const reason = near?.reason ?? null;
-      const leftOut =
-        Boolean(situational[periodKey(r.id, iso(dayOf(p.start)))]) || (reason !== null && (LAYOFF_REASONS.has(reason) || NOT_COUNTED_QUITS.has(reason)));
+      const leftOut = Boolean(situational[periodKey(r.id, iso(s))]) || (reason !== null && (LAYOFF_REASONS.has(reason) || NOT_COUNTED_QUITS.has(reason)));
       add(deptOn(p.end), i, (c) => {
         c.exits++;
         if (leftOut) c.exitsLeftOut++;
@@ -157,33 +156,17 @@ export async function getRollingTurnover(now: Date = new Date(), pointCount = 12
     }
   }
 
-  // Rolling windows: point j covers months j .. j+11.
-  const seriesOf = (g: TurnoverDepartment | "N/A" | "Company"): TurnoverSeries => {
-    const cs = cells.get(g) as Cell[];
-    const windowAt = (j: number) => {
-      const w = cs.slice(j, j + 12);
-      const avg = w.reduce((s, c) => s + c.head, 0) / 12;
-      const exits = w.reduce((s, c) => s + c.exits, 0);
-      const leftOut = w.reduce((s, c) => s + c.exitsLeftOut, 0);
-      return { avg, exits, leftOut };
-    };
-    const rate: number[] = [];
-    const leaveOut: number[] = [];
-    for (let j = 0; j < pointCount; j++) {
-      const w = windowAt(j);
-      rate.push(w.avg ? round1((w.exits / w.avg) * 100) : 0);
-      leaveOut.push(w.avg ? round1(((w.exits - w.leftOut) / w.avg) * 100) : 0);
-    }
-    const last = windowAt(pointCount - 1);
-    return { rate, leaveOut, exits: last.exits, exitsLeftOut: last.leftOut, avgHeadcount: round1(last.avg) };
-  };
-
-  const na = seriesOf("N/A");
   return {
     asOf: iso(today),
-    points: months.slice(11).map((m) => ({ key: m.key, label: m.label, long: m.long })),
-    company: seriesOf("Company"),
-    departments: TURNOVER_DEPARTMENTS.map((name) => ({ name, series: seriesOf(name) })),
-    unplaced: { avgHeadcount: na.avgHeadcount, exits: na.exits }
+    months: months.map(({ key, label, long }) => ({ key, label, long })),
+    company,
+    departments: TURNOVER_DEPARTMENTS.map((name) => ({ name, cells: byDept.get(name) as MonthCell[] })),
+    unplaced
   };
+}
+
+/** The window ending this month - At a glance. */
+export async function getRollingTurnover(now: Date = new Date()): Promise<RollingTurnover> {
+  const h = await getTurnoverHistory(now);
+  return rollingAt(h, h.months.length - 1);
 }

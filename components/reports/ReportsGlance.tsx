@@ -8,7 +8,7 @@ import { TurnoverChart, TurnoverLegend } from "@/components/reports/TurnoverChar
 import { ExitsToggle, exitsFor, valuesFor } from "@/components/reports/TurnoverReport";
 import { formatCalendarDay } from "@/lib/dates/display";
 import { REPORTS } from "@/lib/reports/catalog";
-import type { RollingTurnover } from "@/lib/data/rolling-turnover";
+import type { RollingTurnover } from "@/lib/reports/rolling-turnover-math";
 
 // Reports > At a glance: the one number from each report, each card a real link to
 // the report it came from. Rolling turnover leads, with the dashboard's chart.
