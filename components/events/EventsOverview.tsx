@@ -4,15 +4,29 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { CalendarRange, Mail, MapPin, Package, Plane, Users } from "lucide-react";
+import { CalendarRange, Mail, MapPin, Package, Plane, Sparkles, Users } from "lucide-react";
 import { Badge, Button, EmptyState, Input, Modal } from "@/components/ui";
-import { EVENT_TYPES, aircraftPlanLabel, eventStatusLabel, eventTypeLabel } from "@/lib/events/constants";
+import {
+  EVENT_AUDIENCES,
+  aircraftPlanLabel,
+  eventHref,
+  eventStatusLabel,
+  eventTypeLabel,
+  typesFor,
+  type EventAudience
+} from "@/lib/events/constants";
 import { EventsCalendar } from "@/components/events/EventsCalendar";
 import { EventFromEmailModal } from "@/components/events/EventFromEmailModal";
 import type { CalendarEvent, EventListItem, PersonRef } from "@/lib/data/events";
 import { dayKeyOf, formatMixedDay, zoneForValue } from "@/lib/dates/display";
 
 type EventsOverviewProps = {
+  /**
+   * Which home this is (Aimee, Nov 25 2026): EXTERNAL = Recruiting > Career Fairs
+   * (/events), INTERNAL = People > Company Events (/company-events). New event
+   * starts on this audience, and the event lands in the list its choice says.
+   */
+  audience: EventAudience;
   upcoming: EventListItem[];
   past: EventListItem[];
   calendar: CalendarEvent[];
@@ -59,9 +73,10 @@ function place(e: EventListItem) {
 }
 
 function EventCard({ event }: { event: EventListItem }) {
+  const internal = event.audience === "INTERNAL";
   return (
     <Link
-      href={`/events/${event.id}`}
+      href={eventHref(event)}
       className="block rounded border border-brand-lea/10 bg-white p-4 shadow-panel transition-shadow hover:shadow-glow dark:border-white/10 dark:bg-brand-panel"
     >
       <div className="flex items-start justify-between gap-2">
@@ -103,9 +118,17 @@ function EventCard({ event }: { event: EventListItem }) {
             {event.openTaskCount} to do
           </span>
         ) : null}
+        {internal ? (
+          <span className="inline-flex items-center gap-1 rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-2 py-0.5 text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
+            <Sparkles className="h-3 w-3" />
+            <span className="font-semibold">{event.activityCount}</span>
+            <span className="text-brand-grey dark:text-slate-400">{event.activityCount === 1 ? "activity" : "activities"}</span>
+          </span>
+        ) : null}
         {/* Aircraft only earns a pill when there is something to say. "Not
-            bringing one" is a settled answer and does not need the space. */}
-        {event.aircraftPlan !== "NOT_BRINGING" ? (
+            bringing one" is a settled answer and does not need the space. An
+            internal event never takes one. */}
+        {!internal && event.aircraftPlan !== "NOT_BRINGING" ? (
           <span
             className={clsx(
               "inline-flex items-center gap-1 rounded px-2 py-0.5 font-semibold",
@@ -130,7 +153,8 @@ function EventCard({ event }: { event: EventListItem }) {
   );
 }
 
-export function EventsOverview({ upcoming, past, calendar, reorderCount, roster }: EventsOverviewProps) {
+export function EventsOverview({ audience: home, upcoming, past, calendar, reorderCount, roster }: EventsOverviewProps) {
+  const external = home === "EXTERNAL";
   const router = useRouter();
   const [view, setView] = useState<"upcoming" | "calendar" | "past">("upcoming");
   const [adding, setAdding] = useState(false);
@@ -140,7 +164,10 @@ export function EventsOverview({ upcoming, past, calendar, reorderCount, roster 
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState("");
-  const [type, setType] = useState<string>("CAREER_FAIR");
+  // The first question on New event. Starts on this page's audience; choosing the
+  // other one is fine - the event is filed (and opened) where the choice says.
+  const [audience, setAudience] = useState<EventAudience>(home);
+  const [type, setType] = useState<string>(typesFor(home)[0].value);
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
   const [venue, setVenue] = useState("");
@@ -157,13 +184,13 @@ export function EventsOverview({ upcoming, past, calendar, reorderCount, roster 
       const res = await fetch("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, type, startsAt, endsAt, venue, city, state, ownerId })
+        body: JSON.stringify({ name, audience, type, startsAt, endsAt, venue, city, state, ownerId })
       });
       const payload = (await res.json()) as { id?: string; message?: string };
       if (!res.ok || !payload.id) {
         throw new Error(payload?.message ?? "Unable to create the event.");
       }
-      router.push(`/events/${payload.id}`);
+      router.push(eventHref({ id: payload.id, audience }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to create the event.");
       setSaving(false);
@@ -174,27 +201,20 @@ export function EventsOverview({ upcoming, past, calendar, reorderCount, roster 
     <div className="space-y-4 px-5 py-5 lg:px-8">
       <section className="flex flex-wrap items-start justify-between gap-3 rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">Recruiting</p>
-          <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">Events &amp; Outreach</h1>
+          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
+            {external ? "Recruiting · Events & Outreach" : "People"}
+          </p>
+          <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">{external ? "Career Fairs" : "Company Events"}</h1>
           <p className="mt-1 max-w-2xl text-sm text-brand-grey dark:text-slate-400">
-            Career fairs, school visits, and community events: who is going, what we are bringing, what still needs
-            doing, and when to reorder the swag.
+            {external
+              ? "Career fairs, school visits and community events: who is going, what we are bringing, what still needs doing, and when to reorder the swag."
+              : "Events for our own people: the holiday party, team events, company meetings. Each has its guests, to-dos, party store and activities."}
           </p>
         </div>
+        {/* The scavenger hunt and party store buttons that sat here moved INTO the
+            event they belong to (Nov 25 2026): Activities and Party store tabs. */}
         <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href="/events/exec-hunt"
-            className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"
-          >
-            🎄 Christmas scavenger hunt
-          </Link>
-          <Link
-            href="/events/store"
-            className="rounded border border-brand-lea/20 px-3 py-1.5 text-xs font-semibold text-brand-lea transition hover:shadow-glow dark:border-white/10 dark:text-slate-100"
-          >
-            Party store
-          </Link>
-          {reorderCount > 0 ? (
+          {external && reorderCount > 0 ? (
             <Link
               href="/events/supplies"
               className="rounded border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 transition hover:shadow-glow dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300"
@@ -202,10 +222,12 @@ export function EventsOverview({ upcoming, past, calendar, reorderCount, roster 
               {reorderCount} to reorder
             </Link>
           ) : null}
-          <Button variant="secondary" onClick={() => setFromEmail(true)}>
-            <Mail className="mr-1.5 h-4 w-4" />
-            From an email
-          </Button>
+          {external ? (
+            <Button variant="secondary" onClick={() => setFromEmail(true)}>
+              <Mail className="mr-1.5 h-4 w-4" />
+              From an email
+            </Button>
+          ) : null}
           <Button onClick={() => setAdding(true)}>+ New event</Button>
         </div>
       </section>
@@ -250,7 +272,9 @@ export function EventsOverview({ upcoming, past, calendar, reorderCount, roster 
           title={view === "upcoming" ? "No events on the calendar" : "No past events yet"}
           description={
             view === "upcoming"
-              ? "Add the next career fair or school visit to start tracking who is going and what to bring."
+              ? external
+                ? "Add the next career fair or school visit to start tracking who is going and what to bring."
+                : "Add the next party or team event to start planning guests, to-dos and activities."
               : "Events move here once they are complete or the date has passed."
           }
           action={view === "upcoming" ? <Button size="sm" onClick={() => setAdding(true)}>+ New event</Button> : undefined}
@@ -263,13 +287,47 @@ export function EventsOverview({ upcoming, past, calendar, reorderCount, roster 
         </div>
       )}
 
-      <EventFromEmailModal open={fromEmail} onClose={() => setFromEmail(false)} />
+      {external ? <EventFromEmailModal open={fromEmail} onClose={() => setFromEmail(false)} /> : null}
 
       <Modal open={adding} onClose={() => setAdding(false)} busy={saving} maxWidth="max-w-lg">
         <h2 className="text-base font-semibold text-brand-lea dark:text-slate-100">New event</h2>
         <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
           Name and start date are all you need — the rest can be filled in later.
         </p>
+        {/* Internal or external first: it decides which list the event goes on and
+            which types are offered. Selected = navy with a gold ring, the app's
+            selected state. */}
+        <div role="radiogroup" aria-label="Who is this event for?" className="mt-4 grid gap-2 sm:grid-cols-2">
+          {EVENT_AUDIENCES.map((a) => {
+            const on = audience === a.value;
+            return (
+              <button
+                key={a.value}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                onClick={() => {
+                  setAudience(a.value);
+                  setType(typesFor(a.value)[0].value);
+                }}
+                className={clsx(
+                  "rounded border p-3 text-left transition hover:shadow-glow",
+                  on
+                    ? "border-brand-gold bg-brand-lea text-white ring-1 ring-brand-gold"
+                    : "border-brand-lea/15 bg-white text-brand-lea dark:border-white/10 dark:bg-brand-panel dark:text-slate-100"
+                )}
+              >
+                <span className="block text-sm font-semibold">{a.label}</span>
+                <span className={clsx("mt-0.5 block text-xs", on ? "text-white/80" : "text-brand-grey dark:text-slate-400")}>
+                  {a.hint}
+                </span>
+                <span className={clsx("mt-1 block text-[11px]", on ? "text-brand-gold" : "text-brand-grey dark:text-slate-500")}>
+                  Goes to {a.value === "INTERNAL" ? "People › Company Events" : "Recruiting › Career Fairs"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="block sm:col-span-2">
             <span className={LABEL}>Event name</span>
@@ -277,13 +335,13 @@ export function EventsOverview({ upcoming, past, calendar, reorderCount, roster 
               className="mt-1"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="UVU Aviation Career Fair"
+              placeholder={audience === "INTERNAL" ? "2026 Christmas Holiday Party" : "UVU Aviation Career Fair"}
             />
           </label>
           <label className="block">
             <span className={LABEL}>Type</span>
             <select className={`mt-1 ${FIELD}`} value={type} onChange={(e) => setType(e.target.value)}>
-              {EVENT_TYPES.map((t) => (
+              {typesFor(audience).map((t) => (
                 <option key={t.value} value={t.value}>
                   {t.label}
                 </option>

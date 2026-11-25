@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Plane } from "lucide-react";
 import clsx from "clsx";
-import { eventStatusLabel, eventTypeLabel } from "@/lib/events/constants";
+import { eventHref, eventStatusLabel, eventTypeLabel } from "@/lib/events/constants";
 import type { CalendarEvent } from "@/lib/data/events";
 
 /**
@@ -195,7 +195,7 @@ export function EventsCalendar({ events }: { events: CalendarEvent[] }) {
                 {dayEvents.slice(0, 2).map((event) => (
                   <Link
                     key={event.id}
-                    href={`/events/${event.id}`}
+                    href={eventHref(event)}
                     // A month grid shows up to two chips a day across ~31 days, so the
                     // default prefetch fires dozens of /events/[id] requests just for
                     // rendering the month. Same reason the sidebar's links opt out.
@@ -233,7 +233,7 @@ export function EventsCalendar({ events }: { events: CalendarEvent[] }) {
                       {dayEvents.map((event) => (
                         <Link
                           key={event.id}
-                          href={`/events/${event.id}`}
+                          href={eventHref(event)}
                           // Same reasoning as the day chips above — this "+N more"
                           // popover can hold every event on a busy day at once.
                           prefetch={false}

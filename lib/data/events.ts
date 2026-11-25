@@ -24,6 +24,9 @@ export type EventListItem = {
   openTaskCount: number;
   aircraftPlan: string;
   aircraftTail: string | null;
+  /** EXTERNAL | INTERNAL - decides which list it is on and where its page lives. */
+  audience: string;
+  activityCount: number;
 };
 
 export type AttendeeView = {
@@ -70,6 +73,24 @@ export type MeetingView = {
   taskCount: number;
 };
 
+export type ActivityCommentView = { id: string; author: string | null; body: string; createdAt: string };
+
+export type ActivityView = {
+  id: string;
+  name: string;
+  description: string | null;
+  /** CUSTOM | SCAVENGER_HUNT */
+  kind: string;
+  /** IDEA | PLANNED | READY | DROPPED */
+  status: string;
+  owner: string | null;
+  suggestedBy: string | null;
+  meetingId: string | null;
+  meetingTitle: string | null;
+  createdAt: string;
+  comments: ActivityCommentView[];
+};
+
 export type PersonRef = {
   id: string;
   name: string;
@@ -109,6 +130,12 @@ export type EventDetail = {
   contactEmail: string | null;
   contactPhone: string | null;
   shipToAddress: string | null;
+  /** EXTERNAL | INTERNAL */
+  audience: string;
+  /** Internal events only: what people will do there, the scavenger hunt among them. */
+  activities: ActivityView[];
+  /** The party store opened for this event, if any (PartyStore.eventId). */
+  storeId: string | null;
   attendees: AttendeeView[];
   supplies: SupplyLineView[];
   tasks: TaskView[];
@@ -147,14 +174,22 @@ function personName(n: { name: string }) {
   return n.name;
 }
 
-export async function getEvents(): Promise<{ upcoming: EventListItem[]; past: EventListItem[] }> {
+/**
+ * The events on one list. Career Fairs (/events) shows EXTERNAL events and Company
+ * Events (/company-events) shows INTERNAL ones - Aimee's two homes, Nov 25 2026.
+ */
+export async function getEvents(
+  audience: "EXTERNAL" | "INTERNAL" = "EXTERNAL"
+): Promise<{ upcoming: EventListItem[]; past: EventListItem[] }> {
   const rows = await prisma.event.findMany({
+    where: { audience },
     orderBy: [{ startsAt: "asc" }],
     include: {
       owner: { select: { name: true } },
       attendees: { select: { status: true } },
       supplies: { select: { id: true } },
-      tasks: { select: { done: true } }
+      tasks: { select: { done: true } },
+      _count: { select: { activities: true } }
     }
   });
 
@@ -174,7 +209,9 @@ export async function getEvents(): Promise<{ upcoming: EventListItem[]; past: Ev
     supplyCount: e.supplies.length,
     openTaskCount: e.tasks.filter((t) => !t.done).length,
     aircraftPlan: e.aircraftPlan,
-    aircraftTail: e.aircraftTail
+    aircraftTail: e.aircraftTail,
+    audience: e.audience,
+    activityCount: e._count.activities
   }));
 
   // "Past" is about the calendar, not the status — a canceled future event still
@@ -237,7 +274,15 @@ export async function getEventDetail(id: string): Promise<EventDetail | null> {
       meetings: {
         orderBy: [{ heldAt: "desc" }, { createdAt: "desc" }],
         select: { id: true, title: true, heldAt: true, fileName: true, createdAt: true, _count: { select: { tasks: true } } }
-      }
+      },
+      activities: {
+        orderBy: [{ createdAt: "asc" }],
+        include: {
+          meeting: { select: { title: true } },
+          comments: { orderBy: { createdAt: "asc" } }
+        }
+      },
+      stores: { select: { id: true }, orderBy: { createdAt: "desc" }, take: 1 }
     }
   });
   if (!event) return null;
@@ -277,6 +322,21 @@ export async function getEventDetail(id: string): Promise<EventDetail | null> {
     contactEmail: event.contactEmail,
     contactPhone: event.contactPhone,
     shipToAddress: event.shipToAddress,
+    audience: event.audience,
+    activities: event.activities.map((a) => ({
+      id: a.id,
+      name: a.name,
+      description: a.description,
+      kind: a.kind,
+      status: a.status,
+      owner: a.owner,
+      suggestedBy: a.suggestedBy,
+      meetingId: a.meetingId,
+      meetingTitle: a.meeting?.title ?? null,
+      createdAt: a.createdAt.toISOString(),
+      comments: a.comments.map((c) => ({ id: c.id, author: c.author, body: c.body, createdAt: c.createdAt.toISOString() }))
+    })),
+    storeId: event.stores[0]?.id ?? null,
     attendees: event.attendees.map((a) => ({
       id: a.id,
       newHireId: a.newHireId,
@@ -540,10 +600,13 @@ export type CalendarEvent = {
   venue: string | null;
   aircraftPlan: string;
   attendeeCount: number;
+  audience: string;
 };
 
-export async function getEventCalendar(): Promise<CalendarEvent[]> {
+/** Each home shows its own events on its calendar (EXTERNAL on Career Fairs, INTERNAL on Company Events). */
+export async function getEventCalendar(audience: "EXTERNAL" | "INTERNAL" = "EXTERNAL"): Promise<CalendarEvent[]> {
   const rows = await prisma.event.findMany({
+    where: { audience },
     orderBy: { startsAt: "asc" },
     include: { attendees: { select: { id: true } } }
   });
@@ -558,6 +621,7 @@ export async function getEventCalendar(): Promise<CalendarEvent[]> {
     state: e.state,
     venue: e.venue,
     aircraftPlan: e.aircraftPlan,
-    attendeeCount: e.attendees.length
+    attendeeCount: e.attendees.length,
+    audience: e.audience
   }));
 }

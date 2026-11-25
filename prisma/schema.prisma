@@ -2297,6 +2297,11 @@ model Event {
   budget    Float?
   currency  String    @default("USD")
   notes     String?
+  // EXTERNAL | INTERNAL (Nov 25 2026, Aimee). External events are recruiting's
+  // (Recruiting > Career Fairs, /events); internal ones are for our own people
+  // (People > Company Events, /company-events), with tabs and activities.
+  // Existing rows read as EXTERNAL from the default.
+  audience  String    @default("EXTERNAL")
 
   // --- Are we bringing an aircraft? ---
   // Kept as its own decision rather than a line in notes because it drives real
@@ -2335,10 +2340,57 @@ model Event {
   tasks     EventTask[]
   meetings  EventMeeting[]
   stores    PartyStore[]
+  activities EventActivity[]
 
   @@index([status])
   @@index([startsAt])
   @@index([ownerId])
+  @@index([audience])
+}
+
+// Something people DO at an internal event: the scavenger hunt, a gift swap, a
+// photo booth (Nov 25 2026, Aimee: "there is room for people to contribute").
+// Anyone who can see events may suggest one (it starts as IDEA) and comment;
+// changing status or removing one needs events:write.
+model EventActivity {
+  id          String   @id @default(cuid())
+  eventId     String
+  name        String
+  description String?
+  // CUSTOM | SCAVENGER_HUNT. A SCAVENGER_HUNT activity shows the QR hunt's admin
+  // (lib/exec-hunt) inside it - there is still one hunt, ExecHuntConfig "default".
+  kind        String   @default("CUSTOM")
+  // IDEA | PLANNED | READY | DROPPED (lib/events/constants.ts ACTIVITY_STATUSES)
+  status      String   @default("IDEA")
+  // Who is running it, free text like EventTask.owner.
+  owner       String?
+  // Who put it forward - the signed-in user's name, or "Meeting" when a
+  // transcript proposed it.
+  suggestedBy String?
+  // The planning meeting it came out of, when a transcript proposed it.
+  meetingId   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  event    Event                  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  meeting  EventMeeting?          @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  comments EventActivityComment[]
+
+  @@index([eventId])
+  @@index([meetingId])
+}
+
+// A note on an activity - feedback, an idea, "I can bring the speaker".
+model EventActivityComment {
+  id         String   @id @default(cuid())
+  activityId String
+  author     String?
+  body       String
+  createdAt  DateTime @default(now())
+
+  activity EventActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([activityId])
 }
 
 // "No thanks" for an email the scan offered as an event.
@@ -2461,8 +2513,9 @@ model EventMeeting {
   transcript String
   createdAt  DateTime  @default(now())
 
-  event Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  tasks EventTask[]
+  event      Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tasks      EventTask[]
+  activities EventActivity[]
 
   @@index([eventId])
 }

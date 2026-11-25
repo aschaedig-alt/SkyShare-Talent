@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { prisma } from "@/lib/prisma";
-import { isEventStatus, isEventType } from "@/lib/events/constants";
+import { isEventAudience, isEventStatus, isEventType } from "@/lib/events/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +33,10 @@ export async function POST(request: Request) {
     const event = await prisma.event.create({
       data: {
         name,
+        // Internal or external, chosen first on New event (Nov 25 2026). Decides
+        // which home lists it; anything unrecognised is a recruiting event, as
+        // every event was before.
+        audience: isEventAudience(body.audience) ? body.audience : "EXTERNAL",
         startsAt,
         endsAt,
         type: isEventType(body.type) ? body.type : "CAREER_FAIR",

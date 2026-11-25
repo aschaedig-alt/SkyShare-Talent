@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import clsx from "clsx";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ExternalLink, Mail, Plane, Truck } from "lucide-react";
@@ -10,8 +11,14 @@ import {
   ATTENDEE_STATUSES,
   EVENT_STATUSES,
   aircraftPlanLabel,
+  EVENT_AUDIENCES,
+  EVENT_TABS,
+  eventHref,
   eventStatusLabel,
-  eventTypeLabel
+  eventTypeLabel,
+  eventsHomeFor,
+  eventsHomeLabel,
+  type EventTab
 } from "@/lib/events/constants";
 import type { AttendeeView, EventDetail, SupplyLineView, TaskView } from "@/lib/data/events";
 import { zoneForValue } from "@/lib/dates/display";
@@ -66,8 +73,22 @@ function departmentsOf(value: string | null): string[] {
     .filter(Boolean);
 }
 
-export function EventDetailWorkspace({ event }: { event: EventDetail }) {
+export function EventDetailWorkspace({
+  event,
+  tab = "overview",
+  storeTab = null,
+  activitiesTab = null
+}: {
+  event: EventDetail;
+  /** Company events only: the open tab. */
+  tab?: EventTab;
+  /** Rendered on the server for the open tab only. */
+  storeTab?: ReactNode;
+  activitiesTab?: ReactNode;
+}) {
   const router = useRouter();
+  const internal = event.audience === "INTERNAL";
+  const [audience, setAudience] = useState(event.audience);
 
   const [status, setStatus] = useState(event.status);
   const [attendees, setAttendees] = useState<AttendeeView[]>(event.attendees);
@@ -122,6 +143,18 @@ export function EventDetailWorkspace({ event }: { event: EventDetail }) {
     event.endsAt && new Date(event.endsAt).toDateString() !== new Date(event.startsAt).toDateString()
       ? `${fmtDate(event.startsAt)} – ${fmtDate(event.endsAt)}`
       : fmtDate(event.startsAt, { weekday: "long", month: "short", day: "numeric", year: "numeric" });
+
+  /** Move the event to the other home (a party filed as a career fair, say). */
+  async function changeAudience(next: string) {
+    setAudience(next);
+    const ok = await send(`/api/events/${event.id}`, { audience: next });
+    if (!ok) {
+      setAudience(event.audience);
+      setError("Could not move the event.");
+      return;
+    }
+    router.push(eventHref({ id: event.id, audience: next }));
+  }
 
   async function changeStatus(next: string) {
     setStatus(next);
@@ -218,78 +251,11 @@ export function EventDetailWorkspace({ event }: { event: EventDetail }) {
     router.refresh();
   }
 
-  return (
-    <div className="space-y-4 px-5 py-5 lg:px-8">
-      <Link
-        href="/events"
-        className="inline-flex items-center gap-1 text-sm font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400"
-      >
-        ← Events &amp; Outreach
-      </Link>
-
-      <section className={`rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10`}>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">{event.name}</h1>
-            <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
-              {eventTypeLabel(event.type)} · {when}
-              {where ? ` · ${where}` : ""}
-            </p>
-            {event.website ? (
-              <a
-                href={event.website}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-eden hover:underline dark:text-brand-sweet"
-              >
-                Event page <ExternalLink className="h-3 w-3" />
-              </a>
-            ) : null}
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge tone={statusTone(status)}>{eventStatusLabel(status)}</Badge>
-            <select className={SELECT_SM} value={status} onChange={(e) => changeStatus(e.target.value)}>
-              {EVENT_STATUSES.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-2 text-xs">
-          {[
-            ["Going", `${confirmed}/${attendees.length}`],
-            ["Packed", `${packed}/${supplies.length}`],
-            ["To do", String(openTasks)],
-            ["Owner", event.ownerName ?? "Unassigned"]
-          ].map(([label, val]) => (
-            <span
-              key={label}
-              className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-1 text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
-            >
-              <span className="font-semibold">{val}</span> <span className="text-brand-grey dark:text-slate-400">{label}</span>
-            </span>
-          ))}
-        </div>
-
-        {shortLines.length > 0 ? (
-          <div className="mt-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300">
-            Not enough in stock for {shortLines.map((s) => s.label).join(", ")}. Check{" "}
-            <Link href="/events/supplies" className="font-semibold underline">
-              Supplies
-            </Link>{" "}
-            and reorder.
-          </div>
-        ) : null}
-        {error ? <p className="mt-3 text-sm font-medium text-red-700 dark:text-red-300">{error}</p> : null}
-      </section>
-
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+  const guestsCard = (
+    <>
         {/* Who's going */}
         <section className={CARD}>
-          <h2 className={H2}>Who is going</h2>
+          <h2 className={H2}>{internal ? "Guests" : "Who is going"}</h2>
           <div className="mt-3 overflow-x-auto">
             <table className="min-w-full text-xs">
               <thead>
@@ -409,7 +375,7 @@ export function EventDetailWorkspace({ event }: { event: EventDetail }) {
                 <Input
                   value={personRole}
                   onChange={(e) => setPersonRole(e.target.value)}
-                  placeholder="Role — e.g. Booth lead"
+                  placeholder={internal ? "Role — e.g. Host, DJ" : "Role — e.g. Booth lead"}
                 />
               </label>
               <Button size="sm" onClick={addPerson} disabled={busy || !personId}>
@@ -418,7 +384,10 @@ export function EventDetailWorkspace({ event }: { event: EventDetail }) {
             </div>
           </div>
         </section>
-
+    </>
+  );
+  const aircraftCard = (
+    <>
         {/* Are we bringing an aircraft? */}
         <section className={CARD}>
           <h2 className={`${H2} flex items-center gap-2`}>
@@ -476,7 +445,10 @@ export function EventDetailWorkspace({ event }: { event: EventDetail }) {
             </p>
           ) : null}
         </section>
-
+    </>
+  );
+  const invitationCard = (
+    <>
         {/* Where this event came from */}
         {event.sourceEmailUrl || event.contactName || event.contactEmail || event.shipToAddress ? (
           <section className={CARD}>
@@ -538,9 +510,10 @@ export function EventDetailWorkspace({ event }: { event: EventDetail }) {
             ) : null}
           </section>
         ) : null}
-
-      </div>
-
+    </>
+  );
+  const trackerCard = (
+    <>
       {/* What we need — the to-do tracker, full width so a long planning list has room */}
       <EventTaskTracker
         eventId={event.id}
@@ -548,12 +521,16 @@ export function EventDetailWorkspace({ event }: { event: EventDetail }) {
         setTasks={setTasks}
         meetings={event.meetings}
         ownerSuggestions={event.ownerSuggestions}
+        internal={internal}
       />
-
+    </>
+  );
+  const suppliesCard = (
+    <>
       {/* What we're bringing */}
       <section className={CARD}>
         <div className="flex items-baseline justify-between">
-          <h2 className={H2}>What we are bringing</h2>
+          <h2 className={H2}>{internal ? "Supplies" : "What we are bringing"}</h2>
           <Link href="/events/supplies" className="text-xs font-semibold text-brand-eden hover:underline dark:text-brand-sweet">
             Stock room →
           </Link>
@@ -669,6 +646,272 @@ export function EventDetailWorkspace({ event }: { event: EventDetail }) {
           </Button>
         </div>
       </section>
+    </>
+  );
+
+  const backLink = (
+    <Link
+      href={eventsHomeFor(event.audience)}
+      className="inline-flex items-center gap-1 text-sm font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400"
+    >
+      ← {eventsHomeLabel(event.audience)}
+    </Link>
+  );
+
+  // EXTERNAL - a career fair: one page, exactly as it was before Nov 25 2026.
+  if (!internal) {
+    return (
+      <div className="space-y-4 px-5 py-5 lg:px-8">
+        {backLink}
+      <section className={`rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
+              {internal ? "Company event" : "Career fair"}
+            </p>
+            <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">{event.name}</h1>
+            <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
+              {eventTypeLabel(event.type)} · {when}
+              {where ? ` · ${where}` : ""}
+            </p>
+            {event.website ? (
+              <a
+                href={event.website}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-eden hover:underline dark:text-brand-sweet"
+              >
+                Event page <ExternalLink className="h-3 w-3" />
+              </a>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="sr-only" htmlFor={`audience-${event.id}`}>
+              Who is this event for?
+            </label>
+            <select
+              id={`audience-${event.id}`}
+              className={SELECT_SM}
+              value={audience}
+              onChange={(e) => void changeAudience(e.target.value)}
+              title="Internal events are under People › Company Events; external under Recruiting › Career Fairs"
+            >
+              {EVENT_AUDIENCES.map((a) => (
+                <option key={a.value} value={a.value}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
+            <Badge tone={statusTone(status)}>{eventStatusLabel(status)}</Badge>
+            <select className={SELECT_SM} value={status} onChange={(e) => changeStatus(e.target.value)}>
+              {EVENT_STATUSES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+          {(internal
+            ? [
+                ["Going", `${confirmed}/${attendees.length}`],
+                ["To do", String(openTasks)],
+                ["Owner", event.ownerName ?? "Unassigned"]
+              ]
+            : [
+                ["Going", `${confirmed}/${attendees.length}`],
+                ["Packed", `${packed}/${supplies.length}`],
+                ["To do", String(openTasks)],
+                ["Owner", event.ownerName ?? "Unassigned"]
+              ]
+          ).map(([label, val]) => (
+            <span
+              key={label}
+              className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-1 text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+            >
+              <span className="font-semibold">{val}</span> <span className="text-brand-grey dark:text-slate-400">{label}</span>
+            </span>
+          ))}
+        </div>
+
+        {shortLines.length > 0 ? (
+          <div className="mt-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300">
+            Not enough in stock for {shortLines.map((s) => s.label).join(", ")}. Check{" "}
+            <Link href="/events/supplies" className="font-semibold underline">
+              Supplies
+            </Link>{" "}
+            and reorder.
+          </div>
+        ) : null}
+        {error ? <p className="mt-3 text-sm font-medium text-red-700 dark:text-red-300">{error}</p> : null}
+      </section>
+        <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+          {guestsCard}
+          {aircraftCard}
+          {invitationCard}
+        </div>
+        {trackerCard}
+        {suppliesCard}
+      </div>
+    );
+  }
+
+  // INTERNAL - a company event, in tabs (Aimee, Nov 25 2026): Overview, Guests,
+  // To-dos, Party store, Activities. Each tab is a real link (?tab=), so a tab can
+  // be sent to somebody; the server loads only what the open tab needs.
+  const tabHref = (key: EventTab) => (key === "overview" ? eventHref(event) : `${eventHref(event)}?tab=${key}`);
+  const activityCounts = {
+    live: event.activities.filter((a) => a.status !== "DROPPED").length,
+    ideas: event.activities.filter((a) => a.status === "IDEA").length
+  };
+  return (
+    <div className="space-y-4 px-5 py-5 lg:px-8">
+      {backLink}
+      <section className={`rounded bg-white p-5 shadow-panel ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:ring-white/10`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand-gold">
+              {internal ? "Company event" : "Career fair"}
+            </p>
+            <h1 className="text-2xl font-semibold text-brand-lea dark:text-slate-100">{event.name}</h1>
+            <p className="mt-1 text-sm text-brand-grey dark:text-slate-400">
+              {eventTypeLabel(event.type)} · {when}
+              {where ? ` · ${where}` : ""}
+            </p>
+            {event.website ? (
+              <a
+                href={event.website}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-eden hover:underline dark:text-brand-sweet"
+              >
+                Event page <ExternalLink className="h-3 w-3" />
+              </a>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="sr-only" htmlFor={`audience-${event.id}`}>
+              Who is this event for?
+            </label>
+            <select
+              id={`audience-${event.id}`}
+              className={SELECT_SM}
+              value={audience}
+              onChange={(e) => void changeAudience(e.target.value)}
+              title="Internal events are under People › Company Events; external under Recruiting › Career Fairs"
+            >
+              {EVENT_AUDIENCES.map((a) => (
+                <option key={a.value} value={a.value}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
+            <Badge tone={statusTone(status)}>{eventStatusLabel(status)}</Badge>
+            <select className={SELECT_SM} value={status} onChange={(e) => changeStatus(e.target.value)}>
+              {EVENT_STATUSES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+          {(internal
+            ? [
+                ["Going", `${confirmed}/${attendees.length}`],
+                ["To do", String(openTasks)],
+                ["Owner", event.ownerName ?? "Unassigned"]
+              ]
+            : [
+                ["Going", `${confirmed}/${attendees.length}`],
+                ["Packed", `${packed}/${supplies.length}`],
+                ["To do", String(openTasks)],
+                ["Owner", event.ownerName ?? "Unassigned"]
+              ]
+          ).map(([label, val]) => (
+            <span
+              key={label}
+              className="rounded border border-brand-lea/10 bg-brand-cloudDancer/40 px-3 py-1 text-brand-lea dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
+            >
+              <span className="font-semibold">{val}</span> <span className="text-brand-grey dark:text-slate-400">{label}</span>
+            </span>
+          ))}
+        </div>
+
+        {shortLines.length > 0 ? (
+          <div className="mt-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300">
+            Not enough in stock for {shortLines.map((s) => s.label).join(", ")}. Check{" "}
+            <Link href="/events/supplies" className="font-semibold underline">
+              Supplies
+            </Link>{" "}
+            and reorder.
+          </div>
+        ) : null}
+        {error ? <p className="mt-3 text-sm font-medium text-red-700 dark:text-red-300">{error}</p> : null}
+      </section>
+      {/* Selected = navy with a gold ring (Aimee: selected things show our colours). */}
+      <nav aria-label="Event sections" className="flex flex-wrap gap-1.5">
+        {EVENT_TABS.map((t) => {
+          const on = tab === t.key;
+          return (
+            <Link
+              key={t.key}
+              href={tabHref(t.key)}
+              scroll={false}
+              aria-current={on ? "page" : undefined}
+              className={clsx(
+                "rounded px-3 py-2 text-sm font-semibold transition hover:shadow-glow",
+                on
+                  ? "bg-brand-lea text-white ring-1 ring-brand-gold"
+                  : "bg-white text-brand-lea ring-1 ring-brand-lea/10 dark:bg-brand-panel dark:text-slate-200 dark:ring-white/10"
+              )}
+            >
+              {t.label}
+              {t.key === "activities" && activityCounts.live ? ` (${activityCounts.live})` : ""}
+              {t.key === "todos" && openTasks ? ` (${openTasks})` : ""}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {tab === "overview" ? (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              { key: "guests" as const, label: "Guests", value: `${confirmed}/${attendees.length}`, sub: "confirmed" },
+              { key: "todos" as const, label: "To-dos", value: String(openTasks), sub: "still open" },
+              {
+                key: "activities" as const,
+                label: "Activities",
+                value: String(activityCounts.live),
+                sub: activityCounts.ideas ? `${activityCounts.ideas} still ideas` : "planned or ready"
+              },
+              { key: "store" as const, label: "Party store", value: event.storeId ? "Open" : "None", sub: event.storeId ? "credit and register" : "open one for the party" }
+            ].map((tile) => (
+              <Link
+                key={tile.key}
+                href={tabHref(tile.key)}
+                scroll={false}
+                className={`${CARD} block transition hover:shadow-glow`}
+              >
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-grey dark:text-slate-400">{tile.label}</p>
+                <p className="mt-1 text-2xl font-semibold text-brand-lea dark:text-slate-100">{tile.value}</p>
+                <p className="text-xs text-brand-grey dark:text-slate-400">{tile.sub}</p>
+              </Link>
+            ))}
+          </div>
+          {invitationCard}
+          {suppliesCard}
+        </>
+      ) : null}
+      {tab === "guests" ? guestsCard : null}
+      {tab === "todos" ? trackerCard : null}
+      {tab === "store" ? storeTab : null}
+      {tab === "activities" ? activitiesTab : null}
     </div>
   );
 }

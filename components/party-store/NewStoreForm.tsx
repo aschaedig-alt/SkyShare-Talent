@@ -8,11 +8,16 @@ const LABEL = "text-[10px] font-bold uppercase tracking-[0.16em] text-brand-grey
 const SELECT =
   "mt-1 w-full rounded border border-brand-lea/20 bg-white px-3 py-2 text-sm text-brand-lea outline-none focus:border-brand-gold dark:border-white/10 dark:bg-brand-panel dark:text-slate-100";
 
-export function NewStoreForm({ events }: { events: { id: string; name: string }[] }) {
+/**
+ * fixedEventId: opened from an event's Party store tab (Nov 25 2026). The store
+ * belongs to that event, so there is no event picker, and the tab simply reloads
+ * to show the new store rather than going to the old stores page.
+ */
+export function NewStoreForm({ events, fixedEventId }: { events: { id: string; name: string }[]; fixedEventId?: string }) {
   const router = useRouter();
   const christmas = events.find((e) => /christmas|holiday/i.test(e.name));
   const [name, setName] = useState("Christmas party store");
-  const [eventId, setEventId] = useState(christmas?.id ?? "");
+  const [eventId, setEventId] = useState(fixedEventId ?? christmas?.id ?? "");
   const [credit, setCredit] = useState("100");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,16 +36,17 @@ export function NewStoreForm({ events }: { events: { id: string; name: string }[
       setError(data.message ?? "Could not open the store.");
       return;
     }
-    router.push(`/events/store/${data.id}`);
+    if (fixedEventId) router.refresh();
+    else router.push(`/events/store/${data.id}`);
   }
 
   return (
-    <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_8rem_auto] sm:items-end">
+    <div className={`mt-3 grid gap-3 sm:items-end ${fixedEventId ? "sm:grid-cols-[1fr_8rem_auto]" : "sm:grid-cols-[1fr_1fr_8rem_auto]"}`}>
       <label className="block">
         <span className={LABEL}>Name</span>
         <Input className="mt-1" value={name} onChange={(e) => setName(e.target.value)} />
       </label>
-      <label className="block">
+      <label className={fixedEventId ? "hidden" : "block"}>
         <span className={LABEL}>Event</span>
         <select className={SELECT} value={eventId} onChange={(e) => setEventId(e.target.value)}>
           <option value="">No event</option>

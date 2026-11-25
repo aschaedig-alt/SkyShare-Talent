@@ -31,7 +31,11 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
-export function PartyStoreWorkspace({ initial }: { initial: StoreSummary }) {
+/**
+ * embedded: shown in its event's Party store tab (Nov 25 2026) - the event page
+ * already has the back link and the page heading, so this drops both.
+ */
+export function PartyStoreWorkspace({ initial, embedded = false }: { initial: StoreSummary; embedded?: boolean }) {
   const [summary, setSummary] = useState(initial);
   const [tab, setTab] = useState<TabKey>("register");
   const storeId = initial.store.id;
@@ -66,15 +70,17 @@ export function PartyStoreWorkspace({ initial }: { initial: StoreSummary }) {
   const pendingLabel = t.pendingPreorders ? ` (${t.pendingPreorders})` : "";
 
   return (
-    <div className={R.page}>
-      <Link href="/events/store" className="inline-flex text-sm font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400">
-        ← Party stores
-      </Link>
+    <div className={embedded ? "space-y-4" : R.page}>
+      {embedded ? null : (
+        <Link href="/events/store" className="inline-flex text-sm font-semibold text-brand-grey hover:text-brand-lea dark:text-slate-400">
+          ← Party stores
+        </Link>
+      )}
 
       <section className={R.pageHeader}>
         <div className="min-w-0">
           <p className={R.eyebrow}>{summary.store.eventName ?? "Party store"}</p>
-          <h1 className={R.pageTitle}>{summary.store.name}</h1>
+          {embedded ? <h2 className={R.pageTitle}>{summary.store.name}</h2> : <h1 className={R.pageTitle}>{summary.store.name}</h1>}
           <p className={R.pageLede}>
             {formatCents(summary.store.startingCreditCents)} credit for each of {t.people} employees ·{" "}
             {summary.store.registerOpen ? "register open" : "register closed"} ·{" "}

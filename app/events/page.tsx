@@ -4,16 +4,19 @@ import { EventsOverview } from "@/components/events/EventsOverview";
 
 export const dynamic = "force-dynamic";
 
+// Recruiting > Events & Outreach > Career Fairs: the EXTERNAL events. Internal ones
+// (the holiday party) are People > Company Events, /company-events (Nov 25 2026).
 export default async function EventsPage() {
   await requireModulePageAccess("events");
   const [events, reorderCount, roster, calendar] = await Promise.all([
-    getEvents(),
+    getEvents("EXTERNAL"),
     getReorderCount(),
     getEventRoster(),
-    getEventCalendar()
+    getEventCalendar("EXTERNAL")
   ]);
   return (
     <EventsOverview
+      audience="EXTERNAL"
       upcoming={events.upcoming}
       past={events.past}
       calendar={calendar}

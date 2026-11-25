@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireApiPermission } from "@/lib/auth/route-auth";
 import { prisma } from "@/lib/prisma";
 import { cleanRichInput, richNoteTooLong } from "@/lib/richtext/stored";
-import { isAircraftPlan, isEventStatus, isEventType } from "@/lib/events/constants";
+import { isAircraftPlan, isEventAudience, isEventStatus, isEventType } from "@/lib/events/constants";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -18,6 +18,8 @@ export async function PATCH(request: Request, ctx: Ctx) {
 
     if (typeof body.name === "string" && body.name.trim()) data.name = body.name.trim();
     if (isEventType(body.type)) data.type = body.type;
+    // Move an event between Career Fairs and Company Events.
+    if (isEventAudience(body.audience)) data.audience = body.audience;
     if (isEventStatus(body.status)) data.status = body.status;
     if (typeof body.startsAt === "string") {
       const d = new Date(body.startsAt);

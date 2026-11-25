@@ -31,7 +31,7 @@ export async function POST(request: Request, ctx: Ctx) {
 
   const event = await prisma.event.findUnique({
     where: { id },
-    select: { name: true, startsAt: true, attendees: { select: { newHire: { select: { name: true } } } } }
+    select: { name: true, startsAt: true, audience: true, attendees: { select: { newHire: { select: { name: true } } } } }
   });
   if (!event) return NextResponse.json({ message: "That event no longer exists." }, { status: 404 });
 
@@ -51,7 +51,8 @@ export async function POST(request: Request, ctx: Ctx) {
     eventDate: dayKeyOf(event.startsAt),
     meetingDate: heldAt,
     meetingTitle: typeof body.title === "string" && body.title.trim() ? body.title.trim() : "Planning meeting",
-    knownPeople
+    knownPeople,
+    internal: event.audience === "INTERNAL"
   });
   if (!result.ok) {
     return NextResponse.json({ message: (result as { ok: false; message: string }).message }, { status: 502 });

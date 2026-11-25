@@ -106,6 +106,8 @@ const PATH_MODULES: Array<[string, ModuleId]> = [
   // --- events ---
   ["/api/events", "events"],
   ["/events", "events"],
+  // People > Company Events (Nov 25 2026): the internal events, same module.
+  ["/company-events", "events"],
 
   // --- command center ---
   ["/command-center", "command-center"]

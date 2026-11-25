@@ -55,13 +55,16 @@ export function EventTaskTracker({
   tasks,
   setTasks,
   meetings,
-  ownerSuggestions
+  ownerSuggestions,
+  internal = false
 }: {
   eventId: string;
   tasks: TaskView[];
   setTasks: React.Dispatch<React.SetStateAction<TaskView[]>>;
   meetings: MeetingView[];
   ownerSuggestions: string[];
+  /** A company event: a meeting import also offers activity ideas. */
+  internal?: boolean;
 }) {
   const router = useRouter();
   const ownerListId = `task-owners-${eventId}`;
@@ -399,8 +402,13 @@ export function EventTaskTracker({
         onClose={() => setImporting(false)}
         eventId={eventId}
         ownerListId={ownerListId}
-        onSaved={(count) => {
-          setNotice(`Saved ${count} to-do${count === 1 ? "" : "s"} from the meeting.`);
+        withActivities={internal}
+        onSaved={(count, activityCount) => {
+          setNotice(
+            `Saved ${count} to-do${count === 1 ? "" : "s"}${
+              activityCount ? ` and ${activityCount} activit${activityCount === 1 ? "y" : "ies"} (see Activities)` : ""
+            } from the meeting.`
+          );
           router.refresh();
         }}
       />

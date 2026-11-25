@@ -26,6 +26,7 @@ import {
   Layers,
   Megaphone,
   Package,
+  PartyPopper,
   LayoutDashboard,
   LayoutGrid,
   ListChecks,
@@ -203,7 +204,9 @@ export const navigationGroups: readonly NavigationGroup[] = [
         id: "events",
         label: "Events & Outreach",
         items: [
-          { id: "events", href: "/events", label: "Events", icon: Megaphone },
+          // External events only since Nov 25 2026 (Aimee: "Career Fairs" as the
+          // name). Internal ones are People > Company Events.
+          { id: "events", href: "/events", label: "Career Fairs", icon: Megaphone },
           { id: "events", href: "/events/supplies", label: "Supplies", icon: Package }
         ]
       },
@@ -292,6 +295,9 @@ export const navigationGroups: readonly NavigationGroup[] = [
         items: [
           { id: "people", href: "/employees", label: "Employees", icon: Users },
           { id: "people", href: "/compliments", label: "Compliments", icon: Sparkles },
+          // INTERNAL events - the holiday party, team events (Aimee, Nov 25 2026). The
+          // events module, like Career Fairs, so access is the same as it was.
+          { id: "events", href: "/company-events", label: "Company Events", icon: PartyPopper, accessTableHome: false },
           // From Onboarding, Nov 25 2026: cards are ordered for every employee now,
           // not only new hires (the page has New hires and All employees views).
           { id: "people", href: "/business-cards", label: "Business cards", icon: CreditCard },

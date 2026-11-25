@@ -43,6 +43,16 @@ const SYSTEM_PROMPT = [
   "- status: IN_PROGRESS if the transcript says it is already underway, BLOCKED if it is waiting",
   "  on something or someone, otherwise TODO.",
   "- Merge duplicates: one item per piece of work, even if it came up several times.",
+  "",
+  "ACTIVITIES (only when the request says the event is INTERNAL; otherwise return an empty list):",
+  "things guests will DO at the event that were discussed - a game, a gift swap, a photo booth, a raffle,",
+  "a speech, a scavenger hunt. Include ideas that were raised and not rejected, since the team reviews",
+  "them; leave out anything the group clearly decided against. One entry per activity:",
+  "- name: short, under 60 characters ('Ugly sweater contest').",
+  "- description: one or two lines of what was said about it (prizes, who runs it, timing), or null.",
+  "- owner: who is running it, only when the transcript makes that clear, else null.",
+  "- evidence: a short paraphrase of where it came up.",
+  "An activity can also produce to-dos (buy the prizes); list those under items as usual.",
 ].join("\n");
 
 const NULLABLE_STRING = { anyOf: [{ type: "string" }, { type: "null" }] } as const;
@@ -67,10 +77,32 @@ const SCHEMA = {
         },
         required: ["label", "owner", "dueDate", "status", "notes", "evidence"]
       }
+    },
+    activities: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          name: { type: "string" },
+          description: NULLABLE_STRING,
+          owner: NULLABLE_STRING,
+          evidence: { type: "string" }
+        },
+        required: ["name", "description", "owner", "evidence"]
+      }
     }
   },
-  required: ["summary", "items"]
+  required: ["summary", "items", "activities"]
 } as const;
+
+/** An activity idea a meeting raised (internal events only, Nov 25 2026). */
+export type ProposedActivity = {
+  name: string;
+  description: string | null;
+  owner: string | null;
+  evidence: string;
+};
 
 export type ProposedTask = {
   label: string;
@@ -83,7 +115,7 @@ export type ProposedTask = {
 };
 
 export type MeetingExtraction =
-  | { ok: true; summary: string; items: ProposedTask[]; truncated: boolean }
+  | { ok: true; summary: string; items: ProposedTask[]; activities: ProposedActivity[]; truncated: boolean }
   | { ok: false; message: string };
 
 const str = (v: unknown) => {
@@ -109,6 +141,8 @@ export async function extractMeetingTasks(input: {
   meetingDate: string | null; // yyyy-mm-dd
   meetingTitle: string;
   knownPeople: string[];
+  /** Internal events also get activity ideas pulled out. */
+  internal?: boolean;
 }): Promise<MeetingExtraction> {
   if (!isMeetingExtractionConfigured()) {
     return { ok: false, message: "The AI reader is not set up on this server (no ANTHROPIC_API_KEY)." };
@@ -132,6 +166,7 @@ export async function extractMeetingTasks(input: {
           role: "user",
           content: [
             `EVENT: ${input.eventName}`,
+            `EVENT IS: ${input.internal ? "INTERNAL (for our own employees)" : "EXTERNAL (recruiting)"}`,
             `EVENT DATE: ${input.eventDate}`,
             `MEETING: ${input.meetingTitle}`,
             `MEETING DATE: ${input.meetingDate ?? "unknown"}`,
@@ -151,8 +186,9 @@ export async function extractMeetingTasks(input: {
       return { ok: false, message: "The transcript produced more items than fit in one read. Try splitting it in two." };
     }
     const raw = response.content.find((b) => b.type === "text")?.text ?? "";
-    const parsed = JSON.parse(raw) as { summary?: unknown; items?: unknown };
+    const parsed = JSON.parse(raw) as { summary?: unknown; items?: unknown; activities?: unknown };
     const items = Array.isArray(parsed.items) ? parsed.items : [];
+    const activities = input.internal && Array.isArray(parsed.activities) ? parsed.activities : [];
 
     return {
       ok: true,
@@ -173,7 +209,20 @@ export async function extractMeetingTasks(input: {
             evidence: str(e.evidence) ?? ""
           } satisfies ProposedTask;
         })
-        .filter((item): item is ProposedTask => item !== null)
+        .filter((item): item is ProposedTask => item !== null),
+      activities: activities
+        .map((entry) => {
+          const e = entry as Record<string, unknown>;
+          const name = str(e.name);
+          if (!name) return null;
+          return {
+            name: name.slice(0, 160),
+            description: str(e.description),
+            owner: str(e.owner),
+            evidence: str(e.evidence) ?? ""
+          } satisfies ProposedActivity;
+        })
+        .filter((a): a is ProposedActivity => a !== null)
     };
   } catch (error) {
     console.error("Meeting task extraction failed:", error);

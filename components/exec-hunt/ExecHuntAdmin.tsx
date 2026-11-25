@@ -73,7 +73,18 @@ function toLocalInput(iso: string | null) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function ExecHuntAdmin({ config, stats, origin }: { config: Config; stats: Stats; origin: string }) {
+/** embedded: inside the party's Activities tab (Nov 25 2026), which has its own page heading. */
+export function ExecHuntAdmin({
+  config,
+  stats,
+  origin,
+  embedded = false
+}: {
+  config: Config;
+  stats: Stats;
+  origin: string;
+  embedded?: boolean;
+}) {
   const router = useRouter();
   const [tab, setTab] = useState<TabKey>("overview");
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -100,11 +111,15 @@ export function ExecHuntAdmin({ config, stats, origin }: { config: Config; stats
   const pct = Math.round((stats.locationsFound / stats.total) * 100);
 
   return (
-    <div className={R.page}>
+    <div className={embedded ? "space-y-4" : R.page}>
       <section className={R.pageHeader}>
         <div>
           <p className={R.eyebrow}>Events · Christmas party, Dec 11</p>
-          <h1 className={R.pageTitle}>Christmas Party Scavenger Hunt</h1>
+          {embedded ? (
+            <h2 className={R.pageTitle}>Christmas Party Scavenger Hunt</h2>
+          ) : (
+            <h1 className={R.pageTitle}>Christmas Party Scavenger Hunt</h1>
+          )}
           <p className={R.pageLede}>
             &ldquo;Where&apos;s the Executive?&rdquo; Five executives, three hidden pictures each, one QR code per
             picture. Guests scan with their phone camera, no login.{" "}

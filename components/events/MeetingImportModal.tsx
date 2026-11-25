@@ -10,6 +10,10 @@ import { readTranscriptFile, TRANSCRIPT_FILE_ACCEPT } from "@/lib/events/transcr
 // Upload (or paste) a planning-meeting transcript, let Claude list the action
 // items, review them, save the ones you keep. Two steps on purpose: the read
 // writes nothing, and nothing reaches the live database until "Save".
+//
+// For a company event (internal) the same read also lists ACTIVITY ideas - the
+// games, swaps and contests discussed - reviewed and kept the same way (Aimee,
+// Nov 25 2026: "the system can do a lot of it for us").
 
 type Draft = {
   key: string;
@@ -21,6 +25,9 @@ type Draft = {
   notes: string;
   evidence: string;
 };
+
+type ActivityDraft = { key: string; keep: boolean; name: string; description: string; owner: string; evidence: string };
+type ProposedActivity = { name: string; description: string | null; owner: string | null; evidence: string };
 
 type Proposed = {
   label: string;
@@ -40,14 +47,17 @@ export function MeetingImportModal({
   onClose,
   eventId,
   ownerListId,
-  onSaved
+  onSaved,
+  withActivities = false
 }: {
   open: boolean;
   onClose: () => void;
   eventId: string;
   /** id of a <datalist> of names already on the page. */
   ownerListId: string;
-  onSaved: (taskCount: number) => void;
+  onSaved: (taskCount: number, activityCount: number) => void;
+  /** A company event: also offer the activity ideas the meeting raised. */
+  withActivities?: boolean;
 }) {
   const [step, setStep] = useState<"source" | "review">("source");
   const [title, setTitle] = useState("Holiday party planning");
@@ -57,6 +67,7 @@ export function MeetingImportModal({
   const [summary, setSummary] = useState("");
   const [truncated, setTruncated] = useState(false);
   const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [activityDrafts, setActivityDrafts] = useState<ActivityDraft[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +78,7 @@ export function MeetingImportModal({
     setSummary("");
     setTruncated(false);
     setDrafts([]);
+    setActivityDrafts([]);
     setError(null);
   }
 
@@ -102,6 +114,7 @@ export function MeetingImportModal({
         summary?: string;
         truncated?: boolean;
         items?: Proposed[];
+        activities?: ProposedActivity[];
       };
       if (!res.ok) throw new Error(data.message ?? "Could not read the transcript.");
       setSummary(data.summary ?? "");
@@ -118,6 +131,16 @@ export function MeetingImportModal({
           evidence: item.evidence
         }))
       );
+      setActivityDrafts(
+        (withActivities ? (data.activities ?? []) : []).map((a, index) => ({
+          key: `a${index}`,
+          keep: true,
+          name: a.name,
+          description: a.description ?? "",
+          owner: a.owner ?? "",
+          evidence: a.evidence
+        }))
+      );
       setStep("review");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not read the transcript.");
@@ -130,7 +153,12 @@ export function MeetingImportModal({
     setDrafts((cur) => cur.map((d) => (d.key === key ? { ...d, ...patch } : d)));
   }
 
+  function updateActivity(key: string, patch: Partial<ActivityDraft>) {
+    setActivityDrafts((cur) => cur.map((d) => (d.key === key ? { ...d, ...patch } : d)));
+  }
+
   const kept = drafts.filter((d) => d.keep && d.label.trim());
+  const keptActivities = activityDrafts.filter((d) => d.keep && d.name.trim());
 
   async function save() {
     setBusy(true);
@@ -150,12 +178,13 @@ export function MeetingImportModal({
             dueAt: d.due,
             status: d.status,
             notes: d.notes
-          }))
+          })),
+          activities: keptActivities.map((d) => ({ name: d.name, description: d.description, owner: d.owner }))
         })
       });
-      const data = (await res.json().catch(() => ({}))) as { message?: string; taskCount?: number };
+      const data = (await res.json().catch(() => ({}))) as { message?: string; taskCount?: number; activityCount?: number };
       if (!res.ok) throw new Error(data.message ?? "Could not save.");
-      onSaved(data.taskCount ?? kept.length);
+      onSaved(data.taskCount ?? kept.length, data.activityCount ?? 0);
       close();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save.");
@@ -165,15 +194,18 @@ export function MeetingImportModal({
   }
 
   return (
-    <Modal open={open} onClose={close} busy={busy} maxWidth="max-w-3xl" title="Import to-dos from a meeting">
+    <Modal open={open} onClose={close} busy={busy} maxWidth="max-w-3xl" title="Import from a meeting">
       <div className="p-5">
-        <h2 className="pr-8 text-lg font-semibold text-brand-lea dark:text-slate-100">Import to-dos from a meeting</h2>
+        <h2 className="pr-8 text-lg font-semibold text-brand-lea dark:text-slate-100">
+          {withActivities ? "Import to-dos and activities from a meeting" : "Import to-dos from a meeting"}
+        </h2>
 
         {step === "source" ? (
           <div className="mt-4 space-y-4">
             <p className="text-sm text-brand-grey dark:text-slate-400">
-              Upload the meeting transcript or paste it in. Claude lists who said they would do what, and you check
-              the list before anything is saved.
+              Upload the meeting transcript or paste it in. Claude lists who said they would do what
+              {withActivities ? ", and the activity ideas that came up," : ""} and you check the list before anything is
+              saved.
             </p>
             <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
               <label className="block">
@@ -226,7 +258,7 @@ export function MeetingImportModal({
                 Cancel
               </Button>
               <Button onClick={read} disabled={busy || !transcript.trim()}>
-                {busy ? "Reading… (up to a minute)" : "Find the to-dos"}
+                {busy ? "Reading… (up to a minute)" : withActivities ? "Read the meeting" : "Find the to-dos"}
               </Button>
             </div>
           </div>
@@ -304,6 +336,58 @@ export function MeetingImportModal({
               ))}
             </ul>
 
+            {withActivities ? (
+              <div className="space-y-3 border-t border-brand-lea/10 pt-4 dark:border-white/10">
+                <h3 className="text-sm font-semibold text-brand-lea dark:text-slate-100">Activity ideas</h3>
+                <p className="text-sm text-brand-grey dark:text-slate-400">
+                  {activityDrafts.length === 0
+                    ? "No activities came up in this meeting."
+                    : `Found ${activityDrafts.length}. Kept ones are added to Activities as ideas.`}
+                </p>
+                <ul className="space-y-3">
+                  {activityDrafts.map((d) => (
+                    <li
+                      key={d.key}
+                      className={`rounded border p-3 transition ${
+                        d.keep ? "border-brand-lea/15 dark:border-white/10" : "border-brand-lea/5 opacity-50 dark:border-white/5"
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <input
+                          type="checkbox"
+                          checked={d.keep}
+                          onChange={(e) => updateActivity(d.key, { keep: e.target.checked })}
+                          className="mt-2 h-4 w-4 shrink-0 accent-brand-gold"
+                          aria-label="Keep this activity"
+                        />
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <div className="grid gap-2 sm:grid-cols-[1fr_12rem]">
+                            <Input value={d.name} onChange={(e) => updateActivity(d.key, { name: e.target.value })} />
+                            <Input
+                              list={ownerListId}
+                              value={d.owner}
+                              onChange={(e) => updateActivity(d.key, { owner: e.target.value })}
+                              placeholder="Runs it (unclear)"
+                            />
+                          </div>
+                          <Textarea
+                            rows={2}
+                            className="text-xs"
+                            value={d.description}
+                            onChange={(e) => updateActivity(d.key, { description: e.target.value })}
+                            placeholder="What it is"
+                          />
+                          {d.evidence ? (
+                            <p className="text-[11px] italic text-brand-grey dark:text-slate-400">From the meeting: {d.evidence}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
             {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
 
             <div className="flex flex-wrap justify-end gap-2">
@@ -311,7 +395,16 @@ export function MeetingImportModal({
                 Back
               </Button>
               <Button onClick={save} disabled={busy}>
-                {busy ? "Saving…" : kept.length ? `Save ${kept.length} to-do${kept.length === 1 ? "" : "s"}` : "Save the meeting only"}
+                {busy
+                  ? "Saving…"
+                  : kept.length || keptActivities.length
+                    ? `Save ${[
+                        kept.length ? `${kept.length} to-do${kept.length === 1 ? "" : "s"}` : null,
+                        keptActivities.length ? `${keptActivities.length} activit${keptActivities.length === 1 ? "y" : "ies"}` : null
+                      ]
+                        .filter(Boolean)
+                        .join(" and ")}`
+                    : "Save the meeting only"}
               </Button>
             </div>
           </div>

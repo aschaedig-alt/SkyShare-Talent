@@ -20,8 +20,9 @@ export async function GET(_request: Request, ctx: Ctx) {
 }
 
 /**
- * DELETE — remove an imported meeting. With ?withTasks=1 its to-dos go too (the
- * undo for an import); without it they stay and just lose the link.
+ * DELETE — remove an imported meeting. With ?withTasks=1 its to-dos and the
+ * activity ideas it added go too (the undo for an import); without it they stay
+ * and just lose the link.
  */
 export async function DELETE(request: Request, ctx: Ctx) {
   const auth = await requireApiPermission("events:write");
@@ -31,6 +32,7 @@ export async function DELETE(request: Request, ctx: Ctx) {
   try {
     const removed = await prisma.$transaction(async (tx) => {
       const tasks = withTasks ? await tx.eventTask.deleteMany({ where: { meetingId: id } }) : { count: 0 };
+      if (withTasks) await tx.eventActivity.deleteMany({ where: { meetingId: id } });
       await tx.eventMeeting.delete({ where: { id } });
       return tasks.count;
     });
