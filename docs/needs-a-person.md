@@ -1333,6 +1333,33 @@ is still the only activity; nothing runs off the side of the phone screen.
 
 ---
 
+### 93. A check-in has never gone to two supervisors on the live site
+
+**Status:** OPEN
+**Added:** 2026-11-25
+
+Since Nov 25 a manager check-in can go to both supervisors. Each gets their own link,
+the saved rating is the average once both have answered, and only then is the check-in
+ticked done. The bulk dialog also picks first supervisor, second, both or someone else,
+can replace a link already out, and Post-onboard can cancel links in bulk. Checked by
+the session: the averaging maths (15 checks) and the whole two-supervisor flow (21
+checks) against a stand-in database, the live bulk plan read-only (nothing saved), and
+both dialogs at 1536x695, 375 and 329. NOT checked: a real send, a real cancel, or a
+manager submitting a link on the live site.
+
+**How to check it, about ten minutes:** on the live site, send one person's check-in to
+Both supervisors, with you as one of them if you can. Answer one link. Check that the
+check-in is NOT ticked yet. Answer the other, then open View both scores on the
+profile's Check-ins tab. Then tick two people on Post-onboard and use Cancel check-in
+links on a test link.
+
+**What would count as a pass:** each supervisor gets one email from hrotasks@. The
+saved rating is the average of the two and the check-in ticks only after the second
+answer. View both scores shows each person's answers. The bulk cancel asks first with a
+count and leaves answered links alone.
+
+---
+
 ### 89. The party store credit email has never been sent — not even to the test inbox
 
 **Status:** OPEN — waiting on him, by his choice
