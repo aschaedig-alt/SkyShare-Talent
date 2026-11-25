@@ -1349,6 +1349,42 @@ Imports shows no Hire quality uploads, and Cleanup shows the source names but no
 "Paycom and Journey disagree". As an admin, one source rename on Cleanup sticks after
 a reload.
 
+**Moved again Nov 25 (menu layout 2):** the Reports side list is now in the blue menu
+under Data, not on the page; the Hire quality uploads left Data > Imports for their own
+admin-only page, Data > Upkeep (/imports/hire-quality); and Imports is now Recruiting >
+Records > Imports. Read "the side list" above as the Data menu, and check Imports
+there. Item 91 covers the rest of the menu move.
+
+---
+
+### 91. Nobody without admin rights has seen the reorganised menu
+
+**Status:** OPEN
+**Added:** 2026-11-25
+
+The menu was reorganised on Nov 25 (his pick, layout 2). Recruiting gained a Records
+section (Imports, Duplicate Review, Historical Archive). The Reports list moved into
+the blue Data menu with its Find a report box. HR-only reports are filtered out of that
+menu for anyone who is not an admin. Handbook became a Help button at the bottom of the
+rail for every role. Fleet positions moved to Recruiting, New hire contacts to
+Onboarding, and Business cards and the Paycom roster import to People. Block management
+became an admin-only Manage tab on Content Blocks, and its old address redirects there.
+Access was not meant to change: every item kept its module id. Local dev signs everyone
+in as an admin, so the session saw only the admin menu. Checked by the session: every
+moved page answers 200; at 1536x695 the Recruiting menu (Records open), the Data menu and
+the rail fit with no scrollbar; dark mode on the People menu; no sideways scroll at 375
+and 329 in browser emulation (except Historical Archive, which is on the roadmap). NOT
+checked: a recruiter's, hiring manager's or Viewer's menu, and a real iPhone or Android.
+
+**How to check it, about five minutes:** sign in on the live site as a recruiter (not an
+admin), and on a phone if you can. Open each blue menu, then the Help button. Then type
+/blocks?tab=manage and /imports/hire-quality into the address bar.
+
+**What would count as a pass:** the menu shows only the areas that person could open
+before. The Data menu lists no Hire quality, Manager check-ins or Offers. Help opens the
+Handbook. Content Blocks shows no Manage tab, and /imports/hire-quality does not show the
+uploads. On a phone the drawer menu opens and every item can be tapped.
+
 ---
 
 ## Closed
