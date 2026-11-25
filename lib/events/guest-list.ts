@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { getEventRoster } from "@/lib/data/events";
+import { CURRENT_EMPLOYEE_WHERE } from "@/lib/data/current-employee";
 import { getOrientationChannelId, ORIENTATION_CHANNEL_ADDRESS } from "@/lib/front/config";
 import { sendEmail } from "@/lib/front/messages";
 import { guardDecision } from "@/lib/front/send-guard";
@@ -25,7 +26,9 @@ import {
 // The party guest list - server half. Rules and her words: guest-list-shared.ts.
 //
 // EVERY CURRENT EMPLOYEE IS A GUEST. The list is the event roster (getEventRoster:
-// current, not terminated, not cancelled) - nobody has to be "added". Whether they
+// current, not terminated, not cancelled) narrowed to CURRENT_EMPLOYEE_WHERE, so
+// contractors are left out (his call, Nov 25 2026: employees only) - the same 179
+// the party store credits. Nobody has to be "added". Whether they
 // are coming lives where the rest of the app already reads it, EventAttendee.status
 // (CONFIRMED / DECLINED; no row or PENDING = no response), so the event's
 // "Going" count and Overview tile stay right without knowing about this file.
@@ -120,9 +123,13 @@ async function assertInternalEvent(eventId: string): Promise<void> {
 type Person = { id: string; name: string; position: string | null; department: string | null; emails: string[]; ssEmail: string | null };
 
 async function people(): Promise<Person[]> {
-  const roster = await getEventRoster();
-  const emails = await prisma.newHire.findMany({ where: { id: { in: roster.map((r) => r.id) } }, select: { id: true, ssEmail: true, personalEmail: true } });
+  const all = await getEventRoster();
+  // Employees only - his call, Nov 25 2026: contractors are not invited to the
+  // party. getEventRoster also feeds the career-fair invite picker, which keeps
+  // contractors, so the filter lives here rather than there.
+  const emails = await prisma.newHire.findMany({ where: { id: { in: all.map((r) => r.id) }, ...CURRENT_EMPLOYEE_WHERE }, select: { id: true, ssEmail: true, personalEmail: true } });
   const byId = new Map(emails.map((e) => [e.id, e]));
+  const roster = all.filter((r) => byId.has(r.id));
   return roster.map((r) => {
     const e = byId.get(r.id);
     const list = [e?.ssEmail, e?.personalEmail].map((x) => x?.trim().toLowerCase()).filter((x): x is string => Boolean(x));
