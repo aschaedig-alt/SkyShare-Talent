@@ -1238,6 +1238,12 @@ the repeat says "You've already found this one!", the photo shows on the scan pa
 and the cards PDF, the hiring manager gets a 404, and Reset leaves the printed
 codes working.
 
+**Moved Nov 25 (company events):** the hunt admin now lives in People > Company Events >
+2026 Christmas Holiday Party > Activities, and /events/exec-hunt forwards there for
+anyone who can edit events (a hiring manager still gets the 404). Also open that
+Activities tab as the hiring manager: the pass is that the hunt is listed but its admin
+(Settings, cards PDF, Reset) is not shown.
+
 ---
 
 ### 87. The event to-do tracker has not been used on a phone, or with a real meeting transcript
@@ -1291,6 +1297,39 @@ own pre-order link to your phone and place and cancel a pre-order. Open
 **What would count as a pass:** both devices show the same balances within ten
 seconds, the refunds put the credit back, the phone page works, and the hiring
 manager gets a 404.
+
+**Moved Nov 25 (company events):** the store now opens inside People > Company Events >
+2026 Christmas Holiday Party > Party store, and /events/store/<id> forwards there for
+anyone who can edit events (a hiring manager still gets the 404). Also open that Party
+store tab as the hiring manager: the pass is the line "Only people who can edit events
+can run the party store" and no register or balances.
+
+---
+
+### 92. Nobody without admin rights has suggested a party activity or left a note
+
+**Status:** OPEN
+**Added:** 2026-11-25
+
+Events were split on Nov 25: external ones are Recruiting > Career Fairs (/events),
+internal ones People > Company Events (/company-events). A company event has Overview,
+Guests, To-dos, Party store and Activities tabs, and the scavenger hunt is one activity.
+Anyone who can see events can suggest an activity (it starts as Idea) or leave a note;
+only people who can edit events set its status and who runs it, or remove it. Local dev
+signs everyone in as an admin, so only the admin path was tried: the session created,
+noted, set status on and deleted a TEST activity, and confirmed an external event and a
+second hunt are refused. Every page was checked at 375 and 329 in browser emulation
+only. NOT checked: a recruiter, hiring manager or Viewer suggesting an activity or
+leaving a note, and a real iPhone or Android.
+
+**How to check it, about five minutes:** sign in on the live site as someone who can
+see Events but not edit them. Open People > Company Events > 2026 Christmas Holiday
+Party > Activities, suggest an activity called TEST and leave it a note. Then, as an
+admin, delete it. Do the same on a phone if you can.
+
+**What would count as a pass:** the suggestion saves as Idea with the note under it; the
+non-admin sees no status, owner or remove controls; after the admin deletes it the hunt
+is still the only activity; nothing runs off the side of the phone screen.
 
 ---
 
