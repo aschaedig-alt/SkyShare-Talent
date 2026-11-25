@@ -8,6 +8,7 @@ import type { RatingRequestView } from "@/lib/onboarding/checkin-rating-request-
 import type { CheckinRow } from "@/lib/quality-of-hire/checkins";
 import { Score, SHORT } from "@/components/reports/CheckinReport";
 import { CheckinRatingRequestDialog, StateChip } from "@/components/people/CheckinRatingRequestDialog";
+import { CheckinRatersBreakdown } from "@/components/people/CheckinRatersBreakdown";
 import { formatMomentDate, formatMomentDateShort } from "@/lib/dates/display";
 import { buttonClasses } from "@/components/ui/Button";
 
@@ -44,6 +45,7 @@ function RatingBody({ r }: { r: CheckinRow }) {
         </span>
         {r.followUp.length ? <span className="font-semibold text-red-700 dark:text-red-300">For HR to talk to: {r.followUp.join(", ")}</span> : null}
       </div>
+      <CheckinRatersBreakdown raters={r.raters} />
       {r.note ? (
         <p className="mt-2 whitespace-pre-line rounded border border-brand-lea/10 bg-brand-cloudDancer/45 px-3 py-2 text-sm text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-400">{r.note}</p>
       ) : null}

@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { Archive, CalendarClock, Building2, Trash2, ListChecks, MessageSquareText, MessageSquareWarning, RefreshCw, Send, SkipForward, X } from "lucide-react";
+import { Archive, Ban, CalendarClock, Building2, Trash2, ListChecks, MessageSquareText, MessageSquareWarning, RefreshCw, Send, SkipForward, X } from "lucide-react";
 import { BulkRatingSendDialog } from "@/components/people/BulkRatingSendDialog";
 import { CheckinRatingRequestDialog, StateChip } from "@/components/people/CheckinRatingRequestDialog";
-import { cancelReasonText, type RatingRequestView } from "@/lib/onboarding/checkin-rating-request-shared";
+import { cancelReasonText, groupMembers, groupProgress, type RatingRequestView } from "@/lib/onboarding/checkin-rating-request-shared";
 import type { Checkin, EmploymentStatus, GridTaskStatus, PostOnboardHire } from "@/lib/data/onboarding";
 import { MAINTENANCE_TASKS } from "@/lib/onboarding/tasks";
 import { BulkActionBar, bulkUpdateHires, bulkDeleteHires, type BulkAction, type BulkPatch } from "@/components/people/BulkActionBar";
@@ -51,6 +51,8 @@ const POST_ONBOARD_BULK_ACTIONS: BulkAction[] = [
   // One email per manager with a link per person (his ask, Nov 14 2026). Opens a
   // dialog that groups the ticked people by supervisor; nothing sends from here.
   { kind: "choice", key: "sendRating", label: "Send manager check-in", icon: Send, options: RATED_CHECKINS.map((c) => ({ value: String(c.dayMark), label: c.title })) },
+  // Every rating link not yet answered for the ticked people, at one check-in (Aimee, Nov 25 2026, feedback cmwwilqem). Asks first, with the count.
+  { kind: "choice", key: "cancelRating", label: "Cancel check-in links", icon: Ban, options: RATED_CHECKINS.map((c) => ({ value: String(c.dayMark), label: c.title })) },
   { kind: "patch", key: "archive", label: "Archive", icon: Archive, patch: { stage: "ARCHIVED" }, confirm: true, tone: "danger" },
   { kind: "date", key: "orientation", label: "Set orientation date", icon: CalendarClock },
   { kind: "text", key: "dept", label: "Set department", icon: Building2, placeholder: "Department" },
@@ -442,6 +444,7 @@ export function PostOnboardTab({
       if (selected.size) setBulkSend({ hireIds: [...selected], dayMark: Number(key) });
       return;
     }
+    if (actionKey === "cancelRating") return bulkCancelLinks(Number(key));
     const ids = [...selected];
     if (ids.length === 0) return;
     setBusy(true);
@@ -467,6 +470,52 @@ export function PostOnboardTab({
           )
       );
       setSelected(new Set());
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /**
+   * Bulk "Cancel check-in links" (Aimee, Nov 25 2026, feedback cmwwilqem): every
+   * link still waiting or expired for the ticked people at one check-in. Counts
+   * from what the tab already shows, asks, then one server write; answered links
+   * and ratings are untouched.
+   */
+  async function bulkCancelLinks(dayMark: number) {
+    const ids = [...selected];
+    const c = RATED_CHECKINS.find((x) => x.dayMark === dayMark);
+    const open = ids.flatMap((id) => {
+      const v = requests[rk(id, dayMark)];
+      return v ? groupMembers(v).filter((m) => m.state === "PENDING" || m.state === "EXPIRED") : [];
+    });
+    if (!open.length) {
+      window.alert(`None of the ${ids.length} selected has a ${c?.short ?? ""} rating link waiting.`);
+      return;
+    }
+    const people = new Set(open.map((m) => m.hireId)).size;
+    const left = ids.length - people;
+    if (
+      !window.confirm(
+        `Cancel ${open.length} ${c?.short ?? ""} rating ${open.length === 1 ? "link" : "links"} for ${people} ${people === 1 ? "person" : "people"}? The links stop working straight away.${left ? ` ${left} of those selected have none waiting and are not touched.` : ""}`
+      )
+    )
+      return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/onboarding/checkin-rating-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "bulkCancel", hireIds: ids, dayMark })
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; cancelled?: number; requests?: RatingRequestView[]; message?: string };
+      if (!res.ok || !data.ok) {
+        window.alert(data.message ?? "Could not cancel those links.");
+        return;
+      }
+      setRequests((cur) => ({ ...cur, ...Object.fromEntries((data.requests ?? []).map((v) => [rk(v.hireId, v.dayMark), v])) }));
+      setSelected(new Set());
+      // A two-supervisor check-in whose other link was answered saves its rating now; reload so it shows.
       router.refresh();
     } finally {
       setBusy(false);
@@ -701,7 +750,9 @@ export function PostOnboardTab({
             className="flex flex-wrap items-center justify-center gap-1 rounded px-1 py-0.5 text-[10px] text-brand-grey transition hover:bg-brand-gold/10 dark:text-slate-400"
           >
             <StateChip view={req} />
-            {formatMomentDateShort(req.state === "COMPLETED" ? req.completedAt : req.state === "CANCELLED" ? req.cancelledAt : req.lastSentAt)}
+            {groupProgress(req)
+              ? `${groupProgress(req)?.answered} of ${groupProgress(req)?.total} rated`
+              : formatMomentDateShort(req.state === "COMPLETED" ? req.completedAt : req.state === "CANCELLED" ? req.cancelledAt : req.lastSentAt)}
           </button>
         ) : saved || terminated ? null : (
           <button
@@ -812,17 +863,18 @@ export function PostOnboardTab({
       const saved = ratings[rk(h.id, rated.dayMark)];
       const req = requests[rk(h.id, rated.dayMark)];
       if (saved) return { node: <span className="whitespace-nowrap text-[10px] font-medium text-emerald-700 dark:text-emerald-300">★ rated</span>, text: "rated" };
-      if (req && req.state === "PENDING")
+      const prog = req ? groupProgress(req) : null;
+      if (req && groupMembers(req).some((m) => m.state === "PENDING"))
         return {
           node: (
             <span className={clsx(SENT_PILL, justSent.has(rk(h.id, rated.dayMark)) && "po-slide-in")}>
               {/* The plane and the date in a light-grey pill (his pick). "SENT 11/14" did not
                   fit a 60px cell; the words are in the cell label and hover. */}
               <Send className="h-2.5 w-2.5" aria-hidden />
-              {mdy(new Date(req.lastSentAt).getTime(), true).slice(0, 5)}
+              {prog ? `${prog.answered}/${prog.total}` : mdy(new Date(req.lastSentAt).getTime(), true).slice(0, 5)}
             </span>
           ),
-          text: `rating link sent ${formatMomentDateShort(req.lastSentAt)}`
+          text: prog ? `${prog.answered} of ${prog.total} supervisors have rated` : `rating link sent ${formatMomentDateShort(req.lastSentAt)}`
         };
       if (c.status === "DONE") return { node: <span className={cap}>done</span>, text: "" };
     } else if (c.status !== "NA") {
@@ -855,7 +907,8 @@ export function PostOnboardTab({
       group === "mgr" && rated && c.status === "TODO" && late !== null && late > 0 && late < STALE_AFTER_DAYS &&
       !ratings[rk(h.id, rated.dayMark)] && !requests[rk(h.id, rated.dayMark)] && h.employmentStatus !== "TERMINATED";
     const caption = showSend ? null : captionOf(h, c, group, at, skipped);
-    const linkOut = Boolean(rated && requests[rk(h.id, rated.dayMark)]?.state === "PENDING" && !ratings[rk(h.id, rated.dayMark)]);
+    const reqNow = rated ? requests[rk(h.id, rated.dayMark)] : undefined;
+    const linkOut = Boolean(reqNow && groupMembers(reqNow).some((m) => m.state === "PENDING") && rated && !ratings[rk(h.id, rated.dayMark)]);
     const tile = c.status !== "TODO" || linkOut || late === null ? "" : late > 0 ? TILE.late : late >= -SOON_DAYS ? TILE.soon : "";
     let when = "";
     if (at !== null && late !== null) when = late > 0 ? `, ${late} days late, was due ${mdy(at)}` : late === 0 ? ", due today" : `, due ${mdy(at)}, in ${-late} days`;

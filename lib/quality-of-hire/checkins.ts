@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { CORE_VALUE_NAMES } from "@/lib/interviews/scorecard";
-import { RATED_CHECKINS, isRatedDayMark, readScale, cleanRatings, type RoleProgressKey } from "@/lib/onboarding/checkin-rating";
+import { RATED_CHECKINS, isRatedDayMark, raterRows, readRaters, readScale, cleanRatings, type CheckinRaterRow, type RoleProgressKey } from "@/lib/onboarding/checkin-rating";
+
+export type { CheckinRaterRow };
 import { readAllRatingRequestViews } from "@/lib/onboarding/checkin-rating-request";
 import { richTextToPlain } from "@/lib/richtext/sanitize";
 
@@ -43,7 +45,13 @@ export type CheckinRow = {
   note: string | null;
   ratedOn: string;
   followUp: string[];
+  /**
+   * Each supervisor's own answers when two rated this check-in (Nov 25 2026); the
+   * scores above are then their average. Empty for a one-person rating.
+   */
+  raters: CheckinRaterRow[];
 };
+
 
 export type CheckinStatus = {
   dayMark: number;
@@ -109,7 +117,8 @@ function toRow(r: RatingRecord, h: HireBits | undefined): CheckinRow {
     ratedBy: r.enteredBy?.match(RATED_BY)?.[1] ?? r.managerName ?? r.enteredBy ?? null,
     note: r.notes ? richTextToPlain(r.notes).trim() || null : null,
     ratedOn: r.updatedAt.toISOString(),
-    followUp
+    followUp,
+    raters: raterRows(readRaters(raw))
   };
 }
 

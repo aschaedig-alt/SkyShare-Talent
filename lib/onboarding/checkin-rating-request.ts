@@ -5,7 +5,8 @@ import { sendEmail, type SentMessage } from "@/lib/front/messages";
 import { guardDecision } from "@/lib/front/send-guard";
 import { cleanEditedBody } from "@/lib/front/sanitize-body";
 import { resolveSupervisors } from "@/lib/front/orientation-email";
-import { RATED_TASK_KEYS, ratedCheckin, type RatedCheckin } from "@/lib/onboarding/checkin-rating";
+import { RATED_TASK_KEYS, parseAnswers, ratedCheckin, type RatedCheckin, type RaterAnswers } from "@/lib/onboarding/checkin-rating";
+import { checkCheckinRatingInput, saveAveragedCheckinRating, saveCheckinRating } from "@/lib/onboarding/save-checkin-rating";
 import {
   RATING_LINK_DAYS,
   RATING_LINK_PATH,
@@ -18,6 +19,7 @@ import {
   ratingLinkBlockHtml,
   ratingLinksBlockHtml,
   type RatingCancelReason,
+  type RatingRecipientMode,
   type RatingRecipientOption,
   type RatingRequestSend,
   type RatingRequestState,
@@ -57,12 +59,20 @@ const DAY_MS = 86_400_000;
 /** hrotasks@ is copied on every hand-built send, same as the others in lib/front. */
 const CC = ["hrotasks@skyshare.com"];
 
-type StoredRequest = Omit<RatingRequestView, "hireName" | "state" | "dayMark"> & {
+type StoredRequest = Omit<RatingRequestView, "hireName" | "state" | "dayMark" | "extra" | "others"> & {
   token: string;
   /** Absent on records made before the 6- and 12-month check-ins: those are 90-day. */
   dayMark?: number;
   /** Set by a submission through the link. */
   completed?: boolean;
+  /** A second supervisor's link, stored under extraKey (Nov 25 2026). */
+  extra?: boolean;
+  /**
+   * This supervisor's answers, kept on the request while another link in the same
+   * check-in is still waiting. The average is saved from these once none is
+   * (maybeFinalizeGroup). Absent on one-link check-ins, which save straight away.
+   */
+  answers?: RaterAnswers;
 };
 
 type RequestMap = Record<string, StoredRequest>;
@@ -71,7 +81,25 @@ type RequestMap = Record<string, StoredRequest>;
 export function recKey(hireId: string, dayMark: number): string {
   return dayMark === 90 ? hireId : `${hireId}@${dayMark}`;
 }
+/**
+ * A second supervisor's link for the same person and check-in (Aimee, Nov 25
+ * 2026: one review to the chief pilot AND the assistant chief pilot). Keyed by
+ * their address, so each supervisor has at most one link per check-in and a
+ * resend to them reuses it. "~" never appears in a cuid or in recKey.
+ */
+function extraKey(hireId: string, dayMark: number, email: string): string {
+  return `${recKey(hireId, dayMark)}~${email.trim().toLowerCase()}`;
+}
 const markOf = (rec: StoredRequest) => rec.dayMark ?? 90;
+
+/** Every key in the map for one person's check-in: the main link and any second supervisor's. */
+function groupKeys(all: RequestMap, hireId: string, dayMark: number): string[] {
+  return Object.keys(all).filter((k) => all[k].hireId === hireId && markOf(all[k]) === dayMark);
+}
+/** The one-link key first, then the others, oldest first - the order every screen lists them in. */
+function sortGroup(all: RequestMap, keys: string[]): string[] {
+  return [...keys].sort((a, b) => Number(Boolean(all[a].extra)) - Number(Boolean(all[b].extra)) || all[a].firstSentAt.localeCompare(all[b].firstSentAt));
+}
 
 async function readAll(): Promise<RequestMap> {
   const row = await prisma.workspaceSetting.findUnique({ where: { scope_key: { scope: SCOPE, key: KEY } }, select: { valueJson: true } });
@@ -191,7 +219,9 @@ function toView(rec: StoredRequest, hireName: string, state: RatingRequestState)
     cancelledBy: rec.cancelledBy ?? null,
     cancelReason: rec.cancelReason ?? null,
     cancelDetail: rec.cancelDetail ?? null,
-    acknowledgedAt: rec.acknowledgedAt ?? null
+    acknowledgedAt: rec.acknowledgedAt ?? null,
+    extra: Boolean(rec.extra),
+    others: []
   };
 }
 
@@ -208,15 +238,20 @@ async function settle(all: RequestMap): Promise<{ hires: Map<string, HireNow>; r
   const [hires, ratings] = await Promise.all([
     prisma.newHire.findMany({ where: { id: { in: ids } }, select: HIRE_SELECT }),
     // Every day mark, anytime check-ins included (each request is matched to its own mark below).
-    prisma.hireCheckinRating.findMany({ where: { newHireId: { in: ids } }, select: { newHireId: true, dayMark: true, updatedAt: true } })
+    prisma.hireCheckinRating.findMany({ where: { newHireId: { in: ids } }, select: { newHireId: true, dayMark: true, updatedAt: true, enteredBy: true } })
   ]);
   const byId = new Map(hires.map((h) => [h.id, h as HireNow]));
   // Rated in the app AFTER the request went out - an older rating is what the
   // request was sent to replace or confirm, so it must not close the link.
+  // Only an IN-APP rating counts: a rating saved by a link ("Rating link (...)")
+  // is one supervisor's or the group's average, and must not close the other
+  // supervisor's link that is still waiting (Nov 25 2026).
   const rated = new Set<string>();
   for (const r of ratings) {
-    const k = recKey(r.newHireId, r.dayMark);
-    if (all[k] && r.updatedAt.getTime() > new Date(all[k].firstSentAt).getTime()) rated.add(k);
+    if (r.enteredBy?.startsWith("Rating link")) continue;
+    for (const k of groupKeys(all, r.newHireId, r.dayMark)) {
+      if (r.updatedAt.getTime() > new Date(all[k].firstSentAt).getTime()) rated.add(k);
+    }
   }
 
   const now = new Date().toISOString();
@@ -248,15 +283,33 @@ export async function getRatingRequestViews(hireIds: string[]): Promise<{ reques
     await updateOne(k, (cur) => (cur && cur.token === all[k].token && !cur.cancelledAt && !cur.completed ? all[k] : undefined));
   }
   const wanted = new Set(hireIds);
-  const requests: RatingRequestView[] = [];
+  const views = new Map<string, RatingRequestView>();
   const leftNotices: RatingRequestView[] = [];
   for (const [k, rec] of Object.entries(all)) {
     const name = hires.get(rec.hireId)?.name ?? "A former employee";
     const view = toView(rec, name, stateOf(rec, rated.has(k)));
-    if (wanted.has(rec.hireId)) requests.push(view);
-    if (view.state === "CANCELLED" && view.cancelReason === "LEFT" && !view.acknowledgedAt) leftNotices.push(view);
+    views.set(k, view);
+    // One notice per person and check-in, from its main link.
+    if (!rec.extra && view.state === "CANCELLED" && view.cancelReason === "LEFT" && !view.acknowledgedAt) leftNotices.push(view);
+  }
+  // ONE view per person and check-in - the main link, with any second supervisor's
+  // link under `others` - because every screen keys requests by person + check-in.
+  const requests: RatingRequestView[] = [];
+  const seen = new Set<string>();
+  for (const rec of Object.values(all)) {
+    const g = `${rec.hireId}|${markOf(rec)}`;
+    if (!wanted.has(rec.hireId) || seen.has(g)) continue;
+    seen.add(g);
+    const [main, ...rest] = sortGroup(all, groupKeys(all, rec.hireId, markOf(rec)));
+    requests.push({ ...views.get(main)!, others: rest.map((k) => views.get(k)!) });
   }
   return { requests, leftNotices };
+}
+
+/** The one view the screens show for a person's check-in, read fresh. Null when nothing was ever sent. */
+async function groupView(hireId: string, dayMark: number): Promise<RatingRequestView | null> {
+  const { requests } = await getRatingRequestViews([hireId]);
+  return requests.find((r) => r.dayMark === dayMark) ?? null;
 }
 
 /**
@@ -322,10 +375,97 @@ export async function lookupRatingLink(token: string | undefined | null): Promis
   };
 }
 
-/** Mark the link used. Called only after the rating saved. */
-export async function completeRatingLink(hireId: string, dayMark: number, token: string, typedName: string | null): Promise<void> {
-  await updateOne(recKey(hireId, dayMark), (cur) =>
-    cur && sameToken(cur.token, token) ? { ...cur, completed: true, completedAt: new Date().toISOString(), completedByName: typedName } : undefined
+/** The map key a token lives under, or null. */
+function keyForToken(all: RequestMap, token: string): string | null {
+  return Object.keys(all).find((k) => typeof all[k].token === "string" && sameToken(all[k].token, token)) ?? null;
+}
+
+export type SubmitRatingLinkResult = { ok: true } | { ok: false; status: number; message: string };
+
+/**
+ * The manager's submit, for a link already checked as PENDING by lookupRatingLink.
+ *
+ * ONE LINK for this check-in (every check-in before Nov 25 2026): the rating saves
+ * straight away and the check-in is ticked done, exactly as it always has.
+ *
+ * TWO SUPERVISORS: this supervisor's answers are kept on their own request, and
+ * the AVERAGE is saved once no other link in the group is still waiting
+ * (maybeFinalizeGroup) - so the check-in is ticked done when both have rated.
+ */
+export async function submitRatingLink(input: {
+  token: string;
+  hireId: string;
+  dayMark: number;
+  answers: unknown;
+  managerName: string | null;
+  notes: string | null;
+}): Promise<SubmitRatingLinkResult> {
+  const all = await readAll();
+  const key = keyForToken(all, input.token);
+  if (!key) return { ok: false, status: 404, message: "This link isn't valid." };
+  const others = groupKeys(all, input.hireId, input.dayMark).filter((k) => k !== key && !all[k].cancelledAt);
+
+  if (!others.length) {
+    const result = await saveCheckinRating({
+      newHireId: input.hireId,
+      dayMark: input.dayMark,
+      answers: input.answers,
+      managerName: input.managerName,
+      notes: input.notes,
+      enteredBy: `Rating link${input.managerName ? ` (${input.managerName})` : ""}`
+    });
+    if (!result.ok) return result as { ok: false; status: number; message: string };
+    await updateOne(key, (cur) =>
+      cur && sameToken(cur.token, input.token) ? { ...cur, completed: true, completedAt: new Date().toISOString(), completedByName: input.managerName } : undefined
+    );
+    return { ok: true };
+  }
+
+  const check = checkCheckinRatingInput({ answers: input.answers, notes: input.notes });
+  if (!check.ok) return { ok: false, status: 400, message: (check as { message: string }).message };
+  const parsed = parseAnswers(input.answers);
+  if (!parsed.ok) return { ok: false, status: 400, message: (parsed as { message: string }).message };
+  const nowIso = new Date().toISOString();
+  await updateOne(key, (cur) =>
+    cur && sameToken(cur.token, input.token)
+      ? {
+          ...cur,
+          completed: true,
+          completedAt: nowIso,
+          completedByName: input.managerName,
+          answers: {
+            name: input.managerName ?? cur.toName,
+            email: cur.to,
+            ratingsJson: parsed.ratingsJson,
+            wouldHireAgain: parsed.wouldHireAgain,
+            notes: input.notes?.trim() || null,
+            at: nowIso
+          }
+        }
+      : undefined
+  );
+  await maybeFinalizeGroup(input.hireId, input.dayMark);
+  return { ok: true };
+}
+
+/**
+ * Save the average for a two-supervisor check-in once no link in it is still
+ * waiting. Called after a submit and after a cancel (cancelling the supervisor who
+ * never answered is how HR closes it with one rating). An EXPIRED link does not
+ * hold it up; if HR resends it and it is answered later, the average is saved
+ * again with both. Does nothing for a group with no kept answers - including every
+ * one-link check-in, whose rating was saved at submit.
+ */
+async function maybeFinalizeGroup(hireId: string, dayMark: number): Promise<void> {
+  const all = await readAll();
+  const keys = sortGroup(all, groupKeys(all, hireId, dayMark));
+  if (keys.some((k) => stateOf(all[k], false) === "PENDING")) return;
+  const answered = keys.map((k) => all[k]).filter((r) => r.completed && r.answers);
+  if (!answered.length) return;
+  await saveAveragedCheckinRating(
+    hireId,
+    dayMark,
+    answered.map((r) => r.answers as RaterAnswers)
   );
 }
 
@@ -385,6 +525,12 @@ export type SendRatingRequestInput = {
   bodyHtml: string | null;
   /** "same" keeps the link already sent (only while it is pending or expired). */
   linkMode: "new" | "same";
+  /**
+   * True = a link for ANOTHER supervisor, beside the one already out: each rates
+   * separately and the scores are averaged. False = the main link (a first send,
+   * a resend, or a replacement that kills the old link).
+   */
+  additional?: boolean;
   actor: string | null;
 };
 
@@ -404,9 +550,22 @@ export async function sendRatingRequest(input: SendRatingRequestInput): Promise<
   const gone = leftReason(hire as HireNow, checkin);
   if (gone) return { ok: false, error: `${hire.name} has left (${gone.toLowerCase()}), so there is no ${checkin.short} rating to ask for.` };
 
-  const key = recKey(hire.id, checkin.dayMark);
   // The hire was checked just above, so there is nothing for settle() to cancel here.
-  const prev = (await readAll())[key];
+  const before = await readAll();
+  const mainKey = recKey(hire.id, checkin.dayMark);
+  let key = mainKey;
+  if (input.additional) {
+    const main = before[mainKey];
+    if (!main || main.cancelledAt) return { ok: false, error: "There is no link out yet to send a second one beside - send it as the main link." };
+    if (main.completed && !main.answers) return { ok: false, error: `${main.completedByName ?? "The manager"} already rated this check-in, so a second rating cannot be averaged with it.` };
+    if (main.to.toLowerCase() === to.toLowerCase()) return { ok: false, error: `The main link already goes to ${to}.` };
+    key = extraKey(hire.id, checkin.dayMark, to);
+  } else {
+    // Sending the main link to someone who already has a second-supervisor link would give them two.
+    const dup = groupKeys(before, hire.id, checkin.dayMark).find((k) => k !== mainKey && before[k].to.toLowerCase() === to.toLowerCase() && !before[k].cancelledAt);
+    if (dup) return { ok: false, error: `${to} already has their own link for this check-in.` };
+  }
+  const prev = before[key];
   const prevState = prev ? stateOf(prev, false) : null;
   if (prevState === "COMPLETED") return { ok: false, error: `${prev.completedByName ?? "The manager"} already submitted this rating.` };
   const reuse = input.linkMode === "same" && prev && (prevState === "PENDING" || prevState === "EXPIRED");
@@ -448,7 +607,8 @@ export async function sendRatingRequest(input: SendRatingRequestInput): Promise<
     cancelledBy: null,
     cancelReason: null,
     cancelDetail: null,
-    acknowledgedAt: null
+    acknowledgedAt: null,
+    ...(key !== mainKey ? { extra: true } : {})
   };
   try {
     await updateOne(key, () => draft);
@@ -484,7 +644,9 @@ export async function sendRatingRequest(input: SendRatingRequestInput): Promise<
       /* the conversation id is a nicety */
     }
   }
-  return { ok: true, request: toView(draft, hire.name, "PENDING"), mode: guard.mode, warnings };
+  // The whole check-in (main link plus any second supervisor's), since the screens show them together.
+  const request = (await groupView(hire.id, checkin.dayMark).catch(() => null)) ?? toView(draft, hire.name, "PENDING");
+  return { ok: true, request, mode: guard.mode, warnings };
 }
 
 // ---------------------------------------------------------------------------
@@ -494,16 +656,39 @@ export async function sendRatingRequest(input: SendRatingRequestInput): Promise<
 // exactly as a single send makes, so status, resend, cancel and the link page all
 // work per person; only the email is shared.
 
-export type BulkRatingPlanItem = { hireId: string; name: string };
-export type BulkRatingGroup = { to: string; toName: string | null; items: BulkRatingPlanItem[] };
-export type BulkRatingPlan = { dayMark: number; groups: BulkRatingGroup[]; skipped: Array<BulkRatingPlanItem & { reason: string }> };
+//
+// WHO IT GOES TO (Aimee, Nov 25 2026, feedback cmwwiir1m): the bulk send used to
+// go only to each person's FIRST supervisor and to leave out anyone with a link
+// already out - so when she had sent links to Britt and wanted them all to go to
+// Jared (their second supervisor) instead, every one was left out and the dialog
+// said nobody could be sent. Now the dialog picks who (first supervisor, second
+// supervisor, BOTH - each gets their own link and the scores are averaged - or
+// one address for everybody) and can replace a link already out.
 
-/** Why one person cannot be in a bulk send, or their primary supervisor. */
-async function bulkCandidate(
-  hireId: string,
-  checkin: RatedCheckin,
-  all: RequestMap
-): Promise<{ name: string; reason: string } | { name: string; to: string; toName: string | null }> {
+export type BulkRatingOptions = {
+  mode: RatingRecipientMode;
+  /** Mode "other": the one address every link goes to. */
+  other?: { to: string; toName: string | null } | null;
+  /** Replace a link already out (that link stops working) instead of leaving the person out. */
+  replaceOpen?: boolean;
+};
+
+export type BulkRatingPlanItem = {
+  hireId: string;
+  name: string;
+  /** A second supervisor's link, beside the main one. */
+  extra: boolean;
+  /** Who the link this one replaces went to, when it replaces one. */
+  replacing: string | null;
+};
+export type BulkRatingGroup = { to: string; toName: string | null; items: BulkRatingPlanItem[] };
+export type BulkRatingPlan = { dayMark: number; groups: BulkRatingGroup[]; skipped: Array<{ hireId: string; name: string; reason: string }> };
+
+type BulkTarget = { to: string; toName: string | null; extra: boolean; replacing: string | null };
+type BulkCandidate = { name: string; reason: string } | { name: string; targets: BulkTarget[]; notes: string[] };
+
+/** Who one person's links would go to under these options, or why they cannot be sent. */
+async function bulkCandidate(hireId: string, checkin: RatedCheckin, all: RequestMap, opts: BulkRatingOptions): Promise<BulkCandidate> {
   const hire = await prisma.newHire.findUnique({
     where: { id: hireId },
     select: {
@@ -524,39 +709,116 @@ async function bulkCandidate(
   if (task?.status === "NA") return { name: hire.name, reason: `${checkin.short} skipped or not applicable` };
   const rated = await prisma.hireCheckinRating.findFirst({ where: { newHireId: hire.id, dayMark: checkin.dayMark }, select: { id: true } });
   if (rated) return { name: hire.name, reason: "already rated" };
-  const prev = all[recKey(hire.id, checkin.dayMark)];
-  const state = prev ? stateOf(prev, false) : null;
-  if (state === "PENDING") return { name: hire.name, reason: `a link is already out to ${prev.toName ?? prev.to}` };
-  if (state === "COMPLETED") return { name: hire.name, reason: "already rated through the link" };
-  const sup = resolveSupervisors(hire).find((s) => s.email);
-  if (!sup?.email) return { name: hire.name, reason: "no supervisor email on file - send it on its own" };
-  return { name: hire.name, to: sup.email.trim(), toName: sup.name ?? null };
+
+  const mainKey = recKey(hire.id, checkin.dayMark);
+  const main = all[mainKey];
+  if (main?.completed && !main.answers) return { name: hire.name, reason: "already rated through the link" };
+
+  // Who, before checking what is already out.
+  const sups = resolveSupervisors(hire);
+  const first = sups.find((s) => s.email);
+  const second = sups[1]?.email ? sups[1] : null;
+  const asTarget = (s: { name: string | null; email: string | null }, extra: boolean): BulkTarget => ({
+    to: (s.email as string).trim(),
+    toName: s.name ?? null,
+    extra,
+    replacing: null
+  });
+  const wanted: BulkTarget[] = [];
+  const notes: string[] = [];
+  if (opts.mode === "other") {
+    if (!opts.other || !looksLikeEmail(opts.other.to)) return { name: hire.name, reason: "type who to send it to" };
+    wanted.push({ to: opts.other.to.trim(), toName: opts.other.toName, extra: false, replacing: null });
+  } else if (opts.mode === "supervisor2") {
+    if (!second) return { name: hire.name, reason: "no second supervisor on file" };
+    wanted.push(asTarget(second, false));
+  } else {
+    if (!first) return { name: hire.name, reason: "no supervisor email on file - send it on its own" };
+    wanted.push(asTarget(first, false));
+    if (opts.mode === "both") {
+      if (second && second.email?.trim().toLowerCase() !== first.email?.trim().toLowerCase()) wanted.push(asTarget(second, true));
+      else notes.push(`only one supervisor on file, so only ${first.name ?? first.email} gets a link`);
+    }
+  }
+
+  // What is already out, per link.
+  const targets: BulkTarget[] = [];
+  for (const t of wanted) {
+    const key = t.extra ? extraKey(hire.id, checkin.dayMark, t.to) : mainKey;
+    const prev = all[key];
+    const state = prev ? stateOf(prev, false) : null;
+    const who = t.toName ?? t.to;
+    if (state === "COMPLETED") {
+      notes.push(`${who} already rated them`);
+      continue;
+    }
+    if (!t.extra) {
+      const dup = groupKeys(all, hire.id, checkin.dayMark).find((k) => k !== mainKey && all[k].to.toLowerCase() === t.to.toLowerCase() && !all[k].cancelledAt);
+      if (dup) {
+        notes.push(`${who} already has their own link`);
+        continue;
+      }
+    } else if (main && !main.cancelledAt && main.to.toLowerCase() === t.to.toLowerCase() && !targets.some((x) => !x.extra)) {
+      // They hold the main link already (e.g. it was re-sent to them in place of
+      // the first supervisor). Only when this same send overwrites that main link
+      // (a main target is going out - the main is always checked first) does the
+      // second supervisor need a link of their own.
+      notes.push(`${who} already has the main link`);
+      continue;
+    }
+    if (state === "PENDING") {
+      if (!opts.replaceOpen) {
+        notes.push(`a link is already out to ${prev.toName ?? prev.to}`);
+        continue;
+      }
+      targets.push({ ...t, replacing: prev.toName ?? prev.to });
+    } else targets.push(t);
+  }
+  if (!targets.length) return { name: hire.name, reason: notes.join("; ") || "nothing to send" };
+  return { name: hire.name, targets, notes };
 }
 
-/** Who would get which links: grouped by the primary supervisor's address. Nothing is written. */
-export async function planBulkRatingSend(hireIds: string[], dayMark: number): Promise<BulkRatingPlan | { error: string }> {
+/** Who would get which links, grouped by recipient. Nothing is written. */
+export async function planBulkRatingSend(
+  hireIds: string[],
+  dayMark: number,
+  opts: BulkRatingOptions = { mode: "supervisor" }
+): Promise<BulkRatingPlan | { error: string }> {
   const checkin = ratedCheckin(dayMark);
   if (!checkin) return { error: "Which check-in? (3-month, 6-month or 12-month)" };
   const all = await readAll();
   const groups = new Map<string, BulkRatingGroup>();
   const skipped: BulkRatingPlan["skipped"] = [];
   for (const id of [...new Set(hireIds)]) {
-    const c = await bulkCandidate(id, checkin, all);
+    const c = await bulkCandidate(id, checkin, all, opts);
     if ("reason" in c) {
       skipped.push({ hireId: id, name: c.name, reason: c.reason });
       continue;
     }
-    const k = c.to.toLowerCase();
-    const g = groups.get(k) ?? { to: c.to, toName: c.toName, items: [] };
-    g.items.push({ hireId: id, name: c.name });
-    groups.set(k, g);
+    // Sent to one supervisor but not the other: still listed, with why.
+    c.notes.forEach((n, i) => skipped.push({ hireId: `${id}#${i}`, name: c.name, reason: n }));
+    for (const t of c.targets) {
+      const k = t.to.toLowerCase();
+      const g = groups.get(k) ?? { to: t.to, toName: t.toName, items: [] };
+      g.items.push({ hireId: id, name: c.name, extra: t.extra, replacing: t.replacing });
+      groups.set(k, g);
+    }
   }
   return { dayMark, groups: [...groups.values()].sort((a, b) => b.items.length - a.items.length), skipped };
 }
 
-export type SendBulkRatingInput = { hireIds: string[]; dayMark: number; to: string; toName: string | null; subject: string | null; bodyHtml: string | null; actor: string | null };
+export type SendBulkRatingInput = {
+  hireIds: string[];
+  dayMark: number;
+  to: string;
+  toName: string | null;
+  subject: string | null;
+  bodyHtml: string | null;
+  actor: string | null;
+  options: BulkRatingOptions;
+};
 
-/** Send one manager one email with a link for each person. Every person is re-checked first. */
+/** Send one recipient one email with a link for each person. Every person is re-checked first, with the options the plan used. */
 export async function sendBulkRatingRequests(
   input: SendBulkRatingInput
 ): Promise<{ ok: true; requests: RatingRequestView[]; skipped: Array<{ name: string; reason: string }>; mode: string; warnings: string[] } | { ok: false; error: string }> {
@@ -567,13 +829,17 @@ export async function sendBulkRatingRequests(
   const toName = input.toName?.replace(/\s+/g, " ").trim().slice(0, 80) || null;
 
   const before = await readAll();
-  const people: Array<{ hireId: string; name: string }> = [];
+  const people: Array<{ hireId: string; name: string; extra: boolean }> = [];
   const skipped: Array<{ name: string; reason: string }> = [];
   for (const id of [...new Set(input.hireIds)]) {
-    const c = await bulkCandidate(id, checkin, before);
-    if ("reason" in c) skipped.push({ name: c.name, reason: c.reason });
-    else if (c.to.toLowerCase() !== to.toLowerCase()) skipped.push({ name: c.name, reason: `their supervisor is now ${c.toName ?? c.to}` });
-    else people.push({ hireId: id, name: c.name });
+    const c = await bulkCandidate(id, checkin, before, input.options);
+    if ("reason" in c) {
+      skipped.push({ name: c.name, reason: c.reason });
+      continue;
+    }
+    const t = c.targets.find((x) => x.to.toLowerCase() === to.toLowerCase());
+    if (t) people.push({ hireId: id, name: c.name, extra: t.extra });
+    else skipped.push({ name: c.name, reason: `their link now goes to ${c.targets.map((x) => x.toName ?? x.to).join(" and ")}` });
   }
   if (people.length === 0) return { ok: false, error: `Nothing to send: ${skipped.map((s) => `${s.name} - ${s.reason}`).join("; ") || "no one selected"}.` };
 
@@ -598,7 +864,8 @@ export async function sendBulkRatingRequests(
   }
 
   // Every link has to work BEFORE the email lands, so all records are written in
-  // one write first; a failed send puts every one back exactly as it was.
+  // one write first; a failed send puts every one back exactly as it was. A
+  // replaced link is overwritten here, which is what stops the old one working.
   const drafts: StoredRequest[] = people.map((p, i) => ({
     hireId: p.hireId,
     dayMark: checkin.dayMark,
@@ -615,9 +882,10 @@ export async function sendBulkRatingRequests(
     cancelledBy: null,
     cancelReason: null,
     cancelDetail: null,
-    acknowledgedAt: null
+    acknowledgedAt: null,
+    ...(p.extra ? { extra: true } : {})
   }));
-  const keys = people.map((p) => recKey(p.hireId, checkin.dayMark));
+  const keys = people.map((p) => (p.extra ? extraKey(p.hireId, checkin.dayMark, to) : recKey(p.hireId, checkin.dayMark)));
   const prevs = keys.map((k) => before[k]);
   try {
     const all = await readAll();
@@ -660,19 +928,70 @@ export async function sendBulkRatingRequests(
       /* the conversation id is a nicety */
     }
   }
-  return { ok: true, requests: drafts.map((d, i) => toView(d, people[i].name, "PENDING")), skipped, mode: guard.mode, warnings };
+  // Whole check-ins (main link plus any second supervisor's), as the screens key them.
+  const fresh = await getRatingRequestViews(people.map((p) => p.hireId)).catch(() => null);
+  const requests = fresh ? fresh.requests.filter((r) => r.dayMark === checkin.dayMark) : drafts.map((d, i) => toView(d, people[i].name, "PENDING"));
+  return { ok: true, requests, skipped, mode: guard.mode, warnings };
 }
 
-export async function cancelRatingRequest(hireId: string, dayMark: number, actor: string | null, reason: RatingCancelReason = "MANUAL"): Promise<RatingRequestView | null> {
-  const box: { rec?: StoredRequest } = {};
-  await updateOne(recKey(hireId, dayMark), (cur) => {
-    if (!cur || cur.completed || cur.cancelledAt) return undefined;
-    box.rec = { ...cur, cancelledAt: new Date().toISOString(), cancelledBy: actor, cancelReason: reason, cancelDetail: null };
-    return box.rec;
-  });
-  if (!box.rec) return null;
-  const hire = await prisma.newHire.findUnique({ where: { id: hireId }, select: { name: true } });
-  return toView(box.rec, hire?.name ?? "", "CANCELLED");
+/** Cancel one record in memory. False when it was already finished. */
+function cancelInPlace(all: RequestMap, key: string, actor: string | null, reason: RatingCancelReason, at: string): boolean {
+  const cur = all[key];
+  if (!cur || cur.completed || cur.cancelledAt) return false;
+  all[key] = { ...cur, cancelledAt: at, cancelledBy: actor, cancelReason: reason, cancelDetail: null };
+  return true;
+}
+
+/**
+ * Cancel a person's open links for one check-in - every one, or only the one to
+ * `to` (a two-supervisor check-in lists each link with its own Cancel). If the
+ * other supervisor has already answered, cancelling the one who has not is how
+ * HR closes the check-in with one rating: their answers are saved then.
+ */
+export async function cancelRatingRequest(
+  hireId: string,
+  dayMark: number,
+  actor: string | null,
+  reason: RatingCancelReason = "MANUAL",
+  to: string | null = null
+): Promise<RatingRequestView | null> {
+  const all = await readAll();
+  const at = new Date().toISOString();
+  const keys = groupKeys(all, hireId, dayMark).filter((k) => !to || all[k].to.toLowerCase() === to.trim().toLowerCase());
+  const changed = keys.filter((k) => cancelInPlace(all, k, actor, reason, at));
+  if (!changed.length) return null;
+  await writeAll(all);
+  await maybeFinalizeGroup(hireId, dayMark);
+  return groupView(hireId, dayMark);
+}
+
+/**
+ * Bulk cancel (Aimee, Nov 25 2026, feedback cmwwilqem: "i also need to be able to
+ * cancel sent incomplete requests in bulk"): every link not yet answered for the
+ * ticked people at one check-in - waiting or expired - stops working, in one write.
+ */
+export async function cancelRatingRequestsBulk(
+  hireIds: string[],
+  dayMark: number,
+  actor: string | null
+): Promise<{ cancelled: number; people: number; requests: RatingRequestView[] }> {
+  const all = await readAll();
+  const at = new Date().toISOString();
+  let cancelled = 0;
+  const touched = new Set<string>();
+  for (const id of new Set(hireIds)) {
+    for (const k of groupKeys(all, id, dayMark)) {
+      if (cancelInPlace(all, k, actor, "MANUAL", at)) {
+        cancelled++;
+        touched.add(id);
+      }
+    }
+  }
+  if (!cancelled) return { cancelled: 0, people: 0, requests: [] };
+  await writeAll(all);
+  for (const id of touched) await maybeFinalizeGroup(id, dayMark);
+  const { requests } = await getRatingRequestViews([...touched]);
+  return { cancelled, people: touched.size, requests: requests.filter((r) => r.dayMark === dayMark) };
 }
 
 /** Dismiss the "employee left" notice. The record stays, for the history. */

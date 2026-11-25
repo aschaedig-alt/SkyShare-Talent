@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { clsx } from "clsx";
 import { R } from "@/components/reports/report-ui";
 import { CORE_VALUE_NAMES, RATING_LABEL, type RatingKey } from "@/lib/interviews/scorecard";
-import { ROLE_PROGRESS_LABEL, SCALE_COLORS, isAnytimeDayMark, ratedCheckin, scoreWord } from "@/lib/onboarding/checkin-rating";
+import { ROLE_PROGRESS_LABEL, isAnytimeDayMark, ratedCheckin, scoreColor, scoreWord } from "@/lib/onboarding/checkin-rating";
 import type { CheckinReport as Report, CheckinRow } from "@/lib/quality-of-hire/checkins";
 import { formatMomentDate } from "@/lib/dates/display";
 
@@ -37,10 +37,11 @@ const day = (iso: string) => formatMomentDate(iso) || "—";
 
 /** One core-value score in the form's own color - also used by the profile's Check-ins tab. */
 export function Score({ value, band, label }: { value: number | null; band: string | null; label: string }) {
-  const c = value !== null ? SCALE_COLORS[value] : null;
+  // An average of two supervisors can be a half (7.5): it takes its rounded score's color and word.
+  const c = value !== null ? scoreColor(value) : null;
   return (
     <div
-      title={value !== null ? `${label}: ${value}, ${scoreWord(value)}` : band ? `${label}: ${RATING_LABEL[band as RatingKey] ?? band}` : `${label}: not seen yet`}
+      title={value !== null ? `${label}: ${value}, ${scoreWord(Math.round(value))}` : band ? `${label}: ${RATING_LABEL[band as RatingKey] ?? band}` : `${label}: not seen yet`}
       className={clsx("rounded px-1 py-1 text-center text-sm font-semibold tabular-nums", !c && "bg-brand-cloudDancer/70 text-brand-grey dark:bg-white/10 dark:text-slate-400")}
       style={c ? { background: c.fill, color: c.text } : undefined}
     >

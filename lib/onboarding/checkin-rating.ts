@@ -222,6 +222,8 @@ export type CheckinRatingView = {
   notes: string | null;
   enteredBy: string | null;
   updatedAt: string;
+  /** Each supervisor's own answers when two rated it ([] for one); the fields above are then their average. */
+  raters: CheckinRaterView[];
 };
 
 /** Only the four core values, only valid ratings. Ignores the SCALE_KEY entry. */
@@ -244,9 +246,136 @@ export function readScale(raw: unknown): CheckinScale | null {
   const scores: Record<string, number | null> = {};
   const rawScores = (o.scores ?? {}) as Record<string, unknown>;
   for (const name of CORE_VALUE_NAMES) {
-    if (name in rawScores) scores[name] = isScore(rawScores[name]) ? (rawScores[name] as number) : null;
+    if (name in rawScores) scores[name] = isStoredScore(rawScores[name]) ? Math.round((rawScores[name] as number) * 10) / 10 : null;
   }
   return { scores, progress: isRoleProgress(o.progress) ? o.progress : null };
+}
+
+/**
+ * A STORED score: a whole 1-10 from one form, or the average of two supervisors'
+ * scores, which can be a half (7.5). Input from a form is still checked with
+ * isScore - only an average is ever fractional.
+ */
+export function isStoredScore(v: unknown): v is number {
+  return typeof v === "number" && Number.isFinite(v) && v >= SCALE_MIN && v <= SCALE_MAX;
+}
+
+/** The color for a stored score - an average like 7.5 takes the color of its rounded score. */
+export function scoreColor(v: number): { fill: string; text: string } | null {
+  return SCALE_COLORS[Math.min(SCALE_MAX, Math.max(SCALE_MIN, Math.round(v)))] ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// TWO SUPERVISORS, ONE CHECK-IN (Aimee, Nov 25 2026, feedback cmwwiir1m: "if i
+// need to send the same review ... to two supervisors (like chief pilot and
+// assistant chief pilot) i want them to each individually receive the review
+// link, then when i view the results id like the main number to be the average of
+// the 2 scores. then give me the option to view both scores.")
+//
+// The stored rating stays ONE row per person per check-in (HireCheckinRating is
+// unique on newHireId + dayMark), so every report, cell and points calculation
+// reads the AVERAGE without knowing about it. Each supervisor's own answers ride
+// along in the same JSON under RATERS_KEY - no schema change, the same trade as
+// SCALE_KEY. The average is written once no link in the group is still waiting
+// (lib/onboarding/checkin-rating-request.ts maybeFinalizeGroup), so the check-in
+// is only marked done when both have rated.
+//
+// How each part averages:
+//   scores      the mean of the scores given, to one decimal; a value neither
+//               supervisor has seen yet stays "not seen".
+//   bands       from the ROUNDED average score, the same scoreBand as one form.
+//   progress    Behind -1 / On track 0 / Ahead +1, averaged; half-way reads On track.
+//   hire again  a split ("1 yes, 1 no") counts as NO - the answer HR has to see
+//               (his default, Nov 25 2026). Each answer shows in the raters list.
+
+export const RATERS_KEY = "raters";
+
+export type CheckinRaterView = {
+  name: string | null;
+  email: string | null;
+  ratings: CheckinRatings;
+  scale: CheckinScale | null;
+  wouldHireAgain: boolean | null;
+  notes: string | null;
+  at: string | null;
+};
+
+/** One supervisor's answers, as kept on their request until the group is complete. */
+export type RaterAnswers = {
+  name: string | null;
+  email: string | null;
+  /** parseAnswers' ratingsJson: bands + SCALE_KEY. */
+  ratingsJson: Record<string, unknown>;
+  wouldHireAgain: boolean;
+  notes: string | null;
+  at: string;
+};
+
+/** The per-supervisor answers inside a stored ratingsJson, or [] for a one-person rating. */
+export function readRaters(raw: unknown): CheckinRaterView[] {
+  if (!raw || typeof raw !== "object") return [];
+  const list = (raw as Record<string, unknown>)[RATERS_KEY];
+  if (!Array.isArray(list)) return [];
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v : null);
+  return list
+    .filter((x): x is Record<string, unknown> => Boolean(x) && typeof x === "object")
+    .map((x) => ({
+      name: str(x.name),
+      email: str(x.email),
+      ratings: cleanRatings(x.ratingsJson),
+      scale: readScale(x.ratingsJson),
+      wouldHireAgain: typeof x.wouldHireAgain === "boolean" ? x.wouldHireAgain : null,
+      notes: str(x.notes),
+      at: str(x.at)
+    }));
+}
+
+/** One supervisor's answers, in the same shape as a row's scores. */
+export type CheckinRaterRow = { name: string | null; scores: (number | null)[]; progress: RoleProgressKey | null; hireAgain: boolean | null; note: string | null; at: string | null };
+
+/** The rater rows for a rating's per-supervisor answers - also used by the Post-onboard rating form. */
+export function raterRows(raters: CheckinRaterView[]): CheckinRaterRow[] {
+  return raters.map((x) => ({
+    name: x.name ?? x.email,
+    scores: CORE_VALUE_NAMES.map((v) => x.scale?.scores[v] ?? null),
+    progress: x.scale?.progress ?? null,
+    hireAgain: x.wouldHireAgain,
+    note: x.notes,
+    at: x.at
+  }));
+}
+
+const PROGRESS_NUM: Record<RoleProgressKey, number> = { BEHIND: -1, ON_TRACK: 0, AHEAD: 1 };
+
+/** The averaged rating for a group of supervisors, with each one's own answers under RATERS_KEY. */
+export function averageRaters(raters: RaterAnswers[]): { ratingsJson: Record<string, unknown>; wouldHireAgain: boolean } {
+  const scales = raters.map((r) => readScale(r.ratingsJson));
+  const bands: CheckinRatings = {};
+  const scores: Record<string, number | null> = {};
+  for (const name of CORE_VALUE_NAMES) {
+    const given = scales.map((s) => s?.scores[name]).filter((v): v is number => typeof v === "number");
+    if (given.length) {
+      const avg = Math.round((given.reduce((a, b) => a + b, 0) / given.length) * 10) / 10;
+      scores[name] = avg;
+      bands[name] = scoreBand(Math.round(avg));
+    } else scores[name] = null;
+  }
+  const progressGiven = scales.map((s) => s?.progress).filter((p): p is RoleProgressKey => Boolean(p));
+  let progress: RoleProgressKey | null = null;
+  if (progressGiven.length) {
+    // Half-way (one On track, one Ahead or Behind) reads On track, the same either way.
+    const m = progressGiven.reduce((a, p) => a + PROGRESS_NUM[p], 0) / progressGiven.length;
+    progress = m < -0.5 ? "BEHIND" : m > 0.5 ? "AHEAD" : "ON_TRACK";
+  }
+  const scale: CheckinScale = { scores, progress };
+  return {
+    ratingsJson: {
+      ...bands,
+      [SCALE_KEY]: scale,
+      [RATERS_KEY]: raters.map((r) => ({ name: r.name, email: r.email, ratingsJson: r.ratingsJson, wouldHireAgain: r.wouldHireAgain, notes: r.notes, at: r.at }))
+    },
+    wouldHireAgain: raters.every((r) => r.wouldHireAgain)
+  };
 }
 
 /**
@@ -288,7 +417,11 @@ export function answersFromView(v: CheckinRatingView | null): CheckinAnswers {
   const a = emptyAnswers();
   if (!v) return a;
   for (const name of CORE_VALUE_NAMES) {
-    if (v.scale && name in v.scale.scores) a.scores[name] = v.scale.scores[name] ?? "SKIP";
+    // Rounded: an averaged rating can hold a half, and the form takes whole numbers.
+    if (v.scale && name in v.scale.scores) {
+      const s = v.scale.scores[name];
+      a.scores[name] = s === null || s === undefined ? "SKIP" : Math.round(s);
+    }
   }
   a.progress = v.scale?.progress ?? null;
   a.wouldHireAgain = v.wouldHireAgain;

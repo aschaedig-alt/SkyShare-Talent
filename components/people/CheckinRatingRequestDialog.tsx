@@ -11,6 +11,7 @@ import {
   cancelReasonText,
   defaultRatingBodyHtml,
   defaultRatingSubject,
+  groupMembers,
   looksLikeEmail,
   ratingGreetingHtml,
   type RatingRecipientOption,
@@ -27,9 +28,17 @@ import { RATED_CHECKINS, ratedCheckin } from "@/lib/onboarding/checkin-rating";
 // The link itself is added under the body by the server and is not in the edit
 // box, so no rewrite can drop it or leave an old one in.
 
+// TWO SUPERVISORS (Aimee, Nov 25 2026, feedback cmwwiir1m): "Both supervisors"
+// sends each their own link, and "Keep ...'s link too" adds a second supervisor
+// beside a link already out. Each rates separately; the check-in's rating is the
+// average of the two, with each one's answers kept (lib/onboarding/checkin-rating.ts
+// averageRaters). Every link is listed with its own status and Cancel.
+
 type Recipients = { employeeName: string; options: RatingRecipientOption[]; leftReason: string | null };
 
 const OTHER = "__other__";
+const BOTH = "__both__";
+const OPEN_STATES = new Set(["PENDING", "EXPIRED"]);
 
 export function CheckinRatingRequestDialog({
   hireId,
@@ -88,41 +97,86 @@ export function CheckinRatingRequestDialog({
     };
   }, [hireId, request, checkin.dayMark]);
 
+  const [keepExisting, setKeepExisting] = useState(false);
+  const both = pick === BOTH;
   const chosen = recipients?.options.find((o) => o.email === pick) ?? null;
-  const toEmail = pick === OTHER ? otherEmail.trim() : chosen?.email ?? "";
-  const toName = pick === OTHER ? otherName.trim() || null : chosen?.name ?? null;
+  const toEmail = both ? recipients?.options[0]?.email ?? "" : pick === OTHER ? otherEmail.trim() : chosen?.email ?? "";
+  const toName = both ? recipients?.options[0]?.name ?? null : pick === OTHER ? otherName.trim() || null : chosen?.name ?? null;
+  const second = both ? recipients?.options[1] ?? null : null;
 
+  const members = current ? groupMembers(current) : [];
+  const live = members.filter((m) => m.state !== "CANCELLED");
   const state = current?.state ?? null;
-  // Completed, or cancelled because the person left: nothing left to send.
-  const closed = state === "COMPLETED" || (state === "CANCELLED" && current?.cancelReason === "LEFT");
-  const canSend = !closed && !recipients?.leftReason && looksLikeEmail(toEmail);
+  // Every link answered, or cancelled because the person left: nothing left to send.
+  const closed = (live.length > 0 && live.every((m) => m.state === "COMPLETED")) || (state === "CANCELLED" && current?.cancelReason === "LEFT");
+  // A link that is still out (waiting or expired) and goes to someone other than
+  // the one picked: sending can replace it, or keep it and add this one beside it.
+  const sameAsMain = Boolean(current && current.to.toLowerCase() === toEmail.toLowerCase());
+  const canKeep = !both && Boolean(current && OPEN_STATES.has(current.state) && toEmail && !sameAsMain);
+  const additional = canKeep && keepExisting;
+  const canSend = !closed && !recipients?.leftReason && looksLikeEmail(toEmail) && (!both || Boolean(second));
 
-  async function post(payload: Record<string, unknown>) {
+  async function call(payload: Record<string, unknown>): Promise<{ request?: RatingRequestView; warnings?: string[] }> {
+    const res = await fetch("/api/onboarding/checkin-rating-requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hireId, dayMark: checkin.dayMark, ...payload })
+    });
+    const data = (await res.json().catch(() => ({}))) as { message?: string; request?: RatingRequestView; warnings?: string[] };
+    if (!res.ok || !data.request) throw new Error(data.message || "That did not work.");
+    return data;
+  }
+
+  async function run(steps: Array<Record<string, unknown>>) {
     setBusy(true);
     setError(null);
+    const warnings: string[] = [];
     try {
-      const res = await fetch("/api/onboarding/checkin-rating-requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hireId, dayMark: checkin.dayMark, ...payload })
-      });
-      const data = (await res.json().catch(() => ({}))) as { message?: string; request?: RatingRequestView; warnings?: string[] };
-      if (!res.ok || !data.request) throw new Error(data.message || "That did not work.");
-      setCurrent(data.request);
-      setNotes(data.warnings ?? []);
+      for (const step of steps) {
+        const data = await call(step);
+        warnings.push(...(data.warnings ?? []));
+        if (data.request) {
+          setCurrent(data.request);
+          onChanged(data.request);
+        }
+      }
+      setNotes([...new Set(warnings)]);
       setLinkMode("same");
-      onChanged(data.request);
+      setKeepExisting(false);
     } catch (e) {
+      setNotes([...new Set(warnings)]);
       setError(e instanceof Error ? e.message : "That did not work.");
     } finally {
       setBusy(false);
     }
   }
 
-  const send = () => post({ action: "send", to: toEmail, toName, subject, body, linkMode: reusableNow() ? linkMode : "new" });
-  const cancel = () => {
-    if (!confirm(`Cancel the ${checkin.short} rating request for ${hireName}? The link stops working straight away.`)) return;
-    void post({ action: "cancel" });
+  const send = () => {
+    const base = { action: "send", subject, body };
+    if (both && second) {
+      // The first supervisor gets the main link (a resend when it is theirs already); the second gets their own beside it.
+      const steps: Array<Record<string, unknown>> = [];
+      const mainIsFirst = current && current.to.toLowerCase() === toEmail.toLowerCase() && OPEN_STATES.has(current.state);
+      if (!mainIsFirst) steps.push({ ...base, to: toEmail, toName, linkMode: "new" });
+      // When the main link is about to be re-sent to the first supervisor, whatever it held now
+      // (e.g. it had gone to the second supervisor) stops working, so only their OWN extra link counts.
+      const secondOut = members.some(
+        (m) => (mainIsFirst || m.extra) && m.to.toLowerCase() === second.email.toLowerCase() && OPEN_STATES.has(m.state)
+      );
+      if (!secondOut) steps.push({ ...base, to: second.email, toName: second.name, linkMode: "new", additional: true });
+      if (!steps.length) return setError("Both supervisors already have a link out. Use Resend on each below, or pick one of them.");
+      return void run(steps);
+    }
+    if (additional) return void run([{ ...base, to: toEmail, toName, linkMode: "new", additional: true }]);
+    // A resend to someone who has a second-supervisor link goes to that link.
+    const theirs = members.find((m) => m.extra && m.to.toLowerCase() === toEmail.toLowerCase() && OPEN_STATES.has(m.state));
+    if (theirs) return void run([{ ...base, to: toEmail, toName, linkMode, additional: true }]);
+    void run([{ ...base, to: toEmail, toName, linkMode: reusableNow() && sameAsMain ? linkMode : "new" }]);
+  };
+  const cancel = (who?: RatingRequestView) => {
+    const what = who ? `the link to ${who.toName ?? who.to}` : `the ${checkin.short} rating request for ${hireName}`;
+    if (!confirm(`Cancel ${what}? The link stops working straight away.`)) return;
+    void run([{ action: "cancel", ...(who ? { to: who.to } : {}) }]);
   };
   function reusableNow() {
     return current?.state === "PENDING" || current?.state === "EXPIRED";
@@ -155,27 +209,39 @@ export function CheckinRatingRequestDialog({
                 {current.state === "COMPLETED" ? ` · rated ${formatMomentDateShort(current.completedAt)}${current.completedByName ? ` by ${current.completedByName}` : ""}` : null}
               </span>
               {reusableNow() ? (
-                <button
-                  type="button"
-                  onClick={cancel}
-                  disabled={busy}
-                  className="ml-auto rounded border border-red-200 px-2 py-0.5 text-[11px] font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10"
-                >
-                  Cancel request
+                <button type="button" onClick={() => cancel(members.length > 1 ? current : undefined)} disabled={busy} className={CANCEL_BUTTON}>
+                  {members.length > 1 ? "Cancel this link" : "Cancel request"}
                 </button>
               ) : null}
             </div>
             {current.state === "CANCELLED" ? <p className="mt-1.5">{cancelReasonText(current)} ({formatMomentDateShort(current.cancelledAt)}).</p> : null}
-            <ul className="mt-2 space-y-0.5">
-              {current.sends.map((s) => (
-                <li key={s.at}>
-                  {formatMomentDateShort(s.at)}: {s.newLink ? "sent" : "resent (same link)"} to {s.toName ?? s.to}
-                  {s.by ? ` by ${s.by}` : ""}
-                  {s.edited ? " · edited wording" : ""}
-                  {s.mode !== "production" ? <span className="font-semibold text-amber-700 dark:text-amber-300"> · test send ({s.mode}), not delivered to them</span> : null}
-                </li>
-              ))}
-            </ul>
+            <SendList view={current} />
+            {(current.others ?? []).map((m) => (
+              <div key={m.to} className="mt-3 border-t border-brand-lea/10 pt-2 dark:border-white/10">
+                <div className="flex flex-wrap items-center gap-2">
+                  <StateChip view={m} />
+                  <span>
+                    Second supervisor: {m.toName ? `${m.toName} (${m.to})` : m.to}
+                    {m.state === "PENDING" ? ` · works until ${formatMomentDateShort(m.expiresAt)}` : null}
+                    {m.state === "EXPIRED" ? ` · expired ${formatMomentDateShort(m.expiresAt)}` : null}
+                    {m.state === "COMPLETED" ? ` · rated ${formatMomentDateShort(m.completedAt)}${m.completedByName ? ` by ${m.completedByName}` : ""}` : null}
+                  </span>
+                  {OPEN_STATES.has(m.state) ? (
+                    <button type="button" onClick={() => cancel(m)} disabled={busy} className={CANCEL_BUTTON}>
+                      Cancel this link
+                    </button>
+                  ) : null}
+                </div>
+                {m.state === "CANCELLED" ? <p className="mt-1.5">{cancelReasonText(m)} ({formatMomentDateShort(m.cancelledAt)}).</p> : null}
+                <SendList view={m} />
+              </div>
+            ))}
+            {live.length > 1 ? (
+              <p className="mt-2 font-semibold text-brand-lea dark:text-slate-100">
+                {live.filter((m) => m.state === "COMPLETED").length} of {live.length} rated. The rating is the average of both, saved once neither link is still waiting
+                {checkin.anytime ? "" : `; then the ${checkin.short} check-in is marked done`}. Cancelling the one who has not answered saves the other&apos;s rating on its own.
+              </p>
+            ) : null}
           </div>
         ) : null}
 
@@ -201,6 +267,14 @@ export function CheckinRatingRequestDialog({
                     </span>
                   </label>
                 ))}
+                {recipients.options.length >= 2 ? (
+                  <label className="flex items-start gap-2 text-sm text-brand-lea dark:text-slate-100">
+                    <input type="radio" name="rating-to" checked={both} onChange={() => setPick(BOTH)} className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span className="min-w-0">
+                      Both supervisors <span className="text-xs text-brand-grey dark:text-slate-400">- each gets their own link; the two scores are averaged</span>
+                    </span>
+                  </label>
+                ) : null}
                 <label className="inline-flex items-center gap-2 text-sm text-brand-lea dark:text-slate-100">
                   <input type="radio" name="rating-to" checked={pick === OTHER} onChange={() => setPick(OTHER)} className="h-4 w-4" />
                   {recipients.options.length ? "Someone else" : "No supervisor on file - type who to send it to"}
@@ -214,7 +288,19 @@ export function CheckinRatingRequestDialog({
               </div>
             </fieldset>
 
-            {reusableNow() ? (
+            {canKeep && current ? (
+              <label className="mt-3 flex items-start gap-2 text-sm text-brand-lea dark:text-slate-100">
+                <input type="checkbox" checked={keepExisting} onChange={(e) => setKeepExisting(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0" />
+                <span className="min-w-0">
+                  Keep {current.toName ?? current.to}&apos;s link too{" "}
+                  <span className="text-xs text-brand-grey dark:text-slate-400">
+                    - both rate separately and the scores are averaged. Unticked, this replaces their link and it stops working.
+                  </span>
+                </span>
+              </label>
+            ) : null}
+
+            {reusableNow() && sameAsMain && !both ? (
               <fieldset className="mt-3">
                 <legend className={label}>Link</legend>
                 <div className="mt-1.5 grid gap-1 text-sm text-brand-lea dark:text-slate-100">
@@ -273,12 +359,37 @@ export function CheckinRatingRequestDialog({
               disabled={busy || !canSend}
               className="rounded bg-brand-lea px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-eden disabled:opacity-50"
             >
-              {busy ? "Sending…" : `${current ? "Resend" : "Send"}${body !== null ? " edited copy" : ""} to ${toEmail || "…"}`}
+              {busy
+                ? "Sending…"
+                : both
+                  ? `Send${body !== null ? " edited copy" : ""} to both supervisors`
+                  : additional
+                    ? `Send a second link${body !== null ? " (edited)" : ""} to ${toEmail}`
+                    : `${current && sameAsMain ? "Resend" : "Send"}${body !== null ? " edited copy" : ""} to ${toEmail || "…"}`}
             </button>
           ) : null}
         </div>
       </div>
     </Modal>
+  );
+}
+
+const CANCEL_BUTTON =
+  "ml-auto rounded border border-red-200 px-2 py-0.5 text-[11px] font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10";
+
+/** Every send of one link, newest last. */
+function SendList({ view }: { view: RatingRequestView }) {
+  return (
+    <ul className="mt-2 space-y-0.5">
+      {view.sends.map((s) => (
+        <li key={s.at}>
+          {formatMomentDateShort(s.at)}: {s.newLink ? "sent" : "resent (same link)"} to {s.toName ?? s.to}
+          {s.by ? ` by ${s.by}` : ""}
+          {s.edited ? " · edited wording" : ""}
+          {s.mode !== "production" ? <span className="font-semibold text-amber-700 dark:text-amber-300"> · test send ({s.mode}), not delivered to them</span> : null}
+        </li>
+      ))}
+    </ul>
   );
 }
 

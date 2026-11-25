@@ -78,7 +78,38 @@ export type RatingRequestView = {
   cancelDetail: string | null;
   /** HR dismissed the "employee left" notice. */
   acknowledgedAt: string | null;
+  /** True for a second supervisor's link, sent beside the main one (Nov 25 2026). */
+  extra: boolean;
+  /**
+   * The OTHER supervisors' links for the same person and check-in. Set only on the
+   * main view the Post-onboard tab keys by person + check-in; empty for one link.
+   */
+  others: RatingRequestView[];
 };
+
+/** Every link in a person's check-in: the main one first, then the others. */
+export function groupMembers(v: RatingRequestView): RatingRequestView[] {
+  return [v, ...(v.others ?? [])];
+}
+
+/**
+ * Where a two-supervisor check-in stands: how many links are live (not cancelled)
+ * and how many of those are answered. Null when there is only one link, so the
+ * one-link cells read exactly as before.
+ */
+export function groupProgress(v: RatingRequestView): { answered: number; total: number } | null {
+  const live = groupMembers(v).filter((m) => m.state !== "CANCELLED");
+  if (live.length < 2) return null;
+  return { answered: live.filter((m) => m.state === "COMPLETED").length, total: live.length };
+}
+
+/**
+ * Who a bulk send goes to (Aimee, Nov 25 2026: she had sent links to Britt and
+ * wanted them all to go to Jared, the second supervisor, instead - and a review
+ * can go to two supervisors at once). "both" = each gets their own link and the
+ * two ratings are averaged.
+ */
+export type RatingRecipientMode = "supervisor" | "supervisor2" | "both" | "other";
 
 /** One supervisor the dialog can offer as the recipient. */
 export type RatingRecipientOption = { name: string | null; email: string; source: "supervisor" | "supervisor2" };

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { completeRatingLink, lookupRatingLink } from "@/lib/onboarding/checkin-rating-request";
-import { checkCheckinRatingInput, saveCheckinRating } from "@/lib/onboarding/save-checkin-rating";
+import { lookupRatingLink, submitRatingLink } from "@/lib/onboarding/checkin-rating-request";
+import { checkCheckinRatingInput } from "@/lib/onboarding/save-checkin-rating";
 
 // PUBLIC: the hiring manager's no-login check-in rating submit (90-day, 6-month or
 // 12-month; feedback cmwcq16o7).
@@ -34,18 +34,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
 
   const typedName = typeof body.managerName === "string" ? body.managerName.replace(/\s+/g, " ").trim().slice(0, 80) || null : null;
   const managerName = typedName ?? found.managerName;
-  const result = await saveCheckinRating({
-    newHireId: found.hireId,
-    dayMark: found.dayMark,
-    answers: body.answers,
-    managerName,
-    notes,
-    enteredBy: `Rating link${managerName ? ` (${managerName})` : ""}`
-  });
+  // One link: saved and ticked done now. Two supervisors: this one's answers are
+  // kept, and the average is saved once the other has answered too.
+  const result = await submitRatingLink({ token, hireId: found.hireId, dayMark: found.dayMark, answers: body.answers, managerName, notes });
   if (!result.ok) {
     const failed = result as { status: number; message: string };
     return NextResponse.json({ message: failed.status === 400 ? failed.message : "Could not save the rating. Please try again." }, { status: failed.status === 400 ? 400 : 500 });
   }
-  await completeRatingLink(found.hireId, found.dayMark, token, managerName);
   return NextResponse.json({ ok: true });
 }

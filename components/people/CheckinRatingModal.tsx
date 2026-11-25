@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { RichNoteField } from "@/components/richtext/RichNoteField";
 import { CheckinScaleForm, type CheckinFormResult } from "@/components/people/CheckinScaleForm";
-import { RATED_CHECKINS, answersFromView, ratedCheckin, type CheckinRatingView, type CheckinTickResult } from "@/lib/onboarding/checkin-rating";
+import { RATED_CHECKINS, answersFromView, raterRows, ratedCheckin, type CheckinRatingView, type CheckinTickResult } from "@/lib/onboarding/checkin-rating";
+import { CheckinRatersBreakdown } from "@/components/people/CheckinRatersBreakdown";
 
 // A check-in rating (90-day, 6-month or 12-month), entered by HR from the hiring
 // manager's answers (Quality of Hire). The SAME form the manager gets on the no-login
@@ -72,6 +73,13 @@ export function CheckinRatingModal({
           <p className="mb-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
             This rating was saved before the 1–10 form, so the scores start blank. Saving replaces it.
           </p>
+        ) : null}
+        {initial && initial.raters.length >= 2 ? (
+          <div className="mb-3 rounded border border-brand-lea/15 bg-brand-cloudDancer/40 px-3 py-2 text-xs text-brand-grey dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+            {initial.raters.length} supervisors rated this check-in, so the scores below are their average, rounded to whole numbers for the form. Saving here replaces the
+            average with one rating.
+            <CheckinRatersBreakdown raters={raterRows(initial.raters)} />
+          </div>
         ) : null}
         <CheckinScaleForm
           employeeName={name}

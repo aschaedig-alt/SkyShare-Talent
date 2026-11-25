@@ -4,7 +4,10 @@ import {
   cleanRatings,
   ratedCheckin,
   parseAnswers,
+  readRaters,
   readScale,
+  averageRaters,
+  type RaterAnswers,
   type CheckinRatingView,
   type CheckinTickResult
 } from "@/lib/onboarding/checkin-rating";
@@ -46,7 +49,8 @@ export function checkinRatingView(r: {
     managerName: r.managerName,
     notes: r.notes,
     enteredBy: r.enteredBy,
-    updatedAt: r.updatedAt.toISOString()
+    updatedAt: r.updatedAt.toISOString(),
+    raters: readRaters(parsed)
   };
 }
 
@@ -79,7 +83,6 @@ export async function saveCheckinRating(input: SaveCheckinRatingInput): Promise<
   if (!newHireId) return { ok: false, status: 400, message: "Which person?" };
   const checkin = ratedCheckin(input.dayMark);
   if (!checkin) return { ok: false, status: 400, message: "Which check-in? (3-month, 6-month or 12-month)" };
-  const dayMark = checkin.dayMark;
   const parsed = parseAnswers(input.answers);
   if (!parsed.ok) return { ok: false, status: 400, message: (parsed as { message: string }).message };
   const notes = cleanRichInput(input.notes);
@@ -89,14 +92,50 @@ export async function saveCheckinRating(input: SaveCheckinRatingInput): Promise<
   if (!hire) return { ok: false, status: 404, message: "Person not found." };
 
   const good = parsed as Extract<typeof parsed, { ok: true }>;
-  const data = {
+  return persistAndTick(newHireId, checkin, {
     ratingsJson: JSON.stringify(good.ratingsJson),
     wouldHireAgain: good.wouldHireAgain,
     managerName: tidy(input.managerName, 80),
     // Rich text since feedback cmwcjtm5k; the shared 4000 limit is on the words typed (checked above).
     notes,
     enteredBy: input.enteredBy
-  };
+  });
+}
+
+/**
+ * Save the AVERAGE of two (or more) supervisors' answers for one check-in, each
+ * one's own answers kept beside it (lib/onboarding/checkin-rating.ts averageRaters).
+ * Called only once no link in the group is still waiting, so ticking the check-in
+ * done here is "done when both have rated". Every answer was checked by
+ * parseAnswers when that supervisor submitted it.
+ */
+export async function saveAveragedCheckinRating(newHireId: string, dayMark: number, raters: RaterAnswers[]): Promise<SaveCheckinRatingResult> {
+  const checkin = ratedCheckin(dayMark);
+  if (!checkin) return { ok: false, status: 400, message: "Which check-in? (3-month, 6-month or 12-month)" };
+  if (!raters.length) return { ok: false, status: 400, message: "No answers to average." };
+  const hire = await prisma.newHire.findUnique({ where: { id: newHireId }, select: { id: true } });
+  if (!hire) return { ok: false, status: 404, message: "Person not found." };
+  const avg = averageRaters(raters);
+  const names = raters.map((r) => r.name ?? r.email ?? "A supervisor");
+  // Plain text, one paragraph per supervisor, so the report and the profile show who said what.
+  const notes = raters
+    .filter((r) => r.notes)
+    .map((r) => `${r.name ?? r.email ?? "A supervisor"}: ${r.notes}`)
+    .join("\n\n");
+  return persistAndTick(newHireId, checkin, {
+    ratingsJson: JSON.stringify(avg.ratingsJson),
+    wouldHireAgain: avg.wouldHireAgain,
+    managerName: tidy(names.join(" & "), 160),
+    notes: notes || null,
+    // The "Rating link (...)" form is what Reports > Check-ins reads as "rated by".
+    enteredBy: `Rating link (${names.join(" & ")})`
+  });
+}
+
+type RatingData = { ratingsJson: string; wouldHireAgain: boolean; managerName: string | null; notes: string | null; enteredBy: string | null };
+
+async function persistAndTick(newHireId: string, checkin: NonNullable<ReturnType<typeof ratedCheckin>>, data: RatingData): Promise<SaveCheckinRatingResult> {
+  const dayMark = checkin.dayMark;
   const saved = await prisma.hireCheckinRating.upsert({
     where: { newHireId_dayMark: { newHireId, dayMark } },
     create: { newHireId, dayMark, ...data },
