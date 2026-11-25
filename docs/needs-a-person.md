@@ -600,7 +600,7 @@ and clicked through it, and **Save and Undo have never been pressed**, because b
 the live database. Until the three files are saved, the tab shows no exit reasons and
 almost no interviews.
 
-**How to check it:** as an admin, open Data > Reports > Quality of Hire. In Update the
+**How to check it:** as an admin, open Data > Reports > Hire quality (/reports/hiring/quality; was the Quality of Hire tab until 6c7f034). In Update the
 data, upload Paycom's terminations report (.xlsx), HR's term-type sheet (.csv) and the
 calendar interview file (.csv): preview each, then Save. Confirm the tab now shows exit
 reasons and interviews (about 190 of 274 hires with one or more). Then press Undo on one
@@ -1007,6 +1007,8 @@ read on its next run. Whether it follows them is still to be seen on the next in
 **Status:** OPEN
 **Added:** 2026-11-21
 
+**Note (Nov 24, commit agent):** the Sign-off tab was removed from Reports in 6c7f034, so this check can no longer be run as written. The hiring-manager sign-off was dropped on Nov 23. Left open for him to close.
+
 The definitions sign-off moved from the Google Form into Journey (his ask, Nov 21): Reports >
 Sign-off > "Send a sign-off link" emails one hiring manager a no-login link (/signoff/<token>)
 for the departments ticked, with the email body editable before it goes; the form shows the
@@ -1043,6 +1045,8 @@ phone; after sending, the tab shows your sign-off and its answers.
 
 **Status:** OPEN
 **Added:** 2026-11-21
+
+**Note (Nov 24, commit agent):** the Sign-off tab was removed from Reports in 6c7f034, so this check can no longer be run as written. The hiring-manager sign-off was dropped on Nov 23. Left open for him to close.
 
 A new admin-only Reports tab holds the definitions sign-off form's links (the form to send,
 editing it, the answers Sheet, the sign-off page) and reads the answers live from the Sheet:
@@ -1175,7 +1179,7 @@ live data (2021-2025: 151 good, 38 bad, 34 regretted loss, 16 not counted, 5 too
 page. But no call has ever been saved, because saving one writes live data. Nobody has
 looked at the live site either.
 
-**How to check it:** on the live site, Reports > Quality of Hire. Tap the Needs a call
+**How to check it:** on the live site, Reports > Hire quality (/reports/hiring/quality). Tap the Needs a call
 tile: 8 people should be listed. Use the HR's call picker to record one real decision
 HR has already made, e.g. the first-year quitter HR now calls a Satisfactory hire. Then
 reload.
@@ -1196,7 +1200,7 @@ read-only. The session saw them on its local page (37 "Would hire back", 22 "Wou
 hire back"), but nobody has looked on the live site after the deploy, and that table's
 phone layout still scrolls sideways (unchanged by this work).
 
-**How to check it:** on the live site, Reports > Quality of Hire > Every hire, find
+**How to check it:** on the live site, Reports > Hire quality > Every hire, find
 Nicholas Smout (started Apr 14 2025) and one of the yes answers, e.g. Echo Campbell
 (started Jan 4 2021).
 
