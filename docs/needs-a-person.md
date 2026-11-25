@@ -1104,6 +1104,43 @@ so the person has to guess. The trimmed card is only useful if they already know
 design question on the roadmap; the iPhone test above cannot be done as written until it is
 decided.
 
+**ON HOLD, his call Nov 25 2026:** "i just dont like the options right now... the make contact
+works as needed. i just dont love the options when it comes to making a new contact vs adding to
+an existing. that can be something we work on later." He picked none of A-G and wants nothing
+built. When he brings it up again, start from this research and the memory note
+make-contact-new-vs-existing-on-hold; do not re-research from scratch, and bring fresh options
+rather than re-pitching these.
+
+**Research for his pick (Nov 21-25, written down here Nov 25; he chooses, not a session).**
+Known: in Aimee's recording, Add to Existing Contact doubled the multi-value lines (mobile as
+both "+1 (310) 752-3500" and "(310) 752-3500", both emails twice) and kept name, title and
+department once; she closed without pressing Done. Third-party guides (nothing official): Android
+imports a card as a NEW contact and never merges (fix afterwards: Google Contacts > Fix & manage >
+Merge & fix); iPhone's fix is also afterwards (Contacts > Duplicates Found > Merge). A web page
+cannot see the phone's contacts; the Contact Picker returns only people the user picks, Chrome on
+Android only.
+
+- A. One list, the phone decides: every detail ticked, untick what they already have. The guess
+  moves to the tick boxes; Android still makes a separate contact.
+- B. Whole card only. Simplest; iPhone Add to Existing doubles phones and emails (proven), Android
+  makes a new contact every time.
+- C. Write the number the way the iPhone stores it, "+1 (310) 752-3500". Cheap, goes with any
+  option; only helps if iPhone tidies identical lines on save, doubtful.
+- D. The app remembers who saved whom and which details, and offers only what changed. The only
+  option that answers "does it already exist", but only for saves made through the app, per
+  person not per phone; needs a small new database record.
+- E. Android only: pick the existing contact, send only new details. Android still imports a
+  separate contact; not iPhone; two flows.
+- F. Shared company directory (Google Workspace directory or a sync tool). No duplicates, updates
+  everywhere; admin setup, maybe paid, misses pre-start hires and personal mobiles, outside the app.
+- G. Keep the full card, merge with the phone's own tool afterwards. Nothing to build; cleanup on
+  every person every time.
+
+Only real phones settle these (C and D depend on 1 and 2): (1) iPhone Add to Existing with a card
+whose lines exactly match the contact, then Done - one email or two? (2) the same with the number
+written "+1 (310) 752-3500"; (3) Android Chrome, Make contact for someone already saved - what
+opens, and does it make a second contact?
+
 ---
 
 ### 78. No anytime check-in has been sent, answered or seen in a browser yet
@@ -1310,6 +1347,7 @@ can run the party store" and no register or balances.
 
 **Status:** OPEN
 **Added:** 2026-11-25
+**Who:** Aimee (his call, Nov 25). Includes opening People > Company Events on a real iPhone and a real Android phone.
 
 Events were split on Nov 25: external ones are Recruiting > Career Fairs (/events),
 internal ones People > Company Events (/company-events). A company event has Overview,
@@ -1459,6 +1497,7 @@ there. Item 91 covers the rest of the menu move.
 
 **Status:** OPEN
 **Added:** 2026-11-25
+**Who:** Aimee (his call, Nov 25), as a recruiter and as a Viewer.
 
 The menu was reorganised on Nov 25 (his pick, layout 2). Recruiting gained a Records
 section (Imports, Duplicate Review, Historical Archive). The Reports list moved into
