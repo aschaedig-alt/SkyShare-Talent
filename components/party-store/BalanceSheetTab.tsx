@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Copy, Download } from "lucide-react";
+import { Copy, Download, Mail } from "lucide-react";
 import { R } from "@/components/reports/report-ui";
+import { CreditEmailDialog } from "@/components/party-store/CreditEmailDialog";
 import {
   CREDIT_STATUS_LABEL,
   formatCents,
@@ -44,6 +45,7 @@ export function BalanceSheetTab({ summary, call }: { summary: StoreSummary; call
   const [copied, setCopied] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [emailing, setEmailing] = useState(false);
 
   const rows = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -113,8 +115,17 @@ export function BalanceSheetTab({ summary, call }: { summary: StoreSummary; call
           <button onClick={makeAllLinks} disabled={busy} className={R.smallButton}>
             {busy ? "Making links…" : "Make links for everyone with credit"}
           </button>
+          <button onClick={() => setEmailing(true)} className={R.smallButton}>
+            <Mail className="h-3 w-3" /> Email links…
+          </button>
         </div>
       </div>
+      <CreditEmailDialog
+        storeId={storeId}
+        open={emailing}
+        onClose={() => setEmailing(false)}
+        onSent={() => void call(`/api/events/store/${storeId}`, undefined, "GET")}
+      />
 
       <div className={R.hero}>
         <div className={R.heroRow}>

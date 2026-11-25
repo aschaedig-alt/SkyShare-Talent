@@ -1290,6 +1290,27 @@ manager gets a 404.
 
 ---
 
+### 89. The party store credit email has never been sent — not even to the test inbox
+
+**Status:** OPEN — waiting on him, by his choice
+**Added:** 2026-11-24
+
+He asked for sending to be built but for nothing to go out until he chooses
+(Nov 24 2026). So the send path was checked only up to the point of sending: the
+dialog loads, lists 179 people who can be emailed, previews the email, starts with
+nobody ticked, and the server refuses a send that is unconfirmed, empty or over 20
+at a time. No email has gone anywhere, and zero PartyStoreEmail rows exist.
+
+**How to check it:** when he is ready, open the store on the live site, Balance
+sheet, "Email links…", tick ONLY yourself, and send. Open it on a phone and tap the
+link.
+
+**What would count as a pass:** one email arrives from hrotasks@ with your first
+name, your real credit left and a link that opens your own store page; the dialog
+then shows you as "emailed".
+
+---
+
 ## Closed
 
 ### 2. Private HR notes have never been loaded by a non-HR viewer

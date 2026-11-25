@@ -2584,6 +2584,7 @@ model PartyStore {
   items    PartyStoreItem[]
   accounts PartyStoreAccount[]
   orders   PartyStoreOrder[]
+  emails   PartyStoreEmail[]
 
   @@index([eventId])
 }
@@ -2632,6 +2633,7 @@ model PartyStoreAccount {
   // erase what they bought (the business-card orders were lost exactly that way).
   newHire NewHire           @relation(fields: [newHireId], references: [id], onDelete: Restrict)
   orders  PartyStoreOrder[]
+  emails  PartyStoreEmail[]
 
   @@unique([storeId, newHireId])
   @@index([newHireId])
@@ -2674,4 +2676,29 @@ model PartyStoreOrderLine {
 
   @@index([orderId])
   @@index([itemId])
+}
+
+// One row per leftover-credit email the store sent (or tried to). Written only
+// when a person in the app presses Send — nothing sends on a schedule. mode is
+// the send guard's decision (lib/front/send-guard.ts): "production" reached the
+// employee; "redirected" went to the test inbox instead; error is set when Front
+// refused it, in which case nothing was delivered.
+model PartyStoreEmail {
+  id             String   @id @default(cuid())
+  storeId        String
+  accountId      String
+  toEmail        String
+  subject        String
+  mode           String
+  edited         Boolean  @default(false)
+  conversationId String?
+  error          String?
+  sentBy         String?
+  sentAt         DateTime @default(now())
+
+  store   PartyStore        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  account PartyStoreAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, sentAt])
+  @@index([accountId])
 }
